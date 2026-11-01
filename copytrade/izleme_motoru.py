@@ -68,12 +68,22 @@ def load_list(path: Path) -> list[dict]:
     ids, addresses = set(), set()
     for row in rows:
         required = {'id', 'adres', 'takma_ad', 'durum', 't0'}
-        if not isinstance(row, dict) or not required <= set(row) or set(row) - required - {'tarz', 'kol', 'kollar', 'secim', 'cikarilma_tarihi'}:
-            raise ValueError('İzleme satırında yalnız id, adres, takma_ad, durum, t0 (ve isteğe bağlı tarz, kol, kollar, secim, cikarilma_tarihi) olmalı.')
+        optional = {'tarz', 'kol', 'kollar', 'secim', 'cikarilma_tarihi',
+                    'takim', 'snapshot_id', 'form_puani', 'takim_hafta'}
+        if not isinstance(row, dict) or not required <= set(row) or set(row) - required - optional:
+            raise ValueError('İzleme satırında yalnız id, adres, takma_ad, durum, t0 ve tanımlı isteğe bağlı alanlar olmalı.')
         if 'kol' in row and row['kol'] not in KOLLAR:
             raise ValueError('Geçersiz kol.')
         if 'tarz' in row and row['tarz'] not in STYLES:
             raise ValueError('Geçersiz tarz (intraday | swing).')
+        if 'takim' in row and row['takim'] not in {'ilk11', 'yedek11', 'paf'}:
+            raise ValueError('Geçersiz takım (ilk11 | yedek11 | paf).')
+        if 'snapshot_id' in row and (not isinstance(row['snapshot_id'], str) or not re.fullmatch(r'[0-9a-f]{64}', row['snapshot_id'])):
+            raise ValueError('Geçersiz snapshot_id.')
+        if 'form_puani' in row and (isinstance(row['form_puani'], bool) or not isinstance(row['form_puani'], (int, float)) or not math.isfinite(row['form_puani']) or not 0 <= row['form_puani'] <= 100):
+            raise ValueError('Geçersiz form_puani (0..100).')
+        if 'takim_hafta' in row and (not isinstance(row['takim_hafta'], str) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}', row['takim_hafta'])):
+            raise ValueError('Geçersiz takim_hafta (YYYY-MM-DD).')
         if not isinstance(row['id'], str) or not re.fullmatch(r'[A-Za-z0-9_-]+', row['id']):
             raise ValueError('Geçersiz trader id.')
         if not isinstance(row['adres'], str) or not re.fullmatch(r'0x[0-9a-fA-F]{40}', row['adres']):
