@@ -515,6 +515,8 @@
   });
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
+    const navOpen = document.querySelector('.ray-grup[open]');
+    if (navOpen) { navOpen.open = false; navOpen.querySelector('summary').focus(); return; }
     const dlg = $('#ayarlar'); if (dlg && dlg.open) return;      // ayarlar penceresi kendi Esc'ini yönetir
     if (O.Cekmece.isOpen()) { O.Cekmece.close(); kick(); } else if (kartAcik || (once && Info.isOpen())) panelKapat(); else if (Info.isOpen()) { Info.close(); kick(); } else if (mode.active) goBuilding();
   });
@@ -533,6 +535,10 @@
   };
   function markRay(id) {
     document.querySelectorAll('.ray [data-tab], .ray [data-oda]').forEach(b => b.setAttribute('aria-pressed', (id ? b.dataset.oda === id : b.dataset.tab === 'genel') ? 'true' : 'false'));
+    document.querySelectorAll('.ray-grup').forEach(g => {
+      const active = !!(id && g.querySelector('[data-oda="' + id + '"]'));
+      g.classList.toggle('secili', active);
+    });
   }
   function goCard(id) {
     const el = id && $('#' + id); if (!el) return;
@@ -554,6 +560,13 @@
   document.querySelectorAll('.ray [data-oda]').forEach(b => {
     const r = W.roomById[b.dataset.oda]; if (r) b.style.setProperty('--c', lighten(r.ac, 0.28));
     b.addEventListener('click', () => railTik(b.dataset.oda));
+  });
+  document.querySelectorAll('.ray-grup [data-oda]').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.ray-grup[open]').forEach(g => { g.open = false; });
+  }));
+  document.addEventListener('click', e => {
+    if (e.target.closest('.ray-grup')) return;
+    document.querySelectorAll('.ray-grup[open]').forEach(g => { g.open = false; });
   });
   /* panel modu: geniş ekran + kart sütunu gizli (varsayılan). Aksi halde (telefon, klasik sütun) eski davranış: kart sütununda kaydır */
   const telefon = () => !window.matchMedia('(min-width: 900px)').matches;

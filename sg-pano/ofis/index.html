@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SG Ofis · animasyonlu pano</title>
   <meta name="description" content="sg-arge copy trade hattının animasyonlu izometrik ofis görünümü. Örnek veriyle çalışır; gerçek emir yok.">
-  <link rel="stylesheet" href="ofis.css?v=acil-leaderboard-20261101">
+  <link rel="stylesheet" href="ofis.css?v=ust-nav-20261101">
 </head>
 <body class="tam">
 <a class="atla" href="#ofisTuval">Ofise geç</a>
@@ -17,25 +17,39 @@
   <div class="marka" aria-label="SG Ofis"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5z" fill="#46d3c2"/><path d="M3 8v8l9 5v-8z" fill="#1f8a86"/><path d="M21 8v8l-9 5v-8z" fill="#14575b"/><path d="M9 14.5v3.2l3 1.6v-3.2z" fill="#ffb86b"/></svg><span>SG<b>ofis</b></span></div>
   <h1 class="sr">SG Ofis: copy trade hattının animasyonlu ofis görünümü </h1>
   <div class="ray-ic" id="rayIc">
-    <p class="ray-bas">Odalar</p>
-    <button type="button" data-tab="genel" aria-pressed="true"><i class="el"></i><span>Tüm ofis</span></button>
-    <button type="button" data-olay-ac aria-controls="olayCekmece"><i class="el" style="--c:#ffb86b"></i><span>Olaylar</span></button>
-    <p class="ray-bas">Hat</p>
-    <button type="button" data-oda="tarama" aria-pressed="false"><i class="el"></i><span>Bilgi İşlem/IT</span></button>
-    <button type="button" data-oda="kapi" aria-pressed="false"><i class="el"></i><span>Kapı</span></button>
-    <button type="button" data-oda="lab" aria-pressed="false"><i class="el"></i><span>LAB</span></button>
-    <button type="button" data-oda="aday" aria-pressed="false"><i class="el"></i><span>PAF Takım</span></button>
-    <button type="button" data-oda="oda" aria-pressed="false"><i class="el"></i><span>İlk 11</span></button>
-    <button type="button" data-oda="kontrol" aria-pressed="false"><i class="el"></i><span>Yedekler</span></button>
-    <p class="ray-bas">Destek</p>
-    <button type="button" data-oda="finans" aria-pressed="false"><i class="el"></i><span>Finans</span></button>
-    <button type="button" data-oda="risk" aria-pressed="false"><i class="el"></i><span>Risk</span></button>
-    <button type="button" data-oda="denetim" aria-pressed="false"><i class="el"></i><span>Denetim</span></button>
-    <button type="button" data-oda="arsiv" aria-pressed="false"><i class="el"></i><span>Arşiv</span></button>
-    <button type="button" data-oda="haberlesme" aria-pressed="false"><i class="el"></i><span>Haberleşme</span></button>
-    <button type="button" data-oda="sekreterlik" aria-pressed="false"><i class="el"></i><span>Sekreterlik</span></button>
-    <button type="button" data-oda="makam" aria-pressed="false"><i class="el"></i><span>Makam</span></button>
-    <button type="button" data-oda="cay" aria-pressed="false"><i class="el"></i><span>Çay ocağı</span></button>
+    <button class="ray-genel" type="button" data-tab="genel" aria-pressed="true"><i class="el"></i><span>Genel</span></button>
+    <details class="ray-grup">
+      <summary>Trade Odası</summary>
+      <div class="ray-acilir" role="group" aria-label="Trade Odası">
+        <button type="button" data-oda="oda" aria-pressed="false"><i class="el"></i><span>İlk 11</span></button>
+        <button type="button" data-oda="kontrol" aria-pressed="false"><i class="el"></i><span>Yedekler</span></button>
+        <button type="button" data-oda="aday" aria-pressed="false"><i class="el"></i><span>PAF Takım</span></button>
+      </div>
+    </details>
+    <details class="ray-grup">
+      <summary>Yönetim</summary>
+      <div class="ray-acilir" role="group" aria-label="Yönetim">
+        <button type="button" data-oda="makam" aria-pressed="false"><i class="el"></i><span>Makam</span></button>
+        <button type="button" data-oda="sekreterlik" aria-pressed="false"><i class="el"></i><span>Sekreterlik</span></button>
+        <button type="button" data-oda="finans" aria-pressed="false"><i class="el"></i><span>Finans</span></button>
+        <button type="button" data-oda="risk" aria-pressed="false"><i class="el"></i><span>Risk</span></button>
+      </div>
+    </details>
+    <details class="ray-grup">
+      <summary>Operasyon</summary>
+      <div class="ray-acilir" role="group" aria-label="Operasyon">
+        <button type="button" data-oda="tarama" aria-pressed="false"><i class="el"></i><span>Bilgi İşlem/IT</span></button>
+        <button type="button" data-oda="denetim" aria-pressed="false"><i class="el"></i><span>Denetim</span></button>
+        <button type="button" data-oda="arsiv" aria-pressed="false"><i class="el"></i><span>Arşiv</span></button>
+        <button type="button" data-oda="haberlesme" aria-pressed="false"><i class="el"></i><span>Haberleşme</span></button>
+      </div>
+    </details>
+    <details class="ray-grup">
+      <summary>Çay Ocağı</summary>
+      <div class="ray-acilir" role="group" aria-label="Çay Ocağı">
+        <button type="button" data-oda="cay" aria-pressed="false"><i class="el"></i><span>Çay ocağı</span></button>
+      </div>
+    </details>
   </div>
   <div class="ray-alt" role="group" aria-label="Sistem durumu">
     <div class="plaka" id="plKayit"><i class="lamba"></i><span><small>kayıt kipi</small><b id="kayitDeger">gölge</b></span></div>
@@ -175,6 +189,6 @@
 <script src="panel.js?v=acil-leaderboard-20261101"></script>
 <script src="dialogue.js?v=acil-leaderboard-20261101"></script>
 <script src="konusma.js?v=acil-leaderboard-20261101"></script>
-<script src="main.js?v=acil-leaderboard-20261101"></script>
+<script src="main.js?v=ust-nav-20261101"></script>
 </body>
 </html>
