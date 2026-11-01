@@ -56,11 +56,11 @@
     const p = W.roomPoly(r); x.beginPath(); x.moveTo(p[0][0], p[0][1] - (up || 0)); x.lineTo(p[1][0], p[1][1] - (up || 0)); x.lineTo(p[2][0], p[2][1]); x.lineTo(p[3][0], p[3][1]); x.closePath();
   }
   function buildRoomLight() {
-    // toplama (lighter) katmanı: her odada merkezden dışa sıcak ışık; havuzda gece su ışığı. Bayat odada ışık yok.
-    const c = mk(W.CW, W.CH), x = c.getContext('2d'), s = Off.state(), n = light.night;
+    // toplama (lighter) katmanı: her odada merkezden dışa sıcak ışık; havuzda gece su ışığı.
+    const c = mk(W.CW, W.CH), x = c.getContext('2d'), n = light.night;
     const a = 0.13 + 0.42 * n;            // gündüz hafif, akşam/gece belirgin
     W.ROOMS.forEach(r => {
-      if (r.out || (s && s.stale[r.id])) return;
+      if (r.out) return;
       const p = W.roomPoly(r), cx0 = (p[0][0] + p[2][0]) / 2, cy0 = (p[0][1] + p[2][1]) / 2, rad = Math.max(p[1][0] - p[3][0], (p[2][1] - p[0][1]) * 1.6) * 0.62;
       const cool = r.id === 'denetim', col = cool ? '110,190,255' : r.id === 'makam' ? '255,160,90' : '255,188,118';
       const g = x.createRadialGradient(cx0, cy0, 0, cx0, cy0, rad);
@@ -162,17 +162,6 @@
       ctx.moveTo(p[0][0], p[0][1] - up); ctx.lineTo(p[1][0], p[1][1] - up); ctx.lineTo(p[1][0], p[1][1]); ctx.lineTo(p[2][0], p[2][1]); ctx.lineTo(p[3][0], p[3][1]); ctx.lineTo(p[3][0], p[3][1] - up); ctx.closePath();
       ctx.fillStyle = grassColor(); ctx.fill(); ctx.restore();
     });
-    // bayat odalar: renksiz
-    Object.keys(s.stale).forEach(id => {
-      if (!s.stale[id]) return;
-      const r = W.roomById[id], p = W.roomPoly(r), up = 46;
-      ctx.save(); ctx.beginPath();
-      ctx.moveTo(p[0][0], p[0][1] - up); ctx.lineTo(p[1][0], p[1][1] - up); ctx.lineTo(p[1][0], p[1][1]); ctx.lineTo(p[2][0], p[2][1]); ctx.lineTo(p[3][0], p[3][1]); ctx.lineTo(p[3][0], p[3][1] - up); ctx.closePath();
-      ctx.clip(); ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, W.CW, W.CH);
-      ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(150,155,170,1)'; ctx.fillRect(0, 0, W.CW, W.CH);
-      ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = 'rgba(214,222,232,0.38)'; ctx.fillRect(0, 0, W.CW, W.CH);   // veri eski: oda sislenir
-      ctx.restore();
-    });
     // oda vurgusu
     Off.highlights().forEach(h => {
       const r = W.roomById[h.room]; if (!r) return;
@@ -273,7 +262,7 @@
         if (v.x < -90 || v.y < -40 || v.x > view.w + 90 || v.y > view.h + 40) return;
         const gri = Off.gri(r.id), stale = s.stale[r.id] && !gri, sel = s.sel === r.id || hoverRoom === r.id, acc = lighten(r.ac, 0.32);
         cx.globalAlpha = mode.room && r.id !== mode.room ? 1 - 0.68 * roomT : 1;
-        plate(v.x, v.y, Names.room(r.id, r.ad) + (stale ? ' · VERİ ESKİ' : ''), { size: fs, pad: fs < 9 ? 3 : 4, stripe: fs < 9 ? 3 : 4, bg: 'rgba(12,22,28,' + (sel ? '0.97' : '0.88') + ')', fg: stale ? '#ffd98a' : gri ? '#aab5b8' : '#eaf4f5', accent: stale ? '#f2b035' : gri ? '#6d777b' : acc, edge: sel ? 'rgba(255,255,255,.9)' : 'rgba(210,235,238,.28)', glow: sel ? acc : null, hatch: !!stale });
+        plate(v.x, v.y, Names.room(r.id, r.ad), { size: fs, pad: fs < 9 ? 3 : 4, stripe: fs < 9 ? 3 : 4, bg: 'rgba(12,22,28,' + (sel ? '0.97' : '0.88') + ')', fg: gri ? '#aab5b8' : '#eaf4f5', accent: stale ? '#d69a32' : gri ? '#6d777b' : acc, edge: sel ? 'rgba(255,255,255,.9)' : 'rgba(210,235,238,.28)', glow: sel ? acc : null });
         cx.globalAlpha = 1;
       });
     }

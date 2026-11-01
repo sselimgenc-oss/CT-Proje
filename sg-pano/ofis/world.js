@@ -310,6 +310,9 @@
     L(S.cooler(), 8, 4, { obj: 'lab.sebil' }); L(S.plant('tall'), 12, 6); L(S.cabinet('y'), 15, 6, { obj: 'lab.kayit_dolabi' }); L(S.board(), 17, 5, { obj: 'lab.pano' }); L(S.plant('small'), 13, 6);   // kapı boşlukları (y=4, x=11/14/17) açık
     /* --- KONTROL --- */
     [19, 20, 22, 23, 25].forEach((x, i) => { seats.kontrol.push(pod('kontrol', x, 4, 5, '#b9c4d2', 140 + i)); seats.kontrol.push(pod('kontrol', x, 7, 8, '#b9c4d2', 160 + i)); });
+    // Eleven emergency roster entries need eleven deterministic seats. Keep
+    // the doorway at (24, 4) clear; use the lower row for the extra seat.
+    seats.kontrol.push(pod('kontrol', 24, 7, 8, '#b9c4d2', 171));
     L(S.dice(), 18, 4, { obj: 'kontrol.zar' }); L(S.plant('tall'), 25, 6, { obj: 'kontrol.bitki1' });   // kapı boşlukları (21 ve 24, y=4) açık kalır
     seats.kontrol.forEach(sk => W.objects.push({ id: 'kontrol.masa', room: 'kontrol', e: sk.deskE }));
     /* --- ADAY --- */

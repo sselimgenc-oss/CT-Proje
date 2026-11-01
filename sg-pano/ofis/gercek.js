@@ -55,9 +55,11 @@
     d.secim = { surum: 'acil-leaderboard-only', tarih: date.slice(0, 10), kapi_tarihi: null, onaylandi: false, snapshot_id: s.snapshot_id };
     d.katlar = {
       havuz: { n: s.uygun_evren, masa: 0, zaman: z, esik_dk: ESIK_DK },
-      oda: { n: counts.ilk11, kapasite: KAPASITE.ilk11, masa: counts.ilk11, zaman: z, esik_dk: ESIK_DK },
-      kontrol: { n: counts.yedek11, masa: 0, zaman: z, esik_dk: ESIK_DK },
-      aday: { n: counts.paf, masa: counts.paf, zaman: z, esik_dk: ESIK_DK }
+      // n is roster size; masa is the number of seats/figures that can be shown.
+      // Keep the two distinct where PAF's roster exceeds its physical seating.
+      oda: { n: counts.ilk11, kapasite: KAPASITE.ilk11, masa: Math.min(counts.ilk11, 20), zaman: z, esik_dk: ESIK_DK },
+      kontrol: { n: counts.yedek11, kapasite: 11, masa: Math.min(counts.yedek11, 11), zaman: z, esik_dk: ESIK_DK },
+      aday: { n: counts.paf, kapasite: null, masa: Math.min(counts.paf, 8), zaman: z, esik_dk: ESIK_DK }
     };
     d.traderlar = rows;
     d.oda_sayilar.kapi = [['İlk11 rosterı', counts.ilk11], ['Yedekler', counts.yedek11], ['PAF', counts.paf]];
@@ -66,6 +68,9 @@
     ];
     d.kapi = { bugun_gecen_n: null, bugun_elenen_n: null, zaman: z, esik_dk: ESIK_DK };
     d.veri_kaynagi = { tur: 'ilk11-acil', etiket: 'ACİL · yalnız leaderboard rosterı · Pazar sonucu değil · Kapı-qualified değil', uyari: s.uyari, snapshot_id: s.snapshot_id };
+    // cevir() defaults to the normal pilot's hidden comparison room; the
+    // emergency snapshot is an explicit, visible 11/11/28 roster instead.
+    delete d.oda_durum.kontrol;
     return d;
   }
 

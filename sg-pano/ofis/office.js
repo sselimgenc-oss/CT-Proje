@@ -628,7 +628,9 @@
       case 'lab': lines.push('Havuz gölgede izleniyor: n=' + k.havuz.n + ' adres; ' + k.havuz.masa + ' masa görünür.'); break;
       case 'aday': lines.push('Aday katı: n=' + k.aday.n + ' (' + k.aday.masa + ' masa görünür).'); break;
       case 'oda': lines.push('Oda: ' + (k.oda.kapasite == null ? 'n=' + k.oda.n : k.oda.n + '/' + k.oda.kapasite) + ' trader' + (st.data.oda_durum ? '' : '; açık gölge işlemi ' + st.acik.length) + '.'); break;
-      case 'kontrol': lines.push('Kontrol: aynı havuzdan rastgele N=' + (st.kk.kollar[1] || {}).n + ' adres (sabit tohum).'); break;
+      case 'kontrol': lines.push(st.data.veri_kaynagi && st.data.veri_kaynagi.tur === 'ilk11-acil'
+        ? 'Yedekler: leaderboard snapshot rosterı, n=' + k.kontrol.n + '; kapı-qualified değildir.'
+        : 'Kontrol: aynı havuzdan rastgele N=' + (st.kk.kollar[1] || {}).n + ' adres (sabit tohum).'); break;
       case 'risk': lines.push('Risk tavanları: ' + st.risk.tavanlar.map(x => x.ad + ' %' + Math.round(x.kullanim / x.tavan * 100)).join(' · ')); break;
       case 'finans': lines.push(Off.KILIT ? 'Sanal kasa değeri ve eğrisi kilitli (hafta ' + st.kk.hafta + '/' + st.kk.hafta_toplam + ').' : 'Sanal kasa değeri: ' + (st.kasa.deger_usd == null ? 'bilinmiyor' : '$' + st.kasa.deger_usd.toLocaleString('tr-TR', { minimumFractionDigits: 2 })) + ' (hafta ' + st.kk.hafta + '/' + st.kk.hafta_toplam + ').'); break;
       case 'haberlesme': lines.push('Telegram bildirimi bugün: n=' + st.tg.bugun_n + '.'); break;

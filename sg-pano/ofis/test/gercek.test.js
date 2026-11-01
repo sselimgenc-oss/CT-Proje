@@ -109,6 +109,8 @@ ok('son.json varsa: 4 ham dosya, API çağrısı yok', istek2.length === 4 && !i
     adapted.traderlar.filter(t => t.kat === 'oda').length === 11 && adapted.traderlar.filter(t => t.kat === 'kontrol').length === 11 && adapted.traderlar.filter(t => t.kat === 'aday').length === 28);
   ok('snapshot preserves team-local click identities O01/K01/A01', ['O01', 'K01', 'A01'].every(id => adapted.traderlar.some(t => t.id === id)));
   ok('timestamp/counts and snapshot ID are source values', adapted.uretildi === snap.as_of && adapted.katlar.havuz.n === snap.provenance.eligible_count && adapted.secim.snapshot_id === snap.snapshot_id);
+  ok('emergency Yedekler are visible with 11 seats; room metadata separates roster from rendered seats', !adapted.oda_durum.kontrol && adapted.katlar.kontrol.n === 11 && adapted.katlar.kontrol.masa === 11 && adapted.katlar.kontrol.kapasite === 11);
+  ok('snapshot roster vs rendered seating is explicit for PAF and İlk11', adapted.katlar.aday.n === 28 && adapted.katlar.aday.masa === 8 && adapted.katlar.aday.kapasite === null && adapted.katlar.oda.n === 11 && adapted.katlar.oda.masa === 11 && adapted.katlar.oda.kapasite === 11);
   ok('score is hidden and emergency warning is carried to status data', adapted.traderlar.every(t => !('puan' in t)) && adapted.veri_kaynagi.tur === 'ilk11-acil' && adapted.veri_kaynagi.uyari.length === 3);
   ok('team rows make no Sunday or gate qualification claim', adapted.traderlar.every(t => /Kapı yeterliliği değil/.test(t.kat_olay.kural)) && /Pazar sonucu değil/.test(adapted.veri_kaynagi.etiket));
   const invalidTeam = JSON.parse(JSON.stringify(snap)); invalidTeam.kadro[0].takim = 'oda';

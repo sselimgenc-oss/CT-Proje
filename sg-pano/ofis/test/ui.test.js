@@ -321,8 +321,10 @@ const srv = http.createServer((q, r) => {
   ok('telefonda olaya dokununca çekmece kapanır, oda açılır', await pg.evaluate(() => document.getElementById('olayCekmece').hidden && OFIS.debug.mode.active));
   await ctx.close();
 
-  /* ---------- L. bayatlık: eşik veride, X dk önce, VERİ ESKİ, sis ---------- */
+  /* ---------- L. bayatlık: eşik veride, X dk önce, görünür oda ve durum rozeti ---------- */
   ({ ctx, pg } = await open());
+  const navState = await pg.evaluate(() => ({ nav: [...document.querySelectorAll('.ray summary')].map(x => x.textContent.trim()), room: !!OFIS.World.roomById.cay, button: !!document.querySelector('.ray [data-oda=cay]') }));
+  ok('Çay Ocağı üst gezinmede yok; dünya odası korunuyor', !navState.nav.includes('Çay Ocağı') && navState.room && !navState.button, JSON.stringify(navState));
   const bz = await pg.evaluate(() => { const d = OFIS.data, kay = []; Object.keys(d.oda_kaynak).forEach(r => d.oda_kaynak[r].forEach(p => { const a = p.split(':'), o = a[0] === 'veri_kalitesi' ? d.veri_kalitesi.find(x => x.anahtar === a[1]) : a[0] === 'katlar' ? d.katlar[a[1]] : d[a[0]]; if (!o || typeof o.esik_dk !== 'number') kay.push(p); })); return kay; });
   ok('her veri kaynağında esik_dk alanı var (koda sabit yazılmamış)', bz.length === 0, bz.join(','));
   await pg.evaluate(() => { OFIS.Office.state().speed = 0; });
@@ -338,7 +340,7 @@ const srv = http.createServer((q, r) => {
   await pg.evaluate(() => OFIS.Office.applyEvent(OFIS.data.olaylar.find(e => e.tur === 'veri_taze'))); await sleep(500);
   const fogB = await pg.evaluate(() => { const c = document.getElementById('tuval'), r = OFIS.World.roomById.lab, p = OFIS.World.roomPoly(r), v = OFIS.debug.toView((p[0][0] + p[2][0]) / 2, (p[0][1] + p[2][1]) / 2), x = c.getContext('2d').getImageData(Math.round(v.x * (c.width / OFIS.debug.view.w)), Math.round(v.y * (c.height / OFIS.debug.view.h)), 1, 1).data; return [x[0], x[1], x[2]]; });
   const sat = a => Math.max(...a) - Math.min(...a);
-  ok('bayat oda sislenir (renksizleşir); veri tazelenince renk döner', sat(fogA) < sat(fogB) || Math.abs(fogA[0] - fogB[0]) + Math.abs(fogA[2] - fogB[2]) > 20, JSON.stringify([fogA, fogB]));
+  ok('bayat oda renkli ve okunaklı kalır; VERİ ESKİ rozeti ile yaşı görünür', sat(fogA) > 25 && /VERİ ESKİ/.test(tx) && /dk önce/.test(tx), JSON.stringify({ eski: fogA, taze: fogB }));
   ok('veri_taze sonrası oda bayat değil', await pg.evaluate(() => !OFIS.Office.state().stale.lab));
   await ctx.close();
   // eşik veriden gelir: kasa eşiğini çok küçük yap → olay olmadan oda kendiliğinden bayatlar ve döngü o anda uyanır
