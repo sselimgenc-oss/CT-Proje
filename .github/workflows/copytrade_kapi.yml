@@ -21,8 +21,7 @@ on:
       - claude/kapi-duzeltme
     paths:
       - copytrade/kapi/CALISTIR
-  schedule:
-    - cron: "43 19 * * 0"
+  # Zamanlama durduruldu (kullanıcı kararı 2026-11-01: "projenin tüm run'larını, rutinleri durdur").
 
 permissions:
   contents: write

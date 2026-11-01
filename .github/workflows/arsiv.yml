@@ -1,9 +1,7 @@
 name: Hyperliquid arşivi
+# Zamanlama durduruldu (kullanıcı kararı 2026-11-01: "projenin tüm run'larını, rutinleri durdur" — izleme.yml'in
+# sürekli 150 dk zaman aşımına uğraması nedeniyle). Yeniden açmak için cron satırlarını geri ekleyin.
 on:
-  schedule:
-    - cron: "*/15 * * * *"
-    - cron: "7 * * * *"
-    - cron: "13 2 * * 0"
   workflow_dispatch:
 permissions: {contents: read}
 concurrency:

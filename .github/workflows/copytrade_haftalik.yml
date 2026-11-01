@@ -3,9 +3,8 @@ name: CT-Haftalık
 # Her Perşembe (etiket günü) ve elle. Önce `pilot_veri` arşivi R2'den okuyup üç girdiyi üretir (getiri, kapanmış işlem, risk), sonra haftalık rapor ve
 # geçiş kaydı `rotasyon/` altına yazılır (rotasyon içindir; kol bazında getiri yazılmaz). Aynı hafta yeniden koşmak yeni olay üretmez.
 # Hata yutulmaz: girdi üretilemezse koşu kırmızı biter.
+# Zamanlama durduruldu (kullanıcı kararı 2026-11-01: "projenin tüm run'larını, rutinleri durdur").
 on:
-  schedule:
-    - cron: "23 6 * * 4"
   workflow_dispatch:
     inputs:
       tarih:

@@ -1,8 +1,9 @@
 name: Copy trade saatlik izleme
 
+# Zamanlama durduruldu (kullanıcı kararı 2026-11-01: "projenin tüm run'larını, rutinleri durdur" — bu iş akışı
+# 2026-10-30 23:00'dan beri art arda 150 dk zaman aşımına uğruyor, durum.json güncellenmiyordu). Kök neden
+# bulunup düzeltilmeden zamanlamayı geri açmayın.
 on:
-  schedule:
-    - cron: "23 * * * *"
   workflow_dispatch:
 
 permissions:
