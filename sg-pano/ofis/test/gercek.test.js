@@ -4,6 +4,7 @@ const G = require('../gercek.js'), F = require('./fixture.js');
 let bad = 0;
 const ok = (n, c, x) => { if (!c) bad++; console.log((c ? 'OK   ' : 'FAIL ') + n + (x !== undefined && x !== '' ? ' → ' + x : '')); };
 const SIMDI = new Date('2026-10-29T12:00:00Z');
+const snapFile = require('../../../ilk11/acil_baslangic_leaderboard_only.json');
 
 /* ağaç: tek API çağrısı; en son seçim klasörü adla sıralanır ("<tarih>-v1.3" aynı günkü "<tarih>"ten sonra gelir) */
 const son = G.enSon(F.agac(['2026-10-27', '2026-10-28', '2026-10-28-v1.3'], ['2026-10-27', '2026-10-28']));
@@ -81,14 +82,14 @@ ok('kasa.gun_n: t0\'dan bu yana gün (hafta × 7 değil)', canli.kasa.gun_n === 
     if (url === G.HAM + 'copytrade/kapi/2026-10-28/durum.json') return yanit(F.durum);
     return { ok: false, status: 404, json: async () => ({}) };
   };
-  const g = await G.yukle(sahteFetch, { simdi: SIMDI });
+  const g = await G.yukleLegacy(sahteFetch, { simdi: SIMDI });
   ok('sözleşme: ağaç adresi git/trees/copytrade-kapi?recursive=1 (kimliksiz tek çağrı)', istek[1] === 'https://api.github.com/repos/sselimgenc-oss/sg-arge/git/trees/copytrade-kapi?recursive=1', istek[1]);
   ok('sözleşme: ham adresler raw.githubusercontent.com/…/copytrade-kapi/secim/<tarih>/secim.json ve copytrade/kapi/<tarih>/durum.json',
     istek[2] === 'https://raw.githubusercontent.com/sselimgenc-oss/sg-arge/copytrade-kapi/secim/2026-10-28/secim.json' && istek[3] === 'https://raw.githubusercontent.com/sselimgenc-oss/sg-arge/copytrade-kapi/copytrade/kapi/2026-10-28/durum.json', istek.join(' | '));
 ok('sözleşme: canlı izleme de okunur; yoksa sahte veriye düşmez', istek.length === 5 && istek[4] === G.IZLEME_HAM && g.traderlar.length === 9);
   /* son.json işaretçisi varsa API hiç çağrılmaz */
   const istek2 = [];
-  const g2 = await G.yukle(async (url) => {
+  const g2 = await G.yukleLegacy(async (url) => {
     istek2.push(url);
     const yanit = b => ({ ok: true, status: 200, json: async () => b });
     if (url === G.HAM + 'son.json') return yanit({ kapi: '2026-10-28', secim: '2026-10-28', uretildi: '2026-10-28T06:00:00Z' });
@@ -98,10 +99,40 @@ ok('sözleşme: canlı izleme de okunur; yoksa sahte veriye düşmez', istek.len
   }, { simdi: SIMDI });
 ok('son.json varsa: 4 ham dosya, API çağrısı yok', istek2.length === 4 && !istek2.some(u => /api\.github\.com/.test(u)) && g2.traderlar.length === 9, istek2.join(' | '));
   let hata = null;
-  try { await G.yukle(async () => ({ ok: false, status: 403, json: async () => ({}) }), { simdi: SIMDI }); } catch (e) { hata = e.message; }
+  try { await G.yukleLegacy(async () => ({ ok: false, status: 403, json: async () => ({}) }), { simdi: SIMDI }); } catch (e) { hata = e.message; }
   ok('API sınırı (403) → açık hata, sessiz örnek yok', /HTTP 403/.test(hata || ''), hata);
-  try { hata = null; await G.yukle(async () => ({ ok: true, status: 200, json: async () => ({ truncated: true, tree: [] }) }), { simdi: SIMDI }); } catch (e) { hata = e.message; }
+  try { hata = null; await G.yukleLegacy(async () => ({ ok: true, status: 200, json: async () => ({ truncated: true, tree: [] }) }), { simdi: SIMDI }); } catch (e) { hata = e.message; }
   ok('kesilmiş ağaç → açık hata', /truncated/.test(hata || ''), hata);
+
+  const snap = JSON.parse(JSON.stringify(snapFile)), adapted = await G.snapshotCevir(snap);
+  ok('emergency snapshot maps teams: İlk11→oda, Yedekler→kontrol, PAF→aday',
+    adapted.traderlar.filter(t => t.kat === 'oda').length === 11 && adapted.traderlar.filter(t => t.kat === 'kontrol').length === 11 && adapted.traderlar.filter(t => t.kat === 'aday').length === 28);
+  ok('snapshot preserves team-local click identities O01/K01/A01', ['O01', 'K01', 'A01'].every(id => adapted.traderlar.some(t => t.id === id)));
+  ok('timestamp/counts and snapshot ID are source values', adapted.uretildi === snap.as_of && adapted.katlar.havuz.n === snap.provenance.eligible_count && adapted.secim.snapshot_id === snap.snapshot_id);
+  ok('score is hidden and emergency warning is carried to status data', adapted.traderlar.every(t => !('puan' in t)) && adapted.veri_kaynagi.tur === 'ilk11-acil' && adapted.veri_kaynagi.uyari.length === 3);
+  ok('team rows make no Sunday or gate qualification claim', adapted.traderlar.every(t => /Kapı yeterliliği değil/.test(t.kat_olay.kural)) && /Pazar sonucu değil/.test(adapted.veri_kaynagi.etiket));
+  const invalidTeam = JSON.parse(JSON.stringify(snap)); invalidTeam.kadro[0].takim = 'oda';
+  try { hata = null; await G.snapshotCevir(invalidTeam); } catch (e) { hata = e.message; }
+  ok('invalid team enum fails visibly', /takım enum/.test(hata || ''), hata);
+  const invalidFlag = JSON.parse(JSON.stringify(snap)); invalidFlag.kapi_qualified = true;
+  try { hata = null; await G.snapshotCevir(invalidFlag); } catch (e) { hata = e.message; }
+  ok('gate-qualified claim fails visibly', /uyarı\/provenans/.test(hata || ''), hata);
+  const published = await G.yukle(async url => ({ ok: url === G.ILK11_SNAPSHOT_URL, status: 200, json: async () => snap }));
+  ok('published artifact URL loads emergency snapshot', published.veri_kaynagi.snapshot_id === snap.snapshot_id);
+
+  const notFound = async url => url === G.ILK11_SNAPSHOT_URL ? { ok: false, status: 404 } : await (async () => {
+    if (url === G.HAM + 'son.json') return { ok: false, status: 404 };
+    if (url === G.AGAC) return { ok: true, status: 200, json: async () => F.agac(['2026-10-28'], ['2026-10-28']) };
+    if (url === G.HAM + 'secim/2026-10-28/secim.json') return { ok: true, status: 200, json: async () => F.secim('2026-10-28', null) };
+    if (url === G.HAM + 'copytrade/kapi/2026-10-28/durum.json') return { ok: true, status: 200, json: async () => F.durum };
+    return { ok: false, status: 404 };
+  })();
+  const fallback = await G.yukle(notFound, { simdi: SIMDI });
+  ok('snapshot 404 only: visible legacy label', fallback.veri_kaynagi.tur === 'legacy' && /LEGACY/.test(fallback.veri_kaynagi.etiket));
+  try { hata = null; await G.yukle(async () => ({ ok: false, status: 500 }), { simdi: SIMDI }); } catch (e) { hata = e.message; }
+  ok('snapshot 500 never falls back to stale legacy data', /HTTP 500/.test(hata || ''), hata);
+  try { hata = null; await G.yukle(async () => ({ ok: true, status: 200, json: async () => ({ sema: 'broken' }) }), { simdi: SIMDI }); } catch (e) { hata = e.message; }
+  ok('malformed published snapshot never falls back', /şeması/.test(hata || ''), hata);
   console.log(bad ? '\n' + bad + ' test başarısız' : '\nhepsi geçti');
   process.exit(bad ? 1 : 0);
 })();

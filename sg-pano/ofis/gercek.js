@@ -11,9 +11,63 @@
   const AGAC = 'https://api.github.com/repos/' + REPO + '/git/trees/' + DAL + '?recursive=1';   // kimliksiz API: tek çağrı
   const HAM = 'https://raw.githubusercontent.com/' + REPO + '/' + DAL + '/';
   const IZLEME_HAM = 'https://raw.githubusercontent.com/' + REPO + '/' + IZLEME_DALI + '/izleme/durum.json';
+  // Publish the validated artifact at ../veri/ilk11/son.json (sg-pano/veri/ilk11/son.json).
+  // Deployments may pin another published endpoint with window.OFIS_ILK11_SNAPSHOT_URL.
+  const ILK11_SNAPSHOT_URL = '../veri/ilk11/son.json';
   const ESIK_DK = 7 * 1440;                                   // seçim ve kapı haftalık/günlük üretilir: bir haftadan eskiyse VERİ ESKİ
   const GRI = 'sanal izleme başlamadı';
   const TARIH = /^\d{4}-\d{2}-\d{2}/;
+  const TAKIM = { ilk11: 'oda', yedek11: 'kontrol', paf: 'aday' };
+  const KAPASITE = { ilk11: 11, yedek11: 11, paf: 28 };
+
+  function snapshotKontrol(s) {
+    if (!s || s.sema !== 'ilk11-acil-baslangic-leaderboard-only-v1' || s.snapshot_turu !== 'acil_baslangic_leaderboard_only' || !Array.isArray(s.kadro) || s.kadro.length !== 50) throw new Error('Acil İlk11 snapshot şeması/kadro boyutu geçersiz');
+    if (!/^([0-9a-f]{64})$/.test(String(s.snapshot_id || ''))) throw new Error('İlk11 snapshot_id geçersiz');
+    if (!s.as_of || isNaN(Date.parse(s.as_of)) || s.kapi_qualified !== false || s.kapidan_gecti_iddiasi !== false || s.normal_pazar_snapshoti !== false ||
+        !Array.isArray(s.uyari) || !s.uyari.some(x => /acil/i.test(x) && /Kapı-qualified değildir/i.test(x)) ||
+        !s.provenance || s.provenance.source_kind !== 'Hyperliquid public leaderboard download') throw new Error('Acil İlk11 snapshot zamanı/uyarı/provenans geçersiz');
+    const ids = new Set(), counts = { ilk11: 0, yedek11: 0, paf: 0 };
+    s.kadro.forEach(m => {
+      if (!m || typeof m.id !== 'string' || !/^0x[0-9a-f]{40}$/i.test(m.id) || ids.has(m.id) || !m.alanlar || !m.alan_kaynagi) throw new Error('İlk11 snapshot kadro kimliği/alanları geçersiz veya tekrarlı');
+      ids.add(m.id);
+      const team = m.takim;
+      if (typeof team !== 'string' || !Object.prototype.hasOwnProperty.call(KAPASITE, team)) throw new Error('İlk11 snapshot takım enum değeri geçersiz');
+      counts[team]++;
+    });
+    Object.keys(KAPASITE).forEach(k => { if (counts[k] !== KAPASITE[k]) throw new Error('İlk11 snapshot takım dağılımı 11/11/28 değil'); });
+    return { counts: counts };
+  }
+  async function snapshotCevir(s) {
+    const checked = snapshotKontrol(s), counts = checked.counts;
+    const date = s.as_of, z = date;
+    const localSira = { ilk11: 0, yedek11: 0, paf: 0 };
+    const rows = s.kadro.map(m => {
+      const team = m.takim, kat = TAKIM[team], id = String(m.id);
+      localSira[team]++;
+      return { id: (team === 'ilk11' ? 'O' : team === 'yedek11' ? 'K' : 'A') + String(localSira[team]).padStart(2, '0'), adres: kisa(id), takma_ad: id.slice(2, 6), kat,
+        kol: kat === 'oda' ? 'kohort' : 'havuz', tarz: null, etiket: date.slice(0, 10), gun: null, islem_n: null, sira: null,
+        medyan_kaldirac: null, en_yuksek_kaldirac: null, genc_aday: false,
+        kat_olay: { id: 'ilk11-' + s.snapshot_id.slice(0, 12) + '-' + id, kural: 'Acil leaderboard rosterı · ' + team + ' (Kapı yeterliliği değil)', zaman: z } };
+    });
+    const d = cevir({ tarih: date.slice(0, 10), secim_surumu: 'acil-leaderboard-only', adresler: {}, sayilar: {} }, null, { simdi: new Date(date), kapiTarihi: null });
+    d.uretildi = date;
+    d.kaynak = 'Acil leaderboard-only rosterı · snapshot ' + s.snapshot_id;
+    d.secim = { surum: 'acil-leaderboard-only', tarih: date.slice(0, 10), kapi_tarihi: null, onaylandi: false, snapshot_id: s.snapshot_id };
+    d.katlar = {
+      havuz: { n: s.uygun_evren, masa: 0, zaman: z, esik_dk: ESIK_DK },
+      oda: { n: counts.ilk11, kapasite: KAPASITE.ilk11, masa: counts.ilk11, zaman: z, esik_dk: ESIK_DK },
+      kontrol: { n: counts.yedek11, masa: 0, zaman: z, esik_dk: ESIK_DK },
+      aday: { n: counts.paf, masa: counts.paf, zaman: z, esik_dk: ESIK_DK }
+    };
+    d.traderlar = rows;
+    d.oda_sayilar.kapi = [['İlk11 rosterı', counts.ilk11], ['Yedekler', counts.yedek11], ['PAF', counts.paf]];
+    d.kohort_kontrol.kollar = [
+      { ad: 'İlk11 (oda)', n: counts.ilk11 }, { ad: 'Yedekler (kontrol)', n: counts.yedek11 }, { ad: 'PAF (aday)', n: counts.paf }
+    ];
+    d.kapi = { bugun_gecen_n: null, bugun_elenen_n: null, zaman: z, esik_dk: ESIK_DK };
+    d.veri_kaynagi = { tur: 'ilk11-acil', etiket: 'ACİL · yalnız leaderboard rosterı · Pazar sonucu değil · Kapı-qualified değil', uyari: s.uyari, snapshot_id: s.snapshot_id };
+    return d;
+  }
 
   /* ağaç (GitHub git/trees yanıtı ya da yol listesi) → en son seçim klasörü ve kapı tarihleri */
   function enSon(agac) {
@@ -132,12 +186,13 @@
       },
       oda_durum: onaylandi ? {} : { lab: { gri: true, metin: GRI }, finans: { gri: true, metin: GRI }, risk: { gri: true, metin: GRI }, kontrol: { gizli: true } },
       oda_kaynak: { lab: ['veri_kalitesi:lab'], aday: ['katlar:aday'], oda: ['katlar:oda'], kontrol: ['kohort_kontrol'], finans: ['kasa', 'kohort_kontrol'], risk: ['risk'], tarama: ['veri_kalitesi:tarama', 'tarama'], kapi: ['kapi'], sekreterlik: ['kohort_kontrol'] },
-      ekran_kaynak: { 'tarama.tv': 'tarama', 'aday.tv': 'katlar:aday' }
+      ekran_kaynak: { 'tarama.tv': 'tarama', 'aday.tv': 'katlar:aday' },
+      veri_kaynagi: { tur: 'legacy', etiket: 'LEGACY · eski seçim verisi' }
     };
   }
 
   /* ağ: (0) son.json işaretçisi (varsa yalnız ham dosyalar: API yok), yoksa (1) ağaç — tek API çağrısı; (2) secim.json, (3) durum.json. fetchFn: fetch uyumlu. */
-  async function yukle(fetchFn, opt) {
+  async function yukleLegacy(fetchFn, opt) {
     opt = opt || {};
     const oku = async url => { const r = await fetchFn(url, { cache: 'no-store' }); if (!r.ok) throw new Error(url.replace(/^https:\/\/[^/]+\//, '') + ' → HTTP ' + r.status); return r.json(); };
     let sonJ = null;
@@ -159,5 +214,20 @@
     return cevir(secim, durum, { simdi: opt.simdi, kapiTarihi: kt, izleme: izleme });
   }
 
-  return { AGAC: AGAC, HAM: HAM, IZLEME_HAM: IZLEME_HAM, GRI: GRI, enSon: enSon, kapiTarihi: kapiTarihi, cevir: cevir, yukle: yukle };
+  async function yukle(fetchFn, opt) {
+    opt = opt || {};
+    const url = opt.snapshotUrl || (typeof window !== 'undefined' && window.OFIS_ILK11_SNAPSHOT_URL) || ILK11_SNAPSHOT_URL;
+    const response = await fetchFn(url, { cache: 'no-store' });
+    if (response.status === 404) {
+      const legacy = await yukleLegacy(fetchFn, opt);
+      legacy.veri_kaynagi = { tur: 'legacy', etiket: 'LEGACY · İlk11 snapshotı yayımlanmamış (404)' };
+      return legacy;
+    }
+    if (!response.ok) throw new Error('İlk11 snapshot → HTTP ' + response.status);
+    let snapshot;
+    try { snapshot = await response.json(); } catch (_) { throw new Error('İlk11 snapshot JSON okunamadı'); }
+    return snapshotCevir(snapshot);
+  }
+
+  return { AGAC: AGAC, HAM: HAM, IZLEME_HAM: IZLEME_HAM, ILK11_SNAPSHOT_URL: ILK11_SNAPSHOT_URL, GRI: GRI, enSon: enSon, kapiTarihi: kapiTarihi, cevir: cevir, snapshotKontrol: snapshotKontrol, snapshotCevir: snapshotCevir, yukleLegacy: yukleLegacy, yukle: yukle };
 });

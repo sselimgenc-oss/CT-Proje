@@ -1,0 +1,2005 @@
+{
+  "as_of": "2026-11-01T20:28:07Z",
+  "created_at_utc": "2026-11-01T20:28:07Z",
+  "kadro": [
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1805.0,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.4876441516,
+        "hesap": 903000.0,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xe0371261b53e70d63e680899c83c0072ef60f63d",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.61229714974209,
+      "takim": "ilk11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1805.0,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.4754901961,
+        "hesap": 5418000.0,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xdcda2478f8f4f16fe13335f7b2795e2ce3520176",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.6001599103439,
+      "takim": "ilk11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1.59431236,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.3401523821,
+        "hesap": 505986.174055,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xfeec88b13fc0be31695069f02bac18538a154e9c",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.596926266270664,
+      "takim": "ilk11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 32.2328,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 32.2328,
+        "hesap": 764240.335157,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xbf300fbb0101db2ef5435af8eb4e2873554e162d",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.58797837445156,
+      "takim": "ilk11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.9424944805,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.502413025,
+        "hesap": 736879.099011,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xf899937184168b1d9dee75acbaa3fef0f52888db",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.58323864957708,
+      "takim": "ilk11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1.1978884252,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.4466366515,
+        "hesap": 1226888.600709,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xf215c807672f168f6894bb2f5154000de11b4d85",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.57748010533707,
+      "takim": "ilk11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1.3935390441,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.3104053651,
+        "hesap": 2935414.574492,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xfb1898bb5955fdd11704e397104c6a0e0725eb17",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.5622421113481,
+      "takim": "ilk11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1829.0,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.4546899841,
+        "hesap": 1830000.0,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xbfce143acf73a34a1f8b2e2da64736146035c732",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.52410282988153,
+      "takim": "ilk11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1.6704092185,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.3154824842,
+        "hesap": 1277363.220153,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xe091330c53b971ed4e886f902f18e8544a8d6705",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.514667676626736,
+      "takim": "ilk11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.555669802,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.4493541533,
+        "hesap": 520822.559924,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xf3365305d3fe902b4b916ed7785b3751cf40e3a8",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.44959612671455,
+      "takim": "ilk11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.7299680406,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.3442461666,
+        "hesap": 901394.150993,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xe896b67ad5c2d59a88f6be38900c5489d268f9ed",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.44498929132254,
+      "takim": "ilk11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1.9504738893,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.2985498656,
+        "hesap": 1196250.99847,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.44197712972007,
+      "takim": "yedek11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1.3189374312,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.2204098314,
+        "hesap": 2173649.921774,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xe4d1fa7e6141f9131345117bdb8b5701bca67662",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.4294412218745,
+      "takim": "yedek11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.4494530682,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.460540884,
+        "hesap": 1168844.845816,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xfeb63b9e4a871b644816d94a1d19517a87ce5fa0",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.427447879637576,
+      "takim": "yedek11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1.4999227469,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.1881876543,
+        "hesap": 608509.83919,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xed62616a7c1dd354801f4e72389299a81493e004",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.41606368064,
+      "takim": "yedek11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 2.3674161334,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.7347541005,
+        "hesap": 1633500.189888,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0x83ffcfb1f2ad843c474b2e28df86c721cb869d3a",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.4015344305575,
+      "takim": "yedek11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 2.0286188602,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.720765226,
+        "hesap": 553913.455316,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0x8301b74387162c8190b468a07aa97aa85cbc3e3f",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.39196638782024,
+      "takim": "yedek11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.8571820266,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.2412919511,
+        "hesap": 1746312.855751,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xdfe5195e7cc1a2eca9b0df09d4646472a8c4a402",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.38332857146021,
+      "takim": "yedek11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 5.9831603552,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 5.6231234394,
+        "hesap": 50914936.8838,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0x659ddde484fd9dc313917d5de92a52b6a74a9d63",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.3687107283894,
+      "takim": "yedek11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.8736709431,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.3141818059,
+        "hesap": 790036.251481,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xc05b532d9b4eff8c140ad5477dc87d5803b98951",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.367204647588174,
+      "takim": "yedek11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.676949512,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.2768756787,
+        "hesap": 736503.200627,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xdf52df044f1b150dfa79590909cdac6ad83d59fc",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.36405959650324,
+      "takim": "yedek11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.7698711929,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 1.3948707242,
+        "hesap": 707540.692635,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0x968091651f2ed9a3556b61d03e7ade6d17c5bd95",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.35599763456722,
+      "takim": "yedek11"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 157.9375,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 49.89,
+        "hesap": 768931.667248,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0x58e1b0e63c905d5982324fcd9108582623b8132e",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.34483491804041,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.4719735047,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.3076622522,
+        "hesap": 1143475.474279,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xf03176787e391f759c0623f7007c89e7470ac936",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.34399328465149,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1.0887778017,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.3092888955,
+        "hesap": 824273.17008,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xa7426f2c5b90a81bfa7f8e3570fe0e745a97e390",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.33517828231485,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1.0516576358,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.3579463458,
+        "hesap": 974763.53674,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0x9e3787f9f7f0ff7eea9e36628beca431b61ae647",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.335045392832384,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.4725071172,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.3901153952,
+        "hesap": 1286600.9365939999,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xd93db9fc95c19c1eaab854281890e9e77b18ae3f",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.328888180144986,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.7978333518,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.8517131348,
+        "hesap": 815595.652168,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0x8bd30fc805e672e1d978138ecbedcb48479ce275",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.32472430969451,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.6978433755,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.1763981507,
+        "hesap": 35215763.726194,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xfc27136e42af1732ddc9ce2605ea9bff1b959d9d",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.322288002516046,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.7250213607,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.4447868911,
+        "hesap": 518327.667619,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0x9f99eae212a63c0d7d29902b0c6858d1e5eb2da8",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.302354580146755,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1.5153198461,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.25397393,
+        "hesap": 1050834.343724,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0x9c16bc8f1104e4d2f72267eb981fa12de7cc4a6f",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.299165232567674,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.5541355771,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.4646647761,
+        "hesap": 658366.94119,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xb1839ea781ed5574801dd6460cf634d81ad06844",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.29912093607352,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.604852717,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.2141289289,
+        "hesap": 1857024.198065,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xe31501c472d557bfa145ce105d325fb2dd4cb867",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.29128045660826,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.8889791551,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.2026746915,
+        "hesap": 1617857.93857,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xc5f033a47dde827133850ced50009c3802c989ba",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.2894200038538,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1.9520512719,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.4768077089,
+        "hesap": 603487.117942,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0x62f87be0f6c6145e809b852b1f7d3ab84975e7ac",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.286142063286405,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.677452187,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.2213036367,
+        "hesap": 8293296.847792001,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xd4c1f7e8d876c4749228d515473d36f919583d1d",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.28609776679225,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.3309820225,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.3309820225,
+        "hesap": 995855.668501,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xf54ac7966dad594dc4952b3eccc8f77cd77fde92",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.2810479664587,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.6634034062,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.3439092337,
+        "hesap": 2360364.104604,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xab81fef97356d57cd30f8ceb15285b988682c608",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.27896603123346,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.6051735108,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.4572181595,
+        "hesap": 1023177.705976,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xa23190045c4aebeb724844ce622465475e539bae",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.275688090666065,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1.3775117945,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.2016937032,
+        "hesap": 594637.158241,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xaa52715cd19cf8b9fcd57cc3899aae4e1fe88c48",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.27285311504021,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.7853175174,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.1609760372,
+        "hesap": 1051951.583777,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xe886c5afa152cb3ce0477441e04e1500796cd190",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.267714721718356,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.6869390427,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.6869390427,
+        "hesap": 674771.568441,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0x84e835ffbc14b8628e0d2d8d35a1b204bb7c7537",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.26638582689373,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1.4956819227,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.1714870144,
+        "hesap": 5964087.346405,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xba5d9cc840745aeeeeedac5712e32f13ab8ea352",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.26186758449003,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.7119346444,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.8938825746,
+        "hesap": 569426.963204,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0x7798b5b995b2a17c1c42f71730c25eb6844cb326",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.258013789498634,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1.5468867694,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.2744322419,
+        "hesap": 2800565.333807,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0x8328446602cb4c3b2b4a25beca6488e947b6f54a",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.25557748232017,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 1.3723561541,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.1600088446,
+        "hesap": 673348.127569,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xc4643e390f49d1616b5108bf0eac309f7c0eb868",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.25469155243709,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.9891927058,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.1978857549,
+        "hesap": 2149160.713536,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xb0dca8d7a78d6e4c37134bab5f2ae1d5268fdfb1",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.24747122388999,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.665330761,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.1562743883,
+        "hesap": 871100.701365,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xf324004d164c75a4cea6fd90a6dab98d1fd88af0",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.24543358515891,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.69675324,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.1455837084,
+        "hesap": 31986405.905801,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0xfe7ce058edc7cfcde9ef8262ba51f8d4796ab7ae",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.240029412872126,
+      "takim": "paf"
+    },
+    {
+      "alan_kaynagi": {
+        "ay_roi": "Hyperliquid leaderboardRows.windowPerformances[month].roi",
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": "Hyperliquid leaderboardRows.windowPerformances[week].roi",
+        "hesap": "Hyperliquid leaderboardRows.accountValue",
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "alanlar": {
+        "ay_roi": 0.6545830057,
+        "dusus": null,
+        "golge": null,
+        "hafta_roi": 0.3968434995,
+        "hesap": 8519200.903995,
+        "kaldirac": null,
+        "kazanma": null,
+        "siklik": null,
+        "tutarli": null,
+        "tutma": null
+      },
+      "id": "0x92cbb22a9b9fc01da9914c9b39ed904dd61b859c",
+      "missing_field_score_default": 35.0,
+      "missing_fields": [
+        "golge",
+        "dusus",
+        "kazanma",
+        "siklik",
+        "tutma",
+        "kaldirac",
+        "tutarli"
+      ],
+      "puan": 47.236972954775496,
+      "takim": "paf"
+    }
+  ],
+  "kapi_qualified": false,
+  "kapidan_gecti_iddiasi": false,
+  "normal_pazar_snapshoti": false,
+  "provenance": {
+    "available_score_inputs": [
+      "ay_roi",
+      "hafta_roi",
+      "hesap"
+    ],
+    "eligible_count": 44265,
+    "eligible_filter": "valid 0x + 40 hex address; finite accountValue > 0; finite week ROI and month ROI; first unique address wins",
+    "excluded_counts": {
+      "duplicate_address": 0,
+      "invalid_address": 0,
+      "missing_week_or_month": 0,
+      "nonpositive_or_invalid_account": 3948
+    },
+    "input_row_count": 48213,
+    "missing_input_policy": "copytrade.ilk11.EKSİK_ALAN_PUANI = 35 per missing field",
+    "missing_score_inputs": [
+      "golge",
+      "dusus",
+      "kazanma",
+      "siklik",
+      "tutma",
+      "kaldirac",
+      "tutarli"
+    ],
+    "public_source_endpoint": "https://api.hyperliquid.xyz/info (public info API)",
+    "score_method": "copytrade.ilk11.ilk_kadro Phase1 percentile weighted scoring; no gate filters or fabricated fields",
+    "source_file": "/tmp/hl_leaderboard.json",
+    "source_kind": "Hyperliquid public leaderboard download",
+    "source_sha256": "2c5ea9e04fc30a78e0f1ab0be4bab5820cbf1a64a393877681b54e3d77c8617b"
+  },
+  "secim_adedi": 50,
+  "sema": "ilk11-acil-baslangic-leaderboard-only-v1",
+  "snapshot_id": "1d92dd25aa9cc6868f60a313f8434b4d9fbb33e24cbef70d05f8f3e555146f17",
+  "snapshot_turu": "acil_baslangic_leaderboard_only",
+  "takim_sayilari": {
+    "ilk11": 11,
+    "paf": 28,
+    "yedek11": 11
+  },
+  "uyari": [
+    "Bu, anlık acil başlangıç rosterıdır; normal Pazar 13:00 sonucu değildir ve Kapı-qualified değildir.",
+    "Kaynak yalnız Hyperliquid public leaderboard verisidir. K1/K5-K10 ölçümleri yoktur; eksik alanlarda Phase1 varsayılan puanı 35 uygulanır.",
+    "Leaderboard performans verisi kapı, uygunluk onayı veya PAPER işlem geçmişi kanıtı değildir."
+  ],
+  "uygun_evren": 44265
+}

@@ -15,6 +15,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .atla:focus { left: 8px; top: 8px; }
 .mono { font-family: var(--mono); }
 .hata { margin: 0; padding: 10px 14px; background: #4a1a14; color: #ffd8d0; }
+.veri-kaynak { margin: 0; padding: 4px 12px; background: #14252b; color: #b8d5da; font-size: 11px; }
+.veri-kaynak.legacy { background: #49371b; color: #ffe1a6; }
 
 /* kabuk: sol dikey menü + özet paneli + ofis */
 .kabuk { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 142px minmax(0, 1fr); }

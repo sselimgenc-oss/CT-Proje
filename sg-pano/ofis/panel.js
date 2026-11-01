@@ -132,13 +132,17 @@
     const ornek = P.ornekMi(), gri = Object.keys(O.data.oda_durum || {}).filter(x => (O.data.oda_durum[x] || {}).gri).map(ODA_AD);
     $('#ofisAciklama').textContent = ornek
       ? 'Örnek veriyle çalışan izometrik ofis: 14 oda; Lab, Aday, Oda ve Kontrol masalarında trader figürleri oturur. Havuz ' + k.havuz.n + ', aday ' + k.aday.n + ', oda ' + k.oda.n + '/' + k.oda.kapasite + '. Açık gölge işlemi ' + st.acik.length + '. Risk alarmı ' + (st.alarm ? 'açık' : 'yok') + '. Bayat oda: ' + (ac.length ? ac.join(', ') : 'yok') + '.'
-      : 'Veri dalındaki seçim ve kapı durumuyla çalışan izometrik ofis (onaylanmamış ön izleme): Aday ve Oda masalarında gerçek trader figürleri oturur. Havuz ' + k.havuz.n + ', aday ' + k.aday.n + ', oda ' + k.oda.n + '. Paper izleme başlamadı; henüz verisi olmayan odalar gri: ' + (gri.length ? gri.join(', ') : 'yok') + '.';
+      : O.data.veri_kaynagi && O.data.veri_kaynagi.tur === 'ilk11-acil'
+        ? 'Acil leaderboard rosterıyla çalışan ofis; bu normal Pazar sonucu veya Kapı yeterlilik kararı değildir. İlk11, yedekler ve PAF takımları yalnız anlık leaderboard sıralamasını gösterir. Paper izleme başlamadı.'
+        : 'Veri dalındaki seçim ve kapı durumuyla çalışan izometrik ofis (onaylanmamış ön izleme): Aday ve Oda masalarında gerçek trader figürleri oturur. Havuz ' + k.havuz.n + ', aday ' + k.aday.n + ', oda ' + k.oda.n + '. Paper izleme başlamadı; henüz verisi olmayan odalar gri: ' + (gri.length ? gri.join(', ') : 'yok') + '.';
   }
   function top() {
     const ornek = P.ornekMi(), d = O.data, sc = d.secim;
     $('#ornekFlt').hidden = !ornek;
     $('#onizlemeFlt').hidden = ornek || !sc;
-    if (sc) $('#onizlemeMetin').textContent = 'Seçim ' + sc.surum + (sc.onaylandi ? ' — pilot, hafta ' + st.kk.hafta + '/' + st.kk.hafta_toplam : ' — veri yok') + ' (' + sc.tarih + ')';
+    if (sc) $('#onizlemeMetin').textContent = d.veri_kaynagi && d.veri_kaynagi.tur === 'ilk11-acil'
+      ? 'ACİL leaderboard-only roster · Kapı-qualified değil · ' + sc.tarih
+      : 'Seçim ' + sc.surum + (sc.onaylandi ? ' — pilot, hafta ' + st.kk.hafta + '/' + st.kk.hafta_toplam : ' — veri yok') + ' (' + sc.tarih + ')';
     Object.keys(d.oda_durum || {}).forEach(id => { if (d.oda_durum[id].gizli) document.querySelectorAll('.ray [data-oda=' + id + ']').forEach(b => { b.hidden = true; }); });   // gizli oda sol menüde de yok
     const lk = $('#lejKontrol'); if (lk) lk.hidden = false;
     const an = $('#altNot'); if (an && ornek) an.innerHTML = 'Bu sayfa <b>örnek veriyle</b> çalışır (<code>?durum=ornek</code>); adresler uydurmadır.';

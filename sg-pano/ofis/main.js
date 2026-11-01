@@ -695,6 +695,12 @@
     Off.init(data, { reduced: reduced, speed: parseFloat(qs.get('hiz')) || 1 });
     if (O.Dialogue) O.Dialogue.init(Off);
     window.OFIS.data = data;
+    if (data.veri_kaynagi) {
+      const badge = $('#veriKaynak');
+      badge.hidden = false;
+      badge.textContent = data.veri_kaynagi.etiket + (data.veri_kaynagi.snapshot_id ? ' · ' + data.veri_kaynagi.snapshot_id.slice(0, 12) : '');
+      badge.classList.toggle('legacy', data.veri_kaynagi.tur === 'legacy');
+    }
     updateLight(); resize();
     new ResizeObserver(() => { resize(); kick(); }).observe($('#ofisTuval'));
     Off.on(() => kick());                      // durum her değiştiğinde (dışarıdan gelen olay dâhil) döngü uyanır

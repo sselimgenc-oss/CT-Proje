@@ -118,3 +118,10 @@ Kaynak (varsayılan; `?durum` yoksa): `sg-arge` veri dalı `copytrade-kapi`.
 Yeni alanlar (yalnız ekleme, `surum` hâlâ 1): `oda_durum: {oda: {gri, metin} | {gizli}}` — `gri` oda gri çizilir, köşede metin ("sanal izleme başlamadı") yazar, bilgi kutusu aynı metni söyler, sol panel kartı sayı yerine bu metni gösterir; `gizli` oda (kontrol) ofiste çizilmez, tıklanamaz, sol menüde yoktur. `oda_sayilar: {oda: [[ad, değer], …]}` oda bilgisi satırı. `secim`.
 Gerçek veride: **kasa, özet, risk, telegram, kapanan işlem, olaylar boştur**; Lab, Finans, Risk gri; "örnek" rozetleri yoktur. Körlük: kâr/zarar, kol karşılaştırması, puan hiçbir yerde yer almaz.
 **Açık işlemler** istisnadır: seçim etiketi onaylıysa (`secim.onaylandi`), yalnız Oda üyelerinin (`kollar` içinde `oda`) `copytrade-izleme/izleme/durum.json`'daki `pozisyonlar[]` listesinden gelir (`coin`, `yon`, `kaldirac`, `kz_usd`, `yas_dk`: açılıştan veri üretim anına kadar). Kaynakta olmayan `kz_yuzde`, `lik_uzaklik`, `teminat_usd` uydurulmaz, `null` kalır (panelde "bilinmiyor").
+
+## 10. Acil leaderboard-only İlk11 snapshotı
+Varsayılan yayın yolu, ofis sayfasına göre `../veri/ilk11/son.json` (`sg-pano/veri/ilk11/son.json`). Yayın ortamı `window.OFIS_ILK11_SNAPSHOT_URL` ile aynı sözleşmeye uygun, yayımlanmış JSON adresi verebilir. Kaynak `ilk11/acil_baslangic_leaderboard_only.json`; kaynak türü `acil_baslangic_leaderboard_only` ve `snapshot_id` alanı görünür biçimde korunur.
+
+Bu snapshot yalnız Hyperliquid public leaderboard verisinden türetilmiş acil başlangıç rosterıdır. Normal Pazar 13:00 sonucu değildir, Kapı-qualified değildir ve Kapı geçişi iddiası taşımaz. Eksik K1/K5-K10 alanları ile Phase1 varsayılan puanı uyarıları `veri_kaynagi.uyari` içinde korunur. Puan ofise taşınmaz; `takim` alanı yalnız roster yerleşimini belirler (İlk11→oda, Yedekler→kontrol, PAF→aday), uygunluk veya Kapı kararı değildir.
+
+Yalnız endpoint HTTP 404 döndürürse eski seçim uyarlayıcısı çalışır ve üstte `LEGACY` etiketi görünür. Diğer HTTP hataları ve bozuk JSON/şema/takım/uyarı verileri ofis hata bandında açıkça gösterilir; eski veriyle gizli devam edilmez. Test: `node ofis/test/gercek.test.js`.
