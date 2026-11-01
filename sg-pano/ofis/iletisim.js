@@ -140,14 +140,19 @@
       return;
     }
     if (e.tur === 'kirmizi_bayrak') {
-      const tid = e.trader, n = notes[tid] = { e: e, shown: false }, tt = traderSeatTile(st, tid);
-      const arrive = () => { n.shown = true; fire([{ k: 'not', a: 'denetim', b: 'seat:' + tid, warn: true }]); };
-      if (!tt || !Off.courier('denetim', adjFree(tt[0], tt[1]), 'bayrakNot', arrive)) { n.shown = true; fire([{ k: 'not', a: 'denetim', b: 'seat:' + tid, warn: true }]); }
+      const tid = e.trader, n = notes[tid] = { e: e, shown: true }, tt = traderSeatTile(st, tid);
+      // Kırmızı bayrak durumu kritiktir: ziyaret/yürüme kuyruğu taşıyıcıyı meşgul
+      // edebilir. Notu olayla aynı anda göster; kurye yalnızca görsel geri bildirimdir.
+      const delivered = () => fire([{ k: 'not', a: 'denetim', b: 'seat:' + tid, warn: true }]);
+      if (!tt || !Off.courier('denetim', adjFree(tt[0], tt[1]), 'bayrakNot', delivered)) delivered();
       return;
     }
     if (e.tur === 'bayrak_kalkti') {
-      const tid = e.trader, tt = traderSeatTile(st, tid), drop = () => { delete notes[tid]; fire([{ k: 'ok', a: 'seat:' + tid, b: 'denetim' }]); };
-      if (!tt || !notes[tid] || !Off.courier('denetim', adjFree(tt[0], tt[1]), null, drop)) drop();
+      const tid = e.trader, tt = traderSeatTile(st, tid);
+      // Kaldırma da olayla aynı anda geçerlidir; animasyon kuyruğu notu tutamaz.
+      delete notes[tid];
+      const drop = () => fire([{ k: 'ok', a: 'seat:' + tid, b: 'denetim' }]);
+      if (!tt || !Off.courier('denetim', adjFree(tt[0], tt[1]), null, drop)) drop();
       return;
     }
     const f = MAP[e.tur]; if (f) fire(f(e, st));

@@ -1,5 +1,4 @@
-/* Ofis · durum, aktörler, olay motoru, efektler, duvar ekranları.
-   Kural: her hareket bir olaydan doğar. Boşta sahte hareket yok (çaycı yürüyüşü ve ağaç sallanması kaldırıldı). */
+/* Ofis · durum, aktörler, olay motoru, efektler, duvar ekranları. */
 (function () {
   'use strict';
   const O = window.OFIS, W = O.World, S = O.S, HW = O.HW, HH = O.HH;
@@ -80,7 +79,7 @@
     st = {
       data: data, initial: clone(data), loadMs: Date.now(), simT: 0, evIdx: 0, speed: opt.speed || 1, turn: 0,
       traders: {}, actors: [], actorById: {}, katlar: clone(data.katlar), acik: clone(data.acik_islemler), kapanan: clone(data.kapananlar),
-      kasa: clone(data.kasa), ozet: clone(data.ozet), risk: clone(data.risk), vk: clone(data.veri_kalitesi), tg: clone(data.telegram), kk: clone(data.kohort_kontrol), arsiv: clone(data.arsiv), kapi: clone(data.kapi), onkayit: clone(data.onkayit_kasasi), gecmis: clone(data.gecmis_olaylar), oturum: [], spot: null, fastUntil: 0,
+      kasa: clone(data.kasa), ozet: clone(data.ozet), risk: clone(data.risk), vk: clone(data.veri_kalitesi), tg: clone(data.telegram), kk: clone(data.kohort_kontrol), arsiv: clone(data.arsiv), kapi: clone(data.kapi), onkayit: clone(data.onkayit_kasasi), gecmis: clone(data.gecmis_olaylar), oturum: [], spot: null, fastUntil: 0, fastReplay: false,
       tarama: clone(data.tarama), stale: {}, hl: {}, sel: null, alarm: false, denetim: 'tamam', boxN: 3, log: [], fx: [], flash: {},
       scanUntil: 0, haberUntil: 0, kasaUntil: 0, last: { kz: null }
     };
@@ -140,6 +139,30 @@
       W.seats[kat].forEach(seat => { if (!seat.occ) seat.chair.s = O.chairSpr(seat.chairLook, 'b'); });
     });
   }
+  // Personel boş kaldığında kısa bir ziyaret turu yapar ve kendi işine döner.
+  // Hedefler gerçek yürüme ağından seçilir; masalar ve kapılar kapatılmaz.
+  function planVisit() {
+    if (!st || Off.reduced || (st.fastUntil > now())) return;
+    const available = st.actors.filter(a => a.kind === 'staff' && !a.dead && !a.path.length && !a.queue.length && !a.wait && !a.react && a.home);
+    if (!available.length) return;
+    const a = available[Math.floor(Math.random() * available.length)];
+    const returnSeat = a.seat, home = a.seat ? [a.seat.tx, a.seat.ty] : a.home;
+    const choices = [];
+    W.ROOMS.filter(r => !r.out && !r.gizli && r.id !== a.room).forEach(r => {
+      for (let x = 0; x < r.w; x++) for (let y = 0; y < r.h; y++) {
+        const tx = BX + r.x + x, ty = BY + r.y + y;
+        if (W.isBlocked(tx, ty)) continue;
+        const path = W.path(a.tx, a.ty, tx, ty);
+        if (path && path.length >= 2 && path.length <= 8) choices.push({ tx, ty, room: r.id });
+      }
+    });
+    if (!choices.length) return;
+    const dest = choices[Math.floor(Math.random() * choices.length)];
+    standUp(a);
+    a.visitRoom = dest.room;
+    a.queue.push({ go: [dest.tx, dest.ty] }, { wait: 2.2 }, { go: home });
+    if (returnSeat) a.queue.push({ sit: returnSeat });
+  }
   function nearestFree(tx, ty) { return [tx, ty]; }
   function go(a, tx, ty) {
     if (Off.reduced || (st && st.fastUntil > now())) { a.tx = tx; a.ty = ty; a.fx = tx + 0.5; a.fy = ty + 0.5; a.path = []; return; }   // olay yağmurunda animasyon atlanır, durum anında doğrudur
@@ -148,6 +171,15 @@
     a.path = p;
   }
   function stepActor(a, dt) {
+    if (st.fastReplay) {
+      a.wait = 0;
+      if (a.path.length) {
+        const n = a.path[a.path.length - 1];
+        a.tx = n[0]; a.ty = n[1]; a.fx = a.tx + 0.5; a.fy = a.ty + 0.5; a.path = [];
+        a.pose = 'stand';
+        return;
+      }
+    }
     if (a.wait > 0) { a.wait -= dt; if (a.wait > 0) return; a.wait = 0; }
     if (a.path.length) {
       const n = a.path[0], tx = n[0] + 0.5, ty = n[1] + 0.5, dx = tx - a.fx, dy = ty - a.fy, d = Math.hypot(dx, dy), sp = 2.7 * dt;
@@ -429,10 +461,16 @@
     if (real == null) real = dt;
     const evs = st.data.olaylar, total = st.data.akis_suresi_sn != null ? st.data.akis_suresi_sn : 120;
     st.simT += real * st.speed;
+    st.visitIn = (st.visitIn == null ? 7 : st.visitIn) - real;
+    if (st.visitIn <= 0) { if (st.speed > 0 && st.speed <= 1) planVisit(); st.visitIn = 12 + Math.random() * 9; }
+    if (O.Konusma) O.Konusma.update(st);
     const due = [];
     while (st.evIdx < evs.length && evs[st.evIdx].t <= st.simT) { due.push(evs[st.evIdx]); st.evIdx++; }
     // olay kuyruğu: çok olay birden gelirse (sekme uykudan döndü, hız yüksek) animasyonlar atlanır; durum her olayda anında güncellenir
-    if (due.length >= 3) st.fastUntil = now() + 4000;
+    // Çok hızlı tekrar oynatmada tek tek aralıklı olaylar da figürlerin
+    // yürüyüşünden hızlı gelir. Olay animasyonlarını, kuyruklar boşalana kadar atla.
+    if (st.speed >= 10 || due.length >= 3) st.fastReplay = true;
+    if (st.fastReplay && (st.speed >= 10 || due.length >= 3 || st.actors.some(a => a.path.length || a.queue.length || a.wait > 0))) st.fastUntil = now() + 4000;
     due.forEach(e => Off.applyEvent(e));
     if (evs.length && st.evIdx >= evs.length && st.simT >= total) Off.reset();   // olay yoksa (gerçek veri) örnek akış asla döngüye girmez
     updateStale();
@@ -442,6 +480,7 @@
     for (let i = st.actors.length - 1; i >= 0; i--) if (st.actors[i].dead) { const a = st.actors[i]; delete st.actorById[a.id]; st.actors.splice(i, 1); }
     const t = now();
     st.actors.forEach(a => { if (a.react && t - a.react.t0 > a.react.dur) a.react = null; });
+    if (st.fastReplay && !st.actors.some(a => a.path.length || a.queue.length || a.wait > 0)) st.fastReplay = false;
     st.fx = st.fx.filter(f => t - f.t0 < f.dur);
     refreshVisuals();
   };
@@ -467,6 +506,8 @@
     if (evs.length === 0) ms = 30000;   // olay yoksa (gerçek veri) sabit bekleme — döngüye gerek yok
     else { const nxt = st.evIdx < evs.length ? evs[st.evIdx].t : total; ms = (nxt - st.simT) / st.speed * 1000; }
     Object.keys(st.data.oda_kaynak || {}).forEach(r => srcOfRoom(r).forEach(o => { const a = Off.ageMin(o.zaman); if (a != null && o.esik_dk != null && a <= o.esik_dk) ms = Math.min(ms, (o.esik_dk - a) * 60000 + 50); }));
+    if (!Off.reduced && st.visitIn != null) ms = Math.min(ms, st.visitIn * 1000);
+    if (O.Konusma && O.Konusma.nextMs) ms = Math.min(ms, O.Konusma.nextMs());
     return Math.max(20, ms);
   };
   /* olay çekmecesinden seçilen olayın figürü vurgulanır (kullanıcı eylemi; birkaç sn sürer) */

@@ -14,6 +14,8 @@ indirilmedi ya da kopyalanmadı; bu yüzden üçüncü taraf lisans yükümlül�
 | Duvar ekranlarının içeriği (eğri, çubuklar) | `office.js` — çalışma anında veriden çizilir | Bu reponun kendi içeriği |
 | Arayüz simgeleri (logo, ışık simgesi, kilit) ve menü elmasları | Sayfa içinde elle yazılmış SVG yolları ve CSS `clip-path` (`index.html`, `ofis.css`, `panel.js`) | Bu reponun kendi içeriği |
 | Bilgi kutusu, ayarlar penceresi, oda içi geçiş, iletişim işaretleri (zarf, not, ok, bayrak, gülümseme balonu) | `bilgi.js`, `ad.js`, `iletisim.js`, `kisiler.js`, `ofis.css` — hepsi kodla (CSS + Canvas); simge dosyası yok | Bu reponun kendi içeriği |
+| Olay kaynaklı kısa konuşma balonları | `dialogue.js` — Canvas 2D ile çalışma anında çizilir; dış görsel veya kaynak kod kopyası yok | Bu reponun kendi içeriği |
+| Kullanıcı tıklamasına verilen karakter replikleri | `konusma.js` — Canvas 2D ile çalışma anında çizilir; özgün, kısa ofis replikleri | Bu reponun kendi içeriği |
 | Replik ve ad metinleri (`replikler.json`, `kadro.json`) | Bu iş için yazıldı; sahte/uydurma örnek içerik | Bu reponun kendi içeriği |
 | Sıcak iç ışık, ortam ışığı, su altı ışığı | `main.js` — çalışma anında Canvas gradyanlarıyla (PNG yok) | Bu reponun kendi içeriği |
 | Yazı tipi | Sistem yazı tipleri (`ui-monospace` / `Segoe UI` / `Roboto` yığını); yazı tipi dosyası indirilmez | İşletim sistemine ait; dağıtılmaz |
@@ -22,7 +24,13 @@ indirilmedi ya da kopyalanmadı; bu yüzden üçüncü taraf lisans yükümlül�
 Lisansı belirsiz varlık kullanılmadı. Telif konusunda şüphe doğarsa bu belgeye değil önce kodun ilgili işlevine bakın: her çizim
 `sprites.js` / `kisiler.js` içinde okunabilir hâldedir.
 
-## Etre V2 ve Taslak 1 ile ilişki (kopya değil, kendi tarzımız)
+## Etre V2 ile ilişki
+`/tmp/etre-review.APFwx6` içindeki GPL-3.0 lisanslı Etre V2 yalnız etkileşim/estetik referansı olarak incelendi (kişi hareketi, konuşma balonu,
+oda gezintisi). `dialogue.js` ve bu ofisteki diğer kod, Etre kaynak dosyalarından kopyalanmadı veya uyarlanmadı; Etre görseli, atlası, ekran görüntüsü
+ve trading/API/eylem kodu alınmadı. Bu nedenle Etre kodu veya varlığı dağıtıma eklenmemiştir; Etre'nin GPL-3.0 lisansı bu dosyaların lisansı değildir.
+Özgün renderer ve lisans kaydı bu repoda kalır.
+
+## Taslak 1 ile ilişki (kopya değil, kendi tarzımız)
 `sg-arge/arastirma/etre/` yalnız **tarz** referansı olarak okundu. Etre'nin hiçbir görseli, çizimi ya da ekran görüntüsü parçası ofis sayfasına
 alınmadı, üzerinden çizilmedi, iz sürülmedi. (Etre karşılaştırma görseli yalnız #18 dalında, lider karşılaştırması içindir; sayfanın parçası değildir.) Oda sırası ve içerikleri `sg-arge/docs/GOREV_D_YOLU.md` Roller tablosundan (14 oda) çıkarıldı.
 

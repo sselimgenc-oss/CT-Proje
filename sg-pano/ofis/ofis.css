@@ -141,8 +141,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .gozcu li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gozcu .bos { padding: 2px 0; font-size: 11px; }
 
-/* kart sütunu varsayılan gizli (geniş görünüm; telefonda düzen aynı kalır). ◧ düğmesi klasik sütunu geri getirir */
-@media (min-width: 900px) { body.tam .sol { display: none; } body.tam .ana { grid-template-columns: 1fr; } }
+/* Ofis modu tüm ekranlarda tek sahnedir; ◧ düğmesi klasik veri kartlarını geri getirir. */
+body.tam .sol { display: none; }
+@media (min-width: 900px) { body.tam .ana { grid-template-columns: 1fr; } }
 
 /* telefon */
 @media (max-width: 899px) {

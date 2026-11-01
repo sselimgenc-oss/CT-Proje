@@ -277,6 +277,8 @@
         cx.globalAlpha = 1;
       });
     }
+    if (O.Dialogue) O.Dialogue.draw(cx, s, toView, view.w, view.h);
+    if (O.Konusma) O.Konusma.draw(cx, s, toView, view.w, view.h);
   }
   /* telefon: dolu masası olan odalarda küçük rozet ("Oda 20"); ad plakası yakınlaşmadan okunmasa da kaç kişinin oturduğu görünür */
   function drawRozetler() {
@@ -492,9 +494,9 @@
     if (!was || was.moved) return;
     const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, w = toWorld(px, py), p = pick(w.x, w.y, was.touch);
     hideTip();
-    if (p) { Info.show(p); return; }
+    if (p) { if (p.type === 'person' && O.Konusma) O.Konusma.speak(p.a); Info.show(p); return; }
     const room = roomAtWorld(w.x, w.y);
-    if (room) { if (mode.active && mode.room === room.id) panelKapat(); else goRoom(room.id); }
+    if (room) railTik(room.id);
     else panelKapat();
   });
   cv.addEventListener('pointerleave', () => { hover = null; hoverRoom = null; hideTip(); kick(); });
@@ -645,12 +647,13 @@
     if (qs.get('perf') === '1') { const el = $('#perf'); if (el) { el.hidden = false; el.textContent = (window.OFIS.fps || 0) + ' fps · sahne ' + pf.scene.toFixed(1) + ' ms · aktarım ' + pf.blit.toFixed(1) + ' ms · kare ' + pf.kare; } }
     fpsN++; fpsT += dt; if (fpsT >= 1) { window.OFIS.fps = Math.round(fpsN / fpsT); fpsN = 0; fpsT = 0; }
   }
-  const busyNow = () => (target || roomT !== roomTWant) ? 'raf' : (Off.busy() || false);
+  const busyNow = () => (target || roomT !== roomTWant) ? 'raf' : ((O.Dialogue && O.Dialogue.busy()) || (O.Konusma && O.Konusma.busy()) || Off.busy() || false);
   function schedule() {
     if (raf) return;                                  // olay işleyicisi (emit) zaten bir kare istedi
     clearTimeout(wakeT); wakeT = 0;
     const b = reduced ? false : busyNow();
-    if (b === 'raf') raf = requestAnimationFrame(tick);
+    if (reduced && ((O.Dialogue && O.Dialogue.busy()) || (O.Konusma && O.Konusma.busy()))) wakeT = setTimeout(kick, 2500);
+    else if (b === 'raf') raf = requestAnimationFrame(tick);
     else if (b === 'slow') wakeT = setTimeout(kick, 190);
     else wakeT = setTimeout(kick, Math.min(Off.nextEventMs(), 30000));    // uyku: sıradaki örnek olayda (en geç 30 sn'de, ışık saati için) uyan
   }
@@ -690,6 +693,7 @@
     W.build();
     Object.keys(data.oda_durum || {}).forEach(id => { if (data.oda_durum[id].gizli && W.roomById[id]) { W.roomById[id].out = true; W.roomById[id].gizli = true; } });   // gizli oda: etkileşim, etiket ve ışık dışı; yalnız sayısı panelde
     Off.init(data, { reduced: reduced, speed: parseFloat(qs.get('hiz')) || 1 });
+    if (O.Dialogue) O.Dialogue.init(Off);
     window.OFIS.data = data;
     updateLight(); resize();
     new ResizeObserver(() => { resize(); kick(); }).observe($('#ofisTuval'));

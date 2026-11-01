@@ -8,27 +8,37 @@
   const sx = (x, y) => OX + (x - y) * HW, sy = (x, y) => OY + (x + y) * HH;
 
   const ROOMS = [
-    { id: 'makam', ad: 'MAKAM', x: 0, y: 0, w: 4, h: 4, fl: ['parquet', '#8a5a3a'], ac: '#7a4a32', solid: true },
-    { id: 'sekreterlik', ad: 'SEKRETERLİK', x: 4, y: 0, w: 4, h: 4, fl: ['carpet', '#a9bba4'], ac: '#5f7d68' },
-    { id: 'finans', ad: 'FİNANS', x: 8, y: 0, w: 4, h: 4, fl: ['tile', '#cfe6e0', '#b6d6cf'], ac: '#2a7f7a' },
-    { id: 'haberlesme', ad: 'HABERLEŞME', x: 12, y: 0, w: 4, h: 4, fl: ['carpet', '#566d93'], ac: '#3e5a8c' },
-    { id: 'risk', ad: 'RİSK', x: 16, y: 0, w: 4, h: 4, fl: ['tile', '#efd5c4', '#e0bca3'], ac: '#c4553a' },
-    { id: 'denetim', ad: 'DENETİM', x: 20, y: 0, w: 3, h: 4, fl: ['grate', '#58626d'], ac: '#4c5a6a', solid: true },
-    { id: 'arsiv', ad: 'ARŞİV', x: 23, y: 0, w: 3, h: 4, fl: ['wood', '#b48a54'], ac: '#7b5a34', solid: true },
-    { id: 'tarama', ad: 'TARAMA', x: 0, y: 4, w: 5, h: 5, fl: ['carpet', '#a56f88'], ac: '#8a4f6c' },
-    { id: 'cay', ad: 'ÇAY OCAĞI', x: 5, y: 4, w: 3, h: 5, fl: ['fayans', '#eef4f1', '#4fa6a6'], ac: '#2f8c8c' },
-    { id: 'lab', ad: 'LAB · HAVUZ', x: 8, y: 4, w: 10, h: 5, fl: ['tile', '#e4f0ec', '#d1e4de'], ac: '#2f8a76' },
-    { id: 'kontrol', ad: 'KONTROL GRUBU', x: 18, y: 4, w: 8, h: 5, fl: ['carpet', '#5f8f93'], ac: '#3d6f78' },
+    { id: 'makam', ad: 'Makam', x: 0, y: 0, w: 4, h: 4, fl: ['parquet', '#8a5a3a'], ac: '#7a4a32', solid: true },
+    { id: 'sekreterlik', ad: 'Sekreterlik', x: 4, y: 0, w: 4, h: 4, fl: ['carpet', '#a9bba4'], ac: '#5f7d68' },
+    { id: 'finans', ad: 'Finans', x: 8, y: 0, w: 4, h: 4, fl: ['tile', '#cfe6e0', '#b6d6cf'], ac: '#2a7f7a' },
+    { id: 'haberlesme', ad: 'Haberleşme', x: 12, y: 0, w: 4, h: 4, fl: ['carpet', '#566d93'], ac: '#3e5a8c' },
+    { id: 'risk', ad: 'Risk', x: 16, y: 0, w: 4, h: 4, fl: ['tile', '#efd5c4', '#e0bca3'], ac: '#c4553a' },
+    { id: 'denetim', ad: 'Denetim', x: 20, y: 0, w: 3, h: 4, fl: ['grate', '#58626d'], ac: '#4c5a6a', solid: true },
+    { id: 'arsiv', ad: 'Arşiv', x: 23, y: 0, w: 3, h: 4, fl: ['wood', '#b48a54'], ac: '#7b5a34', solid: true },
+    { id: 'tarama', ad: 'Bilgi İşlem/IT', x: 0, y: 4, w: 5, h: 5, fl: ['carpet', '#a56f88'], ac: '#8a4f6c' },
+    { id: 'cay', ad: 'Çay Ocağı', x: 5, y: 4, w: 3, h: 5, fl: ['fayans', '#eef4f1', '#4fa6a6'], ac: '#2f8c8c' },
+    { id: 'lab', ad: 'LAB', x: 8, y: 4, w: 10, h: 5, fl: ['tile', '#e4f0ec', '#d1e4de'], ac: '#2f8a76' },
+    { id: 'kontrol', ad: 'Yedekler', x: 18, y: 4, w: 8, h: 5, fl: ['carpet', '#5f8f93'], ac: '#3d6f78' },
     { id: 'bahce', ad: 'AVLU · HAVUZ', x: 0, y: 9, w: 26, h: 6, fl: ['grass', '#5e9c46'], ac: '#3f7a4a', out: true },
-    { id: 'aday', wall: 18, ad: 'ADAY', x: 0, y: 15, w: 6, h: 5, fl: ['carpet', '#d9a06c'], ac: '#b7733c' },
-    { id: 'oda', wall: 18, ad: 'ODA · KOPYA', x: 6, y: 15, w: 16, h: 5, fl: ['carpet', '#2f5d70'], ac: '#244a5c' },
-    { id: 'kapi', wall: 18, ad: 'KAPI', x: 22, y: 15, w: 4, h: 5, fl: ['stone', '#bcc1c6'], ac: '#59636e' }
+    { id: 'aday', wall: 18, ad: 'PAF Takım', x: 0, y: 15, w: 6, h: 5, fl: ['carpet', '#d9a06c'], ac: '#b7733c' },
+    { id: 'oda', wall: 18, ad: 'İlk 11', x: 6, y: 15, w: 16, h: 5, fl: ['carpet', '#2f5d70'], ac: '#244a5c' },
+    { id: 'kapi', wall: 18, ad: 'Kapı', x: 22, y: 15, w: 4, h: 5, fl: ['stone', '#bcc1c6'], ac: '#59636e' }
   ];
   const roomAt = {}; // "lx,ly" → oda
   ROOMS.forEach(r => { r.cx = r.x + r.w / 2; r.cy = r.y + r.h / 2; for (let i = 0; i < r.w; i++) for (let j = 0; j < r.h; j++) roomAt[(r.x + i) + ',' + (r.y + j)] = r; });
   const roomById = {}; ROOMS.forEach(r => (roomById[r.id] = r));
 
-  const W = (O.World = { BX, BY, BW, BH, WW, WH, OX, OY, CW, CH, sx, sy, ROOMS, roomById, roomAt, statics: [], seats: { lab: [], aday: [], oda: [], kontrol: [] }, staff: [], objects: [], tvs: {}, wins: [], leds: {}, screens: [], trees: [], lamps: [], boxSlots: [], doors: [] });
+  // Etre-inspired isometric office staging, drawn from our own room geometry.
+  // These small accent rugs make each doorway read as a deliberate threshold.
+  // `oda` IDs remain the dashboard's stable programmatic room IDs.
+  const ENTRY_MATS = [
+    ['makam', 1, 3], ['sekreterlik', 5, 3], ['finans', 11, 3], ['haberlesme', 14, 3],
+    ['risk', 17, 3], ['denetim', 21, 3], ['arsiv', 24, 3],
+    ['tarama', 2, 8], ['cay', 6, 8], ['lab', 11, 8], ['kontrol', 24, 8],
+    ['aday', 1, 15], ['oda', 9, 15], ['kapi', 23, 15]
+  ];
+
+  const W = (O.World = { BX, BY, BW, BH, WW, WH, OX, OY, CW, CH, sx, sy, ROOMS, roomById, roomAt, entryMats: ENTRY_MATS.map(([id, x, y]) => ({ id, x, y })), statics: [], seats: { lab: [], aday: [], oda: [], kontrol: [] }, staff: [], objects: [], tvs: {}, wins: [], leds: {}, screens: [], trees: [], lamps: [], boxSlots: [], doors: [] });
 
   /* ---------- yürüme ağı ---------- */
   const blocked = new Set(), wallH = new Set(), wallV = new Set();
@@ -106,6 +116,12 @@
     ROOMS.forEach(r => {
       if (r.out) return;
       for (let i = 0; i < r.w; i++) for (let j = 0; j < r.h; j++) T(BX + r.x + i, BY + r.y + j, { k: r.fl[0], c: r.fl[1], c2: r.fl[2], room: r.id });
+    });
+    // Doorway rugs are floor tiles, so they remain in the isometric scene and
+    // never affect the existing room hit testing or one-click card routing.
+    ENTRY_MATS.forEach(([id, lx, ly]) => {
+      const r = roomById[id];
+      T(BX + lx, BY + ly, { k: 'carpet', c: r.ac, room: id, rug: true });
     });
     // avlu: çim + taş yollar + havuz
     for (let lx = 0; lx < BW; lx++) for (let ly = 9; ly <= 14; ly++) {

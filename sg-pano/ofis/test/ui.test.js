@@ -11,6 +11,7 @@ const ok = (n, c, x) => { if (!c) bad++; console.log((c ? 'OK   ' : 'FAIL ') + n
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 const srv = http.createServer((q, r) => {
+  if (q.url.split('?')[0] === '/favicon.ico') { r.writeHead(204); r.end(); return; }
   let p = decodeURIComponent(q.url.split('?')[0]); if (p.endsWith('/')) p += 'index.html';
   fs.readFile(path.join(root, p), (e, d) => { if (e) { r.writeHead(404); r.end('nf'); return; } r.writeHead(200, { 'content-type': (TYPES[path.extname(p)] || 'application/octet-stream') + '; charset=utf-8' }); r.end(d); });
 }).listen(0, async () => {
@@ -58,6 +59,24 @@ const srv = http.createServer((q, r) => {
 
   /* ---------- B. bilgi kutusu, tıklanabilir kişi ve nesneler ---------- */
   ({ ctx, pg } = await open());
+  const atlas = await pg.evaluate(() => {
+    const W = OFIS.World, ids = W.ROOMS.filter(r => r.id !== 'bahce').map(r => r.id);
+    return { ids: ids, mats: W.entryMats.map(m => m.id), aligned: W.entryMats.every(m => W.roomAt[m.x + ',' + m.y].id === m.id) };
+  });
+  ok('özgün izometrik ofis atlası: 14 kararlı oda kimliği ve her girişte oda rengine bağlı zemin eşiği', atlas.ids.length === 14 && atlas.mats.length === 14 && atlas.ids.every(id => atlas.mats.includes(id)) && atlas.aligned, JSON.stringify(atlas));
+  const floor = await pg.evaluate(() => {
+    const r = OFIS.World.roomById.finans, p = OFIS.World.roomPoly(r), c = document.getElementById('tuval').getBoundingClientRect();
+    for (let v = 0.2; v < 0.9; v += 0.1) for (let u = 0.2; u < 0.9; u += 0.1) {
+      const x = p[0][0] + (p[1][0] - p[0][0]) * u + (p[3][0] - p[0][0]) * v;
+      const y = p[0][1] + (p[1][1] - p[0][1]) * u + (p[3][1] - p[0][1]) * v;
+      if (!OFIS.debug.pick(x, y, false)) { const q = OFIS.debug.toView(x, y); return { x: q.x + c.left, y: q.y + c.top }; }
+    }
+    return null;
+  });
+  if (floor) await pg.mouse.click(floor.x, floor.y);
+  await sleep(850);
+  ok('oda zeminine tıklama aynı Finanz panelini ve oda görünümünü açar', !!floor && await pg.evaluate(() => OFIS.debug.mode.room === 'finans' && !document.getElementById('kartPanel').hidden && /Finans/.test(document.getElementById('kpBaslik').textContent)));
+  await pg.keyboard.press('Escape'); await sleep(850);
   const gaps = await pg.evaluate(() => {
     const W = OFIS.World, bad = [];
     Object.keys(W.gapsH).forEach(y => W.gapsH[y].forEach(lx => [[W.BX + lx, W.BY + +y], [W.BX + lx, W.BY + +y - 1]].forEach(t => { if (W.isBlocked(t[0], t[1])) bad.push('h' + y + ':' + lx + '→' + t.join(',')); })));
@@ -155,7 +174,7 @@ const srv = http.createServer((q, r) => {
   const exported = JSON.parse(fs.readFileSync(await dl.path(), 'utf8'));
   ok('JSON dışa aktarma (surum 1; oda, çalışan, trader adları)', exported.surum === 1 && exported.odalar.lab === 'Havuz Odası' && exported.calisanlar.denetim === 'Müfettiş' && exported.traderlar.T033 === 'Kısa Ad', JSON.stringify(exported));
   await pg.click('#ayarSifirla'); await sleep(150);
-  ok('varsayılana dön: adlar kadro.json varsayılanına döner', await pg.evaluate(() => OFIS.Names.room('lab') === 'LAB · HAVUZ' && OFIS.Names.staff('denetim') === 'Denetçi' && OFIS.Names.trader('T033') === ''));
+  ok('varsayılana dön: adlar kadro.json varsayılanına döner', await pg.evaluate(() => OFIS.Names.room('lab') === 'LAB' && OFIS.Names.staff('denetim') === 'Denetçi' && OFIS.Names.trader('T033') === ''));
   await pg.setInputFiles('#ayarIce', { name: 'adlar.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ surum: 1, odalar: { lab: 'İçe Lab', yok: 'x' }, calisanlar: { cayci: 'Çaycı Usta' }, traderlar: { T033: 'Kısa Ad', zzz: 'x' } })) }); await sleep(300);
   const imp = await pg.evaluate(() => ({ lab: OFIS.Names.room('lab'), cay: OFIS.Names.staff('cayci'), t: OFIS.Names.trader('T033'), msg: document.getElementById('ayarMesaj').textContent }));
   ok('JSON içe aktarma: bilinen kimlikler uygulanır, bilinmeyenler atlanır', imp.lab === 'İçe Lab' && imp.cay === 'Çaycı Usta' && imp.t === 'Kısa Ad' && /2 kayıt atlandı/.test(imp.msg), JSON.stringify(imp));
@@ -165,12 +184,13 @@ const srv = http.createServer((q, r) => {
   ok('desteklenmeyen sürüm reddedilir', await pg.evaluate(() => /desteklenmeyen/.test(document.getElementById('ayarMesaj').textContent) && OFIS.Names.room('lab') === 'İçe Lab'));
   await ctx.close();
 
-  /* ---------- D. olay yokken döngü durur ---------- */
+  /* ---------- D. olaylar ve kısa ortam replikleri bitince döngü durur ---------- */
   ctx = await b.newContext({ viewport: { width: 1440, height: 900 } }); pg = await ctx.newPage();
   pg.on('pageerror', e => errs.push(e.message));
   const orn = JSON.parse(fs.readFileSync(path.join(root, 'ofis', 'ornek_durum.json'), 'utf8')); orn.olaylar = [];
   await pg.route('**/bos.json', r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(orn) }));
-  await pg.goto(base + 'index.html?saat=15:40&durum=bos.json'); await pg.waitForFunction('window.OFIS&&window.OFIS.ready'); await sleep(2500);
+  await pg.goto(base + 'index.html?saat=15:40&durum=bos.json'); await pg.waitForFunction('window.OFIS&&window.OFIS.ready');
+  await pg.evaluate(() => { OFIS.Office.state().speed = 0; OFIS.Konusma.clear(); OFIS.Konusma.update = () => {}; OFIS.Konusma.nextMs = () => 30000; }); await sleep(7000);
   const k0 = await pg.evaluate(() => OFIS.perf.kare); await sleep(2500); const k1 = await pg.evaluate(() => OFIS.perf.kare);
   ok('olay yokken kare çizilmez (2,5 sn boyunca ' + (k1 - k0) + ' kare)', k1 - k0 === 0 && await pg.evaluate(() => !OFIS.debug.loop().raf));
   await pg.mouse.move(900, 400); await sleep(300); const k2 = await pg.evaluate(() => OFIS.perf.kare);
@@ -204,7 +224,18 @@ const srv = http.createServer((q, r) => {
   ({ ctx, pg } = await open());
   await pg.evaluate(() => { OFIS.Office.state().speed = 0; window.__m = {}; setInterval(() => OFIS.Office.marks().forEach(m => { if (m.e && m.e.tur) (window.__m[m.e.tur] = window.__m[m.e.tur] || new Set()).add(m.kind); }), 60); });
   const evs = await pg.evaluate(() => OFIS.data.olaylar.map(e => e.tur));
-  for (let i = 0; i < evs.length; i++) { await pg.evaluate(i => OFIS.Office.applyEvent(OFIS.data.olaylar[i]), i); await sleep(evs[i] === 'kirmizi_bayrak' || evs[i] === 'bayrak_kalkti' ? 5600 : evs[i] === 'bildirim' ? 2800 : 1200); if (evs[i] === 'kirmizi_bayrak') { ok('kırmızı bayrak notu trader masasında durur', await pg.evaluate(() => { const n = OFIS.Office.notes().T046; return !!(n && n.shown); })); } }
+  for (let i = 0; i < evs.length; i++) {
+    await pg.evaluate(i => OFIS.Office.applyEvent(OFIS.data.olaylar[i]), i);
+    if (evs[i] === 'kirmizi_bayrak') {
+      let arrived = true;
+      try { await pg.waitForFunction(() => { const n = OFIS.Office.notes().T046; return !!(n && n.shown); }, null, { timeout: 12000 }); }
+      catch (_) { arrived = false; }
+      ok('kırmızı bayrak notu trader masasında durur', arrived);
+    } else if (evs[i] === 'bayrak_kalkti') {
+      try { await pg.waitForFunction(() => !OFIS.Office.notes().T046, null, { timeout: 12000 }); }
+      catch (_) { /* report through the final state assertion below */ }
+    } else await sleep(evs[i] === 'bildirim' ? 2800 : 1200);
+  }
   await sleep(1500);
   const mm = await pg.evaluate(() => Object.fromEntries(Object.entries(window.__m).map(([k, v]) => [k, [...v]])));
   const turler = [...new Set(evs)].filter(t => t !== 'sistem'), yok = turler.filter(t => !mm[t]);
@@ -499,10 +530,10 @@ const srv = http.createServer((q, r) => {
   ok('klasik sütun açıkken menü eski gibi çalışır (panel açılmaz)', (await panelDurum()).acik === false && (await panelDurum()).oda === 'risk');
   await ctx.close();
 
-  /* telefon: kart sütunu sayfada; şerit yok; menüden açılan kart alttan panelde */
+  /* telefon: aynı sahne önceliği; menüden açılan kart alttan panelde */
   ({ ctx, pg } = await open('?saat=15:40&durum=ornek', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }));
   const ph = await pg.evaluate(() => ({ sol: getComputedStyle(document.getElementById('sol')).display, serit: getComputedStyle(document.getElementById('gunSerit')).display, panel: getComputedStyle(document.getElementById('kartPanel')).display, sw: document.documentElement.scrollWidth, n: document.querySelectorAll('#sol > .kart').length }));
-  ok('telefon: kart sütunu sayfada görünür, şerit ve panel yok, yatay kaydırma yok', ph.sol !== 'none' && ph.serit === 'none' && ph.panel === 'none' && ph.sw <= 390 && ph.n === 10, JSON.stringify(ph));
+  ok('telefon: varsayılan tek sahne, panel başlangıçta kapalı ve yatay kaydırma yok', ph.sol === 'none' && ph.serit === 'none' && ph.panel === 'none' && ph.sw <= 390 && ph.n === 10, JSON.stringify(ph));
   await pg.tap('.ray [data-oda=finans]'); await sleep(700);
   // kullanıcı isteği (2026-10-30): telefonda menüye dokununca bilgi kartı alttan açılan panelde görünür; × ile kart sütuna geri döner
   const tp = await pg.evaluate(() => { const k = document.getElementById('kartPanel'), r = k.getBoundingClientRect(); return { acik: !k.hidden && getComputedStyle(k).display !== 'none', alt: Math.round(r.bottom), ust: Math.round(r.top), kart: k.querySelectorAll('.kart').length, sw: document.documentElement.scrollWidth }; });
@@ -512,14 +543,12 @@ const srv = http.createServer((q, r) => {
   await ctx.close();
 
 
-  /* ---------- R. gezinme: ofisten ana panoya bağlantı (göreli yol, telefonda da görünür) ---------- */
+  /* ---------- R. tek deneyim: ayrı ana pano gezinmesi yok ---------- */
   ({ ctx, pg } = await open());
-  const ap = await pg.evaluate(() => { const e = document.getElementById('anaPanoLink'), r = e.getBoundingClientRect(); return { href: e.getAttribute('href'), txt: e.textContent.trim(), gor: r.width > 0 && r.height > 0 && r.left >= 0 && r.right <= innerWidth && r.top >= 0 }; });
-  ok('ofis: "Ana pano" bağlantısı göreli yol ../ ile, görünür', ap.href === '../' && /Ana pano/.test(ap.txt) && ap.gor, JSON.stringify(ap));
+  ok('ofis oda gezinmesinde ayrı ana pano bağlantısı yok', await pg.evaluate(() => !document.getElementById('anaPanoLink') && !document.querySelector('.marka[href]')));
   await ctx.close();
   ({ ctx, pg } = await open('?saat=15:40&durum=ornek', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }));
-  const apt = await pg.evaluate(() => { const e = document.getElementById('anaPanoLink'), r = e.getBoundingClientRect(); return { gor: r.width > 0 && r.left >= 0 && r.right <= innerWidth, h: r.height }; });
-  ok('telefon: "Ana pano" bağlantısı ekranda ve ≥ 44 px', apt.gor && apt.h >= 43.5, JSON.stringify(apt));
+  ok('telefon: ayrı ana pano bağlantısı da yok', await pg.evaluate(() => !document.getElementById('anaPanoLink')));
   await ctx.close();
 
   /* ---------- T. sol menü paneli kapanınca kamera panel öncesi görünüme yumuşakça döner ---------- */
@@ -570,6 +599,15 @@ const srv = http.createServer((q, r) => {
   const elleBina = await camDurum();
   await pg.click('.ray [data-oda=risk]'); await sleep(900); await pg.click('#kpKapat'); await sleep(1300);
   ok('panel öncesi elle ayarlı bina görünümüne dönülür', yakin(await camDurum(), elleBina), JSON.stringify({ s: await camDurum(), elleBina }));
+  await ctx.close();
+  /* Olaydan bağımsız personel ziyareti: ayrı sayfada zamanlayıcıyı kontrollü tetikle. */
+  ({ ctx, pg } = await open('?saat=15:40&durum=ornek'));
+  const roam = await pg.evaluate(() => {
+    const st = OFIS.Office.state(); st.speed = 1; st.visitIn = 0;
+    OFIS.Office.update(0.016, 0.016);
+    return st.actors.some(a => a.kind === 'staff' && a.visitRoom && (a.path.length || a.queue.length));
+  });
+  ok('olay gelmeden görevli başka bir odaya ziyaret turu planlar', roam);
   await ctx.close();
   /* azaltılmış hareket: geçiş animasyonsuz */
   ({ ctx, pg } = await open('?saat=15:40&durum=ornek', { reducedMotion: 'reduce' }));

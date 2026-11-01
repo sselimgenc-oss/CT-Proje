@@ -3,72 +3,72 @@
  "aciklama": "Varsayılan oda ve çalışan adları ile birim açıklamaları. Kullanıcı adları tarayıcıda saklanır; bu dosya değişmez.",
  "odalar": {
   "makam": {
-   "ad": "MAKAM",
+   "ad": "Makam",
    "yapar": "Kararı kullanıcı verir; lider denetler. Makam kuralları ve ön kayıt değerlerini onaylar.",
    "yapmaz": "Trader seçmez, kural değiştirmez, performansa bakıp karar vermez."
   },
   "sekreterlik": {
-   "ad": "SEKRETERLİK",
+   "ad": "Sekreterlik",
    "yapar": "Kural kitabını (kurallar.yaml), ön kayıt sürümünü ve dondurma tarihini saklar.",
    "yapmaz": "Kural değiştirmez; yalnız kaydeder."
   },
   "finans": {
-   "ad": "FİNANS",
+   "ad": "Finans",
    "yapar": "Sanal kasayı ve işlem büyüklüğünü tutar; kapanan işlemleri deftere işler.",
    "yapmaz": "Gerçek para tutmaz; toplanmış kol performansını göstermez."
   },
   "haberlesme": {
-   "ad": "HABERLEŞME",
+   "ad": "Haberleşme",
    "yapar": "Telegram bildirimlerini gönderir (işlem açıldı / kapandı).",
    "yapmaz": "Karar bildirmez, tavsiye vermez."
   },
   "risk": {
-   "ad": "RİSK",
+   "ad": "Risk",
    "yapar": "Risk tavanlarını izler; tavan dolunca alarm verir.",
    "yapmaz": "Pozisyon kapatmaz, emir vermez."
   },
   "denetim": {
-   "ad": "DENETİM",
+   "ad": "Denetim",
    "yapar": "Veri tazeliğini ve gölge ↔ trader PnL sağlamasını denetler; gerekirse kırmızı bayrak bırakır.",
    "yapmaz": "Düzeltme yapmaz; yalnız bayrak ve uyarı bırakır."
   },
   "arsiv": {
-   "ad": "ARŞİV",
+   "ad": "Arşiv",
    "yapar": "Defterleri, mumları ve olay günlüğünü saklar; yazım zamanı kayıtlıdır.",
    "yapmaz": "Kayıt silmez ya da değiştirmez."
   },
   "tarama": {
-   "ad": "TARAMA",
+   "ad": "Bilgi İşlem/IT",
    "yapar": "Haftalık tarama yapar, yeni adresleri bulur ve Kapı'ya iletir.",
    "yapmaz": "Seçim yapmaz; yalnız aday bulur."
   },
   "cay": {
-   "ad": "ÇAY OCAĞI",
+   "ad": "Çay Ocağı",
    "yapar": "Yalnız ofis süsü.",
    "yapmaz": "Veri göstermez, olay üretmez."
   },
   "lab": {
-   "ad": "LAB · HAVUZ",
+   "ad": "LAB",
    "yapar": "Kapı'dan geçen adreslerin gölgede izlendiği havuz; terfi kuralı burada işler.",
    "yapmaz": "Gerçek işlem açmaz; kopya işlem hizmeti vermez."
   },
   "kontrol": {
-   "ad": "KONTROL GRUBU",
+   "ad": "Yedekler",
    "yapar": "Aynı havuzdan rastgele (sabit tohumlu) seçilen adresler; kohort ile karşılaştırma için tutulur.",
    "yapmaz": "Performans karşılaştırması ofiste gösterilmez (kilitli)."
   },
   "aday": {
-   "ad": "ADAY",
+   "ad": "PAF Takım",
    "yapar": "Terfi kuralına yaklaşan adresler beklenir.",
    "yapmaz": "Terfiyi kendisi vermez; kural verir."
   },
   "oda": {
-   "ad": "ODA · KOPYA",
+   "ad": "İlk 11",
    "yapar": "Gölgede kopyalanan trader'lar burada oturur; açık gölge işlemleri buradan doğar.",
    "yapmaz": "Gerçek emir göndermez."
   },
   "kapi": {
-   "ad": "KAPI",
+   "ad": "Kapı",
    "yapar": "Yeni adresleri ön elemeden geçirir; geçenleri Lab'a, geçemeyenleri dışarı yollar.",
    "yapmaz": "Karar vermez; yalnız ön eleme kuralını uygular."
   }
