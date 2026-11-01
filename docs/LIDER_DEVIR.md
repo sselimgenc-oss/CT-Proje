@@ -26,10 +26,10 @@ Okuma sırası: bu dosya → `DURUM.md` ("Şu an") → `AGENTS.md` (kurallar + *
 
 ## Durum (30.10 sabah)
 - Pilot: 91 trader izleniyor (oda 18, kontrol 18 [E01 `kollar`'da], taban 18, elle 8, **havuz 30** — K‑8, t0 30.10, sessiz).
-- Veri akışı: Cloudflare Worker her dakika bakar, `izleme.yml` (75 dk eşik) ve `arsiv.yml`'i (20 dk) workflow_dispatch ile tetikler
-  (secret `TETIK_TOKEN`); son BİTEN koşuya bakar. Telegram: işlem mesajları kapalı (`BILDIRIM_KIPI=ozet`), 09:00 TR günlük özet,
+- Eski veri akışı: Worker'ın `izleme.yml` ve `arsiv.yml` iş akışlarını tetikleme mekanizması, bu iş akışları kaldırıldığı için emekliye ayrıldı.
+  Telegram: işlem mesajları kapalı (`BILDIRIM_KIPI=ozet`), 09:00 TR günlük özet,
   veri > 3 sa / kalabalık uyarısı. `motor.json` R2'de (`izleme/motor.json.gz`), veri dalında değil.
-- Arşiv (`arsiv.yml`) günlük boşluk eşiğinde **bilerek kırmızı** biter ama veriyi R2'ye yazar — hata değil.
+- Eski `arsiv.yml` koşuları günlük boşluk eşiğinde **bilerek kırmızı** bitebiliyordu; bu iş akışı artık çalıştırılmıyor.
 - İlk 91'lik izleme koşusu uzun (30 yeni trader 90 günlük geçmiş indirir). Bittiğinde: süre (motor adımı) ve 30 havuz trader'ının
   `gecerli` sayısı → makulse havuzun tamamı (`python -m copytrade.secim --izleme-listesi --secim <secim.json> --havuz-adet 154`,
   sonra izleme süresine bak; 150 dk iş sınırı).

@@ -1,16 +1,8 @@
 import { eventId, isPerp, orderEvents } from "./events.js";
-import { tetiklemeKarari } from "./tetikleyici.js";
 
 const INFO = "https://api.hyperliquid.xyz/info";
 const STATUS = "https://raw.githubusercontent.com/sselimgenc-oss/sg-arge/copytrade-izleme/izleme/durum.json";
 const CALLBACK = /^k\|([^|]+)\|([as])(?:\|([gbd]))?$/;
-const REPO = "sselimgenc-oss/sg-arge";
-// izleme.yml saatlik (cron "23 * * * *"), arsiv.yml 15 dk'da bir (cron "*/15 * * * *") çalışmalı; GitHub zamanlayıcısı
-// bu repoda sık atladığından (2026-10-29: 17:26'dan sonra izleme hiç başlamadı) burada yedek tetikleme var.
-const TETIKLENECEK = [
-  { dosya: "izleme.yml", esikDk: 75 },   // 60 dk + 15 dk tolerans
-  { dosya: "arsiv.yml", esikDk: 20 },    // 15 dk + 5 dk tolerans
-];
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -137,35 +129,6 @@ function gecikmeDk(fillTimeMs, nowMs = Date.now()) { return (nowMs - fillTimeMs)
 // bildirimleri de (eski davranış) açık. Kod silinmez, yalnız bu ayarla kapatılır/açılır (lider kararı, kullanıcı).
 function bildirimKipi(env) { return env.BILDIRIM_KIPI === "islem" ? "islem" : "ozet"; }
 
-function githubHeaders(env) {
-  return { authorization: `Bearer ${env.GITHUB_ACTIONS_TOKEN}`, accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28", "user-agent": "sg-arge-worker" };
-}
-
-async function workflowRuns(env, dosya, fetcher = fetch) {
-  const response = await fetcher(`https://api.github.com/repos/${REPO}/actions/workflows/${dosya}/runs?per_page=5`, { headers: githubHeaders(env) });
-  if (!response.ok) throw new Error(`GitHub runs ${dosya} ${response.status}`);
-  const body = await response.json();
-  return body.workflow_runs || [];
-}
-
-async function dispatchWorkflow(env, dosya, fetcher = fetch) {
-  const response = await fetcher(`https://api.github.com/repos/${REPO}/actions/workflows/${dosya}/dispatches`, {
-    method: "POST", headers: { ...githubHeaders(env), "content-type": "application/json" }, body: JSON.stringify({ ref: "main" }),
-  });
-  if (!response.ok) throw new Error(`GitHub dispatch ${dosya} ${response.status}`);
-}
-
-// Token yoksa (secret ayarlanmamış) sessizce atlanır — GitHub'ın kendi zamanlayıcısı yedek olarak çalışmaya devam eder.
-async function tetiklemeKontrol(env, fetcher = fetch) {
-  if (!env.GITHUB_ACTIONS_TOKEN) return;
-  for (const { dosya, esikDk } of TETIKLENECEK) {
-    try {
-      const runs = await workflowRuns(env, dosya, fetcher);
-      if (tetiklemeKarari(runs, esikDk).tetikle) await dispatchWorkflow(env, dosya, fetcher);
-    } catch { /* bir iş akışındaki hata diğerinin kontrolünü engellemesin */ }
-  }
-}
-
 async function runCron(env, fetcher = fetch) {
   let status;
   try { status = await currentStatus(fetcher); } catch { return; }
@@ -232,8 +195,7 @@ async function handleTelegram(request, env, fetcher = fetch) {
   if (String(message?.chat?.id) !== String(env.TELEGRAM_CHAT_ID) || message?.text !== "/durum") return new Response("ok");
   let status;
   try { status = await currentStatus(fetcher); } catch { return new Response("ok"); }
-  const tetikleme = env.GITHUB_ACTIONS_TOKEN ? "" : "\n\n🔁 Otomatik tetikleme: kapalı (GITHUB_ACTIONS_TOKEN secret'ı yok)";
-  await telegram(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text: formatStatus(status) + tetikleme, disable_web_page_preview: true }, fetcher);
+  await telegram(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text: formatStatus(status), disable_web_page_preview: true }, fetcher);
   return new Response("ok");
 }
 
@@ -374,7 +336,7 @@ function formatStatus(status, nowMs = Date.now()) {
 }
 
 export default {
-  scheduled(event, env, ctx) { ctx.waitUntil(runCron(env)); ctx.waitUntil(tetiklemeKontrol(env)); ctx.waitUntil(sendDailySummaryIfDue(env)); },
+  scheduled(event, env, ctx) { ctx.waitUntil(runCron(env)); ctx.waitUntil(sendDailySummaryIfDue(env)); },
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === "GET" && url.pathname === "/kararlar") {

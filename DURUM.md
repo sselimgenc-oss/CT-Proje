@@ -10,9 +10,8 @@ beklemez).
 Hyperliquid kaldıraç trader'larını sanal kasada, küçük sabit tutarla, Etre'nin çıkış kurallarıyla kopyalayan; tek panelde ve
 Telegram'da canlı izlenen; her kuralı ileri testle ölçen sistem. Gerçek para/emir yok. Görev: `docs/GOREV_ETRE_GECIS.md` (E1–E6).
 
-## Şu an çalışan (yeni sistem canlıya geçene kadar kalır)
-- `izleme.yml` saatlik izleme (Worker tetikler, `TETIK_TOKEN`) → `copytrade-izleme` veri dalı (`izleme/durum.json`), motor durumu R2.
-- `arsiv.yml` dolum arşivi (R2), `arsiv_alarm.yml`; `copytrade_kapi.yml` / `copytrade_secim.yml` seçim (v1.3); `copytrade_haftalik.yml` ön kayıt raporu.
+## Durum
+- `izleme.yml`, `izleme_deneme.yml`, `arsiv.yml`, `arsiv_alarm.yml`, `golge_saglama.yml`, `copytrade_kapi.yml`, `copytrade_secim.yml` ve `copytrade_haftalik.yml` iş akışları emekliye ayrıldı ve GitHub'dan kaldırıldı. Worker artık workflow tetiklemez. Tarihsel izleme çıktısı `copytrade-izleme` veri dalında (`izleme/durum.json`), motor durumu ise R2'de tutulur.
 - Worker: günlük özet 09:00 TR + alarm (işlem bildirimleri kapalı). Pano/ofis: `sg-pano/` (artık bu repo içinde,
   ayrı bir repo değil — `sg-pano` reposu geçmişiyle birlikte `git subtree` ile buraya taşındı).
 

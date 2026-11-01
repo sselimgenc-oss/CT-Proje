@@ -19,7 +19,6 @@ jobs:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
-      GITHUB_ACTIONS_TOKEN: ${{ secrets.TETIK_TOKEN }}   # GitHub, "GITHUB_" ile başlayan secret adına izin vermez
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -62,13 +61,6 @@ jobs:
           for name in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID TELEGRAM_WEBHOOK_SECRET; do
             printf '%s' "${!name}" | npm exec --yes -- wrangler@4 secret put "$name" --config=worker/wrangler.generated.toml
           done
-          # İsteğe bağlı: izleme.yml/arsiv.yml'i yedek tetiklemek için ince taneli GitHub token'ı (bkz.
-          # docs/WORKER_TETIKLEME.md). Ayarlanmamışsa Worker sessizce atlar, deploy'u başarısız etmez.
-          if [ -n "${GITHUB_ACTIONS_TOKEN:-}" ]; then
-            printf '%s' "$GITHUB_ACTIONS_TOKEN" | npm exec --yes -- wrangler@4 secret put GITHUB_ACTIONS_TOKEN --config=worker/wrangler.generated.toml
-          else
-            echo "GITHUB_ACTIONS_TOKEN secret'ı yok; otomatik yedek tetikleme kapalı kalacak (isteğe bağlı)."
-          fi
       - name: Telegram webhook'unu ayarla
         shell: bash
         run: |
