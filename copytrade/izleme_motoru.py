@@ -247,8 +247,12 @@ def cached_candle(value: object) -> tuple[float, bool]:
     return float(value), False
 
 
-def execution_candles(client, fills: list[dict], cache: dict, now_ms: int, delay: int = 30) -> tuple[dict[str, list[dict]], bool]:
-    """Use 1m opens when retained; fall back to the matching 1h opening, never a later price."""
+def execution_candles(client, fills: list[dict], cache: dict, now_ms: int, delay: int = 30,
+                      eksik: list[dict] | None = None) -> tuple[dict[str, list[dict]], bool]:
+    """Use 1m opens when retained; fall back to the matching 1h opening, never a later price.
+
+    Hedef için mum yok / fiyatı ≤ 0 ise hedef ATLANIR (önbelleğe girmez, sonraki saat yeniden denenir) ve ``eksik``e ``{"coin", "hedef"}`` eklenir;
+    trader düşürülmez (K-14). Ağ / API hatası ise yine istisnadır (okuma hatası)."""
     needed = {}
     approximate = any(cached_candle(value)[1] for rows in cache.values() for value in rows.values())
     for fill in fills:
@@ -263,7 +267,9 @@ def execution_candles(client, fills: list[dict], cache: dict, now_ms: int, delay
             prices = {int(c['t']): float(c['o']) for c in candles}
             for target in exact:
                 if target not in prices or prices[target] <= 0:
-                    raise ValueError(f'{coin}: gecikmeli 1 dk mum eksik ({target}); defter yayımlanmadı.')
+                    if eksik is not None:
+                        eksik.append({'coin': coin, 'hedef': target})
+                    continue
                 cache.setdefault(coin, {})[str(target)] = {'fiyat': prices[target], 'yaklasik': False}
         if older:
             hourly = client.candles(coin, min(target // (60 * MINUTE) * (60 * MINUTE) for target in older),
@@ -272,7 +278,9 @@ def execution_candles(client, fills: list[dict], cache: dict, now_ms: int, delay
             for target in older:
                 hour = target // (60 * MINUTE) * (60 * MINUTE)
                 if hour not in prices or prices[hour] <= 0:
-                    raise ValueError(f'{coin}: gecikmeli 1 saat mum eksik ({hour}); defter yayımlanmadı.')
+                    if eksik is not None:
+                        eksik.append({'coin': coin, 'hedef': target})
+                    continue
                 cache.setdefault(coin, {})[str(target)] = {'fiyat': prices[hour], 'yaklasik': True}
                 approximate = True
     return ({coin: [{'t': int(t), 'o': cached_candle(value)[0]} for t, value in rows.items()]
@@ -323,11 +331,13 @@ def copy_results(fills: list[dict], candles: dict, funding: list[dict], account:
     mature = [f for f in fills if math.ceil((int(f['time']) + delay * MINUTE) / MINUTE) * MINUTE <= millis(now)]
     days = pd.date_range(t0.normalize(), now.normalize(), freq='1D')
     # Sonuç kanonik defterden (defter.copy_ledger) gelir: gerçekleşmiş + açık (işaretlenmiş) K/Z ayrı yayımlanır.
-    ledger_fills = []
-    for fill in mature:
+    ledger_fills, fiyatsiz = [], 0
+    for fill in list(mature):
         execution = math.ceil((int(fill['time']) + delay * MINUTE) / MINUTE) * MINUTE
         if execution not in prices.get(fill['coin'], {}):
-            raise ValueError('Sanal defterde eksik mum var.')
+            mature.remove(fill)              # yürütme fiyatı yok (K-14): dolum atlanır ve sayılır; trader düşmez
+            fiyatsiz += 1
+            continue
         ledger_fills.append(dict(fill, _execution_time=execution, _execution_price=prices[fill['coin']][execution]))
     ledger = copy_ledger(ledger_fills, Market(candles), account, delay, millis(t0), millis(now), daily=True)
     if ledger['net'] is None:
@@ -405,7 +415,9 @@ def copy_results(fills: list[dict], candles: dict, funding: list[dict], account:
             # hesap değerine oranlı kesirler: gerçekleşmiş (maliyet + funding dahil), açık (işaretlenmiş) ve toplam; son işaret zamanı
             'gerceklesen': ledger['realized'] + funding_frac, 'acik': ledger['unrealized_end'], 'toplam': ledger['net'] + funding_frac,
             'son_isaret': at_ms(ledger['mark_time']) if ledger['mark_time'] is not None else None, 'isaret_eksik': int(ledger['mark_missing'])}
-    notes = (['yaklaşık fiyat'] if approximate else []) + (['eksik işaretleme'] if ledger['mark_missing'] else [])
+    if fiyatsiz:
+        result['fiyatsiz_eylem'] = fiyatsiz
+    notes = (['yaklaşık fiyat'] if approximate else []) + (['eksik işaretleme'] if ledger['mark_missing'] else []) + ([f'{fiyatsiz} dolumun fiyatı eksik (atlandı)'] if fiyatsiz else [])
     if notes:
         result['not'] = ', '.join(notes)
     return result
@@ -529,6 +541,7 @@ def with_data_error(trader: dict, error: Exception) -> dict:
     reasons = [reason for reason in previous['saglik']['nedenler'] if not reason.startswith('veri hatası:')]
     previous['saglik']['nedenler'] = reasons + [f'veri hatası: {short}']
     previous['gecerli'] = False
+    previous['veri_durumu'], previous['veri_durumu_neden'] = 'okuma_hatasi', short       # önceki yük korunur; bu saatin okuması başarısız
     return previous
 
 
@@ -572,8 +585,9 @@ def unavailable_trader(root: Path, row: dict, error: Exception) -> dict:
             'form': {'skor': 0.0, 'getiri_30g': 0.0, 'getiri_90g': 0.0},
             'hesap_degeri': 0.0, 'pozisyonlar': [], 'egri': [],
             'son_islem': {'coin': '', 'yon': '', 'acilis': '', 'kapanis': '', 'net_yuzde': 0.0},
+            'veri_durumu': 'okuma_hatasi', 'veri_durumu_neden': data_error_reason(error),
             'sanal_kopya': {'baslangic_usd': 1000, 'bakiye_usd': 1000.0, 'getiri': 0.0, 'dusus': 0.0,
-                            'gecikme_dk': delay_for_style(style), 't0': str(timestamp(row['t0']).date()), 'egri': []},
+                            'gecikme_dk': delay_for_style(style), 't0': str(timestamp(row['t0']).date()), 'egri': [], 'yer_tutucu': True},
             'sanal_kopya_v2': {'surum': 'v2', 'durum': 'hesaplanamadi', 'yer_tutucu': True, 'neden': 'hiç okunmadı'},
             'sanal_kopya_v3': {'surum': 'v3', 'durum': 'hesaplanamadi', 'yer_tutucu': True, 'neden': 'hiç okunmadı'},
             'ilk11_form_ham': {'hata': 'hiç okunmadı'}, 'son_perp_dolum': None,
@@ -637,6 +651,19 @@ def durum_icin_kirp(trader: dict, now: pd.Timestamp, rules: dict | None = None) 
     return {**trader, 'sanal_kopya_v3': {**v3, 'kapanan_islemler': kalan, 'kapanan_islemler_toplam': len(islemler)}}
 
 
+def veri_durumu_belirle(account: float, paper: dict, paper_v3: dict, eksik_hedef: int) -> tuple[str, str]:
+    """Trader başına veri durumu kodu (K-14; ``durum`` izleme listesinin kendi alanıdır, bu yüzden ``veri_durumu``). Öncelik: perp_bos > fiyatsiz > bayat > tamam.
+    ``okuma_hatasi`` okuması başarısız saatte ``with_data_error`` / ``unavailable_trader`` tarafından yazılır."""
+    fiyatsiz = max(int(paper_v3.get('fiyatsiz_eylem', 0) or 0), eksik_hedef, int(paper.get('fiyatsiz_eylem', 0) or 0))
+    if account <= 0:
+        return 'perp_bos', 'perp hesap değeri 0 (ana + HIP-3); v1 yer tutucu, v3 / olaylar sürer'
+    if fiyatsiz:
+        return 'fiyatsiz', f'{fiyatsiz} dolum için mum fiyatı eksik (atlandı, sayıldı)'
+    if int(paper.get('isaret_eksik', 0) or 0):
+        return 'bayat', f"{paper['isaret_eksik']} açık coin için işaret fiyatı eksik / bayat"
+    return 'tamam', ''
+
+
 def update_trader(root: Path, client, dexes: list[str], state: dict, all_events: dict,
                   row: dict, now: pd.Timestamp, symbols: set[str] | None) -> dict:
     ident, address, t0 = row['id'], row['adres'], timestamp(row['t0'])
@@ -655,15 +682,23 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
     # Health is refreshed hourly. The t0 denominator is persisted once and never recalculated.
     saved['portfolio'] = client.portfolio(address)
     # t0 değişirse (liste yeniden başlatılınca) payda yeni t0'a göre bir kez yeniden sabitlenir.
+    saglik_notu = None
     if saved.get('saglik_paydasi_t0') != str(t0.date()):
-        saved['saglik_paydasi'] = health_denominator(saved['portfolio'], t0)
-        saved['saglik_paydasi_t0'] = str(t0.date())
-    history = portfolio_curve(saved['portfolio'], now, float(saved['saglik_paydasi']))
+        try:
+            saved['saglik_paydasi'] = health_denominator(saved['portfolio'], t0)
+            saved['saglik_paydasi_t0'] = str(t0.date())
+        except ValueError as error:           # t0 için pozitif hesap değeri yok: trader düşmez, ışık "bilinmiyor" (K-14); sonraki saat yeniden denenir
+            saved['saglik_paydasi'], saglik_notu = None, data_error_reason(error)
+    history = pd.Series(dtype=float, index=pd.DatetimeIndex([], tz='UTC'))
+    if saved.get('saglik_paydasi'):
+        try:
+            history = portfolio_curve(saved['portfolio'], now, float(saved['saglik_paydasi']))
+        except ValueError as error:
+            saglik_notu = data_error_reason(error)
     states = clearinghouse_states(client, address, dexes)
     account, positions = positions_from_state(states, fills, symbols, now)
-    if account <= 0:
-        raise ValueError(f'{ident}: pozitif hesap değeri gerekli; sanal defter hesaplanamadı.')
-    saved.setdefault('kopya_paydasi', account)
+    if account > 0:
+        saved.setdefault('kopya_paydasi', account)
     copy_fills = [f for f in perp_fills(fills) if int(f['time']) >= millis(t0)]
     new_funding = funding_since(client, address, saved.get('son_funding', millis(t0)), millis(now))
     saved['funding'] = merge_rows(saved['funding'], new_funding, funding_key)
@@ -674,10 +709,15 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
     actions = copy_actions(copy_fills)
     style = resolve_style(root, row)
     delay = delay_for_style(style)
-    candles, approximate = execution_candles(client, actions, saved['mumlar'], millis(now), delay)
+    eksik_mum: list[dict] = []
+    candles, approximate = execution_candles(client, actions, saved['mumlar'], millis(now), delay, eksik_mum)
     marks = mark_candles(client, actions, millis(now))
     priced = {coin: rows + marks.get(coin, []) for coin, rows in {**{c: [] for c in marks}, **candles}.items()}
-    paper = copy_results(actions, priced, saved['funding'], saved['kopya_paydasi'], t0, now, own_events, approximate, delay)
+    if account > 0:
+        paper = copy_results(actions, priced, saved['funding'], saved['kopya_paydasi'], t0, now, own_events, approximate, delay)
+    else:                                     # perp hesap değeri 0: v1 (hesaba oranlı) hesaplanamaz -> açıkça işaretli yer tutucu; v3 / olaylar sürer
+        paper = {'baslangic_usd': 1000, 'bakiye_usd': 1000.0, 'getiri': 0.0, 'dusus': 0.0, 'gecikme_dk': delay, 't0': str(t0.date()), 'egri': [],
+                 'yer_tutucu': True, 'neden': 'perp hesap değeri 0'}
     # girdisi (tek fetch, kural 7). v1 (paper/sanal_kopya) yanında yayımlanır, değiştirmez; hata v1'i düşürmez (kural 6).
     try:
         saatlik = kopya_v2.saatlik_mumlar(client, saved.setdefault('mumlar_1s', {}), copy_fills,
@@ -692,6 +732,8 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
         paper_v3 = {'surum': 'v3', 'durum': 'hesaplanamadi', 'neden': data_error_reason(mum_error)}
     else:
         try:
+            if account <= 0:
+                raise ValueError('perp hesap değeri 0')
             hesap_serisi = kopya_v2.hesap_serisi_guncelle(saved, millis(t0), millis(now), account)
             paper_v2 = kopya_v2.hesapla(copy_fills, saatlik, marks, yurutme, hesap_serisi, saved['funding'],
                                         t0, now, delay, style)
@@ -703,10 +745,12 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
             paper_v3 = kopya_v3.hesapla(copy_fills, saatlik, marks, yurutme, saved['funding'], t0, now, delay, style)
         except Exception as error:
             paper_v3 = {'surum': 'v3', 'durum': 'hesaplanamadi', 'neden': data_error_reason(error)}
-    leverage = sum(p['buyukluk_usd'] for p in positions) / account
+    leverage = sum(p['buyukluk_usd'] for p in positions) / account if account > 0 else 0.0
     metrics = calculate_metrics(perp_fills(fills), account_value=account)
     light = health(history, t0, now, leverage, metrics['martingale_signal'],
                    max((int(f['time']) for f in perp_fills(fills)), default=None))
+    if saglik_notu:                           # payda yok -> ışık "bilinmiyor" (kaldıraç / martingale nedenleri yine yazılır)
+        light = {'isik': 'bilinmiyor', 'nedenler': [f'sağlık paydası yok: {saglik_notu}'] + [n for n in light['nedenler'] if n != 'kaldıraç normal']}
     if saved.get('isik') is not None and light['isik'] != saved['isik']:
         event = {'id': f'{ident}-{millis(now)}-isik', 'zaman': iso(now), 'trader': ident,
                  'tur': 'isik', 'coin': '', 'yon': '', 'fiyat': None, 'hesap_payi': None,
@@ -731,7 +775,9 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
         last_trade = {'coin': last['coin'], 'yon': 'long' if float(ending.get('startPosition', 0)) > 0 else 'short',
                       'acilis': iso(last['open_time']) if last['open_time'] is not None else '',
                       'kapanis': iso(last['close_time']), 'net_yuzde': last['net_pnl'] / notional if notional else 0.0}
+    veri_durumu, veri_durumu_neden = veri_durumu_belirle(account, paper, paper_v3, len(eksik_mum))
     trader = {**{k: v for k, v in row.items() if k != 'tarz'}, 'tarz': style, 'veri_zamani': iso(now), 'gecerli': True,
+              'veri_durumu': veri_durumu, 'veri_durumu_neden': veri_durumu_neden,
               'kapi': gate_result(root, address), 'saglik': light,
               'form': {'skor': ret30 / volatility if volatility > 0 and math.isfinite(volatility) else 0.0,
                        'getiri_30g': ret30, 'getiri_90g': float(recent.iloc[-1] - recent.iloc[0]) if len(recent) else 0.0},
