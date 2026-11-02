@@ -125,3 +125,34 @@ Görev: `docs/GOREV_D_YOLU.md`.
 - K‑8 havuz genişletmesi (30 → +30, motor ≈ 60 dk) dondurma bitene kadar bekler; 91 trader'da motor adımı 45 dk.
 
 - Yürütme: Sonnet tek lider ve birleştirme yetkili; Codex (Sol) denetçi.
+
+### K‑12. İlk 11 seçimi ve veri hattı önceliği (kullanıcı kararı 2026-11-02: lider önerileri onaylandı)
+- **Pano yok (şimdilik).** Öncelik: motor + İlk 11 / Yedek 11 / PAF seçiminin sorunsuz oturması + canlı veri akışı. Pano sonra.
+- **Uygunluk:** CT-Kapı `katman` = `izleme_adayi` veya `kopyalanabilir` olanlar (~91) kadroya aday olabilir.
+- **İlk sıralama İlk 11 puanıyla** (`copytrade/ilk11.py`, 10 alan), yalnız 10 alanın hepsi gerçek veriyle dolduktan sonra.
+  `ILK11_KADRO_V1.md`'deki "kapı sıralamasına göre" ifadesi bu kararla geçersiz (belge düzeltildi).
+- 2026-11-01 acil leaderboard-only kadro **geçici**dir; gerçek Pazar kadrosu gelince tamamen kaldırılır.
+- **Haftalık form puanı** = aynı 10 alanlı puan, son 30 günün verisiyle her Pazar yeniden hesaplanır.
+- Strateji kilidi (kural 5) sürer: ağırlıklar, 60/40, 11/11/28, terfi kapısı değişmez. Tanımlar ve açık sorular (K‑12.1–K‑12.11):
+  `docs/ILK11_SECIM_SARTNAME.md` §7.
+- **K‑12.1–K‑12.11: önerilen seçeneklerin tümü onaylandı (kullanıcı 2026-11-02). Kullanıcının vurgusu: önce verinin doğru gelmesi ve
+  kalıcı kaydı.**
+  - K‑12.1 `golge` (ilk seçim): kapının tarz gecikmeli kopya neti (`secim.puan`); formda v3 `kapanan_islemler`.
+  - K‑12.2 `tutarli`: pozitif gün oranı, 30 gün, payda PnL'i değişen günler.
+  - K‑12.3 `kaldirac`: efektif kaldıraç, dönüşüm aynen. Not: kaldıraç dönüşümü ilk kadroda aynen kalır; adaylar 0,03–2,87x olduğundan
+    dönüşüm bu aralıkta yüksek kaldıraca daha yüksek puan veriyor — ilk gerçek kadrodan sonra etkisi raporlanır, değişiklik ayrı kullanıcı kararıdır.
+  - K‑12.4 İlk seçim penceresi (kazanma/sıklık/tutma/kaldıraç): kapı penceresi 365 gün.
+  - K‑12.5 Form yüzdelik evreni: kadronun 50 kişisi.
+  - K‑12.6 Kadro boşluğu: her Pazar uygun adaylardan İlk 11 puanıyla en iyisi boş PAF yerine girer.
+  - K‑12.7 Pazar planı: otomatik uygulanır (PAPER); geri alma `gecis.py` kaydıyla.
+  - K‑12.8 İzleme kapsamı: kadro 50 + `referans_oda`/`referans_kontrol`; eski pilot kolları (taban, elle, havuz vb.) saatlik izlemeden çıkar;
+    geçmiş veri dalda kalır, silinmez.
+  - K‑12.9 Az aday: uygun < 11 → yayın yok; 11–49 → uyarılı yayın.
+  - K‑12.10 Veri kalitesi parametreleri (`ilk11_*`: tazelik 7 gün / 120 dk, form ≥ 8/10 alan, doluluk ≥ %90, akıl sağlığı aralıkları, ihlal > %5 → kırmızı): olduğu gibi.
+  - K‑12.11 Kapıya 5 bilgi sütunu (adım/eşik değişmez; veri bir kez çekilir): onaylandı.
+
+### K‑13. Telegram / Cloudflare Worker ertelendi (kullanıcı kararı 2026-11-02: lider önerisi kabul)
+- Telegram/Cloudflare Worker ertelendi. Trader seçimi ve veri akışı Worker'a bağlı değildir; Worker canlı veri akışı oturduktan sonra
+  yeniden bağlanır.
+- Şu an GitHub'da `CLOUDFLARE_API_TOKEN` (ve muhtemelen diğer Worker secret'ları) yok; `worker.yml` dağıtımı "Gerekli secret'ları doğrula"
+  adımında kırmızı biter — bu beklenen durumdur. Canlıdaki eski Worker sürümü dokunulmadan kalır.
