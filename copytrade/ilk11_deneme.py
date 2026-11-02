@@ -136,6 +136,35 @@ def ozet(kapi_sonuc: Path, durum: Path, pazar_alanlar: Path | None, sure_sn: flo
     return "\n".join(out) + "\n"
 
 
+def liste_sec(kaynak: Path, idler: list[str], cikti: Path) -> list[dict]:
+    """A4-1 izleme denemesi: ana izleme listesinden verilen kimlikleri (`id`) olduğu gibi (adres, t0, tarz …) seçip 5-6 satırlık deneme listesi yazar."""
+    satirlar = yaml.safe_load(kaynak.read_text(encoding="utf-8"))["traderlar"]
+    bulunan = {r["id"]: r for r in satirlar}
+    eksik = [i for i in idler if i not in bulunan]
+    if eksik:
+        raise ValueError(f"listede olmayan kimlik: {eksik}")
+    secilen = [bulunan[i] for i in idler]
+    cikti.mkdir(parents=True, exist_ok=True)
+    (cikti / "izleme_listesi.yaml").write_text(yaml.safe_dump({"traderlar": secilen}, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    return secilen
+
+
+def durum_ozeti(durum: Path, sure_sn: float | None, artimli_sn: float | None) -> str:
+    """Trader başına `veri_durumu`, sağlık ışığı, hesap, v3 ve form alanı özeti + süre tahmini (A4-1 gerçek veri denemesi)."""
+    d = json.loads(durum.read_text(encoding="utf-8"))
+    out = ["### Trader durumları", "", "| id | gecerli | veri_durumu | neden | ışık | hesap (perp) $ | v3 bakiye $ | v3 fiyatsız | v3 kapanan | form dolu | olay |", "|---|---|---|---|---|---|---|---|---|---|---|"]
+    olay = {}
+    for e in d.get("olaylar", []):
+        olay[e["trader"]] = olay.get(e["trader"], 0) + 1
+    for t in d["traderlar"]:
+        v3 = t.get("sanal_kopya_v3") or {}
+        form = t.get("ilk11_form_ham") or {}
+        out.append(f"| {t['id']} | {t['gecerli']} | {t.get('veri_durumu')} | {t.get('veri_durumu_neden', '')} | {t['saglik']['isik']} ({t['saglik']['nedenler'][0]}) | "
+                   f"{t.get('hesap_degeri', 0):.0f} | {v3.get('bakiye_usd', '—')} | {v3.get('fiyatsiz_eylem', '—')} | {len(v3.get('kapanan_islemler') or [])}/{v3.get('kapanan_islemler_toplam', '—')} | "
+                   f"{form.get('dolu_alan', form.get('hata'))} | {olay.get(t['id'], 0)} |")
+    return "\n".join(out + ["", "### İzleme süresi", ""] + sure_tahmini(len(d["traderlar"]), sure_sn, artimli_sn)) + "\n"
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     alt = ap.add_subparsers(dest="komut", required=True)
@@ -148,8 +177,20 @@ def main(argv: list[str] | None = None) -> None:
     o.add_argument("--pazar-alanlar", type=Path, default=None)
     o.add_argument("--sure-sn", type=float, default=None)
     o.add_argument("--artimli-sn", type=float, default=None)
+    ls = alt.add_parser("liste")
+    ls.add_argument("--kaynak", type=Path, required=True)
+    ls.add_argument("--idler", required=True, help="virgülle ayrılmış izleme listesi kimlikleri")
+    ls.add_argument("--cikti", type=Path, required=True)
+    ds = alt.add_parser("durum-ozeti")
+    ds.add_argument("--durum", type=Path, required=True)
+    ds.add_argument("--sure-sn", type=float, default=None)
+    ds.add_argument("--artimli-sn", type=float, default=None)
     a = ap.parse_args(argv)
-    if a.komut == "hazirla":
+    if a.komut == "liste":
+        print(json.dumps([r["id"] for r in liste_sec(a.kaynak, [i.strip() for i in a.idler.split(",") if i.strip()], a.cikti)]))
+    elif a.komut == "durum-ozeti":
+        print(durum_ozeti(a.durum, a.sure_sn, a.artimli_sn))
+    elif a.komut == "hazirla":
         print(json.dumps(hazirla(a.kapi_sonuc, a.cikti, datetime.now(UTC)), ensure_ascii=False, indent=1))
     else:
         print(ozet(a.kapi_sonuc, a.durum, a.pazar_alanlar, a.sure_sn, a.artimli_sn))

@@ -19,7 +19,7 @@ from test_izleme import ADDRESS, NOW, Client, project
 ROOT = Path(__file__).resolve().parents[1]
 WF = ROOT / ".github/workflows"
 SCRIPTS = ROOT / ".github/scripts"
-ISLER = ("copytrade_kapi.yml", "izleme.yml", "ilk11_pazar.yml", "ilk11_deneme.yml")
+ISLER = ("copytrade_kapi.yml", "izleme.yml", "ilk11_pazar.yml", "ilk11_deneme.yml", "izleme_deneme.yml")
 
 
 def yukle(ad: str) -> dict:
@@ -55,7 +55,7 @@ def test_hata_or_true_ile_orulmez_ve_main_e_yazilmaz():
 
 
 def test_veri_dali_yazimlari_yalniz_veri_dallarina():
-    hedef = {"copytrade_kapi.yml": None, "izleme.yml": None, "ilk11_pazar.yml": "copytrade-kapi", "ilk11_deneme.yml": None}
+    hedef = {"copytrade_kapi.yml": None, "izleme.yml": None, "ilk11_pazar.yml": "copytrade-kapi", "ilk11_deneme.yml": None, "izleme_deneme.yml": None}
     for ad in ISLER:
         for satir in (WF / ad).read_text(encoding="utf-8").splitlines():
             if "git push" in satir:
@@ -372,3 +372,20 @@ def test_deneme_hazirla_dosyalari_kapi_ve_izleme_formatinda_yazar(tmp_path):
     liste = m.load_list(tmp_path / "deneme/izleme_listesi.yaml")
     assert [r["id"] for r in liste] == ["D1", "D2", "D3", "D4", "D5"] and {r["t0"] for r in liste} == {"2026-10-05"}
     assert (tmp_path / "deneme/tarih.txt").read_text().strip() == "2026-10-31"
+
+
+def test_izleme_deneme_listesi_ve_ozeti(tmp_path):
+    from copytrade.ilk11_deneme import durum_ozeti, liste_sec
+    kaynak = tmp_path / "liste.yaml"
+    satirlar = [{"id": f"K0{i}", "adres": "0x" + str(i) * 40, "takma_ad": f"k{i}", "durum": "izlemede", "t0": "2026-10-28", "tarz": "swing"} for i in range(1, 5)]
+    kaynak.write_text(yaml.safe_dump({"traderlar": satirlar}))
+    secilen = liste_sec(kaynak, ["K03", "K01"], tmp_path / "c")
+    assert [r["id"] for r in secilen] == ["K03", "K01"] and m.load_list(tmp_path / "c/izleme_listesi.yaml") == secilen
+    with pytest.raises(ValueError, match="K99"):
+        liste_sec(kaynak, ["K01", "K99"], tmp_path / "c2")
+    durum = tmp_path / "durum.json"
+    durum.write_text(json.dumps({"olaylar": [{"trader": "K01"}], "traderlar": [
+        {"id": "K01", "gecerli": True, "veri_durumu": "fiyatsiz", "veri_durumu_neden": "2 dolum", "saglik": {"isik": "yesil", "nedenler": ["kaldıraç normal"]}, "hesap_degeri": 10.0,
+         "sanal_kopya_v3": {"bakiye_usd": 1000.5, "fiyatsiz_eylem": 2, "kapanan_islemler": [{}], "kapanan_islemler_toplam": 3}, "ilk11_form_ham": {"dolu_alan": 9}}]}))
+    metin = durum_ozeti(durum, 100, 10)
+    assert "| K01 | True | fiyatsiz | 2 dolum | yesil (kaldıraç normal) | 10 | 1000.5 | 2 | 1/3 | 9 | 1 |" in metin and "ilk okuma: 1 trader 100 sn" in metin
