@@ -90,7 +90,9 @@ yalnız olay kimliği, karar ve neden. Trader adresleri zaten herkese açık zin
     v1 (`sanal_kopya`, hesaba oranlı) ve v2 hesaplanamaz.
   - `fiyatsiz`: en az bir dolum için gecikmeli yürütme mumu yok (1 dk, ya da 1 sa yedek). Hedef atlanır ve sayılır (önbelleğe girmez, sonraki saat yeniden
     denenir); asla "sonraki fiyat" kullanılmaz. v1'de `sanal_kopya.fiyatsiz_eylem` (adet; atlanan dolum) ve `not`; v3'te `fiyatsiz_eylem` (`copy_ledger` sayısı).
-  - `bayat`: açık coin için işaret fiyatı eksik / bayat (`sanal_kopya.isaret_eksik > 0`): açık K/Z güvenilmez.
+    Açık kopya coini için son 15 dakikada işaret (1 dk) mumu yoksa da `fiyatsiz`: neden "işaret fiyatı eksik: <coin listesi>" (işaret eksiği bir FİYAT eksiğidir).
+  - `bayat`: trader'ın `veri_zamani` değeri yayın anındaki `uretildi`'den `ilk11_form_tazelik_dk` (120) dakikadan DAHA eski (sınır dahil değil) ve başka bir kod yok
+    (öncelik: okuma_hatasi > perp_bos > fiyatsiz > bayat > tamam). `veri_durumu_neden`: "veri N dk eski (> 120 dk)".
   - `tamam`: yukarıdakilerin hiçbiri. `veri_durumu_neden`: kısa Türkçe metin (`tamam`da boş).
 - **v1 yer tutucusu:** `sanal_kopya.yer_tutucu: true` (bakiye 1.000 $, getiri 0, `egri: []`; `perp_bos` ise `neden` da yazılır) — gerçek hesap DEĞİL.
   Tüketici `yer_tutucu` olanı ortalamaya / toplama katmamalı (v3 `durum: hesaplanamadi` ile aynı kural).

@@ -651,17 +651,28 @@ def durum_icin_kirp(trader: dict, now: pd.Timestamp, rules: dict | None = None) 
     return {**trader, 'sanal_kopya_v3': {**v3, 'kapanan_islemler': kalan, 'kapanan_islemler_toplam': len(islemler)}}
 
 
-def veri_durumu_belirle(account: float, paper: dict, paper_v3: dict, eksik_hedef: int) -> tuple[str, str]:
-    """Trader başına veri durumu kodu (K-14; ``durum`` izleme listesinin kendi alanıdır, bu yüzden ``veri_durumu``). Öncelik: perp_bos > fiyatsiz > bayat > tamam.
-    ``okuma_hatasi`` okuması başarısız saatte ``with_data_error`` / ``unavailable_trader`` tarafından yazılır."""
-    fiyatsiz = max(int(paper_v3.get('fiyatsiz_eylem', 0) or 0), eksik_hedef, int(paper.get('fiyatsiz_eylem', 0) or 0))
+def veri_durumu_belirle(account: float, paper: dict, paper_v3: dict, eksik_hedef: int, isaret_eksik: list[str] | None = None) -> tuple[str, str]:
+    """Trader başına veri durumu kodu (K-14; ``durum`` izleme listesinin kendi alanıdır, bu yüzden ``veri_durumu``). Öncelik: perp_bos > fiyatsiz > tamam.
+    ``okuma_hatasi`` okuması başarısız saatte ``with_data_error`` / ``unavailable_trader`` tarafından yazılır; ``bayat`` yayın anında ``bayat_isle`` ile.
+    Fiyat eksiği = yürütme mumu eksik dolum (v1 atlanan, v3 ``fiyatsiz_eylem``) ya da açık kopya coini için işaret fiyatı eksik (``isaret_eksik``: coin listesi)."""
     if account <= 0:
         return 'perp_bos', 'perp hesap değeri 0 (ana + HIP-3); v1 yer tutucu, v3 / olaylar sürer'
-    if fiyatsiz:
-        return 'fiyatsiz', f'{fiyatsiz} dolum için mum fiyatı eksik (atlandı, sayıldı)'
-    if int(paper.get('isaret_eksik', 0) or 0):
-        return 'bayat', f"{paper['isaret_eksik']} açık coin için işaret fiyatı eksik / bayat"
-    return 'tamam', ''
+    fiyatsiz = max(int(paper_v3.get('fiyatsiz_eylem', 0) or 0), eksik_hedef, int(paper.get('fiyatsiz_eylem', 0) or 0))
+    nedenler = ([f'{fiyatsiz} dolum için mum fiyatı eksik (atlandı, sayıldı)'] if fiyatsiz else []) + \
+               ([f"işaret fiyatı eksik: {', '.join(isaret_eksik)}"] if isaret_eksik else [])
+    return ('fiyatsiz', '; '.join(nedenler)) if nedenler else ('tamam', '')
+
+
+def bayat_isle(trader: dict, uretildi: pd.Timestamp, rules: dict | None = None) -> dict:
+    """Yayın anında: ``tamam`` görünen ama ``veri_zamani`` yayın anındaki ``uretildi``'den ``ilk11_form_tazelik_dk`` dakikadan eski trader ``bayat`` olur
+    (önceki başarılı veri taşınıyorsa). ``okuma_hatasi`` / ``perp_bos`` / ``fiyatsiz`` önceliği korunur. Kopya döner."""
+    if trader.get('veri_durumu') != 'tamam' or not trader.get('veri_zamani'):
+        return trader
+    yas = (uretildi - timestamp(trader['veri_zamani'])) / pd.Timedelta(minutes=1)
+    sinir = int((rules or load_rules())['ilk11_form_tazelik_dk'])
+    if yas > sinir:
+        return {**trader, 'veri_durumu': 'bayat', 'veri_durumu_neden': f'veri {yas:.0f} dk eski (> {sinir} dk)'}
+    return trader
 
 
 def update_trader(root: Path, client, dexes: list[str], state: dict, all_events: dict,
@@ -775,7 +786,7 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
         last_trade = {'coin': last['coin'], 'yon': 'long' if float(ending.get('startPosition', 0)) > 0 else 'short',
                       'acilis': iso(last['open_time']) if last['open_time'] is not None else '',
                       'kapanis': iso(last['close_time']), 'net_yuzde': last['net_pnl'] / notional if notional else 0.0}
-    veri_durumu, veri_durumu_neden = veri_durumu_belirle(account, paper, paper_v3, len(eksik_mum))
+    veri_durumu, veri_durumu_neden = veri_durumu_belirle(account, paper, paper_v3, len(eksik_mum), sorted(open_copy_coins(actions) - set(marks)))
     trader = {**{k: v for k, v in row.items() if k != 'tarz'}, 'tarz': style, 'veri_zamani': iso(now), 'gecerli': True,
               'veri_durumu': veri_durumu, 'veri_durumu_neden': veri_durumu_neden,
               'kapi': gate_result(root, address), 'saglik': light,
@@ -837,7 +848,7 @@ def run(root: Path, output: Path, client=None, now=None, symbols=None, liste: Pa
     if watchlist and failed == len(watchlist):
         raise RuntimeError('Tüm trader verileri hatalı; önceki durum yayımlanmadı.')
     rules = load_rules()
-    result = {'surum': 1, 'uretildi': iso(now), 'kaynak': 'hyperliquid', 'traderlar': [durum_icin_kirp(t, now, rules) for t in traders],
+    result = {'surum': 1, 'uretildi': iso(now), 'kaynak': 'hyperliquid', 'traderlar': [durum_icin_kirp(bayat_isle(t, now, rules), now, rules) for t in traders],
               'kasa_egri': {'oda': kasa_egrisi(traders, 'oda'), 'kontrol': kasa_egrisi(traders, 'kontrol')},
               'olaylar': sorted(all_events.values(), key=lambda e: (e['zaman'], e['id']), reverse=True)[:200]}
     oda_uyeleri = [t for t in traders if t.get('kol') == 'oda']

@@ -155,10 +155,42 @@ def test_hic_okunmamis_trader_yer_tutucu_okuma_hatasi_ve_v1_yer_tutucu(tmp_path)
     assert kirik['sanal_kopya']['yer_tutucu'] is True and kirik['sanal_kopya_v3']['yer_tutucu'] is True and kirik['gecerli'] is False
 
 
-def test_veri_durumu_belirle_oncelik_perp_bos_fiyatsiz_bayat_tamam():
+def test_veri_durumu_belirle_oncelik_perp_bos_fiyatsiz_tamam():
     belirle = m.veri_durumu_belirle
     assert belirle(1000, {}, {}, 0) == ('tamam', '')
-    assert belirle(1000, {'isaret_eksik': 2}, {}, 0)[0] == 'bayat'
-    assert belirle(1000, {'isaret_eksik': 2}, {'fiyatsiz_eylem': 3}, 0) == ('fiyatsiz', '3 dolum için mum fiyatı eksik (atlandı, sayıldı)')
+    assert belirle(1000, {'isaret_eksik': 2}, {}, 0) == ('tamam', '')                       # eski v1 sayacı artık durumu belirlemez; coin listesi belirler
+    assert belirle(1000, {}, {}, 0, ['ETH', 'SOL']) == ('fiyatsiz', 'işaret fiyatı eksik: ETH, SOL')       # işaret eksiği = FİYAT eksiği
+    assert belirle(1000, {}, {'fiyatsiz_eylem': 3}, 0) == ('fiyatsiz', '3 dolum için mum fiyatı eksik (atlandı, sayıldı)')
+    assert belirle(1000, {}, {'fiyatsiz_eylem': 3}, 0, ['ETH'])[1] == '3 dolum için mum fiyatı eksik (atlandı, sayıldı); işaret fiyatı eksik: ETH'
     assert belirle(1000, {}, {}, 4)[0] == 'fiyatsiz' and belirle(1000, {'fiyatsiz_eylem': 2}, {}, 0)[0] == 'fiyatsiz'
-    assert belirle(0, {'isaret_eksik': 2}, {'fiyatsiz_eylem': 3}, 4)[0] == 'perp_bos'
+    assert belirle(0, {}, {'fiyatsiz_eylem': 3}, 4, ['ETH'])[0] == 'perp_bos'
+
+
+def test_bayat_veri_zamani_uretildiden_120_dk_ve_daha_eskiyse_ve_oncelikler_korunur():
+    """Altın örnek: yayın anı 12:00. veri_zamani 09:00 (3 sa = 180 dk > 120) -> bayat; 11:00 (1 sa) -> değil; tam 120 dk (10:00) -> değil (sınır dahil değil)."""
+    uretildi = m.timestamp('2026-10-27T12:00:00Z')
+    tamam = {'id': 'T1', 'veri_durumu': 'tamam', 'veri_durumu_neden': '', 'veri_zamani': '2026-10-27T09:00:00Z'}
+    eski = m.bayat_isle(tamam, uretildi)
+    assert (eski['veri_durumu'], eski['veri_durumu_neden']) == ('bayat', 'veri 180 dk eski (> 120 dk)') and tamam['veri_durumu'] == 'tamam'       # girdi değişmez
+    assert m.bayat_isle({**tamam, 'veri_zamani': '2026-10-27T11:00:00Z'}, uretildi)['veri_durumu'] == 'tamam'
+    assert m.bayat_isle({**tamam, 'veri_zamani': '2026-10-27T10:00:00Z'}, uretildi)['veri_durumu'] == 'tamam'
+    for durum in ('okuma_hatasi', 'perp_bos', 'fiyatsiz'):                                          # öncelik: bayat bunları ezmez
+        assert m.bayat_isle({**tamam, 'veri_durumu': durum}, uretildi)['veri_durumu'] == durum
+    assert m.bayat_isle({**tamam, 'veri_zamani': None}, uretildi)['veri_durumu'] == 'tamam'          # hiç okunmamış yer tutucu zaten okuma_hatasi
+
+
+def test_run_tasinan_eski_yuk_okuma_hatasi_kalir_taze_okuma_tamam(tmp_path):
+    root = project(tmp_path)
+    ilk = trader_of(m.run(root, root / 'out', Client(), NOW))
+    assert ilk['veri_durumu'] == 'tamam'
+    # 3 saat sonra okuma başarısız: taşınan yük okuma_hatasi (bayat değil: öncelik)
+    satir = {'id': 'T9', 'adres': '0x' + '9' * 40, 'takma_ad': 'Dokuz', 'durum': 'izlemede', 't0': str(T0.date())}
+    (root / 'copytrade/izleme_listesi.yaml').write_text(__import__('yaml').safe_dump({'traderlar': [{'id': 'T1', 'adres': ADDRESS, 'takma_ad': 'Test', 'durum': 'izlemede', 't0': str(T0.date())}, satir]}))
+
+    class Yalniz9Saglam(Client):
+        def fills(self, address, start):
+            if address == ADDRESS:
+                raise RuntimeError('429')
+            return super().fills(address, start)
+    sonuc = m.run(root, root / 'out', Yalniz9Saglam(), NOW + pd.Timedelta(hours=3))
+    assert trader_of(sonuc, 'T1')['veri_durumu'] == 'okuma_hatasi' and trader_of(sonuc, 'T9')['veri_durumu'] == 'tamam'
