@@ -92,7 +92,10 @@ jobs:
           fi
           sure=$(cat deneme/izleme_sure_sn.txt)
           alanlar=$(find deneme_pazar1/ilk11 -name alanlar.csv -print -quit 2>/dev/null)
-          python -m copytrade.ilk11_deneme ozet --kapi-sonuc "deneme_kok/copytrade/kapi/$TARIH/sonuc.csv" --durum deneme_izleme/durum.json --pazar-alanlar "$alanlar" --sure-sn "$sure" | tee deneme/OZET.md >> "$GITHUB_STEP_SUMMARY"
+          python -m copytrade.ilk11_deneme ozet --kapi-sonuc "deneme_kok/copytrade/kapi/$TARIH/sonuc.csv" --durum deneme_izleme/durum.json --pazar-alanlar "$alanlar" --sure-sn "$sure" > deneme/OZET.md
+          cat deneme/OZET.md
+          cat deneme/OZET.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$alanlar" ]; then cat "$(dirname "$alanlar")/RAPOR.md"; fi
       - uses: actions/upload-artifact@v4
         if: ${{ always() && steps.secret.outcome == 'success' }}
         with:
