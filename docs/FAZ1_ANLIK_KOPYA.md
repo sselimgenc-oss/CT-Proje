@@ -24,7 +24,7 @@ Amaç: canlıda kâr. Trader'ın kendi getirisi değil, **bizim kopyamızın mal
 | H5 | **Risk sınırları tasarımı.** Trader başına tavan, toplam açık pozisyon tavanı, zarar şalteri (/dur), küçük başlangıç tutarı; dry-run'da uygulanır. | Sonnet | H2 | Dry-run'da sınır ihlali sayılır ve reddedilir |
 
 ## Sıra
-PR‑3 → tam kapı taraması → A4‑1 → A4‑3 → **H1** → A4‑2 → A4‑4 → **H2** (sunucu hazır olunca) → H5 → H3/H4 (kullanıcı kararı).
+PR‑3 → tam kapı taraması → A4‑1 → A4‑3 → **H1** → A4‑2 → A4‑4 → **H2** (sunucu hazır olunca) → H5 → H3 (lider kararı) → H4 (son karar kullanıcı).
 Faz 2 (pano) bundan sonra.
 
 ## Sunucu (H2) — kullanıcıdan istenecek
