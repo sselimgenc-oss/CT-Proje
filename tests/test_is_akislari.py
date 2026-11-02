@@ -349,7 +349,9 @@ def test_deneme_hazirla_dosyalari_kapi_ve_izleme_formatinda_yazar(tmp_path):
     cikti = hazirla(csv, tmp_path / "deneme", datetime(2026, 11, 4, 12, 0, tzinfo=UTC))
     assert cikti["tarih"] == "2026-10-31"                                                         # son Pazar (11-01) − 1 gün: ilk11_pazar'ın kapı kuralına uyar
     liderler = read_universe_snapshot(tmp_path / "deneme/evren.json")
-    assert len(liderler) == 5 and all(x["kaynak"] == "dis_aday" for x in liderler)
+    assert len(liderler) == 5 and all(x["kaynak"] == "leaderboard" for x in liderler)             # dis_aday olsaydı yalniz_adim5 plaseboyu hesaplamazdı
+    onceki = pd.read_csv(tmp_path / "deneme/onceki_sonuc.csv")
+    assert set(onceki["address"]) == {x["address"] for x in liderler} and (onceki[["adim1", "adim2", "adim3", "adim4"]] == "Geçti").all().all()
     liste = m.load_list(tmp_path / "deneme/izleme_listesi.yaml")
     assert [r["id"] for r in liste] == ["D1", "D2", "D3", "D4", "D5"] and {r["t0"] for r in liste} == {"2026-10-05"}
     assert (tmp_path / "deneme/tarih.txt").read_text().strip() == "2026-10-31"

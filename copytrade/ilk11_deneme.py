@@ -67,7 +67,10 @@ def hazirla(kapi_sonuc: Path, cikti: Path, simdi: datetime) -> dict:
     tarih = (pazar_as_of(simdi).date() - timedelta(days=1)).isoformat()
     t0 = (simdi - timedelta(days=int(load_rules()["ilk11_form_pencere_gun"]))).date().isoformat()
     cikti.mkdir(parents=True, exist_ok=True)
-    (cikti / "evren.json").write_text(json.dumps({"liderler": [{"address": s["address"], "accountValue": s["hesap"], "kaynak": "dis_aday"} for s in secilen]}), encoding="utf-8")
+    # `kapi.py --yalniz-adim5` plaseboyu adım 3–4'e bakmadan hesaplar, ama dış adaylara (`dis_aday`) uygulamaz ve önceki sonuçta adım 1–4 Geçti arar: bu yüzden adaylar
+    # `leaderboard` etiketli ve aşağıdaki "önceki sonuç" (yalnız deneme düzeneği; hiçbir yere yayımlanmaz) 5 adresi adım 1–4 Geçti diye listeler.
+    (cikti / "evren.json").write_text(json.dumps({"liderler": [{"address": s["address"], "accountValue": s["hesap"], "kaynak": "leaderboard"} for s in secilen]}), encoding="utf-8")
+    pd.DataFrame({"address": [s["address"] for s in secilen], **{f"adim{i}": "Geçti" for i in range(1, 5)}}).to_csv(cikti / "onceki_sonuc.csv", index=False)
     liste = [{"id": f"D{i}", "adres": s["address"], "takma_ad": s["address"][2:6], "tarz": s["tarz"], "durum": "izlemede", "t0": t0} for i, s in enumerate(secilen, 1)]
     (cikti / "izleme_listesi.yaml").write_text(yaml.safe_dump({"traderlar": liste}, allow_unicode=True, sort_keys=False), encoding="utf-8")
     (cikti / "tarih.txt").write_text(tarih + "\n", encoding="utf-8")
@@ -101,7 +104,7 @@ def ozet(kapi_sonuc: Path, durum: Path, pazar_alanlar: Path | None, sure_sn: flo
     for a in KALDIRAC_ALANLARI:
         out.append(_istatistik(f"İ {a}", [v[0][a] for v in ilk.values()]))
         out.append(_istatistik(f"F {a}", [(f.get("alanlar") or {}).get(a) for f in form.values()]))
-    if pazar_alanlar and pazar_alanlar.exists():
+    if pazar_alanlar and pazar_alanlar.is_file():
         tablo = pd.read_csv(pazar_alanlar)
         out += [f"", f"### Pazar `alanlar.csv` ({len(tablo)} satır)", "", "| sütun | n | min | medyan | max |", "|---|---|---|---|---|"]
         out += [_istatistik(c, tablo[c].tolist()) for c in tablo.columns if pd.api.types.is_numeric_dtype(tablo[c])]

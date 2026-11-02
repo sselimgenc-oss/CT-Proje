@@ -19,7 +19,7 @@ defaults:
 jobs:
   deneme:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
       R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
@@ -52,12 +52,14 @@ jobs:
         id: hazir
       - name: Kapı alanları (5 adres, tek parça) ve birleştirme
         # Parça çıktısı ile birleştirme çıktısı AYRI köklerde: birleştirme parçayı "önceki dosya" saymasın (tüm satırlar `bu_kosu` kalır).
+        # `--yalniz-adim5`: plasebo adım 3–4'e bakmadan hesaplanır (5 adresin hiçbiri bugünkü veriyle adım 3–4'ü geçmeyebilir; akıl sağlığı kapısı `plasebo_p` boş sütununu kabul etmez).
         env:
           PYTHONWARNINGS: ignore
           TARIH: ${{ steps.hazir.outputs.tarih }}
         run: |
-          mkdir -p deneme_parca/copytrade deneme_kok/copytrade shards/s0
-          python -m copytrade.kapi --root deneme_parca/copytrade --tarih "$TARIH" --evren-dosyasi deneme/evren.json
+          mkdir -p deneme_parca/copytrade/kapi/2000-01-01 deneme_kok/copytrade shards/s0
+          cp deneme/onceki_sonuc.csv deneme_parca/copytrade/kapi/2000-01-01/sonuc.csv
+          python -m copytrade.kapi --root deneme_parca/copytrade --tarih "$TARIH" --evren-dosyasi deneme/evren.json --yalniz-adim5
           cp -r "deneme_parca/copytrade/kapi/$TARIH" shards/s0/
           python -m copytrade.kapi --root deneme_kok/copytrade --birlestir shards --beklenen-parca 1 --mod tam --evren-dosyasi deneme/evren.json
           cat "deneme_kok/copytrade/kapi/$TARIH/durum.json"
@@ -80,8 +82,16 @@ jobs:
         env:
           TARIH: ${{ steps.hazir.outputs.tarih }}
         run: |
-          sure=$(cat deneme/izleme_sure_sn.txt 2>/dev/null || echo 0)
-          alanlar=$(find deneme_pazar1/ilk11 -name alanlar.csv | head -1)
+          eksik=""
+          for dosya in "deneme_kok/copytrade/kapi/$TARIH/sonuc.csv" deneme_izleme/durum.json; do
+            if [ ! -f "$dosya" ]; then eksik="$eksik $dosya"; fi
+          done
+          if [ -n "$eksik" ]; then
+            echo "Önceki bir adım kırmızı, çıktı yok:$eksik (özet üretilmedi; iş kırmızı kalır)." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          sure=$(cat deneme/izleme_sure_sn.txt)
+          alanlar=$(find deneme_pazar1/ilk11 -name alanlar.csv -print -quit 2>/dev/null)
           python -m copytrade.ilk11_deneme ozet --kapi-sonuc "deneme_kok/copytrade/kapi/$TARIH/sonuc.csv" --durum deneme_izleme/durum.json --pazar-alanlar "$alanlar" --sure-sn "$sure" | tee deneme/OZET.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: ${{ always() && steps.secret.outcome == 'success' }}
