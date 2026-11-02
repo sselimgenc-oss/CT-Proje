@@ -59,6 +59,7 @@ def form_esle(kayit: Mapping[str, Any]) -> tuple[dict[str, float | None], dict[s
                 value = _number(kayit[source])
                 if value is not None:
                     if field == "tutma" and source == "medyan_tutma_saat":
+                        value *= 60.0  # ham tutma birimi dakikadır; kaynak saat.
                         source = "medyan_tutma_saat*60"
                     result[field], provenance[field] = value, source
                     break

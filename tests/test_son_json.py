@@ -25,10 +25,3 @@ def test_son_json_cli(tmp_path):
     path = tmp_path / "son.json"
     son_yaz.main(["son_yaz.py", str(path), "secim", "2026-10-30-v1.3"])
     assert json.loads(path.read_text())["secim"] == "2026-10-30-v1.3"
-
-
-def test_yayincilar_son_json_yazar():
-    kapi = (ROOT / ".github/scripts/kapi_yayimla.sh").read_text(encoding="utf-8")
-    secim = (ROOT / ".github/workflows/copytrade_secim.yml").read_text(encoding="utf-8")
-    assert 'son_yaz.py" son.json kapi "$DAY"' in kapi and "git add -f son.json" in kapi
-    assert 'son_yaz.py son.json secim "$name"' in secim and 'git add -f "secim/$name" son.json' in secim

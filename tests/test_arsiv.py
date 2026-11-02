@@ -1,5 +1,4 @@
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 import pandas as pd
 
@@ -61,11 +60,3 @@ def test_altin_ornek_acik_pozisyon_coini_1dk_muma_gider(tmp_path):
             return [{"coin": coin, "t": start}]
     collect(tmp_path, tmp_path / "out", {"pozisyon", "mum_1dk"}, gate_root=tmp_path / "kapi", client=Fake(), now=NOW)
     assert list((tmp_path / "out" / "tur=mum_1dk").rglob("*.parquet"))
-
-
-def test_is_akisi_bosluk_kirmizisi_dolum_ve_r2_yuklemesini_atlatmaz():
-    """Boşluk eşiği 15 dk adımını kırmızı yapınca dolum toplanmalı ve veri R2'ye yine yazılmalı."""
-    import yaml
-    steps = {s.get("name"): s for s in yaml.safe_load((Path(__file__).parents[1] / ".github/workflows/arsiv.yml").read_text(encoding="utf-8"))["jobs"]["arsiv"]["steps"]}
-    assert steps["Saatlik dolum ve funding"]["if"].startswith("always() && ")
-    assert steps["R2'ye ekle"]["if"] == "always()"

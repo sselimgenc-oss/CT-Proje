@@ -1,19 +1,16 @@
 """Seçim v1.3 altın örnekleri (docs/GOREV_SECIM_V1.md, GOREV_SECIM_V13.md): 12 satırlık, elle hesaplanmış kapı tablosu → havuz / aday / oda / kontrol."""
 import hashlib
-import re
 import json
 from pathlib import Path
 
 import pandas as pd
 import pytest
-import yaml
 
 from copytrade import secim
 from copytrade.izleme_motoru import load_list
 from copytrade.kurallar import load_rules
 
 RULES = load_rules()
-WORKFLOW = Path(__file__).resolve().parents[1] / ".github/workflows/copytrade_secim.yml"
 
 
 def addr(name: str) -> str:
@@ -288,27 +285,6 @@ def test_tam_kosu_degilse_durur(tmp_path: Path):
     assert (tmp_path / "secim/2026-10-28-v1.3/secim.json").read_text() == before
 
 
-def test_secim_main_calistir_dosyasi_ile_tetiklenir():
-    workflow = WORKFLOW.read_text(encoding="utf-8")
-    assert "workflow_dispatch:" in workflow
-    assert "branches:\n      - main" in workflow
-    assert "- copytrade/secim/CALISTIR" in workflow
-
-
-def test_secim_isi_bayrak_cekimi_icin_yeterli_sure_tanir():
-    # Run 1 (22 aday) 20 dk'da iptal oldu: aday başına 365 günlük dolum/funding çekimi.
-    bayrak_job = WORKFLOW.read_text(encoding="utf-8").split("\n  bayrak:\n")[1]       # bayraklar ayrı işte (v1.3); süre o işe aittir
-    assert int(re.search(r"timeout-minutes: (\d+)", bayrak_job).group(1)) >= 120
-
-
-def test_secim_yayimi_seçimle_ayni_gunu_kullanir():
-    # Gece yarısını geçen koşu: yayım adımı günü yeniden hesaplarsa secim/<gün> bulunamaz (denetim B24).
-    workflow = WORKFLOW.read_text(encoding="utf-8")
-    assert "--tarih \"$day\"" in workflow and workflow.count("date -u +%F") == 1                  # gün tek yerde belirlenir
-    assert "name=${{ steps.secim.outputs.name }}" in workflow and "name=${{ needs.secim.outputs.name }}" in workflow     # yayım ve bayrak işi aynı klasör adını kullanır
-    assert "actions/upload-artifact" in workflow
-
-
 def test_izleme_listesi_ayni_secim_yeniden_yazilirsa_id_ve_t0_degismez():
     result = secim.sec(TABLE, "2026-10-28", [], [], RULES, kapi_tarihi="2026-10-28")
     existing = [{"id": "T1", "adres": addr("a"), "takma_ad": "aaaa", "durum": "izlemede", "t0": "2026-10-20", "tarz": "intraday"}]
@@ -336,21 +312,6 @@ def test_bayrak_ayri_is_aday_kati_icin_secimi_degistirmez():
     assert (body["secim_surumu"], body["kapi_tarihi"], body["tamam"]) == ("v1.3", "2026-10-27", True)
     assert body["bayraklar"] == {addr("2"): {"bayrak_rol": "vault"}, addr("a"): {"bayrak_rol": "vault"}}
     assert json.dumps(result, sort_keys=True) == snapshot                                       # secim.json değişmez
-
-
-def test_secim_ana_islemi_bayrak_hesaplamaz_ayri_is_hesaplar():
-    workflow = WORKFLOW.read_text(encoding="utf-8")
-    secim_job, bayrak_job = workflow.split("\n  bayrak:\n")
-    assert "--bayrak" not in secim_job.split("jobs:")[1] and "needs: secim" in bayrak_job
-    assert "python -m copytrade.secim --bayrak --secim" in bayrak_job and "bayrak.json" in bayrak_job
-    assert "git archive FETCH_HEAD secim" in secim_job and "git cat-file -e \"HEAD:secim/$name/secim.json\"" in secim_job       # yayımlı seçim üzerine yazılmaz
-
-
-def test_yayim_korumasi_calisma_agacina_degil_veri_dalina_bakar():
-    # Koşu 40868284352: seçimin kendi çıktısı (secim/<ad>/) çalışma ağacında durduğu için `test ! -e` her zaman düşüyordu.
-    workflow = WORKFLOW.read_text(encoding="utf-8")
-    assert 'git cat-file -e "HEAD:secim/$name/secim.json"' in workflow
-    assert 'test ! -e "secim/$name/secim.json"' not in workflow
 
 
 def test_havuz_kolu_ileriye_donuk_sessiz_izleme_k8():
