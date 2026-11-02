@@ -1,0 +1,82 @@
+name: İlk 11 Pazar işi
+
+# Pazar 10:07, 12:07, 14:07, 16:07, 18:07 UTC (TSİ 13:07 … 21:07) + elle. as_of takvimden (o haftanın Pazar 13:00 TSİ) alınır, saatten değil: cron gecikmesi sonucu
+# değiştirmez. Her çalışma `pazar_akis` planına bakar: başarılı olduysa sonraki çalışmalar hiçbir şey yazmaz. HL çağrısı yok (veri dallarından okur).
+# Çıkış kodu: 0 yayımlandı / bekle / tamamla; 1 girdi-kalite hatası (HİÇBİR ŞEY yayımlanmaz, önceki kadro sürer); 2 form yayımlandı ama kapı eski/yok (dosyalar yazılır, iş KIRMIZI biter).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "7 10-18/2 * * 0"
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+concurrency:
+  group: ilk11-pazar
+  cancel-in-progress: false
+
+jobs:
+  pazar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: copytrade-kapi
+          path: kapi-dali
+      - uses: actions/checkout@v4
+        with:
+          ref: copytrade-izleme
+          path: izleme-dali
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Pazar işi
+        id: pazar
+        run: |
+          kod=0
+          python -m copytrade.ilk11_pazar --kapi-dali kapi-dali --izleme-dali izleme-dali --taban-liste copytrade/izleme_listesi.yaml || kod=$?
+          echo "kod=$kod" >> "$GITHUB_OUTPUT"
+          case "$kod" in
+            0|2) ;;
+            *) echo "Pazar işi hata ile bitti (çıkış kodu $kod); veri dalına bir şey yazılmayacak." >&2; exit "$kod" ;;
+          esac
+      - name: Özeti iş özetine yaz
+        if: always()
+        run: |
+          for f in $(find kapi-dali/ilk11 -name RAPOR.md -mmin -30 | sort); do cat "$f" >> "$GITHUB_STEP_SUMMARY"; done
+      - name: Veri dalına yaz (copytrade-kapi)
+        if: ${{ steps.pazar.outputs.kod == '0' || steps.pazar.outputs.kod == '2' }}
+        run: |
+          cd kapi-dali
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A -f .
+          if git diff --cached --quiet; then echo "Yazılacak değişiklik yok."; exit 0; fi
+          git commit -m "ilk11: Pazar işi $(date -u +%FT%TZ)"
+          pushed=0
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin copytrade-kapi
+            if git push origin HEAD:copytrade-kapi; then pushed=1; break; fi
+            sleep 5
+          done
+          [ "$pushed" = 1 ]
+      - name: Kapı eski ya da yok ise işi kırmızı bitir
+        if: ${{ steps.pazar.outputs.kod == '2' }}
+        run: |
+          echo "Form yayımlandı ama kapı verisi eski/yok: kadro boşluğu doldurulmadı (bkz. RAPOR.md)." >&2
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ilk11-pazar
+          path: kapi-dali/ilk11
+          if-no-files-found: ignore

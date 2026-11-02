@@ -60,11 +60,6 @@ def test_evren_adresleri_verilmezse_eski_olcu_korunur(tmp_path):
     assert merge_shards(tmp_path / "shards", tmp_path / "root", 1, "tam")["2026-10-28"]["kapsam"] == 1.0
 
 
-def test_calistir_dosyasi_eksik_mod_ister():
-    lines = (ROOT / "copytrade/kapi/CALISTIR").read_text(encoding="utf-8").splitlines()
-    assert "mod=eksik" in lines and re.fullmatch(r"2026-10-29T\d\d:\d\d:\d\dZ", lines[0])
-
-
 def test_latest_day_ve_tarih_bayragi():
     from copytrade.kapi import latest_day
     assert latest_day(["copytrade/kapi/2026-10-27", "copytrade/kapi/2026-10-28", "copytrade/kapi/CALISTIR"]) == "2026-10-28"

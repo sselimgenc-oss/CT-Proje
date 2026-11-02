@@ -28,6 +28,7 @@ git add -f "copytrade/kapi/$DAY"
 # Seçim raporunun yoğunlaşma hesabı bu dosyayı okur. Genel ignore kuralları
 # değişse bile kapı günlüğü veri dalında açıkça yer almalıdır.
 [ -f "copytrade/kapi/$DAY/gunluk.csv.gz" ] && git add -f "copytrade/kapi/$DAY/gunluk.csv.gz"
+python3 "$archive_scripts/son_yaz.py" son.json kapi "$DAY"     # İlk 11 işi ve izleme en son kapı tarihini buradan okur; diğer anahtarlar (ilk11) korunur
 git add -f son.json
 [ -f kesif/kesif.json ] && git add -f kesif/kesif.json
 if git diff --cached --quiet; then exit 0; fi
