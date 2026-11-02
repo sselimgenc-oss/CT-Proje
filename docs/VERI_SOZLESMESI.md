@@ -1,4 +1,4 @@
-# Veri sözleşmesi — copy trade izleme (v1.12, 2026-10-30; v1.12 `sanal_kopya_v3` tasfiye/aşamalı çıkış (E3), v1.11 `sanal_kopya_v3` (E2 sabit tutar), v1.10 `sanal_kopya_v2.kapanis_nedenleri` (E3), v1.9 `sanal_kopya_v2`, v1.8 `gecikme.json` taze pencere, v1.7 `gecikme.json`, v1.6 `saglik_hatti`, v1.5 `kol`, v1.2 olay kimliği, v1.3 tarz, v1.4 veri geçerliliği ve karar gizliliği)
+# Veri sözleşmesi — copy trade izleme (v1.13, 2026-11-02; v1.13 İlk 11 puan alanları (§6, tanım; uygulama A2), v1.12 `sanal_kopya_v3` tasfiye/aşamalı çıkış (E3), v1.11 `sanal_kopya_v3` (E2 sabit tutar), v1.10 `sanal_kopya_v2.kapanis_nedenleri` (E3), v1.9 `sanal_kopya_v2`, v1.8 `gecikme.json` taze pencere, v1.7 `gecikme.json`, v1.6 `saglik_hatti`, v1.5 `kol`, v1.2 olay kimliği, v1.3 tarz, v1.4 veri geçerliliği ve karar gizliliği)
 
 sözleşmeye göre çalışır; alan eklemek/değiştirmek lider onayıyla `surum` artırılarak yapılır.
 
@@ -193,3 +193,39 @@ yok (ilk koşu, sakin piyasa ya da tüm örnekler eski); medyan/maks `null`. Yal
 - Gizlilik (v1.4, kullanıcı kararı): yayımlanan karar kaydında `zaman` yalnız tarih; `bakiye_yok` nedeni yok.
 - Bot anahtarı ve sohbet kimliği yalnız GitHub Secrets'ta (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`,
   `TELEGRAM_WEBHOOK_SECRET`); dağıtım işi bunları Cloudflare secret'ına aktarır. Repoya, günlüğe, sohbete yazılmaz.
+
+## 6. İlk 11 puan alanları (v1.13, 2026-11-02; K‑12)
+Tanım belgesi: `docs/ILK11_SECIM_SARTNAME.md` §3–4. **Durum:** sözleşme tanımlandı; alanlar A2'de üretilecek. Bu bölümde yazmayan
+alan tüketilmez (kalite kuralı 2). Puan kodu `copytrade/ilk11.py` (değişmez); ham alanların tek hesap yeri `copytrade/ilk11_alanlar.py`.
+
+**Ortak:** getiri ve oranlar **kesir** (0,012 = %1,2); zaman UTC; pencere sonu = Pazar snapshot `as_of` (Pazar 13:00 TSİ = 10:00 UTC)
+ya da izleme okuma zamanı (`veri_zamani`). Eksik = `null` → alan puanı 35. Akıl sağlığı dışı değer `null` olur ve
+`alan_kaynagi[alan] = "akil_sagligi_ihlali:<değer>"`. İ = ilk seçim (kapı satırı, uygun evren), F = haftalık form (izleme, kadro 50).
+
+| Alan | Anlam | Birim / ölçek | Pencere İ / F | Kaynak İ / F | Aralık |
+|---|---|---|---|---|---|
+| `golge` | Kopya sonucu | oran; İ: trader hesabına oranlı defter neti; F: v3 işlem başı getirinin büzülmüş ortalaması (1.000 $ sanal kopya) | 200 g / 30 g | `secim.puan` (`gecikme_{kapi_gecikme_dk}dk_net`) / `golge_ozeti(sanal_kopya_v3.kapanan_islemler[].getiri)` | İ [−1, 10]; F [−1, 3] |
+| `ay_roi` | Aylık getiri (zaman ağırlıklı, yatırma/çekme hariç) | oran, trader hesabı | 30 g / 30 g | `portfolio.month` → `kapi.twr_chain` (kapı sütunu `ilk11_ay_roi`) / aynı | [−1, 10] |
+| `hafta_roi` | Haftalık getiri | oran, trader hesabı | 7 g / 7 g | `portfolio.week` → `twr_chain` (`ilk11_hafta_roi`) / aynı | [−1, 5] |
+| `hesap` | Hesap büyüklüğü | $, trader hesabı | anlık / anlık | `hesap_degeri_bugun` (ana + HIP-3 + spot USDC) / `traderlar[].hesap_degeri` (ana + HIP-3) | [5.000, 1e9] |
+| `dusus` | Aylık en büyük düşüş (düşük iyi) | oran, pozitif büyüklük (0,25 = %25) | 30 g / 30 g | `twr_chain` özsermayesi, `max(1 − e/cummax)` (`ilk11_dusus_30g`) / aynı | [0, 1] |
+| `kazanma` | Kazanan kapanmış işlem payı (ücret dahil net > 0) | oran | 365 g / 30 g | `olcut.closed_round_trips` (`kazanma_orani`) / aynı, kapanışı pencerede | [0, 1] |
+| `siklik` | Kapanmış işlem / gün | adet/gün | 365 g / 30 g | `gunluk_islem_sikligi` / pencere işlem sayısı ÷ 30 | [0, 200] |
+| `tutma` | Medyan tutma süresi | **dakika** (saat × 60) | 365 g / 30 g | `median_holding_hours × 60` / `closed_round_trips` medyanı × 60 | (0, 525.600] |
+| `kaldirac` | Efektif kaldıraç (pozisyon değeri / o anki hesap değeri), zaman ağırlıklı medyan | x | 365 g / 30 g | `median_leverage` / `olcut.effective_leverage_detail` | [0, 200] |
+| `tutarli` | Pozitif gün oranı (ΔPnL > 0 gün / ΔPnL ≠ 0 gün, UTC gün) | oran | 30 g / 30 g | `portfolio.month.pnlHistory` (`ilk11_tutarli_30g`) / aynı | [0, 1] |
+
+**Yeni alanlar (A2):**
+- Kapı `sonuc.csv` bilgi sütunları (adım/eşik kullanmaz): `ilk11_ay_roi`, `ilk11_hafta_roi`, `ilk11_dusus_30g`, `ilk11_tutarli_30g`,
+  `kazanma_orani` (yukarıdaki birimlerle; oran sütunları akıl sağlığı kapısında 0–1).
+- `traderlar[].ilk11_form_ham` (izleme, saatlik): `{alanlar: {10 alan, birimler yukarıdaki}, alan_kaynagi: {alan: str|null},
+  pencere_bitis: UTC ISO, dolu_alan: int}`.
+- `traderlar[].sanal_kopya_v3.kapanan_islemler` (izleme): `[{coin, acilis, kapanis (UTC ISO), sonuc_usd ($, 1.000 $ sanal kopya
+  ölçeği; maliyet + funding dahil), getiri (oran = sonuc_usd / işlemde açılan toplam $), neden (trader|zarar_kes|kar_al|likidasyon),
+  gecerli (bool)}]`. Bakiye/getiri hesabını değiştirmez (kural 6).
+- `ilk11/<pazar>/snapshot.json` (`copytrade-kapi` dalı): `snapshot_id` (gövdenin kanonik JSON SHA-256'sı), `sema`
+  (`ilk11-pazar-v1` ilk seçim | `ilk11-form-v1` form), `as_of` (Pazar 13:00 TSİ, ISO +03:00), `kaynak_surumu`, `adaylar[]`
+  (`id`, `uygun`, `uygunluk_nedeni`, `alanlar`, `alan_kaynagi`, `kapi_puani` (oran), `gecerli_gozlem_suresi` (gün)), `kadro[]`
+  (`id`, `takim`, `puan` 0–100). Formda ayrıca `form_puani` (0–100), `bu_pazar_gecerli`, `bu_pazar_aktif`, `onceki_pazar_aktif` (bool|null).
+- **Kullanılmaz:** leaderboard `windowPerformances.roi` (payda yatırma/çekmeyle bozulur; acil kadroda 1805 = %180.500) ve leaderboard
+  `accountValue`.
