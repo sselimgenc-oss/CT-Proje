@@ -20,7 +20,7 @@ import pandas as pd
 import yaml
 
 from copytrade.defter import Market, copy_ledger
-from copytrade.kapi import (SLIPPAGE, TAKER, binance_availability, delayed_copy,
+from copytrade.kapi import (SLIPPAGE, TAKER, binance_availability, delayed_copy, spot_usdc,
                             write_binance_universe)
 from copytrade.pozisyon_mutabakat import mutabakat, ozet
 from copytrade.olcut import _funding_amount, asset_class, calculate_metrics, closed_round_trips, perp_fills
@@ -570,7 +570,7 @@ def unavailable_trader(root: Path, row: dict, error: Exception) -> dict:
             'kapi': gate_result(root, row['adres']),
             'saglik': {'isik': 'sari', 'nedenler': [f'veri hatası: {data_error_reason(error)}']},
             'form': {'skor': 0.0, 'getiri_30g': 0.0, 'getiri_90g': 0.0},
-            'hesap_degeri': 0.0, 'pozisyonlar': [], 'egri': [],
+            'hesap_degeri': 0.0, 'hesap_degeri_toplam': None, 'pozisyonlar': [], 'egri': [],
             'son_islem': {'coin': '', 'yon': '', 'acilis': '', 'kapanis': '', 'net_yuzde': 0.0},
             'sanal_kopya': {'baslangic_usd': 1000, 'bakiye_usd': 1000.0, 'getiri': 0.0, 'dusus': 0.0,
                             'gecikme_dk': delay_for_style(style), 't0': str(timestamp(row['t0']).date()), 'egri': []},
@@ -731,7 +731,12 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
         last_trade = {'coin': last['coin'], 'yon': 'long' if float(ending.get('startPosition', 0)) > 0 else 'short',
                       'acilis': iso(last['open_time']) if last['open_time'] is not None else '',
                       'kapanis': iso(last['close_time']), 'net_yuzde': last['net_pnl'] / notional if notional else 0.0}
+    try:    # İlk 11 `hesap` (İ ile AYNI tanım, kural 7): ana + HIP-3 (marginSummary) + spot USDC; spot okunamazsa alan eksik (trader düşmez)
+        hesap_toplam = account + spot_usdc(client, address)
+    except Exception:  # noqa: BLE001 - spot okuma hatası yalnız `hesap` alanını eksik bırakır (K-14: tek eksik trader'ı düşürmez)
+        hesap_toplam = None
     trader = {**{k: v for k, v in row.items() if k != 'tarz'}, 'tarz': style, 'veri_zamani': iso(now), 'gecerli': True,
+              'hesap_degeri_toplam': hesap_toplam,
               'kapi': gate_result(root, address), 'saglik': light,
               'form': {'skor': ret30 / volatility if volatility > 0 and math.isfinite(volatility) else 0.0,
                        'getiri_30g': ret30, 'getiri_90g': float(recent.iloc[-1] - recent.iloc[0]) if len(recent) else 0.0},
@@ -744,7 +749,7 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
         trader['veri_kalitesi'] = {'mutabakat': mutabakat_raporu(fills, states, now, onceki_hesap_degeri=saved.get('son_hesap_degeri'), hesap_degeri=account)}
     # İlk 11 haftalık form ham alanları (tek hesap yeri: ilk11_alanlar); hata trader'ı düşürmez, açıkça yazılır.
     try:
-        trader['ilk11_form_ham'] = ilk11_alanlar.form_ham_30g(fills, saved['portfolio'], account, paper_v3, now)
+        trader['ilk11_form_ham'] = ilk11_alanlar.form_ham_30g(fills, saved['portfolio'], trader['hesap_degeri_toplam'], paper_v3, now)
     except Exception as error:  # noqa: BLE001 - form alanı hatası izleme okumasını düşürmesin; `hata` alanı Pazar işinde geçersizlik nedenidir
         trader['ilk11_form_ham'] = {'hata': data_error_reason(error)}
     perp_zamanlari = [int(f['time']) for f in perp_fills(fills)]

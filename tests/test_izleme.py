@@ -130,6 +130,7 @@ class Client:
         self.calls = []
         self.positions = [position()]
         self.account = 1000
+        self.spot = []                       # spotClearinghouseState bakiyeleri: [{'coin': 'USDC', 'total': '123'}]
         self.portfolio_reads = 0
         self.candle_reads = 0
         self.mark_reads = 0
@@ -143,6 +144,8 @@ class Client:
         if payload['type'] == 'clearinghouseState':
             return {'marginSummary': {'accountValue': str(self.account if not payload.get('dex') else 0)},
                     'assetPositions': self.positions if not payload.get('dex') else [position(coin='xyz:CL', value=50)]}
+        if payload['type'] == 'spotClearinghouseState':
+            return {'balances': self.spot}
         if payload['type'] == 'userFunding':
             return [x for x in self.funding if payload['startTime'] <= x['time'] <= payload['endTime']]
         raise AssertionError(payload)

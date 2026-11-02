@@ -176,6 +176,13 @@ def hip3_dex_names(client: Any) -> list[str]:
     return names
 
 
+def spot_usdc(client: Any, address: str) -> float:
+    """Spot USDC bakiyesi (``spotClearinghouseState``; USDC dışı bakiyeler sayılmaz). İlk 11 `hesap` alanının İ (kapı) ve F (izleme) tanımı bunu
+    paylaşır: ana + HIP-3 + spot USDC (kural 7)."""
+    state = client.info({"type": "spotClearinghouseState", "user": address}, weight=2) or {}
+    return sum(float(b.get("total", 0) or 0) for b in state.get("balances", []) if str(b.get("coin")) == "USDC")
+
+
 def account_value_parts(client: Any, address: str, dexes: list[str]) -> dict[str, float]:
     """Bugünkü hesap değerinin parçaları: ana piyasa, HIP-3 dex toplamı ve spot USDC (``spotClearinghouseState``; birleşik hesapta bakiye
     burada durur: 0x69b0 ana + HIP-3 = 0 $, spot USDC 602.437 $). Ana piyasa/spot okunamazsa hata fırlar (satır veri hatası olur);
@@ -187,9 +194,7 @@ def account_value_parts(client: Any, address: str, dexes: list[str]) -> dict[str
             hip3 += float(client.info({"type": "clearinghouseState", "user": address, "dex": dex}, weight=2)["marginSummary"]["accountValue"])
         except (KeyError, TypeError, ValueError, requests.RequestException):
             continue
-    spot_state = client.info({"type": "spotClearinghouseState", "user": address}, weight=2) or {}
-    spot = sum(float(b.get("total", 0) or 0) for b in spot_state.get("balances", []) if str(b.get("coin")) == "USDC")
-    return {"ana": ana, "hip3": hip3, "spot_usdc": spot}
+    return {"ana": ana, "hip3": hip3, "spot_usdc": spot_usdc(client, address)}
 
 
 def total_account_value(client: Any, address: str, dexes: list[str]) -> float:
