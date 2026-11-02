@@ -6,7 +6,7 @@ Bu belge Faz 1 kadro kurallarını kaydeder. **Veri kaynağı, birim, pencere ve
 ## Yol haritası
 
 1. **Faz 1 — Karar belgesi ve veri modeli:** kadro kuralları, puanlama kararları ve verinin nasıl temsil edileceği.
-2. **Faz 2 — 14 oda iç kararları:** oda üyeliği ve kadro içi yönetim kararları.
+2. **Faz 2 — 13 oda iç kararları:** oda üyeliği ve kadro içi yönetim kararları.
 3. **Faz 3 — Canlı hesap/cüzdan ve HL işlem hattı:** ayrı güvenlik ve onay kapıları gerekir. Şu an PAPER modunda kalınır; gerçek emir ve sıcak cüzdan bu fazın hedefidir.
 
 ## Kullanıcı kararları

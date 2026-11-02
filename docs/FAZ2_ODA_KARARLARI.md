@@ -1,4 +1,4 @@
-# Faz 2 — 14 Oda Kararları
+# Faz 2 — 13 Oda Kararları
 
 Bu belge Faz 2 boyunca her odanın görev ve yetki sınırlarını kaydeder. Kararlar kullanıcıyla konuşularak eklenir; açık olmayan davranışlar varsayılmaz.
 
@@ -23,16 +23,7 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Yasak:**
 - **Açık karar:**
 
-## 1. Çay Ocağı
-
-- **Oda:** Çay Ocağı
-- **Girdi:** İşlevsel veri girdisi yok.
-- **Çıktı:** Yalnız görsel/dekoratif gösterim.
-- **Yetki:** Karar, veri, uyarı veya işlem yetkisi yok.
-- **Yasak:** Sistem kararlarını, verileri, uyarıları veya işlemleri etkilemek.
-- **Açık karar:** Faz 4 görünümünde atmosfer gösteriminin biçimi.
-
-## 2. Arşiv
+## 1. Arşiv
 
 - **Oda:** Arşiv
 - **Amaç:** İşlem geçmişini ve işlemlerin karar bağlamını saklamak; istatistiklerin yeniden üretilebilmesini sağlamak.
@@ -51,7 +42,7 @@ Her oda için aşağıdaki alanlar doldurulur:
 2. **PAPER işlem defteri:** Giriş, ekleme, azaltma ve çıkış; fiyat, miktar, ücret/funding, PnL, çıkış nedeni ve zaman tutulur.
 3. **Karar bağlamı:** `snapshot_id`, takım, kural/politika sürümü ve uygulama ya da ret gerekçesi tutulur.
 
-## 3. Haberleşme
+## 2. Haberleşme
 
 - **Oda:** Haberleşme
 - **Amaç:** Sistemden insana bildirim ve insan iletişimi sağlamak.
@@ -61,7 +52,7 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Yasak:** Otomatik işlem veya kadro değişimi başlatmak. Rutin durumlar bildirim göndermez; yinelenen hata bildirimleri bastırılır.
 - **Açık karar:** Yok.
 
-## 4. Sekreterlik
+## 3. Sekreterlik
 
 - **Oda:** Sekreterlik
 - **Amaç:** Sistemin tek resmî karar kaydını tutmak.
@@ -71,7 +62,7 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Yasak:** Kayıtları değiştirmek veya silmek; düzeltmeler yeni kayıt olarak eklenir. Onaysız taslak uygulanmış karar olarak gösterilmez. Faz 3 işlemleri için talep ve açık onay ayrı aşamalar olarak kaydedilir.
 - **Açık karar:** Yok.
 
-## 5. Bilgi İşlem (IT)
+## 4. Bilgi İşlem (IT)
 
 - **Oda:** Bilgi İşlem (IT)
 - **Amaç:** Veri ve teknik altyapı hatlarının sürekliliğini sağlamak.
@@ -80,7 +71,7 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Yasak:** Trader seçimi, kadro, risk veya işlem kararı vermek. Gerçek emir onayı IT yetkisinde değildir; Makam ve Sekreterlik kayıt zincirinden geçer.
 - **Açık karar:** Yok.
 
-## 6. Denetim
+## 5. Denetim
 
 - **Oda:** Denetim
 - **Amaç:** Trader seçimi, Pazar snapshotı, takım geçişi, PAPER işlemi ve istisnaların kurala uygunluğunu ve kanıt zincirini denetlemek.
@@ -90,7 +81,7 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Yasak:** Tek başına trader düşürmek, kural değiştirmek veya pozisyon açıp kapatmak.
 - **Açık karar:** Yok.
 
-## 7. Finans
+## 6. Finans
 
 - **Oda:** Finans
 - **Amaç:** PAPER kasasının ve takım sonuçlarının finansal kayıtları için tek kaynak olmak.
@@ -100,7 +91,7 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Yasak:** Risk limitlerini değiştirmek; Faz 3'te anahtar veya emir yetkisi taşımak. Negatif bakiye, tutarsız teminat veya limit aşımı Risk ve Denetim için olay oluşturur.
 - **Açık karar:** Yok.
 
-## 8. LAB
+## 7. LAB
 
 - **Oda:** LAB
 - **Amaç:** Hyperliquid trader/cüzdan keşfi ve gölge izleme hattını arka planda yürütmek.
@@ -109,7 +100,7 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Yetki:** Keşif, gölge izleme ve bu çıktıları ilgili seçim/form verisine aktarmak.
 - **Açık karar:** Yok.
 
-## 9. Kapı
+## 8. Kapı
 
 - **Oda:** Kapı
 - **Amaç:** LAB'ın bulduğu adaylar için otomatik Hyperliquid uygunluk filtresi uygulamak.
@@ -118,7 +109,7 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Yetki:** Tanımlı ve sürümlenmiş uygunluk filtrelerini çalıştırmak. Sonuç ve etkilenen Pazar snapshotı Arşiv ve Denetim için kanıtlanır.
 - **Açık karar:** Yok.
 
-## 10. PAF Takım
+## 9. PAF Takım
 
 - **Oda:** PAF Takım
 - **Amaç:** 28 trader'a kadar gelişim adaylarını izlemek.
@@ -128,7 +119,7 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Yasak:** Gerçek veya ana PAPER kasa işlemi yapmak; PAF'a manuel trader atamak. Pazar formu <40 veya iki ardışık Pazar hareketsizliği kadro dışı bırakılma nedenidir. PAF'a giriş yalnız o haftanın onaylı 50 kişilik snapshotı üzerinden olur.
 - **Açık karar:** Yok.
 
-## 11. Yedekler
+## 10. Yedekler
 
 - **Oda:** Yedekler
 - **Amaç:** 11 kişilik canlı fiyatlı gölge takımı olarak İlk 11'e adayları izlemek.
@@ -138,7 +129,7 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Yasak:** Ana PAPER kasaya dahil olmak. Form <40 veya iki ardışık Pazar hareketsizliği PAF'a düşüş nedenidir.
 - **Açık karar:** Yok.
 
-## 12. İlk 11
+## 11. İlk 11
 
 - **Oda:** İlk 11
 - **Amaç:** 11 kişilik ana PAPER takımını ve ana PAPER kasasını işletmek; ana kasa yalnız İlk 11 üyelerini kapsar.
@@ -147,7 +138,7 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Yasak:** Faz 3'e geçilene kadar cüzdan bağlamak veya gerçek emir göndermek.
 - **Açık karar:** Yok.
 
-## 13. Risk
+## 12. Risk
 
 - **Oda:** Risk
 - **Amaç:** İlk 11 PAPER işlemlerinin risk ve çıkış kurallarını yönetmek.
@@ -156,7 +147,7 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Yasak:** Keyfi/manuel pozisyon kapatma veya onaysız kural değişikliği. Kural değişikliği Makam ve Sekreterlik onayıyla, yeni sürüm olarak yapılır.
 - **Açık karar:** Faz 3 acil durdurmanın kapsamı ayrı kararla belirlenecektir.
 
-## 14. Makam
+## 13. Makam
 
 - **Oda:** Makam
 - **Amaç:** Nihai politika ve istisna kararlarını vermek.
@@ -166,19 +157,18 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Yasak:** Günlük işlem veya trader seçimi yapmak. Değişiklik geçmiş snapshot veya işlemleri geriye dönük değiştiremez; ileri tarihli yeni sürüm olarak yürürlüğe girer. Acil durdurma kalıcı politika değişikliği değildir; kalıcı değişiklik Sekreterlik kaydı ve yeni sürüm gerektirir.
 - **Açık karar:** Faz 3'e geçiş ve gerçek işlem/cüzdan/bütçe onayları zamanı geldiğinde ayrı ayrı karara bağlanacaktır.
 
-## Onaylı 14 oda listesi
+## Onaylı 13 oda listesi
 
-1. Çay Ocağı
-2. Arşiv
-3. Haberleşme
-4. Sekreterlik
-5. Bilgi İşlem (IT)
-6. Denetim
-7. Finans
-8. LAB
-9. Kapı
-10. PAF Takım
-11. Yedekler
-12. İlk 11
-13. Risk
-14. Makam
+1. Arşiv
+2. Haberleşme
+3. Sekreterlik
+4. Bilgi İşlem (IT)
+5. Denetim
+6. Finans
+7. LAB
+8. Kapı
+9. PAF Takım
+10. Yedekler
+11. İlk 11
+12. Risk
+13. Makam
