@@ -25,6 +25,7 @@ from copytrade.kapi import (SLIPPAGE, TAKER, binance_availability, delayed_copy,
 from copytrade.pozisyon_mutabakat import mutabakat, ozet
 from copytrade.olcut import _funding_amount, asset_class, calculate_metrics, closed_round_trips, perp_fills
 from copytrade.tarama import PublicClient, RateLimiter
+from copytrade import ilk11_alanlar
 from copytrade import oda_risk
 from copytrade import kopya_v2
 from copytrade import kopya_v3
@@ -574,7 +575,9 @@ def unavailable_trader(root: Path, row: dict, error: Exception) -> dict:
             'sanal_kopya': {'baslangic_usd': 1000, 'bakiye_usd': 1000.0, 'getiri': 0.0, 'dusus': 0.0,
                             'gecikme_dk': delay_for_style(style), 't0': str(timestamp(row['t0']).date()), 'egri': []},
             'sanal_kopya_v2': {'surum': 'v2', 'durum': 'hesaplanamadi', 'yer_tutucu': True, 'neden': 'hiç okunmadı'},
-            'sanal_kopya_v3': {'surum': 'v3', 'durum': 'hesaplanamadi', 'yer_tutucu': True, 'neden': 'hiç okunmadı'}}
+            'sanal_kopya_v3': {'surum': 'v3', 'durum': 'hesaplanamadi', 'yer_tutucu': True, 'neden': 'hiç okunmadı'},
+            'ilk11_form_ham': {'hata': 'hiç okunmadı'}, 'son_perp_dolum': None,
+            'ilk11_gecerli_saat': {'baslangic': row.get('takim_hafta') or str(timestamp(row['t0']).date()), 'saat': 0, 'son_saat': None}}
 
 
 def yonsuz_guncelle(client, address: str, saved: dict, states: list[dict], fills: list[dict], now: pd.Timestamp) -> dict:
@@ -599,6 +602,39 @@ def yonsuz_guncelle(client, address: str, saved: dict, states: list[dict], fills
     perp = {item['position']['coin']: float(item['position']['szi']) for state in states for item in state['assetPositions'] if float(item['position']['szi'])}
     return oda_risk.yonsuz_bayrak(onbellek['funding_usd'], oda_risk.toplam_kar(saved.get('portfolio') or [], millis(now), rules), onbellek['spot'], perp, fills, millis(now), rules,
                                   '; '.join(hatalar) or None)
+
+
+def gecerli_saat_say(saved: dict, row: dict, now: pd.Timestamp) -> dict:
+    """`ilk11_gecerli_saat` (şartname §4.1 eşitlik 3): trader'ın kadroya SON girişinden (`takim_hafta`; yoksa `t0`) itibaren geçerli (`gecerli == true`)
+    saatlik okuma sayısı. Aynı saat dilimine düşen ikinci koşu yeniden saymaz; `takim_hafta` değişince (yeni giriş) sayaç sıfırlanır. Sayım BU motorun
+    okumalarından başlar (geriye dönük doldurulmaz). `motor.json`'da kalıcı (`saved['ilk11_gecerli_saat']`), `durum.json`'a trader alanı olarak yayımlanır."""
+    baslangic = row.get('takim_hafta') or str(timestamp(row['t0']).date())
+    kayit = saved.get('ilk11_gecerli_saat')
+    if not kayit or kayit.get('baslangic') != baslangic:
+        kayit = {'baslangic': baslangic, 'saat': 0, 'son_saat': None}
+    saat = iso(now.floor('h'))
+    if kayit['son_saat'] != saat:
+        kayit['saat'] += 1
+        kayit['son_saat'] = saat
+    saved['ilk11_gecerli_saat'] = kayit
+    return dict(kayit)
+
+
+def durum_icin_kirp(trader: dict, now: pd.Timestamp, rules: dict | None = None) -> dict:
+    """`durum.json` (yayın) için `sanal_kopya_v3.kapanan_islemler` kırpması; TAM geçmiş `motor.json`'daki `son_trader`'da silinmeden kalır.
+
+    Yayımlanan: kapanışı son `ilk11_form_pencere_gun` günde (now − N gün, now] olanlar VE (pencereden eski olsa da) en son `ilk11_durum_min_gecerli_islem`
+    GEÇERLİ işlem (terfi kapısı son N geçerli işleme bakar). Sıra korunur. `kapanan_islemler_toplam` = tam geçmişteki sayı. Trader'ın kopyası döner."""
+    rules = rules or load_rules()
+    v3 = trader.get('sanal_kopya_v3')
+    islemler = v3.get('kapanan_islemler') if isinstance(v3, dict) else None
+    if islemler is None:
+        return trader
+    sinir = now - pd.Timedelta(days=int(rules['ilk11_form_pencere_gun']))
+    gecerli = [i for i, x in enumerate(islemler) if x.get('gecerli') is True]
+    son_gecerli = set(sorted(gecerli, key=lambda i: islemler[i]['kapanis'])[-int(rules['ilk11_durum_min_gecerli_islem']):])
+    kalan = [x for i, x in enumerate(islemler) if timestamp(x['kapanis']) > sinir or i in son_gecerli]
+    return {**trader, 'sanal_kopya_v3': {**v3, 'kapanan_islemler': kalan, 'kapanan_islemler_toplam': len(islemler)}}
 
 
 def update_trader(root: Path, client, dexes: list[str], state: dict, all_events: dict,
@@ -706,15 +742,23 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
         trader['yonsuz_bayrak'] = yonsuz_guncelle(client, address, saved, states, fills, now)
     if row.get('kol') == 'oda':
         trader['veri_kalitesi'] = {'mutabakat': mutabakat_raporu(fills, states, now, onceki_hesap_degeri=saved.get('son_hesap_degeri'), hesap_degeri=account)}
+    # İlk 11 haftalık form ham alanları (tek hesap yeri: ilk11_alanlar); hata trader'ı düşürmez, açıkça yazılır.
+    try:
+        trader['ilk11_form_ham'] = ilk11_alanlar.form_ham_30g(fills, saved['portfolio'], account, paper_v3, now)
+    except Exception as error:  # noqa: BLE001 - form alanı hatası izleme okumasını düşürmesin; `hata` alanı Pazar işinde geçersizlik nedenidir
+        trader['ilk11_form_ham'] = {'hata': data_error_reason(error)}
+    perp_zamanlari = [int(f['time']) for f in perp_fills(fills)]
+    trader['son_perp_dolum'] = at_ms(max(perp_zamanlari)) if perp_zamanlari else None    # `bu_pazar_aktif` (as_of − 7 g içinde perp dolumu) girdisi
+    trader['ilk11_gecerli_saat'] = gecerli_saat_say(saved, row, now)
     saved['son_hesap_degeri'] = account
     saved['son_trader'] = trader
     return trader
 
 
-def run(root: Path, output: Path, client=None, now=None, symbols=None) -> dict:
+def run(root: Path, output: Path, client=None, now=None, symbols=None, liste: Path | None = None) -> dict:
     now = timestamp(now or datetime.now(UTC))
     client = client or PublicClient(limiter=RateLimiter())
-    watchlist = load_list(root / 'copytrade/izleme_listesi.yaml')
+    watchlist = load_list(liste or root / 'copytrade/izleme_listesi.yaml')
     state = read_json(output / 'motor.json', {'surum': 1, 'traderlar': {}, 'olaylar': {}})
     if state.get('surum') != 1:
         raise ValueError('Desteklenmeyen motor arşivi sürümü.')
@@ -746,7 +790,8 @@ def run(root: Path, output: Path, client=None, now=None, symbols=None) -> dict:
                 traders.append(unavailable_trader(root, row, error))
     if watchlist and failed == len(watchlist):
         raise RuntimeError('Tüm trader verileri hatalı; önceki durum yayımlanmadı.')
-    result = {'surum': 1, 'uretildi': iso(now), 'kaynak': 'hyperliquid', 'traderlar': traders,
+    rules = load_rules()
+    result = {'surum': 1, 'uretildi': iso(now), 'kaynak': 'hyperliquid', 'traderlar': [durum_icin_kirp(t, now, rules) for t in traders],
               'kasa_egri': {'oda': kasa_egrisi(traders, 'oda'), 'kontrol': kasa_egrisi(traders, 'kontrol')},
               'olaylar': sorted(all_events.values(), key=lambda e: (e['zaman'], e['id']), reverse=True)[:200]}
     oda_uyeleri = [t for t in traders if t.get('kol') == 'oda']
@@ -772,13 +817,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=Path('.'))
     parser.add_argument('--output', type=Path, default=Path('izleme'))
+    parser.add_argument('--liste', type=Path, default=None, help='izleme listesi YAML (varsayılan: <root>/copytrade/izleme_listesi.yaml)')
     args = parser.parse_args()
     # Only a public symbol catalog; blocked access remains explicitly "bilinmiyor".
     symbols = None
-    if load_list(args.root / 'copytrade/izleme_listesi.yaml'):
+    if load_list(args.liste or args.root / 'copytrade/izleme_listesi.yaml'):
         args.output.mkdir(parents=True, exist_ok=True)
         symbols, _ = write_binance_universe(args.output)
-    result = run(args.root, args.output, symbols=symbols)
+    result = run(args.root, args.output, symbols=symbols, liste=args.liste)
     print(f"İzleme: {len(result['traderlar'])} trader, {len(result['olaylar'])} olay.")
 
 

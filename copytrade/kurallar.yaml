@@ -307,6 +307,9 @@ ilk11_min_uygun: 11
 # Pencereler (gün): form + kapı bilgi sütunları. ay_roi / dusus / tutarli / form penceresi = 30; hafta_roi = 7 (şartname §3.2 "30g", "7g")
 ilk11_form_pencere_gun: 30
 ilk11_hafta_pencere_gun: 7
+# `durum.json` (yayın) trader başına `sanal_kopya_v3.kapanan_islemler`: son `ilk11_form_pencere_gun` gün + (pencereden eski olsa da) en az son bu kadar
+# GEÇERLİ işlem (terfi kapısı son 6'ya bakar). TAM geçmiş `motor.json`'da silinmeden kalır.
+ilk11_durum_min_gecerli_islem: 6
 # Alan akıl sağlığı aralıkları [alt, üst] (şartname §3.2; aralık dışı değer kullanılmaz -> None + `akil_sagligi_ihlali:<değer>`).
 # `kaldirac` aralığı mevcut `saglik_max_kaldirac` anahtarıdır (tekrarlanmaz). golge_ilk: kapı gecikmeli net; golge_form: v3 işlem getirisi kırpma aralığı.
 ilk11_saglik:

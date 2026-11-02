@@ -213,7 +213,7 @@ def test_incremental_overlap_daily_portfolio_and_repeatable_ledger(tmp_path):
     drop = lambda t: {k: ({a: b for a, b in v.items() if a != 'son_isaret'} if k == 'sanal_kopya'
                           else {a: b for a, b in v.items() if a not in ('payda_yontemi', 'payda_okuma_sayisi')} if k == 'sanal_kopya_v2'
                           else v)
-                      for k, v in t.items() if k != 'veri_zamani'}
+                      for k, v in t.items() if k not in ('veri_zamani', 'ilk11_gecerli_saat', 'ilk11_form_ham')}   # saatlik sayaç / okuma zamanına bağlı form alanı koşuyla ilerler (ayrı testli)
     assert drop(first) == drop(second)
     assert second['veri_zamani'] == '2026-10-27T13:00:00Z'
     assert one['olaylar'] == two['olaylar']

@@ -865,7 +865,12 @@ def evaluate_address(leader: dict, client: PublicClient, cache: CandleCache, now
         stats = stage1_stats(portfolio)
         row.update(stats or {})
         # İlk 11 bilgi sütunları (K-12.11; adım / eşik kullanmaz): aynı `portfolio` yanıtından, yeni istek yok. Tek hesap yeri: ilk11_alanlar.
-        row.update(kapi_bilgi_sutunlari(portfolio, rules))
+        # Bilgi sütunu hatası kapı SONUCUNU değiştirmemeli (adres "veri hatası"na düşmez): yalıt, sütunlar None + `ilk11_bilgi_hatasi`.
+        try:
+            row.update(kapi_bilgi_sutunlari(portfolio, rules))
+        except Exception as exc:  # noqa: BLE001 - yalnız bilgi sütunları; adım/katman/neden etkilenmesin (K-12.11), hata satıra yazılır
+            row.update({"ilk11_ay_roi": None, "ilk11_hafta_roi": None, "ilk11_dusus_30g": None, "ilk11_tutarli_30g": None,
+                        "ilk11_bilgi_hatasi": type(exc).__name__ + ": " + str(exc)[:60]})
         row["asama1"] = "Geçti" if stage1_pass(stats, rules) else "Yetersiz"
         progress.stage("portfolio", f"1. aşama: {row['asama1']}")
         if row["asama1"] != "Geçti":
