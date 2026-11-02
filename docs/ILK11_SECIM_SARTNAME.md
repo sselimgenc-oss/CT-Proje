@@ -7,7 +7,7 @@ Dayanak: kullanıcı kararları **K‑12** ve **K‑13** (Worker ertelendi) (`do
 **Strateji kilidi (AGENTS kural 5):** ağırlıklar (`KALDIRAC_AGIRLIKLARI`), alan dönüşümleri, eksik alan = 35, 60/40 eşikleri,
 11/11/28, terfi kapısı (son 6 / toplam > 0 / kazanma ≥ 0,40 / en iyi hariç > 0) **değişmez**. Bu belge yalnız tanımsız olanı
 (veri kaynağı, pencere, birim, eksik/hata davranışı, iş akışı) tanımlar. Yeni sayısal parametreler (tazelik, doluluk, akıl sağlığı
-aralığı) veri kalitesi içindir, `kurallar.yaml`'a `ilk11_*` anahtarlarıyla yazılır ve §7 K‑12.10 ile kullanıcı onayına sunulur.
+aralığı) veri kalitesi içindir, `kurallar.yaml`'a `ilk11_*` anahtarlarıyla yazılır ve §7 K‑12.10 ile kullanıcı tarafından onaylandı (2026-11-02).
 
 ---
 
@@ -24,7 +24,7 @@ aralığı) veri kalitesi içindir, `kurallar.yaml`'a `ilk11_*` anahtarlarıyla 
 5. **Haftalık form puanı** = aynı 10 alanlı puan (`ilk11.agirlikli_puan`), **son 30 günün verisiyle**, her Pazar yeniden hesaplanır.
 
 **Kapsam (bu şartname):** uygunluk (§2), 10 alanın kaynağı/birimi/penceresi (§3), form ve `paper_sonuclari` (§4), A2 veri hattı (§5),
-A3 kabul kanıtı (§6), açık kullanıcı kararları (§7).
+A3 kabul kanıtı (§6), kararlar (§7; hepsi 2026-11-02'de verildi).
 **Kapsam dışı:** pano/ofis, gerçek emir/cüzdan (Faz 3), Faz 2 oda iç kararları, kapı adım mantığı ve eşikleri.
 
 **Lider tespitleri ve bu belgedeki çözümü:**
@@ -48,7 +48,7 @@ Bir adres `uygun: true` olur, ancak ve ancak aşağıdakilerin **hepsi** sağlan
 1. **Kapı koşusu:** `copytrade-kapi` veri dalında `copytrade/kapi/<YYYY-MM-DD>/` klasörü; `durum.json` → `durum == "tamam"`,
    `kapsam ≥ kapsam_hedefi` (`kurallar.yaml`, bugün 0,98), `hesap` = güncel `HESAP_SURUMU`. Birden fazla uygun klasör varsa
    **as_of'tan önceki en yeni** tarih alınır (as_of = Pazar 13:00 TSİ = 10:00 UTC).
-2. **Tazelik (koşu):** `as_of tarihi − kapı klasör tarihi ≤ ilk11_kapi_tazelik_gun` (öneri **7 gün**). Daha eskiyse kapı verisi
+2. **Tazelik (koşu):** `as_of tarihi − kapı klasör tarihi ≤ ilk11_kapi_tazelik_gun` (**7 gün**, K‑12.10). Daha eskiyse kapı verisi
    **geçersiz**: ilk seçim ve kadro boşluğu doldurma yapılmaz; iş kırmızı biter, RAPOR/iş özetine neden yazılır (Telegram K‑13 ile ertelendi). (Haftalık form
    kapıya bağlı değildir, §4; yalnız `kapi_puani` eşitlik bozucusu boş kalır.)
 3. **Tazelik (satır):** satır o koşuda hesaplanmış olmalı: `satir_kaynagi == "bu_kosu"` (sütun yoksa `now_ms` ≥ as_of − 7 gün).
@@ -67,7 +67,7 @@ Diğer satırlar `uygun: false` ve `uygunluk_nedeni` (`katman_yok` | `eski_satir
 - 11 ≤ uygun < 50: snapshot **yayımlanır**; sıra İlk 11 → Yedek 11 → PAF doldurulur, boş kalan yer `kapasite_bos`, `uyari`
   dolu; RAPOR ve iş özetinde uyarı. Kapasite yapay doldurulmaz (uygun olmayan aday alınmaz).
 - uygun < 11: snapshot **yayımlanmaz**, iş kırmızı; önceki kadro (ilk haftada geçici kadro) sürer. (Eşik 11 = İlk 11'in dolması;
-  onay §7 K‑12.9.)
+  karar §7 K‑12.9.)
 
 ---
 
@@ -105,7 +105,7 @@ Pencere sütunu: **İ** = ilk seçim, **F** = haftalık form. "30g" = as_of'tan 
 - **`golge` (İ):** iki aday vardı: (a) kapının tarz gecikmeli kopya neti (`gecikme_30dk_net` intraday / `gecikme_120dk_net` swing),
   (b) `sanal_kopya_v3`. v3 yalnız izlenen trader'da ve t0'dan sonra var; 91 adayın çoğunda **hiç yok**. (a) tüm uygun evrende aynı
   motorla (`defter.copy_ledger`, gecikme + maliyet + funding) hesaplı ve seçim v1.3'ün puanıyla birebir aynı (`secim.puan`) → tek yerde.
-  Eksi: v1 tipi (trader hesabına oranlı) ölçek, v3 değil. Yüzdelik sıralamada ölçek farkı sırayı az etkiler. **Seçildi: (a).** Alternatif §7 K‑12.1.
+  Eksi: v1 tipi (trader hesabına oranlı) ölçek, v3 değil. Yüzdelik sıralamada ölçek farkı sırayı az etkiler. **Seçildi (karar §7 K‑12.1).**
 - **`golge` (F):** kadronun hepsi saatlik v3 izlemede → güncel motor (v3, sabit tutar + çıkış + tasfiye). İşlem başı sonuç
   `golge_ozeti`'nin tasarlandığı girdi (kırpma + büzülme az işlemli trader'ı ortalamaya çeker). Bunun için v3'e yalnız **çıktı alanı**
   `kapanan_islemler` eklenir (§4.2; hesap değişmez).
@@ -114,7 +114,7 @@ Pencere sütunu: **İ** = ilk seçim, **F** = haftalık form. "30g" = as_of'tan 
   testindeki karar korunur). v3 kopya işlemleri yerine trader'ın kendi işlemleri seçildi: ilk seçimde v3 yok; form ile aynı tanım kalsın.
 - **`tutarli`:** Etre tanımı "pozitif gün tutarlılığı". Kapının `profitable_month_ratio` (kârlı ay, 12 ay) aylık; 30 günlük formda
   anlamsız (≤ 1 ay). Pozitif gün oranı her iki koşuda aynı tanımla çalışır. Payda yalnız aktif günler (kapının "aktif ay" tanımıyla
-  tutarlı; swing trader'ın işlemsiz günleri cezalandırılmaz). Alternatif §7 K‑12.2.
+  tutarlı; swing trader'ın işlemsiz günleri cezalandırılmaz). Karar §7 K‑12.2.
 - **`ay_roi` / `hafta_roi`:** leaderboard `roi` paydası yatırma/çekmeyle bozuluyor (1805 örneği). Kapının yatırma/çekmeyi ayıklayan
   Modified Dietz zinciri (`twr_chain`, görev 15) tek yerde kullanılır. HL `portfolio` yanıtının `month`/`week` pencereleri bu iş için var;
   örnekleme sıklığı kural 1 denemesinde (§5.6) gözle doğrulanır.
@@ -123,7 +123,7 @@ Pencere sütunu: **İ** = ilk seçim, **F** = haftalık form. "30g" = as_of'tan 
 - **`hesap`:** İ'de kapının bugünkü toplamı (spot USDC dahil), F'de izlemenin `hesap_degeri` (spot hariç). Fark küçük; her koşu kendi
   içinde yüzdeliklendiği için tutarlıdır. `account_value` (leaderboard) **kullanılmaz**.
 - **`kaldirac`:** "kaldıraç kullanımı" = efektif kaldıraç (kapının ölçüsü). Bilgi: uygun 91 adayın medyan kaldıracı 0,03–2,87x;
-  dönüşümün tepe noktası 4x olduğundan bu aralıkta puan **kaldıraçla artar**. Dönüşüm kilitli; anlam sorusu §7 K‑12.3.
+  dönüşümün tepe noktası 4x olduğundan bu aralıkta puan **kaldıraçla artar**. Dönüşüm kilitli; karar §7 K‑12.3.
 
 ---
 
@@ -133,14 +133,14 @@ Pencere sütunu: **İ** = ilk seçim, **F** = haftalık form. "30g" = as_of'tan 
 - **Tanım:** `form_puani = ilk11.agirlikli_puan(kadro_alanlari)[id]` (0–100); `kadro_alanlari` = §3.2 F sütunları,
   `hazirla_kaldirac_alanlari` ile dönüştürülmüş. Ağırlıklar, 35 kuralı değişmez.
 - **Yüzdelik evreni:** o Pazar kadroda olan 50 kişi (İlk 11 + Yedek 11 + PAF). Gerekçe: F alanlarının kaynağı (v3, saatlik izleme)
-  yalnız kadroda var; kadro dışı biri `golge` için hep 35 alırdı. Alternatif §7 K‑12.5.
+  yalnız kadroda var; kadro dışı biri `golge` için hep 35 alırdı. Karar §7 K‑12.5.
 - **Hesap yeri (kural 7):** izleme motoru her saat `traderlar[].ilk11_form_ham` (10 ham alan + `alan_kaynagi` + `pencere_bitis`)
   yayımlar (`ilk11_alanlar.form_ham_30g`). Pazar işi yalnız okur, yüzdeliklendirir.
 - **Girdi dondurma:** Pazar işi, `copytrade-izleme` dalında `uretildi ≤ as_of` olan **en son** `izleme/durum.json` sürümünü
-  (git geçmişinden) alır; `as_of − uretildi ≤ ilk11_form_tazelik_dk` (öneri 120 dk) değilse o hafta form **geçersiz** (hareket yok).
+  (git geçmişinden) alır; `as_of − uretildi ≤ ilk11_form_tazelik_dk` (120 dk, K‑12.10) değilse o hafta form **geçersiz** (hareket yok).
   Bu seçim yalnız as_of'a bağlı olduğundan tekrar denemede aynı girdi, aynı `snapshot_id` çıkar (`pazar_akis` şartı).
 - **`bu_pazar_gecerli`** (`pazar_gecis` girdisi) `true` ⇔ trader'ın `gecerli == true`, `veri_zamani ≥ as_of − 120 dk`, ve 10 alandan
-  en az `ilk11_form_min_dolu_alan` (öneri **8**) gerçek değerle dolu. Değilse form hareketi yok (`pazar_gecis` açıklama yazar).
+  en az `ilk11_form_min_dolu_alan` (**8**, K‑12.10) gerçek değerle dolu. Değilse form hareketi yok (`pazar_gecis` açıklama yazar).
 - **`bu_pazar_aktif`** `true` ⇔ (as_of − 7 gün, as_of] aralığında trader'ın en az bir **perp** dolumu var (HL `userFillsByTime`,
   izleme motorunun dolum önbelleği). `onceki_pazar_aktif` = bir önceki Pazar form snapshot'ındaki değer; yoksa `None`
   (iki Pazar hareketsizlik kararı verilmez).
@@ -192,7 +192,7 @@ Pencere sütunu: **İ** = ilk seçim, **F** = haftalık form. "30g" = as_of'tan 
 | `copytrade/ilk11_alanlar.py` | **yeni**, saf (ağ/dosya yok) | `pencere_getiri`, `pencere_dusus`, `pozitif_gun_orani` (hepsi `kapi.twr_chain` üstünde), `kazanma_orani` (`closed_round_trips`), `ilk_alanlar(kapi_satiri) → (form_ham, alan_kaynagi)`, `form_ham_30g(fills, portfolio, hesap, v3, now)`, `akil_sagligi(alanlar, rules)`. 10 alanın tek hesap yeri. |
 | `copytrade/ilk11_pazar.py` | **yeni**, CLI | Girdi seçimi (kapı klasörü, as_of'a göre `durum.json` sürümü), uygunluk (§2), ilk seçim (`ilk11_veri.snapshot_olustur`) ya da form snapshot + `ilk11.pazar_gecis`, planı izleme listesine uygulama, `pazar_akis.pazar_akis_plani` durumu (`akis.json`), RAPOR. Yalnız dosya üretir; commit iş akışında. |
 | `copytrade/olcut.py` | değişir (bilgi) | `calculate_metrics` → `kazanma_orani` (yalnız bilgi sütunu; kapı adımı kullanmaz). |
-| `copytrade/kapi.py` | değişir (bilgi) | `evaluate_address`: zaten çekilen `portfolio`'dan `ilk11_ay_roi`, `ilk11_hafta_roi`, `ilk11_dusus_30g`, `ilk11_tutarli_30g` (`ilk11_alanlar` çağrısı). Adım mantığı, eşikler, `HESAP_SURUMU` **değişmez**; `RATIO_COLUMNS`'a `ilk11_dusus_30g`, `ilk11_tutarli_30g`, `kazanma_orani` eklenir (akıl sağlığı). Onay §7 K‑12.11. |
+| `copytrade/kapi.py` | değişir (bilgi) | `evaluate_address`: zaten çekilen `portfolio`'dan `ilk11_ay_roi`, `ilk11_hafta_roi`, `ilk11_dusus_30g`, `ilk11_tutarli_30g` (`ilk11_alanlar` çağrısı). Adım mantığı, eşikler, `HESAP_SURUMU` **değişmez**; `RATIO_COLUMNS`'a `ilk11_dusus_30g`, `ilk11_tutarli_30g`, `kazanma_orani` eklenir (akıl sağlığı). Karar §7 K‑12.11. |
 | `copytrade/defter.py` + `kopya_v3.py` | değişir (çıktı) | `copy_ledger` kapanan kopya işlemlerini listeler; v3 `kapanan_islemler` yayımlar. Bakiye/getiri aynı (eski ↔ yeni sayılar PR'da yan yana; fark 0 olmalı). |
 | `copytrade/izleme_motoru.py` | değişir | trader başına `ilk11_form_ham`; `motor.json`'da `ilk11_gecerli_saat`; izleme listesini veri dalından okuyabilme (`--liste` parametresi). |
 | `copytrade/ilk11_veri.py` | değişmez | `form_esle` saat→dakika (×60) #461 ile doğru; A2'de `form_ham` yolu esas (10 alan açıkça verilir). |
@@ -310,32 +310,28 @@ Lider/denetçi `RAPOR.md` + `alanlar.csv` + `snapshot.json`'a **gerçek çıktı
 
 ---
 
-## 7. Kullanıcı kararı gerekiyor
+## 7. Kararlar (K‑12.1–K‑12.11)
 
-Her maddede lider önerisi **kalın**. Karar verilmezse A2 öneriyle başlar, sonuç PR'da gösterilir (kilitli değerlerin hiçbiri değişmez).
+**Karar verildi (kullanıcı, 2026-11-02):** "Önerilerini kabul ediyorum; amacım verilerin doğru gelmesi ve kaydedilmesi." Önerilen seçeneklerin
+tümü onaylandı. Vurgu: önce verinin doğru gelmesi ve kalıcı kaydı. Açık karar yoktur; kilitli değerlerin (ağırlık, dönüşüm, 60/40,
+11/11/28, terfi kapısı) hiçbiri değişmedi.
 
-- **K‑12.1 `golge` (ilk seçim) kaynağı.** (a) **Kapının tarz gecikmeli kopya neti (200 gün, seçim v1.3 puanıyla aynı; hazır, 91 kişide dolu).**
-  (b) v3'ü kapı dolumlarıyla geriye dönük 30 gün koşmak (güncel motor, ama yeni ağır hesap yolu ve dakikalık mum ihtiyacı).
-  Form tarafı her durumda v3 (`kapanan_islemler`).
-- **K‑12.2 `tutarli` tanımı.** (a) **Pozitif gün oranı, 30 gün, payda = PnL'i değişen günler.** (b) Payda = tüm 30 gün (az işlem yapan
-  swing trader düşük puan alır). (c) İlk seçimde kapının kârlı ay oranı (12 ay), formda pozitif gün (iki farklı ölçü).
-- **K‑12.3 `kaldirac` anlamı.** Uygun adayların hepsi 4x'in altında; dönüşüm (kilitli) bu aralıkta **daha yüksek kaldıraca daha yüksek puan**
-  veriyor. (a) **Efektif kaldıraç (kapının ölçüsü), dönüşüm aynen; yalnız raporda belirtilir.** (b) HL pozisyon ayarı kaldıracı
-  (`leverage.value`; tipik 3–20x, Etre'nin "ortalama kaldıraç"ına daha yakın olabilir). (c) Dönüşümü değiştirmek — strateji değişikliği, ayrı karar.
-- **K‑12.4 İlk seçimde `kazanma/siklik/tutma/kaldirac` penceresi.** (a) **Kapı penceresi (365 gün, kapı zaten hesaplıyor, az işlemli
-  trader'da kararlı).** (b) 30 gün (formla aynı; swing trader'da 2–5 işlemle oynak).
-- **K‑12.5 Form puanının yüzdelik evreni.** (a) **Kadronun 50 kişisi (her Pazar ~yarısı 50 altı; 60/40 hareketi her hafta olur).**
-  (b) Kadro + kadro dışı uygunlar (kadro dışındakilerde v3 yok → `golge` 35; adil değil).
-- **K‑12.6 Kadro boşluğu.** PAF'tan kadro dışına düşen yer nasıl dolar? (a) **Her Pazar, kadroda olmayan uygun adaylar İlk 11 puanıyla
-  sıralanır, boş PAF yerine en iyisi girer** (ilk seçimle aynı kural; yalnız PAF'a giriş). (b) Boş kalır (kadro zamanla küçülür).
-- **K‑12.7 Pazar planının uygulanması.** (a) **Otomatik (PAPER; RAPOR/iş özetinde özet, Worker dönünce Telegram; kullanıcı istediğinde geri alınır, `gecis.py` kaydıyla).**
-  (b) Her Pazar kullanıcı onayı bekler (onay gelene kadar eski kadro).
-- **K‑12.8 İzleme kapsamı.** Saatlik bütçe ~90 trader. (a) **Kadro 50 + sabit referans kolları (`referans_oda` + `referans_kontrol`, 36);
-  diğer pilot kolları (oda, kontrol, taban, elle, havuz, cikarilan) durur, verisi silinmez.** Ön kayıt 1.5/1.6 kolları fiilen 1 Kasım'dan
-  beri izlenmiyor. (b) Hepsi (~140 trader, saatlik bütçe aşılır; iki işe bölmek gerekir).
-- **K‑12.9 Az aday eşiği.** (a) **Uygun < 11 → yayın yok; 11–49 → uyarılı yayın.** (b) < 50 → yayın yok.
-- **K‑12.10 Yeni veri kalitesi parametreleri** (`kurallar.yaml` `ilk11_*`): kapı tazeliği 7 gün, form tazeliği 120 dk, form geçerliliği
-  ≥ 8/10 alan, alan doluluğu ≥ %90, §3.2 akıl sağlığı aralıkları, ihlal > %5 → kırmızı. **Öneri: olduğu gibi onay.**
-- **K‑12.11 Kapı koduna bilgi sütunu.** `kapi.py`/`olcut.py`'ye 5 bilgi sütunu (`ilk11_ay_roi`, `ilk11_hafta_roi`, `ilk11_dusus_30g`,
-  `ilk11_tutarli_30g`, `kazanma_orani`); adım mantığı/eşik değişmez ama kapının dondurma SHA'sı değişir. (a) **Onay (veri bir kez çekilir).**
-  (b) Kapıya dokunma; Pazar işi 91 aday için `portfolio`'yu ayrıca çeker (veri iki kez çekilir, kural 7'ye aykırı).
+- **K‑12.1 `golge` (ilk seçim) kaynağı — Karar verildi (2026-11-02):** kapının tarz gecikmeli kopya neti (`secim.puan`, 200 gün).
+  Form tarafı v3 `kapanan_islemler`.
+- **K‑12.2 `tutarli` tanımı — Karar verildi (2026-11-02):** pozitif gün oranı, 30 gün, payda = PnL'i değişen günler.
+- **K‑12.3 `kaldirac` anlamı — Karar verildi (2026-11-02):** efektif kaldıraç (kapının ölçüsü), dönüşüm aynen. Not: adaylar 0,03–2,87x
+  olduğundan dönüşüm bu aralıkta yüksek kaldıraca daha yüksek puan veriyor; ilk gerçek kadrodan sonra etkisi raporlanır (A3 RAPOR),
+  değişiklik ayrı kullanıcı kararıdır.
+- **K‑12.4 İlk seçim penceresi (`kazanma/siklik/tutma/kaldirac`) — Karar verildi (2026-11-02):** kapı penceresi (365 gün); form 30 gün.
+- **K‑12.5 Form yüzdelik evreni — Karar verildi (2026-11-02):** kadronun 50 kişisi.
+- **K‑12.6 Kadro boşluğu — Karar verildi (2026-11-02):** her Pazar, kadroda olmayan uygun adaylar İlk 11 puanıyla sıralanır; boş PAF
+  yerine en iyisi girer (yalnız PAF'a giriş).
+- **K‑12.7 Pazar planı — Karar verildi (2026-11-02):** otomatik uygulanır (PAPER); RAPOR/iş özetinde özet (Worker dönünce Telegram);
+  kullanıcı istediğinde `gecis.py` kaydıyla geri alınır.
+- **K‑12.8 İzleme kapsamı — Karar verildi (2026-11-02):** kadro 50 + sabit referans kolları (`referans_oda` + `referans_kontrol`, 36).
+  Eski pilot kolları (oda, kontrol, taban, elle, havuz, cikarilan) saatlik izlemeden çıkar; geçmiş veri dalda kalır, silinmez.
+- **K‑12.9 Az aday eşiği — Karar verildi (2026-11-02):** uygun < 11 → yayın yok; 11–49 → uyarılı yayın.
+- **K‑12.10 Veri kalitesi parametreleri — Karar verildi (2026-11-02):** kapı tazeliği 7 gün, form tazeliği 120 dk, form geçerliliği
+  ≥ 8/10 alan, alan doluluğu ≥ %90, §3.2 akıl sağlığı aralıkları, ihlal > %5 → kırmızı (`kurallar.yaml` `ilk11_*`).
+- **K‑12.11 Kapıya bilgi sütunu — Karar verildi (2026-11-02):** `kapi.py`/`olcut.py`'ye 5 bilgi sütunu (`ilk11_ay_roi`, `ilk11_hafta_roi`,
+  `ilk11_dusus_30g`, `ilk11_tutarli_30g`, `kazanma_orani`); veri bir kez çekilir. Adım mantığı/eşik değişmez; dondurma SHA'sı değişir.
