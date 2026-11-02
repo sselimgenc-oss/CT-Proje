@@ -49,7 +49,8 @@ def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str,
     candles = {coin: sorted(saatlik.get(coin, []) + isaret.get(coin, []), key=lambda c: c['t'])
                for coin in {*saatlik, *isaret}}
     ledger = copy_ledger(annotated, Market(candles), None, delay, t0_ms, now_ms, FundingRates(funding), rules,
-                         daily=True, tutar_egrisi=sabit_tutar_egrisi(rules), base_usd=BASE_USD, style=style)
+                         daily=True, tutar_egrisi=sabit_tutar_egrisi(rules), base_usd=BASE_USD, style=style,
+                         islem_kaydi=True)
     if ledger.get('net') is None:
         return {**base, 'durum': 'hesaplanamadi', 'neden': 'yürütülebilir dolum yok'}
     days = pd.date_range(t0.normalize(), now.normalize(), freq='1D')
@@ -59,6 +60,10 @@ def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str,
     equity = BASE_USD * (1 + net.cumsum())
     kapanis_nedenleri = [{'coin': e['coin'], 'neden': e['neden'], 'zaman': iso_ms(e['zaman_ms'])}
                         for e in ledger['olaylar']]
+    # İlk 11 `paper_sonuclari` girdisi (yalnız raporlama; bakiye/getiri aşağıda değişmeden hesaplanır): kapanan kopya işlemleri, 1.000 $ ölçeğinde.
+    kapanan_islemler = [{'coin': t['coin'], 'acilis': iso_ms(t['acilis_ms']), 'kapanis': iso_ms(t['kapanis_ms']),
+                         'sonuc_usd': t['sonuc_usd'], 'getiri': t['sonuc_usd'] / t['acilan_usd'] if t['acilan_usd'] else None,
+                         'neden': t['neden'], 'gecerli': t['gecerli']} for t in ledger['islemler']]
     liquidations = [e['zaman_ms'] for e in ledger['olaylar'] if e.get('neden') == 'likidasyon']
     when, source = (min(liquidations), 'mum') if liquidations else (None, None)
     broke = equity[equity <= 0]
@@ -78,4 +83,4 @@ def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str,
             'toplam': ledger['net'], 'funding': ledger['funding'], 'maliyet': ledger['costs'],
             'fiyatsiz_eylem': int(ledger.get('missing', 0)), 'tasfiye': when is not None,
             'tasfiye_zamani': tasfiye_zamani, 'tasfiye_kaynagi': source,
-            'kapanis_nedenleri': kapanis_nedenleri}
+            'kapanis_nedenleri': kapanis_nedenleri, 'kapanan_islemler': kapanan_islemler}

@@ -1,4 +1,4 @@
-# Veri sözleşmesi — copy trade izleme (v1.13, 2026-11-02; v1.13 İlk 11 puan alanları (§6, tanım; uygulama A2), v1.12 `sanal_kopya_v3` tasfiye/aşamalı çıkış (E3), v1.11 `sanal_kopya_v3` (E2 sabit tutar), v1.10 `sanal_kopya_v2.kapanis_nedenleri` (E3), v1.9 `sanal_kopya_v2`, v1.8 `gecikme.json` taze pencere, v1.7 `gecikme.json`, v1.6 `saglik_hatti`, v1.5 `kol`, v1.2 olay kimliği, v1.3 tarz, v1.4 veri geçerliliği ve karar gizliliği)
+# Veri sözleşmesi — copy trade izleme (v1.14, 2026-11-02; v1.14 İlk 11 hesap katmanı kodda (A2 PR-1: `ilk11_alanlar`, kapı bilgi sütunları, `kapanan_islemler`), v1.13 İlk 11 puan alanları (§6, tanım), v1.12 `sanal_kopya_v3` tasfiye/aşamalı çıkış (E3), v1.11 `sanal_kopya_v3` (E2 sabit tutar), v1.10 `sanal_kopya_v2.kapanis_nedenleri` (E3), v1.9 `sanal_kopya_v2`, v1.8 `gecikme.json` taze pencere, v1.7 `gecikme.json`, v1.6 `saglik_hatti`, v1.5 `kol`, v1.2 olay kimliği, v1.3 tarz, v1.4 veri geçerliliği ve karar gizliliği)
 
 sözleşmeye göre çalışır; alan eklemek/değiştirmek lider onayıyla `surum` artırılarak yapılır.
 
@@ -195,7 +195,9 @@ yok (ilk koşu, sakin piyasa ya da tüm örnekler eski); medyan/maks `null`. Yal
   `TELEGRAM_WEBHOOK_SECRET`); dağıtım işi bunları Cloudflare secret'ına aktarır. Repoya, günlüğe, sohbete yazılmaz.
 
 ## 6. İlk 11 puan alanları (v1.13, 2026-11-02; K‑12)
-Tanım belgesi: `docs/ILK11_SECIM_SARTNAME.md` §3–4. **Durum:** sözleşme tanımlandı; alanlar A2'de üretilecek. Bu bölümde yazmayan
+Tanım belgesi: `docs/ILK11_SECIM_SARTNAME.md` §3–4. **Durum (v1.14):** 10 ham alanın hesap katmanı kodda (`copytrade/ilk11_alanlar.py`),
+kapı `sonuc.csv` bilgi sütunları ve `sanal_kopya_v3.kapanan_islemler` üretiliyor; `traderlar[].ilk11_form_ham` (izleme) ve
+`ilk11/<pazar>/` çıktıları A2 PR-2'de. Bu bölümde yazmayan
 alan tüketilmez (kalite kuralı 2). Puan kodu `copytrade/ilk11.py` (değişmez); ham alanların tek hesap yeri `copytrade/ilk11_alanlar.py`.
 
 **Ortak:** getiri ve oranlar **kesir** (0,012 = %1,2); zaman UTC; pencere sonu = Pazar snapshot `as_of` (Pazar 13:00 TSİ = 10:00 UTC)
@@ -218,11 +220,35 @@ ya da izleme okuma zamanı (`veri_zamani`). Eksik = `null` → alan puanı 35. A
 **Yeni alanlar (A2):**
 - Kapı `sonuc.csv` bilgi sütunları (adım/eşik kullanmaz): `ilk11_ay_roi`, `ilk11_hafta_roi`, `ilk11_dusus_30g`, `ilk11_tutarli_30g`,
   `kazanma_orani` (yukarıdaki birimlerle; oran sütunları akıl sağlığı kapısında 0–1).
-- `traderlar[].ilk11_form_ham` (izleme, saatlik): `{alanlar: {10 alan, birimler yukarıdaki}, alan_kaynagi: {alan: str|null},
-  pencere_bitis: UTC ISO, dolu_alan: int}`.
+- `traderlar[].ilk11_form_ham` (izleme, saatlik; `ilk11_alanlar.form_ham_30g` çıktısı): `{alanlar: {10 alan, birimler yukarıdaki},
+  alan_kaynagi: {alan: str|null}, pencere_bitis: UTC ISO (okuma zamanı, `YYYY-MM-DDTHH:MM:SSZ`), dolu_alan: int}`. `dolu_alan` = akıl sağlığı
+  SONRASI `null` olmayan alan sayısı (0–10). Dolum verisi alınamadıysa (`fills = None`) `kazanma/siklik/tutma/kaldirac` `null`; alındı ama
+  pencerede kapanmış işlem yoksa `siklik = 0`, `kazanma/tutma = null`.
+- **Pencere kuralları (`ilk11_alanlar`):** pencere sonu = ilgili `portfolio` serisinin SON noktası (F'de ayrıca `pencere_bitis`). Getiri / düşüş
+  zinciri `kapi.twr_chain` (Modified Dietz; yatırma-çekme getiri sayılmaz, sermaye ≤ 0 dönem 0 getiri): pencere = (son − N gün, son]; zincirin
+  TABANI, `son − N gün` anında ya da ondan önceki SON noktadır (taban öncesi PnL sayılmaz); geçmiş pencereden kısaysa ilk nokta taban.
+  `pozitif_gun_orani`: günün PnL'i = o UTC günün SON `pnlHistory` noktası, nokta olmayan gün önceki değeri taşır (ΔPnL = 0, paydaya girmez);
+  pencere = son noktanın günü dahil son N takvim günü. `ilk11_ay_roi`/`ilk11_dusus_30g`/`ilk11_tutarli_30g` `portfolio.month`, `ilk11_hafta_roi`
+  `portfolio.week` kullanır; pencere gün sayıları `kurallar.yaml` `ilk11_form_pencere_gun` (30) ve `ilk11_hafta_pencere_gun` (7).
+- **Akıl sağlığı** (`ilk11_alanlar.akil_sagligi`, aralıklar `kurallar.yaml` `ilk11_saglik` + `saglik_max_kaldirac`): aralık dışı değer `null`,
+  `alan_kaynagi[alan] = "akil_sagligi_ihlali:<değer>"` (tam sayı ise `1805`, değilse `repr`; `inf` → `inf`). Sınırlar DAHİL; `tutma` alt sınırı
+  (0 dk) DIŞLANIR. Eksik (`null`/NaN) ihlal değildir (`alan_kaynagi = null`). Aday listesinde alan başına ihlal / aday > `saglik_max_hata_orani`
+  (0,05) → koşu kırmızı (`saglik_sorunlari`); dolu / aday < `ilk11_min_doluluk` (0,90) → snapshot yok (`doluluk_sorunlari`).
 - `traderlar[].sanal_kopya_v3.kapanan_islemler` (izleme): `[{coin, acilis, kapanis (UTC ISO), sonuc_usd ($, 1.000 $ sanal kopya
   ölçeği; maliyet + funding dahil), getiri (oran = sonuc_usd / işlemde açılan toplam $), neden (trader|zarar_kes|kar_al|likidasyon),
-  gecerli (bool)}]`. Bakiye/getiri hesabını değiştirmez (kural 6).
+  gecerli (bool)}]`. Bakiye/getiri hesabını değiştirmez (kural 6; PR'da eski ↔ yeni fark 0). Üretim: `defter.copy_ledger(islem_kaydi=True)`.
+  - **İşlem** = kopya pozisyonunun bir coinde 0'dan açılıp 0'a dönmesi; ters dönüşte kapanan kısım biter (satır), kalan miktar yeni işlemi açar;
+    kısmi azaltmalar ve eklemeler aynı işleme yazılır. **Açık işlem listelenmez.** Satırlar kapanış sırasıyla.
+  - `sonuc_usd` = gerçekleşen K/Z − taker/kayma maliyeti (ters dönüş dolumunda ücret miktarla bölünür: kapanan kısım / açılan kısım) +
+    funding (işlemin açık kaldığı saat aralıklarının funding'i). `getiri` = `sonuc_usd` / işlemde açılan toplam $ (açılış + eklemeler, fiyat × adet ×
+    1.000). `acilis`/`kapanis` = kopyanın YÜRÜTME zamanı (trader dolum zamanı + gecikme, mum açılışı); zorunlu kapanışta (zarar_kes, kar_al,
+    likidasyon) risk denetimi saati.
+  - `gecerli = true` ⇔ (a) işlemi açan trader dolumunun `time` değeri pencere başından (`t0`) sonra ve o an trader pozisyonu yatay (ya da dolum
+    ters dönüştü) — trader'ın pencere öncesinden taşıdığı pozisyona eklemesi ya da kaçırılmış (fiyatsız) açılıştan sonraki ekleme **miras** sayılır,
+    `false` — ve (b) işlem açıkken hiçbir trader dolumu fiyatsız (mum yok → `fiyatsiz_eylem`) kalmadı. Zorunlu kapanışlar (mum işaretiyle) geçerlidir.
+    `false` satırlar listede kalır (sonuç gerçektir) ama `paper_sonuclari` ve `golge` (F) hesabına girmez.
+  - Not: sabit tutarlı v3 yolunda `ledger.net` hiçbir zaman `None` olmaz; `durum: "hesaplanamadi"` dalı (kopya_v3) artık tetiklenmez.
+  - Büyüklük: işlem sayısı t0'dan beri birikir (pencere süzgeci tüketicidedir); satır başına ~150 bayt.
 - `ilk11/<pazar>/snapshot.json` (`copytrade-kapi` dalı): `snapshot_id` (gövdenin kanonik JSON SHA-256'sı), `sema`
   (`ilk11-pazar-v1` ilk seçim | `ilk11-form-v1` form), `as_of` (Pazar 13:00 TSİ, ISO +03:00), `kaynak_surumu`, `adaylar[]`
   (`id`, `uygun`, `uygunluk_nedeni`, `alanlar`, `alan_kaynagi`, `kapi_puani` (oran), `gecerli_gozlem_suresi` (gün)), `kadro[]`
