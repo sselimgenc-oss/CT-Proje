@@ -213,9 +213,15 @@ def test_incremental_overlap_daily_portfolio_and_repeatable_ledger(tmp_path):
     drop = lambda t: {k: ({a: b for a, b in v.items() if a != 'son_isaret'} if k == 'sanal_kopya'
                           else {a: b for a, b in v.items() if a not in ('payda_yontemi', 'payda_okuma_sayisi')} if k == 'sanal_kopya_v2'
                           else v)
-                      for k, v in t.items() if k != 'veri_zamani'}
+                      for k, v in t.items() if k not in ('veri_zamani', 'ilk11_gecerli_saat', 'ilk11_form_ham')}
     assert drop(first) == drop(second)
     assert second['veri_zamani'] == '2026-10-27T13:00:00Z'
+    # Koşuyla ilerlemesi BEKLENEN yeni alanlar karşılaştırmadan düşürülmedi, değişimleri ayrıca doğrulanır: saatlik geçerlilik sayacı +1,
+    # form alanı yalnız pencere_bitis'te (okuma zamanı) farklıdır.
+    assert (first['ilk11_gecerli_saat']['saat'], second['ilk11_gecerli_saat']['saat']) == (1, 2)
+    assert (first['ilk11_gecerli_saat']['son_saat'], second['ilk11_gecerli_saat']['son_saat']) == ('2026-10-27T12:00:00Z', '2026-10-27T13:00:00Z')
+    assert (first['ilk11_form_ham']['pencere_bitis'], second['ilk11_form_ham']['pencere_bitis']) == ('2026-10-27T12:00:00Z', '2026-10-27T13:00:00Z')
+    assert {k: v for k, v in first['ilk11_form_ham'].items() if k != 'pencere_bitis'} == {k: v for k, v in second['ilk11_form_ham'].items() if k != 'pencere_bitis'}
     assert one['olaylar'] == two['olaylar']
     assert client.portfolio_reads == 2  # sağlık eğrisi saatlik yenilenir
     # yürütme mumu (v1) önbellekten (sabit 1); v2'nin saatlik tasfiye mumu her koşuda bir artımlı okuma ekler (+1/koşu, kendi önbelleği ayrı).

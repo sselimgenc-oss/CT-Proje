@@ -406,3 +406,31 @@ def test_yeni_oran_sutunlari_akil_sagligi_kapisinda_0_1_disi_kirmizi():
     assert sanity_check(table(good_row(ilk11_dusus_30g=0.3, ilk11_tutarli_30g=0.6, kazanma_orani=0.5)), RULES) == []
     for sutun, deger in (("ilk11_dusus_30g", 1.5), ("ilk11_tutarli_30g", -0.2), ("kazanma_orani", 1.2)):
         assert any(p.startswith(sutun) for p in sanity_check(table(good_row(**{sutun: deger})), RULES)), sutun
+
+
+def test_bilgi_sutunu_hatasi_kapi_sonucunu_degistirmez(monkeypatch):
+    """K-12.11: bilgi sütunu hesabı patlarsa adres "veri hatası"na düşmez; 4 sütun None + `ilk11_bilgi_hatasi`, diğer her alan hatasız koşuyla birebir aynı."""
+    from datetime import datetime, timezone
+
+    from copytrade import kapi
+    from test_asama1_payda import portfolio as alltime
+    portfoy = alltime([i * 100 for i in range(14)], [1000 + i * 100 for i in range(14)])
+
+    def kosu():
+        return kapi.evaluate_address({"address": "0xa", "accountValue": 50000.0}, _kapi_istemcisi(portfoy),
+                                     type("C", (), {"requests": 0})(), datetime.now(timezone.utc), 0, 0, None, RULES, dexes=[])
+    temiz = kosu()
+
+    def patlak(*a, **k):
+        raise KeyError("bozuk portfolio")
+    monkeypatch.setattr(kapi, "kapi_bilgi_sutunlari", patlak)
+    hatali = kosu()
+    degisken = {"now_ms", "ilk11_bilgi_hatasi"} | {k for k in hatali if k.startswith("sure_")}
+    assert hatali["ilk11_bilgi_hatasi"].startswith("KeyError") and "hata" not in hatali
+    for sutun in ("ilk11_ay_roi", "ilk11_hafta_roi", "ilk11_dusus_30g", "ilk11_tutarli_30g"):
+        assert hatali[sutun] is None
+
+    def ortak(r):
+        return {k: v for k, v in r.items() if k not in degisken and not k.startswith("ilk11_")}
+    assert ortak(hatali) == ortak(temiz)
+    assert hatali["asama1"] == temiz["asama1"] and hatali["neden"] == temiz["neden"] == "hesap değeri tabanı"
