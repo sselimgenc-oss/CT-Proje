@@ -112,6 +112,17 @@ def closed_round_trips(fills: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return rows
 
 
+def kazanma_orani(rounds: list[dict[str, Any]]) -> float | None:
+    """Kazanma oranı = ``net_pnl > 0`` olan kapanmış işlem sayısı / kapanmış işlem sayısı (oran, 0–1).
+
+    ``rounds``: ``closed_round_trips`` çıktısı (ücret ``net_pnl``'e dahildir: ücret yüzünden sıfırın altına inen işlem kaybedendir;
+    ``net_pnl == 0`` kazanan sayılmaz). Kapanmış işlem yoksa ``None`` (0 değil: ölçülemedi). Yalnız bilgi ölçüsüdür, kapı adımı kullanmaz.
+    """
+    if not rounds:
+        return None
+    return sum(1 for x in rounds if x["net_pnl"] > 0) / len(rounds)
+
+
 def martingale_ratio(fills: list[dict[str, Any]], min_adverse: float | None = None) -> tuple[float, int]:
     """Share of same-direction additions made while the open position is under water by more than ``min_adverse``.
 
@@ -295,6 +306,7 @@ def calculate_metrics(fills: list[dict[str, Any]], funding: list[dict[str, Any]]
         "gunluk_islem_sikligi": len(rounds) / max(1, history_days + 1),
         "median_holding_hours": (float(pd.Series(held).median()) if (held := [x["holding_hours"] for x in rounds
                                   if x["holding_hours"] is not None]) else None),
+        "kazanma_orani": kazanma_orani(rounds),   # bilgi (İlk 11 `kazanma`; K-12.11): kapı adımı kullanmaz
         "median_leverage": lev_median, "max_leverage": lev_max, "kaldirac_supheli_ornek": lev_dropped,
         "setting_leverage": max(leverages) if leverages else None, "liquid_coin_share": liquid_share,
         "martingale_ratio": ratio,

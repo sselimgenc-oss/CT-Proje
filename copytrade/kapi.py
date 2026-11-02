@@ -23,6 +23,7 @@ import requests
 
 from copytrade.defter import DAY as DAY_MS
 from copytrade.defter import FundingRates, Market, copy_ledger, delayed_execution_quality
+from copytrade.ilk11_alanlar import kapi_bilgi_sutunlari
 from copytrade.kurallar import load_rules
 from copytrade.mum_saglik import mum_kontrol, ozet as mum_ozet
 from copytrade.olcut import _funding_amount, asset_class, calculate_metrics, closed_round_trips, perp_fills
@@ -863,6 +864,8 @@ def evaluate_address(leader: dict, client: PublicClient, cache: CandleCache, now
         portfolio = client.portfolio(address)
         stats = stage1_stats(portfolio)
         row.update(stats or {})
+        # İlk 11 bilgi sütunları (K-12.11; adım / eşik kullanmaz): aynı `portfolio` yanıtından, yeni istek yok. Tek hesap yeri: ilk11_alanlar.
+        row.update(kapi_bilgi_sutunlari(portfolio, rules))
         row["asama1"] = "Geçti" if stage1_pass(stats, rules) else "Yetersiz"
         progress.stage("portfolio", f"1. aşama: {row['asama1']}")
         if row["asama1"] != "Geçti":
@@ -1263,7 +1266,8 @@ HESAP_SURUMU = "v1.1-2026-10-27d"
 HESAP_KOD_HASH = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 
 RATIO_COLUMNS = ("profitable_month_ratio", "max_drawdown", "largest_trade_share", "kisa_islem_payi", "gece_payi", "pay_kripto", "pay_hisse",
-                 "pay_endeks", "pay_emtia", "binance_payi", "candle_coverage", "plasebo_p", "bhy_q", "kopya_eksik_orani")
+                 "pay_endeks", "pay_emtia", "binance_payi", "candle_coverage", "plasebo_p", "bhy_q", "kopya_eksik_orani",
+                 "ilk11_dusus_30g", "ilk11_tutarli_30g", "kazanma_orani")
 LEVERAGE_COLUMNS = ("median_leverage", "max_leverage")
 EXPECTED_FILLED = ("closed_trades", "history_days", "median_holding_hours", "median_leverage", "max_leverage", "candle_coverage",
                    "profitable_month_ratio", "max_drawdown", "gecikme_30dk_net", "gecikme_120dk_net", "kisa_islem_payi", "pay_kripto", "tarz")
