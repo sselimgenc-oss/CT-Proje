@@ -1,0 +1,135 @@
+name: CT-Kapı haftalık tam koşu
+
+# Cumartesi 18:43 UTC (TSİ 21:43) + elle. Tam koşu: 32 parça + birleştirme + akıl sağlığı. Sonuçlar main'e değil `copytrade-kapi` veri dalına yazılır.
+# Süre bütçesi: plan 10 dk, parça ≤ 120 dk, birleştirme ≤ 90 dk (toplam ≤ 4 sa; Pazar 10:00 UTC'ye ≥ 11 sa pay). Kısmi koşu `durum: eksik` yayımlanır ve iş KIRMIZI biter.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "43 18 * * 6"
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+concurrency:
+  group: copytrade-kapi
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      shards: ${{ steps.p.outputs.shards }}
+      count: ${{ steps.p.outputs.count }}
+      day: ${{ steps.p.outputs.day }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - id: p
+        # Gün BİR KEZ burada seçilir ve tüm parçalara + birleştirmeye aynen geçer (gece yarısını aşan koşu iki klasöre bölünmesin).
+        run: |
+          count=32
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "shards=$(python3 -c "import json;print(json.dumps(list(range($count))))")" >> "$GITHUB_OUTPUT"
+          echo "day=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - name: Ortak kapı evrenini dondur
+        run: python -m copytrade.kapi --evren-yaz evren.json
+      - name: Ortak Binance vadeli listesini dondur
+        run: python -c "from pathlib import Path; from copytrade.kapi import write_binance_universe; write_binance_universe(Path('.'))"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kapi-evren
+          path: |
+            evren.json
+            binance_vadeli.txt
+
+  stage1:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJson(needs.plan.outputs.shards) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - uses: actions/download-artifact@v4
+        with:
+          name: kapi-evren
+          path: .
+      - name: Kapı koşusu
+        # Parça hata verirse ya da zaman aşımına uğrarsa adım (ve iş) kırmızı olur; bitmeyen parça `bitti.json` bırakmaz, birleştirme `durum: eksik` yayımlar.
+        env:
+          PYTHONWARNINGS: ignore
+        run: |
+          timeout 110m python -m copytrade.kapi --root copytrade --shard-index ${{ matrix.shard }} --shard-count ${{ needs.plan.outputs.count }} --tarih ${{ needs.plan.outputs.day }} --evren-dosyasi evren.json --binance-dosyasi binance_vadeli.txt
+      - name: Sonuçları tarih klasörüyle paketle
+        if: always()
+        run: |
+          mkdir -p artifact/${{ needs.plan.outputs.day }}
+          if [ -d copytrade/kapi/${{ needs.plan.outputs.day }} ]; then cp -r copytrade/kapi/${{ needs.plan.outputs.day }}/. artifact/${{ needs.plan.outputs.day }}/; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stage1-${{ matrix.shard }}
+          path: artifact/
+          if-no-files-found: ignore
+
+  publish:
+    needs: [plan, stage1]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: stage1-*
+          path: shards
+      - uses: actions/download-artifact@v4
+        with:
+          name: kapi-evren
+          path: evren_anlik
+      - name: Birleştir
+        id: birlestir
+        run: |
+          # Hiçbir parça sonuç üretmediyse eski (main'deki) dosyalar yayımlanmasın.
+          if [ -z "$(find shards -name sonuc.csv -print -quit)" ]; then echo "Parçalardan sonuc.csv gelmedi; yayımlanacak yeni sonuç yok." >&2; exit 1; fi
+          python -m copytrade.kapi --root copytrade --birlestir shards --beklenen-parca ${{ needs.plan.outputs.count }} --mod tam --evren-dosyasi evren_anlik/evren.json
+          echo "durum=$(python3 -c "import json;print(json.load(open('copytrade/kapi/${{ needs.plan.outputs.day }}/durum.json'))['durum'])")" >> "$GITHUB_OUTPUT"
+      - name: Keşif verisi ve ilişkili hesap işaretleri
+        # Eksik koşudan kesif.json üretilmez. Keşif düşerse iş kırmızı olur (sonuçlar yine yayımlanır: sonraki adımlar `!cancelled()`).
+        if: steps.birlestir.outputs.durum == 'tamam'
+        run: python -m copytrade.kesif --root copytrade --output kesif
+      - name: Veri dalına yaz
+        if: ${{ !cancelled() && steps.birlestir.outcome == 'success' }}
+        env:
+          DAY: ${{ needs.plan.outputs.day }}
+          MOD: tam
+        run: bash .github/scripts/kapi_yayimla.sh
+      - name: Eksik koşu işi kırmızı yapar
+        if: ${{ !cancelled() && steps.birlestir.outputs.durum == 'eksik' }}
+        run: |
+          echo "Koşu eksik (durum: eksik); kısmi sonuç veri dalına yazıldı ama İlk 11 seçiminde kullanılmaz:" >&2
+          cat "copytrade/kapi/${{ needs.plan.outputs.day }}/durum.json" >&2
+          exit 1

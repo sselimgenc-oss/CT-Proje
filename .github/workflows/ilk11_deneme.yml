@@ -1,0 +1,95 @@
+name: İlk 11 deneme (küçük gerçek veri)
+
+# Kalite kuralı 1 (docs/ILK11_SECIM_SARTNAME.md §5.6): 28 Ekim kapısından 5 adres (2 intraday, 2 swing + 1 `kopyalanabilir`; biri ≥ 1 M$, biri < 50 k$ hesap) ile
+# kapı alanları + tek okumalık izleme + `ilk11_pazar --deneme`. Üretim R2'sine ve veri dallarına YAZMAZ; çıktı yalnız artifact ve iş özetidir.
+# Tetik: elle ya da `copytrade/ilk11_deneme/CALISTIR` dosyasına push (kendi dalından deneme: workflow_dispatch yalnız varsayılan dalda tanımlıdır).
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - copytrade/ilk11_deneme/CALISTIR
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+jobs:
+  deneme:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+    steps:
+      - name: Gerekli secret'ların varlığını kontrol et (yalnız ad)
+        # Değer asla yazdırılmaz; eksik olanın ADI yazılır ve iş kırmızı biter (izleme.yml bunları R2 için kullanır).
+        run: |
+          eksik=""
+          for ad in R2_ACCESS_KEY_ID R2_ACCOUNT_ID R2_BUCKET R2_SECRET_ACCESS_KEY; do
+            if [ -z "${!ad:-}" ]; then eksik="$eksik $ad"; fi
+          done
+          if [ -n "$eksik" ]; then echo "Eksik secret:$eksik" >&2; exit 1; fi
+          echo "Gerekli secret'lar tanımlı."
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: 28 Ekim kapı sonucundan 5 adres seç
+        run: |
+          mkdir -p deneme
+          git fetch --depth=1 origin copytrade-kapi
+          git archive FETCH_HEAD copytrade/kapi/2026-10-28 | tar -x
+          python -m copytrade.ilk11_deneme hazirla --kapi-sonuc copytrade/kapi/2026-10-28/sonuc.csv --cikti deneme | tee deneme/hazirla.json
+          echo "tarih=$(cat deneme/tarih.txt)" >> "$GITHUB_OUTPUT"
+        id: hazir
+      - name: Kapı alanları (5 adres, tek parça) ve birleştirme
+        # Parça çıktısı ile birleştirme çıktısı AYRI köklerde: birleştirme parçayı "önceki dosya" saymasın (tüm satırlar `bu_kosu` kalır).
+        env:
+          PYTHONWARNINGS: ignore
+          TARIH: ${{ steps.hazir.outputs.tarih }}
+        run: |
+          mkdir -p deneme_parca/copytrade deneme_kok/copytrade shards/s0
+          python -m copytrade.kapi --root deneme_parca/copytrade --tarih "$TARIH" --evren-dosyasi deneme/evren.json
+          cp -r "deneme_parca/copytrade/kapi/$TARIH" shards/s0/
+          python -m copytrade.kapi --root deneme_kok/copytrade --birlestir shards --beklenen-parca 1 --mod tam --evren-dosyasi deneme/evren.json
+          cat "deneme_kok/copytrade/kapi/$TARIH/durum.json"
+      - name: Tek okumalık izleme (5 adres, t0 = 30 gün önce)
+        run: |
+          mkdir -p deneme_izleme
+          basla=$(date +%s)
+          python -m copytrade.izleme_motoru --root deneme_kok --output deneme_izleme --liste deneme/izleme_listesi.yaml
+          echo "$(( $(date +%s) - basla ))" > deneme/izleme_sure_sn.txt
+      - name: ilk11_pazar --deneme (iki koşu, aynı snapshot_id)
+        run: |
+          python -m copytrade.ilk11_pazar --deneme --kapi-dali deneme_kok --cikti deneme_pazar1
+          python -m copytrade.ilk11_pazar --deneme --kapi-dali deneme_kok --cikti deneme_pazar2
+          a=$(python3 -c "import json,glob;print(json.load(open(glob.glob('deneme_pazar1/ilk11/*/snapshot.json')[0]))['snapshot_id'])")
+          b=$(python3 -c "import json,glob;print(json.load(open(glob.glob('deneme_pazar2/ilk11/*/snapshot.json')[0]))['snapshot_id'])")
+          echo "snapshot_id: $a / $b"
+          [ "$a" = "$b" ]
+      - name: Özet (iş özeti + artifact)
+        if: always()
+        env:
+          TARIH: ${{ steps.hazir.outputs.tarih }}
+        run: |
+          sure=$(cat deneme/izleme_sure_sn.txt 2>/dev/null || echo 0)
+          alanlar=$(find deneme_pazar1/ilk11 -name alanlar.csv | head -1)
+          python -m copytrade.ilk11_deneme ozet --kapi-sonuc "deneme_kok/copytrade/kapi/$TARIH/sonuc.csv" --durum deneme_izleme/durum.json --pazar-alanlar "$alanlar" --sure-sn "$sure" | tee deneme/OZET.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ilk11-deneme
+          path: |
+            deneme
+            deneme_kok/copytrade/kapi
+            deneme_izleme/durum.json
+            deneme_pazar1
+            deneme_pazar2
+          if-no-files-found: ignore
