@@ -85,7 +85,22 @@ def _istatistik(ad: str, degerler: list) -> str:
     return f"| {ad} | {len(xs)} | {min(xs):.6g} | {statistics.median(xs):.6g} | {max(xs):.6g} |"
 
 
-def ozet(kapi_sonuc: Path, durum: Path, pazar_alanlar: Path | None, sure_sn: float | None) -> str:
+ILK11_TRADER = 86      # 50 kadro + 36 referans (K-12.8)
+SAATLIK_BUTCE_DK = 55  # şartname §5.1
+
+
+def sure_tahmini(n: int, ilk_sn: float | None, artimli_sn: float | None) -> list[str]:
+    """İlk okuma (90 günlük geçmiş) ve artımlı (saatlik) koşu süreleri AYRI; ``ILK11_TRADER`` için doğrusal tahmin. Saatlik tahmin bütçeyi aşarsa açıkça yazılır."""
+    out = []
+    for ad, sn in (("ilk okuma", ilk_sn), ("artımlı (saatlik) koşu", artimli_sn)):
+        if sn:
+            out.append(f"- {ad}: {n} trader {sn:.0f} sn (trader başı ≈ {sn / max(1, n):.0f} sn) → {ILK11_TRADER} trader ≈ {sn / max(1, n) * ILK11_TRADER / 60:.0f} dk")
+    if artimli_sn and artimli_sn / max(1, n) * ILK11_TRADER / 60 > SAATLIK_BUTCE_DK:
+        out.append(f"- **UYARI:** saatlik koşu tahmini {SAATLIK_BUTCE_DK} dk bütçesini aşıyor")
+    return out or ["- süre ölçülmedi"]
+
+
+def ozet(kapi_sonuc: Path, durum: Path, pazar_alanlar: Path | None, sure_sn: float | None, artimli_sn: float | None = None) -> str:
     satirlar = pd.read_csv(kapi_sonuc, low_memory=False).to_dict("records")
     ilk = {str(s["address"]).lower(): ilk11_alanlar.ilk_alanlar(s) for s in satirlar}
     d = json.loads(durum.read_text(encoding="utf-8"))
@@ -108,7 +123,8 @@ def ozet(kapi_sonuc: Path, durum: Path, pazar_alanlar: Path | None, sure_sn: flo
         tablo = pd.read_csv(pazar_alanlar)
         out += [f"", f"### Pazar `alanlar.csv` ({len(tablo)} satır)", "", "| sütun | n | min | medyan | max |", "|---|---|---|---|---|"]
         out += [_istatistik(c, tablo[c].tolist()) for c in tablo.columns if pd.api.types.is_numeric_dtype(tablo[c])]
-    out += ["", "### İzleme (1 okuma)" + (f" — toplam {sure_sn:.0f} sn, trader başına ≈ {sure_sn / max(1, len(d['traderlar'])):.0f} sn → 50 trader ≈ {sure_sn / max(1, len(d['traderlar'])) * 50 / 60:.0f} dk" if sure_sn else ""),
+    out += ["", "### İzleme süresi", ""] + sure_tahmini(len(d["traderlar"]), sure_sn, artimli_sn)
+    out += ["", "### İzleme (trader başına)",
             "", "| id | tarz | gecerli | hesap $ | kapanan işlem | geçerli | getiri min/medyan/max | fiyatsız eylem | son_perp_dolum | gecerli_saat |", "|---|---|---|---|---|---|---|---|---|---|"]
     for t in d["traderlar"]:
         v3 = t.get("sanal_kopya_v3") or {}
@@ -131,11 +147,12 @@ def main(argv: list[str] | None = None) -> None:
     o.add_argument("--durum", type=Path, required=True)
     o.add_argument("--pazar-alanlar", type=Path, default=None)
     o.add_argument("--sure-sn", type=float, default=None)
+    o.add_argument("--artimli-sn", type=float, default=None)
     a = ap.parse_args(argv)
     if a.komut == "hazirla":
         print(json.dumps(hazirla(a.kapi_sonuc, a.cikti, datetime.now(UTC)), ensure_ascii=False, indent=1))
     else:
-        print(ozet(a.kapi_sonuc, a.durum, a.pazar_alanlar, a.sure_sn))
+        print(ozet(a.kapi_sonuc, a.durum, a.pazar_alanlar, a.sure_sn, a.artimli_sn))
 
 
 if __name__ == "__main__":

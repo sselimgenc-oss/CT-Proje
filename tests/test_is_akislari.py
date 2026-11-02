@@ -335,6 +335,17 @@ def test_deneme_secimi_dagilim_ve_buyuk_kucuk_hesap():
     assert sec(tablo().iloc[::-1]) == secilen                                                      # girdi sırasından bağımsız (deterministik)
 
 
+def test_sure_tahmini_iki_sure_ayri_ve_butce_asimi_uyarisi():
+    from copytrade.ilk11_deneme import sure_tahmini
+    # 5 trader: ilk okuma 670 sn -> 134 sn/trader -> 86 trader ≈ 192 dk; artımlı 60 sn -> 12 sn/trader -> 86 trader ≈ 17 dk (bütçe içinde)
+    ilk, artimli = sure_tahmini(5, 670, 60)
+    assert "ilk okuma" in ilk and "≈ 192 dk" in ilk and "artımlı" in artimli and "≈ 17 dk" in artimli
+    assert not any("UYARI" in x for x in sure_tahmini(5, 670, 60))
+    # artımlı 200 sn -> 40 sn/trader -> 86 trader ≈ 57 dk > 55: açık uyarı
+    assert any("UYARI" in x and "55 dk" in x for x in sure_tahmini(5, 670, 200))
+    assert sure_tahmini(5, None, None) == ["- süre ölçülmedi"]
+
+
 def test_deneme_secimi_yetersiz_aday_net_hata_verir():
     with pytest.raises(ValueError, match="hesap yok"):
         sec(tablo()[tablo()["hesap_degeri_bugun"] < 1_000_000])

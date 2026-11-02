@@ -63,12 +63,16 @@ jobs:
           cp -r "deneme_parca/copytrade/kapi/$TARIH" shards/s0/
           python -m copytrade.kapi --root deneme_kok/copytrade --birlestir shards --beklenen-parca 1 --mod tam --evren-dosyasi deneme/evren.json
           cat "deneme_kok/copytrade/kapi/$TARIH/durum.json"
-      - name: Tek okumalık izleme (5 adres, t0 = 30 gün önce)
+      - name: İzleme (5 adres, t0 = 30 gün önce) - ilk okuma, sonra aynı durumla artımlı koşu
+        # İki süre AYRI yazılır: ilk okuma (90 günlük geçmiş) ve artımlı (saatlik) koşu; ikincisi motor.json'daki imleçlerle yalnız yeni veriyi çeker.
         run: |
           mkdir -p deneme_izleme
           basla=$(date +%s)
           python -m copytrade.izleme_motoru --root deneme_kok --output deneme_izleme --liste deneme/izleme_listesi.yaml
           echo "$(( $(date +%s) - basla ))" > deneme/izleme_sure_sn.txt
+          basla=$(date +%s)
+          python -m copytrade.izleme_motoru --root deneme_kok --output deneme_izleme --liste deneme/izleme_listesi.yaml
+          echo "$(( $(date +%s) - basla ))" > deneme/izleme_artimli_sn.txt
       - name: ilk11_pazar --deneme (iki koşu, aynı snapshot_id)
         run: |
           python -m copytrade.ilk11_pazar --deneme --kapi-dali deneme_kok --cikti deneme_pazar1
@@ -92,7 +96,7 @@ jobs:
           fi
           sure=$(cat deneme/izleme_sure_sn.txt)
           alanlar=$(find deneme_pazar1/ilk11 -name alanlar.csv -print -quit 2>/dev/null)
-          python -m copytrade.ilk11_deneme ozet --kapi-sonuc "deneme_kok/copytrade/kapi/$TARIH/sonuc.csv" --durum deneme_izleme/durum.json --pazar-alanlar "$alanlar" --sure-sn "$sure" > deneme/OZET.md
+          python -m copytrade.ilk11_deneme ozet --kapi-sonuc "deneme_kok/copytrade/kapi/$TARIH/sonuc.csv" --durum deneme_izleme/durum.json --pazar-alanlar "$alanlar" --sure-sn "$sure" --artimli-sn "$(cat deneme/izleme_artimli_sn.txt)" > deneme/OZET.md
           cat deneme/OZET.md
           cat deneme/OZET.md >> "$GITHUB_STEP_SUMMARY"
           if [ -n "$alanlar" ]; then cat "$(dirname "$alanlar")/RAPOR.md"; fi
