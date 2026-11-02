@@ -53,9 +53,6 @@ golge_v2:
       zarar_kes: -0.20
       kar_al: 0.40
 golge_pozisyon_tavan_carpani: 3.0
-# E2 sabit tutar (copytrade/defter.py sabit_tutar_egrisi; kullanıcı kararı 2026-10-30: "Etre eğrisini enterpolasyonla
-# port et"). Kaynak: etre-trading-office etre2/kasa.py (Kasa.islem_usd) + etre2/ayar.py varsayılanları (GPL-3.0),
-# DEĞİŞTİRİLMEDİ — bunlar Etre'nin kendi sayıları, benim tahminim değil.
 # tutar_usd = sabit_tutar_ref_islem_usd × (clamp(kopya_hesabı_$, 1, sabit_tutar_tavan_kasa_usd) / sabit_tutar_ref_kasa_usd) ** sabit_tutar_us
 sabit_tutar_ref_kasa_usd: 200.0
 sabit_tutar_ref_islem_usd: 5.2
@@ -249,7 +246,7 @@ degisim_tavan_disi: [kaldirac_ihlali, veri_sorunu]
 cikarilan_izleme_gun: 56
 # Sabit referans kolunun seçim etiketi (ön kayıt 1.5 madde 3): bu etiketli oda üyesi çıkarılsa da süresiz izlenir
 referans_secim: "v1.3@2026-10-28"
-# Mutabakat sağlık ışığı (ön kayıt 1.6): yalnız pano/rapor uyarısı, kapı veya seçim kararı değildir.
+# Mutabakat sağlık ışığı (ön kayıt 1.6): yalnız rapor uyarısı, kapı veya seçim kararı değildir.
 mutabakat_saglik_sari_uyumsuz_oran: 0.01
 mutabakat_saglik_kirmizi_uyumsuz_oran: 0.10
 mutabakat_saglik_hesap_degeri_sicrama_oran: 0.25

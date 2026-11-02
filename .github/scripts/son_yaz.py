@@ -1,6 +1,5 @@
 """Veri dalı kökündeki ``son.json`` işaretçisini günceller: ``python son_yaz.py son.json anahtar değer [anahtar değer …]``.
 
-Pano/ofis en son seçim ve kapı tarihini bu tek dosyadan okur (GitHub API sınırına takılmaz). Diğer anahtarlar korunur; yalnız verilenler
 ve ``uretildi`` değişir. Biçim: ``{"kapi": "<tarih>", "secim": "<klasör>", "uretildi": "<ISO UTC>"}``.
 """
 import json

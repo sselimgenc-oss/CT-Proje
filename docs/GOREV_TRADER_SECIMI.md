@@ -48,7 +48,6 @@ Kullanım: bildirimle **elle** kopya. Kapı iki **tarz** tanır; her trader medy
    `arastirma/copytrade/argon_hazir_servis_iliskili_hesap.md`. İstekler: `subAccounts`, `userVaultEquities` +
    `vaultDetails.leader`, `extraAgents`, `userNonFundingLedgerUpdates` (iç transfer karşı adresleri). Sütunlar
    `iliskili_adresler` (`;` ile ayrılmış) ve `iliskili_not`.
-5. **Keşif verisi** (pano Keşif sekmesi için; şema aşağıda): `kesif/kesif.json`, `copytrade-kapi` veri dalında
    (yoksa yetim dal). Kapı sonuçları da bu dala yazılır, `main`'e yazılmaz.
 6. **İş akışı:** `main`'den tetiklenir (`copytrade/kapi/CALISTIR` yolu ve elle); **haftalık zamanlama** (pazar, TSİ
    gece). `--yalniz-adim5` modu korunur: önce 9 adres için hızlı koşu, sonra tam koşu.
@@ -154,5 +153,4 @@ Kullanım: bildirimle **elle** kopya. Kapı iki **tarz** tanır; her trader medy
 - `docs/codex_durum_trader_secimi.md`: yapılanlar, seçimler, sınırlar.
 
 ## Sonra
-Codex: pano **Keşif** sekmesi (sg-pano, `kesif.json`; ayrı görev, kullanıcı kararı). Lider: adayları inceler ve kullanıcıya önerir. İzleme listesi
 **kullanıcı onayıyla** güncellenir; t0 = giriş günü; 3 ay sanal izleme. Gerçek para yok.

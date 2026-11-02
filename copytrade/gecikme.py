@@ -1,6 +1,4 @@
 """Worker'ın GET /gecikme'de ölçtüğü gerçek algılama gecikmesini okur, oda genelinde özet üretir ve
-``izleme/gecikme.json``'a yazar (E1 devamı, Sol denetimi 2026-10-30 — `docs/DENETIM_ETRE_GECIS_2026-10-30.md`,
-`docs/DENETIM_ETRE_GECIS_TEKRAR_2026-10-30.md`).
 
 Bu, ``copytrade/saglik_hatti.py``'deki ``acik_pozisyon_yasi_dk_medyan``'dan ayrıdır: burada ölçülen, trader'ın
 gerçek Hyperliquid dolum zamanı ile Worker'ın onu görmesi arasındaki **gerçek** süre (Worker dakikalık çalıştığı

@@ -47,11 +47,8 @@ Görev: `docs/GOREV_D_YOLU.md`.
 - **Ne:** havuz (hepsi gölgede) → aday → oda.
 - **Öneri:** aday = havuzun %15'i; oda = 10–20; terfi için en az 3 hafta ve 10 kapanmış işlem gölgede; odadan çıkış için puanın
   aday katının alt yarısına düşmesi (gidip gelmeyi önler).
-- **Neden:** kural gevşekse şansa göre terfi olur (Etre'nin riski); sıkıysa oda boş kalır.
 
 ### K7. Kopya kuralı varyantlarının sayıları
-- **V1 fiyat bandı:** trader girişinden en çok %X uzaksa gir. Öneri: intraday %1, swing %2 (gecikmemiz Etre'den uzun).
-- **V2 zaman/zarar çıkışı:** Etre spotta −%30, 18 sa sonra ±%15, 24 sa sonra ±%20. Kaldıraçta teminata göre yazılmalı; öneri:
   teminatın −%50'si zarar kesme, süreye bağlı daralma swing için 7 / 14 gün.
 - **Not:** hepsi aynı sinyallerde paralel gölge; kazananı veri seçer.
 
@@ -67,11 +64,9 @@ Görev: `docs/GOREV_D_YOLU.md`.
 
 ## Sonraki kararlar
 
-### K10. Ofis görünümü ne zaman?
 - **Öneri:** ilk canlı gölge verisi gelince (Faz 4). O zamana kadar panoda sade durum tablosu. Her karakter gerçek bir modüle bağlı.
 
 ### K11. Otomatik emir (uzun vade)
-- **Ne:** Etre'nin asıl gücü saniyelerle kopyalaması; bizde elle kopya 30 dk – 2 sa gecikmeli.
 - **Durum:** `AGENTS.md` gereği emir ve gerçek para yok. Bu ancak D yolu olumlu sonuç verirse ve kullanıcı açıkça isterse konuşulur.
 
 ### K‑5. Maliyet (kullanıcı kararı 2026-10-29: "tamam")
@@ -129,8 +124,4 @@ Görev: `docs/GOREV_D_YOLU.md`.
 - Plan: `GOREV_VERI_DUZELTME.md` "Sadeleştirme" (S1–S5). Ayrı büyük yeniden yazım yok; mevcut maddelerin içinde yapılır.
 - K‑8 havuz genişletmesi (30 → +30, motor ≈ 60 dk) dondurma bitene kadar bekler; 91 trader'da motor adımı 45 dk.
 
-### K‑11. Etre'nin üstün olduğu her şey alınır (kullanıcı kararı 2026-10-30: "sorgusuz sualsiz bizden iyi olduğu her şeyi alıp bizimkinin yerine koymak")
-- Alanlar: program/kullanılabilirlik, plan, veri hattı, risk/çıkış, mimari, yönetim/sadelik, mühendislik, pano/ofis, simülasyon
-  gerçekçiliği, hız, kopya mekaniği, hedef netliği. Görev: `docs/GOREV_ETRE_GECIS.md`. K‑9/K‑10 görev listeleri askıda.
-- Korunan: güvenlik (gerçek para/emir/çekim yok), ölçüm yöntemi, seçim mantığı, bulut işletim. Etre kodu alınırsa GPL‑3.0 + atıf.
 - Yürütme: Sonnet tek lider ve birleştirme yetkili; Codex (Sol) denetçi.

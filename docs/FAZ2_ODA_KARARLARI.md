@@ -4,8 +4,6 @@ Bu belge Faz 2 boyunca her odanın görev ve yetki sınırlarını kaydeder. Kar
 
 ## Organizasyon kararı
 
-- Ofis **14 odalı** yapı olarak ele alınacaktır; Kontrol odası kaldırılmıştır.
-- Bağımsız kontrol grubu operasyonu, pano/ofis odası, kadro veya kasa etkisi oluşturmaz.
 - Varsa pasif karşılaştırma deneyinin ham verisi yalnız Arşivde tutulabilir; seçim, takım, risk veya işlem kararlarını etkilemez.
 - **Bilgi İşlem (IT)** ve **Denetim** birbirinden bağımsız birimlerdir.
 - **Bilgi İşlem (IT):** Veri/API/altyapı sürekliliği ve teknik sağlık kapsamındadır.
@@ -28,7 +26,6 @@ Her oda için aşağıdaki alanlar doldurulur:
 ## 1. Çay Ocağı
 
 - **Oda:** Çay Ocağı
-- **Amaç:** Ofis görünümünde dekoratif ve atmosfer oluşturan bir alan olmak.
 - **Girdi:** İşlevsel veri girdisi yok.
 - **Çıktı:** Yalnız görsel/dekoratif gösterim.
 - **Yetki:** Karar, veri, uyarı veya işlem yetkisi yok.
@@ -78,7 +75,6 @@ Her oda için aşağıdaki alanlar doldurulur:
 
 - **Oda:** Bilgi İşlem (IT)
 - **Amaç:** Veri ve teknik altyapı hatlarının sürekliliğini sağlamak.
-- **Girdi:** Hyperliquid veri erişimi/API, Worker, arşiv yazımı, zaman senkronu ve pano yayını hatlarının çalışma bilgileri.
 - **Çıktı:** Her hat için son başarı zamanı, gecikme, hata oranı ve güncel durum. Bayat veri yeniymiş gibi yayımlanmaz. Sorunlarda Haberleşme bildirimleri üretilir.
 - **Yetki:** Kontrollü yeniden deneme ve yeniden başlatma yapmak. Faz 3'te teknik anahtar, izin ve imzalama güvenliğini işletmek.
 - **Yasak:** Trader seçimi, kadro, risk veya işlem kararı vermek. Gerçek emir onayı IT yetkisinde değildir; Makam ve Sekreterlik kayıt zincirinden geçer.
@@ -111,7 +107,6 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Girdi:** HL aday/cüzdan verisi ve gölge izleme sonuçları.
 - **Çıktı:** Kapıdan geçen adayları Pazar günü 50 kişilik seçim evrenine vermek; gölge verisiyle PAF ve Yedekler'in gelişim/form puanını beslemek.
 - **Yetki:** Keşif, gölge izleme ve bu çıktıları ilgili seçim/form verisine aktarmak.
-- **Yasak:** İlk 11 işlem, kasa veya risk kararı vermek. LAB pano/ofiste görünmez; kayıtları yalnız Denetim veya Makam gerektiğinde inceler.
 - **Açık karar:** Yok.
 
 ## 9. Kapı
@@ -121,7 +116,6 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Girdi:** LAB adayları ve güvenlik, veri yeterliliği, temel risk ölçütleri.
 - **Çıktı:** Kapıyı geçen adaylar puanlama evrenine aktarılır; İlk 50 seçimi puan motoru yapar.
 - **Yetki:** Tanımlı ve sürümlenmiş uygunluk filtrelerini çalıştırmak. Sonuç ve etkilenen Pazar snapshotı Arşiv ve Denetim için kanıtlanır.
-- **Yasak:** İlk 11, Yedekler veya PAF takımına doğrudan seçim yapmak. Kapı pano/ofiste görünmez.
 - **Açık karar:** Yok.
 
 ## 10. PAF Takım
@@ -150,7 +144,6 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Amaç:** 11 kişilik ana PAPER takımını ve ana PAPER kasasını işletmek; ana kasa yalnız İlk 11 üyelerini kapsar.
 - **Girdi:** Onaylı Pazar kadro snapshotı, Hyperliquid perpetual (perp) canlı fiyatı ve takım üyelerinin işlem olayları.
 - **Çıktı:** Canlı fiyatla PAPER aynalama işlemleri; finansal sonuçlar Finans'a, karar/işlem izleri Arşiv'e aktarılır.
-- **Yetki:** Yalnız İlk 11 takımında işlem simülasyonu yapmak. Terfi/düşüşler Pazar snapshotı kurallarına göre uygulanır. İşlem politikası Etre HL referansını izler: giriş sinyalinin tazeliği ve fiyat bandı, en çok 5x kaldıraç, ekleme/azaltma aynalama, stop, ana para koruma, kâr geri çekilmesi ve zaman tabanlı çıkışlar. Giriş retleri ve çıkış nedenleri arşivlenir.
 - **Yasak:** Faz 3'e geçilene kadar cüzdan bağlamak veya gerçek emir göndermek.
 - **Açık karar:** Yok.
 
@@ -159,7 +152,6 @@ Her oda için aşağıdaki alanlar doldurulur:
 - **Oda:** Risk
 - **Amaç:** İlk 11 PAPER işlemlerinin risk ve çıkış kurallarını yönetmek.
 - **Girdi:** Fiyat/sinyal tazeliği ve bandı, kaldıraç, açık pozisyonlar, Finans mutabakatı ve IT hat sağlığı.
-- **Çıktı:** Etre HL referansındaki giriş tazeliği/fiyat bandı, en çok 5x kaldıraç, stop, ana para koruma, kâr geri çekilmesi ve süre tabanlı çıkışların kararları; engel ve çıkış neden kodları Arşiv ve Denetim incelemesine gider.
 - **Yetki:** Veri bayatlığı, limit aşımı, Finans mutabakat bozukluğu veya kritik IT olayı halinde yeni girişleri engellemek. Açık işlem yalnız önceden onaylı otomatik çıkış kurallarına göre kapanır.
 - **Yasak:** Keyfi/manuel pozisyon kapatma veya onaysız kural değişikliği. Kural değişikliği Makam ve Sekreterlik onayıyla, yeni sürüm olarak yapılır.
 - **Açık karar:** Faz 3 acil durdurmanın kapsamı ayrı kararla belirlenecektir.

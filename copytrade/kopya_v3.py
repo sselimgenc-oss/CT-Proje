@@ -1,12 +1,6 @@
-"""Kopya hesap v3 (E2 sabit tutar + E3 çıkış kuralları + tasfiye; `docs/GOREV_ETRE_GECIS.md` bitti tanımı). v1
-(`izleme_motoru.copy_results`) ve v2 (`kopya_v2.py`) silinmez, değişmez; v3 yan yana yayımlanır (`sanal_kopya_v3`,
+"""Kopya hesap v3.
 AGENTS.md kural 6).
 
-Kullanıcı kararı 2026-10-30 ("Etre eğrisini enterpolasyonla port et", ardından "dokümanda ne yazıyorsa onu yap"):
-v1/v2'nin trader hesabına ORANLI kopya ölçeğinin yerine, Etre'nin `kasa.py`sindeki gibi, her taze açılış KOPYA
-HESABININ KENDİ o anki $ değerine göre sabit tutarla açılır (`defter.sabit_tutar_egrisi`, kaynak `etre-trading-office
-etre2/kasa.py`+`ayar.py`, GPL-3.0, DEĞİŞTİRİLMEDİ); ekleme mevcut kopya pozisyonuna trader'ın kendi oranı kadar
-eklenir (Etre `masa.py _ekle`); azaltma/kapatma değişmedi (defterin ortak kuralı). Tek motor: aynı
 `defter.copy_ledger` (kural 7) — yalnız `tutar_egrisi` parametresiyle.
 
 Çapraz teminat tasfiyesi ve (E3) aşamalı zarar_kes/kar_al da AYNI motorda, gerçek (yol bağımlı) pozisyon üzerinde
@@ -16,14 +10,12 @@ desenini KULLANMAZ: proportional `scale`'in sabit tutarda karşılığı yok (yo
 doğrudan `copy_ledger`'ın gerçek `held`/`entry` durumuna kodlandı.
 
 **Kapsam dışı (ayrı GOREV alt maddeleri, bu PR'ın kapsamında değil):** pozisyon tavanı (`golge_pozisyon_tavan_carpani`
-— "bitti tanımı" bunu adlandırmıyor), Etre'nin kaldıraç kademesi, teminat/marj modeli, "ikna" (trader büyük alım) çarpanı.
 
 **Gözlem (test sırasında bulundu, davranış DOĞRU — düzeltme değil):** sabit tutar küçük olduğundan (eğri $1.000'da
 ~%2 açar, $10.000 tavanında bile ~%15), tek bir pozisyonun TEK BAŞINA çapraz teminat eşiğine (−1,0) ya da intraday
 zarar_kes'e (−0,50) gerçek fiyat hareketiyle ulaşması pratikte neredeyse imkânsızdır — küçük, çeşitlendirilmiş
 pozisyonların hesabı tek başına batıramaması tasarımın kendisidir (testlerde eşik yalnız mekanizmayı göstermek için
 gevşetildi, bkz. `tests/test_kopya_v3.py`). Gerçek veride bu katmanın asıl devreye girme yolu, aynı coin'e art arda
-eklemelerin (Etre `masa.py _ekle`) pozisyonu büyütmesidir.
 """
 
 from __future__ import annotations

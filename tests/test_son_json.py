@@ -1,4 +1,4 @@
-"""Veri dalı ``son.json`` işaretçisi (ofis/pano okuyucusu için): altın örnek + iş akışı bağlantısı."""
+"""Veri dalı ``son.json`` işaretçisi için altın örnek ve iş akışı bağlantısı."""
 import importlib.util
 import json
 from datetime import UTC, datetime

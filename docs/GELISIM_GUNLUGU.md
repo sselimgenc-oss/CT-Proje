@@ -1,4 +1,3 @@
-# Gelişim günlüğü — sg-arge (Etre biçimi: tarih-saat, ne değişti, hangi ölçümü etkiledi, test sayısı)
 
 Kronolojik, en yeni üstte. İkinci doğru kaynak değil: kararların ayrıntısı `DURUM.md`, `docs/KARARLAR_D.md` ve
 görev belgelerinde durur; burada yalnız hangi değişikliğin hangi ölçümü/veriyi etkilediği kısaca kayıtlıdır.
@@ -12,10 +11,6 @@ koşusu bekleniyor), yani sıfırlanacak canlı taban da yok — koruma ileriye 
 B17 alınan, bugünkü HL durumu): çıkarılan −%0,36, alınan −%32,73, alfa −%32,73 (taban ilk raporda = çıkarılanın
 değeri). 2 yeni altın örnek + mevcut test v3'e uyarlandı. Ön kayıt eşikleri/gerekçeler değişmedi.
 
-## 2026-10-31 00:40 TR — E5 devamı: pano/ofis/Telegram artık v1 değil v3 gösteriyor (kullanıcı: "güncel motorumuz ona bağlansın")
-Kontrolde bulundu: `sg-pano` (ayrı yürütülen E5) `sanal_kopya_v2`'ye hiç bağlı değildi, `sanal_kopya_v3`'e (#453,
-bugün birleşti) de hiç bağlı değildi — pano/ofis/Telegram hâlâ v1'i (eski, trader hesabına oranlı, risksiz kopya)
-gösteriyordu. Üçü de v3'e geçirildi (`sg-pano/index.html` 6 yer, `ofis/gercek.js` 3 yer, `worker/src/index.js`
 `sanalKohort()`, `izleme_motoru.py::kasa_egrisi()`). v1/v2 silinmedi (kural 6), yalnız gösterilen sürüm değişti.
 - Gerçek bir hata bulundu ve düzeltildi: Telegram'daki `.filter(Boolean)` ve ofisteki `kol()` fonksiyonu
   `{"durum":"hesaplanamadi"}` yer tutucusunu ELEMİYORDU (truthy nesne) — ortalama getiriye payda olarak giriyor,
@@ -26,10 +21,8 @@ gösteriyordu. Üçü de v3'e geçirildi (`sg-pano/index.html` 6 yer, `ofis/gerc
   kendisi, `sanal_kopya_v3` belgesinde zaten yazılı). Panodaki/Telegram'daki sayılar bu PR'dan sonra belirgin
   değişecek; hata değil.
 - `copytrade/degisim_rapor.py` bu PR'da bilerek v1'de bırakıldı; ardından kullanıcı kararıyla v3'e çevrildi (üstteki girdi).
-- `python -m pytest -q`: 551 geçti. `worker node --test`: 40 geçti. `sg-pano` testleri (pano, gercek, replik, ui) geçti.
 
 ## 2026-10-30 23:15 TR — E2 devamı 2: v3'e tasfiye + aşamalı çıkış (kullanıcı: "dokümanda ne yazıyorsa onu yap")
-- GOREV_ETRE_GECIS.md'nin "bitti tanımı" kopya motorunun sabit tutar + çıkış kuralları + tasfiye üçünün BİRLİKTE
   çalışmasını istiyor (önceki E2 devamı bunu kasıtlı ayırmıştı, kapsam notunda açıkça yazılıydı).
 - `golge.py`'nin risk katmanı (`_denetle_ve_kapat`/`kirp_pozisyon`/`v2_cikislari`) sentetik dolum enjekte edip
   trader-hesabına-oranlı `scale`'den geçiriyor; sabit tutarda sizin böyle bir `scale` yok (yol bağımlı). Çözüm:
@@ -42,7 +35,6 @@ gösteriyordu. Üçü de v3'e geçirildi (`sg-pano/index.html` 6 yer, `ofis/gerc
   `kurallar.yaml`'ın `golge_v2.swing` anahtarlarından (`gun_7`/`gun_14`) parse ediliyor — sabit değil (bu, `v2_sinir`
   taşınınca denetlenen dosya listesine girdiği için açığa çıkan, ÖNCEDEN DE var olan bir eksiklikti).
 - 8 yeni altın örnek: `test_defter_sabit_tutar.py` (tasfiye, aşamalı zarar_kes, zorunlu-çıkıştan-sonra-bastırma —
-  Etre `masa.py`/`golge.py`'nin aynı deseni), `test_kopya_v3.py` (ikisi uçtan uca, `kopya_v3.hesapla` seviyesinde).
 - Gözlem (davranış doğru, hata değil): sabit tutar küçük olduğundan ($1.000'da ~%2, $10.000 tavanında ~%15), tek
   pozisyon gerçek fiyat hareketiyle −1,0/−0,50 eşiklerine pratikte ulaşamıyor — testlerde eşik yalnız mekanizmayı
   göstermek için (test_a19.py'deki yerel `rules` kopyalama deseniyle) gevşetildi, `kurallar.yaml` değişmedi.
@@ -55,11 +47,8 @@ gösteriyordu. Üçü de v3'e geçirildi (`sg-pano/index.html` 6 yer, `ofis/gerc
   `kapanis_nedenleri:[]`, gözlemle uyumlu), O02 beklenen `hesaplanamadi`.
 - `python -m pytest -q`: 550 geçti.
 
-## 2026-10-30 22:30 TR — E2 devamı: sabit $ işlem tutarı (v3, Etre kasa.py portu)
-- Kullanıcı kararı: "Etre eğrisini enterpolasyonla port et" — `defter.sabit_tutar_egrisi` Etre `kasa.py
   Kasa.islem_usd`'nin birebir portu (varsayılanlar `ayar.py`'den, DEĞİŞTİRİLMEDİ): tutar_usd = 5,2 ×
   (clamp(hesap,1,10.000)/200)^0,86. `copytrade/kopya_v3.py` (`sanal_kopya_v3`, v1/v2 yanında): açılış kopyanın
-  KENDİ 1.000 $ değerine göre bu eğriden, ekleme mevcut pozisyona trader'ın oranı kadar (Etre `masa.py _ekle`).
 - `defter.copy_ledger`'a yeni `tutar_egrisi`/`base_usd` parametresi (varsayılan `None` → v1/v2 davranışı AYNEN
   korunur, regresyon yok); verildiğinde `account`/trader hesabı hiç okunmaz. Yardımcı `_fresh_open`/
   `_sabit_tutar_signed`: açılış/flip'in yeni tarafı eğriyle (kopyanın o anki gerçekleşen+gerçekleşmemiş K/Z'sinden
@@ -88,28 +77,22 @@ gösteriyordu. Üçü de v3'e geçirildi (`sg-pano/index.html` 6 yer, `ofis/gerc
 
 ## 2026-10-30 21:00 TR — E4/E6 incelemesi: yeni kod yok (kural 7 — mevcut fonksiyonu kopyalama)
 - **Yönetim kararı:** Sol (Codex) denetimi manuel oldu (kullanıcı); birleştirme koşulu artık yalnız CI yeşil.
-- **E4 (oda yönetimi):** Etre'nin istediği gerekçeli giriş/çıkış + bekleme süresi + değişmez olay günlüğü +
   odadan düşme kuralı K-11'den önce kurulmuş: `copytrade/gecis.py` (alt dilim + ardışık hafta çıkış, 28 günde
   ≤2 çıkış tavanı) + `copytrade_haftalik.yml` (her Perşembe, ön kayıt 1.6 onaylı). Yeni kod yazmadım. Gerçek veri
   kontrolü: `rotasyon/kayit.jsonl` henüz yok (pilot 29.10 başladı, ilk Perşembe koşusu gelmedi — zamanlama).
-- **E6 (mühendislik):** `except Exception` taraması — 11 yer, hepsi gerekçeli ve loglanıyor (Etre'nin sorunu yok).
   İş akışı sayısı 12 (#443 zaten indirmiş). Ayarlar tek dosyada. Kullanılmayan iş akışı arşivi kullanıcı onayı
   gerektiriyor, ayrı soru.
-- E5 (pano/ofis) kapsam dışı — bu oturumun işi değil (sg-pano, kullanıcı kararıyla ayrı atandı).
 
 ## 2026-10-30 20:45 TR — E3: aşamalı zarar_kes/kar_al canlıya bağlandı
 - Kullanıcı kararı: "Opus sana ne değişiklik verdiyse sırayla yap, sormana gerek yok" — E2'nin kalan parçası
   (sabit $ işlem tutarı) eşik/strateji kararı gerektirdiği için (AGENTS.md: eşik kararı kullanıcının) atlanıp
   E3'e geçildi: `golge.py`'de zaten yazılı, ön kayıtlı aşamalı çıkış kuralı (`v2_sinir`) canlıya hiç bağlı değildi.
-- `copytrade/kopya_v2.py`: `golge.calistir(..., variant='V0')` → `variant='V2'` — tek satır, ama motoru Etre'nin
   kurallar.py'sindeki zamana bağlı stop/kâr mantığına denk hâle getiriyor (eşikler DEĞİŞMEDİ, zaten dondurulmuştu).
-  Her zorunlu çıkışın nedeni+coin'i yeni `kapanis_nedenleri` alanında (Etre'nin "her kapanışta neden kaydı" isteği).
 - Test: `tests/test_kopya_v2.py`'deki "tasfiye olmayan derin zarar" testi V2 altında artık erken zarar_kes'e
   giriyor (eşik -%50) — elle yeniden hesaplanıp güncellendi (bakiye 196,96 $, kapanış nedeni kaydı doğrulandı);
   eşiğe değmeyen bir senaryo için yeni ayrı test eklendi. 9 altın örnek, `pytest -q` 536 geçti.
 - Küçük gerçek veri denemesi (canlı HL, O01, 7,5 sn): `kapanis_nedenleri: []` — mevcut pozisyon eşiğe değmiyor,
   yanlışlıkla tetiklenmedi (gerçek veriyle doğrulandı).
-- Kapsam dışı (ayrı iş, kullanıcıya sorulacak): sabit $ işlem tutarı — Etre'nin tam eğrisi (200$→5,2$, 1.000$→20,7$,
   10.000$→150$, sonrası sabit) belgelerden yaklaşık çıkarılabilir ama kesin sayılar strateji/eşik kararı.
 
 ## 2026-10-30 20:15 TR — E2: kopya hesabı v2 (tek motor, tasfiye, pozisyon tavanı, doğru payda/funding)
@@ -131,12 +114,9 @@ gösteriyordu. Üçü de v3'e geçirildi (`sg-pano/index.html` 6 yer, `ofis/gerc
   boş hesap). `tests/test_izleme.py` 2 küçük güncelleme (v2'nin koşuyla ilerleyen alanları karşılaştırma dışı;
   v2'nin kendi saatlik mum önbelleği ayrı sayaçla +1/koşu — regresyon değil, yeni, beklenen davranış).
 - `python -m pytest -q`: 535 geçti. `docs/VERI_SOZLESMESI.md` v1.9: `sanal_kopya_v2` şeması belgelendi.
-- **Kapsam dışı (ayrı iş, E3):** Etre'nin sabit $ işlem tutarı (hâlâ trader hesabına oranlı ölçek) ve aşamalı
   zarar_kes/kar_al çıkışları — `golge.calistir` bunları bilerek `variant='V0'` ile uygulamıyor.
 
 ## 2026-10-30 19:45 TR — Sol'un 2. denetimi (%33): #445'teki gerçek bulgu düzeltildi, canlı kanıt eklendi
-- `docs/DENETIM_ETRE_GECIS_TEKRAR_2026-10-30.md` (#446): ilerleme puanı 4/12 (%33) — bu, 12 geniş Etre alanının
-  kaba oranı, "bugünün işi eksik" anlamına gelmez; E2–E5 (kopya motoru, risk kuralları, oda yönetimi, pano) henüz
   başlamadı, sıradaki iş zaten bu. Rapordaki iki gerçek hata:
   1. **Önceki düzeltme:** "dakikalık Worker yoklaması yok" bulgusu rapor yazarının kendi hatasıydı — Worker
      zaten her dakika çalışıyor (`wrangler.toml` `crons`); "hız" alanı KISMİ'ye düzeltildi.
@@ -152,7 +132,6 @@ gösteriyordu. Üçü de v3'e geçirildi (`sg-pano/index.html` 6 yer, `ofis/gerc
 - Test: `tests/test_gecikme.py` 8 altın örnek (pencere filtresi dahil, eski örnek senaryosu elle hesaplandı).
 
 ## 2026-10-30 19:00 TR — E1 devamı: gerçek algılama gecikmesi
-- Sol denetiminin (`docs/DENETIM_ETRE_GECIS_2026-10-30.md`) önerdiği "E1'in asıl hız kazanımı" maddesinin ilk
   parçası: Worker zaten her dakika oda trader'larının dolumlarını çekiyordu (`fills()`), yalnız bunu kullanıp
   **gerçek** algılama gecikmesini (Hyperliquid dolum zamanı → Worker'ın onu görmesi) ölçmeye başladık.
 - Worker: yeni dolum görülünce (`newest` imleç ilerleyince) D1 `son_gecikme` tablosuna trader başına **en son**
@@ -170,7 +149,6 @@ gösteriyordu. Üçü de v3'e geçirildi (`sg-pano/index.html` 6 yer, `ofis/gerc
   sessizce atlanır, saatlik akış bozulmaz.
 
 ## 2026-10-30 18:50 TR — Sol denetimi: #441'de iki YÜKSEK bulgu, düzeltildi
-- `docs/DENETIM_ETRE_GECIS_2026-10-30.md` (#442, birleşti): `sinyal_gecikme_dk_medyan` adı yanıltıcı (gerçekte
   pozisyon yaşı ölçülüyor, algılama gecikmesi değil); sağlık ışığının tazelik kontrolü yayım anındaki `now` ile
   hesaplandığından her zaman ~0 dönüyor, durmuş akışı yakalayamıyor.
 - Düzeltme: alan `acik_pozisyon_yasi_dk_medyan` olarak yeniden adlandırıldı, docstring/sözleşme bunun pozisyon
@@ -180,7 +158,6 @@ gösteriyordu. Üçü de v3'e geçirildi (`sg-pano/index.html` 6 yer, `ofis/gerc
 - Test: `tests/test_saglik_hatti.py` güncellendi (yeniden adlandırma + 2 yeni uç durum: bozuk `uretildi`, acilis
   `uretildi`'den sonra görünen saat kayması). `python -m pytest -q` ve worker testleri yeniden koşuldu.
 
-## 2026-10-30 18:00 TR — E1: veri hattı sağlığı (Etre `kalite.py` deseni)
 - `copytrade/saglik_hatti.py` eklendi: oda kolu için tek sağlık kaydı (yetim gölge payı, işaret eksikliği, veri
   hata oranı, açık pozisyon yaşı) → ışık + neden listesi. Saf fonksiyonlar (`olc`/`kontrol`). **Performans
   ışığından (`traderlar[].saglik.isik`) ayrı** — bu, veri hattının kendi sağlığı.
@@ -194,11 +171,6 @@ gösteriyordu. Üçü de v3'e geçirildi (`sg-pano/index.html` 6 yer, `ofis/gerc
 - Test: `tests/test_saglik_hatti.py` 6 altın örnek (elle hesap) + `tests/test_izleme.py` (70, regresyon yok) +
   `worker/test/bildirim.test.js` 2 yeni (toplam 9) — hepsi yeşil.
 
-## 2026-10-30 17:11 TR — Lisans: GPL-3.0 + Etre v2 atfı birleşti
-- sg-arge `#439`, sg-pano `#46`: `LICENSE` (GPL-3.0) + `NOTICE`/README atfı (Etre v2 · Trading Office, K-11).
   Kod/davranış değişikliği yok. E1'in kod devşirme ön koşulu.
 
-## 2026-10-30 15:00 TR — K-11: Etre geçişi başladı
-- Kullanıcı kararı: Etre'nin üstün olduğu her alan (mimari, veri hattı, risk/çıkış, pano/ofis, sim gerçekçiliği,
   mühendislik) devşirilir; güvenlik (gerçek para/emir/cüzdan yok), ölçüm yöntemi ve seçim mantığı korunur.
-  Lider: Claude (Sonnet 5), tek lider ve birleştirme yetkili. Denetçi: Codex (Sol). Görev: `docs/GOREV_ETRE_GECIS.md`.

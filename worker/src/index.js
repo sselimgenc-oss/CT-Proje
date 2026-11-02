@@ -199,7 +199,6 @@ async function handleTelegram(request, env, fetcher = fetch) {
   return new Response("ok");
 }
 
-const PANO = "https://sselimgenc-oss.github.io/sg-pano/";
 const ESKI_DK = 90;
 const LIGHT = { yesil: "🟢", sari: "🟡", kirmizi: "🔴" };
 const VERI_UYARI_DK = 180;   // günlük uyarı eşiği: 3 saat (ayrı: /durum'un kendi 90 dk eşiğinden farklı, bilgi amaçlı)
@@ -238,7 +237,6 @@ function dailySummaryText(status, nowMs = Date.now()) {
     `🟢 ${count("yesil")}   🟡 ${count("sari")}   🔴 ${count("kirmizi")}`,
     age > ESKI_DK ? `⚠️ Veri ${age} dk önce — güncellenmedi` : `🕐 Veri ${age} dk önce`,
     "",
-    `Pano: ${PANO}`,
   ].join("\n");
 }
 
@@ -256,25 +254,24 @@ async function checkStateAlerts(env, status, fetcher = fetch) {
   const eski = Number.isFinite(age) && age > VERI_UYARI_DK, yasDurum = eski ? "eski" : "taze";
   const oncekiYas = await uyariDurumGetir(env, "veri_yas");
   if (eski && oncekiYas !== "eski") {
-    await telegram(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text: `⚠️ Veri ${Math.round(age)} dk önce üretildi — 3 saatten eski.\nPano: ${PANO}` }, fetcher);
+    await telegram(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text: `⚠️ Veri ${Math.round(age)} dk önce üretildi — 3 saatten eski.` }, fetcher);
   }
   if (oncekiYas !== yasDurum) await uyariDurumYaz(env, "veri_yas", yasDurum);
 
   const kalabalikAcik = !!status.kalabalik?.uyari, kalabalikDurum = kalabalikAcik ? "acik" : "kapali";
   const oncekiKalabalik = await uyariDurumGetir(env, "kalabalik");
   if (kalabalikAcik && oncekiKalabalik !== "acik") {
-    await telegram(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text: `⚠️ Kalabalık uyarısı başladı: ${status.kalabalik.uyari_metni || "ayrıntı yok"}\nPano: ${PANO}` }, fetcher);
+    await telegram(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text: `⚠️ Kalabalık uyarısı başladı: ${status.kalabalik.uyari_metni || "ayrıntı yok"}` }, fetcher);
   }
   if (oncekiKalabalik !== kalabalikDurum) await uyariDurumYaz(env, "kalabalik", kalabalikDurum);
 
-  // E1 (GOREV_ETRE_GECIS.md): veri hattı sağlığı (copytrade.saglik_hatti, performans ışığından ayrı). Yalnız
   // yeşil/sarıdan kırmızıya geçişte uyarır; aynı kırmızı durumda tekrarlanmaz (diğer durum uyarılarıyla aynı desen).
   const hatIsik = status.saglik_hatti?.isik;
   if (hatIsik) {
     const oncekiHat = await uyariDurumGetir(env, "saglik_hatti");
     if (hatIsik === "kirmizi" && oncekiHat !== "kirmizi") {
       const nedenler = (status.saglik_hatti.nedenler || []).join(", ") || "ayrıntı yok";
-      await telegram(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text: `⚠️ Veri hattı sağlığı kırmızı: ${nedenler}\nPano: ${PANO}` }, fetcher);
+      await telegram(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text: `⚠️ Veri hattı sağlığı kırmızı: ${nedenler}` }, fetcher);
     }
     if (oncekiHat !== hatIsik) await uyariDurumYaz(env, "saglik_hatti", hatIsik);
   }
@@ -325,13 +322,12 @@ function formatStatus(status, nowMs = Date.now()) {
     if (!rows.length) continue;
     lines.push("", title);
     for (const t of rows.slice(0, 5)) lines.push(`• ${t.takma_ad} · ${(t.saglik.nedenler || []).join(", ") || LIGHT[colour]}`);
-    if (rows.length > 5) lines.push(`• +${rows.length - 5} trader daha (panoda)`);
+    if (rows.length > 5) lines.push(`• +${rows.length - 5} trader daha`);
   }
   const risk = riskLine(status, room);
   if (risk) lines.push("", risk);
   lines.push("");
   if (hasArms) lines.push(`👀 Sessiz izleme: ${all.length - room.length} trader (kontrol, taban, elle)`);
-  lines.push(`Pano: ${PANO}`);
   return lines.join("\n");
 }
 

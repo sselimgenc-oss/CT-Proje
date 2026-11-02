@@ -13,7 +13,6 @@ import yaml
 from copytrade import izleme_motoru as m
 from copytrade.kararlar import merge
 from copytrade.kapi import delayed_copy
-from pano.saglik import blok_bootstrap
 
 ROOT = Path(__file__).resolve().parents[1]
 ADDRESS = '0x' + '1' * 40
@@ -80,7 +79,7 @@ def test_first_run_error_is_published_as_invalid_trader(tmp_path, capsys):
     assert {k: broken[k] for k in ('id', 'adres', 'tarz', 'veri_zamani', 'gecerli', 'saglik', 'pozisyonlar')} == {
         'id': 'T2', 'adres': rows[1]['adres'], 'tarz': 'swing', 'veri_zamani': None, 'gecerli': False,
         'saglik': {'isik': 'sari', 'nedenler': ['veri hatası: ilk yanıt yok']}, 'pozisyonlar': []}
-    # Pano bu alanları koşulsuz okur: yer tutucu, sağlam trader ile aynı anahtarları taşımalı.
+    # Yer tutucu, sağlam trader ile aynı anahtarları taşımalı.
     healthy = next(trader for trader in result['traderlar'] if trader['id'] == 'T1')
     assert set(healthy) - {'kopya_paydasi'} <= set(broken)
     assert 'T2: veri hatası: ilk yanıt yok' in capsys.readouterr().out
@@ -429,39 +428,6 @@ def test_health_leverage_martingale_inactivity(leverage, martingale, last, expec
     assert any(reason in x for x in result['nedenler'])
 
 
-def test_health_cone_yellow_red_and_cusum(monkeypatch):
-    monkeypatch.setattr(m, 'load_rules', lambda: {'saglik_performans_konisi': True})
-    h = history([-.00001])
-    # A fixed known cone isolates the bands from the separate drawdown condition.
-    monkeypatch.setattr(m, '_mdd', lambda returns: .1)
-    monkeypatch.setattr(m, 'blok_bootstrap', lambda *a, **kw: {'p5': [-.001], 'p20': [.001]})
-    result = m.health(h, h.index[-1], NOW, 1, False, m.millis(NOW))
-    assert result['isik'] == 'sari'
-    assert 'koni %5–%20 bandında' in result['nedenler']
-    h.iloc[-1] -= .1
-    result = m.health(h, h.index[-1], NOW, 1, False, m.millis(NOW))
-    assert result['isik'] == 'kirmizi'
-    assert 'koni %5 altında' in result['nedenler']
-    assert 'CUSUM uyarısı' in result['nedenler']
-
-
-def test_health_drawdown_is_red_even_with_permissive_cone(monkeypatch):
-    monkeypatch.setattr(m, 'load_rules', lambda: {'saglik_performans_konisi': True})
-    h = history([.01, -.03])
-    monkeypatch.setattr(m, 'blok_bootstrap', lambda *a, **kw: {'p5': [-1], 'p20': [-.9]})
-    result = m.health(h, h.index[-2], NOW, 1, False, m.millis(NOW))
-    assert result['isik'] == 'kirmizi'
-    assert 'düşüş geçmişin 1,5 katından fazla' in result['nedenler']
-
-
-def test_shared_bootstrap_supports_p20_without_changing_default_results():
-    series = pd.Series([.01, -.005, .002])
-    default = blok_bootstrap(series, 4)
-    extended = blok_bootstrap(series, 4, quantiles=(5, 20), block_size=4)
-    assert extended['p5'] == default['p5']
-    assert all(a <= b for a, b in zip(extended['p5'], extended['p20']))
-
-
 def check_shape(actual, examples):
     if actual is None:
         assert any(example is None for example in examples)
@@ -672,22 +638,6 @@ def test_canli_kosu_acik_pozisyonu_son_dakika_mumuyla_isaretler(tmp_path):
     assert paper['acik'] == pytest.approx(-0.052) and paper['gerceklesen'] == pytest.approx(-102 * .00095 / 1000)
     assert paper['toplam'] == pytest.approx(-0.052 - 102 * .00095 / 1000) and paper['son_isaret'] == '2026-10-27T11:59:00Z'
     assert client.mark_reads == 1
-
-
-def test_health_blind_mode_ignores_performance(monkeypatch):
-    """K-6 kör mod (saglik_performans_konisi false): kötü getiri/düşüş/CUSUM ışığı değiştirmez ve neden sızdırmaz."""
-    h = history([-.05, -.05])
-    monkeypatch.setattr(m, 'blok_bootstrap', lambda *a, **kw: {'p5': [1], 'p20': [1]})
-    result = m.health(h, h.index[-2], NOW, 1, False, m.millis(NOW), performans_konisi=False)
-    assert result == {'isik': 'yesil', 'nedenler': ['kaldıraç normal']}
-
-
-def test_health_cone_on_by_default_after_onkayit_1_5(monkeypatch):
-    """Ön kayıt 1.5: körlük kalktı; yaml varsayılanıyla koni yeniden çalışır."""
-    assert m.load_rules()['saglik_performans_konisi'] is True
-    h = history([-.05, -.05])
-    monkeypatch.setattr(m, 'blok_bootstrap', lambda *a, **kw: {'p5': [1], 'p20': [1]})
-    assert 'koni %5 altında' in m.health(h, h.index[-2], NOW, 1, False, m.millis(NOW))['nedenler']
 
 
 def test_health_blind_keeps_leverage_and_staleness():

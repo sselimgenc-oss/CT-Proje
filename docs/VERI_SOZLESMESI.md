@@ -1,6 +1,5 @@
 # Veri sözleşmesi — copy trade izleme (v1.12, 2026-10-30; v1.12 `sanal_kopya_v3` tasfiye/aşamalı çıkış (E3), v1.11 `sanal_kopya_v3` (E2 sabit tutar), v1.10 `sanal_kopya_v2.kapanis_nedenleri` (E3), v1.9 `sanal_kopya_v2`, v1.8 `gecikme.json` taze pencere, v1.7 `gecikme.json`, v1.6 `saglik_hatti`, v1.5 `kol`, v1.2 olay kimliği, v1.3 tarz, v1.4 veri geçerliliği ve karar gizliliği)
 
-Üretici: **Codex** (sg-arge). Tüketici: **Sonnet** (sg-pano panosu) ve Telegram bildirimi. İkisi de yalnız bu
 sözleşmeye göre çalışır; alan eklemek/değiştirmek lider onayıyla `surum` artırılarak yapılır.
 
 ## 1. Dosyalar ve yer
@@ -67,7 +66,6 @@ yalnız olay kimliği, karar ve neden. Trader adresleri zaten herkese açık zin
 - `traderlar[].yonsuz_bayrak` (isteğe bağlı, yalnız `kol` = `oda` | `kontrol`; `surum` 1 kalır; Argon A26, **yalnız bilgi**): `funding_payi`, `spot_perp_ters`, `maker_payi` — her biri `{deger, esik, asildi}`
   (`deger` hesaplanamazsa `null`; `spot_perp_ters` ayrıca `coin`), `bayrak` (herhangi biri aşıldıysa `true`), `pencere_gun` (90), `sezgisel: true`, okunamayan kaynak varsa `hata`.
   Funding ve spot durumu günde bir kez çekilir (önbellek `motor.json`'da). Eşikler `kurallar.yaml` `yonsuz_*`, sezgiseldir; seçim/kapı/oda kararını değiştirmez.
-- `saglik_hatti` (üst düzey, isteğe bağlı, oda üyesi varsa; v1.6, E1 `GOREV_ETRE_GECIS.md`, Etre `kalite.py`
   deseninden esinlenilmiş — `copytrade/saglik_hatti.py`, saf fonksiyon, **yalnız rapor**; hiçbir pozisyon/kopya
   bundan etkilenmez; oda için **performans ışığından (`traderlar[].saglik.isik`) ayrı**, veri hattının kendisinin
   sağlığıdır): `{kol: "oda", n, yetim_golge_orani, isaret_eksik_toplam, veri_hata_orani, kirmizi_sayisi,
@@ -80,7 +78,6 @@ yalnız olay kimliği, karar ve neden. Trader adresleri zaten herkese açık zin
   ~0 döner ve durmuş akışı yakalayamaz; tazelik tek yerde Worker'ın okuma anındaki gerçek saatiyle yaptığı mevcut
   3 saatlik kontrolündedir (`worker/src/index.js` `checkStateAlerts`).
 - `kalabalik` (üst düzey, isteğe bağlı, oda üyesi varsa; Argon A27): `{n_oda, coinler: [{coin, net_yon, net_pay, ayni_yon, toplam, cakisma}], uyari, uyari_metni, zaman, sezgisel}`.
-  `net_pay` = |Σ x·yön| / Σ|x|, x = kopya ağırlığı × pozisyon nosyoneli / trader hesap değeri (kaldıraç ikinci kez çarpılmaz). `uyari_metni` yalnız `uyari` iken dolu (tek satır; Telegram `/durum` ve pano).
   Eşikler `kalabalik_*` (sezgisel). Otomatik işlem yoktur.
 - `traderlar[].tarz` (v1.3): `intraday` | `swing` (izleme listesinde `tarz` varsa o, yoksa en son kapı sonucundan; ikisi de yoksa
   `bilinmiyor` ve 30 dk gecikme). Sanal kopya gecikmesi tarza göre (intraday 30 dk, swing 120 dk);
@@ -103,7 +100,6 @@ yalnız olay kimliği, karar ve neden. Trader adresleri zaten herkese açık zin
 - `sanal_kopya`: t0 sonrası, 30 dk gecikmeli, maliyetli (taker %0,045 + kayma %0,05 + funding) — CT-Kapı
   `delayed_copy` ile aynı hesap.
 
-### `traderlar[].sanal_kopya_v2` (v1.9 E2, v1.10 E3 — `GOREV_ETRE_GECIS.md`)
 v1 (`sanal_kopya`) **silinmez ve yeniden yazılmaz**; v2 yan yana yayımlanır (AGENTS.md kural 6). Birim: 1.000 $
 sanal kopya ölçeği (USD); getiri/oranlar kesirdir (0,012 = %1,2). **Tek motor** (kural 7): `copytrade/kopya_v2.py`
 → `golge.calistir` (variant **V2**) → `defter.copy_ledger` — araştırma gölgesiyle aynı yürütme/maliyet/tasfiye/çıkış
@@ -117,7 +113,6 @@ kodu. v1'e göre dört gerçek düzeltme (`docs/DENETIM_TRADER_2026-10-30.md` K2
   ONKAYIT_D v1.1 — **değiştirilmedi**): intraday zarar_kes −%50; swing gün 0 zarar_kes −%50, gün 7 zarar_kes
   −%30/kar_al %60, gün 14 zarar_kes −%20/kar_al %40 (ayrılmış teminata oranlı K/Z). Eşiğe değen pozisyon o saatin
   mumunda zorunlu kapanır (tasfiyeden ayrı; tasfiye eşiği her zaman önce denetlenir). `kapanis_nedenleri`:
-  `[{"coin", "neden": "likidasyon"|"zarar_kes"|"kar_al", "zaman"}]` — Etre'nin "her kapanışta neden kaydı" istediği.
 - **Zamanla değişen payda:** her koşuda trader hesap değeri `hesap_serisi`ye eklenir (motor.json, en çok 3000
   okuma); `payda_yontemi` (`ilk_okuma` | `saatlik_okuma`), `payda_okuma_sayisi`.
 - **Funding yalnız kopyalanan pozisyondan:** t0 öncesi devralınan pozisyonun funding'i kopyaya yazılmaz.
@@ -128,17 +123,12 @@ kodu. v1'e göre dört gerçek düzeltme (`docs/DENETIM_TRADER_2026-10-30.md` K2
 - Hesaplanamazsa `{"surum":"v2","durum":"hesaplanamadi","neden":...}`; v1'i etkilemez. Hiç okunmamış trader için
   `yer_tutucu: true`. Sabit $ işlem tutarı v2'de **yok** (hâlâ trader hesabına oranlı ölçek) — bkz. `sanal_kopya_v3`.
 
-### `traderlar[].sanal_kopya_v3` (v1.11 E2 sabit tutar — `GOREV_ETRE_GECIS.md`; kullanıcı kararı 2026-10-30:
-"Etre eğrisini enterpolasyonla port et")
 v1/v2 **silinmez ve yeniden yazılmaz**; v3 yan yana yayımlanır (AGENTS.md kural 6). Birim: 1.000 $ sanal kopya
 ölçeği (v1/v2 ile aynı). **Tek motor** (kural 7): `copytrade/kopya_v3.py` → `defter.copy_ledger` (AYNI fonksiyon,
 yalnız yeni `tutar_egrisi` parametresiyle — `golge.calistir`'in ön işlemesinden GEÇMEZ, risk katmanı doğrudan
 `copy_ledger` içinde, bkz. aşağıda). v1/v2'nin **trader hesabına ORANLI** kopya ölçeğinin yerine:
 - **Açılış:** kopya hesabının KENDİ o anki $ değerine (1 + şimdiye kadarki gerçekleşen + gerçekleşmemiş K/Z, ×1.000)
-  göre, Etre `kasa.py Kasa.islem_usd` eğrisinden (`defter.sabit_tutar_egrisi`, `kurallar.yaml` `sabit_tutar_*`,
-  Etre'nin kendi varsayılanları — DEĞİŞTİRİLMEDİ) sabit $ tutarla açılır. Trader'ın o dolumdaki kendi işlem
   büyüklüğü artık kopya boyutunu etkilemez (v1/v2'den temel fark).
-- **Ekleme:** eğriden yeniden okunmaz; mevcut kopya pozisyonuna trader'ın kendi oranı kadar eklenir (Etre
   `masa.py _ekle` portu). **Azaltma/kapatma:** değişmedi (defterin ortak kuralı).
 - **Tasfiye ve aşamalı zarar_kes/kar_al (E3, v1.12):** v2'deki AYNI dondurulmuş eşikler (`golge_likidasyon_esigi`,
   `golge_v2`, DEĞİŞTİRİLMEDİ) — ama `golge.py`'nin sentetik-dolum-enjekte-etme deseni değil, `defter.copy_ledger`
@@ -147,27 +137,22 @@ yalnız yeni `tutar_egrisi` parametresiyle — `golge.calistir`'in ön işlemesi
   `kapanis_nedenleri` v2 ile AYNI anlamda doluyor. **Gözlem:** sabit tutar küçük olduğundan (eğri $1.000'da ~%2,
   $10.000 tavanında ~%15 açar), tek pozisyonun TEK BAŞINA gerçek fiyat hareketiyle bu eşiklere ulaşması pratikte
   nadirdir (küçük/çeşitlendirilmiş pozisyonların hesabı tek başına batıramaması tasarımın kendisi) — asıl devreye
-  girme yolu art arda eklemelerin (Etre `_ekle`) pozisyonu büyütmesidir.
 - Diğer alanlar v2 ile aynı anlamda: `baslangic_usd`, `bakiye_usd`, `getiri`, `dusus`, `egri`, `gerceklesen`, `acik`,
   `toplam`, `funding`, `maliyet`, `gecikme_dk`, `t0`. `fiyatsiz_eylem` burada v2'nin ALT SINIRINDAN farklı olarak
   `defter.copy_ledger`'ın DOĞRUDAN/gerçek sayısıdır (`golge.calistir`'in ön filtrelemesinden geçmediği için).
   Gerçek veri denemesinde (B17, 2026-10-30) v2=0 (maskeli) ↔ v3=322 (gerçek) görüldü — v3'ün hatası değil, v2'nin
   raporlama eksiğinin açığa çıkması.
 - **Kapsam dışı (ayrı GOREV alt maddeleri):** pozisyon tavanı (`golge_pozisyon_tavan_carpani` — "bitti tanımı" bunu
-  adlandırmıyor), Etre'nin kaldıraç kademesi, teminat/marj modeli, "ikna" çarpanı.
 - Hesaplanamazsa `{"surum":"v3","durum":"hesaplanamadi","neden":...}`; v1/v2'yi etkilemez. Hiç okunmamış trader için
   `yer_tutucu: true`.
-- **Tüketiciler (2026-10-30, kullanıcı kararı):** `sg-pano` (pano + ofis) ve Telegram günlük özeti artık `sanal_kopya`
   (v1) yerine `sanal_kopya_v3`'ü gösterir — v1/v2 silinmedi/değişmedi (kural 6), yalnız "canlı" gösterilen sürüm
   budur. Bir tüketici `durum: "hesaplanamadi"` girdisini ortalamaya/toplama **0 olarak katmamalı**; gerçek `getiri`
-  sayısı olmayan girdiyi tamamen dışarıda bırakır (Telegram `sanalKohort()` ve ofis `gercek.js` `kol()`'daki
   düzeltme deseni). `copytrade/degisim_rapor.py` (oda rotasyon ölçümü, `izleme/degisim.json`) da artık
   `sanal_kopya_v3.toplam` okur (kullanıcı kararı 2026-10-30). Rapora `kaynak: "sanal_kopya_v3"` ve
   `taban_sifirlandi` (bool) eklendi: önceki rapor `kaynak`sız (v1 dönemi) ise kaydedilmiş `cikarilan_taban_net`
   değerleri v3 sayılarıyla karıştırılmaz, taban v3'ten yeniden alınır. v3 hesaplanamamışsa değişim
   "izleme verisi bekleniyor" kalır, v1'e düşülmez.
 
-## 3. Sağlık ışığı ve form (hesap Codex'te, `pano/saglik.py` yeniden kullanılır)
 | Işık | Koşul (herhangi biri) |
 |---|---|
 | **kırmızı** (eşikler v1; kullanıcı sonra gözden geçirecek) | t0 sonrası getiri t0 öncesi geçmişten kurulan blok bootstrap konisinin %5 altında; zirveden düşüş > t0 öncesi en büyük düşüş × 1,5; gerçek kaldıraç > 10x; martingale işareti |

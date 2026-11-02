@@ -1,5 +1,4 @@
-"""Kopya hesap v2 (E2, `docs/GOREV_ETRE_GECIS.md`). v1 (`izleme_motoru.copy_results`) silinmez, değişmez; v2 yan yana
-yayımlanır (`sanal_kopya_v2`, AGENTS.md kural 6).
+"""Kopya hesap v2.
 
 Tek motor: araştırma gölgesiyle (`golge.calistir` → `defter.copy_ledger`) AYNI fonksiyonlar kullanılır — "tek iş
 tek yerde" (kural 7). v1'in kendi ayrı, daha basit hesabına göre üç gerçek düzeltme (DENETIM_TRADER_2026-10-30.md
@@ -11,13 +10,10 @@ K2-K4):
 - **Funding yalnız kopyalanan pozisyondan (K4):** t0 öncesi devralınan (kopyalanmayan) pozisyonun funding'i
   kopyaya yazılmaz; `defter.copy_ledger` zaten yalnız kopya zaman çizelgesindeki pencerelerin funding'ini sayar.
 
-E3 (`docs/GOREV_ETRE_GECIS.md`): aşamalı zarar_kes/kar_al çıkışları da aynı motorla — `golge.calistir(...,
 variant='V2')`, ön kayıtlı/dondurulmuş eşikler (`kurallar.yaml` `golge_v2`, ONKAYIT_D v1.1, DEĞİŞTİRİLMEDİ):
 intraday zarar_kes −%50; swing gün 0 zarar_kes −%50, gün 7 zarar_kes −%30/kar_al %60, gün 14 zarar_kes −%20/kar_al
 %40 (ayrılmış teminata oranlı K/Z). Her zorunlu çıkışın nedeni (`likidasyon` | `zarar_kes` | `kar_al`) ve coin'i
-`kapanis_nedenleri`de yayımlanır — Etre'nin "her kapanışta neden kaydı" istediği (GOREV E3).
 
-Kapsam dışı (ayrı iş): Etre'nin sabit $ işlem tutarı (burada hâlâ trader hesabına oranlı ölçek — eşik/strateji
 kararı, kullanıcıya sorulacak).
 """
 

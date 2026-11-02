@@ -92,5 +92,5 @@ def test_haftalik_gecis_giris_cikis_ve_surum_kimligi(tmp_path):
 def test_kollar_py_ikinci_uygulama_kaldirildi_tek_kaynak_secim():
     assert not (ROOT / "copytrade/kollar.py").exists()
     assert hasattr(secim, "adaylar") and hasattr(secim, "kontrol_sec") and hasattr(secim, "oda_sec")
-    for path in list((ROOT / "copytrade").rglob("*.py")) + list((ROOT / "tests").rglob("*.py")) + list((ROOT / "pano").rglob("*.py")):
+    for path in list((ROOT / "copytrade").rglob("*.py")) + list((ROOT / "tests").rglob("*.py")):
         assert "copytrade.kollar" not in path.read_text(encoding="utf-8") or path.name == "test_gecis.py"

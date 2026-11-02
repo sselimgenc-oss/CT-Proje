@@ -1,4 +1,4 @@
-"""Keşif verisi (pano Keşif sekmesi): ilişkili hesap işaretleri ve ``kesif.json``.
+"""Keşif verisi: ilişkili hesap işaretleri ve ``kesif.json``.
 
 Yalnız herkese açık Hyperliquid verisi; emir, anahtar, cüzdan yok. İlişkili hesap kontrolü puanı değiştirmez,
 yalnız işaret koyar (kaynak: ``arastirma/copytrade/argon_hazir_servis_iliskili_hesap.md``). Şema:

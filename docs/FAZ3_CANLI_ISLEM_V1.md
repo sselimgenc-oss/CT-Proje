@@ -53,7 +53,6 @@ Emir teyidi belirsizse aynı emir körlemesine yeniden yollanmaz. Önce HL'deki 
 
 - MetaMask seed phrase ve private key kullanıcıda kalır; kopyalanmaz, depolanmaz, loglanmaz, telemetriye eklenmez ve destek/ajan mesajlarında istenmez.
 - Herhangi bir ilerideki otomatik emir tasarımı ayrı, çekim yetkisi olmayan HL işlem yetkisi/agent kimliği gerektiriyorsa, bu kimlik kullanıcı tarafından HL/uyumlu cüzdan akışında oluşturulup açıkça sınırlandırılmalıdır. Bu belge böyle bir anahtarın oluşturulmasını, içe aktarılmasını veya saklanmasını uygulamaz.
-- İşlem sırrı gerekirse yalnız secret yöneticisinde tutulur; kaynak kod, `.env`, CI çıktısı, pano, Worker yanıtı, Arşiv/Sekreterlik kaydı ve Telegram'a yazılmaz. Uygulama sırrı yalnız işlem imzalama bileşenine en az yetkiyle verilir; okuma bileşeni sırrı alamaz. Secret değeri hiçbir logda görünmez.
 - Pazar verisi ve durum yayınları salt okunur kimlik bilgisiyle çalışır; bunlar emir imzalama yetkisi kazanamaz. Geliştirme, test ve dry-run ortamlarında canlı işlem sırrı bulunmaz.
 
 ## Geri alma ve olay müdahalesi

@@ -57,12 +57,7 @@ def v2_sinir(style: str, gecen_gun: float, getiri: float, rules: dict | None = N
 
 
 def sabit_tutar_egrisi(rules: dict | None = None) -> Any:
-    """E2 sabit işlem tutarı (kullanıcı kararı 2026-10-30: "Etre eğrisini enterpolasyonla port et").
-
-    Kaynak: `etre-trading-office` `etre2/kasa.py` (`Kasa.islem_usd`) + `etre2/ayar.py` (varsayılanlar), GPL-3.0.
-    tutar_usd = ref_islem_usd × (clamp(kopya_hesabının_KENDİ_güncel_$_değeri, 1, tavan) / ref_kasa_usd) ** us.
-    Etre'nin kendi varsayılanları (`kurallar.yaml`): 200$→5,2$, 1.000$→~20,7$, 10.000$→~150$, sonrası sabit (kasa.py
-    docstring'inde doğrulandı) — enterpolasyon benim değil, Etre'nin kendi eğrisi."""
+    """Hesap değerinden sabit işlem tutarı üreten eğriyi döndürür."""
     rules = rules or load_rules()
     ref_kasa = float(rules["sabit_tutar_ref_kasa_usd"])
     ref_islem = float(rules["sabit_tutar_ref_islem_usd"])
@@ -77,8 +72,9 @@ def sabit_tutar_egrisi(rules: dict | None = None) -> Any:
 
 def _fresh_open(sign: float, price: float, when: int, held: dict[str, float], entry: dict[str, float],
                 market: "Market", realized_so_far: float, tutar_egrisi: Any, base_usd: float) -> float:
-    """Taze açılış (kopyada pozisyon yok): Etre `masa.py _giris`in portu — tutar, kopya hesabının O ANKİ (trader'ınki
-    değil) gerçek $ değerinden okunur. Hesap: baz × (1 + gerçekleşen_simdiye_kadar + gerçekleşmemiş_simdi); gerçekleşmemiş
+    """Yeni pozisyonu geçerli kopya hesabı değeriyle açar.
+
+    Hesap: baz × (1 + gerçekleşen_simdiye_kadar + gerçekleşmemiş_simdi); gerçekleşmemiş
     bu dolumdan ÖNCEki ``held``/``entry`` ile hesaplanır (bu dolumun kendisi henüz işlenmedi). Funding bu tahmine girmez
     (saatlik, döngü sonrası ayrı hesaplanır) — küçük bir yaklaşıklık, belgelenmiştir."""
     if price <= 0:
@@ -100,8 +96,9 @@ def _fresh_open(sign: float, price: float, when: int, held: dict[str, float], en
 def _sabit_tutar_signed(sign: float, signed: float, before_leader: float, own: float, price: float, when: int,
                         held: dict[str, float], entry: dict[str, float], market: "Market", realized_so_far: float,
                         tutar_egrisi: Any, base_usd: float) -> float:
-    """E2 sabit tutar: açılış (ve flip'in yeni yöndeki parçası) sabit $ eğrisiyle; ekleme Etre `masa.py _ekle`
-    gibi MEVCUT kopya pozisyonuna oranla (trader'ın kendi oranı kadar); azaltma/kapatma değişmez (defterin ortak
+    """Sabit tutar modunda dolumun kopyaya etkisini hesaplar.
+
+    Mevcut kopya pozisyonuna oranla ekleme yapılır; azaltma/kapatma değişmez (defterin ortak
     kuralı)."""
     if before_leader * signed < 0:            # trader azaltıyor / kapatıyor / ters çeviriyor
         leader_close = min(abs(before_leader), abs(signed))
@@ -367,7 +364,6 @@ def copy_ledger(fills: list[dict], market: Market, account: Any, delay_min: int,
 
     ``tutar_egrisi`` verilirse (E2 sabit tutar, bkz. ``sabit_tutar_egrisi``): ``account``/trader hesabına ORANLI kopyalama
     YERİNE, her taze açılış kopya hesabının KENDİ o anki ``base_usd`` ölçeğindeki değerine göre sabit $ tutarla açılır;
-    ekleme mevcut kopya pozisyonuna trader'ın oranı kadar eklenir (Etre `masa.py` portu). ``account`` bu modda okunmaz.
     Bu modda AYRICA E2/E3 risk katmanı (çapraz teminat tasfiyesi + ``style`` verilirse aşamalı zarar_kes/kar_al,
     ``golge.py``'deki ile AYNI dondurulmuş eşikler) gerçek `held`/`entry` üzerinde çalışır; zorunlu çıkışlar
     ``olaylar``'da (``[{"coin","neden","zaman_ms"}]``) döner.

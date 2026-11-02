@@ -1,8 +1,7 @@
-"""E2 sabit tutar altın örnekleri (kullanıcı kararı 2026-10-30: "Etre eğrisini enterpolasyonla port et").
 
-Kaynak: etre-trading-office etre2/kasa.py (Kasa.islem_usd) + etre2/ayar.py varsayılanları (GPL-3.0). Burada,
+"""Sabit tutar kopyalama için altın örnekler.
+
 ``copy_ledger``'a ``tutar_egrisi`` verildiğinde: açılış kopya hesabının KENDİ değerine göre sabit $ tutarla (trader
-hesabına ORANLI değil); ekleme mevcut kopya pozisyonuna trader'ın oranı kadar (Etre `masa.py _ekle`); azaltma/kapatma
 değişmedi (defterin ortak kuralı, ayrı test gerekmez).
 
 Ortak kurallar: maliyet = %0,045 taker + %0,05 kayma = %0,095 (her dolumde, notional'a oranla); base_usd = 1.000 $.
@@ -59,7 +58,7 @@ def test_acilis_sabit_tutarla_trader_islem_buyuklugunden_bagimsiz():
 
 def test_ekleme_mevcut_kopya_pozisyonuna_oranla_acilis_egriye_degil():
     """Açılış (B10@100) sabit $50; trader %50 artırınca (B5 ek, before=10) kopya da KENDİ pozisyonunun %50'si kadar
-    eklenir (Etre masa.py _ekle), eğriden yeniden okunmaz. Ağırlıklı ortalama giriş: (100×0,0005+110×0,00025)/0,00075."""
+    eklenir; eğriden yeniden okunmaz."""
     tutar = lambda hesap: 50.0  # noqa: E731
     out = run([fill(0, "B", 10, 0, px=100), fill(60, "B", 5, 10, px=110)],
               candles({0: 100, 1: 110, 24: 110}), tutar)
@@ -124,8 +123,9 @@ def test_asamali_zarar_kes_intraday_eksi50_cikar_tasfiyeden_once():
 
 
 def test_zorunlu_cikistan_sonra_trader_pozisyonu_sifirlanana_dek_bastirilir():
-    """Etre masa.py / golge.py deseni: zorunlu çıkıştan sonra trader'ın ESKİ pozisyonunu kapatan dolum kopyalanmaz
-    (zaten yok); trader SIFIRLANINCA bastırma kalkar; sonraki TAZE açılış yeniden kopyalanır (eğriyle)."""
+    """Zorunlu çıkıştan sonra eski pozisyon kapatma dolumu kopyalanmaz.
+
+    Trader sıfırlanınca bastırma kalkar ve sonraki taze açılış yeniden kopyalanır."""
     tutar = lambda hesap: 1000.0  # noqa: E731
     fills = [fill(0, "B", 10, 0, px=100),                      # gün 0 açılış
              fill(8 * 24 * 60, "A", 10, 10, px=69),             # gün 8: trader kapatıyor (zarar_kes'ten SONRA -> bastırılır)

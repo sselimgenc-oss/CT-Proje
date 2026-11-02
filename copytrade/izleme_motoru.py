@@ -30,7 +30,6 @@ from copytrade import kopya_v2
 from copytrade import kopya_v3
 from copytrade import saglik_hatti
 from copytrade.kurallar import load_rules
-from pano.saglik import CUSUM_YELLOW, _cusum, _mdd, blok_bootstrap
 
 MINUTE = 60_000
 DAY = 86_400_000
@@ -228,27 +227,6 @@ def health(history: pd.Series, t0: pd.Timestamp, now: pd.Timestamp, leverage: fl
     daily = history.diff().dropna()
     before, live = daily[daily.index < t0], daily[daily.index >= t0]
     red, yellow = [], []
-    # Additive PnL / account -> daily equity returns, for shared compounded bootstrap/CUSUM.
-    def returns(series):
-        equity = 1 + pd.concat([pd.Series([0.0], index=[series.index[0] - pd.Timedelta(days=1)]), series.cumsum()])
-        return equity.pct_change().iloc[1:]
-    if not performans_konisi:
-        pass
-    elif before.empty:
-        yellow.append('t0 öncesi koni geçmişi yetersiz')
-    elif len(live):
-        base_returns, live_returns = returns(before), returns(live)
-        cone = blok_bootstrap(base_returns, len(live), quantiles=(5, 20), block_size=28)
-        actual = float(live.sum())
-        if actual < cone['p5'][-1]:
-            red.append('koni %5 altında')
-        elif actual < cone['p20'][-1]:
-            yellow.append('koni %5–%20 bandında')
-        if _mdd(pd.concat([pd.Series([0.0]), live_returns])) > _mdd(pd.concat([pd.Series([0.0]), base_returns])) * 1.5:
-            red.append('düşüş geçmişin 1,5 katından fazla')
-        cusum = _cusum(live_returns, base_returns)
-        if cusum is not None and cusum >= CUSUM_YELLOW:
-            yellow.append('CUSUM uyarısı')
     if leverage > 10:
         red.append('gerçek kaldıraç > 10x')
     elif leverage >= 3:
@@ -258,7 +236,7 @@ def health(history: pd.Series, t0: pd.Timestamp, now: pd.Timestamp, leverage: fl
     if last_fill is None or millis(now) - last_fill >= 30 * DAY:
         yellow.append('son 30 günde işlem yok')
     return {'isik': 'kirmizi' if red else 'sari' if yellow else 'yesil',
-            'nedenler': red + yellow or (['konide', 'kaldıraç normal'] if performans_konisi else ['kaldıraç normal'])}
+            'nedenler': red + yellow or ['kaldıraç normal']}
 
 
 def cached_candle(value: object) -> tuple[float, bool]:
@@ -556,11 +534,9 @@ def with_data_error(trader: dict, error: Exception) -> dict:
 def kasa_egrisi(traderlar: list[dict], kol: str, gun: int = 90) -> list[list[object]]:
     """Koldaki sanal-kopya bakiyelerinin son ``gun`` günlük toplamı.
 
-    Güncel motor (`sanal_kopya_v3` — sabit tutar + çıkış kuralları + tasfiye, `GOREV_ETRE_GECIS.md`
-    bitti tanımı); v1 (`sanal_kopya`) silinmez/değişmez ama bu toplamın kaynağı artık o değil (kullanıcı
-    kararı 2026-10-30: "güncel motorumuz [pano/ofis/Telegram'a] bağlansın"). v3 hesaplanamamış bir trader
+    v3 hesaplanamamış bir trader
     o günden dışarıda bırakılır (sıfır olarak sayılmaz) — her trader kendi son bilinen günlük bakiyesiyle
-    taşınır; eksik eğri uydurulmaz. Bu isteğe bağlı pano alanıdır, kapı/seçim hesabına girmez.
+    taşınır; eksik eğri uydurulmaz.
     """
     curves = []
     for trader in traderlar:
@@ -587,7 +563,7 @@ def data_error_reason(error: Exception) -> str:
 
 def unavailable_trader(root: Path, row: dict, error: Exception) -> dict:
     """Publish an explicit placeholder when a trader has never completed a read."""
-    # Pano bu alanları koşulsuz okur; eksik alan sayfanın tamamını bozar.
+    # Yer tutucu, beklenen tüm alanları taşımalıdır.
     style = resolve_style(root, row)
     return {**{k: v for k, v in row.items() if k != 'tarz'}, 'tarz': style, 'veri_zamani': None, 'gecerli': False,
             'kapi': gate_result(root, row['adres']),
@@ -666,7 +642,6 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
     marks = mark_candles(client, actions, millis(now))
     priced = {coin: rows + marks.get(coin, []) for coin, rows in {**{c: [] for c in marks}, **candles}.items()}
     paper = copy_results(actions, priced, saved['funding'], saved['kopya_paydasi'], t0, now, own_events, approximate, delay)
-    # E2 (GOREV_ETRE_GECIS.md): v2/v3 — tek motor (golge.calistir / defter.copy_ledger), ORTAK saatlik mum + yürütme
     # girdisi (tek fetch, kural 7). v1 (paper/sanal_kopya) yanında yayımlanır, değiştirmez; hata v1'i düşürmez (kural 6).
     try:
         saatlik = kopya_v2.saatlik_mumlar(client, saved.setdefault('mumlar_1s', {}), copy_fills,
@@ -686,7 +661,6 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
                                         t0, now, delay, style)
         except Exception as error:
             paper_v2 = {'surum': 'v2', 'durum': 'hesaplanamadi', 'neden': data_error_reason(error)}
-        # E2 sabit tutar (kullanıcı kararı 2026-10-30, "Etre eğrisini enterpolasyonla port et"): v3 — aynı motor,
         # trader hesabına ORANLI değil, kopyanın KENDİ değerine göre sabit $ tutarla açılış (kopya_v3.py). v2'den
         # bağımsız hata yalıtımı (kural 6).
         try:
@@ -778,7 +752,6 @@ def run(root: Path, output: Path, client=None, now=None, symbols=None) -> dict:
     oda_uyeleri = [t for t in traders if t.get('kol') == 'oda']
     if oda_uyeleri:
         result['kalabalik'] = {**oda_risk.kalabalik([t for t in oda_uyeleri if t.get('gecerli') and t.get('hesap_degeri')]), 'zaman': iso(now)}
-    # E1 (GOREV_ETRE_GECIS.md) — Etre kalite.py deseninden esinlenilen veri hattı sağlığı (performans ışığından
     # ayrı; yalnız rapor). Tazelik kontrolü kasıtlı olarak burada değil (bkz. saglik_hatti modül docstring'i).
     # Boş izleme listesinde (ağ hiç kullanılmayan sözleşme testi) eklenmez — kalabalik alanıyla aynı desen.
     if traders:
