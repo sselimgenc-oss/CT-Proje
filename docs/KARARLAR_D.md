@@ -166,3 +166,9 @@ Görev: `docs/GOREV_D_YOLU.md`.
 ### K‑16. Çay Ocağı odası kaldırıldı (kullanıcı kararı 2026-11-02)
 - Faz 2 oda listesinden "Çay Ocağı" (yalnız dekoratif oda) çıkarıldı; oda sayısı 14 → 13. Diğer odaların görev/yetki kararları değişmedi
   (yalnız numaraları kaydı).
+
+### K‑17. Anlık kopya Faz 1'e alındı (kullanıcı kararı 2026-11-02)
+- "1 saat zaten çok geç, anlık olmalı işlemlerimiz": canlı kopya anlık (WebSocket) olacak; saatlik izleme canlı için yeterli sayılmaz.
+- Altyapı: küçük sunucu (VPS), kullanıcı açar. Dry-run aşamasında sunucuda anahtar/cüzdan yok.
+- İşler ve sıra: `docs/FAZ1_ANLIK_KOPYA.md` (H1–H5). Seçim gecikmesinin değişmesi (H3) ve canlıya geçiş eşikleri (H4) ayrı kullanıcı kararıdır.
+- Lider görevi (kullanıcı 2026-11-02): yalnız söyleneni yapmak değil, canlıda kâr için yönlendirmek; katılmadığı kararda gerekçeyle itiraz eder.
