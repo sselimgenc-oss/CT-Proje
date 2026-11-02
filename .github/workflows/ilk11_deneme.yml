@@ -27,6 +27,7 @@ jobs:
       R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
     steps:
       - name: Gerekli secret'ların varlığını kontrol et (yalnız ad)
+        id: secret
         # Değer asla yazdırılmaz; eksik olanın ADI yazılır ve iş kırmızı biter (izleme.yml bunları R2 için kullanır).
         run: |
           eksik=""
@@ -75,7 +76,7 @@ jobs:
           echo "snapshot_id: $a / $b"
           [ "$a" = "$b" ]
       - name: Özet (iş özeti + artifact)
-        if: always()
+        if: ${{ always() && steps.secret.outcome == 'success' }}
         env:
           TARIH: ${{ steps.hazir.outputs.tarih }}
         run: |
@@ -83,7 +84,7 @@ jobs:
           alanlar=$(find deneme_pazar1/ilk11 -name alanlar.csv | head -1)
           python -m copytrade.ilk11_deneme ozet --kapi-sonuc "deneme_kok/copytrade/kapi/$TARIH/sonuc.csv" --durum deneme_izleme/durum.json --pazar-alanlar "$alanlar" --sure-sn "$sure" | tee deneme/OZET.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: ${{ always() && steps.secret.outcome == 'success' }}
         with:
           name: ilk11-deneme
           path: |

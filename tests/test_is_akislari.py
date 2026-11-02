@@ -286,6 +286,15 @@ def test_deneme_ilk_adimi_eksik_secret_adini_yazar_kirmizi_biter_degeri_asla_yaz
     assert set(yukle("ilk11_deneme.yml")["jobs"]["deneme"]["env"]) == set(TUMU)
 
 
+def test_deneme_secret_kontrolu_kirmiziysa_ozet_ve_artifact_adimlari_calismaz():
+    wf = yukle("ilk11_deneme.yml")
+    adimlar_ = wf["jobs"]["deneme"]["steps"]
+    assert adimlar_[0]["id"] == "secret"
+    for a in adimlar_:
+        if "always()" in str(a.get("if", "")):
+            assert "steps.secret.outcome == 'success'" in a["if"], a                              # gürültülü ikincil hata yanıltmasın
+
+
 def test_deneme_kendi_dalindan_tetiklenebilir_ve_uretime_yazmaz():
     wf = yukle("ilk11_deneme.yml")
     assert wf["on"]["push"] == {"paths": ["copytrade/ilk11_deneme/CALISTIR"]} and "workflow_dispatch" in wf["on"]
