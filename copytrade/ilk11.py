@@ -1,12 +1,9 @@
 """İlk11 Faz 1 saf kadro/puan fonksiyonları.
 
-Uyarlama atfı: Etre v2 ``etre2/puan.py`` (GPL-3.0-or-later), kaynak
 commit f3f5cff92d6db2fff62b6f7753c45343e00583ba; yüzdelik sırası,
 eksik alan varsayılanı, kaldıraç ağırlıkları, gölge sonucu kırpma ve
-büzülme, işlem sıklığı/tutma/kaldıraç dönüşümleri uyarlanmıştır. Etre
 ``kadro.py`` içindeki hesap büyüklüğü dönüşümü de aynı kaynak committen alınmıştır.
 Bu repo GPL-3.0 ile lisanslıdır; bu dosya
-repo lisansı ve kaynak GPL hükümleriyle dağıtılır. Etre'nin kadro/strateji
 kuralları değil, puan hesaplama parçaları taşınmıştır.
 
 Veri ağdan okunmaz/yazılmaz. Aday girdilerinde `alanlar` K1-K10 ham
@@ -47,7 +44,6 @@ def yuzdelik(degerler: Mapping[str, float | None], dusuk_iyi: bool = False) -> d
 
 
 def siklik_puani(gunluk: float | None, bot: float = 150.0) -> float | None:
-    """Etre puan.py dönüşümü; bot sınırı Etre varsayılanı 150/gün."""
     if gunluk is None:
         return None
     if gunluk <= 0 or gunluk >= min(20.0, bot):
@@ -58,7 +54,6 @@ def siklik_puani(gunluk: float | None, bot: float = 150.0) -> float | None:
 
 
 def tutma_puani(dk: float | None) -> float | None:
-    """Etre puan.py tutma süresi dönüşümü (dakika → [0,1])."""
     import math
     if dk is None:
         return None
@@ -72,19 +67,16 @@ def tutma_puani(dk: float | None) -> float | None:
 
 
 def kaldirac_puani(ortalama: float | None) -> float | None:
-    """Etre kadro.py dönüşümü: 4x merkezli, 20x uzaklıkta sıfır."""
     return None if ortalama is None else max(0.0, 1.0 - abs(float(ortalama) - 4.0) / 20.0)
 
 
 def hesap_puani(usd: float | None) -> float | None:
-    """Etre kadro.py hesap ölçeklemesi: 5k–505k USD aralığında karekök."""
     if not usd:
         return None
     return min(1.0, max(0.0, (float(usd) - 5000.0) / 500000.0)) ** 0.5
 
 
 def hazirla_kaldirac_alanlari(ham: Mapping[str, float | None], bot: float = 150.0) -> dict[str, float | None]:
-    """Etre kadro.py ön dönüşümlerini uygular; diğer 6 alanı olduğu gibi taşır."""
     result = dict(ham)
     result["hesap"] = hesap_puani(ham.get("hesap"))
     result["siklik"] = siklik_puani(ham.get("siklik"), bot)
@@ -114,7 +106,6 @@ def agirlikli_puan(alanlar: Mapping[str, Mapping[str, float | None]],
 
 
 def golge_ozeti(sonuclar: Sequence[float | None], k: int = 8) -> dict[str, Any]:
-    """Etre puan.py golge_ozetindeki [-1, 3] kırpma ve n/(n+k) büzülme."""
     xs = [max(-1.0, min(3.0, float(x))) for x in sonuclar if x is not None]
     n = len(xs)
     if not n:

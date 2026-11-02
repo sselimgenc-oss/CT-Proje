@@ -1,6 +1,4 @@
-"""Kopya hesap v3 (E2 sabit tutar, docs/GOREV_ETRE_GECIS.md): elle hesaplı altın örnekler.
-Maliyet oranı = taker 0,00045 + kayma 0,0005 = 0,00095 (kurallar.yaml). Eğri: `defter.sabit_tutar_egrisi`
-(Etre kasa.py Kasa.islem_usd portu, varsayılanlar DEĞİŞTİRİLMEDİ): tutar(1.000$) = 5,2×5**0,86 ≈ 20,754752$."""
+"""Kopya hesap v3 için altın örnekler."""
 import pytest
 import pandas as pd
 
@@ -55,7 +53,6 @@ def test_acilis_trader_islem_buyuklugunden_bagimsiz():
 
 def test_ekleme_mevcut_pozisyona_oranla():
     # Açılış (10:00, B10@100, eğriyle); trader %50 ekliyor (11:00, B5, before=10): kopya da kendi pozisyonunun
-    # %50'si kadar ekler (eğriden yeniden okumaz — Etre masa.py _ekle).
     fills = [fill('2026-10-27T10:00:00Z', 'B', 10, 0, 100), fill('2026-10-27T11:00:00Z', 'B', 5, 10, 110)]
     v3 = run(fills, hourly(BTC={'10:00': 100.0, '11:00': 110.0, '12:00': 110.0}),
              {'BTC': {'10:30': 100.0, '11:30': 110.0}})

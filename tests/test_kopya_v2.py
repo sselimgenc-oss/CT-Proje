@@ -1,5 +1,4 @@
-"""Kopya hesap v2 (E2, docs/GOREV_ETRE_GECIS.md): elle hesaplı altın örnekler.
-Maliyet oranı = taker 0,00045 + kayma 0,0005 = 0,00095 (kurallar.yaml)."""
+"""Kopya hesap v2 için altın örnekler."""
 import pytest
 import pandas as pd
 

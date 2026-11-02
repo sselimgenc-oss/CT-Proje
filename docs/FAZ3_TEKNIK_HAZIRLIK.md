@@ -19,7 +19,6 @@ Bu modüllerin kodda bulunması, hosting kurulumu, servis işletimi, gözlemlenm
 - Aynı Worker kodu olayları Telegram'a ancak `BILDIRIM_KIPI=islem` ise yollar; aksi halde günlük özet/durum akışı vardır. Telegram callback'leri kullanıcı kararını kaydeder, emir göndermez.
 - `.github/workflows/izleme.yml` saatte bir, `.github/workflows/arsiv.yml` 15 dakikada bir çalışır. Bunlar geçmiş veriyi/izlemeyi tamamlayan işlerdir; saniyelik yürütme döngüsü değildir.
 - `copytrade/tarama.py` ve diğer `copytrade` modülleri HL public bilgi/dolum verisini analiz eder. `copytrade/__init__.py` paketin imzalama, cüzdan veya emir yerleştirme kodu içermediğini açıkça belirtir. Kod tabanında HL emir gönderme ya da cüzdan imzalama çağrısı bulunmuyor.
-- `docs/GOREV_ETRE_GECIS.md` E1 açıklaması Worker dakikalık yoklamayı yaklaşık 1–2 dk gecikmeli seçenek, kalıcı WS hizmetini saniyelik seçenek olarak tarif etmiş. O belge şu an depoda bulunmuyor; bu nedenle aşağıdaki gereksinimler o eski planın uygulanmış olduğu anlamına gelmez.
 
 ## Saniyelik canlı kopya için açık boşluklar
 

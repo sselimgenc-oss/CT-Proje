@@ -33,14 +33,12 @@ GOLD). Oda düzeyinde tavan yok.
 **M1.** Dolumlar üç yerde ayrı çekiliyor: R2 arşivi (saatlik), izleme motoru, Telegram Worker (dakikalık). API yükü ×3, mantık iki dilde
 (Python `fill_events` ↔ JS `orderEvents`) → sapma riski. Öneri: arşiv tek kaynak.
 **M2.** İki gölge hesabı: araştırma `golge.py` ve izleme `copy_results/defter`. Tek motor olmalı.
-**M3.** Üç ekran (pano, ofis, Telegram) aynı sayıyı üç kodla üretiyor; bugün pano/ofis farkları buradan çıktı. Pano tek kaynak olsun.
 **M4.** ~10 iş akışı + GitHub zamanlayıcısı + veri dalı (git) depolama: kırılgan (267 MB vakası). Saatlik veri R2'de, zamanlama tek yerde.
 
 ## 4. Güvenlik / açık
 **G1.** Worker `GET /kararlar` kimliksiz herkese açık (index.js:357): kullanıcının Açtım/Atladım kararları dışarı açık. Gizli anahtar ekle.
 **G2.** Repo herkese açık; adresler kamuya açık veridir, sorun değil. Anahtarlar secret'ta (doğru).
 
-## 5. Etre'ye göre eksikler (kanıtla)
 Saniyelik kopya (bizde 30/120 dk — K1), tek portföy + netleştirme (bizde brüt/net farkı şu an %18; büyüdükçe artar), stop kapanışları
 (K5), işlem başı sabit küçük tutar (bizde hesap oranı — K2 riski), kapanış nedeni, 5 dk güncelleme, otomatik terfi/düşme. Bizim
 üstünlüğümüz: kontrol grubu, ön kayıt, bağımsız denetim, ileri ölçüm.

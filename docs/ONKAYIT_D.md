@@ -109,7 +109,6 @@ Gölge verisi henüz yok. Gerekçe: Argon A18 (odadan çıkarma kuralları; Goya
 Pilotun ilk günü; gölge sonucu henüz görülmedi. Gerekçe (kullanıcı): proje haftalarca yolda gelişecek; trader kararları kullanıcıda
 olmalı, 12 hafta beklemek kabul görmüyor.
 
-1. **Körlük kalkar.** Pano, ofis ve Telegram kâr/zararı, kasayı ve oda ↔ kontrol karşılaştırmasını her an gösterir. Sağlık ışığı
    performans konisini yeniden kullanır (`saglik_performans_konisi: true`). Madde 6'daki "performansa yalnız 12./24. haftada bakılır"
    ve K‑6 (c) kuralı kaldırıldı.
 2. **Oda kullanıcı kararıyla her an değişebilir.** Her değişiklik yeni seçim sürümü ya da tarih + gerekçeli geçiş kaydıyla yapılır

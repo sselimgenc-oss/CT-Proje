@@ -1,5 +1,5 @@
-"""Veri hattı sağlığı — Etre ``etre2/kalite.py`` (GPL-3.0) deseninden esinlenilmiştir, birebir çeviri değildir
-(GOREV_ETRE_GECIS.md E1): ayarlanabilir eşik sözlüğü + saf ölçü/kontrol fonksiyonu ayrımı.
+
+"""Veri hattı sağlığı için saf ölçü ve eşik fonksiyonları.
 
 Mevcut durum.json alanları (mutabakat, işaret eksikliği, veri geçerliliği, performans ışığı) kol düzeyinde
 (varsayılan "oda") tek kayda toplanır; hiçbir yeni ölçüm hesaplamaz, hiçbir pozisyonu/kopyayı etkilemez —
@@ -7,7 +7,6 @@ yalnız rapor. ``olc()`` saf ölçü fonksiyonu, ``kontrol()`` saf eşik fonksiy
 
 **Kasıtlı olarak İÇERMEZ:** veri tazeliği/bayatlık kontrolü. Bu modül `durum.json` içindeki (geçmişte üretilmiş)
 alanları okur; yayım anında hesaplanan bir "şu an"a göre tazelik burada her zaman ~0 döner ve durmuş bir akışı
-hiç yakalayamaz (Sol denetimi, 2026-10-30, `docs/DENETIM_ETRE_GECIS_2026-10-30.md`). Tazelik, Worker'ın okuma
 anında kendi gerçek saatiyle yaptığı mevcut kontrolündedir (`worker/src/index.js` `checkStateAlerts`, 3 saatlik
 eşik) — tek yerde (AGENTS.md kural 7), tekrarlanmaz.
 """
