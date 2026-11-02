@@ -202,8 +202,8 @@ def test_ilk_secim_uctan_uca_dosyalar_akis_liste_ve_idempotans(dal, tmp_path):
     cikti = tmp_path / "cikti"
     taban = tmp_path / "main_liste.yaml"
     taban.write_text(yaml.safe_dump({"traderlar": [
-        {"id": "R1", "adres": adres(3), "takma_ad": "r001", "durum": "izlemede", "t0": "2026-10-28", "kol": "oda", "kollar": ["oda", "referans_oda"]},
-        {"id": "R2", "adres": adres(900), "takma_ad": "r002", "durum": "izlemede", "t0": "2026-10-28", "kol": "kontrol", "kollar": ["referans_kontrol"]},
+        {"id": "R1", "adres": adres(3), "takma_ad": "r001", "durum": "izlemede", "t0": "2026-10-28", "kol": "oda", "kollar": ["oda", "taban"]},
+        {"id": "R2", "adres": adres(900), "takma_ad": "r002", "durum": "izlemede", "t0": "2026-10-28", "kol": "kontrol", "kollar": ["kontrol"]},
         {"id": "P1", "adres": adres(901), "takma_ad": "p001", "durum": "izlemede", "t0": "2026-10-28", "kol": "taban", "kollar": ["taban"]}]}))
     assert pz.calistir(dal, cikti, PAZAR1, taban_liste=taban) == 0
     hedef = cikti / "ilk11/2026-11-01"
@@ -231,9 +231,12 @@ def test_ilk_secim_uctan_uca_dosyalar_akis_liste_ve_idempotans(dal, tmp_path):
     kadro_adresleri = {r["id"] for r in snap["kadro"]}
     beklenen_referans = {adres(900)} | ({adres(3)} - kadro_adresleri)          # referans satırı kadroda değilse ayrıca kalır, kadrodaysa tek satır
     assert len(liste) == 50 + len(beklenen_referans) and adres(900) in by and adres(901) not in by and "takim" not in by[adres(900)]
+    assert (by[adres(900)]["id"], by[adres(900)]["t0"], by[adres(900)]["kol"], by[adres(900)]["kollar"]) == ("R2", "2026-10-28", "referans_kontrol", ["referans_kontrol"])
     assert {r["adres"] for r in liste if "takim" in r} == kadro_adresleri
     if adres(3) in kadro_adresleri:
-        assert by[adres(3)]["id"] == "R1" and by[adres(3)]["t0"] == "2026-10-28" and "referans_oda" in by[adres(3)]["kollar"]       # tek satır, id / t0 korunur
+        assert by[adres(3)]["id"] == "R1" and by[adres(3)]["t0"] == "2026-10-28" and by[adres(3)]["kollar"] == ["referans_oda"]     # tek satır, id / t0 korunur, oda -> referans_oda
+    else:
+        assert (by[adres(3)]["kol"], by[adres(3)]["kollar"]) == ("referans_oda", ["referans_oda"])
     yeni = next(r for r in liste if r["adres"] not in {adres(3), adres(900)})
     assert yeni["t0"] == "2026-11-01" and yeni["snapshot_id"] == snap["snapshot_id"] and yeni["takim_hafta"] == "2026-11-01" and yeni["id"].startswith("K")
     # idempotans: aynı Pazar ikinci koşu hiçbir şey değiştirmez (tamamla)
@@ -308,9 +311,10 @@ def izleme_deposu(tmp_path: Path, surumler: list[tuple[str, dict]]) -> Path:
 
 
 def trader_durum(kimlik: str, adr: str, sira: int, uretildi: str, **over) -> dict:
-    """sira büyüdükçe form iyileşir (dusus hariç: düşük iyi)."""
+    """sira büyüdükçe form iyileşir. Dönüşümler (`ilk11.hazirla_kaldirac_alanlari`) sıra korunacak biçimde seçildi: siklik ≤ 1 (puan = x), tutma 2–4,5 dk
+    (puan = (dk − 2)/3), kaldıraç ≤ 1,6x (puan x ile artar), hesap < 505.000 $; dusus düşük iyi. Böylece form yüzdeliği tam sıradır."""
     alanlar = {"golge": 0.01 * sira, "ay_roi": 0.005 * sira, "hafta_roi": 0.001 * sira, "hesap": 6000.0 + 4000.0 * sira, "dusus": 0.5 - 0.004 * sira,
-               "kazanma": 0.3 + 0.005 * sira, "siklik": 0.5 + 0.03 * sira, "tutma": 60.0 + 10.0 * sira, "kaldirac": 0.1 + 0.03 * sira, "tutarli": 0.2 + 0.006 * sira}
+               "kazanma": 0.3 + 0.005 * sira, "siklik": 0.016 * sira, "tutma": 2.0 + 0.05 * sira, "kaldirac": 0.1 + 0.03 * sira, "tutarli": 0.2 + 0.006 * sira}
     t = {"id": kimlik, "adres": adr, "gecerli": True, "veri_zamani": uretildi, "son_perp_dolum": "2026-11-07T08:00:00Z",
          "ilk11_form_ham": {"alanlar": alanlar, "alan_kaynagi": {k: k for k in alanlar}, "pencere_bitis": uretildi, "dolu_alan": 10},
          "ilk11_gecerli_saat": {"baslangic": "2026-11-01", "saat": 168, "son_saat": uretildi}, "sanal_kopya_v3": {"kapanan_islemler": []}}
@@ -354,7 +358,8 @@ def test_form_uctan_uca_hareketler_bosluk_doldurma_liste_ve_yeniden_uretim(dal, 
     snap = json.loads((hedef / "snapshot.json").read_text())
     assert snapshot_json(snap) and snap["sema"] == "ilk11-form-v1" and snap["as_of"] == "2026-11-08T13:00:00+03:00"
     assert snap["kaynak_surumu"]["izleme"].startswith(git(repo, "rev-parse", "HEAD~1")) and snap["kaynak_surumu"]["onceki_snapshot"] == snap1["snapshot_id"]
-    # form puanı kadro sırasıyla azalır: son 20 üye (PAF) < 40 -> kadro dışı; 10 boşluğu dolduran (60 uygun − 50 üye)
+    # Elle hesap: 50 üyede form tam sıra; yüzdelik p = 100·(j + 0,5)/50 (j = alttan sıra, 0..49). p < 40 ⇔ j ≤ 19 -> 20 üye, hepsi kadronun en
+    # düşük formlu SON 20'si = PAF (PAF 28 üye: sıra 22..49); PAF'tan 20 çıkış. Boş PAF: 28 − 20 = 8 dolu -> 20 yer, ama kadro dışı uygun yalnız 60 − 50 = 10 aday.
     plan = json.loads((hedef / "plan.json").read_text())
     cikanlar = [m for m in plan["degisiklik_plani"] if m["sonra"] == "kadrodisi"]
     assert len(cikanlar) == 20 and all(m["once"] == "paf" and m["neden"] == "geçerli Pazar formu <40" for m in cikanlar)
@@ -434,9 +439,12 @@ def test_form_yedek_terfi_kapisi_kapanan_islemlerle_uctan_uca(dal, tmp_path):
     by = {t["adres"]: t for t in durum["traderlar"]}
     ilk11_uye = next(r for r in kadro if r["takim"] == "ilk11")
     yedek = next(r for r in kadro if r["takim"] == "yedek11")
-    by[ilk11_uye["id"]]["ilk11_form_ham"]["alanlar"] = {**by[ilk11_uye["id"]]["ilk11_form_ham"]["alanlar"], "dusus": 0.9, "kazanma": 0.0, "tutarli": 0.0, "ay_roi": -0.9,
-                                                        "hafta_roi": -0.9, "golge": -0.9, "hesap": 5001.0, "siklik": 100.0, "tutma": 1.0, "kaldirac": 190.0}   # en kötü form
-    by[yedek["id"]]["ilk11_form_ham"]["alanlar"] = {k: v * 50 if k not in ("dusus",) else 0.0 for k, v in by[yedek["id"]]["ilk11_form_ham"]["alanlar"].items()}  # en iyi form
+    en_kotu = {"golge": -0.9, "ay_roi": -0.9, "hafta_roi": -0.9, "hesap": 5001.0, "dusus": 0.9, "kazanma": 0.0, "siklik": 0.0, "tutma": 1.0, "kaldirac": 190.0, "tutarli": 0.0}
+    en_iyi = {"golge": 0.9, "ay_roi": 0.9, "hafta_roi": 0.9, "hesap": 400000.0, "dusus": 0.0, "kazanma": 0.99, "siklik": 1.0, "tutma": 5.0, "kaldirac": 4.0, "tutarli": 0.99}
+    yedek_kotu = [r for r in kadro if r["takim"] == "yedek11"][1]
+    by[ilk11_uye["id"]]["ilk11_form_ham"]["alanlar"] = en_kotu
+    by[yedek_kotu["id"]]["ilk11_form_ham"]["alanlar"] = en_kotu
+    by[yedek["id"]]["ilk11_form_ham"]["alanlar"] = en_iyi
     by[yedek["id"]]["sanal_kopya_v3"]["kapanan_islemler"] = [
         {"coin": "BTC", "acilis": f"2026-11-0{2 + i}T00:00:00Z", "kapanis": f"2026-11-0{2 + i}T06:00:00Z", "sonuc_usd": s, "getiri": s / 20, "neden": "trader", "gecerli": True}
         for i, s in enumerate([3, -1, 2, -1, 2, -1])]
@@ -446,7 +454,10 @@ def test_form_yedek_terfi_kapisi_kapanan_islemlerle_uctan_uca(dal, tmp_path):
     assert pz.calistir(dal, cikti, PAZAR2, izleme_dali=repo) == 0
     plan = json.loads((cikti / "ilk11/2026-11-08/plan.json").read_text())
     hareketler = {m["id"]: (m["once"], m["sonra"]) for m in plan["degisiklik_plani"]}
-    assert hareketler[ilk11_uye["id"]] == ("ilk11", "yedek11") or hareketler[ilk11_uye["id"]][0] == "ilk11"
+    # Zincir (pazar_gecis, değişmez): kötü yedek -> paf (PAF'ta çıkışlarla yer açıldı), kötü İlk 11 -> yedek, en iyi yedek -> İlk 11 (terfi kapısı geçti:
+    # son 6 sonuç [3,-1,2,-1,2,-1]: toplam 4, kazanma 0,5, en iyi hariç 1 > 0)
+    assert hareketler[yedek_kotu["id"]] == ("yedek11", "paf")
+    assert hareketler[ilk11_uye["id"]] == ("ilk11", "yedek11")
     assert hareketler[yedek["id"]] == ("yedek11", "ilk11")
     sonra = {r["id"]: r["grup"] for r in plan["kadro_sonrasi"]}
     assert sonra[yedek["id"]] == "ilk11" and list(sonra.values()).count("ilk11") == 11

@@ -330,6 +330,7 @@ tümü onaylandı. Vurgu: önce verinin doğru gelmesi ve kalıcı kaydı. Açı
   kullanıcı istediğinde `gecis.py` kaydıyla geri alınır.
 - **K‑12.8 İzleme kapsamı — Karar verildi (2026-11-02):** kadro 50 + sabit referans kolları (`referans_oda` + `referans_kontrol`, 36).
   Eski pilot kolları (oda, kontrol, taban, elle, havuz, cikarilan) saatlik izlemeden çıkar; geçmiş veri dalda kalır, silinmez.
+  Not (lider, 2026-11-02): 36 referans = mevcut `izleme_listesi.yaml`'da `kol`/`kollar`'ında `oda` (18) ve `kontrol` (18) olan satırlar; `id`/`t0` korunur, `referans_oda`/`referans_kontrol` olarak etiketlenir.
 - **K‑12.9 Az aday eşiği — Karar verildi (2026-11-02):** uygun < 11 → yayın yok; 11–49 → uyarılı yayın.
 - **K‑12.10 Veri kalitesi parametreleri — Karar verildi (2026-11-02):** kapı tazeliği 7 gün, form tazeliği 120 dk, form geçerliliği
   ≥ 8/10 alan, alan doluluğu ≥ %90, §3.2 akıl sağlığı aralıkları, ihlal > %5 → kırmızı (`kurallar.yaml` `ilk11_*`).

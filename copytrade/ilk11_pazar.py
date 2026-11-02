@@ -341,11 +341,13 @@ def kadro_sonrasi_uygula(satirlar: Sequence[Mapping[str, Any]], plan: Mapping[st
                    if hareket.get(s["id"]) != "kadrodisi"), key=lambda r: r["id"])
 
 
-def bos_paf_doldur(kadro: list[dict[str, Any]], adaylar: Sequence[Mapping[str, Any]], tarih: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """K-12.6: kadroda olmayan UYGUN adaylar İlk 11 puanıyla sıralanır; boş PAF yerlerine en iyisi girer (yalnız PAF'a giriş). Puan, uygun evrenin tamamında."""
+def bos_paf_doldur(kadro: list[dict[str, Any]], adaylar: Sequence[Mapping[str, Any]], tarih: str,
+                   haric: Sequence[str] = ()) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """K-12.6: kadroda olmayan UYGUN adaylar İlk 11 puanıyla sıralanır; boş PAF yerlerine en iyisi girer (yalnız PAF'a giriş). Puan, uygun evrenin tamamında.
+    ``haric``: bu hafta formdan kadro dışına çıkanlar aynı hafta geri alınmaz."""
     uygun = {a["id"]: a["alanlar"] for a in adaylar if a["uygun"]}
     _, puan = yuzdelik_ve_puan(uygun)
-    uyeler = {r["id"] for r in kadro}
+    uyeler = {r["id"] for r in kadro} | set(haric)
     bos = min(ilk11.PAF - sum(r["grup"] == "paf" for r in kadro), ilk11.KAPASITE - len(kadro))
     sirali = sorted((i for i in uygun if i not in uyeler), key=lambda i: (-puan[i], i))[:max(0, bos)]
     girenler = [{"id": i, "grup": "paf", "takim_hafta": tarih, "puan": puan[i]} for i in sirali]
@@ -371,8 +373,14 @@ def form_snapshot(as_of: datetime, kaynak: Mapping[str, str], satirlar: Sequence
 
 # ---------------------------------------------------------------------------------------------------- izleme listesi (§5.3)
 
-def _referans_mi(satir: Mapping[str, Any]) -> bool:
-    return bool(({satir.get("kol")} | set(satir.get("kollar") or [])) & set(secim.REFERANS_KOLLARI))
+REFERANS_ETIKET = {"oda": "referans_oda", "referans_oda": "referans_oda", "kontrol": "referans_kontrol", "referans_kontrol": "referans_kontrol"}
+
+
+def referans_etiketle(satir: Mapping[str, Any]) -> dict[str, Any] | None:
+    """K-12.8 (lider kararı): pilotun `oda` / `kontrol` kolları sabit referans kolu olur (`referans_oda` / `referans_kontrol`; `id`, `t0` korunur);
+    taban / elle / havuz / cikarilan saatlik izlemeden çıkar. Referans değilse ``None``."""
+    etiketler = sorted({REFERANS_ETIKET[k] for k in {satir.get("kol"), *(satir.get("kollar") or [])} if k in REFERANS_ETIKET})
+    return {**satir, "kol": etiketler[-1], "kollar": etiketler} if etiketler else None     # oda + kontrol birlikteyse referans_oda ana etiket
 
 
 def liste_olustur(kadro: Sequence[Mapping[str, Any]], kaynak_satirlar: Sequence[Mapping[str, Any]], adaylar: Mapping[str, Mapping[str, Any]],
@@ -387,8 +395,8 @@ def liste_olustur(kadro: Sequence[Mapping[str, Any]], kaynak_satirlar: Sequence[
         takim_alanlari = ("takim", "snapshot_id", "form_puani", "takim_hafta")
         if adres in uyeler:
             continue
-        if _referans_mi(satir):
-            cikti.append({k: v for k, v in satir.items() if k not in takim_alanlari})
+        if referans_etiketle(satir):
+            cikti.append({k: v for k, v in referans_etiketle(satir).items() if k not in takim_alanlari})
     for adres, uye in sorted(uyeler.items()):
         satir = mevcut.get(adres)
         if satir is None:
@@ -402,7 +410,7 @@ def liste_olustur(kadro: Sequence[Mapping[str, Any]], kaynak_satirlar: Sequence[
             tarz = adaylar.get(adres, {}).get("tarz")
             if tarz:
                 satir["tarz"] = tarz
-        satir = {**satir, "takim": uye["grup"], "snapshot_id": snapshot_id, "takim_hafta": uye["takim_hafta"]}
+        satir = {**(referans_etiketle(satir) or satir), "takim": uye["grup"], "snapshot_id": snapshot_id, "takim_hafta": uye["takim_hafta"]}
         if adres in form_puani:
             satir["form_puani"] = round(float(form_puani[adres]), 6)
         else:
@@ -495,7 +503,7 @@ def _yaz(yol: Path, metin: str) -> None:
 
 
 def calistir(kapi_dali: Path, cikti: Path, now: datetime, izleme_dali: Path | None = None, durum_dosyasi: Path | None = None,
-             taban_liste: Path | None = None, deneme: bool = False, zorla: bool = False, rules: dict | None = None,
+             taban_liste: Path | None = None, deneme: bool = False, rules: dict | None = None,
              rules_yolu: Path | None = None) -> int:
     """Pazar işi. Çıkış kodu 0: yayımlandı / bekle / tamamla; 1: girdi / kalite hatası (hiçbir şey yayımlanmadı, önceki kadro sürer; hazırlık hatası deneme SAYILMAZ);
     2: form yayımlandı AMA kapı eski / yok (boşluk doldurma yapılmadı) — iş akışı dosyaları commit eder, sonra işi KIRMIZI bitirir (§2)."""
@@ -507,7 +515,7 @@ def calistir(kapi_dali: Path, cikti: Path, now: datetime, izleme_dali: Path | No
     if not deneme:
         plan = _plan_cagir(now, as_of, akis, None)
         print(f"Pazar akışı ({tarih}): {plan['eylem']} — {plan['neden']}")
-        if plan["eylem"] in ("bekle", "tamamla") and not (zorla and plan["eylem"] == "bekle"):
+        if plan["eylem"] in ("bekle", "tamamla"):
             return 0
         if plan["eylem"] == "reddet":
             print("HATA: akış reddedildi", file=sys.stderr)
@@ -616,7 +624,7 @@ def _form_akisi(onceki, kapi, as_of, tarih, hedef, kapi_dali, cikti, akis, now, 
     kadro_sonra = kadro_sonrasi_uygula(satirlar, plan)
     girenler: list[dict[str, Any]] = []
     if adaylar:
-        kadro_sonra, girenler = bos_paf_doldur(kadro_sonra, adaylar, tarih)
+        kadro_sonra, girenler = bos_paf_doldur(kadro_sonra, adaylar, tarih, [m["id"] for m in plan["degisiklik_plani"] if m["sonra"] == "kadrodisi"])
     kaynak = {"izleme": f"{izleme_commit}@{durum['uretildi']}", "ilk11_alanlar": sha256_dosya(Path(ilk11_alanlar.__file__)), "kurallar": sha256_dosya(rules_yolu),
               "onceki_snapshot": onceki_snap["snapshot_id"]}
     if kapi is not None:
@@ -647,7 +655,6 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--taban-liste", type=Path, default=None, help="ilk çalıştırmada referans kolların alınacağı liste (örn. main'deki copytrade/izleme_listesi.yaml)")
     ap.add_argument("--now", default=None, help="ISO zaman (varsayılan: şimdi, UTC)")
     ap.add_argument("--deneme", action="store_true", help="kural 1 denemesi: akış / liste / son.json yazılmaz, yayın eşiği uygulanmaz")
-    ap.add_argument("--zorla", action="store_true", help="yeniden deneme bekleme süresini atla (elle tetikleme)")
     ap.add_argument("--basarisiz-isaretle", action="store_true", help="bu Pazar için akis.json'a başarısız deneme yaz (push başarısız olduysa)")
     args = ap.parse_args(argv)
     now = datetime.fromisoformat(args.now.replace("Z", "+00:00")) if args.now else datetime.now(UTC)
@@ -658,7 +665,7 @@ def main(argv: list[str] | None = None) -> int:
         _yaz(cikti / "ilk11" / tarih / "akis.json", json.dumps({**akis, "deneme_sayisi": int(akis["deneme_sayisi"]) + 1, "basarili": False,
                                                               "son_basarisiz_at": now.isoformat()}, indent=1) + "\n")
         return 0
-    return calistir(args.kapi_dali, cikti, now, args.izleme_dali, args.durum_dosyasi, args.taban_liste, args.deneme, args.zorla)
+    return calistir(args.kapi_dali, cikti, now, args.izleme_dali, args.durum_dosyasi, args.taban_liste, args.deneme)
 
 
 if __name__ == "__main__":

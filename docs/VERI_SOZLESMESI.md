@@ -249,9 +249,20 @@ ya da izleme okuma zamanı (`veri_zamani`). Eksik = `null` → alan puanı 35. A
     `false` satırlar listede kalır (sonuç gerçektir) ama `paper_sonuclari` ve `golge` (F) hesabına girmez.
   - Not: sabit tutarlı v3 yolunda `ledger.net` hiçbir zaman `None` olmaz; `durum: "hesaplanamadi"` dalı (kopya_v3) artık tetiklenmez.
   - Büyüklük: işlem sayısı t0'dan beri birikir (pencere süzgeci tüketicidedir); satır başına ~150 bayt.
+- **İzleme `durum.json` trader alanları (A2 PR-2):**
+  - `ilk11_gecerli_saat` = `{baslangic, saat, son_saat}`: trader'ın kadroya SON girişinden (`baslangic` = izleme listesindeki `takim_hafta`; yoksa `t0` günü) itibaren `gecerli == true` saatlik okuma sayısı (`saat`, tam sayı; `son_saat` UTC ISO). Aynı saatte ikinci koşu saymaz; `takim_hafta` değişince sıfırlanır; sayım bu motorun okumalarından başlar. Kalıcı kopya: `motor.json`. Pazar işi `gecerli_gozlem_suresi` (gün) = `saat / 24` (yalnız `baslangic == takim_hafta` ise).
+  - `son_perp_dolum` (UTC ISO | `null`): trader'ın bilinen en son PERP dolumunun zamanı (spot hariç). `bu_pazar_aktif` ⇔ `(as_of − 7 gün, as_of]` içinde.
+  - `ilk11_form_ham` hata durumunda `{"hata": "<metin>"}` (okuma düşmez; Pazar işi o trader için `bu_pazar_gecerli = false`); hiç okunmamış trader'da `{"hata": "hiç okunmadı"}`.
+  - **`kapanan_islemler` kırpması (yalnız `durum.json`):** `sanal_kopya_v3.kapanan_islemler` yayında yalnız kapanışı `(now − ilk11_form_pencere_gun, now]` içinde olanlar VE (pencereden eski olsa da) en son `ilk11_durum_min_gecerli_islem` (6) GEÇERLİ işlemdir; `kapanan_islemler_toplam` tam geçmişin sayısıdır. TAM geçmiş `motor.json`'daki `son_trader`'da silinmeden tutulur.
+- **Kapı `sonuc.csv` `ilk11_bilgi_hatasi`** (metin, yalnız hata olan satırda dolu): `kapi_bilgi_sutunlari` hesabı istisna fırlatırsa `ilk11_ay_roi`, `ilk11_hafta_roi`, `ilk11_dusus_30g`, `ilk11_tutarli_30g` boş (`NaN`) kalır ve hata `TürAdı: ileti` olarak yazılır; adım / katman / neden / `hata` ALANLARI değişmez (bilgi sütunu kapı sonucunu etkilemez, K-12.11).
+- **İzleme listesi (`ilk11/izleme_listesi.yaml`, K-12.8):** kadro 50 (`takim`, `snapshot_id`, `form_puani` 0–100, `takim_hafta` YYYY-MM-DD) + 36 sabit referans satırı: mevcut listede `kol`/`kollar` içinde `oda` (18) ve `kontrol` (18) olan satırlar `referans_oda` / `referans_kontrol` olarak etiketlenir (`id`, `t0` korunur); taban / elle / havuz / cikarilan çıkar. Aynı adres tek satır. `id` yeni kadro üyesinde `K` + adresin ilk 10 hex'i, `t0` = snapshot günü.
 - `ilk11/<pazar>/snapshot.json` (`copytrade-kapi` dalı): `snapshot_id` (gövdenin kanonik JSON SHA-256'sı), `sema`
   (`ilk11-pazar-v1` ilk seçim | `ilk11-form-v1` form), `as_of` (Pazar 13:00 TSİ, ISO +03:00), `kaynak_surumu`, `adaylar[]`
   (`id`, `uygun`, `uygunluk_nedeni`, `alanlar`, `alan_kaynagi`, `kapi_puani` (oran), `gecerli_gozlem_suresi` (gün)), `kadro[]`
   (`id`, `takim`, `puan` 0–100). Formda ayrıca `form_puani` (0–100), `bu_pazar_gecerli`, `bu_pazar_aktif`, `onceki_pazar_aktif` (bool|null).
+  Form snapshot'ı (`ilk11-form-v1`) ayrıca `plan` (pazar_gecis çıktısı), `boslugu_dolduranlar` (K-12.6; bu hafta formdan çıkanlar aynı hafta geri alınmaz), `kadro_sonrasi`
+  (`[{id, grup, takim_hafta}]`; sonraki haftanın "önceki kadro"su) ve `uyari` taşır. `kaynak_surumu`: `izleme` (durum.json commit SHA + `uretildi`), `onceki_snapshot`,
+  `kapi` + `kapi_sonuc_sha256` (varsa), `ilk11_alanlar`, `kurallar`. `snapshot.json` adaylarda `id` = küçük harf trader ADRESİ. `akis.json`: `{deneme_sayisi, snapshot_id,
+  son_basarisiz_at, basarili}`. `ilk11_pazar` çıkış kodu: 0 başarı/bekle/tamamla; 1 girdi-kalite hatası (yalnız RAPOR, snapshot yok); 2 form yayımlandı ama kapı eski/yok.
 - **Kullanılmaz:** leaderboard `windowPerformances.roi` (payda yatırma/çekmeyle bozulur; acil kadroda 1805 = %180.500) ve leaderboard
   `accountValue`.
