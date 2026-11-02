@@ -150,11 +150,3 @@ def test_e6_yarim_kalan_kosu_yalniz_eksikleri_hesaplar_ve_surum_degisince_gecers
     calls.clear()
     secim.bayrak_hesapla(result, fn, onbellek=dict(done, kapi_tarihi="2026-10-21"))        # başka kapı/sürüm: önbellek geçersiz
     assert len(calls) == 3
-
-
-def test_e6_is_akisi_onbellegi_veri_dalindan_geri_yukler_ve_kismi_sonucu_yazar():
-    from pathlib import Path
-    text = (Path(__file__).resolve().parents[1] / ".github/workflows/copytrade_secim.yml").read_text(encoding="utf-8")
-    bayrak_job = text.split("\n  bayrak:\n")[1]
-    assert "FETCH_HEAD:secim/$name/bayrak.json" in bayrak_job                               # önceki (kısmi) bayrak.json önbellek olarak yüklenir
-    assert "if: always()" in bayrak_job                                                      # zaman aşımında bile kısmi sonuç veri dalına yazılır

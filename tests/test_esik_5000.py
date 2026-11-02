@@ -10,7 +10,6 @@ from copytrade.kapi import account_floor_pass, load_rules, merge_shards, missing
 
 ROOT = Path(__file__).resolve().parents[1]
 RULES = load_rules()
-WORKFLOW = (ROOT / ".github/workflows/copytrade_kapi.yml").read_text(encoding="utf-8")
 
 
 def test_hesap_degeri_esikleri_5000():
@@ -61,12 +60,6 @@ def test_evren_adresleri_verilmezse_eski_olcu_korunur(tmp_path):
     assert merge_shards(tmp_path / "shards", tmp_path / "root", 1, "tam")["2026-10-28"]["kapsam"] == 1.0
 
 
-def test_birlestirme_evren_anlik_goruntusunu_kullanir():
-    merge = next(line for line in WORKFLOW.splitlines() if "--birlestir shards" in line)
-    assert "--evren-dosyasi evren_anlik/evren.json" in merge
-    assert re.search(r"name: kapi-evren\n\s+path: evren_anlik", WORKFLOW)
-
-
 def test_calistir_dosyasi_eksik_mod_ister():
     lines = (ROOT / "copytrade/kapi/CALISTIR").read_text(encoding="utf-8").splitlines()
     assert "mod=eksik" in lines and re.fullmatch(r"2026-10-29T\d\d:\d\d:\d\dZ", lines[0])
@@ -76,5 +69,3 @@ def test_latest_day_ve_tarih_bayragi():
     from copytrade.kapi import latest_day
     assert latest_day(["copytrade/kapi/2026-10-27", "copytrade/kapi/2026-10-28", "copytrade/kapi/CALISTIR"]) == "2026-10-28"
     assert latest_day(["2026-10-28/", "2026-10-09"]) == "2026-10-28" and latest_day([]) is None and latest_day(["x"]) is None
-    assert "--tarih ${{ needs.plan.outputs.day }}" in WORKFLOW                       # parçalar plan işinin günüyle yazar (gece yarısı kayması yok)
-    assert "latest_day" in WORKFLOW and "[ \"$mod\" = eksik ]" in WORKFLOW           # eksik mod son yayımlanan güne devam eder

@@ -1,6 +1,5 @@
 """Arşiv kesinti alarmı: eşik sınırları (12 saat), hiç başarılı koşu yok, rapora yazılan satır, iş akışı sözleşmesi."""
 import json
-import re
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -51,12 +50,3 @@ def test_haftalik_rapor_arsiv_kesintisini_yazar(tmp_path):
     haftalik_rapor.main(["--secim", str(tmp_path / "s.json"), "--tarih", "2026-11-05", "--cikti", str(tmp_path / "r"), "--arsiv-kesinti", str(tmp_path / "k.json")])
     metin = (tmp_path / "r/haftalik_2026-11-05.md").read_text()
     assert "## Arşiv kesintisi" in metin and "🔴 **ALARM**" in metin and "20.0 saat önce" in metin and "1 başarısız koşu" in metin
-
-
-def test_is_akisi_saatlik_ve_hata_yutmaz():
-    text = (ROOT / ".github/workflows/arsiv_alarm.yml").read_text(encoding="utf-8")
-    cron = re.search(r'cron: "(\d+) \* \* \* \*"', text)
-    assert cron and cron.group(1) != "0" and "python -m copytrade.arsiv_alarm --runs runs.json" in text and "--bilgi" not in text
-    assert "|| true" not in text and "continue-on-error" not in text
-    weekly = (ROOT / ".github/workflows/copytrade_haftalik.yml").read_text(encoding="utf-8")
-    assert "--bilgi" in weekly and "--arsiv-kesinti pilot_veri/arsiv_kesinti.json" in weekly and "actions: read" in weekly

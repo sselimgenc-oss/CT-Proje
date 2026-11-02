@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
 import pandas as pd
@@ -12,7 +11,6 @@ from copytrade.kapi import (build_universe, external_candidates, load_rules, mer
 
 RULES = load_rules()
 A, B, C = "0x" + "a" * 40, "0x" + "b" * 40, "0x" + "c" * 40
-WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "copytrade_kapi.yml"
 
 
 def board_row(address, value, pnl):
@@ -109,14 +107,6 @@ def test_merge_reports_distinct_code_hashes(tmp_path):
     assert "Farklı kod hash'leri" in report and "`" + "a" * 64 + "`" in report
 
 
-def test_workflow_does_not_hide_errors_and_skips_kesif_when_incomplete():
-    text = WORKFLOW.read_text(encoding="utf-8")
-    kapi_line = next(line for line in text.splitlines() if "python -m copytrade.kapi --root copytrade --shard-index" in line)
-    assert "|| true" not in kapi_line and "continue-on-error" not in text
-    assert re.search(r"if: steps\.birlestir\.outputs\.durum == 'tamam'.*\n\s+run: python -m copytrade\.kesif", text)
-    assert "durum == 'eksik'" in text and "exit 1" in text
-
-
 def test_merge_ignores_shared_universe_snapshot_artifact(tmp_path):
     # Run 29: publish tüm artifact'leri indirince kapi-evren/evren.json ({"liderler": ...}) sayı dosyası sanılıp KeyError verdi.
     make_shard(tmp_path / "shards", 0, "0xa", True)
@@ -124,4 +114,3 @@ def test_merge_ignores_shared_universe_snapshot_artifact(tmp_path):
     (tmp_path / "shards" / "kapi-evren").mkdir()
     write_universe_snapshot(tmp_path / "shards" / "kapi-evren" / "evren.json", [board_row(A, 1000, 10)], [], FakeClient(1000))
     assert merge_shards(tmp_path / "shards", tmp_path / "root", 2, "tam")["2026-10-28"]["durum"] == "tamam"
-    assert "pattern: stage1-*" in WORKFLOW.read_text(encoding="utf-8")

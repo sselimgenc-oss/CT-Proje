@@ -449,7 +449,7 @@ def check_shape(actual, examples):
 def test_nonempty_status_matches_example_keys_types_and_event_variants(tmp_path):
     root, client = project(tmp_path), Client()
     result = m.run(root, root / 'out', client, NOW, symbols={'BTCUSDT'})
-    example = json.loads((ROOT / 'izleme/ornek_durum.json').read_text())
+    example = json.loads((ROOT / 'tests/fixtures/ornek_durum.json').read_text())
     check_shape(result, [example])
     assert result['traderlar'][0]['pozisyonlar'][0]['binance'] == 'var'
     assert result['traderlar'][0]['kapi']['sinif'] == 'Yetersiz'
@@ -517,7 +517,7 @@ def test_current_two_trader_list_runs_offline(tmp_path):
     result = m.run(tmp_path, tmp_path / 'out', Client(), NOW)
     expected = [row['id'] for row in m.load_list(ROOT / 'copytrade/izleme_listesi.yaml')]
     assert [t['id'] for t in result['traderlar']] == expected
-    example = json.loads((ROOT / 'izleme/ornek_durum.json').read_text())
+    example = json.loads((ROOT / 'tests/fixtures/ornek_durum.json').read_text())
     check_shape(result, [example])
     assert all(t['sanal_kopya']['bakiye_usd'] == 1000 for t in result['traderlar'])
 
