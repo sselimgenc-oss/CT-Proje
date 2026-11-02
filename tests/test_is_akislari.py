@@ -76,6 +76,12 @@ def test_zamanlamalar_sartnameyle_ayni():
     assert toplam <= 4 * 60 + 40 and yukle("copytrade_kapi.yml")["jobs"]["stage1"]["timeout-minutes"] <= 120 and yukle("copytrade_kapi.yml")["jobs"]["publish"]["timeout-minutes"] <= 90
 
 
+def test_izleme_ilk_okuma_icin_timeout_300_dk_kuyruk_bekler():
+    wf = yukle("izleme.yml")
+    assert wf["jobs"]["izleme"]["timeout-minutes"] == 300 <= 360                               # 86 trader ilk okuma ≈ 192 dk (ölçüm); GitHub sınırı 360
+    assert wf["concurrency"] == {"group": "copytrade-izleme", "cancel-in-progress": False}      # saatlik koşular uzun ilk koşunun arkasında bekler
+
+
 def test_worker_telegram_adimlari_geri_gelmedi_k13():
     for ad in ISLER:
         metin = (WF / ad).read_text(encoding="utf-8")

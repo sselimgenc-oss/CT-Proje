@@ -23,8 +23,9 @@ jobs:
   izleme:
     runs-on: ubuntu-latest
     # Sürekli bütçe ≈ 55 dk (91 trader ≈ 45 dk). İLK koşu her yeni kadro üyesi için 90 günlük dolum geçmişini çeker ve uzundur; yarıda kesilirse durum
-    # yayımlanmaz ve sonraki koşu baştan dener, bu yüzden üst sınır geniş tutuldu.
-    timeout-minutes: 150
+    # yayımlanmaz ve sonraki koşu baştan dener, bu yüzden üst sınır geniş tutuldu: 86 trader ilk okuma ≈ 192 dk (deneme ölçümü, PR #468); GitHub sınırı 360 dk.
+    # `concurrency` (cancel-in-progress: false) sayesinde uzun ilk koşu sırasında saatlik koşular kuyrukta bekler.
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
         with:
