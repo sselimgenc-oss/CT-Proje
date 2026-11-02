@@ -162,3 +162,7 @@ Görev: `docs/GOREV_D_YOLU.md`.
   (örnek ekran `docs/img/pano_ornek_2026-11-02.webp`). Sıra değişmez: önce Faz 1 (veri, trader seçimi, motor) tamamlanır.
 - Lider, kullanıcının önemli kararları (para/cüzdan/anahtar, canlıya geçiş, eşik/strateji kilidi, silme) dışında Faz 2 ve Faz 3 işlerini
   kullanıcıdan tetik beklemeden sürdürür; model kullanım sınırına takılınca sınır açıldığında kaldığı yerden devam eder.
+
+### K‑16. Çay Ocağı odası kaldırıldı (kullanıcı kararı 2026-11-02)
+- Faz 2 oda listesinden "Çay Ocağı" (yalnız dekoratif oda) çıkarıldı; oda sayısı 14 → 13. Diğer odaların görev/yetki kararları değişmedi
+  (yalnız numaraları kaydı).
