@@ -1,0 +1,3 @@
+# Sunucudaki anlik dinleyici (copytrade/dinleyici.py) icin asgari bagimliliklar: pandas / numpy YOK.
+websockets==15.0.1
+PyYAML==6.0.3
