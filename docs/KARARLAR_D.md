@@ -172,3 +172,10 @@ Görev: `docs/GOREV_D_YOLU.md`.
 - Altyapı: küçük sunucu (VPS), kullanıcı açar. Dry-run aşamasında sunucuda anahtar/cüzdan yok.
 - İşler ve sıra: `docs/FAZ1_ANLIK_KOPYA.md` (H1–H5). Seçim gecikmesinin değişmesi (H3) ve canlıya geçiş eşikleri (H4) ayrı kullanıcı kararıdır.
 - Lider görevi (kullanıcı 2026-11-02): yalnız söyleneni yapmak değil, canlıda kâr için yönlendirmek; katılmadığı kararda gerekçeyle itiraz eder.
+
+### K‑18. Karar yetkisi lidere devredildi (kullanıcı kararı 2026-11-02: "en son karar aşamasında beni beklersin, diğer kararları sen ver")
+- Lider; seçim/strateji ayarları (H3 dahil), eşik önerilerinin uygulanması, iş sırası ve teknik kararları kullanıcıyı beklemeden verir.
+  Strateji/eşik değişikliği yine yan yana (kural 6) yapılır ve `KARARLAR_D.md`'ye gerekçesiyle "lider kararı (K‑18)" diye yazılır.
+- Kullanıcıda kalan: **canlıya geçiş (son karar)**, para/hesap/anahtar/cüzdan, sunucu hesabı. Lider ayrıca geri alınamaz veri silmeyi
+  kullanıcıya sorar. `AGENTS.md` değişmez kuralları (gizli bilgi yok, emir yok, testler zayıflatılmaz, main'e doğrudan push yok) aynen geçerli.
+- Kontroller: model sınırı bitince 05:05 ve 10:05 TR'de kaldığı yerden devam.
