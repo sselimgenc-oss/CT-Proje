@@ -385,3 +385,38 @@ Sunucuda yeniden bağlanmada ~92 adresin `userFillsByTime` dolgusu art arda yap�
 **Hata türü** = hatanın SINIFI (`hata_turu`): `HTTP <kod>` (örn. `HTTP 429`), `Timeout`, `Ağ (URLError)`, `Geçersiz yanıt`, ya da istisna sınıf adı. **Adres, URL ve sağlayıcı metni hiçbir yerde yazılmaz** (`ozet.json` adres içeremez, testli).
 **Journal:** her REST hatası (yeniden denemeler dahil) stderr'e TEK satır: `UYARI REST hatası kaynak=<dolgu|hakem|baslangic_poz> trader=<takma ad> tur=<hata türü>` (`journalctl -u sg-dinleyici | grep "UYARI REST"`).
 
+## 10. `pano.json` (Faz 2 pano; GitHub Pages `pano.json`, üretici `copytrade/pano_veri.py`, iş akışı `.github/workflows/pano.yml`) — v1.22
+Girdiler (yalnız okunur): `copytrade-izleme:izleme/durum.json`, `copytrade-kapi:ilk11/izleme_listesi.yaml` (alan `takim`: `ilk11` | `yedek11` | `paf`), `copytrade-kapi:ilk11/<son tarih>/snapshot.json` (`kadro[].takim`).
+Biçim `pano/ornek_veri.json` ile aynıdır; **panonun JS'i hiçbir şey hesaplamaz** (AGENTS kural 7). Motorda olmayan alan **`null`** (pano "—" gösterir); eksik alan sıfır sayılmaz, uydurulmaz: bir toplamın bir bileşeni `null` ise toplam `null`.
+Oranlar kesirdir (0,012 = %1,2); zaman UTC; üyelik yalnız `takim` alanından (`kol` / `kollar` kullanılmaz). Takımlar sabit sırayla: `İlk 11`, `Yedek 11`, `PAF`.
+
+**İki ölçek (ekranda karışmasın diye `olcek` bloğunda yazılıdır):**
+- **Sabit tutar (v3)** = `sanal_kopya_v3`, trader başına 1.000 $ sanal kopya (kopya hesabının kendi değerine göre sabit $ tutarla açılış): `kasa`, `seriler`, `metrik`, `kapanan`, `traderlar`. **Takım değeri üyelerin TOPLAMIDIR** (her üye 1.000 $ ile başlar): `kasa.baslangic_usd` = 1.000 × veri veren üye sayısı.
+- **Trader hesabına ORANLI 1.000 $** (v1/v2 ölçeği) = yalnız `acik` (açık işlemler) ve ona bağlı `ozet` alanları: ölçek = 1.000 / `hesap_degeri` (trader hesap değeri, $). Açık kopya pozisyonu motorda v3 sabit tutarıyla listelenmediği için (`kapanan_islemler`: "açık işlem listelenmez") açık satırlar trader pozisyonundan bu ölçekle türetilir. İki ölçek toplamda uzlaşmaz (ör. `kasa.bakiye_usd` v3, `acik_kz_usd` oranlı).
+
+| Alan | Birim / anlam |
+|---|---|
+| `uretildi` | kaynak `durum.json`'un üretim zamanı (UTC ISO); pano bunu 2 saatten eskiyse sarı uyarıyla gösterir |
+| `tazelik` | `{kaynak_uretildi, pano_uretildi (UTC), yas_dk (dk, pano_uretildi − kaynak_uretildi), esik_dk (120), bayat (bool: yas_dk > esik_dk; kaynak zamanı yoksa true)}` |
+| `dinleyici` | `null` (sunucunun veri yazma yolu yok) |
+| `takimlar[].kasa.baslangic_usd / bakiye_usd / degisim_usd` | $, v3 ölçeği, üye toplamı (`sanal_kopya_v3.baslangic_usd`, `bakiye_usd`); `degisim_usd` = bakiye − başlangıç |
+| `kasa.degisim_oran` | oran = `degisim_usd` / `baslangic_usd` |
+| `kasa.egri` | `[[UTC ISO gün başı, $]]`, son 30 gün: üyelerin `sanal_kopya_v3.egri` günlük değerlerinin toplamı, yalnız TÜM üyelerde değeri olan günler (eksik gün için değer uydurulmaz) |
+| `ozet.nakit_usd`, `islem_basi_usd` | `null` (motorda yok: v3 nakit/teminat ayrımı ve tek işlem tutarı yayımlanmaz) |
+| `ozet.acik_islem` | adet = `acik` satır sayısı (oranlı ölçek, trader pozisyonları) |
+| `ozet.acik_teminat_usd` / `acik_kz_usd` | $, oranlı ölçek: `acik[].teminat_usd` / `kz_usd` toplamı (TOPLAM satırı ile aynı) |
+| `ozet.bugun_acilan` / `bugun_kapanan` | adet; "bugün" = `uretildi` (kaynak) tarihinin UTC günü. Açılan = bugün açılan `acik` + bugün açılıp bugün/sonra kapanan işlemler (kırpılmış `kapanan_islemler`); kapanan = `kapanis` bugün olanlar |
+| `ozet.son24_islem` / `son24_kazanma_orani` | adet / oran: `kapanis` ∈ (`uretildi` − 24 sa, `uretildi`] olan kapanmış işlemler; kazanma = `sonuc_usd` > 0 (işlem yoksa oran `null`) |
+| `ozet.kadro_dolu` / `kadro_toplam` | adet: `durum.json`'da geçerli v3 verisi olan üye (kopyası henüz başlamamış olanlar dahil) / snapshot `kadro`'da o takımın üye sayısı (snapshot yoksa `null`) |
+| `metrik.bugun_oran` / `hafta_oran` / `ay_oran` | oran: `kasa.egri` son gün / (1, 7, 30 gün önceki gün) − 1; o gün seride yoksa `null` (komşu günle yaklaşıklama yok) |
+| `metrik.toplam_oran` | oran = `kasa.degisim_oran` |
+| `metrik.maruziyet_oran` | oran = `acik_teminat_usd` / `kasa.bakiye_usd` (iki ölçek karışık: bilgi amaçlı) |
+| `metrik.kazanma_orani`, `kar_faktoru`, `ort_kazanc_oran`, `ort_kayip_oran`, `beklenti_oran`, `islem_sayisi` | `durum.json`'daki (KIRPILMIŞ, §`kapanan_islemler`) geçerli kapanmış işlemlerden: kazanma = `sonuc_usd` > 0 payı; kâr faktörü = Σ kazanç $ / Σ zarar $ (zarar yoksa `null`); ort. kazanç/kayıp = kazanan/kaybeden işlemlerin `getiri` ortalaması; beklenti = tüm `getiri` ortalaması; `islem_sayisi` = işlem adedi (tam geçmiş değil) |
+| `seriler.bakiye` | `[[gün, $]]` = `kasa.egri`; `kumulatif_kz` = bakiye − başlangıç ($); `dusus` = bakiye / zirve − 1 (oran, ≤ 0); `gunluk_kz` = bakiye / önceki gün bakiye − 1 (oran) |
+| `traderlar[]` | `ad` (`takma_ad`), `islem` (adet), `kazanma_orani` (oran), `net_oran` (oran = `sanal_kopya_v3.toplam`), `son_islem` (UTC ISO, son `kapanis`) |
+| `acik[]` | `coin`, `yon`, `kaldirac` (x), `trader` (`takma_ad`), `acilis` (UTC ISO), `giris` ($/coin), `buyukluk_usd` = trader büyüklüğü × ölçek ($), `teminat_usd` = `buyukluk_usd` / `kaldirac` ($), `kz_usd` = trader anlık K/Z × ölçek ($), `kz_oran` = `kz_usd` / `teminat_usd` (oran); `son` (son fiyat) ve `likidasyona_uzaklik_oran` motorda yok → `null`. En yeni açılış önce |
+| `kapanan[]` | son 20 geçerli işlem (kapanış sırasıyla, en yeni önce), v3 ölçeği: `coin`, `acilis`/`kapanis` (UTC ISO), `kz_usd` = `sonuc_usd` ($, maliyet + funding dahil), `kz_oran` = `getiri`, `ana_para_usd` = `sonuc_usd` / `getiri` ($, açılan toplam tutar), `neden`: `trader` → `trader_kapatti`, `zarar_kes` → `stop`, `likidasyon` → `tasfiye`, `kar_al` → `null` (panoda karşılığı yok); `yon` ve `kaldirac` motorda yok → `null` |
+
+**Başlamamış üye:** kopya `t0`'da başlar. `t0` > `uretildi` tarihi olan üyenin pozisyonları kopya işlemi değildir; o üye `kasa`, `acik`, `kapanan`, `ozet`, `metrik`, `seriler` ve `traderlar` toplamlarına GİRMEZ (yalnız `kadro_dolu`'ya sayılır). Takımda toplama giren üye yoksa tüm bu alanlar `null` / boş liste.
+
+Gizlilik: dosyada API anahtarı, token, URL ya da sunucu IP'si yoktur (testle denetlenir); trader adresleri yayımlanmaz, yalnız 4 haneli `takma_ad`.

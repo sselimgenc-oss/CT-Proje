@@ -1,0 +1,62 @@
+name: Pano yayını (GitHub Pages)
+
+# izleme.yml başarıyla bitince ve elle. `pano.json` motor çıktılarından (veri dalları) `copytrade/pano_veri.py` ile üretilir; pano/ dosyalarıyla birlikte Pages'e yayımlanır.
+# Anahtar / secret YOK: yalnız herkese açık veri dalları okunur. Yayımlanan dosyalar: index.html, pano.js, pano.css, pano.json (ornek_veri.json yayımlanmaz).
+on:
+  workflow_run:
+    workflows: ["Copy trade izleme (2 saatte bir)"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pano-pages
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+jobs:
+  yayin:
+    # izleme başarısızsa eski (bayat) pano yerinde kalır; pano 2 saatten eski veriyi kendisi uyarıyla gösterir.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Motor çıktılarını veri dallarından al
+        run: |
+          mkdir -p veri/ilk11
+          git fetch --depth=1 origin copytrade-izleme copytrade-kapi
+          git show origin/copytrade-izleme:izleme/durum.json > veri/durum.json
+          git show origin/copytrade-kapi:ilk11/izleme_listesi.yaml > veri/izleme_listesi.yaml
+          son=$(git ls-tree -r --name-only origin/copytrade-kapi | grep -E '^ilk11/[0-9]{4}-[0-9]{2}-[0-9]{2}/snapshot\.json$' | sort | tail -n 1 || true)
+          if [ -n "$son" ]; then mkdir -p "veri/$(dirname "$son")"; git show "origin/copytrade-kapi:$son" > "veri/$son"; else echo "snapshot.json yok; kadro_toplam null olur." >&2; fi
+      - name: pano.json üret
+        run: python -m copytrade.pano_veri --durum veri/durum.json --liste veri/izleme_listesi.yaml --ilk11 veri/ilk11 --cikti pano.json
+      - name: Site dizinini hazırla
+        run: |
+          mkdir -p site
+          cp pano/index.html pano/pano.js pano/pano.css site/
+          cp pano.json site/pano.json
+          # gizlilik: sunucu IP'si / anahtar yayımlanan dosyalarda yer almaz
+          if grep -rEn '([0-9]{1,3}\.){3}[0-9]{1,3}' site/pano.json; then echo "pano.json içinde IP benzeri metin var" >&2; exit 1; fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

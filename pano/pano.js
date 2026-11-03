@@ -4,7 +4,7 @@
  * HTML kaçışı, dokunmatik ipucu, HTML eksen yazıları ve kesin veri doğrulaması içerir.
  */
 
-const VERI_URL = 'ornek_veri.json';
+const VERI_URL = 'pano.json';   // pano_veri.py çıktısı (yerel deneme için ornek_veri.json kullanılabilir)
 
 // Durum değişkenleri
 let panoVerisi = null;
