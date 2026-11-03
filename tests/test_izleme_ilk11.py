@@ -86,13 +86,14 @@ def test_run_ilk11_form_ham_ve_gecerli_saat_yayimlanir(tmp_path):
     assert bir['hesap_degeri'] == 1000.0 and form['alan_kaynagi']['hesap'] == 'akil_sagligi_ihlali:1000'    # 5.000 $ altı: aralık dışı, kullanılmaz
     assert list(form['alanlar']) == ['golge', 'ay_roi', 'hafta_roi', 'hesap', 'dusus', 'kazanma', 'siklik', 'tutma', 'kaldirac', 'tutarli']
     assert form['alanlar']['siklik'] == 0.0 and form['dolu_alan'] == sum(v is not None for v in form['alanlar'].values())
-    assert bir['ilk11_gecerli_saat'] == {'baslangic': str(T0.date()), 'saat': 1, 'son_saat': '2026-10-27T12:00:00Z'}
-    # aynı saat içindeki ikinci koşu yeniden saymaz; sonraki saat sayar
-    assert m.run(root, root / 'out', client, NOW + pd.Timedelta(minutes=20))['traderlar'][0]['ilk11_gecerli_saat']['saat'] == 1
-    iki = m.run(root, root / 'out', client, NOW + pd.Timedelta(hours=1))['traderlar'][0]
-    assert iki['ilk11_gecerli_saat']['saat'] == 2 and iki['ilk11_form_ham']['pencere_bitis'] == '2026-10-27T13:00:00Z'
+    assert bir['ilk11_gecerli_saat'] == {'baslangic': str(T0.date()), 'saat': 2, 'son_saat': '2026-10-27T12:00:00Z'}
+    # aynı 2 saatlik kovadaki ikinci koşu yeniden saymaz (13:00 dahil); sonraki kova 2 saat ekler
+    assert m.run(root, root / 'out', client, NOW + pd.Timedelta(minutes=20))['traderlar'][0]['ilk11_gecerli_saat']['saat'] == 2
+    assert m.run(root, root / 'out', client, NOW + pd.Timedelta(hours=1))['traderlar'][0]['ilk11_gecerli_saat']['saat'] == 2
+    iki = m.run(root, root / 'out', client, NOW + pd.Timedelta(hours=2))['traderlar'][0]
+    assert iki['ilk11_gecerli_saat']['saat'] == 4 and iki['ilk11_form_ham']['pencere_bitis'] == '2026-10-27T14:00:00Z'
     motor = json.loads((root / 'out/motor.json').read_text())
-    assert motor['traderlar']['T1']['ilk11_gecerli_saat']['saat'] == 2             # kalıcı sayaç motor.json'da
+    assert motor['traderlar']['T1']['ilk11_gecerli_saat']['saat'] == 4             # kalıcı sayaç motor.json'da
 
 
 def test_gecerli_saat_takim_hafta_degisince_sifirlanir_ve_hatali_okuma_saymaz(tmp_path):
@@ -106,11 +107,11 @@ def test_gecerli_saat_takim_hafta_degisince_sifirlanir_ve_hatali_okuma_saymaz(tm
     with pytest.raises(RuntimeError, match='Tüm trader'):                               # tek trader hatalı -> yayın yok, sayaç ilerlemez
         m.run(root, root / 'out', Bozuk(), NOW + pd.Timedelta(hours=1))
     saved = json.loads((root / 'out/motor.json').read_text())['traderlar']['T1']['ilk11_gecerli_saat']
-    assert saved['saat'] == 1
+    assert saved['saat'] == 2
     yeni = {**satir, 'takim_hafta': '2026-11-01'}
     (root / 'copytrade/izleme_listesi.yaml').write_text(yaml.safe_dump({'traderlar': [yeni]}))
     sonuc = m.run(root, root / 'out', client, NOW + pd.Timedelta(hours=2))['traderlar'][0]['ilk11_gecerli_saat']
-    assert sonuc == {'baslangic': '2026-11-01', 'saat': 1, 'son_saat': '2026-10-27T14:00:00Z'}
+    assert sonuc == {'baslangic': '2026-11-01', 'saat': 2, 'son_saat': '2026-10-27T14:00:00Z'}
 
 
 def test_liste_parametresi_alternatif_listeyi_okur(tmp_path):
@@ -133,3 +134,14 @@ def test_form_ham_hatasi_izleme_okumasini_dusurmez(tmp_path, monkeypatch):
     root = project(tmp_path)
     trader = m.run(root, root / 'out', Client(), NOW)['traderlar'][0]
     assert trader['gecerli'] is True and trader['ilk11_form_ham'] == {'hata': "'bozuk'"}
+
+
+def test_gecerli_saat_24_saatte_12_kosu_24_saat_ayni_kovada_bir_kez_k18():
+    """Altın örnek (K-18): izleme 2 saatte bir. 24 saatte 12 koşu -> 24 saat (saat/24 = 1 gün); aynı 2 saatlik kovada ikinci koşu (20 dk sonra) yeniden saymaz."""
+    satir = {'id': 'T1', 't0': '2026-10-27'}
+    saved: dict = {}
+    for k in range(12):
+        sonuc = m.gecerli_saat_say(saved, satir, NOW + pd.Timedelta(hours=2 * k, minutes=23))
+    assert (sonuc['saat'], sonuc['saat'] / 24) == (24, 1.0)
+    assert m.gecerli_saat_say(saved, satir, NOW + pd.Timedelta(hours=22, minutes=43))['saat'] == 24        # aynı kova (22:00-24:00): tekrar sayılmaz
+    assert m.gecerli_saat_say(saved, satir, NOW + pd.Timedelta(hours=24, minutes=1))['saat'] == 26         # sonraki kova +2

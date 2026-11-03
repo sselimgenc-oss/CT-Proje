@@ -146,7 +146,7 @@ Pencere sütunu: **İ** = ilk seçim, **F** = haftalık form. "30g" = as_of'tan 
   (iki Pazar hareketsizlik kararı verilmez).
 - **`kapi_puani`** (eşitlik 2.) = son geçerli kapı satırında `secim.puan(row)`; yoksa `None` (→ 0, `_tie_key` mevcut davranışı).
 - **`gecerli_gozlem_suresi`** (eşitlik 3.) = trader'ın kadroya **son girişinden** (`takim_hafta`) as_of'a kadar `gecerli == true`
-  saatlik okuma sayısı / 24 (gün). **K‑18 notu:** izleme 2 saatte bir olunca sayaç (aynı saatte ikinci koşu saymaz) günde ~12 artar; `saat / 24` yarıya iner (yalnız sıralama eşitlik bozucu; yöntem değişmedi, lider kararı bekliyor). Kaynak: izleme `motor.json` saatlik geçerlilik sayacı (A2: `ilk11_gecerli_saat` alanı).
+  saatlik okuma sayısı / 24 (gün). **K‑18 notu:** sayaç anlamı (saat) korunur: her yeni `izleme_aralik_dk` kovası (UTC'ye hizalı 2 saat) `izleme_aralik_dk/60` saat ekler; aynı kovada ikinci koşu saymaz (24 saatte 12 koşu = 24 saat). Kaynak: izleme `motor.json` saatlik geçerlilik sayacı (A2: `ilk11_gecerli_saat` alanı).
 - Form ilk gerçek kadronun **ertesi** Pazarından itibaren hesaplanır (ilk Pazar yalnız ilk seçimdir; 60/40 hareketi yok).
 
 ### 4.2 `paper_sonuclari` (Yedek → İlk 11 kapısı girdisi)
