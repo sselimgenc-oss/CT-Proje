@@ -174,7 +174,7 @@ Pencere sütunu: **İ** = ilk seçim, **F** = haftalık form. "30g" = as_of'tan 
 
 | İş akışı | Ne yapar | Zaman (UTC) | Süre bütçesi | Çıktı (veri dalı yolu) |
 |---|---|---|---|---|
-| `copytrade_kapi.yml` (870974e^'dan geri getir) | CT-Kapı **tam** koşu, 32 parça + birleştirme + akıl sağlığı | Cumartesi 18:43 (`43 18 * * 6`; TSİ 21:43) + elle | plan 10 dk; parça ≤ 120 dk; birleştirme ≤ 90 dk; **toplam ≤ 4 sa** (Pazar 10:00'a ≥ 11 sa pay) | `copytrade-kapi:copytrade/kapi/<tarih>/{sonuc.csv, durum.json, RAPOR.md, evren.json}` |
+| `copytrade_kapi.yml` (870974e^'dan geri getir) | CT-Kapı **tam** koşu, 48 parça + birleştirme + akıl sağlığı | Cumartesi 18:43 (`43 18 * * 6`; TSİ 21:43) + elle | plan 10 dk; parça ≤ 120 dk; birleştirme ≤ 90 dk; **toplam ≤ 4 sa** (Pazar 10:00'a ≥ 11 sa pay) | `copytrade-kapi:copytrade/kapi/<tarih>/{sonuc.csv, durum.json, RAPOR.md, evren.json}` |
 | `izleme.yml` (870974e^'dan geri getir) | Saatlik `izleme_motoru` (kadro 50 + §7 K‑12.8 kapsamı); `sanal_kopya_v3.kapanan_islemler` ve `ilk11_form_ham` dahil | her saat :23 | ≤ 55 dk (K‑10: 91 trader ≈ 45 dk); `concurrency` ile çakışma yok | `copytrade-izleme:izleme/durum.json`; `motor.json` R2'de (`izleme/motor.json.gz`, eski düzen) |
 | `ilk11_pazar.yml` (yeni) | `pazar_akis` planına göre ilk seçim ya da form + `pazar_gecis` + uygulama | Pazar 10:07, 12:07, 14:07, 16:07, 18:07 (`7 10-18/2 * * 0`) + elle | ≤ 15 dk (HL çağrısı yok) | `copytrade-kapi:ilk11/<pazar-tarihi>/…` (§5.3) |
 | `ilk11_deneme.yml` (yeni, elle) | Kural 1 küçük gerçek veri denemesi (§5.6) | elle | ≤ 30 dk | Actions artifact (veri dalına yazmaz) |
