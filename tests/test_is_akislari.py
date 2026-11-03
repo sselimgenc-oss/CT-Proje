@@ -19,7 +19,7 @@ from test_izleme import ADDRESS, NOW, Client, project
 ROOT = Path(__file__).resolve().parents[1]
 WF = ROOT / ".github/workflows"
 SCRIPTS = ROOT / ".github/scripts"
-ISLER = ("copytrade_kapi.yml", "izleme.yml", "ilk11_pazar.yml", "ilk11_deneme.yml")
+ISLER = ("copytrade_kapi.yml", "izleme.yml", "ilk11_pazar.yml", "ilk11_deneme.yml", "dinleyici_deneme.yml")
 
 
 def yukle(ad: str) -> dict:
@@ -55,7 +55,7 @@ def test_hata_or_true_ile_orulmez_ve_main_e_yazilmaz():
 
 
 def test_veri_dali_yazimlari_yalniz_veri_dallarina():
-    hedef = {"copytrade_kapi.yml": None, "izleme.yml": None, "ilk11_pazar.yml": "copytrade-kapi", "ilk11_deneme.yml": None}
+    hedef = {"copytrade_kapi.yml": None, "izleme.yml": None, "ilk11_pazar.yml": "copytrade-kapi", "ilk11_deneme.yml": None, "dinleyici_deneme.yml": None}
     for ad in ISLER:
         for satir in (WF / ad).read_text(encoding="utf-8").splitlines():
             if "git push" in satir:

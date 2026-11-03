@@ -26,6 +26,7 @@ from copytrade.pozisyon_mutabakat import mutabakat, ozet
 from copytrade.olcut import _funding_amount, asset_class, calculate_metrics, closed_round_trips, perp_fills
 from copytrade.tarama import PublicClient, RateLimiter
 from copytrade import ilk11_alanlar
+from copytrade.izleme_liste import KOLLAR, STYLES, load_list, perp_dex_names  # noqa: F401 - m.load_list / m.KOLLAR / m.perp_dex_names dış API'si korunur
 from copytrade import oda_risk
 from copytrade import kopya_v2
 from copytrade import kopya_v3
@@ -34,8 +35,6 @@ from copytrade.kurallar import load_rules
 
 MINUTE = 60_000
 DAY = 86_400_000
-STYLES = {'intraday', 'swing'}
-KOLLAR = {'oda', 'kontrol', 'taban', 'elle', 'referans_oda', 'referans_kontrol', 'cikarilan', 'havuz'}
 
 
 def timestamp(value) -> pd.Timestamp:
@@ -57,48 +56,6 @@ def millis(value) -> int:
 
 def read_json(path: Path, default):
     return json.loads(path.read_text(encoding='utf-8')) if path.exists() else default
-
-
-def load_list(path: Path) -> list[dict]:
-    rows = yaml.safe_load(path.read_text(encoding='utf-8'))
-    if isinstance(rows, dict) and set(rows) == {'traderlar'}:
-        rows = rows['traderlar']
-    if not isinstance(rows, list):
-        raise ValueError('İzleme listesi YAML listesi olmalı (boş liste: []).')
-    ids, addresses = set(), set()
-    for row in rows:
-        required = {'id', 'adres', 'takma_ad', 'durum', 't0'}
-        optional = {'tarz', 'kol', 'kollar', 'secim', 'cikarilma_tarihi',
-                    'takim', 'snapshot_id', 'form_puani', 'takim_hafta'}
-        if not isinstance(row, dict) or not required <= set(row) or set(row) - required - optional:
-            raise ValueError('İzleme satırında yalnız id, adres, takma_ad, durum, t0 ve tanımlı isteğe bağlı alanlar olmalı.')
-        if 'kol' in row and row['kol'] not in KOLLAR:
-            raise ValueError('Geçersiz kol.')
-        if 'tarz' in row and row['tarz'] not in STYLES:
-            raise ValueError('Geçersiz tarz (intraday | swing).')
-        if 'takim' in row and row['takim'] not in {'ilk11', 'yedek11', 'paf'}:
-            raise ValueError('Geçersiz takım (ilk11 | yedek11 | paf).')
-        if 'snapshot_id' in row and (not isinstance(row['snapshot_id'], str) or not re.fullmatch(r'[0-9a-f]{64}', row['snapshot_id'])):
-            raise ValueError('Geçersiz snapshot_id.')
-        if 'form_puani' in row and (isinstance(row['form_puani'], bool) or not isinstance(row['form_puani'], (int, float)) or not math.isfinite(row['form_puani']) or not 0 <= row['form_puani'] <= 100):
-            raise ValueError('Geçersiz form_puani (0..100).')
-        if 'takim_hafta' in row and (not isinstance(row['takim_hafta'], str) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}', row['takim_hafta'])):
-            raise ValueError('Geçersiz takim_hafta (YYYY-MM-DD).')
-        if not isinstance(row['id'], str) or not re.fullmatch(r'[A-Za-z0-9_-]+', row['id']):
-            raise ValueError('Geçersiz trader id.')
-        if not isinstance(row['adres'], str) or not re.fullmatch(r'0x[0-9a-fA-F]{40}', row['adres']):
-            raise ValueError('Geçersiz halka açık trader adresi.')
-        if not isinstance(row['takma_ad'], str) or not row['takma_ad'].strip():
-            raise ValueError('Takma ad boş olamaz.')
-        if row['durum'] not in {'kopyala', 'izlemede', 'durdu'}:
-            raise ValueError('Geçersiz izleme durumu.')
-        row['t0'] = str(row['t0'])
-        if pd.isna(timestamp(row['t0'])):
-            raise ValueError('Geçersiz t0.')
-        if row['id'] in ids or row['adres'].lower() in addresses:
-            raise ValueError('Tekrarlanan trader id/adres.')
-        ids.add(row['id']); addresses.add(row['adres'].lower())
-    return rows
 
 
 def fill_key(fill: dict) -> str:
@@ -498,21 +455,6 @@ def delay_for_style(style: str, rules: dict | None = None) -> int:
     """Sanal kopya gecikmesi (dk): intraday 30, swing 120 (kurallar.yaml ``kopya_gecikme_dk``); scalp/bilinmiyor 30."""
     rules = rules or load_rules()
     return int(rules['kopya_gecikme_dk']['swing' if style == 'swing' else 'intraday'])
-
-
-def perp_dex_names(response: object) -> list[str]:
-    """Return every public HIP-3 dex name exactly once, in API order."""
-    if not isinstance(response, list):
-        raise ValueError('Geçersiz perpDexs yanıtı.')
-    names: list[str] = []
-    for dex in response:
-        if dex is None:
-            continue
-        if not isinstance(dex, dict) or not isinstance(dex.get('name'), str) or not dex['name']:
-            raise ValueError('Geçersiz perpDexs dex adı.')
-        if dex['name'] not in names:
-            names.append(dex['name'])
-    return names
 
 
 def clearinghouse_states(client: PublicClient, address: str, dexes: list[str]) -> list[dict]:
