@@ -1,4 +1,4 @@
-# Veri sözleşmesi — copy trade izleme (v1.17, 2026-11-03; v1.17 `olay_ozeti` + trader başına adil pay + olay arşivi (A4-2), v1.16 `mum_eksik` + negatif mum önbelleği (K-18), v1.15 `veri_durumu` + sağlık ışığı `bilinmiyor` (K-14), v1.14 İlk 11 hesap katmanı kodda (A2 PR-1: `ilk11_alanlar`, kapı bilgi sütunları, `kapanan_islemler`), v1.13 İlk 11 puan alanları (§6, tanım), v1.12 `sanal_kopya_v3` tasfiye/aşamalı çıkış (E3), v1.11 `sanal_kopya_v3` (E2 sabit tutar), v1.10 `sanal_kopya_v2.kapanis_nedenleri` (E3), v1.9 `sanal_kopya_v2`, v1.8 `gecikme.json` taze pencere, v1.7 `gecikme.json`, v1.6 `saglik_hatti`, v1.5 `kol`, v1.2 olay kimliği, v1.3 tarz, v1.4 veri geçerliliği ve karar gizliliği)
+# Veri sözleşmesi — copy trade izleme (v1.18, 2026-11-03; v1.18 dinleyici `risk` bloğu + `risk_kararlari.jsonl` (H5), v1.17 `olay_ozeti` + trader başına adil pay + olay arşivi (A4-2), v1.16 `mum_eksik` + negatif mum önbelleği (K-18), v1.15 `veri_durumu` + sağlık ışığı `bilinmiyor` (K-14), v1.14 İlk 11 hesap katmanı kodda (A2 PR-1: `ilk11_alanlar`, kapı bilgi sütunları, `kapanan_islemler`), v1.13 İlk 11 puan alanları (§6, tanım), v1.12 `sanal_kopya_v3` tasfiye/aşamalı çıkış (E3), v1.11 `sanal_kopya_v3` (E2 sabit tutar), v1.10 `sanal_kopya_v2.kapanis_nedenleri` (E3), v1.9 `sanal_kopya_v2`, v1.8 `gecikme.json` taze pencere, v1.7 `gecikme.json`, v1.6 `saglik_hatti`, v1.5 `kol`, v1.2 olay kimliği, v1.3 tarz, v1.4 veri geçerliliği ve karar gizliliği)
 
 sözleşmeye göre çalışır; alan eklemek/değiştirmek lider onayıyla `surum` artırılarak yapılır.
 
@@ -294,3 +294,31 @@ ya da izleme okuma zamanı (`veri_zamani`). Eksik = `null` → alan puanı 35. A
   son_basarisiz_at, basarili}`. `ilk11_pazar` çıkış kodu: 0 başarı/bekle/tamamla; 1 girdi-kalite hatası (yalnız RAPOR, snapshot yok); 2 form yayımlandı ama kapı eski/yok.
 - **Kullanılmaz:** leaderboard `windowPerformances.roi` (payda yatırma/çekmeyle bozulur; acil kadroda 1805 = %180.500) ve leaderboard
   `accountValue`.
+
+## 7. Dinleyici risk kapısı — DRY-RUN (v1.18, H5; `copytrade/risk_defter.py`, `copytrade/live_koruma.py`)
+**Emir, anahtar, cüzdan, imza YOK; yalnız karar kaydı.** Her satır/blokta `emir_gonderildi` = `false`. Sınırlar `kurallar.yaml` `risk_dry_run:` bloğundan (tek kaynak).
+Tüm tutarlar **notional $, 1.000 $ sanal kopya ölçeğinde** (trader hesabı DEĞİL); zaman UTC; fiyat $/coin; maliyet (taker/kayma) hesaba katılmaz.
+
+| Anahtar (`risk_dry_run`) | Değer | Birim / anlam |
+|---|---|---|
+| `referans_kasa_usd` | 1000 | $ sanal kopya kasası (v3 boyut eğrisi bu kasanın o anki değeriyle çalışır) |
+| `emir_tavan_usd` | 100 | $ tek emir notional tavanı |
+| `trader_tavan_usd` | 200 | $ trader başına açık brüt notional tavanı (yeni sınır; ret nedeni `trader_tavani`) |
+| `toplam_brut_tavan_usd` | 1500 | $ toplam açık brüt notional (1,5x referans) |
+| `gunluk_zarar_usd` | 30 | $ UTC gün başından beri toplam K/Z düşüşü; eşit ya da aşınca şalter |
+| `sinyal_tazelik_sn` | 10 | sn, dolum zamanı → karar anı (aşarsa `gec_sinyal`; tam 10 sn kabul) |
+| `dur_dosyasi` | `$STATE_DIRECTORY/DUR` | dosya varsa yeni giriş/ekleme reddedilir (`yeni_ekleme_durduruldu`), çıkış serbest |
+
+**Niyet kuralları (v3 ile aynı boyut):** yalnız `takim == ilk11` trader'lar için niyet üretilir (diğerleri `ilk11_disi` sayılır, yalnız ölçülür). Açılış tutarı `kurallar.sabit_tutar_egrisi` (defterle AYNI fonksiyon, `defter` yeniden dışa verir) × kopya hesabı değeri = `referans_kasa_usd` + gerçekleşen + gerçekleşmemiş (son görülen işlem fiyatı).
+Ekleme = kopya notional × (trader'ın eklediği / trader'ın önceki pozisyonu). Azaltma/kapatma = kopya pozisyonunun trader'ın kapattığı oranı; ters dönüşte `exit` + `open` (iki niyet). Çıkış sınırlardan muaftır; kopyada açık pozisyon yoksa `acik_pozisyon_yok`.
+**Miras pozisyon:** trader'ın zaten açık (kopyalanmamış) pozisyonuna eklemesi `miras_pozisyon` ile reddedilir; kapanışı `acik_pozisyon_yok`. Trader'ın dolum öncesi pozisyonu `startPosition`'dan (userFills / REST) alınır; `trades` kanalında YOK → o coin için ilk gözlemde trader **düz varsayılır** (`lider_pozisyon_varsayimi` sayar), sonra kümülatif izlenir. Snapshot / abonelik öncesi dolumlar yalnız bu izlemeyi besler (niyet yok, `snapshot_gozlem`).
+Günlük zarar şalteri **kilitlidir**: eşiğe değince UTC gün sonuna kadar (zarar geri dönse de) girişler `gunluk_zarar_limiti` ile reddedilir; UTC gün dönümünde baz sıfırlanır ve şalter açılır. Fiyatı olmayan dolum `fiyat_yok` ile reddedilir (tahmin yok). Aynı dolum iki kaynaktan gelirse (`{adres}:{tid}`) tek niyet. REST dolgusu geç gelir: girişleri `gec_sinyal` ile reddedilir, çıkışlar işlenir.
+
+### `ozet.json` → `risk` (saatlik özetle birlikte; sayaçlar çalışma başından beri KÜMÜLATİF, defter bellekte — yeniden başlatmada sıfırlanır)
+`niyet` (int), `kabul` (int), `ret` ({neden: adet}; bir karar birden çok neden taşıyabilir → toplam `niyet − kabul`'ten büyük olabilir), `acik_brut_usd` ($, açık kopya pozisyonlarının |miktar| × son fiyat toplamı), `gunluk_zarar_usd` ($, ≥ 0), `salter_tetiklendi` (bool), `dur_aktif` (bool), `ilk11_disi`, `gecersiz_dolum` (sıfır/negatif/eksik miktar ya da yön: niyet yok), `lider_pozisyon_varsayimi`, `snapshot_gozlem`, `acik_pozisyon` (adet), `emir_gonderildi` (`false`). `genel.risk_hata`: risk katmanında yakalanan hata (dinleme sürer).
+
+### `$STATE_DIRECTORY/risk_kararlari.jsonl` (adres YOK, takma ad)
+Günlük döner (UTC gün sınırında `risk_kararlari.<YYYY-MM-DD>.jsonl`), son 7 gün tutulur. Satır: `zaman` (karar anı, UTC ISO ms), `gun` (UTC `YYYY-MM-DD`), `trader` (takma ad), `coin`, `aksiyon` (`open|add|exit`), `kabul` (bool), `nedenler` ([str]), `notional_usd` ($; fiyat yokken niyet tutarı), `fiyat` ($/coin | null), `dolum_zamani` (UTC ISO ms), `gecikme_sn` (sn), `kaynak` (`trades|userFills|dolgu`), `dur_aktif` (bool), `emir_gonderildi` (`false`).
+
+### Liste alanı
+Dinleyici listesinde İlk 11 üyeliği `takim: ilk11` alanıyla gelir (`ilk11/izleme_listesi.yaml`, K-12.8; `izleme_liste.load_list` şeması). Pilot liste `copytrade/izleme_listesi.yaml`'da `takim` yoktur → risk kapısı niyet üretmez. Yalnız DENEME için `--risk-tum-liste` listedeki herkesi "ilk11 sayar".

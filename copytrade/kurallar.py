@@ -51,3 +51,17 @@ def evaluate(metrics: dict[str, Any], rules: dict[str, float | int] | None = Non
     if metrics.get("martingale_signal"):
         failures.append("martingale_signal")
     return ("aday", "") if not failures else ("elendi", ",".join(failures))
+
+
+def sabit_tutar_egrisi(rules: dict | None = None) -> Any:
+    """Hesap değerinden sabit işlem tutarı üreten eğriyi döndürür."""
+    rules = rules or load_rules()
+    ref_kasa = float(rules["sabit_tutar_ref_kasa_usd"])
+    ref_islem = float(rules["sabit_tutar_ref_islem_usd"])
+    us = float(rules["sabit_tutar_us"])
+    tavan = float(rules["sabit_tutar_tavan_kasa_usd"])
+
+    def tutar(hesap_usd: float) -> float:
+        e = max(1.0, min(float(hesap_usd), tavan))
+        return ref_islem * (e / ref_kasa) ** us
+    return tutar
