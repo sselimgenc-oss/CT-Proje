@@ -245,3 +245,10 @@ def test_run_tasinan_eski_yuk_okuma_hatasi_kalir_taze_okuma_tamam(tmp_path):
             return super().fills(address, start)
     sonuc = m.run(root, root / 'out', Yalniz9Saglam(), NOW + pd.Timedelta(hours=3))
     assert trader_of(sonuc, 'T1')['veri_durumu'] == 'okuma_hatasi' and trader_of(sonuc, 'T9')['veri_durumu'] == 'tamam'
+
+
+def test_uc_ozeti_altin_ornek():
+    """Elle: önce candleSnapshot 2/40, userFillsByTime 1/20; sonra candleSnapshot 5/130, userFillsByTime 1/20, portfolio 1/20 -> fark: candleSnapshot 3/90, portfolio 1/20 (userFillsByTime 0 -> yazılmaz); ağırlığa göre sıralı."""
+    once = {'candleSnapshot': [2, 40], 'userFillsByTime': [1, 20]}
+    simdi = {'candleSnapshot': [5, 130], 'userFillsByTime': [1, 20], 'portfolio': [1, 20]}
+    assert m.uc_ozeti(simdi, once) == 'candleSnapshot 3/90, portfolio 1/20' and m.uc_ozeti({}, {}) == '—'

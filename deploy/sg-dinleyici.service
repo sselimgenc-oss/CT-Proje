@@ -1,0 +1,23 @@
+[Unit]
+Description=SG anlik dinleyici (dry-run; emir, anahtar, cuzdan YOK)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sg
+WorkingDirectory=/home/sg/sg-arge
+ExecStart=/home/sg/sg-arge/.venv/bin/python -m copytrade.dinleyici calis --liste /home/sg/liste.yaml
+Environment=PYTHONUNBUFFERED=1
+# StateDirectory -> STATE_DIRECTORY=/var/lib/sg-dinleyici: ozet.json ve durum.json (yeniden baslama sayaci) buraya yazilir
+StateDirectory=sg-dinleyici
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ReadWritePaths=/var/lib/sg-dinleyici
+
+[Install]
+WantedBy=multi-user.target

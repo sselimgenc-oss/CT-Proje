@@ -229,7 +229,7 @@ ya da izleme okuma zamanı (`veri_zamani`). Eksik = `null` → alan puanı 35. A
 | `golge` | Kopya sonucu | oran; İ: trader hesabına oranlı defter neti; F: v3 işlem başı getirinin büzülmüş ortalaması (1.000 $ sanal kopya) | 200 g / 30 g | `secim.puan` (`gecikme_{kapi_gecikme_dk}dk_net`) / `golge_ozeti(sanal_kopya_v3.kapanan_islemler[].getiri)` | İ [−1, 10]; F [−1, 3] |
 | `ay_roi` | Aylık getiri (zaman ağırlıklı, yatırma/çekme hariç) | oran, trader hesabı | 30 g / 30 g | `portfolio.month` → `kapi.twr_chain` (kapı sütunu `ilk11_ay_roi`) / aynı | [−1, 10] |
 | `hafta_roi` | Haftalık getiri | oran, trader hesabı | 7 g / 7 g | `portfolio.week` → `twr_chain` (`ilk11_hafta_roi`) / aynı | [−1, 5] |
-| `hesap` | Hesap büyüklüğü | $, trader hesabı | anlık / anlık | `hesap_degeri_bugun` (ana + HIP-3 + spot USDC) / `traderlar[].hesap_degeri` (ana + HIP-3) | [5.000, 1e9] |
+| `hesap` | Hesap büyüklüğü | $, trader hesabı | anlık / anlık | `hesap_degeri_bugun` (ana + HIP-3 + spot USDC) / `traderlar[].hesap_degeri_toplam` (AYNI tanım: ana + HIP-3 + spot USDC; `kapi.spot_usdc`) | [5.000, 1e9] |
 | `dusus` | Aylık en büyük düşüş (düşük iyi) | oran, pozitif büyüklük (0,25 = %25) | 30 g / 30 g | `twr_chain` özsermayesi, `max(1 − e/cummax)` (`ilk11_dusus_30g`) / aynı | [0, 1] |
 | `kazanma` | Kazanan kapanmış işlem payı (ücret dahil net > 0) | oran | 365 g / 30 g | `olcut.closed_round_trips` (`kazanma_orani`) / aynı, kapanışı pencerede | [0, 1] |
 | `siklik` | Kapanmış işlem / gün | adet/gün | 365 g / 30 g | `gunluk_islem_sikligi` / pencere işlem sayısı ÷ 30 | [0, 200] |
@@ -244,6 +244,9 @@ ya da izleme okuma zamanı (`veri_zamani`). Eksik = `null` → alan puanı 35. A
   alan_kaynagi: {alan: str|null}, pencere_bitis: UTC ISO (okuma zamanı, `YYYY-MM-DDTHH:MM:SSZ`), dolu_alan: int}`. `dolu_alan` = akıl sağlığı
   SONRASI `null` olmayan alan sayısı (0–10). Dolum verisi alınamadıysa (`fills = None`) `kazanma/siklik/tutma/kaldirac` `null`; alındı ama
   pencerede kapanmış işlem yoksa `siklik = 0`, `kazanma/tutma = null`.
+- **`traderlar[].hesap_degeri_toplam` (v1.16, A2‑4):** $, trader hesabı ölçeği; ana + HIP-3 (`marginSummary.accountValue`) + spot USDC (`spotClearinghouseState`, yalnız USDC; kapının `hesap_degeri_bugun` ile AYNI tanım,
+  tek kod: `kapi.spot_usdc`). `hesap_degeri` (yalnız ana + HIP-3) olay `hesap_payi` ve mutabakat içindir, değişmedi. Spot okunamazsa `null` (`ilk11_form_ham.alanlar.hesap` = `null`, ihlal değil; trader düşmez);
+  hiç okunmamış trader'da `null`. Gerekçe: deneme 41477749941'de 0x0cd16f3f İ 14.405 $ ↔ F 4.352 $ idi (spot yoktu) ve F `hesap` 5.000 $ altı sayılıp ihlal oluyordu.
 - **Pencere kuralları (`ilk11_alanlar`):** pencere sonu = ilgili `portfolio` serisinin SON noktası (F'de ayrıca `pencere_bitis`). Getiri / düşüş
   zinciri `kapi.twr_chain` (Modified Dietz; yatırma-çekme getiri sayılmaz, sermaye ≤ 0 dönem 0 getiri): pencere = (son − N gün, son]; zincirin
   TABANI, `son − N gün` anında ya da ondan önceki SON noktadır (taban öncesi PnL sayılmaz); geçmiş pencereden kısaysa ilk nokta taban.

@@ -1,0 +1,51 @@
+name: Dinleyici deneme (gerçek ağ, GitHub runner)
+
+# H2 kural 1: dinleyici kodu gerçek Hyperliquid WebSocket / REST ile ilk kez burada denenir (sunucu kurulumundan ÖNCE). Adım 0 (5 dk) + kısa dinleme (15 dk).
+# NOT: runner IP'si (ABD/Azure) kullanıcının sunucusundan (SGP1) farklıdır; gecikme değerleri sunucuyu TEMSİL ETMEZ, protokol / sayaçlar / kaçan mantığı doğrulanır.
+# Hiçbir secret kullanılmaz; veri dallarına ve R2'ye YAZMAZ. Tetik: elle ya da `copytrade/dinleyici_deneme/CALISTIR` dosyasına push.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - copytrade/dinleyici_deneme/CALISTIR
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+jobs:
+  deneme:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dinleyici.txt
+      - name: Yalnız sunucu bağımlılıkları (pandas yok)
+        run: pip install -r requirements-dinleyici.txt
+      - name: Adım 0 (5 dk) - abonelik sınırı, trades users alanı
+        run: |
+          mkdir -p deneme
+          python -m copytrade.dinleyici adim0 --liste copytrade/izleme_listesi.yaml --cikti deneme --sure-sn 300
+      - name: Dinleme (15 dk) ve ozet.json
+        run: |
+          python -m copytrade.dinleyici calis --liste copytrade/izleme_listesi.yaml --cikti deneme --sure-sn 900
+          cat deneme/ozet.json
+      - name: Özet
+        if: always()
+        run: |
+          for f in deneme/adim0.json deneme/ozet.json; do
+            if [ -f "$f" ]; then { echo "### $f"; echo '```json'; cat "$f"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"; fi
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dinleyici-deneme
+          path: deneme
+          if-no-files-found: ignore

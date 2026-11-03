@@ -21,12 +21,13 @@ import pandas as pd
 import yaml
 
 from copytrade.defter import Market, copy_ledger
-from copytrade.kapi import (SLIPPAGE, TAKER, binance_availability, delayed_copy,
+from copytrade.kapi import (SLIPPAGE, TAKER, binance_availability, delayed_copy, spot_usdc,
                             write_binance_universe)
 from copytrade.pozisyon_mutabakat import mutabakat, ozet
 from copytrade.olcut import _funding_amount, asset_class, calculate_metrics, closed_round_trips, perp_fills
 from copytrade.tarama import PublicClient, RateLimiter
 from copytrade import ilk11_alanlar
+from copytrade.izleme_liste import KOLLAR, STYLES, load_list, perp_dex_names  # noqa: F401 - m.load_list / m.KOLLAR / m.perp_dex_names dış API'si korunur
 from copytrade import oda_risk
 from copytrade import kopya_v2
 from copytrade import kopya_v3
@@ -36,8 +37,6 @@ from copytrade.kurallar import load_rules
 MINUTE = 60_000
 DAY = 86_400_000
 NEGATIF_MUM_YENIDEN_MS = 6 * 60 * MINUTE      # eksik mum (coin, hedef) bu süre sonra yeniden denenir (K-18); kalıcı atlama yok
-STYLES = {'intraday', 'swing'}
-KOLLAR = {'oda', 'kontrol', 'taban', 'elle', 'referans_oda', 'referans_kontrol', 'cikarilan', 'havuz'}
 
 
 def timestamp(value) -> pd.Timestamp:
@@ -59,48 +58,6 @@ def millis(value) -> int:
 
 def read_json(path: Path, default):
     return json.loads(path.read_text(encoding='utf-8')) if path.exists() else default
-
-
-def load_list(path: Path) -> list[dict]:
-    rows = yaml.safe_load(path.read_text(encoding='utf-8'))
-    if isinstance(rows, dict) and set(rows) == {'traderlar'}:
-        rows = rows['traderlar']
-    if not isinstance(rows, list):
-        raise ValueError('İzleme listesi YAML listesi olmalı (boş liste: []).')
-    ids, addresses = set(), set()
-    for row in rows:
-        required = {'id', 'adres', 'takma_ad', 'durum', 't0'}
-        optional = {'tarz', 'kol', 'kollar', 'secim', 'cikarilma_tarihi',
-                    'takim', 'snapshot_id', 'form_puani', 'takim_hafta'}
-        if not isinstance(row, dict) or not required <= set(row) or set(row) - required - optional:
-            raise ValueError('İzleme satırında yalnız id, adres, takma_ad, durum, t0 ve tanımlı isteğe bağlı alanlar olmalı.')
-        if 'kol' in row and row['kol'] not in KOLLAR:
-            raise ValueError('Geçersiz kol.')
-        if 'tarz' in row and row['tarz'] not in STYLES:
-            raise ValueError('Geçersiz tarz (intraday | swing).')
-        if 'takim' in row and row['takim'] not in {'ilk11', 'yedek11', 'paf'}:
-            raise ValueError('Geçersiz takım (ilk11 | yedek11 | paf).')
-        if 'snapshot_id' in row and (not isinstance(row['snapshot_id'], str) or not re.fullmatch(r'[0-9a-f]{64}', row['snapshot_id'])):
-            raise ValueError('Geçersiz snapshot_id.')
-        if 'form_puani' in row and (isinstance(row['form_puani'], bool) or not isinstance(row['form_puani'], (int, float)) or not math.isfinite(row['form_puani']) or not 0 <= row['form_puani'] <= 100):
-            raise ValueError('Geçersiz form_puani (0..100).')
-        if 'takim_hafta' in row and (not isinstance(row['takim_hafta'], str) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}', row['takim_hafta'])):
-            raise ValueError('Geçersiz takim_hafta (YYYY-MM-DD).')
-        if not isinstance(row['id'], str) or not re.fullmatch(r'[A-Za-z0-9_-]+', row['id']):
-            raise ValueError('Geçersiz trader id.')
-        if not isinstance(row['adres'], str) or not re.fullmatch(r'0x[0-9a-fA-F]{40}', row['adres']):
-            raise ValueError('Geçersiz halka açık trader adresi.')
-        if not isinstance(row['takma_ad'], str) or not row['takma_ad'].strip():
-            raise ValueError('Takma ad boş olamaz.')
-        if row['durum'] not in {'kopyala', 'izlemede', 'durdu'}:
-            raise ValueError('Geçersiz izleme durumu.')
-        row['t0'] = str(row['t0'])
-        if pd.isna(timestamp(row['t0'])):
-            raise ValueError('Geçersiz t0.')
-        if row['id'] in ids or row['adres'].lower() in addresses:
-            raise ValueError('Tekrarlanan trader id/adres.')
-        ids.add(row['id']); addresses.add(row['adres'].lower())
-    return rows
 
 
 def fill_key(fill: dict) -> str:
@@ -538,21 +495,6 @@ def delay_for_style(style: str, rules: dict | None = None) -> int:
     return int(rules['kopya_gecikme_dk']['swing' if style == 'swing' else 'intraday'])
 
 
-def perp_dex_names(response: object) -> list[str]:
-    """Return every public HIP-3 dex name exactly once, in API order."""
-    if not isinstance(response, list):
-        raise ValueError('Geçersiz perpDexs yanıtı.')
-    names: list[str] = []
-    for dex in response:
-        if dex is None:
-            continue
-        if not isinstance(dex, dict) or not isinstance(dex.get('name'), str) or not dex['name']:
-            raise ValueError('Geçersiz perpDexs dex adı.')
-        if dex['name'] not in names:
-            names.append(dex['name'])
-    return names
-
-
 def clearinghouse_states(client: PublicClient, address: str, dexes: list[str]) -> list[dict]:
     """Read main perpetuals plus each HIP-3 dex; state responses are not interchangeable."""
     states = [client.info({'type': 'clearinghouseState', 'user': address}, weight=2)]
@@ -609,7 +551,7 @@ def unavailable_trader(root: Path, row: dict, error: Exception) -> dict:
             'kapi': gate_result(root, row['adres']),
             'saglik': {'isik': 'sari', 'nedenler': [f'veri hatası: {data_error_reason(error)}']},
             'form': {'skor': 0.0, 'getiri_30g': 0.0, 'getiri_90g': 0.0},
-            'hesap_degeri': 0.0, 'pozisyonlar': [], 'egri': [],
+            'hesap_degeri': 0.0, 'hesap_degeri_toplam': None, 'pozisyonlar': [], 'egri': [],
             'son_islem': {'coin': '', 'yon': '', 'acilis': '', 'kapanis': '', 'net_yuzde': 0.0},
             'veri_durumu': 'okuma_hatasi', 'veri_durumu_neden': data_error_reason(error), 'mum_eksik': {'hedef': 0, 'onbellekten': 0},
             'sanal_kopya': {'baslangic_usd': 1000, 'bakiye_usd': 1000.0, 'getiri': 0.0, 'dusus': 0.0,
@@ -813,9 +755,14 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
         last_trade = {'coin': last['coin'], 'yon': 'long' if float(ending.get('startPosition', 0)) > 0 else 'short',
                       'acilis': iso(last['open_time']) if last['open_time'] is not None else '',
                       'kapanis': iso(last['close_time']), 'net_yuzde': last['net_pnl'] / notional if notional else 0.0}
+    try:    # İlk 11 `hesap` (İ ile AYNI tanım, kural 7): ana + HIP-3 (marginSummary) + spot USDC; spot okunamazsa alan eksik (trader düşmez)
+        hesap_toplam = account + spot_usdc(client, address)
+    except Exception:  # noqa: BLE001 - spot okuma hatası yalnız `hesap` alanını eksik bırakır (K-14: tek eksik trader'ı düşürmez)
+        hesap_toplam = None
     veri_durumu, veri_durumu_neden = veri_durumu_belirle(account, paper, paper_v3, len(eksik_mum), sorted(open_copy_coins(actions) - set(marks)),
                                                            sum(1 for e in eksik_mum if e.get('onbellek')))
     trader = {**{k: v for k, v in row.items() if k != 'tarz'}, 'tarz': style, 'veri_zamani': iso(now), 'gecerli': True,
+              'hesap_degeri_toplam': hesap_toplam,
               'veri_durumu': veri_durumu, 'veri_durumu_neden': veri_durumu_neden,
               'mum_eksik': {'hedef': len(eksik_mum), 'onbellekten': sum(1 for e in eksik_mum if e.get('onbellek'))},
               'kapi': gate_result(root, address), 'saglik': light,
@@ -830,7 +777,7 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
         trader['veri_kalitesi'] = {'mutabakat': mutabakat_raporu(fills, states, now, onceki_hesap_degeri=saved.get('son_hesap_degeri'), hesap_degeri=account)}
     # İlk 11 haftalık form ham alanları (tek hesap yeri: ilk11_alanlar); hata trader'ı düşürmez, açıkça yazılır.
     try:
-        trader['ilk11_form_ham'] = ilk11_alanlar.form_ham_30g(fills, saved['portfolio'], account, paper_v3, now)
+        trader['ilk11_form_ham'] = ilk11_alanlar.form_ham_30g(fills, saved['portfolio'], trader['hesap_degeri_toplam'], paper_v3, now)
     except Exception as error:  # noqa: BLE001 - form alanı hatası izleme okumasını düşürmesin; `hata` alanı Pazar işinde geçersizlik nedenidir
         trader['ilk11_form_ham'] = {'hata': data_error_reason(error)}
     perp_zamanlari = [int(f['time']) for f in perp_fills(fills)]
@@ -839,6 +786,12 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
     saved['son_hesap_degeri'] = account
     saved['son_trader'] = trader
     return trader
+
+
+def uc_ozeti(simdi: dict, once: dict) -> str:
+    """Bir trader için uç türü başına istek / ağırlık farkı (ör. ``candleSnapshot 40/1800, userFillsByTime 5/120``); en ağırdan hafife."""
+    fark = {k: (v[0] - once.get(k, [0, 0])[0], v[1] - once.get(k, [0, 0])[1]) for k, v in simdi.items()}
+    return ', '.join(f'{k} {i}/{w}' for k, (i, w) in sorted(fark.items(), key=lambda kv: -kv[1][1]) if i) or '—'
 
 
 def run(root: Path, output: Path, client=None, now=None, symbols=None, liste: Path | None = None) -> dict:
@@ -862,11 +815,13 @@ def run(root: Path, output: Path, client=None, now=None, symbols=None, liste: Pa
         if retained and (retained['adres'] != row['adres'].lower() or retained['t0'] != iso(timestamp(row['t0']))):
             raise ValueError(f"{row['id']}: adres/t0 değiştirilemez; yeni izleme için yeni id kullanın.")
         try:
+            _u0 = {k: list(v) for k, v in getattr(client, 'uclar', {}).items()}
             _t_basla, _i0, _a0, _w0 = time.monotonic(), dict(getattr(client, 'stats', {})), getattr(getattr(client, 'limiter', None), 'weight_used', 0), getattr(getattr(client, 'limiter', None), 'waited', 0.0)
             traders.append(update_trader(root, client, dexes, state, all_events, row, now, symbols))
             _i1 = getattr(client, 'stats', {})                   # tanı: süre API mi, hesap mı (istek / 429 / ağırlık / hız sınırı beklemesi)
             print(f"{row['id']}: okuma süresi {time.monotonic() - _t_basla:.0f} sn, istek {_i1.get('istek', 0) - _i0.get('istek', 0)}, 429 {_i1.get('429', 0) - _i0.get('429', 0)}, "
-                  f"ağırlık {getattr(getattr(client, 'limiter', None), 'weight_used', 0) - _a0}, hız sınırı bekleme {getattr(getattr(client, 'limiter', None), 'waited', 0.0) - _w0:.0f} sn")
+                  f"ağırlık {getattr(getattr(client, 'limiter', None), 'weight_used', 0) - _a0}, hız sınırı bekleme {getattr(getattr(client, 'limiter', None), 'waited', 0.0) - _w0:.0f} sn, "
+                  f"uçlar (istek/ağırlık): {uc_ozeti(getattr(client, 'uclar', {}), _u0)}")
         except Exception as error:
             failed += 1
             print(f"{row['id']}: veri hatası: {data_error_reason(error)}")

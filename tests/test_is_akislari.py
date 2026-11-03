@@ -19,7 +19,7 @@ from test_izleme import ADDRESS, NOW, Client, project
 ROOT = Path(__file__).resolve().parents[1]
 WF = ROOT / ".github/workflows"
 SCRIPTS = ROOT / ".github/scripts"
-ISLER = ("copytrade_kapi.yml", "izleme.yml", "ilk11_pazar.yml", "ilk11_deneme.yml", "izleme_deneme.yml")
+ISLER = ("copytrade_kapi.yml", "izleme.yml", "ilk11_pazar.yml", "ilk11_deneme.yml", "dinleyici_deneme.yml", "izleme_deneme.yml")
 
 
 def yukle(ad: str) -> dict:
@@ -55,7 +55,7 @@ def test_hata_or_true_ile_orulmez_ve_main_e_yazilmaz():
 
 
 def test_veri_dali_yazimlari_yalniz_veri_dallarina():
-    hedef = {"copytrade_kapi.yml": None, "izleme.yml": None, "ilk11_pazar.yml": "copytrade-kapi", "ilk11_deneme.yml": None, "izleme_deneme.yml": None}
+    hedef = {"copytrade_kapi.yml": None, "izleme.yml": None, "ilk11_pazar.yml": "copytrade-kapi", "ilk11_deneme.yml": None, "dinleyici_deneme.yml": None, "izleme_deneme.yml": None}
     for ad in ISLER:
         for satir in (WF / ad).read_text(encoding="utf-8").splitlines():
             if "git push" in satir:
@@ -73,6 +73,8 @@ def test_zamanlamalar_sartnameyle_ayni():
     assert yukle("ilk11_pazar.yml")["on"]["schedule"] == [{"cron": "7 10-18/2 * * 0"}]
     assert yukle("izleme.yml")["concurrency"]["cancel-in-progress"] is False and yukle("ilk11_pazar.yml")["concurrency"]["cancel-in-progress"] is False
     toplam = sum(yukle("copytrade_kapi.yml")["jobs"][j]["timeout-minutes"] for j in ("plan", "stage1", "publish"))
+    # A2-3b: plan `--evren-yaz` 10 dk'yı aştı (prefilter satır başına YAML okuyordu: 48 bin satır ≈ 1.054 sn). Düzeltmeden sonra saniyeler sürmeli; sınır ≥ 30 dk (ölçüm × 2'nin altına inmez).
+    assert yukle("copytrade_kapi.yml")["jobs"]["plan"]["timeout-minutes"] == 30 and toplam == 30 + 120 + 90
     assert toplam <= 4 * 60 + 40 and yukle("copytrade_kapi.yml")["jobs"]["stage1"]["timeout-minutes"] <= 120 and yukle("copytrade_kapi.yml")["jobs"]["publish"]["timeout-minutes"] <= 90
 
 

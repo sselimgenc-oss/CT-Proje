@@ -227,7 +227,7 @@ def form_ham_30g(fills: Sequence[Mapping[str, Any]] | None, portfolio: Any, hesa
     """Haftalık form (F) 10 ham alanı: izleme motorunun her saat zaten çektiği veriden, ``now``'dan geriye 30 gün.
 
     ``fills``: trader dolumları (HL ``userFillsByTime`` biçimi; ``None`` = alınamadı, ``[]`` = alındı, dolum yok); ``portfolio``: HL
-    `portfolio`; ``hesap``: trader hesap değeri ($, izlemenin `hesap_degeri`); ``v3``: ``sanal_kopya_v3`` sonucu (``kapanan_islemler``);
+    `portfolio`; ``hesap``: trader hesap değeri ($, izlemenin `hesap_degeri_toplam` = ana + HIP-3 + spot USDC; kapının `hesap_degeri_bugun` ile AYNI tanım); ``v3``: ``sanal_kopya_v3`` sonucu (``kapanan_islemler``);
     ``now``: okuma zamanı (`veri_zamani`, UTC). Kapanış zamanı pencerede ((now − 30 g, now]) olan işlemler sayılır; `tutma` yalnız açılışı
     bilinen işlemlerden. Döner: ``{alanlar, alan_kaynagi, pencere_bitis (UTC ISO), dolu_alan}`` (`ilk11_form_ham`)."""
     rules = rules or load_rules()
@@ -253,7 +253,7 @@ def form_ham_30g(fills: Sequence[Mapping[str, Any]] | None, portfolio: Any, hesa
     ham["tutarli"], kaynak["tutarli"] = pozitif_gun_orani(portfolio, "month", gun), "portfolio.month"
     hesap_sayi = _sayi(hesap)
     ham["hesap"] = hesap_sayi if hesap_sayi is not None and hesap_sayi > 0 else None
-    kaynak["hesap"] = "traderlar.hesap_degeri"
+    kaynak["hesap"] = "traderlar.hesap_degeri_toplam"
 
     if fills is not None:
         perp = olcut.perp_fills(list(fills))

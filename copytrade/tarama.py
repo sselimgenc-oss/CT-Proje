@@ -53,6 +53,7 @@ class PublicClient:
     def __init__(self, session: requests.Session | None = None, limiter: RateLimiter | None = None, sleep=time.sleep):
         self.session, self.limiter, self.sleep = session or requests.Session(), limiter or RateLimiter(), sleep
         self.stats = {"istek": 0, "429": 0, "5xx": 0}  # ilerleme günlüğü için sayaçlar
+        self.uclar: dict[str, list[int]] = {}           # uç türü (info `type`, ya da GET) -> [istek, ağırlık]; ağır trader teşhisi (A4-1)
 
     def _request(self, method: str, url: str, *, payload: dict | None = None, weight: int = 1) -> Any:
         server_errors = 0
@@ -60,6 +61,9 @@ class PublicClient:
             self.limiter.acquire(weight)
             response = self.session.request(method, url, json=payload, timeout=30)
             self.stats["istek"] += 1
+            uc = self.uclar.setdefault(str(payload.get("type", "?")) if isinstance(payload, dict) else method, [0, 0])
+            uc[0] += 1
+            uc[1] += weight
             if response.status_code >= 500:
                 self.stats["5xx"] += 1
                 # Geçici sunucu hatası (ör. 500/502/503): 3 deneme, artan bekleme; sonra hata olarak yükselir.
@@ -76,6 +80,7 @@ class PublicClient:
                 per = 60 if isinstance(payload, dict) and payload.get("type") == "candleSnapshot" else 20
                 if isinstance(data, list) and len(data) >= per:
                     self.limiter.acquire(len(data) // per)
+                    uc[1] += len(data) // per
                 return data
             self.stats["429"] += 1
             self.sleep(min(60, 5 * 2 ** attempt))
@@ -169,12 +174,13 @@ def prefilter(rows: list[dict], watchlist: list[dict] | None = None) -> list[dic
     ``watchlist`` eski günlük tarayıcı çağrılarıyla uyumluluk içindir; kapı evrenini genişletmez veya daraltmaz.
     """
     watch = {x["address"].lower() for x in watchlist or []}
+    esik = float(load_rules()["evren_min_hesap_degeri"])      # BİR kez okunur: satır başına YAML okumak 48 bin satırda ~17 dk sürüyordu (A2-3b ölçümü)
     accepted = []
     for row in rows:
         address = _address(row)
         account = float(row.get("accountValue", row.get("account_value", 0)) or 0)
         all_time_pnl = _window(row, "allTime", "pnl")
-        if address and account >= float(load_rules()["evren_min_hesap_degeri"]) and all_time_pnl > 0:
+        if address and account >= esik and all_time_pnl > 0:
             row = dict(row); row["address"] = address; row["accountValue"] = account; accepted.append(row)
     return sorted(accepted, key=lambda x: x["address"].lower())
 
