@@ -1,4 +1,4 @@
-# Veri sözleşmesi — copy trade izleme (v1.17, 2026-11-03; v1.17 `olay_ozeti` + trader başına adil pay + olay arşivi (A4-2), v1.16 `mum_eksik` + negatif mum önbelleği (K-18), v1.15 `veri_durumu` + sağlık ışığı `bilinmiyor` (K-14), v1.14 İlk 11 hesap katmanı kodda (A2 PR-1: `ilk11_alanlar`, kapı bilgi sütunları, `kapanan_islemler`), v1.13 İlk 11 puan alanları (§6, tanım), v1.12 `sanal_kopya_v3` tasfiye/aşamalı çıkış (E3), v1.11 `sanal_kopya_v3` (E2 sabit tutar), v1.10 `sanal_kopya_v2.kapanis_nedenleri` (E3), v1.9 `sanal_kopya_v2`, v1.8 `gecikme.json` taze pencere, v1.7 `gecikme.json`, v1.6 `saglik_hatti`, v1.5 `kol`, v1.2 olay kimliği, v1.3 tarz, v1.4 veri geçerliliği ve karar gizliliği)
+# Veri sözleşmesi — copy trade izleme (v1.18, 2026-11-03; v1.18 `gecikme_kar.json` H1 gecikme–kâr ölçümü + `kopya_v3.hesapla` gecikme 0 (anlık), v1.17 `olay_ozeti` + trader başına adil pay + olay arşivi (A4-2), v1.16 `mum_eksik` + negatif mum önbelleği (K-18), v1.15 `veri_durumu` + sağlık ışığı `bilinmiyor` (K-14), v1.14 İlk 11 hesap katmanı kodda (A2 PR-1: `ilk11_alanlar`, kapı bilgi sütunları, `kapanan_islemler`), v1.13 İlk 11 puan alanları (§6, tanım), v1.12 `sanal_kopya_v3` tasfiye/aşamalı çıkış (E3), v1.11 `sanal_kopya_v3` (E2 sabit tutar), v1.10 `sanal_kopya_v2.kapanis_nedenleri` (E3), v1.9 `sanal_kopya_v2`, v1.8 `gecikme.json` taze pencere, v1.7 `gecikme.json`, v1.6 `saglik_hatti`, v1.5 `kol`, v1.2 olay kimliği, v1.3 tarz, v1.4 veri geçerliliği ve karar gizliliği)
 
 sözleşmeye göre çalışır; alan eklemek/değiştirmek lider onayıyla `surum` artırılarak yapılır.
 
@@ -209,6 +209,37 @@ yapmayan bir trader'ın örneği D1'de eskiyebilir. **v1.8 (Sol 2. denetimi, YÜ
 `zaman`'ı `uretildi`den en çok 120 dk eski olan ("taze") örnekleri sayar; `n_toplam` tüm `trader_detay` satır
 sayısıdır — eski bir trader örneği artık oda genelindeki "gerçek hız" ölçüsünü bozmaz. `n=0` → henüz taze örnek
 yok (ilk koşu, sakin piyasa ya da tüm örnekler eski); medyan/maks `null`. Yalnız rapor; kopya ekonomisini değiştirmez.
+
+## 4b. `gecikme_kar.json` — H1 gecikme–kâr ölçümü (v1.18, 2026-11-03; K‑17)
+YALNIZ ölçüm (bilgi amaçlı; seçim, kapı, eşik ve `durum.json` değişmez). Üretim: `python -m copytrade.gecikme_kar` (görev: `docs/GOREV_H1_GECIKME_KAR.md`).
+Hesap tek motorda: `kopya_v3.hesapla` → `defter.copy_ledger` (kural 7). `kopya_v3.hesapla(delay=0)` = **anlık**: yürütme fiyatı trader'ın dolum fiyatı `px`,
+yürütme zamanı dolum zamanı, maliyet ledger'daki taker + kayma (`kurallar.yaml` `maliyet_taker` + `maliyet_kayma`); `delay > 0` davranışı değişmedi.
+Anlıkta `px` yok/≤ 0 ise dolum `fiyatsiz_eylem`e girer (mum aranmaz, sahte fiyat yok).
+
+| Alan | Birim / anlam |
+|---|---|
+| `surum` | `"h1-v1"` |
+| `uretildi` | UTC ISO; koşu başlangıcı (okuma zamanı değil) |
+| `pencere` | `dakika` (t0 yerine `max(t0, şimdi − 4800 dk)`; bütün gecikmeler gerçek 1 dk açılışı) \| `tam` (t0'dan; 1 dk mum erişimi ~4999 dk dışındaki dolumlar saatlik açılışla YAKLAŞIK → kısa gecikmeler birbirinden ayrışmaz) |
+| `gecikmeler_dk` | `[0, 1, 5, 30, 120]` (dk; 0 = anlık) |
+| `maliyet.taker`, `maliyet.kayma` | ORAN, tek yön, notional'a oranla (varsayılan 0,00045 ve 0,0005; `--taker`/`--kayma` ile geçersiz kılınır; tüm gecikmelerde aynı) |
+| `traderlar[].id/adres/tarz` | izleme kimliği, küçük harf adres, `intraday`/`swing`/`bilinmiyor` |
+| `traderlar[].t0` | UTC ISO; ölçüm penceresinin etkin başlangıcı (`dakika` penceresinde kırpılmış olabilir) |
+| `traderlar[].dolum` | pencere içi perp dolum sayısı (adet) |
+| `traderlar[].mevcut_gecikme_dk` | izlemenin bu trader için kullandığı gecikme (dk; intraday 30, swing 120) |
+| `traderlar[].mevcut_net` | `gecikmeler[mevcut_gecikme_dk].net` (ORAN) — izleme `sanal_kopya_v3.getiri` ile `tam` pencerede karşılaştırılır |
+| `traderlar[].gecikmeler.<dk>.net` | net getiri, ORAN (0,012 = %1,2); 1.000 $ sanal kopya ölçeği; gerçekleşen − taker/kayma + funding + açık K/Z (işaretle); hesaplanamazsa `null` (sıfır SAYILMAZ) |
+| `…<dk>.islem` | kapanan kopya işlemi sayısı (adet; açık işlem sayılmaz) |
+| `…<dk>.fiyatsiz` | yürütme fiyatı BULUNAMAYAN dolum (adet; eksik mum / anlıkta `px` yok). Yürütme zamanı gelmemiş dolum burada DEĞİL |
+| `…<dk>.bekleyen` | yürütme zamanı (dolum + gecikme) henüz gelmemiş dolum (adet; anlıkta 0) — fiyatsız sayılmaz (B17 dersi) |
+| `…<dk>.yaklasik` | yürütme fiyatı saatlik açılışla yaklaşık bulunan hedef (adet; yalnız `tam` pencere) |
+| `…<dk>.tasfiye` | bool; kopya tasfiye oldu mu (v3 çapraz teminat) |
+| `traderlar[].fark_anlik_30dk` | `net(0) − net(30)`, ORAN puanı (0,01 = 1 puan); biri `null` ise `null` |
+| `hatalar[]` | `{id, hata}`: okunamayan trader (ölçümü düşürmez) |
+| `ozet` | `trader`, `anlik_hesaplanan`, `anlik_hesaplanamayan`, `anlik_kazanan` (net > 0), `anlik_kaybeden` (net < 0), `anlik_sifir`, `fark_anlik_30dk {min, medyan, maks}`, `fark_anlik_30dk_ortalama`, `anlik_30dk_karsilastirilan` |
+
+Varsayım/sınır: anlık = bizim emrimizin trader dolumuyla AYNI fiyattan, kayma+taker ile dolması (algılama + emir gecikmesi 0 sayılır; gerçek gecikme H2 ile ölçülür).
+Geçmişte dakikalık fiyat ~4999 dk ile sınırlıdır; `tam` pencerede 1/5/30 dk yaklaşık olur — karar için `dakika` penceresi esas alınır.
 
 ## 5. Telegram
 - Gönderen: Cloudflare Worker, 5 dakikada bir (`docs/GOREV_TELEGRAM.md`). Olay türleri: `acilis`, `kapanis`, `buyutme`,
