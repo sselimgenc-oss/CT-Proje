@@ -64,12 +64,15 @@ class TraderOlcum:
     snapshot: int = 0
     negatif: int = 0                                          # alma anı < dolum zamanı (saat kayması); gecikme örneğine GİRMEZ
     kacan_sinif: dict[str, int] = field(default_factory=dict)  # REST'te olup görülmeyen: sınıf -> adet (spot | hip3 | abonesiz_perp | gercek); `kacan` = gercek
+    dolgu: int = 0                                            # kopma sonrası REST dolgusuyla kurtarılan dolum (kaynak=dolgu)
+    dolgu_gecikme: list[float] = field(default_factory=list)  # saniye: dolum zamanı -> dolgunun aldığı an (canlı gecikmeden AYRI)
 
     def ozet(self) -> dict[str, Any]:
         g = self.gecikme
         return {"n": len(g), "gecikme_medyan_sn": None if not g else round(statistics.median(g), 3),
                 "gecikme_p95_sn": None if not g else round(p_sira(g, 0.95), 3), "gecikme_max_sn": None if not g else round(max(g), 3),
-                "kacan": self.kacan, "kacan_sinif": dict(sorted(self.kacan_sinif.items())), "snapshot": self.snapshot, "negatif_gecikme": self.negatif}
+                "kacan": self.kacan, "kacan_sinif": dict(sorted(self.kacan_sinif.items())), "snapshot": self.snapshot, "negatif_gecikme": self.negatif,
+                "dolgu": self.dolgu, "dolgu_gecikme_max_sn": None if not self.dolgu_gecikme else round(max(self.dolgu_gecikme), 3)}
 
 
 @dataclass(frozen=True)
@@ -175,6 +178,25 @@ class Olcum:
         for pencere in (self.toplam, self.saat):
             pencere[ad].kacan += gercek
         return gercek
+
+    def dolgu(self, ad: str, adres: str, rest_dolumlar: list[dict], bas_ms: int, simdi_ms: int) -> int:
+        """Kopma sonrası REST dolgusu: [bas_ms, simdi_ms] aralığında REST'te olup henüz görülmeyen perp dolumları `kaynak=dolgu` olarak kaydeder (görülmüş sayılır:
+        sonraki REST hakem bunları kaçan saymaz). Gecikme = simdi − dolum zamanı, canlı gecikme örneğine GİRMEZ. Spot kopyalanmaz: atlanır. Döner: kurtarılan adet."""
+        kurtarilan = 0
+        for f in rest_dolumlar:
+            if f.get("tid") is None or _tam_sayi(f.get("time")) is None:
+                continue
+            zaman = int(f["time"])
+            kimlik = f"{adres}:{f['tid']}"
+            coin = str(f.get("coin", ""))
+            if not bas_ms <= zaman <= simdi_ms or kimlik in self.gorulen or coin.startswith("@") or "/" in coin:
+                continue
+            self.gorulen[kimlik] = zaman
+            kurtarilan += 1
+            for pencere in (self.toplam, self.saat):
+                pencere[ad].dolgu += 1
+                pencere[ad].dolgu_gecikme.append(max(0, simdi_ms - zaman) / 1000)
+        return kurtarilan
 
     def kacan_sinifi(self, coin: str, zaman_ms: int = 0) -> str:
         if coin.startswith("@") or "/" in coin:
@@ -301,6 +323,17 @@ class Dinleyici:
         for o in olaylar:
             self.olcum.olay(o)
 
+    async def dolgu(self, aralik: tuple[int, int]) -> None:
+        """Yeniden bağlanınca kopma aralığını (son mesaj → şimdi) `userFillsByTime` ile doldurur. Bir adresin REST hatası diğerlerini engellemez (`genel.dolgu_hata`)."""
+        bas, simdi = aralik[0], self.saat_ms()
+        for i in self.liste:
+            try:
+                dolumlar = await asyncio.to_thread(rest_dolumlar, self.post, i.adres, bas, simdi)
+            except Exception:       # noqa: BLE001 - ağ / API hatası: sayılır, dinleme sürer
+                self.olcum.genel["dolgu_hata"] = self.olcum.genel.get("dolgu_hata", 0) + 1
+                continue
+            self.olcum.genel["dolgu"] = self.olcum.genel.get("dolgu", 0) + self.olcum.dolgu(i.ad, i.adres, dolumlar, bas, simdi)
+
     async def rest_karsilastir(self) -> None:
         simdi = self.saat_ms()
         bas = simdi - int(2 * self.ayar.rest_aralik_sn * 1000)
@@ -347,7 +380,10 @@ class Dinleyici:
                     baglandi += 1
                     if baglandi > 1:
                         self.olcum.genel["yeniden_baglanma"] += 1
+                    onceki_aralik = len(self.olcum.kopma_araliklari)
                     await self._abone_ol(ws)
+                    if len(self.olcum.kopma_araliklari) > onceki_aralik:
+                        await self.dolgu(self.olcum.kopma_araliklari[-1])         # H2b: kopmada kaçan işlem = kayıp -> REST ile tamamla
                     bekleme = self.ayar.geri_cekilme_ilk_sn
                     await self._oturum(ws)
                 except asyncio.CancelledError:
