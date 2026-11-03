@@ -44,6 +44,8 @@ def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str,
     annotated = []
     for fill in fills:
         target = math.ceil((int(fill['time']) + delay * MINUTE) / MINUTE) * MINUTE
+        if target > now_ms:        # A4-3b: yürütme zamanı henüz gelmemiş (gecikme dolmamış) dolum "fiyatsız" DEĞİL, bekliyor: ledger'a verilmez, sayılmaz, işlem geçerliliğini bozmaz
+            continue
         price = yurutme.get(str(fill['coin']), {}).get(target)
         annotated.append(dict(fill, _execution_time=target, _execution_price=price) if price else dict(fill))
     candles = {coin: sorted(saatlik.get(coin, []) + isaret.get(coin, []), key=lambda c: c['t'])

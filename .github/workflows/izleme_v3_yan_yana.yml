@@ -48,11 +48,25 @@ jobs:
         run: python -m copytrade.izleme_motoru --root ../deneme_kok_eski --output ../deneme_izleme_eski --liste ../deneme/izleme_listesi.yaml
       - name: YENİ kod ilk okuma
         run: python -m copytrade.izleme_motoru --root deneme_kok --output deneme_izleme --liste deneme/izleme_listesi.yaml
+      - name: "ESKİ kod tekrar (sapma ölçümü, aynı kod ~20 dk sonra)"
+        working-directory: eski
+        run: |
+          mkdir -p ../deneme_kok_eski2/copytrade ../deneme_izleme_eski2
+          python -m copytrade.izleme_motoru --root ../deneme_kok_eski2 --output ../deneme_izleme_eski2 --liste ../deneme/izleme_listesi.yaml
       - name: Yan yana özet
         run: |
           python -m copytrade.ilk11_deneme v3-yan-yana --eski deneme_izleme_eski/durum.json --yeni deneme_izleme/durum.json > deneme/YAN_YANA.md
           cat deneme/YAN_YANA.md
           cat deneme/YAN_YANA.md >> "$GITHUB_STEP_SUMMARY"
+          python - <<'EOF'
+          import json
+          oku = lambda p: {t["id"]: t for t in json.load(open(p))["traderlar"]}
+          e1, y, e2 = oku("deneme_izleme_eski/durum.json"), oku("deneme_izleme/durum.json"), oku("deneme_izleme_eski2/durum.json")
+          print("\n### sapma ölçümü: v3 bakiye $ (ESKİ -> YENİ -> ESKİ tekrar; aynı kod ESKİ'ler arası fark = piyasa sapması)")
+          for k in sorted(e1):
+              b = lambda t: (t[k].get("sanal_kopya_v3") or {}).get("bakiye_usd")
+              print(f"{k}: {b(e1)} -> {b(y)} -> {b(e2)}")
+          EOF
       - uses: actions/upload-artifact@v4
         if: always()
         with:

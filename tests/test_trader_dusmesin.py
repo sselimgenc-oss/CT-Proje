@@ -266,3 +266,16 @@ def test_a43a_v3_fiyat_hedefi_ham_dolumlar_icin_cekilir_devralinan_kapatma_fiyat
     assert v3.get('fiyatsiz_eylem', 0) == 0 and t['veri_durumu'] == 'tamam'
     hedefler = sorted(int(x) for x in json.loads((root / 'out/motor.json').read_text())['traderlar']['T1']['mumlar']['BTC'])
     assert hedefler == [m.millis(m.timestamp('2026-10-27T10:30:00Z')), m.millis(m.timestamp('2026-10-27T11:30:00Z'))]
+
+
+def test_a43b_henuz_olgunlasmamis_dolum_fiyatsiz_sayilmaz_v2_v3(tmp_path):
+    """A4-3b altın örnek (B17 teşhisi: v3 fiyatsız = bekleyen dolum sayısıyla birebir 1.020 = 1.020). NOW 12:00, gecikme 30 dk. Dolum 1 (10:00 alış 1) olgun (hedef 10:30).
+    Dolum 2 (11:50 alış 1, startPosition 1): hedef 12:20 > NOW -> BEKLİYOR. Eski kod: v3 `fiyatsiz_eylem` 1 ve `veri_durumu = fiyatsiz`. Yeni: 0 ve `tamam`;
+    sayısal sonuç (bakiye) değişmez, çünkü bekleyen dolum ledger'ı zaten etkilemiyordu."""
+    root = project(tmp_path)
+    client = Client([fill('2026-10-27T10:00:00Z', 1, 'B', 1, 0, 100), fill('2026-10-27T11:50:00Z', 2, 'B', 1, 1, 100)])
+    t = trader_of(m.run(root, root / 'out', client, NOW))
+    assert t['veri_durumu'] == 'tamam' and t['sanal_kopya_v3'].get('fiyatsiz_eylem', 0) == 0 and t['sanal_kopya_v2'].get('fiyatsiz_eylem', 0) == 0
+    (tmp_path / 'solo').mkdir()
+    solo = trader_of(m.run(project(tmp_path / 'solo'), tmp_path / 'solo/out', Client([fill('2026-10-27T10:00:00Z', 1, 'B', 1, 0, 100)]), NOW))
+    assert t['sanal_kopya_v3']['bakiye_usd'] == pytest.approx(solo['sanal_kopya_v3']['bakiye_usd'])      # bekleyen dolum sonucu değiştirmez
