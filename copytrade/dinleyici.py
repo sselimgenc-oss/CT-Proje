@@ -18,7 +18,7 @@ import re
 import signal
 import statistics
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Awaitable, Callable
@@ -63,12 +63,13 @@ class TraderOlcum:
     kacan: int = 0
     snapshot: int = 0
     negatif: int = 0                                          # alma anı < dolum zamanı (saat kayması); gecikme örneğine GİRMEZ
+    kacan_sinif: dict[str, int] = field(default_factory=dict)  # REST'te olup görülmeyen: sınıf -> adet (spot | hip3 | abonesiz_perp | gercek); `kacan` = gercek
 
     def ozet(self) -> dict[str, Any]:
         g = self.gecikme
         return {"n": len(g), "gecikme_medyan_sn": None if not g else round(statistics.median(g), 3),
                 "gecikme_p95_sn": None if not g else round(p_sira(g, 0.95), 3), "gecikme_max_sn": None if not g else round(max(g), 3),
-                "kacan": self.kacan, "snapshot": self.snapshot, "negatif_gecikme": self.negatif}
+                "kacan": self.kacan, "kacan_sinif": dict(sorted(self.kacan_sinif.items())), "snapshot": self.snapshot, "negatif_gecikme": self.negatif}
 
 
 @dataclass(frozen=True)
@@ -80,6 +81,7 @@ class Olay:
     alma_ms: int
     kaynak: str          # trades | userFills | rest
     snapshot: bool = False
+    abone: str = ""      # abonelik anahtarı: trades için coin, userFills için "userFills:<adres>" (abonelikten ÖNCEKİ dolum = canlı değil)
 
 
 def _tam_sayi(deger: Any) -> int | None:
@@ -98,7 +100,7 @@ def trades_olaylari(mesaj: dict, izlenen: dict[str, Izlenen], alma_ms: int) -> l
             continue
         for adres in {str(u).lower() for u in users}:
             if adres in izlenen:
-                cikti.append(Olay(f"{adres}:{tid}", izlenen[adres].ad, adres, zaman, alma_ms, "trades"))
+                cikti.append(Olay(f"{adres}:{tid}", izlenen[adres].ad, adres, zaman, alma_ms, "trades", False, str(t.get("coin", ""))))
     return cikti
 
 
@@ -108,7 +110,7 @@ def userfills_olaylari(mesaj: dict, izlenen: dict[str, Izlenen], alma_ms: int) -
     if adres not in izlenen:
         return []
     snapshot = veri.get("isSnapshot") is True
-    return [Olay(f"{adres}:{f['tid']}", izlenen[adres].ad, adres, int(f["time"]), alma_ms, "userFills", snapshot)
+    return [Olay(f"{adres}:{f['tid']}", izlenen[adres].ad, adres, int(f["time"]), alma_ms, "userFills", snapshot, f"userFills:{adres}")
             for f in veri.get("fills") or [] if f.get("tid") is not None and _tam_sayi(f.get("time")) is not None]
 
 
@@ -121,7 +123,11 @@ class Olcum:
         self.saat = {ad: TraderOlcum() for ad in self.adlar}
         self.gorulen: dict[str, int] = {}            # kimlik -> dolum zamanı (REST karşılaştırması ve tekilleştirme)
         self.genel = {"kopma": 0, "yeniden_baglanma": 0, "yeniden_baslama": 0, "error": 0, "subscription_response": 0, "tekrar": 0,
-                      "trades_mesaj": 0, "userfills_mesaj": 0, "ping": 0}
+                      "trades_mesaj": 0, "userfills_mesaj": 0, "ping": 0, "abonelik_oncesi_snapshot_gibi": 0, "gecikme_60sn_ustu": 0,
+                      "rest_abonelik_oncesi_atlanan": 0}
+        self.abone: dict[str, int] = {}              # abonelik anahtarı -> aboneliğin gönderildiği an (ms); bundan ÖNCEKİ dolum canlı olay sayılmaz
+        self.abone_coinler: set[str] = set()         # trades kanalına abone olunan coin evreni (sınıflama için)
+        self.ilk_abone_bitis_ms = 0                  # ilk bağlantıda son aboneliğin gönderildiği an: REST hakem penceresi bundan önceyi kapsamaz
 
     def olay(self, o: Olay) -> bool:
         """Yeni dolum ise True. Tekrar (aynı `{adres}:{tid}`) sayılır ama ikinci kez ölçülmez. Snapshot: kabul ve gecikme örneği YOK."""
@@ -129,6 +135,11 @@ class Olcum:
             self.genel["tekrar"] += 1
             return False
         self.gorulen[o.kimlik] = o.zaman_ms
+        if not o.snapshot and o.zaman_ms < self.abone.get(o.abone, 0):
+            o = replace(o, snapshot=True)           # abonelikten önce gerçekleşmiş: sunucu abonelik anında geçmişi gönderir (trades kanalı dahil)
+            self.genel["abonelik_oncesi_snapshot_gibi"] += 1
+        if not o.snapshot and o.alma_ms - o.zaman_ms > 60_000:
+            self.genel["gecikme_60sn_ustu"] += 1
         for pencere in (self.toplam, self.saat):
             t = pencere[o.ad]
             if o.snapshot:
@@ -140,18 +151,36 @@ class Olcum:
         return True
 
     def rest_karsilastir(self, ad: str, adres: str, rest_dolumlar: list[dict], simdi_ms: int, tolerans_ms: int) -> int:
-        """REST'te olup görülmeyen = kaçan. `tolerans_ms` içindeki (çok yeni) dolumlar sayılmaz (yolda olabilir). Kaçan dolum görülmüş sayılır: ikinci kez sayılmaz."""
-        kacan = 0
+        """REST'te olup görülmeyen = kaçan. Karşılaştırma aralığı [ilk bağlantının aboneliği, şimdi − tolerans]: öncesi dinleyicinin kapsamı dışıdır (sayılmaz).
+        Kaçan dolum sınıflanır: `spot` (`@N` / `…/USDC`), `hip3` (`dex:COIN`), `abonesiz_perp` (abone olunan coin evreninde yok), `gercek` (evrende var, görülmedi).
+        `kacan` YALNIZ gerçek kaçandır; açıklanmış sınıflar `kacan_sinif` içinde ayrı yazılır. Kaçan dolum görülmüş sayılır: ikinci kez sayılmaz."""
+        gercek = 0
         for f in rest_dolumlar:
             if f.get("tid") is None or _tam_sayi(f.get("time")) is None or int(f["time"]) > simdi_ms - tolerans_ms:
+                continue
+            if int(f["time"]) < self.ilk_abone_bitis_ms:
+                self.genel["rest_abonelik_oncesi_atlanan"] += 1
                 continue
             kimlik = f"{adres}:{f['tid']}"
             if kimlik not in self.gorulen:
                 self.gorulen[kimlik] = int(f["time"])
-                kacan += 1
+                sinif = self.kacan_sinifi(str(f.get("coin", "")))
+                for pencere in (self.toplam, self.saat):
+                    pencere[ad].kacan_sinif[sinif] = pencere[ad].kacan_sinif.get(sinif, 0) + 1
+                if sinif == "gercek":
+                    gercek += 1
         for pencere in (self.toplam, self.saat):
-            pencere[ad].kacan += kacan
-        return kacan
+            pencere[ad].kacan += gercek
+        return gercek
+
+    def kacan_sinifi(self, coin: str) -> str:
+        if coin.startswith("@") or "/" in coin:
+            return "spot"
+        if ":" in coin:
+            return "hip3"
+        if self.abone_coinler and coin not in self.abone_coinler:
+            return "abonesiz_perp"
+        return "gercek"
 
     def temizle(self, simdi_ms: int, saklama_ms: int = 2 * SAAT_MS) -> None:
         self.gorulen = {k: z for k, z in self.gorulen.items() if z >= simdi_ms - saklama_ms}
@@ -234,10 +263,15 @@ class Dinleyici:
         self._dur.set()
 
     async def _abone_ol(self, ws: Any) -> None:
+        self.olcum.abone_coinler = set(self.coinler)
         for coin in self.coinler:
             await ws.send(json.dumps({"method": "subscribe", "subscription": {"type": "trades", "coin": coin}}, separators=(",", ":")))
+            self.olcum.abone[coin] = self.saat_ms()
         for i in self.liste[: self.ayar.userfills_adet]:
             await ws.send(json.dumps({"method": "subscribe", "subscription": {"type": "userFills", "user": i.adres}}, separators=(",", ":")))
+            self.olcum.abone[f"userFills:{i.adres}"] = self.saat_ms()
+        if not self.olcum.ilk_abone_bitis_ms:
+            self.olcum.ilk_abone_bitis_ms = self.saat_ms()
 
     def mesaj_isle(self, ham: str | bytes) -> None:
         alma = self.saat_ms()                                   # alma anı: mesaj çözülmeden ÖNCE damgalanır
