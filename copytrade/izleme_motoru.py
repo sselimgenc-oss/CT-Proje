@@ -27,6 +27,7 @@ from copytrade.pozisyon_mutabakat import mutabakat, ozet
 from copytrade.olcut import _funding_amount, asset_class, calculate_metrics, closed_round_trips, perp_fills
 from copytrade.tarama import PublicClient, RateLimiter
 from copytrade import ilk11_alanlar
+from copytrade.mum_paylasim import MumPaylasimi
 from copytrade.izleme_liste import KOLLAR, STYLES, load_list, perp_dex_names  # noqa: F401 - m.load_list / m.KOLLAR / m.perp_dex_names dış API'si korunur
 from copytrade import oda_risk
 from copytrade import kopya_v2
@@ -797,7 +798,7 @@ def uc_ozeti(simdi: dict, once: dict) -> str:
 
 def run(root: Path, output: Path, client=None, now=None, symbols=None, liste: Path | None = None) -> dict:
     now = timestamp(now or datetime.now(UTC))
-    client = client or PublicClient(limiter=RateLimiter())
+    client = MumPaylasimi(client or PublicClient(limiter=RateLimiter()))     # aynı koşuda aynı mum isteği bir kez (hesap değişmez)
     watchlist = load_list(liste or root / 'copytrade/izleme_listesi.yaml')
     state = read_json(output / 'motor.json', {'surum': 1, 'traderlar': {}, 'olaylar': {}})
     if state.get('surum') != 1:
@@ -822,7 +823,7 @@ def run(root: Path, output: Path, client=None, now=None, symbols=None, liste: Pa
             _i1 = getattr(client, 'stats', {})                   # tanı: süre API mi, hesap mı (istek / 429 / ağırlık / hız sınırı beklemesi)
             print(f"{row['id']}: okuma süresi {time.monotonic() - _t_basla:.0f} sn, istek {_i1.get('istek', 0) - _i0.get('istek', 0)}, 429 {_i1.get('429', 0) - _i0.get('429', 0)}, "
                   f"ağırlık {getattr(getattr(client, 'limiter', None), 'weight_used', 0) - _a0}, hız sınırı bekleme {getattr(getattr(client, 'limiter', None), 'waited', 0.0) - _w0:.0f} sn, "
-                  f"uçlar (istek/ağırlık): {uc_ozeti(getattr(client, 'uclar', {}), _u0)}")
+                  f"uçlar (istek/ağırlık): {uc_ozeti(getattr(client, 'uclar', {}), _u0)}, mum paylaşımı (toplam): API {client.istek} / paylaşılan {client.paylasilan}")
         except Exception as error:
             failed += 1
             print(f"{row['id']}: veri hatası: {data_error_reason(error)}")

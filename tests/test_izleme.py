@@ -228,7 +228,7 @@ def test_incremental_overlap_daily_portfolio_and_repeatable_ledger(tmp_path):
     assert one['olaylar'] == two['olaylar']
     assert client.portfolio_reads == 2  # sağlık eğrisi saatlik yenilenir
     # yürütme mumu (v1) önbellekten (sabit 1); v2'nin saatlik tasfiye mumu her koşuda bir artımlı okuma ekler (+1/koşu, kendi önbelleği ayrı).
-    assert client.candle_reads == 3 and client.mark_reads == 2       # işaret her koşuda bir kez
+    assert client.candle_reads == 3 and client.mark_reads == 1       # işaret koşu başına bir kez İSTENİR; 1. koşuda yürütme yanıtından paylaşılır (API'ye gitmez), 2. koşuda API'den
     starts = [x['startTime'] for x in client.calls if x['type'] == 'userFillsByTime']
     assert starts[-1] == client.rows[-1]['time']  # inclusive boundary is deduplicated
     saved = json.loads((root / 'out/motor.json').read_text())
@@ -639,16 +639,15 @@ def test_canli_yol_kanonik_defterle_ayni_sonucu_verir():
 def test_canli_kosu_acik_pozisyonu_son_dakika_mumuyla_isaretler(tmp_path):
     """Uçtan uca: yürütme mumu 102, son 1 dk mum 50 → açık K/Z = 1 × (50 − 102) / 1000 = −%5,2; maliyet 102 × 0,095% / 1000."""
     class Falling(Client):
+        """Tutarlı sahte API: aynı dakika her pencerede aynı fiyat (gerçek API gibi). Son 15 dk mumları 50, yürütme mumu 102."""
         def candles(self, coin, start, end, interval='1m'):
-            if end - start <= 15 * m.MINUTE:
-                self.mark_reads += 1
-                return [{'t': end - m.MINUTE, 'o': '50'}]
-            return super().candles(coin, start, end, interval)
+            rows = super().candles(coin, start, end, interval)
+            return [dict(c, o='50') if int(c['t']) > m.millis(NOW) - 15 * m.MINUTE else c for c in rows]
     root, client = project(tmp_path), Falling()
     paper = m.run(root, root / 'out', client, NOW)['traderlar'][0]['sanal_kopya']
     assert paper['acik'] == pytest.approx(-0.052) and paper['gerceklesen'] == pytest.approx(-102 * .00095 / 1000)
-    assert paper['toplam'] == pytest.approx(-0.052 - 102 * .00095 / 1000) and paper['son_isaret'] == '2026-10-27T11:59:00Z'
-    assert client.mark_reads == 1
+    assert paper['toplam'] == pytest.approx(-0.052 - 102 * .00095 / 1000) and paper['son_isaret'] == '2026-10-27T12:00:00Z'      # tutarlı sahte API: NOW dakikasının mumu da dönüyor (t <= şimdi)
+    assert client.mark_reads == 0                    # işaret, aynı koşudaki yürütme yanıtının son 15 dk'sından paylaşıldı (ayrı istek yok)
 
 
 def test_health_blind_keeps_leverage_and_staleness():
