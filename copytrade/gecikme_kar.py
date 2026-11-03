@@ -75,8 +75,10 @@ def olc(fills: list[dict], saatlik: dict, isaret: dict, yurutme: dict[int, dict]
 
 
 def trader_satiri(ident: str, adres: str, style: str, t0: pd.Timestamp, sonuc: dict[int, dict], mevcut_gecikme: int,
-                  dolum: int) -> dict:
-    return {'id': ident, 'adres': adres, 'tarz': style, 't0': im.iso(t0), 'dolum': dolum, 'mevcut_gecikme_dk': mevcut_gecikme,
+                  dolum: int, ilk_dolum_ms: int | None = None) -> dict:
+    """``ilk_dolum`` (UTC ISO) = API'nin gerçekten döndürdüğü pencere içi ilk dolumun zamanı; yalnız okunurluk, ölçümü DEĞİŞTİRMEZ. Dolum yoksa None."""
+    return {'id': ident, 'adres': adres, 'tarz': style, 't0': im.iso(t0), 'ilk_dolum': None if ilk_dolum_ms is None else im.iso(pd.Timestamp(ilk_dolum_ms, unit='ms', tz='UTC')),
+            'dolum': dolum, 'mevcut_gecikme_dk': mevcut_gecikme,
             'mevcut_net': (sonuc.get(mevcut_gecikme) or {}).get('net'),
             'gecikmeler': {str(g): s for g, s in sonuc.items()}}
 
@@ -151,7 +153,8 @@ def olc_trader(root: Path, client, row: dict, now: pd.Timestamp, pencere: str, r
         yaklasik[gecikme] = sum(1 for rows in cache.values() for v in rows.values() if im.cached_candle(v)[1])
     style = im.resolve_style(root, row)
     sonuc = olc(copy_fills, saatlik, isaret, yurutme, funding, t0, now, style, rules, yaklasik=yaklasik)
-    return trader_satiri(row['id'], address.lower(), style, t0, sonuc, im.delay_for_style(style, rules), len(copy_fills))
+    return trader_satiri(row['id'], address.lower(), style, t0, sonuc, im.delay_for_style(style, rules), len(copy_fills),
+                        min((int(f['time']) for f in copy_fills), default=None))
 
 
 def calistir(root: Path, liste: Path, idler: list[str] | None, pencere: str, now: pd.Timestamp, client=None,

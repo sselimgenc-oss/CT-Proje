@@ -140,6 +140,7 @@ def test_uctan_uca_sahte_istemci_dakika_penceresi():
             return [{'t': t, 'o': 105.0} for t in range(s // adim * adim, e + 1, adim)]
     satir = {'id': 'X1', 'adres': '0xabc', 'takma_ad': 'x', 'durum': 'izlemede', 't0': '2026-10-20', 'tarz': 'intraday'}
     s = gk.olc_trader(Path('.'), Istemci(), satir, now, 'dakika', RULES)
+    assert s['ilk_dolum'] == '2026-10-27T09:00:00Z'            # pencere içi ilk dolum (UTC)
     assert s['dolum'] == 2 and s['mevcut_gecikme_dk'] == 30 and s['mevcut_net'] == s['gecikmeler']['30']['net']
     assert set(s['gecikmeler']) == {'0', '1', '5', '30', '120'}
     assert s['gecikmeler']['0']['net'] == pytest.approx(net_beklenen(100, 110))
@@ -189,3 +190,10 @@ def test_sozlesme_ciktidaki_her_alan_veri_sozlesmesinde_yazili():
     anahtarlar = set(sonuc) | set(satir) | set(s) | set(sonuc['ozet']) | set(sonuc['maliyet'])
     eksik = sorted(a for a in anahtarlar if a not in ('0', 'min', 'medyan', 'maks') and f'`{a}' not in bolum and f'.{a}' not in bolum and f'{a}`' not in bolum)
     assert not eksik, f'VERI_SOZLESMESI §4b\'de yazılmayan alanlar: {eksik}'
+
+
+def test_ilk_dolum_bos_hesapta_none_ve_olcumu_degistirmez():
+    bos = gk.trader_satiri('X', '0xabc', 'intraday', T0, calistir([], {}, gecikmeler=(0,)), 0, 0)
+    assert bos['ilk_dolum'] is None
+    dolu = gk.trader_satiri('X', '0xabc', 'intraday', T0, calistir([], {}, gecikmeler=(0,)), 0, 0, ms('2026-10-27T09:00:00.500Z'))
+    assert dolu['ilk_dolum'] == '2026-10-27T09:00:00.500000Z' and {k: v for k, v in dolu.items() if k != 'ilk_dolum'} == {k: v for k, v in bos.items() if k != 'ilk_dolum'}

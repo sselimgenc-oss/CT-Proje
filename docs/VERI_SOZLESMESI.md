@@ -227,6 +227,7 @@ Anlıkta `px` yok/≤ 0 ise dolum `fiyatsiz_eylem`e girer (mum aranmaz, sahte fi
 | `traderlar[].adres` | küçük harf halka açık adres (bu dosya adres İÇERİR; `ozet.json`/`durum.json` gibi yayımlanmaz, yalnız CI artefaktı) |
 | `traderlar[].tarz` | `intraday` \| `swing` \| `bilinmiyor` (bilinmiyorsa izleme varsayılan gecikmesi 30 dk) |
 | `traderlar[].t0` | UTC ISO; ölçüm penceresinin etkin başlangıcı (`dakika` penceresinde kırpılmış olabilir) |
+| `traderlar[].ilk_dolum` | UTC ISO; API'nin gerçekten döndürdüğü, pencere içindeki ilk perp dolumunun zamanı (`null` = dolum yok). Yalnız okunurluk — ölçümü DEĞİŞTİRMEZ. `t0`'dan belirgin sonraysa API'nin ~10.000 dolum sınırı pencereyi kısaltmıştır (aşağıdaki veri sınırı) |
 | `traderlar[].dolum` | pencere içi perp dolum sayısı (adet) |
 | `traderlar[].mevcut_gecikme_dk` | izlemenin bu trader için kullandığı gecikme (dk; intraday 30, swing 120) |
 | `traderlar[].mevcut_net` | `gecikmeler[mevcut_gecikme_dk].net` (ORAN) — izleme `sanal_kopya_v3.getiri` ile `tam` pencerede karşılaştırılır |
