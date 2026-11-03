@@ -8,25 +8,35 @@
 </head>
 <body>
   <div class="app-container">
-    <!-- 4. Durum Şeridi (En üstte, ince) -->
+    <!-- 5 & 7. Durum Şeridi (En üstte, ince, en fazla 2 satır, bölünmeyen değerler ve takım özeti) -->
     <aside class="status-bar" aria-label="Sistem Durum Şeridi">
-      <div class="status-left">
-        <span class="status-dot" id="yenileme-ikon"></span>
-        <span id="durum-dinleyici" class="listener-tag">
-          Dinleyici: gecikme medyanı <strong>—</strong> · kaçan <strong>—</strong>
-        </span>
-        <span style="color:var(--border-color);">|</span>
-        <span id="durum-saat" class="mono-val" style="color:var(--text-secondary);">TSİ —</span>
+      <!-- Satır 1: Dinleyici Telemetrisi ve SİM Rozeti -->
+      <div class="status-row status-row-top">
+        <div class="status-row-left nowrap">
+          <span class="status-dot" id="yenileme-ikon"></span>
+          <span id="durum-dinleyici" class="listener-tag nowrap">
+            Dinleyici: gecikme medyanı <strong class="nowrap">—</strong> · kaçan <strong class="nowrap">—</strong>
+          </span>
+        </div>
+        <div class="status-row-right nowrap">
+          <span class="sim-badge">SİM</span>
+        </div>
       </div>
 
-      <div class="status-right">
-        <span class="sim-badge">SİM</span>
-        <span class="listener-tag" style="font-size:11px;">
-          Yenileniyor: <strong id="sayac-metni" class="num">60s</strong>
-        </span>
-        <button id="tema-degistir-btn" class="theme-toggle-btn" aria-label="Temayı Değiştir">
-          ☀️ Açık Tema
-        </button>
+      <!-- Satır 2: Takım Özeti, Saat ve Tema Değiştirici -->
+      <div class="status-row status-row-bottom">
+        <div class="status-row-left nowrap" id="durum-takim-ozeti">
+          <span class="status-team-summary nowrap"><span class="team-name">—</span> — · —</span>
+        </div>
+        <div class="status-row-right nowrap">
+          <span id="durum-saat" class="mono-val nowrap">TSİ —</span>
+          <span class="listener-tag nowrap" style="font-size:11px;">
+            <strong id="sayac-metni" class="num">60s</strong>
+          </span>
+          <button id="tema-degistir-btn" class="theme-toggle-btn nowrap" aria-label="Temayı Değiştir">
+            ☀️ Açık Tema
+          </button>
+        </div>
       </div>
     </aside>
 
@@ -186,7 +196,7 @@
         </div>
       </section>
 
-      <!-- 2. GRAFİKLER (INLINE SVG, KÜTÜPHANESİZ, HOVER TOOLTIP'Lİ) -->
+      <!-- 2. GRAFİKLER (INLINE SVG + HTML EKSEN YAZILARI, HOVER VE DOKUNMATİK TOOLTIP) -->
       <!-- GRAFİK 1: Kümülatif K/Z (Yeşil Alan) -->
       <section class="terminal-panel col-span-1" aria-label="Kümülatif K/Z Grafiği">
         <div class="panel-header">

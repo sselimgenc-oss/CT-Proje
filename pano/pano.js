@@ -1,7 +1,7 @@
 /**
  * Hyperliquid Perps Pano — Terminal Sürümü
  * Güvenlik: Yalnızca VERI_URL okunur. API anahtarı, token veya emir/işlem düğmesi bulunmaz.
- * HTML kaçışı ve kesin veri doğrulaması içerir.
+ * HTML kaçışı, dokunmatik ipucu, HTML eksen yazıları ve kesin veri doğrulaması içerir.
  */
 
 const VERI_URL = 'ornek_veri.json';
@@ -230,9 +230,10 @@ function kzSinifi(deger) {
 }
 
 // ==========================================
-// 4. TOOLTIP YÖNETİMİ
+// 4. TOOLTIP YÖNETİMİ (Fare ve 1. Dokunmatik İpucu)
 // ==========================================
 let tooltipEl = null;
+let dokunmaZamanlayici = null;
 
 function setupTooltip() {
   tooltipEl = document.getElementById('chart-tooltip');
@@ -242,6 +243,14 @@ function setupTooltip() {
     tooltipEl.className = 'chart-tooltip';
     document.body.appendChild(tooltipEl);
   }
+
+  // 1. Düzeltme: Başka yere dokununca ipucu güvenle kapansın
+  document.addEventListener('touchstart', (e) => {
+    if (e.target && typeof e.target.closest === 'function' && e.target.closest('.chart-point')) {
+      return;
+    }
+    hideTooltip();
+  }, { passive: true });
 }
 
 function showTooltip(e, text) {
@@ -249,6 +258,17 @@ function showTooltip(e, text) {
   tooltipEl.innerHTML = kacis(text);
   tooltipEl.classList.add('visible');
   moveTooltip(e);
+}
+
+function showTouchTooltip(e, text) {
+  if (dokunmaZamanlayici) clearTimeout(dokunmaZamanlayici);
+  const touch = (e.touches && e.touches.length > 0) ? e.touches[0] : e;
+  showTooltip(touch, text);
+
+  // 1. Düzeltme: 3 saniye sonra otomatik kapansın
+  dokunmaZamanlayici = setTimeout(() => {
+    hideTooltip();
+  }, 3000);
 }
 
 function moveTooltip(e) {
@@ -260,6 +280,10 @@ function moveTooltip(e) {
 }
 
 function hideTooltip() {
+  if (dokunmaZamanlayici) {
+    clearTimeout(dokunmaZamanlayici);
+    dokunmaZamanlayici = null;
+  }
   if (!tooltipEl) return;
   tooltipEl.classList.remove('visible');
 }
@@ -313,7 +337,7 @@ async function veriyiYukle() {
 function panoyuGuncelle() {
   if (!panoVerisi) return;
 
-  // 1. Durum Şeridi (Status Bar)
+  // 1. Durum Şeridi (Status Bar & 7. Takım Özeti)
   durumSeridiniGuncelle();
 
   // 2. Takım sekmeleri
@@ -327,22 +351,22 @@ function panoyuGuncelle() {
   }
   if (!aktifTakim) return;
 
-  // 4. Üst Şerit Metrik Kutuları (9 Metrik)
+  // 4. Üst Şerit Metrik Kutuları
   ustSeritMetrikleriniCiz(aktifTakim);
 
   // 5. Kasa Kartı ve Özet
   kasaKartiniCiz(aktifTakim);
 
-  // 6. 4 Adet Inline SVG Grafik
+  // 6. 4 Adet Inline SVG Grafik (2. HTML Eksen Yazıları)
   grafikleriCiz(aktifTakim);
 
-  // 7. Trader Tablosu (Sıralanabilir)
+  // 7. Trader Tablosu
   traderTablosunuCiz(aktifTakim);
 
-  // 8. Açık İşlemler Tablosu
+  // 8. Açık İşlemler Tablosu (3. Likidasyon & 4. Bilinmeyen Yön)
   acikIslemleriCiz(aktifTakim);
 
-  // 9. Son Kapananlar Tablosu
+  // 9. Son Kapananlar Tablosu (6. Mobil Kapananlar Tek Satır)
   sonKapananlariCiz(aktifTakim);
 
   // Alt bilgi
@@ -352,14 +376,14 @@ function panoyuGuncelle() {
   }
 }
 
-// 4. Durum Şeridi
+// 5 & 7. Durum Şeridi ve Takım Özeti
 function durumSeridiniGuncelle() {
   const dinleyici = panoVerisi.dinleyici || {};
   const durumDinleyici = document.getElementById('durum-dinleyici');
   const durumSaat = document.getElementById('durum-saat');
+  const durumTakimOzet = document.getElementById('durum-takim-ozeti');
 
   if (durumDinleyici) {
-    // 1. Düzeltme: '0,29' ve 0 yedekleri kaldırıldı; alan yoksa '—' gösterilir
     const medyanStr = (dinleyici.gecikme_medyan_sn !== undefined && dinleyici.gecikme_medyan_sn !== null)
       ? `${formatOndalik(dinleyici.gecikme_medyan_sn, 2)} sn`
       : '—';
@@ -367,11 +391,44 @@ function durumSeridiniGuncelle() {
       ? kacis(dinleyici.kacan)
       : '—';
 
-    durumDinleyici.innerHTML = `Dinleyici: gecikme medyanı <strong>${medyanStr}</strong> · kaçan <strong>${kacanStr}</strong>`;
+    // 5. Düzeltme: '0,29 sn' ve değerler nowrap ile satır ortasında bölünmez
+    durumDinleyici.innerHTML = `Dinleyici: gecikme medyanı <strong class="nowrap">${medyanStr}</strong> · kaçan <strong class="nowrap">${kacanStr}</strong>`;
   }
 
   if (durumSaat && panoVerisi.uretildi) {
     durumSaat.textContent = `TSİ ${kacis(formatSaatTr(panoVerisi.uretildi))}`;
+  }
+
+  // 7. Düzeltme: Durum şeridine takım özeti: “İlk 11 +%4,3 · 14 açık”
+  // Yalnız JSON'daki metrik.toplam_oran ve acik listesinin uzunluğu kullanılır. Alan yoksa “—” yaz.
+  if (durumTakimOzet) {
+    let aktifTakim = panoVerisi.takimlar.find(t => t.ad === aktifTakimAdi);
+    if (!aktifTakim && panoVerisi.takimlar.length > 0) aktifTakim = panoVerisi.takimlar[0];
+
+    if (aktifTakim) {
+      const adStr = kacis(aktifTakim.ad || '—');
+      
+      let oranStr = '—';
+      if (aktifTakim.metrik && aktifTakim.metrik.toplam_oran !== undefined && aktifTakim.metrik.toplam_oran !== null && !isNaN(aktifTakim.metrik.toplam_oran)) {
+        oranStr = formatOran(aktifTakim.metrik.toplam_oran, true, 1);
+      }
+
+      let acikStr = '—';
+      if (aktifTakim.acik && Array.isArray(aktifTakim.acik)) {
+        acikStr = `${aktifTakim.acik.length} açık`;
+      }
+
+      const cls = (oranStr !== '—') ? kzSinifi(aktifTakim.metrik.toplam_oran) : 'neutral';
+      durumTakimOzet.innerHTML = `
+        <span class="status-team-summary nowrap">
+          <span class="team-name">${adStr}</span>
+          <span class="${cls} nowrap">${oranStr}</span> · 
+          <span class="nowrap">${acikStr}</span>
+        </span>
+      `;
+    } else {
+      durumTakimOzet.innerHTML = '<span class="status-team-summary nowrap">—</span>';
+    }
   }
 
   // Tazelik uyarısı (2,5 saatten eskiyse sarı uyarı)
@@ -410,7 +467,7 @@ function sekmeleriCiz() {
   });
 }
 
-// 1. Üst Şerit Metrik Kutuları (Uydurma varsayılanlar olmadan)
+// 1. Üst Şerit Metrik Kutuları
 function ustSeritMetrikleriniCiz(takim) {
   const metrik = takim.metrik || {};
 
@@ -455,7 +512,7 @@ function ustSeritMetrikleriniCiz(takim) {
     toplamEl.className = `strip-val ${kzSinifi(metrik.toplam_oran)}`;
   }
 
-  // 6. Kazanma Oranı (Yarım Halka Gösterge) - 0.5 uydurması kaldırıldı
+  // 6. Kazanma Oranı
   const winTxt = document.getElementById('strip-kazanma-txt');
   const winGauge = document.getElementById('strip-kazanma-gauge');
   const totalTrades = document.getElementById('strip-toplam-islem');
@@ -489,7 +546,6 @@ function ustSeritMetrikleriniCiz(takim) {
         </svg>
       `;
     } else {
-      // Değer yoksa boş gri halka
       winGauge.innerHTML = `
         <svg viewBox="0 0 36 20">
           <path d="M 4 18 A 14 14 0 0 1 32 18" fill="none" stroke="var(--bg-subtle)" stroke-width="${stroke}" stroke-linecap="round"/>
@@ -498,7 +554,7 @@ function ustSeritMetrikleriniCiz(takim) {
     }
   }
 
-  // 7. Kâr Faktörü - Değer yoksa kırmızı değil nötr renk
+  // 7. Kâr Faktörü
   const pfEl = document.getElementById('strip-kar-faktoru');
   if (pfEl) {
     if (metrik.kar_faktoru !== undefined && metrik.kar_faktoru !== null) {
@@ -510,7 +566,7 @@ function ustSeritMetrikleriniCiz(takim) {
     }
   }
 
-  // 8. Ortalama Kazanç / Kayıp (İki Renkli Çubuk) - 0.02 / 0.01 uydurması kaldırıldı
+  // 8. Ortalama Kazanç / Kayıp (İki Renkli Çubuk)
   const barWin = document.getElementById('bar-win-seg');
   const barLoss = document.getElementById('bar-loss-seg');
   const lblWin = document.getElementById('strip-ort-kazanc');
@@ -536,7 +592,6 @@ function ustSeritMetrikleriniCiz(takim) {
     if (lblWin) lblWin.textContent = formatOran(metrik.ort_kazanc_oran, true, 1);
     if (lblLoss) lblLoss.textContent = formatOran(metrik.ort_kayip_oran, true, 1);
   } else {
-    // Alan yoksa çubuk gri kalsın, etiketler '—' olsun
     if (barWin) barWin.style.width = '0%';
     if (barLoss) barLoss.style.width = '0%';
     if (lblWin) lblWin.textContent = '—';
@@ -551,7 +606,7 @@ function ustSeritMetrikleriniCiz(takim) {
   }
 }
 
-// Kasa Kartı ve Özet (Uydurma 0'lar kaldırıldı)
+// Kasa Kartı ve Özet
 function kasaKartiniCiz(takim) {
   const kasa = takim.kasa || {};
   const ozet = takim.ozet || {};
@@ -589,7 +644,7 @@ function kasaKartiniCiz(takim) {
     }
   }
 
-  // Özet metinleri (|| 0 ve || 11 kaldırıldı, eksik değerler '—')
+  // Özet metinleri
   const nakitEl = document.getElementById('ozet-nakit');
   const teminatEl = document.getElementById('ozet-teminat');
   const teminatAltEl = document.getElementById('ozet-teminat-alt');
@@ -639,19 +694,20 @@ function kasaKartiniCiz(takim) {
     kadroEl.textContent = (doluStr === '—' && topStr === '—') ? '—' : `Kadro: ${doluStr} / ${topStr}`;
   }
 
-  // 2. Düzeltme: Mini Kasa Grafiği etiketinde hesap yapılmaz; doğrudan kasa.degisim_oran kullanılır
+  // Mini Kasa Grafiği
   cizMiniKasaGrafik(kasa.egri, kasa.baslangic_usd, kasa.degisim_oran);
 }
 
+// 2. Düzeltme: Mini Kasa Grafiğinde HTML rozet kullanılır, SVG metin uzamaz
 function cizMiniKasaGrafik(egri, baslangicUsd, degisimOran) {
   const container = document.getElementById('kasa-grafik');
   if (!container || !egri || egri.length < 2) return;
 
   const w = 320, h = 90;
-  const padL = 36, padR = 48, padT = 14, padB = 18;
+  const padL = 10, padR = 10, padT = 14, padB = 14;
   const cW = w - padL - padR, cH = h - padT - padB;
 
-  const baseV = baslangicUsd !== undefined && baslangicUsd !== null ? baslangicUsd : egri[0][1];
+  const baseV = (baslangicUsd !== undefined && baslangicUsd !== null) ? baslangicUsd : egri[0][1];
   const vals = egri.map(x => x[1]);
   const minV = Math.min(...vals, baseV);
   const maxV = Math.max(...vals, baseV);
@@ -668,9 +724,8 @@ function cizMiniKasaGrafik(egri, baslangicUsd, degisimOran) {
 
   const isUp = (degisimOran !== undefined && degisimOran !== null) ? (degisimOran >= 0) : (lastV >= baseV);
   const color = isUp ? 'var(--color-profit)' : 'var(--color-loss)';
-  const lastX = getX(egri.length - 1), lastY = getY(lastV);
+  const badgeCls = (degisimOran !== undefined && degisimOran !== null) ? (degisimOran >= 0 ? 'profit' : 'loss') : 'neutral';
 
-  // 2. Düzeltme: Hesap yapılmaz, kasa.degisim_oran kullanılır
   const chg = (degisimOran !== undefined && degisimOran !== null)
     ? formatOran(degisimOran, true)
     : '—';
@@ -683,24 +738,21 @@ function cizMiniKasaGrafik(egri, baslangicUsd, degisimOran) {
           <stop offset="100%" stop-color="${color}" stop-opacity="0.0"/>
         </linearGradient>
       </defs>
-      <!-- 5. Düzeltme: CSS değişkenli sıfır çizgisi -->
       <line x1="${padL}" y1="${getY(baseV).toFixed(1)}" x2="${padL + cW}" y2="${getY(baseV).toFixed(1)}" stroke="var(--chart-zero-line)" stroke-dasharray="2 2"/>
       <polygon points="${areaPoints}" fill="url(#miniKasaGrad)"/>
       <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2"/>
-      <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="3" fill="${color}"/>
-      <rect x="${lastX + 4}" y="${lastY - 8}" width="42" height="16" rx="3" fill="${color}"/>
-      <text x="${lastX + 25}" y="${lastY + 3.5}" text-anchor="middle" font-size="9" font-weight="700" fill="#fff" font-family="var(--font-mono)">${chg}</text>
     </svg>
+    <div class="mini-kasa-badge ${badgeCls}">${chg}</div>
   `;
 }
 
 // ==========================================
-// 7. 4 ADET İNLİNE SVG GRAFİK (CSS Değişkenleri ile)
+// 7. 4 ADET İNLİNE SVG GRAFİK (2. HTML Eksen Yazıları)
 // ==========================================
 function grafikleriCiz(takim) {
   const seriler = takim.seriler || {};
 
-  // 1. Kümülatif K/Z (Yeşil Alan)
+  // 1. Kümülatif K/Z
   cizAlanGrafik({
     containerId: 'grafik-kumulatif',
     badgeId: 'badge-kumulatif-son',
@@ -710,7 +762,7 @@ function grafikleriCiz(takim) {
     stopColor: 'rgba(16, 185, 129, 0.4)'
   });
 
-  // 2. Kasa Bakiyesi (Turuncu Çizgi)
+  // 2. Kasa Bakiyesi
   cizCizgiGrafik({
     containerId: 'grafik-bakiye',
     badgeId: 'badge-bakiye-son',
@@ -720,7 +772,7 @@ function grafikleriCiz(takim) {
     stopColor: 'rgba(245, 158, 11, 0.25)'
   });
 
-  // 3. Düşüş (Drawdown, Kırmızı Alan 0'dan aşağı)
+  // 3. Düşüş (Drawdown)
   cizDususGrafik({
     containerId: 'grafik-dusus',
     badgeId: 'badge-dusus-son',
@@ -730,7 +782,7 @@ function grafikleriCiz(takim) {
     stopColor: 'rgba(244, 63, 94, 0.35)'
   });
 
-  // 4. Günlük Net K/Z (Yeşil/Kırmızı Çubuklar)
+  // 4. Günlük Net K/Z
   cizGunlukCubukGrafik({
     containerId: 'grafik-gunluk',
     badgeId: 'badge-gunluk-ozet',
@@ -751,7 +803,7 @@ function cizAlanGrafik(cfg) {
   }
 
   const w = 380, h = 130;
-  const padL = 40, padR = 16, padT = 16, padB = 22;
+  const padL = 44, padR = 16, padT = 14, padB = 22;
   const cW = w - padL - padR, cH = h - padT - padB;
 
   const vals = data.map(d => d[1]);
@@ -775,12 +827,12 @@ function cizAlanGrafik(cfg) {
     const dateStr = formatKisaTarihTr(d[0]);
     const valStr = formatPara(d[1], true);
     dotsHtml += `
-      <circle cx="${cx}" cy="${cy}" r="4" fill="transparent" class="chart-point"
+      <circle cx="${cx}" cy="${cy}" r="4.5" fill="transparent" class="chart-point"
               data-tooltip="${dateStr}: ${valStr}" style="cursor:pointer;" />
     `;
   });
 
-  // 5. Düzeltme: Sabit renkler yerine CSS değişkenleri
+  // 2. Düzeltme: HTML eksen yazıları
   container.innerHTML = `
     <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
       <defs>
@@ -790,15 +842,19 @@ function cizAlanGrafik(cfg) {
         </linearGradient>
       </defs>
       <line x1="${padL}" y1="${zeroY.toFixed(1)}" x2="${padL + cW}" y2="${zeroY.toFixed(1)}" stroke="var(--chart-zero-line)" stroke-dasharray="2 2"/>
-      <text x="${padL - 6}" y="${zeroY + 3.5}" fill="var(--chart-axis-text)" font-size="9" text-anchor="end" font-family="var(--font-mono)">0 $</text>
-
       <polygon points="${areaPoints}" fill="url(#${cfg.gradId})"/>
       <polyline points="${points}" fill="none" stroke="${cfg.strokeColor}" stroke-width="2"/>
       ${dotsHtml}
-
-      <text x="${padL}" y="${h - 4}" fill="var(--chart-axis-text)" font-size="9" font-family="var(--font-mono)">${formatKisaTarihTr(data[0][0])}</text>
-      <text x="${padL + cW}" y="${h - 4}" fill="var(--chart-axis-text)" font-size="9" text-anchor="end" font-family="var(--font-mono)">${formatKisaTarihTr(data[data.length - 1][0])}</text>
     </svg>
+    <div class="chart-axis-y">
+      <span>${formatPara(maxV, true)}</span>
+      <span>0 $</span>
+      <span>${minV < 0 ? formatPara(minV, true) : ''}</span>
+    </div>
+    <div class="chart-axis-x">
+      <span>${kacis(formatKisaTarihTr(data[0][0]))}</span>
+      <span>${kacis(formatKisaTarihTr(data[data.length - 1][0]))}</span>
+    </div>
   `;
 
   attachHoverEvents(container);
@@ -814,7 +870,7 @@ function cizCizgiGrafik(cfg) {
   if (badge) badge.textContent = formatPara(lastVal);
 
   const w = 380, h = 130;
-  const padL = 46, padR = 16, padT = 16, padB = 22;
+  const padL = 44, padR = 16, padT = 14, padB = 22;
   const cW = w - padL - padR, cH = h - padT - padB;
 
   const vals = data.map(d => d[1]);
@@ -836,12 +892,12 @@ function cizCizgiGrafik(cfg) {
     const dateStr = formatKisaTarihTr(d[0]);
     const valStr = formatPara(d[1]);
     dotsHtml += `
-      <circle cx="${cx}" cy="${cy}" r="4" fill="transparent" class="chart-point"
+      <circle cx="${cx}" cy="${cy}" r="4.5" fill="transparent" class="chart-point"
               data-tooltip="${dateStr}: ${valStr}" style="cursor:pointer;" />
     `;
   });
 
-  // 5. Düzeltme: Sabit renkler yerine CSS değişkenleri
+  // 2. Düzeltme: HTML eksen yazıları
   container.innerHTML = `
     <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
       <defs>
@@ -851,17 +907,18 @@ function cizCizgiGrafik(cfg) {
         </linearGradient>
       </defs>
       <line x1="${padL}" y1="${getY(maxV).toFixed(1)}" x2="${padL + cW}" y2="${getY(maxV).toFixed(1)}" stroke="var(--chart-grid-light)" stroke-dasharray="2 2"/>
-      <text x="${padL - 6}" y="${getY(maxV) + 3.5}" fill="var(--chart-axis-text)" font-size="9" text-anchor="end" font-family="var(--font-mono)">${Math.round(maxV)} $</text>
-
       <line x1="${padL}" y1="${getY(minV).toFixed(1)}" x2="${padL + cW}" y2="${getY(minV).toFixed(1)}" stroke="var(--chart-grid-light)" stroke-dasharray="2 2"/>
-      <text x="${padL - 6}" y="${getY(minV) + 3.5}" fill="var(--chart-axis-text)" font-size="9" text-anchor="end" font-family="var(--font-mono)">${Math.round(minV)} $</text>
-
       <polyline points="${points}" fill="none" stroke="${cfg.strokeColor}" stroke-width="2"/>
       ${dotsHtml}
-
-      <text x="${padL}" y="${h - 4}" fill="var(--chart-axis-text)" font-size="9" font-family="var(--font-mono)">${formatKisaTarihTr(data[0][0])}</text>
-      <text x="${padL + cW}" y="${h - 4}" fill="var(--chart-axis-text)" font-size="9" text-anchor="end" font-family="var(--font-mono)">${formatKisaTarihTr(data[data.length - 1][0])}</text>
     </svg>
+    <div class="chart-axis-y">
+      <span>${Math.round(maxV)} $</span>
+      <span>${Math.round(minV)} $</span>
+    </div>
+    <div class="chart-axis-x">
+      <span>${kacis(formatKisaTarihTr(data[0][0]))}</span>
+      <span>${kacis(formatKisaTarihTr(data[data.length - 1][0]))}</span>
+    </div>
   `;
 
   attachHoverEvents(container);
@@ -880,7 +937,7 @@ function cizDususGrafik(cfg) {
   }
 
   const w = 380, h = 130;
-  const padL = 44, padR = 16, padT = 16, padB = 22;
+  const padL = 44, padR = 16, padT = 14, padB = 22;
   const cW = w - padL - padR, cH = h - padT - padB;
 
   const vals = data.map(d => d[1]);
@@ -903,12 +960,12 @@ function cizDususGrafik(cfg) {
     const dateStr = formatKisaTarihTr(d[0]);
     const valStr = formatOran(d[1], true);
     dotsHtml += `
-      <circle cx="${cx}" cy="${cy}" r="4" fill="transparent" class="chart-point"
+      <circle cx="${cx}" cy="${cy}" r="4.5" fill="transparent" class="chart-point"
               data-tooltip="${dateStr}: ${valStr}" style="cursor:pointer;" />
     `;
   });
 
-  // 5. Düzeltme: Sabit renkler yerine CSS değişkenleri
+  // 2. Düzeltme: HTML eksen yazıları
   container.innerHTML = `
     <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
       <defs>
@@ -918,18 +975,19 @@ function cizDususGrafik(cfg) {
         </linearGradient>
       </defs>
       <line x1="${padL}" y1="${zeroY.toFixed(1)}" x2="${padL + cW}" y2="${zeroY.toFixed(1)}" stroke="var(--chart-zero-line)" stroke-dasharray="2 2"/>
-      <text x="${padL - 6}" y="${zeroY + 3.5}" fill="var(--chart-axis-text)" font-size="9" text-anchor="end" font-family="var(--font-mono)">%0</text>
-
       <line x1="${padL}" y1="${getY(minV).toFixed(1)}" x2="${padL + cW}" y2="${getY(minV).toFixed(1)}" stroke="var(--chart-grid-light)" stroke-dasharray="2 2"/>
-      <text x="${padL - 6}" y="${getY(minV) + 3.5}" fill="var(--chart-axis-text)" font-size="9" text-anchor="end" font-family="var(--font-mono)">${formatOran(minV, true, 1)}</text>
-
       <polygon points="${areaPoints}" fill="url(#${cfg.gradId})"/>
       <polyline points="${points}" fill="none" stroke="${cfg.strokeColor}" stroke-width="2"/>
       ${dotsHtml}
-
-      <text x="${padL}" y="${h - 4}" fill="var(--chart-axis-text)" font-size="9" font-family="var(--font-mono)">${formatKisaTarihTr(data[0][0])}</text>
-      <text x="${padL + cW}" y="${h - 4}" fill="var(--chart-axis-text)" font-size="9" text-anchor="end" font-family="var(--font-mono)">${formatKisaTarihTr(data[data.length - 1][0])}</text>
     </svg>
+    <div class="chart-axis-y">
+      <span>%0</span>
+      <span>${formatOran(minV, true, 1)}</span>
+    </div>
+    <div class="chart-axis-x">
+      <span>${kacis(formatKisaTarihTr(data[0][0]))}</span>
+      <span>${kacis(formatKisaTarihTr(data[data.length - 1][0]))}</span>
+    </div>
   `;
 
   attachHoverEvents(container);
@@ -944,7 +1002,7 @@ function cizGunlukCubukGrafik(cfg) {
   if (badge) badge.textContent = `${data.length} Günlük Veri`;
 
   const w = 900, h = 120;
-  const padL = 46, padR = 20, padT = 16, padB = 22;
+  const padL = 44, padR = 16, padT = 14, padB = 22;
   const cW = w - padL - padR, cH = h - padT - padB;
 
   const vals = data.map(d => d[1]);
@@ -981,31 +1039,33 @@ function cizGunlukCubukGrafik(cfg) {
     `;
   });
 
-  // 5. Düzeltme: Sabit renkler yerine CSS değişkenleri
+  // 2. Düzeltme: HTML eksen yazıları
   container.innerHTML = `
     <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
       <line x1="${padL}" y1="${zeroY.toFixed(1)}" x2="${padL + cW}" y2="${zeroY.toFixed(1)}" stroke="var(--chart-zero-line)" stroke-dasharray="2 2"/>
-      <text x="${padL - 6}" y="${zeroY + 3.5}" fill="var(--chart-axis-text)" font-size="9" text-anchor="end" font-family="var(--font-mono)">%0</text>
-
       <line x1="${padL}" y1="${getY(maxAbs).toFixed(1)}" x2="${padL + cW}" y2="${getY(maxAbs).toFixed(1)}" stroke="var(--chart-grid-light)" stroke-dasharray="2 2"/>
-      <text x="${padL - 6}" y="${getY(maxAbs) + 3.5}" fill="var(--chart-axis-text)" font-size="9" text-anchor="end" font-family="var(--font-mono)">${formatOran(maxAbs, true, 1)}</text>
-
       <line x1="${padL}" y1="${getY(-maxAbs).toFixed(1)}" x2="${padL + cW}" y2="${getY(-maxAbs).toFixed(1)}" stroke="var(--chart-grid-light)" stroke-dasharray="2 2"/>
-      <text x="${padL - 6}" y="${getY(-maxAbs) + 3.5}" fill="var(--chart-axis-text)" font-size="9" text-anchor="end" font-family="var(--font-mono)">${formatOran(-maxAbs, true, 1)}</text>
-
       ${barsHtml}
-
-      <text x="${padL}" y="${h - 4}" fill="var(--chart-axis-text)" font-size="9" font-family="var(--font-mono)">${formatKisaTarihTr(data[0][0])}</text>
-      <text x="${padL + cW}" y="${h - 4}" fill="var(--chart-axis-text)" font-size="9" text-anchor="end" font-family="var(--font-mono)">${formatKisaTarihTr(data[data.length - 1][0])}</text>
     </svg>
+    <div class="chart-axis-y">
+      <span>${formatOran(maxAbs, true, 1)}</span>
+      <span>%0</span>
+      <span>${formatOran(-maxAbs, true, 1)}</span>
+    </div>
+    <div class="chart-axis-x">
+      <span>${kacis(formatKisaTarihTr(data[0][0]))}</span>
+      <span>${kacis(formatKisaTarihTr(data[data.length - 1][0]))}</span>
+    </div>
   `;
 
   attachHoverEvents(container);
 }
 
+// 1. Düzeltme: Dokunmatik ve fare etkinlikleri
 function attachHoverEvents(container) {
   const elements = container.querySelectorAll('.chart-point');
   elements.forEach(el => {
+    // Fare davranışı
     el.addEventListener('mouseenter', (e) => {
       const txt = el.getAttribute('data-tooltip');
       if (txt) showTooltip(e, txt);
@@ -1016,11 +1076,19 @@ function attachHoverEvents(container) {
     el.addEventListener('mouseleave', () => {
       hideTooltip();
     });
+
+    // 1. Düzeltme: Dokunmatik cihazlarda ipucu (3 sn veya başka yere dokununca kapanır)
+    el.addEventListener('touchstart', (e) => {
+      const txt = el.getAttribute('data-tooltip');
+      if (txt) {
+        showTouchTooltip(e, txt);
+      }
+    }, { passive: true });
   });
 }
 
 // ==========================================
-// 8. TRADER TABLOSU (Sıralanabilir & Kaçışlı)
+// 8. TRADER TABLOSU
 // ==========================================
 function traderTablosunuCiz(takim) {
   const tbody = document.getElementById('trader-tablosu-body');
@@ -1062,7 +1130,6 @@ function traderTablosunuCiz(takim) {
     const adGuvenli = kacis(t.ad);
     const islemGuvenli = (t.islem !== undefined && t.islem !== null) ? t.islem : '—';
 
-    // 3. Düzeltme: HTML kaçışı uygulandı
     tr.innerHTML = `
       <td class="left">
         <span class="desktop-only trader-tag"><strong>${adGuvenli}</strong></span>
@@ -1114,7 +1181,7 @@ function traderTablosunuCiz(takim) {
 }
 
 // ==========================================
-// 9. AÇIK İŞLEMLER TABLOSU (Kaçışlı & Fiyat Biçimli)
+// 9. AÇIK İŞLEMLER TABLOSU
 // ==========================================
 function acikIslemleriCiz(takim) {
   const acikListesi = takim.acik || [];
@@ -1157,13 +1224,30 @@ function acikIslemleriCiz(takim) {
       const tr = document.createElement('tr');
       tr.className = 'pos-row';
 
-      const yonCls = pos.yon === 'long' ? 'long' : 'short';
-      const yonEtiket = pos.yon === 'long' ? `L ${kacis(pos.kaldirac)}x` : `S ${kacis(pos.kaldirac)}x`;
+      // 4. Düzeltme: Bilinmeyen yön durumunda rozet short görünmesin, nötr '—' görünsün
+      let yonCls = 'neutral';
+      let yonEtiket = '—';
+      const kaldiracStr = (pos.kaldirac !== undefined && pos.kaldirac !== null) ? `${kacis(pos.kaldirac)}x` : '';
+      if (pos.yon === 'long') {
+        yonCls = 'long';
+        yonEtiket = kaldiracStr ? `L ${kaldiracStr}` : 'L';
+      } else if (pos.yon === 'short') {
+        yonCls = 'short';
+        yonEtiket = kaldiracStr ? `S ${kaldiracStr}` : 'S';
+      } else {
+        yonCls = 'neutral';
+        yonEtiket = '—';
+      }
+
       const kzCls = kzSinifi(pos.kz_usd);
       const yasMetni = yasHesapla(pos.acilis, panoVerisi.uretildi);
-      const liqMetni = pos.likidasyona_uzaklik_oran !== undefined ? `liq ${formatOran(pos.likidasyona_uzaklik_oran, false, 0)} uzak` : '—';
 
-      // 3. ve 4. Düzeltmeler: HTML kaçışı ve bilimsel gösterimsiz Türkçe fiyat biçimlendirmesi
+      // 3. Düzeltme: likidasyona_uzaklik_oran alanı yoksa ya da null ise yalnız '—' yaz
+      let liqMetni = '—';
+      if (pos.likidasyona_uzaklik_oran !== undefined && pos.likidasyona_uzaklik_oran !== null && !isNaN(pos.likidasyona_uzaklik_oran)) {
+        liqMetni = `liq ${formatOran(pos.likidasyona_uzaklik_oran, false, 0)} uzak`;
+      }
+
       const coinGuvenli = kacis(pos.coin);
       const traderGuvenli = kacis(pos.trader);
       const girisFiyat = formatFiyat(pos.giris);
@@ -1217,7 +1301,6 @@ function acikIslemleriCiz(takim) {
     });
   }
 
-  // 2. Düzeltme: Tek izin verilen hesap olan dinamik tablosal toplam
   toplamSatiriniCiz(acikListesi);
 }
 
@@ -1272,7 +1355,7 @@ function toplamSatiriniCiz(acikListesi) {
 }
 
 // ==========================================
-// 10. SON KAPANANLAR TABLOSU (Kaçışlı & Sınıf Korumalı)
+// 10. SON KAPANANLAR TABLOSU (6. Mobil Tek Satır)
 // ==========================================
 function sonKapananlariCiz(takim) {
   const kapananListesi = takim.kapanan || [];
@@ -1292,35 +1375,54 @@ function sonKapananlariCiz(takim) {
     const tr = document.createElement('tr');
     tr.className = 'closed-row';
 
-    const yonCls = pos.yon === 'long' ? 'long' : 'short';
-    const yonEtiket = pos.yon === 'long' ? `L ${kacis(pos.kaldirac)}x` : `S ${kacis(pos.kaldirac)}x`;
+    // 4. Düzeltme: Bilinmeyen yön nötr '—' rozeti
+    let yonCls = 'neutral';
+    let yonEtiket = '—';
+    const kaldiracStr = (pos.kaldirac !== undefined && pos.kaldirac !== null) ? `${kacis(pos.kaldirac)}x` : '';
+    if (pos.yon === 'long') {
+      yonCls = 'long';
+      yonEtiket = kaldiracStr ? `L ${kaldiracStr}` : 'L';
+    } else if (pos.yon === 'short') {
+      yonCls = 'short';
+      yonEtiket = kaldiracStr ? `S ${kaldiracStr}` : 'S';
+    } else {
+      yonCls = 'neutral';
+      yonEtiket = '—';
+    }
+
     const kzCls = kzSinifi(pos.kz_usd);
     const sureMetni = sureHesapla(pos.acilis, pos.kapanis);
     const nedenMetni = kacis(turkceNeden(pos.neden));
-    // 3. Düzeltme: reason-tag sınıf adında yalnız bilinen 5 değeri kabul et
     const nedenSinif = guvenliNedenSinifi(pos.neden);
     const coinGuvenli = kacis(pos.coin);
     const traderGuvenli = kacis(pos.trader);
 
+    // 6. Düzeltme: Kapanma nedeni ve trader, kartta coin satırının altına tek satır olarak yazılır:
+    // “Trader kapattı · 936c · 7 sa 15 dk”
     tr.innerHTML = `
       <td class="left">
         <div class="desktop-only" style="display:inline-flex;align-items:center;gap:6px;">
           <strong>${coinGuvenli}</strong>
         </div>
         <!-- Mobil Kart -->
-        <div class="mobile-only mobile-card-top">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <strong>${coinGuvenli}</strong>
-            <span class="badge-pos ${yonCls}">${yonEtiket}</span>
-            <span class="reason-tag ${nedenSinif}">${nedenMetni}</span>
+        <div class="mobile-only">
+          <div class="mobile-card-top">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <strong style="font-size:14px;">${coinGuvenli}</strong>
+              <span class="badge-pos ${yonCls}">${yonEtiket}</span>
+            </div>
+            <div style="text-align:right;">
+              <span class="num ${kzCls}" style="font-weight:700;font-size:13px;">${formatPara(pos.kz_usd, true)}</span>
+              <span class="num ${kzCls}" style="font-size:11px;margin-left:4px;">(${formatOran(pos.kz_oran, true)})</span>
+            </div>
           </div>
-          <div class="num ${kzCls}" style="font-weight:700;">
-            ${formatPara(pos.kz_usd, true)}
+          <!-- 6. Düzeltme: Coin satırının altında tek satır: “Trader kapattı · 936c · 7 sa 15 dk” -->
+          <div class="mobile-card-meta nowrap" style="font-size:11px;color:var(--text-secondary);margin:4px 0 2px 0;">
+            <span><span class="reason-tag ${nedenSinif}">${nedenMetni}</span> · <span class="trader-tag">${traderGuvenli}</span> · ${sureMetni}</span>
           </div>
-        </div>
-        <div class="mobile-only mobile-card-meta">
-          <span><span class="trader-tag">${traderGuvenli}</span> · ${sureMetni}</span>
-          <span class="num ${kzCls}">${formatOran(pos.kz_oran, true)} (Ana para: ${formatPara(pos.ana_para_usd)})</span>
+          <div style="font-size:10px;color:var(--text-muted);text-align:right;margin-top:2px;">
+            Ana para: ${formatPara(pos.ana_para_usd)}
+          </div>
         </div>
       </td>
       <td class="center desktop-only"><span class="badge-pos ${yonCls}">${yonEtiket}</span></td>
