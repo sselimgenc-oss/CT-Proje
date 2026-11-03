@@ -1024,6 +1024,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--adres", action="append", default=[], help="kapıya zorla eklenen adres (dis_aday); tekrarlanabilir")
     parser.add_argument("--yeniden-dene-gun", metavar="YYYY-MM-DD",
                         help="o günün `hata` dolu satırlarını yeniden koş, mevcut sonuc.csv ile bayt bayt birleştir, durum.json'ı yeniden hesapla (hesap sürümü / kod hash'i farklıysa reddeder)")
+    parser.add_argument("--hash-istisnasi", action="store_true",
+                        help="--yeniden-dene-gun: kod hash'i farklı dosyada TEK SEFERLİK istisna (önce 20 başarılı satırın ham sütunları bayt bayt aynı çıkmalı; aksi halde durur)")
     parser.add_argument("--en-fazla", type=int, help="--yeniden-dene-gun: en çok bu kadar hatalı satır (küçük gerçek veri denemesi)")
     parser.add_argument("--evren-yaz", type=Path, help="yalnız ortak evren anlık görüntüsünü yazıp çık")
     parser.add_argument("--evren-dosyasi", type=Path, help="plan işinin ortak evren anlık görüntüsünü kullan")
@@ -1035,7 +1037,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.yeniden_dene_gun:
         from copytrade.kapi_yeniden import YenidenKosuReddedildi, calistir
         try:
-            calistir(args.root, args.yeniden_dene_gun, en_fazla=args.en_fazla)
+            calistir(args.root, args.yeniden_dene_gun, en_fazla=args.en_fazla, hash_istisnasi=args.hash_istisnasi)
         except YenidenKosuReddedildi as hata:
             raise SystemExit(str(hata)) from hata
         return
@@ -1379,22 +1381,25 @@ def sanity_by_source(table: pd.DataFrame) -> dict[str, list[str]]:
 
 
 def run_status(finished: int, expected: int | None, processed: int, universe: int | None, mod: str, rules: dict,
-               hatali: int = 0, satir: int = 0) -> dict:
+               hatali: int = 0, aday: int = 0, satir: int = 0) -> dict:
     """Koşu durumu (görev 24): beklenen parçalardan biri bitmediyse veya (hızlı dışı) kapsam hedefin altındaysa ``eksik``.
-    VERİ BÜTÜNLÜĞÜ (kapı kuralı değil): ``hatali`` (hata sütunu dolu satır) / ``satir`` > ``veri_butunlugu_hatali_oran_max`` ise de ``eksik`` (neden ``hatali_satir``).
-    ``kapsam`` hatalı satırları da kapsanmış sayar; bu yüzden ``hatali_satir`` / ``hatali_oran`` ayrıca yayımlanır."""
+    VERİ BÜTÜNLÜĞÜ (kapı kuralı değil): ``hatali`` (hata sütunu dolu satır) / ``aday`` (analize giren = ``asama1`` Geçti) =
+    ``hatali_oran_aday`` > ``veri_butunlugu_hatali_oran_max`` ise de ``eksik`` (neden ``hatali_satir``). ``hatali_oran_evren`` (hatalı / TÜM satırlar)
+    yalnız bilgidir: evrenin çoğu API'ye hiç gitmez, payda olamaz. ``kapsam`` hatalı satırları da kapsanmış sayar; bu yüzden bu alanlar ayrıca yayımlanır."""
     reasons = []
     if expected is not None and finished < expected:
         reasons.append(f"{expected} parçanın yalnız {finished} tanesi bitti (zaman aşımı / hata)")
     coverage = processed / universe if universe else None
     if mod != "hizli" and coverage is not None and coverage < float(rules["kapsam_hedefi"]):
         reasons.append(f"kapsam %{100 * coverage:.1f} < hedef %{100 * float(rules['kapsam_hedefi']):.0f}")
-    hatali_oran = hatali / satir if satir else 0.0
-    if hatali_oran > float(rules["veri_butunlugu_hatali_oran_max"]):
-        reasons.append(f"hatali_satir {hatali}/{satir} (%{100 * hatali_oran:.2f}) > %{100 * float(rules['veri_butunlugu_hatali_oran_max']):.0f}")
+    oran_aday = hatali / aday if aday else 0.0
+    oran_evren = hatali / satir if satir else 0.0
+    if oran_aday > float(rules["veri_butunlugu_hatali_oran_max"]):
+        reasons.append(f"hatali_satir {hatali}/{aday} analize giren (%{100 * oran_aday:.2f}) > %{100 * float(rules['veri_butunlugu_hatali_oran_max']):.0f}")
     return {"durum": "eksik" if reasons else "tamam", "parca_beklenen": expected, "parca_biten": finished,
             "islenen": processed, "evren": universe, "kapsam": round(coverage, 4) if coverage is not None else None,
-            "hatali_satir": int(hatali), "hatali_oran": round(hatali_oran, 6), "neden": "; ".join(reasons)}
+            "hatali_satir": int(hatali), "aday_satir": int(aday), "hatali_oran_aday": round(oran_aday, 6), "hatali_oran_evren": round(oran_evren, 6),
+            "neden": "; ".join(reasons)}
 
 
 def mum_ozeti(table: pd.DataFrame) -> dict[str, float] | None:
@@ -1417,6 +1422,11 @@ def gunluk_kaydet(gunluk: dict | None, address: str, statuses: dict, daily: pd.S
     """Adım 1 ve 2'yi geçen adresin günlük kopya net getirisini (gecikmesiz defter) toplar; seçim raporu (A14) oda yoğunlaşması ve puan tutarlılığı için okur."""
     if gunluk is not None and daily is not None and len(daily) and statuses.get("adim1") == "Geçti" and statuses.get("adim2") == "Geçti":
         gunluk[address] = daily
+
+
+def aday_say(table: pd.DataFrame) -> int:
+    """Analize giren (1. aşamayı geçen, ``asama1`` == Geçti) satır sayısı: ``hatali_oran_aday`` paydası."""
+    return int((table["asama1"] == "Geçti").sum()) if "asama1" in table else 0
 
 
 def hatali_satir_say(table: pd.DataFrame) -> int:
@@ -1489,7 +1499,7 @@ def merge_shards(shards: Path, root: Path, expected: int | None = None, mod: str
             legacy.to_csv(output / "sonuc_eski_hesap.csv.gz", index=False, compression="gzip")
         status = run_status(len(list(shards.rglob(f"{date}/bitti.json"))), expected, len(table) if covered is None else covered,
                             len(universe) if universe is not None else evren.get(date), mod, load_rules(),
-                            hatali_satir_say(table), len(table))
+                            hatali_satir_say(table), aday_say(table), len(table))
         if covered is not None:
             status.update({"islenen": int(len(table)), "kapsanan": covered, "evren_disi_satir": int(len(table)) - covered})
         mum = mum_ozeti(table)

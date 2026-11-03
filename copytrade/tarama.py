@@ -48,24 +48,36 @@ class RateLimitError(RuntimeError):
 SERVER_ERROR_ATTEMPTS = 3          # (eski ilke) HTTP 5xx için toplam deneme
 SERVER_ERROR_WAITS = (2, 6)        # (eski ilke) denemeler arası artan bekleme (sn)
 RATE_LIMIT_WAITS = (5, 10, 20, 40, 60)           # (eski ilke) 429: 5 yeniden deneme
-KAPI_YENIDEN_BEKLEME = (5, 15, 45)               # kapı ilkesi: 5xx, 429 ve ağ hatasında 3 yeniden deneme, bekleme (sn); 4xx (429 hariç) yeniden denenmez
+KAPI_YENIDEN_BEKLEME = (5, 15, 45)               # kapı ilkesi: YALNIZ 5xx ve ağ hatasında 3 yeniden deneme, bekleme (sn); 4xx (429 hariç) yeniden denenmez
+RETRY_AFTER_MAX = 300                            # 429'da `Retry-After` başlığına uyulur (bekleme = max(takvim, başlık)); uç değerler bu kadar sn ile sınırlanır
 _AG_HATALARI = (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.ChunkedEncodingError)
 
 
 class PublicClient:
     def __init__(self, session: requests.Session | None = None, limiter: RateLimiter | None = None, sleep=time.sleep,
                  yeniden_bekleme: tuple[float, ...] | None = None):
-        """``yeniden_bekleme`` verilirse (kapı: ``KAPI_YENIDEN_BEKLEME``) 5xx, 429 VE ağ hatasının her biri için o kadar yeniden deneme (bekleme sn). ``None`` = eski ilke
-        (5xx: 2 yeniden deneme 2/6 sn, 429: 5 yeniden deneme 5-60 sn, ağ hatası yeniden denenmez; izleme / H1 gibi diğer tüketiciler değişmez)."""
+        """``yeniden_bekleme`` verilirse (kapı: ``KAPI_YENIDEN_BEKLEME``) 5xx VE ağ hatasının her biri için o kadar yeniden deneme (bekleme sn). ``None`` = eski ilke
+        (5xx: 2 yeniden deneme 2/6 sn, ağ hatası yeniden denenmez; izleme / H1 gibi diğer tüketiciler değişmez). 429 HER İKİ ilkede de aynıdır: 5 yeniden deneme
+        5/10/20/40/60 sn (toplam 135 sn; lider kararı: kısalmaz) ve varsa ``Retry-After`` başlığına uyulur."""
         self.session, self.limiter, self.sleep = session or requests.Session(), limiter or RateLimiter(), sleep
         self.yeniden_bekleme = yeniden_bekleme
         self.stats = {"istek": 0, "429": 0, "5xx": 0, "ag": 0}  # ilerleme günlüğü için sayaçlar
         self.uclar: dict[str, list[int]] = {}           # uç türü (info `type`, ya da GET) -> [istek, ağırlık]; ağır trader teşhisi (A4-1)
 
     def _waits(self, kind: str) -> tuple[float, ...]:
+        if kind == "429":
+            return RATE_LIMIT_WAITS
         if self.yeniden_bekleme is not None:
             return self.yeniden_bekleme
-        return {"5xx": SERVER_ERROR_WAITS, "429": RATE_LIMIT_WAITS, "ag": ()}[kind]
+        return {"5xx": SERVER_ERROR_WAITS, "ag": ()}[kind]
+
+    @staticmethod
+    def _retry_after(response: Any) -> float:
+        """`Retry-After` (saniye) başlığı; yok / geçersizse 0. `RETRY_AFTER_MAX` ile sınırlı."""
+        try:
+            return min(max(float((getattr(response, "headers", None) or {}).get("Retry-After", 0)), 0.0), RETRY_AFTER_MAX)
+        except (TypeError, ValueError):
+            return 0.0
 
     def _request(self, method: str, url: str, *, payload: dict | None = None, weight: int = 1) -> Any:
         used = {"5xx": 0, "429": 0, "ag": 0}          # hata türü başına yapılan yeniden deneme
@@ -93,7 +105,7 @@ class PublicClient:
                     if kind == "429":
                         raise RateLimitError("Hyperliquid rate limit exceeded after retries")
                     response.raise_for_status()
-                self.sleep(waits[used[kind]])
+                self.sleep(max(waits[used[kind]], self._retry_after(response)) if kind == "429" else waits[used[kind]])
                 used[kind] += 1
                 continue
             response.raise_for_status()           # diğer 4xx: yeniden denenmez

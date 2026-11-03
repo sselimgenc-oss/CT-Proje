@@ -47,7 +47,7 @@ Bir adres `uygun: true` olur, ancak ve ancak aşağıdakilerin **hepsi** sağlan
 
 1. **Kapı koşusu:** `copytrade-kapi` veri dalında `copytrade/kapi/<YYYY-MM-DD>/` klasörü; `durum.json` → `durum == "tamam"`,
    `kapsam ≥ kapsam_hedefi` (`kurallar.yaml`, bugün 0,98), `hesap` = güncel `HESAP_SURUMU`.
-   **Veri bütünlüğü (2026-11-03; kapı kuralı değil):** `durum.json` → `hatali_oran ≤ veri_butunlugu_hatali_oran_max` (`kurallar.yaml`, bugün 0,01 = %1; `hatali_satir` = `hata` dolu satır). Aşılırsa kapı `durum: eksik`
+   **Veri bütünlüğü (2026-11-03; kapı kuralı değil):** `durum.json` → `hatali_oran_aday ≤ veri_butunlugu_hatali_oran_max` (`kurallar.yaml`, bugün 0,01 = %1; `hatali_satir` = `hata` dolu satır, `hatali_oran_aday` = hatalı / analize giren = `asama1` Geçti; `hatali_oran_evren` yalnız bilgi). Aşılırsa kapı `durum: eksik`
    (`neden`: `hatali_satir …`) yayımlar ve bu klasör seçimde kullanılmaz (`kapsam` hatalı satırları da kapsanmış saydığı için ayrı ölçü). Hatalı satırlar
    `copytrade_kapi.yml` `yeniden_dene_gun` girdisiyle yeniden koşulur (`VERI_SOZLESMESI.md` §9); yeniden koşulan satır `satir_kaynagi == "bu_kosu"` kalır (3. madde). Birden fazla uygun klasör varsa
    **as_of'tan önceki en yeni** tarih alınır (as_of = Pazar 13:00 TSİ = 10:00 UTC).

@@ -9,6 +9,10 @@ on:
         description: "YYYY-MM-DD: yalnız o günün `hata` dolu satırlarını yeniden koş ve veri dalındaki sonuc.csv ile bayt bayt birleştir (boş = normal tam koşu)"
         required: false
         default: ""
+      hash_istisnasi:
+        description: "true: yeniden koşuda kod hash'i farklı dosyaya TEK SEFERLİK istisna (önce 20 başarılı satır yeni kodla yeniden hesaplanır; ham sütunlar bayt bayt aynı değilse durur). Varsayılan: reddet"
+        required: false
+        default: "false"
       en_fazla:
         description: "yeniden koşuda en çok bu kadar hatalı satır (boş = hepsi; küçük deneme için)"
         required: false
@@ -172,8 +176,10 @@ jobs:
         env:
           PYTHONWARNINGS: ignore
           EN_FAZLA: ${{ github.event.inputs.en_fazla }}
+          HASH_ISTISNASI: ${{ github.event.inputs.hash_istisnasi }}
         run: |
-          ek=(); [ -n "$EN_FAZLA" ] && ek=(--en-fazla "$EN_FAZLA")
+          ek=(); [ -n "$EN_FAZLA" ] && ek+=(--en-fazla "$EN_FAZLA")
+          [ "$HASH_ISTISNASI" = "true" ] && ek+=(--hash-istisnasi)
           python -m copytrade.kapi --root copytrade --yeniden-dene-gun "$DAY" "${ek[@]}"
           echo "durum=$(python3 -c "import json;print(json.load(open('copytrade/kapi/$DAY/durum.json'))['durum'])")" >> "$GITHUB_OUTPUT"
         id: yeniden
