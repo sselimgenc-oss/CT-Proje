@@ -210,7 +210,7 @@ def test_incremental_overlap_daily_portfolio_and_repeatable_ledger(tmp_path):
     root = project(tmp_path)
     client = Client()
     one = m.run(root, root / 'out', client, NOW)
-    two = m.run(root, root / 'out', client, NOW + pd.Timedelta(hours=1))
+    two = m.run(root, root / 'out', client, NOW + pd.Timedelta(hours=2))
     first, second = one['traderlar'][0], two['traderlar'][0]
     # son_isaret/payda_yontemi/payda_okuma_sayisi koşuyla ilerler (işaret zamanı, hesap_serisi okuma sayısı); sayılar aynı kalmalı.
     drop = lambda t: {k: ({a: b for a, b in v.items() if a != 'son_isaret'} if k == 'sanal_kopya'
@@ -218,12 +218,12 @@ def test_incremental_overlap_daily_portfolio_and_repeatable_ledger(tmp_path):
                           else v)
                       for k, v in t.items() if k not in ('veri_zamani', 'ilk11_gecerli_saat', 'ilk11_form_ham')}
     assert drop(first) == drop(second)
-    assert second['veri_zamani'] == '2026-10-27T13:00:00Z'
+    assert second['veri_zamani'] == '2026-10-27T14:00:00Z'
     # Koşuyla ilerlemesi BEKLENEN yeni alanlar karşılaştırmadan düşürülmedi, değişimleri ayrıca doğrulanır: saatlik geçerlilik sayacı +1,
     # form alanı yalnız pencere_bitis'te (okuma zamanı) farklıdır.
-    assert (first['ilk11_gecerli_saat']['saat'], second['ilk11_gecerli_saat']['saat']) == (1, 2)
-    assert (first['ilk11_gecerli_saat']['son_saat'], second['ilk11_gecerli_saat']['son_saat']) == ('2026-10-27T12:00:00Z', '2026-10-27T13:00:00Z')
-    assert (first['ilk11_form_ham']['pencere_bitis'], second['ilk11_form_ham']['pencere_bitis']) == ('2026-10-27T12:00:00Z', '2026-10-27T13:00:00Z')
+    assert (first['ilk11_gecerli_saat']['saat'], second['ilk11_gecerli_saat']['saat']) == (2, 4)      # K-18: 2 saatlik koşu = 2 saat
+    assert (first['ilk11_gecerli_saat']['son_saat'], second['ilk11_gecerli_saat']['son_saat']) == ('2026-10-27T12:00:00Z', '2026-10-27T14:00:00Z')
+    assert (first['ilk11_form_ham']['pencere_bitis'], second['ilk11_form_ham']['pencere_bitis']) == ('2026-10-27T12:00:00Z', '2026-10-27T14:00:00Z')
     assert {k: v for k, v in first['ilk11_form_ham'].items() if k != 'pencere_bitis'} == {k: v for k, v in second['ilk11_form_ham'].items() if k != 'pencere_bitis'}
     assert one['olaylar'] == two['olaylar']
     assert client.portfolio_reads == 2  # sağlık eğrisi saatlik yenilenir

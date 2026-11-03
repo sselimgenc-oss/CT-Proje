@@ -1,11 +1,11 @@
-name: Copy trade saatlik izleme
+name: Copy trade izleme (2 saatte bir)
 
-# Her saat :23. İzlenen liste: `copytrade-kapi:ilk11/izleme_listesi.yaml` (İlk 11 kadro 50 + sabit referans kolları; ilk Pazar'dan önce main'deki pilot listesi).
-# Sonuç: `copytrade-izleme:izleme/durum.json` (git geçmişi saatlik sürümleri tutar); `motor.json` (ham dolum önbelleği) R2'de `izleme/motor.json.gz`.
+# Her 2 saatte bir, :23 (K-18: gerçek ölçüm 86 trader ≈ 84 dk > eski saatlik 55 dk bütçe; anlık dinleyici asıl akış, izleme yedek). İzlenen liste: `copytrade-kapi:ilk11/izleme_listesi.yaml` (İlk 11 kadro 50 + sabit referans kolları; ilk Pazar'dan önce main'deki pilot listesi).
+# Sonuç: `copytrade-izleme:izleme/durum.json` (git geçmişi 2 saatlik sürümleri tutar); `motor.json` (ham dolum önbelleği) R2'de `izleme/motor.json.gz`.
 # Telegram / Worker bu iş akışında YOK (K-13): kararlar / gecikme / oda değişim adımları geri getirilmedi.
 on:
   schedule:
-    - cron: "23 * * * *"
+    - cron: "23 */2 * * *"
   workflow_dispatch:
 
 permissions:
@@ -22,9 +22,9 @@ concurrency:
 jobs:
   izleme:
     runs-on: ubuntu-latest
-    # Sürekli bütçe ≈ 55 dk (91 trader ≈ 45 dk). İLK koşu her yeni kadro üyesi için 90 günlük dolum geçmişini çeker ve uzundur; yarıda kesilirse durum
+    # Sürekli bütçe < 120 dk (86 trader artımlı ≈ 84 dk, 5 trader 293 sn ölçüldü). İLK koşu her yeni kadro üyesi için 90 günlük dolum geçmişini çeker ve uzundur; yarıda kesilirse durum
     # yayımlanmaz ve sonraki koşu baştan dener, bu yüzden üst sınır geniş tutuldu: 86 trader ilk okuma ≈ 192 dk (deneme ölçümü, PR #468); GitHub sınırı 360 dk.
-    # `concurrency` (cancel-in-progress: false) sayesinde uzun ilk koşu sırasında saatlik koşular kuyrukta bekler.
+    # `concurrency` (cancel-in-progress: false) sayesinde uzun ilk koşu sırasında sonraki koşular kuyrukta bekler.
     timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4

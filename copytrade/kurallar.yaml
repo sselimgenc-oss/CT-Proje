@@ -296,8 +296,13 @@ kalabalik_ayni_yon_sayi: 10
 # dönüşüm, 60/40, 11/11/28 ve terfi kapısı (copytrade/ilk11.py) değişmez. Kodda sayı yok (ilk11_alanlar.py bu anahtarları okur).
 # Kapı verisi tazeliği: Pazar as_of tarihi − kapı klasör tarihi ≤ bu gün; aşılırsa ilk seçim / kadro boşluğu doldurma yapılmaz
 ilk11_kapi_tazelik_gun: 7
-# Haftalık form tazeliği: as_of − izleme `uretildi` ≤ bu dakika; aşılırsa o hafta form geçersiz (hareket yok)
-ilk11_form_tazelik_dk: 120
+# İzleme aralığı (dk): `.github/workflows/izleme.yml` cron'u (K-18: 2 saatte bir; ölçüm 86 trader ≈ 84 dk > saatlik 55 dk bütçe; anlık dinleyici asıl akış, izleme yedek)
+izleme_aralik_dk: 120
+# Tazelik tamponu (dk): koşu süresi + gecikme payı
+izleme_tazelik_tampon_dk: 30
+# Veri/form tazeliği (dk) = 2 × izleme_aralik_dk + izleme_tazelik_tampon_dk (bir koşu kaçsa bile bayat sayılmaz; test_is_akislari ilişkiyi sınar).
+# Kullanımı: (a) haftalık form: as_of − izleme `uretildi` ≤ bu dakika, aşılırsa o hafta form geçersiz; (b) `bayat_isle`: veri_zamani yayın anından bu dakikadan eskiyse `bayat`
+ilk11_form_tazelik_dk: 270
 # Form geçerliliği: 10 alandan en az bu kadarı gerçek değerle dolu olmalı
 ilk11_form_min_dolu_alan: 8
 # Uygun evrende her alan için dolu / uygun oranı en az bu kadar (altındaysa snapshot yayımlanmaz)

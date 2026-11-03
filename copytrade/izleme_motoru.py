@@ -586,17 +586,18 @@ def yonsuz_guncelle(client, address: str, saved: dict, states: list[dict], fills
                                   '; '.join(hatalar) or None)
 
 
-def gecerli_saat_say(saved: dict, row: dict, now: pd.Timestamp) -> dict:
+def gecerli_saat_say(saved: dict, row: dict, now: pd.Timestamp, rules: dict | None = None) -> dict:
     """`ilk11_gecerli_saat` (şartname §4.1 eşitlik 3): trader'ın kadroya SON girişinden (`takim_hafta`; yoksa `t0`) itibaren geçerli (`gecerli == true`)
-    saatlik okuma sayısı. Aynı saat dilimine düşen ikinci koşu yeniden saymaz; `takim_hafta` değişince (yeni giriş) sayaç sıfırlanır. Sayım BU motorun
+    okuma süresi (saat). Her yeni `izleme_aralik_dk` kovası (UTC'ye hizalı) `izleme_aralik_dk/60` saat ekler (2 saatlik koşu = 2 saat); aynı kovaya düşen ikinci koşu yeniden saymaz; `takim_hafta` değişince (yeni giriş) sayaç sıfırlanır. Sayım BU motorun
     okumalarından başlar (geriye dönük doldurulmaz). `motor.json`'da kalıcı (`saved['ilk11_gecerli_saat']`), `durum.json`'a trader alanı olarak yayımlanır."""
     baslangic = row.get('takim_hafta') or str(timestamp(row['t0']).date())
     kayit = saved.get('ilk11_gecerli_saat')
     if not kayit or kayit.get('baslangic') != baslangic:
         kayit = {'baslangic': baslangic, 'saat': 0, 'son_saat': None}
-    saat = iso(now.floor('h'))
+    aralik = int((rules or load_rules())['izleme_aralik_dk'])       # K-18: sayaç anlamı (saat) korunur; her yeni aralık kovası aralık/60 saat ekler
+    saat = iso(now.floor(f'{aralik}min'))
     if kayit['son_saat'] != saat:
-        kayit['saat'] += 1
+        kayit['saat'] += aralik // 60
         kayit['son_saat'] = saat
     saved['ilk11_gecerli_saat'] = kayit
     return dict(kayit)

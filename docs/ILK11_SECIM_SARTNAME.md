@@ -33,7 +33,7 @@ A3 kabul kanıtı (§6), kararlar (§7; hepsi 2026-11-02'de verildi).
 |---|---|
 | 7 alan (`golge, kazanma, tutarli, dusus, siklik, tutma, kaldirac`) hiçbir kaynaktan dolmuyor → herkese 35 | §3: her alana tek kaynak; A2 doldurur; A3 doluluk ≥ %90 |
 | Acil kadroda `ay_roi` = 1805 (leaderboard `roi`, oran → %180.500) | Leaderboard ROI **kullanılmaz**; ROI, kapının zaman ağırlıklı zinciriyle (`kapi.twr_chain`, yatırma/çekme getiri sayılmaz) hesaplanır; akıl sağlığı aralığı (§3.3) |
-| Kapı/seçim/izleme iş akışları silindi; kapı verisi 28 Ekim'den | §5: kapı (haftalık), izleme (saatlik), İlk 11 Pazar işi geri gelir; tazelik kuralı §2 |
+| Kapı/seçim/izleme iş akışları silindi; kapı verisi 28 Ekim'den | §5: kapı (haftalık), izleme (2 saatte bir, K‑18), İlk 11 Pazar işi geri gelir; tazelik kuralı §2 |
 | `form_puani`, `paper_sonuclari` kaynağı tanımsız | §4 |
 | Bu ortamdan HL erişimi yok (proxy 403) | Tüm canlı koşular GitHub Actions'ta (§5) |
 | `form_esle` `medyan_tutma_saat`'i ×60 yapmadan taşıyordu (26e3f97 `value *= 60.0` satırını silmişti; test kırmızıydı) | **#461 ile düzeldi** (satır geri kondu; `main` 594 test yeşil). `tutma` ham birimi **dakika**: kaynak saat ise ×60 |
@@ -137,7 +137,7 @@ Pencere sütunu: **İ** = ilk seçim, **F** = haftalık form. "30g" = as_of'tan 
 - **Hesap yeri (kural 7):** izleme motoru her saat `traderlar[].ilk11_form_ham` (10 ham alan + `alan_kaynagi` + `pencere_bitis`)
   yayımlar (`ilk11_alanlar.form_ham_30g`). Pazar işi yalnız okur, yüzdeliklendirir.
 - **Girdi dondurma:** Pazar işi, `copytrade-izleme` dalında `uretildi ≤ as_of` olan **en son** `izleme/durum.json` sürümünü
-  (git geçmişinden) alır; `as_of − uretildi ≤ ilk11_form_tazelik_dk` (120 dk, K‑12.10) değilse o hafta form **geçersiz** (hareket yok).
+  (git geçmişinden) alır; `as_of − uretildi ≤ ilk11_form_tazelik_dk` (270 dk = 2 × izleme aralığı 120 dk + 30 dk tampon; K‑12.10 değeri K‑18 ile izleme 2 saatte bire inince güncellendi) değilse o hafta form **geçersiz** (hareket yok).
   Bu seçim yalnız as_of'a bağlı olduğundan tekrar denemede aynı girdi, aynı `snapshot_id` çıkar (`pazar_akis` şartı).
 - **`bu_pazar_gecerli`** (`pazar_gecis` girdisi) `true` ⇔ trader'ın `gecerli == true`, `veri_zamani ≥ as_of − 120 dk`, ve 10 alandan
   en az `ilk11_form_min_dolu_alan` (**8**, K‑12.10) gerçek değerle dolu. Değilse form hareketi yok (`pazar_gecis` açıklama yazar).
@@ -146,7 +146,7 @@ Pencere sütunu: **İ** = ilk seçim, **F** = haftalık form. "30g" = as_of'tan 
   (iki Pazar hareketsizlik kararı verilmez).
 - **`kapi_puani`** (eşitlik 2.) = son geçerli kapı satırında `secim.puan(row)`; yoksa `None` (→ 0, `_tie_key` mevcut davranışı).
 - **`gecerli_gozlem_suresi`** (eşitlik 3.) = trader'ın kadroya **son girişinden** (`takim_hafta`) as_of'a kadar `gecerli == true`
-  saatlik okuma sayısı / 24 (gün). Kaynak: izleme `motor.json` saatlik geçerlilik sayacı (A2: `ilk11_gecerli_saat` alanı).
+  saatlik okuma sayısı / 24 (gün). **K‑18 notu:** sayaç anlamı (saat) korunur: her yeni `izleme_aralik_dk` kovası (UTC'ye hizalı 2 saat) `izleme_aralik_dk/60` saat ekler; aynı kovada ikinci koşu saymaz (24 saatte 12 koşu = 24 saat). Kaynak: izleme `motor.json` saatlik geçerlilik sayacı (A2: `ilk11_gecerli_saat` alanı).
 - Form ilk gerçek kadronun **ertesi** Pazarından itibaren hesaplanır (ilk Pazar yalnız ilk seçimdir; 60/40 hareketi yok).
 
 ### 4.2 `paper_sonuclari` (Yedek → İlk 11 kapısı girdisi)
