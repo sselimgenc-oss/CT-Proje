@@ -330,3 +330,13 @@ ilk11_saglik:
   tutarli: [0.0, 1.0]
 # Alt sınırı DIŞLAYAN alanlar (tutma: 0 dakika olanaksız; "(0, 525.600]")
 ilk11_saglik_alt_disla: [tutma]
+# H5 (docs/GOREV_H5_RISK.md): anlık kopya risk sınırları, DRY-RUN varsayılanları (lider kararı; canlı sayıları H4'te kullanıcı onaylar).
+# Birimler: *_usd = 1.000 $ sanal kopya ölçeğinde notional ($); sinyal_tazelik_sn = saniye (dolum zamanı -> karar anı).
+risk_dry_run:
+  referans_kasa_usd: 1000.0
+  emir_tavan_usd: 100.0
+  trader_tavan_usd: 200.0
+  toplam_brut_tavan_usd: 1500.0
+  gunluk_zarar_usd: 30.0
+  sinyal_tazelik_sn: 10
+  dur_dosyasi: "$STATE_DIRECTORY/DUR"
