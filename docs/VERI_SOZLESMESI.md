@@ -223,7 +223,9 @@ Anlıkta `px` yok/≤ 0 ise dolum `fiyatsiz_eylem`e girer (mum aranmaz, sahte fi
 | `pencere` | `dakika` (t0 yerine `max(t0, şimdi − 4800 dk)`; bütün gecikmeler gerçek 1 dk açılışı) \| `tam` (t0'dan; 1 dk mum erişimi ~4999 dk dışındaki dolumlar saatlik açılışla YAKLAŞIK → kısa gecikmeler birbirinden ayrışmaz) |
 | `gecikmeler_dk` | `[0, 1, 5, 30, 120]` (dk; 0 = anlık) |
 | `maliyet.taker`, `maliyet.kayma` | ORAN, tek yön, notional'a oranla (varsayılan 0,00045 ve 0,0005; `--taker`/`--kayma` ile geçersiz kılınır; tüm gecikmelerde aynı) |
-| `traderlar[].id/adres/tarz` | izleme kimliği, küçük harf adres, `intraday`/`swing`/`bilinmiyor` |
+| `traderlar[].id` | izleme kimliği (örn. `O01`) |
+| `traderlar[].adres` | küçük harf halka açık adres (bu dosya adres İÇERİR; `ozet.json`/`durum.json` gibi yayımlanmaz, yalnız CI artefaktı) |
+| `traderlar[].tarz` | `intraday` \| `swing` \| `bilinmiyor` (bilinmiyorsa izleme varsayılan gecikmesi 30 dk) |
 | `traderlar[].t0` | UTC ISO; ölçüm penceresinin etkin başlangıcı (`dakika` penceresinde kırpılmış olabilir) |
 | `traderlar[].dolum` | pencere içi perp dolum sayısı (adet) |
 | `traderlar[].mevcut_gecikme_dk` | izlemenin bu trader için kullandığı gecikme (dk; intraday 30, swing 120) |
@@ -234,9 +236,14 @@ Anlıkta `px` yok/≤ 0 ise dolum `fiyatsiz_eylem`e girer (mum aranmaz, sahte fi
 | `…<dk>.bekleyen` | yürütme zamanı (dolum + gecikme) henüz gelmemiş dolum (adet; anlıkta 0) — fiyatsız sayılmaz (B17 dersi) |
 | `…<dk>.yaklasik` | yürütme fiyatı saatlik açılışla yaklaşık bulunan hedef (adet; yalnız `tam` pencere) |
 | `…<dk>.tasfiye` | bool; kopya tasfiye oldu mu (v3 çapraz teminat) |
+| `…<dk>.neden` | `null`; v3 `hesaplanamadi` döndürürse nedeni (metin). **Sınır:** sabit tutar yolunda motor `net` için `None` döndürmez — hiç fiyatı bulunamayan trader `net = 0,0`, `islem = 0`, `fiyatsiz > 0` görünür; `fiyatsiz` sütunu okunmadan `net = 0` yorumlanmaz |
 | `traderlar[].fark_anlik_30dk` | `net(0) − net(30)`, ORAN puanı (0,01 = 1 puan); biri `null` ise `null` |
 | `hatalar[]` | `{id, hata}`: okunamayan trader (ölçümü düşürmez) |
 | `ozet` | `trader`, `anlik_hesaplanan`, `anlik_hesaplanamayan`, `anlik_kazanan` (net > 0), `anlik_kaybeden` (net < 0), `anlik_sifir`, `fark_anlik_30dk {min, medyan, maks}`, `fark_anlik_30dk_ortalama`, `anlik_30dk_karsilastirilan` |
+
+**Veri sınırı (küçük gerçek veri denemesi bulgusu, 2026-11-03):** Hyperliquid `userFillsByTime` yalnız hesabın EN YENİ ~10.000 dolumunu döndürür (sayfa sınırı değil, API'nin geçmiş sınırı). Çok işlem yapan hesapta (B17: ~220 dolum/saat) pencere gerçekte `t0`'dan çok daha kısadır
+(yerel kontrol: `t0` 29 Ekim iken ilk dönen dolum 3 Kasım 08:58) ve `dolum` sayısı pencere uzatıldıkça artmaz. Bu hesaplarda `traderlar[].t0` etkin başlangıcı DEĞİL istenen başlangıcı gösterir; `net` yalnız dönen dolumları kapsar ve ilk dolumlar miras pozisyona ekleme olduğundan `islem = 0` çıkabilir.
+Büyük `bekleyen` (B17: 120 dk gecikmede ~4.500) hata değildir: son 120 dk'daki dolum sayısıdır (yerel kontrol: son 120 dk 4.511, son 30 dk 1.958 dolum).
 
 Varsayım/sınır: anlık = bizim emrimizin trader dolumuyla AYNI fiyattan, kayma+taker ile dolması (algılama + emir gecikmesi 0 sayılır; gerçek gecikme H2 ile ölçülür).
 Geçmişte dakikalık fiyat ~4999 dk ile sınırlıdır; `tam` pencerede 1/5/30 dk yaklaşık olur — karar için `dakika` penceresi esas alınır.

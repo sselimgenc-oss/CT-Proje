@@ -144,3 +144,48 @@ def test_uctan_uca_sahte_istemci_dakika_penceresi():
     assert set(s['gecikmeler']) == {'0', '1', '5', '30', '120'}
     assert s['gecikmeler']['0']['net'] == pytest.approx(net_beklenen(100, 110))
     assert abs(s['gecikmeler']['30']['net']) < 0.01 and all(h['yaklasik'] == 0 for h in s['gecikmeler'].values())
+
+
+# ------------------------------------------------------------------------------------------------ ek altın örnekler (SAYISAL, elle hesap)
+# Açılış tutarı: 5,2 $ × (1.000 / 200)^0,86 = 5,2 × 3,99130 = 20,754752 $ (kurallar.yaml sabit_tutar_*); taker + kayma = 0,00045 + 0,0005 = 0,00095 (tek yön).
+# Dolumlar: 10:00 al 1 BTC, 11:00 sat 1 BTC. Net = (kâr − giriş maliyeti − çıkış maliyeti) / 1.000 $ (ORAN).
+def test_altin_3_sayisal_anlik_giris_100_cikis_110():
+    # miktar = 20,754752 / 100 = 0,20754752 BTC; kâr = 0,20754752 × 10 = 2,0754752 $
+    # maliyet = 0,20754752 × (100 + 110) × 0,00095 = 0,0414066 $ ; net = 2,0340686 $ -> 0,0020340686
+    fills = [fill('2026-10-27T10:00:00Z', 'B', 1, 0, 100), fill('2026-10-27T11:00:00Z', 'A', 1, 1, 110)]
+    s = calistir(fills, {}, gecikmeler=(0,))
+    assert s[0]['net'] == pytest.approx(0.0020340686, abs=1e-9)
+
+
+def test_altin_4_sayisal_1_dk_gecikme_giris_100_5_cikis_109_5():
+    # miktar = 20,754752 / 100,5 = 0,20651494 BTC; kâr = 0,20651494 × 9 = 1,8586345 $
+    # maliyet = 0,20651494 × (100,5 + 109,5) × 0,00095 = 0,0412006 $ ; net = 1,8174339 $ -> 0,0018174339
+    fills = [fill('2026-10-27T10:00:00Z', 'B', 1, 0, 100), fill('2026-10-27T11:00:00Z', 'A', 1, 1, 110)]
+    s = calistir(fills, yurutme({1: {'BTC': {'10:01': 100.5, '11:01': 109.5}}}), gecikmeler=(1,))
+    assert s[1]['net'] == pytest.approx(0.0018174339, abs=1e-9)
+
+
+def test_gelecek_tarihli_dolum_anlikta_yok_sayilir_ve_fiyatsiz_tek_dolum_net_sifir_gorunur():
+    # şimdiden sonraki dolum (saat kayması) anlıkta ne işlem ne fiyatsız sayılır.
+    # Fiyatı hiç bulunamayan tek yürütme: v3 motoru `net` None DÖNDÜRMEZ (sabit tutar yolunda net daima sayı) -> net 0,0 ve fiyatsiz 1 görünür;
+    # tabloyu okuyan `fiyatsiz` sütununa bakmak zorundadır (VERI_SOZLESMESI §4b'de yazılı sınır).
+    fills = [fill('2026-10-27T13:00:00Z', 'B', 1, 0, 100)]
+    s = calistir(fills, {}, gecikmeler=(0,))
+    assert (s[0]['islem'], s[0]['fiyatsiz'], s[0]['bekleyen']) == (0, 0, 0)
+    s = calistir([fill('2026-10-27T10:00:00Z', 'B', 1, 0, 100)], {}, gecikmeler=(5,))        # 10:05 mumu yok
+    assert s[5]['net'] == 0.0 and s[5]['fiyatsiz'] == 1 and s[5]['islem'] == 0 and s[5]['neden'] is None
+
+
+def test_sozlesme_ciktidaki_her_alan_veri_sozlesmesinde_yazili():
+    """Tüketen/üreten kod sözleşmeye göre sınanır (AGENTS kural 2): çıktıdaki her anahtar docs/VERI_SOZLESMESI.md §4b'de geçer."""
+    belge = (Path(__file__).resolve().parents[1] / 'docs/VERI_SOZLESMESI.md').read_text(encoding='utf-8')
+    bolum = belge[belge.index('## 4b.'):belge.index('## 5.')]
+    fills = [fill('2026-10-27T10:00:00Z', 'B', 1, 0, 100)]
+    s = calistir(fills, {}, gecikmeler=(0,))[0]
+    satir = gk.trader_satiri('X', '0xabc', 'intraday', T0, {0: s}, 0, 1)
+    satir['fark_anlik_30dk'] = None
+    sonuc = {'surum': gk.SURUM, 'uretildi': '', 'pencere': '', 'gecikmeler_dk': [], 'maliyet': {'taker': 0, 'kayma': 0}, 'traderlar': [satir], 'hatalar': [],
+             'ozet': gk.ozet([satir])}
+    anahtarlar = set(sonuc) | set(satir) | set(s) | set(sonuc['ozet']) | set(sonuc['maliyet'])
+    eksik = sorted(a for a in anahtarlar if a not in ('0', 'min', 'medyan', 'maks') and f'`{a}' not in bolum and f'.{a}' not in bolum and f'{a}`' not in bolum)
+    assert not eksik, f'VERI_SOZLESMESI §4b\'de yazılmayan alanlar: {eksik}'
