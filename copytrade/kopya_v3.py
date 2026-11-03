@@ -39,13 +39,14 @@ def hedef_ms(dolum_ms: int, delay: int) -> int:
 
 def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str, list[dict]],
             yurutme: dict[str, dict[int, float]], funding: list[dict],
-            t0: pd.Timestamp, now: pd.Timestamp, delay: int, style: str, rules: dict | None = None) -> dict:
+            t0: pd.Timestamp, now: pd.Timestamp, delay: int, style: str, rules: dict | None = None,
+            risk_limitleri: dict | None = None, surum: str = 'v3', tepe: bool = False) -> dict:
     """v3 sanal kopya sonucu (1.000 $ ölçeğinde, v1/v2 ile aynı ölçek). Girdiler `kopya_v2.hesapla` ile aynı anlamda;
     ``serisi`` (trader hesap değeri serisi) burada gerekmez — sabit tutar trader'ın hesabına bakmaz, yalnız kopyanın
     KENDİ değerine; ``style`` E3'ün aşamalı zarar_kes/kar_al eşiği için gerekli (intraday/swing)."""
     rules = rules or load_rules()
     t0_ms, now_ms = int(t0.value // 1_000_000), int(now.value // 1_000_000)
-    base = {'surum': 'v3', 'baslangic_usd': BASE_USD, 'gecikme_dk': delay, 't0': str(t0.date())}
+    base = {'surum': surum, 'baslangic_usd': BASE_USD, 'gecikme_dk': delay, 't0': str(t0.date())}
     annotated = []
     bozuk_px = 0
     for fill in fills:
@@ -65,7 +66,7 @@ def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str,
                for coin in {*saatlik, *isaret}}
     ledger = copy_ledger(annotated, Market(candles), None, delay, t0_ms, now_ms, FundingRates(funding), rules,
                          daily=True, tutar_egrisi=sabit_tutar_egrisi(rules), base_usd=BASE_USD, style=style,
-                         islem_kaydi=True)
+                         islem_kaydi=True, risk_limitleri=risk_limitleri, acik_liste=risk_limitleri is not None)
     if ledger.get('net') is None:
         return {**base, 'durum': 'hesaplanamadi', 'neden': 'yürütülebilir dolum yok'}
     days = pd.date_range(t0.normalize(), now.normalize(), freq='1D')
@@ -98,4 +99,6 @@ def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str,
             'toplam': ledger['net'], 'funding': ledger['funding'], 'maliyet': ledger['costs'],
             'fiyatsiz_eylem': int(ledger.get('missing', 0)) + bozuk_px, 'tasfiye': when is not None,
             'tasfiye_zamani': tasfiye_zamani, 'tasfiye_kaynagi': source,
-            'kapanis_nedenleri': kapanis_nedenleri, 'kapanan_islemler': kapanan_islemler}
+            'kapanis_nedenleri': kapanis_nedenleri, 'kapanan_islemler': kapanan_islemler,
+            **({'risk_kirpma': ledger.get('risk_kirpma', []), 'acik_pozisyonlar': ledger.get('acik_pozisyonlar', [])} if risk_limitleri is not None else {}),
+            **({'tepe_pozisyon_usd': ledger.get('tepe_pozisyon_usd'), 'tepe_brut_usd': ledger.get('tepe_brut_usd')} if (tepe or risk_limitleri is not None) else {})}

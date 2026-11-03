@@ -31,6 +31,7 @@ from copytrade.izleme_liste import KOLLAR, STYLES, load_list, perp_dex_names  # 
 from copytrade import oda_risk
 from copytrade import kopya_v2
 from copytrade import kopya_v3
+from copytrade import kopya_v4
 from copytrade import saglik_hatti
 from copytrade.kurallar import load_rules
 
@@ -558,6 +559,7 @@ def unavailable_trader(root: Path, row: dict, error: Exception) -> dict:
                             'gecikme_dk': delay_for_style(style), 't0': str(timestamp(row['t0']).date()), 'egri': [], 'yer_tutucu': True},
             'sanal_kopya_v2': {'surum': 'v2', 'durum': 'hesaplanamadi', 'yer_tutucu': True, 'neden': 'hiç okunmadı'},
             'sanal_kopya_v3': {'surum': 'v3', 'durum': 'hesaplanamadi', 'yer_tutucu': True, 'neden': 'hiç okunmadı'},
+            'sanal_kopya_v4': {'surum': 'v4', 'durum': 'hesaplanamadi', 'yer_tutucu': True, 'neden': 'hiç okunmadı'},
             'ilk11_form_ham': {'hata': 'hiç okunmadı'}, 'son_perp_dolum': None,
             'ilk11_gecerli_saat': {'baslangic': row.get('takim_hafta') or str(timestamp(row['t0']).date()), 'saat': 0, 'son_saat': None}}
 
@@ -604,20 +606,37 @@ def gecerli_saat_say(saved: dict, row: dict, now: pd.Timestamp, rules: dict | No
 
 
 def durum_icin_kirp(trader: dict, now: pd.Timestamp, rules: dict | None = None) -> dict:
-    """`durum.json` (yayın) için `sanal_kopya_v3.kapanan_islemler` kırpması; TAM geçmiş `motor.json`'daki `son_trader`'da silinmeden kalır.
+    """`durum.json` (yayın) için `sanal_kopya_v3` / `sanal_kopya_v4` `.kapanan_islemler` kırpması; TAM geçmiş `motor.json`'daki `son_trader`'da silinmeden kalır.
 
     Yayımlanan: kapanışı son `ilk11_form_pencere_gun` günde (now − N gün, now] olanlar VE (pencereden eski olsa da) en son `ilk11_durum_min_gecerli_islem`
     GEÇERLİ işlem (terfi kapısı son N geçerli işleme bakar). Sıra korunur. `kapanan_islemler_toplam` = tam geçmişteki sayı. Trader'ın kopyası döner."""
     rules = rules or load_rules()
-    v3 = trader.get('sanal_kopya_v3')
-    islemler = v3.get('kapanan_islemler') if isinstance(v3, dict) else None
-    if islemler is None:
-        return trader
-    sinir = now - pd.Timedelta(days=int(rules['ilk11_form_pencere_gun']))
-    gecerli = [i for i, x in enumerate(islemler) if x.get('gecerli') is True]
-    son_gecerli = set(sorted(gecerli, key=lambda i: islemler[i]['kapanis'])[-int(rules['ilk11_durum_min_gecerli_islem']):])
-    kalan = [x for i, x in enumerate(islemler) if timestamp(x['kapanis']) > sinir or i in son_gecerli]
-    return {**trader, 'sanal_kopya_v3': {**v3, 'kapanan_islemler': kalan, 'kapanan_islemler_toplam': len(islemler)}}
+    cikti = trader
+    for anahtar in ('sanal_kopya_v3', 'sanal_kopya_v4'):
+        surum = trader.get(anahtar)
+        islemler = surum.get('kapanan_islemler') if isinstance(surum, dict) else None
+        if islemler is None:
+            continue
+        sinir = now - pd.Timedelta(days=int(rules['ilk11_form_pencere_gun']))
+        gecerli = [i for i, x in enumerate(islemler) if x.get('gecerli') is True]
+        son_gecerli = set(sorted(gecerli, key=lambda i: islemler[i]['kapanis'])[-int(rules['ilk11_durum_min_gecerli_islem']):])
+        kalan = [x for i, x in enumerate(islemler) if timestamp(x['kapanis']) > sinir or i in son_gecerli]
+        cikti = {**cikti, anahtar: {**surum, 'kapanan_islemler': kalan, 'kapanan_islemler_toplam': len(islemler)}}
+    return cikti
+
+
+def azami_kaldirac_oku(client, dexes: list[str]) -> dict[str, float] | None:
+    """HL azami kaldıracı (v4 kaldıraç sınırı): `meta` (ana dex) + HIP-3 dex'leri → {coin: maxLeverage}. Okunamazsa `None` (v4 kaldıraç sınırı uygulanmaz, `limitler.azami_kaldirac_uygulandi: false`)."""
+    try:
+        sonuc: dict[str, float] = {}
+        for dex in ['', *[d for d in dexes if d]]:
+            meta = client.info({'type': 'meta', 'dex': dex} if dex else {'type': 'meta'}, weight=20) or {}
+            for u in meta.get('universe') or []:
+                if u.get('name') and u.get('maxLeverage') and not u.get('isDelisted'):
+                    sonuc[str(u['name'])] = float(u['maxLeverage'])
+        return sonuc or None
+    except Exception:       # noqa: BLE001 - kaldıraç meta'sı v4'ü düşürmesin; sınır uygulanmaz ve bu durum çıktıda görünür
+        return None
 
 
 def veri_durumu_belirle(account: float, paper: dict, paper_v3: dict, eksik_hedef: int, isaret_eksik: list[str] | None = None, eksik_onbellek: int = 0) -> tuple[str, str]:
@@ -646,7 +665,7 @@ def bayat_isle(trader: dict, uretildi: pd.Timestamp, rules: dict | None = None) 
 
 
 def update_trader(root: Path, client, dexes: list[str], state: dict, all_events: dict,
-                  row: dict, now: pd.Timestamp, symbols: set[str] | None) -> dict:
+                  row: dict, now: pd.Timestamp, symbols: set[str] | None, azami_kaldirac: dict[str, float] | None = None) -> dict:
     ident, address, t0 = row['id'], row['adres'], timestamp(row['t0'])
     saved = state['traderlar'].setdefault(ident, {'adres': address.lower(), 't0': iso(t0),
                                                    'fills': [], 'funding': [], 'mumlar': {}, 'mum_eksik': {}})
@@ -712,6 +731,7 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
     if mum_error is not None:
         paper_v2 = {'surum': 'v2', 'durum': 'hesaplanamadi', 'neden': data_error_reason(mum_error)}
         paper_v3 = {'surum': 'v3', 'durum': 'hesaplanamadi', 'neden': data_error_reason(mum_error)}
+        paper_v4 = {'surum': 'v4', 'durum': 'hesaplanamadi', 'neden': data_error_reason(mum_error)}
     else:
         try:
             if account <= 0:
@@ -727,6 +747,11 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
             paper_v3 = kopya_v3.hesapla(copy_fills, saatlik, marks, yurutme, saved['funding'], t0, now, delay, style)
         except Exception as error:
             paper_v3 = {'surum': 'v3', 'durum': 'hesaplanamadi', 'neden': data_error_reason(error)}
+        # v4 = v3 + H5 risk sınırları (kopya_v4.py; kurallar.yaml risk_dry_run). v3'ten bağımsız hata yalıtımı (kural 6): v3 yanında yayımlanır, v3'ü değiştirmez.
+        try:
+            paper_v4 = kopya_v4.hesapla(copy_fills, saatlik, marks, yurutme, saved['funding'], t0, now, delay, style, azami_kaldirac=azami_kaldirac)
+        except Exception as error:
+            paper_v4 = {'surum': 'v4', 'durum': 'hesaplanamadi', 'neden': data_error_reason(error)}
     leverage = sum(p['buyukluk_usd'] for p in positions) / account if account > 0 else 0.0
     metrics = calculate_metrics(perp_fills(fills), account_value=account)
     light = health(history, t0, now, leverage, metrics['martingale_signal'],
@@ -772,7 +797,7 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
                        'getiri_30g': ret30, 'getiri_90g': float(recent.iloc[-1] - recent.iloc[0]) if len(recent) else 0.0},
               'hesap_degeri': account, 'pozisyonlar': positions, 'son_islem': last_trade,
               'egri': [[str(day.date()), float(value)] for day, value in recent.items()], 'sanal_kopya': paper,
-              'sanal_kopya_v2': paper_v2, 'sanal_kopya_v3': paper_v3}
+              'sanal_kopya_v2': paper_v2, 'sanal_kopya_v3': paper_v3, 'sanal_kopya_v4': paper_v4}
     if row.get('kol') in oda_risk.YONSUZ_KOLLAR:
         trader['yonsuz_bayrak'] = yonsuz_guncelle(client, address, saved, states, fills, now)
     if row.get('kol') == 'oda':
@@ -855,6 +880,7 @@ def run(root: Path, output: Path, client=None, now=None, symbols=None, liste: Pa
     dexes: list[str] = []
     if watchlist:
         dexes = perp_dex_names(client.info({'type': 'perpDexs'}))
+    azami_kaldirac = azami_kaldirac_oku(client, dexes) if watchlist and dexes is not None else None
     failed = 0
     for row in watchlist:
         retained = state['traderlar'].get(row['id'])
@@ -863,7 +889,7 @@ def run(root: Path, output: Path, client=None, now=None, symbols=None, liste: Pa
         try:
             _u0 = {k: list(v) for k, v in getattr(client, 'uclar', {}).items()}
             _t_basla, _i0, _a0, _w0 = time.monotonic(), dict(getattr(client, 'stats', {})), getattr(getattr(client, 'limiter', None), 'weight_used', 0), getattr(getattr(client, 'limiter', None), 'waited', 0.0)
-            traders.append(update_trader(root, client, dexes, state, all_events, row, now, symbols))
+            traders.append(update_trader(root, client, dexes, state, all_events, row, now, symbols, azami_kaldirac))
             _i1 = getattr(client, 'stats', {})                   # tanı: süre API mi, hesap mı (istek / 429 / ağırlık / hız sınırı beklemesi)
             print(f"{row['id']}: okuma süresi {time.monotonic() - _t_basla:.0f} sn, istek {_i1.get('istek', 0) - _i0.get('istek', 0)}, 429 {_i1.get('429', 0) - _i0.get('429', 0)}, "
                   f"ağırlık {getattr(getattr(client, 'limiter', None), 'weight_used', 0) - _a0}, hız sınırı bekleme {getattr(getattr(client, 'limiter', None), 'waited', 0.0) - _w0:.0f} sn, "
