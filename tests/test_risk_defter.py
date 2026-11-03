@@ -244,4 +244,5 @@ def test_dolgu_gec_giris_ret_cikis_kabul(tmp_path):
 
 async def _dolgu(din, dolumlar):
     din.post = lambda yuk: dolumlar if yuk["type"] == "userFillsByTime" and yuk["user"] == A else []
-    await din.dolgu((T - 120_000, 0))
+    din._dolgu_baslat((T - 120_000, 0))                        # dolgu artık arka plan görevi: başlat ve bitmesini bekle
+    await din._dolgu_gorevi

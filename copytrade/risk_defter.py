@@ -165,8 +165,10 @@ class RiskDefteri:
         anahtar = (ad, coin)
         isaret = 1.0 if yon == "B" else -1.0
         signed = isaret * sz
+        eski_dolum = False                                     # REST okumasından ÖNCE gerçekleşmiş + `startPosition` taşıyan dolum (arka plan dolgusu): okuma daha tazedir, izleme ezilmez
         if bas_poz is not None and math.isfinite(bas_poz):
             onceki = bas_poz
+            eski_dolum = ad in self.bilinen and zaman_ms <= self._okuma_esigi(ad, coin)
         else:
             if anahtar not in self.lider and ad not in self.bilinen:
                 self.sayac["lider_pozisyon_varsayimi"] += 1    # YALNIZ REST başlangıç pozisyonu okunamadıysa: ilk gözlemde trader düz varsayılır
@@ -175,7 +177,8 @@ class RiskDefteri:
                 onceki -= signed                               # dolum REST okumasından önce: okuma onu zaten içeriyor, tekrar eklenmez
                 self.lider[anahtar] = onceki
         sonra = onceki + signed
-        self.lider[anahtar] = 0.0 if abs(sonra) < EPS else sonra
+        if not eski_dolum:
+            self.lider[anahtar] = 0.0 if abs(sonra) < EPS else sonra
         if not canli:
             self.sayac["snapshot_gozlem"] += 1
             return []

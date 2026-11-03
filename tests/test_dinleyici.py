@@ -184,7 +184,7 @@ def calistir(izlenen, mesajlar_listesi, tmp_path, post=lambda y: [], ayar=None, 
         ws = baglantilar[sira["i"]]
         sira["i"] += 1
         return ws
-    ayar = ayar or d.Ayar(sure_sn=0.5, geri_cekilme_ilk_sn=0.01, geri_cekilme_max_sn=0.02)
+    ayar = ayar or d.Ayar(rest_istek_ara_sn=0.0, sure_sn=0.5, geri_cekilme_ilk_sn=0.01, geri_cekilme_max_sn=0.02)
     din = d.Dinleyici(izlenen, list(coinler), baglan, post, tmp_path, ayar, saat.saat_ms, saat.mono if sahte_mono else None)
     ozet = asyncio.run(din.calis())
     return din, baglantilar, ozet
@@ -194,7 +194,7 @@ def test_calistirici_abonelikler_olaylar_ve_ozet_dosyasi(tmp_path):
     saat = Saat(ms=1_000_000)
     mesajlar = [500, trades((1, 1_000_100, [A, C])), userfills(A, (1, 1_000_100), (2, 1_000_000)), {"channel": "subscriptionResponse", "data": {}}, {"channel": "error", "data": "x"},
                 {"channel": "pong"}]
-    din, ws, ozet = calistir(IZ, [mesajlar], tmp_path, saat=saat, ayar=d.Ayar(sure_sn=0.3, geri_cekilme_ilk_sn=0.01))
+    din, ws, ozet = calistir(IZ, [mesajlar], tmp_path, saat=saat, ayar=d.Ayar(rest_istek_ara_sn=0.0, sure_sn=0.3, geri_cekilme_ilk_sn=0.01))
     abonelikler = [m["subscription"] for m in ws[0].gonderilen if m.get("method") == "subscribe"]
     assert [a for a in abonelikler if a["type"] == "trades"] == [{"type": "trades", "coin": "BTC"}, {"type": "trades", "coin": "ETH"}]
     assert [a["user"] for a in abonelikler if a["type"] == "userFills"] == [A, B] and ws[0].kapandi
@@ -208,7 +208,7 @@ def test_calistirici_abonelikler_olaylar_ve_ozet_dosyasi(tmp_path):
 def test_calistirici_kopma_yeniden_baglanma_ve_abonelikler_yeniden_gonderilir(tmp_path):
     saat = Saat(ms=1_000_000)
     din, ws, ozet = calistir(IZ, [[100, trades((1, 1_000_000, [A]))], [50, trades((2, 1_000_120, [B]))]], tmp_path, saat=saat,
-                             ayar=d.Ayar(sure_sn=0.4, geri_cekilme_ilk_sn=0.01, geri_cekilme_max_sn=0.02))
+                             ayar=d.Ayar(rest_istek_ara_sn=0.0, sure_sn=0.4, geri_cekilme_ilk_sn=0.01, geri_cekilme_max_sn=0.02))
     assert ozet["genel"]["kopma"] >= 2 and ozet["genel"]["yeniden_baglanma"] >= 1            # iki bağlantı koptu (ConnectionError), üçüncü bekler
     assert all(any(m["subscription"]["type"] == "trades" for m in w.gonderilen if m.get("method") == "subscribe") for w in ws[:3])
     assert ozet["toplam"]["aaaa"]["n"] == 1 and ozet["toplam"]["bbbb"]["n"] == 1 and all(w.kapandi for w in ws)
@@ -218,7 +218,7 @@ def test_calistirici_rest_hakem_kacani_sayar(tmp_path):
     saat = Saat(ms=1_000_000)
     rest = {A: [{"tid": t, "time": z, "coin": "BTC"} for t, z in ((1, 1_000_000), (2, 1_000_100), (3, 1_000_200))], B: []}
     din, ws, ozet = calistir(IZ, [[1_000_000, trades((1, 1_000_000, [A]), (2, 1_000_100, [A]))]], tmp_path, saat=saat,
-                             post=lambda y: rest[y["user"]], ayar=d.Ayar(sure_sn=0.2, geri_cekilme_ilk_sn=0.01))
+                             post=lambda y: rest[y["user"]], ayar=d.Ayar(rest_istek_ara_sn=0.0, sure_sn=0.2, geri_cekilme_ilk_sn=0.01))
     assert ozet["toplam"]["aaaa"]["kacan"] == 1 and ozet["toplam"]["bbbb"]["kacan"] == 0       # REST 3 dolum, dinleyici 2
 
 
@@ -228,7 +228,7 @@ def test_calistirici_ping_ve_saatlik_ozet_penceresi(tmp_path):
             self.ms += 20_000                     # her okumada 20 sn
             return self.ms / 1000
     saat = IlerleyenSaat(ms=0)
-    ayar = d.Ayar(sure_sn=400.0, ping_sn=25.0, ozet_aralik_sn=100.0, rest_aralik_sn=10 ** 9, geri_cekilme_ilk_sn=0.01)
+    ayar = d.Ayar(rest_istek_ara_sn=0.0, sure_sn=400.0, ping_sn=25.0, ozet_aralik_sn=100.0, rest_aralik_sn=10 ** 9, geri_cekilme_ilk_sn=0.01)
     din, ws, ozet = calistir(IZ, [[]], tmp_path, saat=saat, ayar=ayar, sahte_mono=True)
     ping = [m for w in ws for m in w.gonderilen if m == {"method": "ping"}]
     assert len(ping) >= 3 and ozet["genel"]["ping"] == len(ping)                              # uygulama ping'i
@@ -339,7 +339,7 @@ def test_golden_rest_penceresi_ilk_abonelikten_onceyi_kapsamaz_ve_kacan_siniflan
 
 def test_calistirici_abonelik_anlari_ve_ilk_abonelik_bitisi_kaydedilir(tmp_path):
     saat = Saat(ms=7_000)
-    din, ws, ozet = calistir(IZ, [[]], tmp_path, saat=saat, ayar=d.Ayar(sure_sn=0.2, geri_cekilme_ilk_sn=0.01))
+    din, ws, ozet = calistir(IZ, [[]], tmp_path, saat=saat, ayar=d.Ayar(rest_istek_ara_sn=0.0, sure_sn=0.2, geri_cekilme_ilk_sn=0.01))
     assert din.olcum.abone["BTC"] == 7_000 and din.olcum.abone[f"userFills:{A}"] == 7_000 and din.olcum.ilk_abone_bitis_ms == 7_000
     assert din.olcum.abone_coinler == {"BTC", "ETH"}
 
@@ -358,7 +358,7 @@ def test_golden_kopma_araligindaki_kacan_ayri_sinif_aralik_disi_gercek():
 
 def test_calistirici_kopma_araligi_son_mesajdan_yeniden_abonelik_bitisine(tmp_path):
     saat = Saat(ms=1_000_000)
-    din, ws, ozet = calistir(IZ, [[100, trades((1, 1_000_050, [A]))], []], tmp_path, saat=saat, ayar=d.Ayar(sure_sn=0.4, geri_cekilme_ilk_sn=0.01, geri_cekilme_max_sn=0.02))
+    din, ws, ozet = calistir(IZ, [[100, trades((1, 1_000_050, [A]))], []], tmp_path, saat=saat, ayar=d.Ayar(rest_istek_ara_sn=0.0, sure_sn=0.4, geri_cekilme_ilk_sn=0.01, geri_cekilme_max_sn=0.02))
     # ilk bağlantı: son mesaj anı 1_000_100 (saat 100 ms ilerledi), sonra kopma; yeniden aboneliğin bitişi >= son mesaj
     assert din.olcum.kopma_araliklari and din.olcum.kopma_araliklari[0][0] == 1_000_100 and din.olcum.kopma_araliklari[0][1] >= 1_000_100
     assert din.olcum.kopma_bas_ms is None
@@ -386,6 +386,6 @@ def test_calistirici_kopma_sonrasi_dolgu_rest_ile_kopma_araligi_kapanir(tmp_path
     saat = Saat(ms=1_000_000)
     rest = {A: [{"tid": 11, "time": 1_000_150, "coin": "BTC"}, {"tid": 12, "time": 1_000_160, "coin": "BTC"}], B: []}
     din, ws, ozet = calistir(IZ, [[100, trades((1, 1_000_050, [A])), 400], []], tmp_path, saat=saat, post=lambda y: rest[y["user"]],
-                             ayar=d.Ayar(sure_sn=0.4, geri_cekilme_ilk_sn=0.01, geri_cekilme_max_sn=0.02, rest_tolerans_ms=0))
+                             ayar=d.Ayar(rest_istek_ara_sn=0.0, sure_sn=0.4, geri_cekilme_ilk_sn=0.01, geri_cekilme_max_sn=0.02, rest_tolerans_ms=0))
     assert ozet["genel"]["dolgu"] == 2 and ozet["toplam"]["aaaa"]["dolgu"] == 2 and ozet["toplam"]["aaaa"]["kacan"] == 0
     assert ozet["genel"].get("dolgu_hata", 0) == 0

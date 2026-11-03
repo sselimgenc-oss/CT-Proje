@@ -361,3 +361,26 @@ Günlük döner (UTC gün sınırında `risk_kararlari.<YYYY-MM-DD>.jsonl`), son
 
 ### Liste alanı
 Dinleyici listesinde İlk 11 üyeliği `takim: ilk11` alanıyla gelir (`ilk11/izleme_listesi.yaml`, K-12.8; `izleme_liste.load_list` şeması). Pilot liste `copytrade/izleme_listesi.yaml`'da `takim` yoktur → risk kapısı niyet üretmez. Yalnız DENEME için `--risk-tum-liste` listedeki herkesi "ilk11 sayar".
+
+## 8. Dinleyici REST koruması — dolgu / hakem / başlangıç pozisyonu (v1.20; `copytrade/dinleyici.py`)
+Sunucuda yeniden bağlanmada ~92 adresin `userFillsByTime` dolgusu art arda yapılıp 429 aldığı için (4 saatte `genel.dolgu_hata: 78`) **tüm REST işleri** (dolgu, hakem, başlangıç pozisyonu) tek desene bağlandı:
+- **Arka plan:** hiçbiri WS akışını / gecikme-kaçan ölçümünü beklemez (REST çağrısı `asyncio.to_thread` içinde). Hakem turu sürerken yeni tur gelirse atlanır (`genel.rest_tur_atlanan`, adet). Hakem, bekleyen dolguyu önce bitirir (aynı aralıktaki dolumlar "kopma aralığı kaçanı" diye görülmüş işaretlenmesin).
+- **İstek aralığı:** ardışık REST istekleri arası en az 0,5 sn (`Ayar.rest_istek_ara_sn`, **ortak sayaç**: üç iş birlikte de aşmaz). **Uyarı:** `userFillsByTime` isteği ≥ 20 ağırlık, HL IP sınırı 1.200 ağırlık/dk → 0,5 sn aralık (≈ 2 istek/sn) sürekli yük için sınırın üstündedir; kısa süreli patlamayı yumuşatır, tükenme `HTTP 429` olarak görünür (aşağıdaki sayaçlar).
+- **Yeniden deneme:** dolgu ve hakemde bir adres için 429 / ağ / geçersiz yanıt hatasında en çok 3 yeniden deneme, öncesinde 2 / 5 / 15 sn bekleme (`Ayar.rest_bekleme_sn`). Dolgu: 3'ü de başarısızsa `genel.dolgu_hata` +1; adres **doldurulamayan en eski kopma aralığı başlangıcıyla** bekleyende kalır ve sonraki REST turunda (varsayılan 600 sn) yeniden denenir; yeni bir kopma bekleyen başlangıcı geriye çekmez (en eski korunur). Hakem: `genel.hakem_hata` +1; pencere (2 tur) sonraki turda yeniden kapsandığı için o adres sonraki turda yeniden denenmiş olur. Hakem hatası artık oturumu **koparmaz** (eski davranış: istisna → `kopma` → yeniden bağlanma → yeni dolgu fırtınası).
+- **Kapanış turu** (servis durdurulurken son hakem): bekleme / yeniden deneme yok (durdurma gecikmez), yalnız istek aralığı geçerlidir (92 adres ≈ 46 sn).
+
+`ozet.json` → `genel` (hepsi adet, çalışma başından beri kümülatif; `*_bekleyen` anlık gösterge):
+| Alan | Anlam |
+|---|---|
+| `dolgu` | dolguyla kurtarılan dolum (mevcut) |
+| `dolgu_hata` | 3 yeniden deneme de tükenen dolgu adresi sayısı (mevcut; artık yalnız tükenmede) |
+| `dolgu_yeniden_deneme` | dolgudaki yeniden deneme sayısı (2 / 5 / 15 sn beklemeli denemeler) |
+| `dolgu_bekleyen` | hâlâ doldurulamayan adres sayısı (anlık) |
+| `dolgu_hata_tur` | `{hata türü: adet}`; `dolgu_hata` ile aynı olaylar, tükenen turun SON hatasının sınıfı (toplam = `dolgu_hata`). Örn. `{"HTTP 429": 70, "Timeout": 8}` |
+| `hakem_yeniden_deneme`, `hakem_hata`, `hakem_hata_tur` | aynı anlamlar, REST hakem için |
+| `baslangic_poz_hata_tur` | `{hata türü: adet}`, başlangıç pozisyonu okuması için (toplam = `baslangic_poz_hata`); yalnız risk açıkken |
+| `rest_tur_atlanan` | önceki hakem turu sürdüğü için atlanan tur |
+
+**Hata türü** = hatanın SINIFI (`hata_turu`): `HTTP <kod>` (örn. `HTTP 429`), `Timeout`, `Ağ (URLError)`, `Geçersiz yanıt`, ya da istisna sınıf adı. **Adres, URL ve sağlayıcı metni hiçbir yerde yazılmaz** (`ozet.json` adres içeremez, testli).
+**Journal:** her REST hatası (yeniden denemeler dahil) stderr'e TEK satır: `UYARI REST hatası kaynak=<dolgu|hakem|baslangic_poz> trader=<takma ad> tur=<hata türü>` (`journalctl -u sg-dinleyici | grep "UYARI REST"`).
+
