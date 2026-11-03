@@ -59,28 +59,31 @@ def _oran(pay: float | None, payda: float | None) -> float | None:
     return None if pay is None or payda is None or payda == 0 else pay / payda
 
 
-def v3_gecerli(trader: dict) -> dict | None:
-    v3 = trader.get("sanal_kopya_v3")
-    if not isinstance(v3, dict) or v3.get("durum") == "hesaplanamadi" or v3.get("yer_tutucu"):
+def v4_gecerli(trader: dict) -> dict | None:
+    """Pano kasası `sanal_kopya_v4`'e dayanır (v3 + H5 risk sınırları; lider kararı 2026-11-03). v4 yoksa / hesaplanamadıysa üye veri vermemiş sayılır (v3'e düşülmez)."""
+    v4 = trader.get("sanal_kopya_v4")
+    if not isinstance(v4, dict) or v4.get("durum") == "hesaplanamadi" or v4.get("yer_tutucu"):
         return None
-    return v3 if _sayi(v3.get("bakiye_usd")) is not None and _sayi(v3.get("baslangic_usd")) else None
+    return v4 if _sayi(v4.get("bakiye_usd")) is not None and _sayi(v4.get("baslangic_usd")) else None
 
 
-def acik_islemler(trader: dict) -> list[dict]:
-    """Açık işlemler: YALNIZ trader'ın pozisyon bilgisi (coin, yön, kaldıraç, trader, açılış). Açık KOPYA pozisyonu henüz motorda yok (v3 listelemiyor); trader pozisyonunu
-    1.000 $'a oranlayıp $ / K/Z üretmek kullanıcıyı yanıltır (lider kararı 2026-11-03) → tüm $ alanları ve `kz_oran` `null`."""
+def acik_islemler(trader: dict, v4: dict) -> list[dict]:
+    """Açık KOPYA pozisyonları = `sanal_kopya_v4.acik_pozisyonlar` (1.000 $ sanal kopya, v4 ölçeği). `kaldirac` = büyüklük / teminat (HL azami kaldıracı; bilinmiyorsa `null`);
+    `teminat_usd` = büyüklük / HL azami kaldıracı (başlangıç teminatı); `kz_oran` = K/Z / teminat. Motorda olmayan alan `null`."""
     cikti = []
-    for poz in trader.get("pozisyonlar") or []:
-        cikti.append({"coin": poz.get("coin"), "yon": poz.get("yon"), "kaldirac": _sayi(poz.get("kaldirac")), "trader": trader.get("takma_ad"), "acilis": poz.get("acilis") or None,
-                      "teminat_usd": None, "buyukluk_usd": None, "giris": None, "son": None, "kz_usd": None, "kz_oran": None, "likidasyona_uzaklik_oran": None})
+    for p in v4.get("acik_pozisyonlar") or []:
+        teminat, buyukluk = _sayi(p.get("teminat_usd")), _sayi(p.get("buyukluk_usd"))
+        cikti.append({"coin": p.get("coin"), "yon": p.get("yon"), "kaldirac": _yuvarla(_oran(buyukluk, teminat), 4), "trader": trader.get("takma_ad"), "acilis": p.get("acilis") or None,
+                      "teminat_usd": _yuvarla(teminat, 4), "buyukluk_usd": _yuvarla(buyukluk, 4), "giris": _sayi(p.get("giris")), "son": _sayi(p.get("son")),
+                      "kz_usd": _yuvarla(_sayi(p.get("kz_usd")), 4), "kz_oran": _yuvarla(_sayi(p.get("kz_oran")), 6), "likidasyona_uzaklik_oran": None})
     return cikti
 
 
 def kapanan_islemler(trader: dict) -> list[dict]:
-    """`sanal_kopya_v3.kapanan_islemler` (1.000 $ sabit tutar ölçeği); yalnız `gecerli` olanlar. `ana_para_usd` = sonuc_usd / getiri (getiri = sonuc / açılan toplam $)."""
-    v3 = trader.get("sanal_kopya_v3")
+    """`sanal_kopya_v4.kapanan_islemler` (1.000 $ sanal kopya ölçeği, v4); yalnız `gecerli` olanlar. `ana_para_usd` = sonuc_usd / getiri (getiri = sonuc / açılan toplam $)."""
+    v4 = trader.get("sanal_kopya_v4")
     cikti = []
-    for islem in (v3.get("kapanan_islemler") if isinstance(v3, dict) else None) or []:
+    for islem in (v4.get("kapanan_islemler") if isinstance(v4, dict) else None) or []:
         if islem.get("gecerli") is False:
             continue
         sonuc, getiri = _sayi(islem.get("sonuc_usd")), _sayi(islem.get("getiri"))
@@ -109,7 +112,7 @@ def _donem_orani(egri: list[tuple[str, float]], geri: int) -> float | None:
 
 def takim_uret(takim_ad: str, uyeler: list[dict], durum_traderlar: dict[str, dict], kadro_toplam: int | None, ref: datetime) -> dict:
     veriler = [(u, durum_traderlar[u["adres"].lower()]) for u in uyeler if u["adres"].lower() in durum_traderlar]
-    v3li = [(u, t, v3_gecerli(t)) for u, t in veriler]
+    v3li = [(u, t, v4_gecerli(t)) for u, t in veriler]
     v3li = [(u, t, v) for u, t, v in v3li if v is not None]
     kadro_dolu = len(v3li)
     # kopya `t0`'da başlar: t0 > bugün olan üye henüz başlamamıştır (açık / kapanan / kasa toplamlarına GİRMEZ; trader pozisyonu kopya işlemi değildir)
@@ -118,7 +121,7 @@ def takim_uret(takim_ad: str, uyeler: list[dict], durum_traderlar: dict[str, dic
     baslangic = sum(_sayi(v["baslangic_usd"]) for _, _, v in v3li) if var else None
     bakiye = sum(_sayi(v["bakiye_usd"]) for _, _, v in v3li) if var else None
     egri = _egri_topla([v.get("egri") or [] for _, _, v in v3li]) if var else []
-    acik = [a for _, t, _ in v3li for a in acik_islemler(t)]
+    acik = [a for _, t, v in v3li for a in acik_islemler(t, v)]
     acik.sort(key=lambda a: str(a["acilis"] or ""), reverse=True)
     kapanan_tum = [k for _, t, _ in v3li for k in kapanan_islemler(t)]
     kapanan_tum.sort(key=lambda k: str(k["kapanis"] or ""), reverse=True)
@@ -150,7 +153,7 @@ def takim_uret(takim_ad: str, uyeler: list[dict], durum_traderlar: dict[str, dic
               "ort_kayip_oran": _yuvarla(sum(kayip_g) / len(kayip_g) if kayip_g else None, 6),
               "beklenti_oran": _yuvarla(sum(getiriler) / len(getiriler) if getiriler else None, 6),
               "islem_sayisi": len(kapanan_tum) if var else None}
-    ozet = {"nakit_usd": None, "acik_teminat_usd": _yuvarla(teminat, 4), "acik_islem": len(acik) if var else None, "acik_kz_usd": _yuvarla(kz_acik, 4),
+    ozet = {"nakit_usd": _yuvarla(None if teminat is None or bakiye is None else bakiye - teminat, 4), "acik_teminat_usd": _yuvarla(teminat, 4), "acik_islem": len(acik) if var else None, "acik_kz_usd": _yuvarla(kz_acik, 4),
             "bugun_acilan": (sum(1 for a in acik if str(a["acilis"] or "")[:10] == bugun) + sum(1 for k in kapanan_tum if str(k["acilis"] or "")[:10] == bugun)) if var else None,
             "bugun_kapanan": sum(1 for k in kapanan_tum if str(k["kapanis"] or "")[:10] == bugun) if var else None,
             "islem_basi_usd": None, "son24_islem": len(son24) if var else None,
@@ -186,8 +189,8 @@ def pano_uret(durum: dict, liste: dict, snapshot: dict | None, simdi: datetime |
     return {"surum": 1, "uretildi": _iso(kaynak) if kaynak else None, "dinleyici": None,
             "tazelik": {"kaynak_uretildi": _iso(kaynak) if kaynak else None, "pano_uretildi": _iso(simdi), "yas_dk": None if yas is None else round(yas, 1),
                         "esik_dk": BAYAT_DK, "bayat": True if yas is None else yas > BAYAT_DK},
-            "olcek": {"kasa_ve_kapanan": "1.000 $ sanal kopya, sabit tutar (sanal_kopya_v3), trader başına; takım değeri üyelerin TOPLAMI",
-                      "acik_islemler": "Açık kopya pozisyonu henüz motorda yok; yalnız trader'ın pozisyon bilgisi gösterilir ($ alanları yok)"},
+            "olcek": {"kasa_ve_kapanan": "1.000 $ sanal kopya, v4 = v3 + H5 risk sınırları (sanal_kopya_v4), trader başına; takım değeri üyelerin TOPLAMI",
+                      "acik_islemler": "Açık kopya pozisyonları v4'ten (1.000 $ sanal kopya, risk sınırlı); teminat = büyüklük / HL azami kaldıracı"},
             "takimlar": [takim_uret(ad, uyeler[k], tr, toplam[k], ref) for k, ad in TAKIMLAR]}
 
 
