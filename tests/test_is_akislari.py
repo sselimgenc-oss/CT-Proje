@@ -73,6 +73,8 @@ def test_zamanlamalar_sartnameyle_ayni():
     assert yukle("ilk11_pazar.yml")["on"]["schedule"] == [{"cron": "7 10-18/2 * * 0"}]
     assert yukle("izleme.yml")["concurrency"]["cancel-in-progress"] is False and yukle("ilk11_pazar.yml")["concurrency"]["cancel-in-progress"] is False
     toplam = sum(yukle("copytrade_kapi.yml")["jobs"][j]["timeout-minutes"] for j in ("plan", "stage1", "publish"))
+    # A2-3b: plan `--evren-yaz` 10 dk'yı aştı (prefilter satır başına YAML okuyordu: 48 bin satır ≈ 1.054 sn). Düzeltmeden sonra saniyeler sürmeli; sınır ≥ 30 dk (ölçüm × 2'nin altına inmez).
+    assert yukle("copytrade_kapi.yml")["jobs"]["plan"]["timeout-minutes"] == 30 and toplam == 30 + 120 + 90
     assert toplam <= 4 * 60 + 40 and yukle("copytrade_kapi.yml")["jobs"]["stage1"]["timeout-minutes"] <= 120 and yukle("copytrade_kapi.yml")["jobs"]["publish"]["timeout-minutes"] <= 90
 
 

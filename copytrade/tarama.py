@@ -169,12 +169,13 @@ def prefilter(rows: list[dict], watchlist: list[dict] | None = None) -> list[dic
     ``watchlist`` eski günlük tarayıcı çağrılarıyla uyumluluk içindir; kapı evrenini genişletmez veya daraltmaz.
     """
     watch = {x["address"].lower() for x in watchlist or []}
+    esik = float(load_rules()["evren_min_hesap_degeri"])      # BİR kez okunur: satır başına YAML okumak 48 bin satırda ~17 dk sürüyordu (A2-3b ölçümü)
     accepted = []
     for row in rows:
         address = _address(row)
         account = float(row.get("accountValue", row.get("account_value", 0)) or 0)
         all_time_pnl = _window(row, "allTime", "pnl")
-        if address and account >= float(load_rules()["evren_min_hesap_degeri"]) and all_time_pnl > 0:
+        if address and account >= esik and all_time_pnl > 0:
             row = dict(row); row["address"] = address; row["accountValue"] = account; accepted.append(row)
     return sorted(accepted, key=lambda x: x["address"].lower())
 

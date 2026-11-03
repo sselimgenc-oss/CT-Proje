@@ -89,6 +89,22 @@ def test_prefilter_keeps_every_eligible_leader_without_a_cap():
     assert {row["address"] for row in selected} == {f"0x{i}" for i in range(1, 301)}
 
 
+def test_prefilter_kurallari_tek_kez_okur_ve_sonuc_ayni(monkeypatch):
+    """A2-3b: eşik satır başına değil BİR kez okunur (48.130 satırda YAML okuma ~17 dk sürüyordu). Elle: 5 satır, eşik 20.000: 25.000 geçer; 19.999 geçmez; PnL ≤ 0 geçmez."""
+    import copytrade.tarama as tarama
+    cagri = {"n": 0}
+    gercek = tarama.load_rules
+
+    def sayac():
+        cagri["n"] += 1
+        return gercek()
+    monkeypatch.setattr(tarama, "load_rules", sayac)
+    esik = float(gercek()["evren_min_hesap_degeri"])
+    rows = [{"ethAddress": "0xa", "accountValue": esik + 5_000, "allTimePnl": 1}, {"ethAddress": "0xb", "accountValue": esik - 1, "allTimePnl": 1},
+            {"ethAddress": "0xc", "accountValue": esik + 5_000, "allTimePnl": 0}, {"ethAddress": "0xd", "accountValue": esik, "allTimePnl": 5}, {"ethAddress": "", "accountValue": esik, "allTimePnl": 5}]
+    assert [r["address"] for r in tarama.prefilter(rows)] == ["0xa", "0xd"] and cagri["n"] == 1
+
+
 def test_prefilter_accepts_documented_window_performances_shape():
     row = {"ethAddress": "0xA", "accountValue": "25000", "windowPerformances": [
         {"window": "month", "roi": "1", "pnl": "3"}, {"window": "allTime", "roi": "2", "pnl": "4"}]}
