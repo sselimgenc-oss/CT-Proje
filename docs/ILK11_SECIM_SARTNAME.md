@@ -46,7 +46,10 @@ A3 kabul kanıtı (§6), kararlar (§7; hepsi 2026-11-02'de verildi).
 Bir adres `uygun: true` olur, ancak ve ancak aşağıdakilerin **hepsi** sağlanırsa:
 
 1. **Kapı koşusu:** `copytrade-kapi` veri dalında `copytrade/kapi/<YYYY-MM-DD>/` klasörü; `durum.json` → `durum == "tamam"`,
-   `kapsam ≥ kapsam_hedefi` (`kurallar.yaml`, bugün 0,98), `hesap` = güncel `HESAP_SURUMU`. Birden fazla uygun klasör varsa
+   `kapsam ≥ kapsam_hedefi` (`kurallar.yaml`, bugün 0,98), `hesap` = güncel `HESAP_SURUMU`.
+   **Veri bütünlüğü (2026-11-03; kapı kuralı değil):** `durum.json` → `hatali_oran_aday ≤ veri_butunlugu_hatali_oran_max` (`kurallar.yaml`, bugün 0,01 = %1; `hatali_satir` = `hata` dolu satır, `hatali_oran_aday` = hatalı / analize giren = `asama1` Geçti; `hatali_oran_evren` yalnız bilgi). Aşılırsa kapı `durum: eksik`
+   (`neden`: `hatali_satir …`) yayımlar ve bu klasör seçimde kullanılmaz (`kapsam` hatalı satırları da kapsanmış saydığı için ayrı ölçü). Hatalı satırlar
+   `copytrade_kapi.yml` `yeniden_dene_gun` girdisiyle yeniden koşulur (`VERI_SOZLESMESI.md` §9); yeniden koşulan satır `satir_kaynagi == "bu_kosu"` kalır (3. madde). Birden fazla uygun klasör varsa
    **as_of'tan önceki en yeni** tarih alınır (as_of = Pazar 13:00 TSİ = 10:00 UTC).
 2. **Tazelik (koşu):** `as_of tarihi − kapı klasör tarihi ≤ ilk11_kapi_tazelik_gun` (**7 gün**, K‑12.10). Daha eskiyse kapı verisi
    **geçersiz**: ilk seçim ve kadro boşluğu doldurma yapılmaz; iş kırmızı biter, RAPOR/iş özetine neden yazılır (Telegram K‑13 ile ertelendi). (Haftalık form

@@ -130,13 +130,16 @@ saglik_max_kaldirac: 200
 saglik_min_satir_sabit_kontrolu: 50
 # Adres başı hata (hata sütunu dolu) oranı bunu aşarsa kapı kırmızı
 saglik_max_hata_orani: 0.05
+# VERİ BÜTÜNLÜĞÜ kuralı (kapı kuralı DEĞİL, kapı eşiklerini/kararını değiştirmez): hata sütunu dolu satır oranı (hatali_satir / tablo satırı, ORAN) bunu AŞARSA
+# koşu `durum: eksik` (neden `hatali_satir`). Sonuç yayımlanır ama İlk 11 seçiminde kullanılmaz; hatalı satırlar `--yeniden-dene-gun` ile yeniden koşulur.
+veri_butunlugu_hatali_oran_max: 0.01
 # Oran sütunlarında kayan nokta farkı için tolerans (ör. paylar toplamı 1,0000000000000002)
 saglik_oran_toleransi: 1.0e-9
 # Kopya net getirisi (kopya sermayesine oran) makul aralığı: −1 (tüm sermaye) .. +100 (yüz katı); dışı satırda `hata`, sütunda kapı kırmızı
 saglik_net_min: -1.0
 saglik_net_max: 100.0
 # Tamamen boş olmasına izin verilen (isteğe bağlı / yalnız sorun varsa dolan) sütunlar; bunların DIŞINDA tamamen boş sütun kapıyı kırar (görev: ölü sütunlar sessiz kalmasın)
-saglik_bos_olabilir: [plasebo_hata, plasebo_not, hata, not, plasebo_gercek_skor, neden, bhy_q, mum_sayisi, mum_bozuk, mum_sicrama, mum_bosluk, mum_hacimsiz, mum_gecerli]
+saglik_bos_olabilir: [plasebo_hata, plasebo_not, hata, not, plasebo_gercek_skor, neden, bhy_q, mum_sayisi, mum_bozuk, mum_sicrama, mum_bosluk, mum_hacimsiz, mum_gecerli, hesap_zamani]
 # Arşiv: ardışık kayıt arası > 3 × hedef aralık boşluktur; günlük boşluk > %10 ise iş kırmızıdır.
 arsiv_bosluk_carpani: 3
 arsiv_bosluk_esigi: 0.10
