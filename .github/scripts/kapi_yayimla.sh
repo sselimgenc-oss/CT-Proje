@@ -28,8 +28,12 @@ git add -f "copytrade/kapi/$DAY"
 # Seçim raporunun yoğunlaşma hesabı bu dosyayı okur. Genel ignore kuralları
 # değişse bile kapı günlüğü veri dalında açıkça yer almalıdır.
 [ -f "copytrade/kapi/$DAY/gunluk.csv.gz" ] && git add -f "copytrade/kapi/$DAY/gunluk.csv.gz"
-python3 "$archive_scripts/son_yaz.py" son.json kapi "$DAY"     # İlk 11 işi ve izleme en son kapı tarihini buradan okur; diğer anahtarlar (ilk11) korunur
-git add -f son.json
+# İlk 11 işi ve izleme en son kapı tarihini buradan okur; diğer anahtarlar (ilk11) korunur. Eski bir günün yeniden koşusu işaretçiyi GERİ ALMAZ.
+son_kapi=$(python3 -c "import json,os;print(json.load(open('son.json')).get('kapi','') if os.path.exists('son.json') else '')")
+if [ -z "$son_kapi" ] || [ "$DAY" \> "$son_kapi" ] || [ "$DAY" = "$son_kapi" ]; then
+  python3 "$archive_scripts/son_yaz.py" son.json kapi "$DAY"
+  git add -f son.json
+fi
 [ -f kesif/kesif.json ] && git add -f kesif/kesif.json
 if git diff --cached --quiet; then exit 0; fi
 git commit -m "copytrade: CT-Kapı sonuçları $DAY ($MOD)"
