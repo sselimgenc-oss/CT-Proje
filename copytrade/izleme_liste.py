@@ -54,3 +54,18 @@ def load_list(path: Path) -> list[dict]:
             raise ValueError('Tekrarlanan trader id/adres.')
         ids.add(row['id']); addresses.add(row['adres'].lower())
     return rows
+
+
+def perp_dex_names(response: object) -> list[str]:
+    """Return every public HIP-3 dex name exactly once, in API order."""
+    if not isinstance(response, list):
+        raise ValueError('Geçersiz perpDexs yanıtı.')
+    names: list[str] = []
+    for dex in response:
+        if dex is None:
+            continue
+        if not isinstance(dex, dict) or not isinstance(dex.get('name'), str) or not dex['name']:
+            raise ValueError('Geçersiz perpDexs dex adı.')
+        if dex['name'] not in names:
+            names.append(dex['name'])
+    return names

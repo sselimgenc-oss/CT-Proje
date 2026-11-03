@@ -26,7 +26,7 @@ from copytrade.pozisyon_mutabakat import mutabakat, ozet
 from copytrade.olcut import _funding_amount, asset_class, calculate_metrics, closed_round_trips, perp_fills
 from copytrade.tarama import PublicClient, RateLimiter
 from copytrade import ilk11_alanlar
-from copytrade.izleme_liste import KOLLAR, STYLES, load_list  # noqa: F401 - m.load_list / m.KOLLAR dış API'si korunur
+from copytrade.izleme_liste import KOLLAR, STYLES, load_list, perp_dex_names  # noqa: F401 - m.load_list / m.KOLLAR / m.perp_dex_names dış API'si korunur
 from copytrade import oda_risk
 from copytrade import kopya_v2
 from copytrade import kopya_v3
@@ -455,21 +455,6 @@ def delay_for_style(style: str, rules: dict | None = None) -> int:
     """Sanal kopya gecikmesi (dk): intraday 30, swing 120 (kurallar.yaml ``kopya_gecikme_dk``); scalp/bilinmiyor 30."""
     rules = rules or load_rules()
     return int(rules['kopya_gecikme_dk']['swing' if style == 'swing' else 'intraday'])
-
-
-def perp_dex_names(response: object) -> list[str]:
-    """Return every public HIP-3 dex name exactly once, in API order."""
-    if not isinstance(response, list):
-        raise ValueError('Geçersiz perpDexs yanıtı.')
-    names: list[str] = []
-    for dex in response:
-        if dex is None:
-            continue
-        if not isinstance(dex, dict) or not isinstance(dex.get('name'), str) or not dex['name']:
-            raise ValueError('Geçersiz perpDexs dex adı.')
-        if dex['name'] not in names:
-            names.append(dex['name'])
-    return names
 
 
 def clearinghouse_states(client: PublicClient, address: str, dexes: list[str]) -> list[dict]:

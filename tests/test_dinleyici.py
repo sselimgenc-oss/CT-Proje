@@ -240,7 +240,24 @@ def test_baslama_sayaci_restart_sayisi(tmp_path):
 
 
 def test_coin_listesi_silinmis_coinleri_atlar():
-    assert d.coin_listesi(lambda y: {"universe": [{"name": "BTC"}, {"name": "OLD", "isDelisted": True}, {"name": "ETH"}]}) == ["BTC", "ETH"]
+    assert d.coin_listesi(lambda y: [None] if y["type"] == "perpDexs" else {"universe": [{"name": "BTC"}, {"name": "OLD", "isDelisted": True}, {"name": "ETH"}]}) == ["BTC", "ETH"]
+
+
+def test_golden_coin_evreni_ana_perp_ve_hip3_dexleri_spot_yok():
+    """Elle: ana evren [BTC, ETH(silinmiş)], perpDexs [None, xyz, abc], xyz evreni [xyz:XYZ100, xyz:GOLD], abc evreni [abc:X, xyz:GOLD(tekrar)] -> 5 değil 4 benzersiz coin:
+    BTC, xyz:XYZ100, xyz:GOLD, abc:X. Aynı evren izleme motorunun kopyaladığı evrendir: hiçbiri `olcut.asset_class` ile 'spot' değildir (kural 7)."""
+    from copytrade.olcut import asset_class
+    evrenler = {None: [{"name": "BTC"}, {"name": "ETH", "isDelisted": True}], "xyz": [{"name": "xyz:XYZ100"}, {"name": "xyz:GOLD"}],
+                "abc": [{"name": "abc:X"}, {"name": "xyz:GOLD"}]}
+
+    def post(y):
+        if y["type"] == "perpDexs":
+            return [None, {"name": "xyz"}, {"name": "abc"}]
+        assert y["type"] == "meta"
+        return {"universe": evrenler[y.get("dex")]}
+    coinler = d.coin_listesi(post)
+    assert coinler == ["BTC", "xyz:XYZ100", "xyz:GOLD", "abc:X"]
+    assert all(asset_class(c) != "spot" for c in coinler)
 
 
 # ------------------------------------------------------------------------------------------------ adım 0

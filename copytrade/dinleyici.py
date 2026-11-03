@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable
 
 from copytrade.hl_public_adapter import DEFAULT_INFO_URL, DEFAULT_WS_URL, HyperliquidPublicAdapter
-from copytrade.izleme_liste import load_list
+from copytrade.izleme_liste import load_list, perp_dex_names
 
 REST_SAYFA = 2000                      # userFillsByTime tek yanıtta en çok bu kadar dolum döner (API sınırı; eşik değil)
 ADRES = re.compile(r"0x[0-9a-fA-F]{40}")
@@ -384,8 +384,13 @@ async def ws_baglan(ws_url: str = DEFAULT_WS_URL) -> Any:
 
 
 def coin_listesi(post: Callable[[dict], Any]) -> list[str]:
+    """Abone olunacak coin evreni = izleme motorunun kopyaladığı evren (kural 7): ana perp dex + HER HIP-3 dex'in perp coin'leri (`dex:COIN`).
+    Motor `perp_fills` ile yalnız SPOT'u dışarıda bırakır (`olcut.asset_class`); spot kopyalanmadığı için abone olunmaz, REST'te görülürse `kacan_sinif.spot` olarak yalnız sayılır."""
     meta = post({"type": "meta"})
-    return [u["name"] for u in meta["universe"] if not u.get("isDelisted")]
+    coinler = [u["name"] for u in meta["universe"] if not u.get("isDelisted")]
+    for dex in perp_dex_names(post({"type": "perpDexs"})):
+        coinler += [u["name"] for u in post({"type": "meta", "dex": dex})["universe"] if not u.get("isDelisted") and u["name"] not in coinler]
+    return coinler
 
 
 def baslama_sayaci(durum_yolu: Path) -> int:

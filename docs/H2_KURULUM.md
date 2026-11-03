@@ -76,5 +76,5 @@ systemctl stop sg-dinleyici
 Kaldırmak için ek olarak `systemctl disable sg-dinleyici` ve Droplet'i silin. Servis çökerse `Restart=on-failure` yeniden başlatır; sayısı `yeniden_baslama` alanındadır.
 
 ## Bilinen sınırlar
-- `trades` kanalı yalnız ana perp piyasası coinlerini kapsar (`meta` evreni); HIP-3 (`dex:coin`) ve spot dolumlar Adım 0 sonrası ayrıca değerlendirilecek. Kaçan hesabı (REST hakem) bunları da yakalar ve sayar.
+- `trades` coin evreni = izleme motorunun kopyaladığı evren (kural 7): ana perp piyasası + HER HIP-3 dex'inin coinleri (`dex:coin`; `perpDexs` + `meta` `dex`). Spot kopyalanmaz (`olcut.perp_fills`): abone olunmaz, REST hakemde görülürse yalnız `kacan_sinif.spot` olarak sayılır. Abonelik reddi `genel.error` ve `error` çerçeveleriyle görünür.
 - `userFills` çapraz kontrolü ilk 10 adresle sınırlıdır (varsayılan; Adım 0 sonucuna göre değişir).
