@@ -91,7 +91,7 @@ class RiskDefteri:
         self.dur_aktif = False
         self.pozlar: dict[tuple[str, str], Poz] = {}
         self.lider: dict[tuple[str, str], float] = {}      # trader'ın görülen pozisyonu (userFills/REST `startPosition` varsa oradan, yoksa kümülatif)
-        self.bilinen: dict[str, int] = {}                  # REST ile başlangıç pozisyonu okunan trader -> okuma anı (ms); bilinen trader için "ilk gözlemde düz" varsayımı YOK
+        self.bilinen: dict[str, tuple[int, dict[str, int]]] = {}   # REST ile başlangıç pozisyonu okunan trader -> (varsayılan okuma anı ms, {dex: okuma anı ms}); bilinen trader için "ilk gözlemde düz" varsayımı YOK
         self.fiyatlar: dict[str, float] = {}
         self.realized = 0.0
         self.gun = _gun(baslangic_ms) if baslangic_ms else None
@@ -100,15 +100,21 @@ class RiskDefteri:
         self.sayac = {"niyet": 0, "kabul": 0, "ilk11_disi": 0, "gecersiz_dolum": 0, "lider_pozisyon_varsayimi": 0, "snapshot_gozlem": 0}
         self.ret: dict[str, int] = {}
 
-    def baslangic_ayarla(self, ad: str, pozlar: dict[str, float], okuma_ms: int) -> None:
+    def baslangic_ayarla(self, ad: str, pozlar: dict[str, float], okuma_ms: int | dict[str, int]) -> None:
         """H5b: REST `clearinghouseState` ile okunan trader pozisyonlarını (coin -> işaretli miktar) başlangıç/tazeleme olarak verir. O trader için önceki izleme SİLİNİR
-        (REST gerçektir); listede olmayan coin düzdür. `okuma_ms` ve öncesi dolumlar bu okumaya zaten dahil sayılır (çift sayım yok)."""
+        (REST gerçektir); listede olmayan coin düzdür. `okuma_ms` (ms) ve öncesi dolumlar bu okumaya zaten dahil sayılır (çift sayım yok). Dex'ler ardışık okunduğundan
+        `okuma_ms` {dex: ms} olabilir (ana dex anahtarı ""; coin'in dex'i `dex:COIN` önekidir); tek sayı = tüm dex'ler."""
         for anahtar in [k for k in self.lider if k[0] == ad]:
             del self.lider[anahtar]
         for coin, boyut in pozlar.items():
             if math.isfinite(boyut) and abs(boyut) > EPS:
                 self.lider[(ad, coin)] = boyut
-        self.bilinen[ad] = int(okuma_ms)
+        okuma = {"": int(okuma_ms)} if isinstance(okuma_ms, int) else {k: int(v) for k, v in okuma_ms.items()}
+        self.bilinen[ad] = (int(okuma_ms) if isinstance(okuma_ms, int) else min(okuma.values()), okuma)
+
+    def _okuma_esigi(self, ad: str, coin: str) -> int:
+        varsayilan, okuma = self.bilinen[ad]
+        return okuma.get(coin.split(":", 1)[0] if ":" in coin else "", varsayilan)
 
     # ------------------------------------------------------------------ durum okuma
     def _mark(self, coin: str, yedek: float) -> float:
@@ -165,7 +171,7 @@ class RiskDefteri:
             if anahtar not in self.lider and ad not in self.bilinen:
                 self.sayac["lider_pozisyon_varsayimi"] += 1    # YALNIZ REST başlangıç pozisyonu okunamadıysa: ilk gözlemde trader düz varsayılır
             onceki = self.lider.get(anahtar, 0.0)
-            if ad in self.bilinen and zaman_ms <= self.bilinen[ad]:
+            if ad in self.bilinen and zaman_ms <= self._okuma_esigi(ad, coin):
                 onceki -= signed                               # dolum REST okumasından önce: okuma onu zaten içeriyor, tekrar eklenmez
                 self.lider[anahtar] = onceki
         sonra = onceki + signed

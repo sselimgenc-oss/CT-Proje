@@ -84,7 +84,7 @@ Kaldırmak için:
 rm /var/lib/sg-dinleyici/DUR
 ```
 Dosya her dolumda kontrol edilir; yeniden başlatma gerekmez.
-**Başlangıç pozisyonu (H5b):** servis her başlangıçta/yeniden bağlanmada `takim: ilk11` adreslerinin açık pozisyonlarını REST `clearinghouseState` ile okur (adres başına 1 + HIP-3 dex sayısı istek, ~2 ağırlık). `ozet.json` → `genel.baslangic_poz_hata` sürekli artıyorsa (429/ağ) loga bakın; dinleme sürer, risk eski varsayıma düşer (`risk.lider_pozisyon_varsayimi`).
+**Başlangıç pozisyonu (H5b):** servis her başlangıçta/yeniden bağlanmada `takim: ilk11` adreslerinin açık pozisyonlarını REST `clearinghouseState` ile okur (adres başına 1 + HIP-3 dex sayısı istek, ~2 ağırlık). Okuma arka planda yapılır, istekler arası 0,5 sn; hata/429'da 3 yeniden deneme (2/5/15 sn), sonra o adres her 5 dk'da yeniden denenir. `ozet.json` → `genel.baslangic_poz_bekleyen` > 0 uzun süre sürüyorsa (429/ağ) o adres için risk eski varsayımda kalmıştır (`risk.lider_pozisyon_varsayimi`); dinleme ve ölçüm etkilenmez.
 
 ## 9. Durdur
 ```bash

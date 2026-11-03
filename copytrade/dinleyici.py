@@ -290,6 +290,9 @@ class Ayar:
     geri_cekilme_ilk_sn: float = 1.0
     geri_cekilme_max_sn: float = 30.0
     sure_sn: float | None = None
+    baslangic_bekleme_sn: tuple[float, ...] = (2.0, 5.0, 15.0)    # H5b: başlangıç pozisyonu okuması hata verirse yeniden denemeden önce bekleme (sn); 3 yeniden deneme
+    baslangic_istek_ara_sn: float = 0.5                           # H5b: ardışık clearinghouseState istekleri arası en az (sn)
+    baslangic_yeniden_sn: float = 300.0                           # H5b: 3 yeniden deneme de başarısızsa o adres için arka plan deneme aralığı (sn)
 
 
 class Dinleyici:
@@ -314,7 +317,10 @@ class Dinleyici:
         self.risk, self.risk_gunlugu, self.dur_yolu = risk, risk_gunlugu, dur_yolu      # H5: dry-run risk kapısı (None = kapalı)
         self.dex_adlari = list(dex_adlari or [])
         if risk is not None:
-            self.olcum.genel.update({"baslangic_poz_okundu": 0, "baslangic_poz_hata": 0})
+            self.olcum.genel.update({"baslangic_poz_okundu": 0, "baslangic_poz_hata": 0, "baslangic_poz_yeniden_deneme": 0, "baslangic_poz_arka_plan": 0, "baslangic_poz_bekleyen": 0})
+        self._bas_gorevler: dict[str, asyncio.Task] = {}
+        self._rest_kilit: asyncio.Lock | None = None
+        self._son_rest = float("-inf")
 
     def durdur(self) -> None:
         self._dur.set()
@@ -333,22 +339,73 @@ class Dinleyici:
             self.olcum.kopma_araliklari.append((self.olcum.kopma_bas_ms, self.saat_ms()))
             self.olcum.kopma_bas_ms = None
 
-    async def baslangic_pozisyonlari(self) -> None:
-        """H5b: her (yeniden) bağlanmada İlk 11 adreslerinin açık pozisyonlarını REST `clearinghouseState` ile okuyup risk defterine başlangıç/tazeleme olarak verir.
-        Bir adresin okuması başarısızsa o adresin önceki izlemesi KORUNUR, `genel.baslangic_poz_hata` artar; dinleme ve gecikme/kaçan ölçümü ASLA durmaz."""
+    def _bas_baslat(self) -> None:
+        """H5b: her (yeniden) bağlanmada İlk 11 adreslerinin açık pozisyonlarını ARKA PLANDA okur (WS akışı ve ölçüm ASLA beklemez). Önceki turun görevleri iptal edilir."""
         if self.risk is None:
             return
+        self._bas_iptal()
         for i in self.liste:
-            if i.ad not in self.risk.ilk11:
-                continue
-            okuma_ms = self.saat_ms()
-            try:
-                pozlar = await asyncio.to_thread(clearinghouse_pozisyonlari, self.post, i.adres, self.dex_adlari)
-            except Exception:       # noqa: BLE001 - ağ / API / yanıt hatası: sayılır, varsayıma düşülür, dinleme sürer
-                self.olcum.genel["baslangic_poz_hata"] += 1
-                continue
-            self.risk.baslangic_ayarla(i.ad, pozlar, okuma_ms)
-            self.olcum.genel["baslangic_poz_okundu"] += 1
+            if i.ad in self.risk.ilk11:
+                self._bas_gorevler[i.ad] = asyncio.create_task(self._bas_adres(i))
+
+    def _bas_iptal(self) -> list[asyncio.Task]:
+        gorevler = list(self._bas_gorevler.values())
+        for g in gorevler:
+            g.cancel()
+        self._bas_gorevler.clear()
+        return gorevler
+
+    async def _rest_ara(self) -> None:
+        """Başlangıç okumalarının istekleri arasında en az `baslangic_istek_ara_sn` (görevler arası ortak)."""
+        if self._rest_kilit is None:
+            self._rest_kilit = asyncio.Lock()
+        async with self._rest_kilit:
+            dongu = asyncio.get_running_loop()
+            bekle = self.ayar.baslangic_istek_ara_sn - (dongu.time() - self._son_rest)
+            if bekle > 0:
+                await asyncio.sleep(bekle)
+            self._son_rest = dongu.time()
+
+    async def _bas_oku(self, i: Izlenen) -> bool:
+        """Bir adres için tüm dex'leri sırayla okur; hepsi başarılıysa risk defterine verir. Hata (429, ağ, geçersiz yanıt) -> False; kısmi sonuç uygulanmaz."""
+        pozlar: dict[str, float] = {}
+        okuma: dict[str, int] = {}
+        try:
+            for dex in ["", *self.dex_adlari]:
+                await self._rest_ara()
+                okuma[dex] = self.saat_ms()
+                pozlar.update(clearinghouse_ayristir(await asyncio.to_thread(self.post, clearinghouse_yuk(i.adres, dex))))
+        except asyncio.CancelledError:
+            raise
+        except Exception:       # noqa: BLE001 - ağ / 429 / yanıt hatası: çağıran yeniden dener
+            return False
+        self.risk.baslangic_ayarla(i.ad, pozlar, okuma)
+        self.olcum.genel["baslangic_poz_okundu"] += 1
+        return True
+
+    async def _bas_adres(self, i: Izlenen) -> None:
+        """Okuma + en çok 3 yeniden deneme (2 / 5 / 15 sn bekleyerek). Hepsi başarısızsa `baslangic_poz_hata` +1 ve o adres her 5 dk'da arka planda yeniden denenir;
+        başarılı olana dek YALNIZ o adres için `lider_pozisyon_varsayimi` geçerlidir (defter bilinen saymaz)."""
+        genel, bekleyen = self.olcum.genel, False
+        try:
+            if await self._bas_oku(i):
+                return
+            for bekle in self.ayar.baslangic_bekleme_sn:
+                genel["baslangic_poz_yeniden_deneme"] += 1
+                await asyncio.sleep(bekle)
+                if await self._bas_oku(i):
+                    return
+            genel["baslangic_poz_hata"] += 1
+            genel["baslangic_poz_bekleyen"] += 1
+            bekleyen = True
+            while True:
+                await asyncio.sleep(self.ayar.baslangic_yeniden_sn)
+                genel["baslangic_poz_arka_plan"] += 1
+                if await self._bas_oku(i):
+                    return
+        finally:
+            if bekleyen:
+                genel["baslangic_poz_bekleyen"] -= 1
 
     def risk_isle(self, o: Olay, canli: bool, simdi_ms: int, kaynak: str | None = None) -> None:
         """H5: yeni (tekilleştirilmiş) dolumu risk defterine verir; karar satırları günlüğe yazılır. Risk hatası dinlemeyi/ölçümü ASLA durdurmaz."""
@@ -466,7 +523,7 @@ class Dinleyici:
                     await self._abone_ol(ws)
                     if len(self.olcum.kopma_araliklari) > onceki_aralik:
                         await self.dolgu(self.olcum.kopma_araliklari[-1])         # H2b: kopmada kaçan işlem = kayıp -> REST ile tamamla
-                    await self.baslangic_pozisyonlari()                           # H5b: trader'ın açık pozisyonları (dolgudan SONRA: REST gerçektir)
+                    self._bas_baslat()                                            # H5b: trader'ın açık pozisyonları, ARKA PLANDA (dolgudan SONRA başlar: REST gerçektir)
                     bekleme = self.ayar.geri_cekilme_ilk_sn
                     await self._oturum(ws)
                 except asyncio.CancelledError:
@@ -487,6 +544,7 @@ class Dinleyici:
                         except Exception:  # noqa: BLE001
                             pass
         finally:
+            await asyncio.gather(*self._bas_iptal(), return_exceptions=True)
             await self.rest_karsilastir_guvenli()
             self.ozet_yaz()
         return self.ozet()
@@ -511,23 +569,33 @@ async def ws_baglan(ws_url: str = DEFAULT_WS_URL) -> Any:
     return await connect(ws_url, open_timeout=20, ping_interval=None, max_size=2 ** 24)       # ping uygulama düzeyinde (HL {"method":"ping"})
 
 
+def clearinghouse_yuk(adres: str, dex: str = "") -> dict[str, Any]:
+    yuk: dict[str, Any] = {"type": "clearinghouseState", "user": adres}
+    if dex:
+        yuk["dex"] = dex
+    return yuk
+
+
+def clearinghouse_ayristir(yanit: Any) -> dict[str, float]:
+    """`clearinghouseState` yanıtı -> {coin: işaretli miktar (coin birimi, + long / − short)}. Bozuk yanıt ValueError."""
+    if not isinstance(yanit, dict) or not isinstance(yanit.get("assetPositions"), list):
+        raise ValueError("clearinghouseState yanıtı geçersiz")
+    sonuc: dict[str, float] = {}
+    for ap in yanit["assetPositions"]:
+        poz = ap.get("position") if isinstance(ap, dict) else None
+        miktar = _sayi(poz.get("szi")) if isinstance(poz, dict) else None
+        if miktar is None or not poz.get("coin"):
+            raise ValueError("clearinghouseState pozisyonu geçersiz")
+        sonuc[str(poz["coin"])] = sonuc.get(str(poz["coin"]), 0.0) + miktar
+    return sonuc
+
+
 def clearinghouse_pozisyonlari(post: Callable[[dict], Any], adres: str, dex_adlari: list[str]) -> dict[str, float]:
-    """H5b: REST `clearinghouseState` (ana perp dex + her HIP-3 dex) -> {coin: işaretli miktar (coin birimi, + long / − short)}. Herhangi bir çağrı ya da yanıt bozuksa ValueError/istisna
-    YÜKSELTİR (kısmi sonuç dönmez: çağıran trader'ı "okunamadı" sayar). Spot kopyalanmadığı için okunmaz."""
+    """H5b (eşzamanlı, bekleme/yeniden deneme YOK): ana perp dex + her HIP-3 dex. Herhangi bir çağrı ya da yanıt bozuksa istisna YÜKSELTİR (kısmi sonuç dönmez).
+    Dinleyici bunu kullanmaz (arka plan okuması `Dinleyici._bas_oku`); araç / deneme içindir. Spot kopyalanmadığı için okunmaz."""
     sonuc: dict[str, float] = {}
     for dex in ["", *dex_adlari]:
-        yuk = {"type": "clearinghouseState", "user": adres}
-        if dex:
-            yuk["dex"] = dex
-        yanit = post(yuk)
-        if not isinstance(yanit, dict) or not isinstance(yanit.get("assetPositions"), list):
-            raise ValueError("clearinghouseState yanıtı geçersiz")
-        for ap in yanit["assetPositions"]:
-            poz = ap.get("position") if isinstance(ap, dict) else None
-            miktar = _sayi(poz.get("szi")) if isinstance(poz, dict) else None
-            if miktar is None or not poz.get("coin"):
-                raise ValueError("clearinghouseState pozisyonu geçersiz")
-            sonuc[str(poz["coin"])] = sonuc.get(str(poz["coin"]), 0.0) + miktar
+        sonuc.update(clearinghouse_ayristir(post(clearinghouse_yuk(adres, dex))))
     return sonuc
 
 
