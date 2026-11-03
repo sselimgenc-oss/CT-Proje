@@ -398,12 +398,12 @@ def test_v3_yan_yana_altin_ornek(tmp_path):
     from copytrade.ilk11_deneme import v3_yan_yana
 
     def trader(kimlik, fiyatsiz, bakiye, kapanan, durum, v1):
-        return {"id": kimlik, "veri_durumu": durum, "sanal_kopya": {"bakiye_usd": v1},
+        return {"id": kimlik, "veri_durumu": durum, "sanal_kopya": {"bakiye_usd": v1}, "mum_eksik": {"hedef": fiyatsiz, "onbellekten": 0},
                 "sanal_kopya_v3": {"fiyatsiz_eylem": fiyatsiz, "bakiye_usd": bakiye, "kapanan_islemler": kapanan}}
     eski, yeni = tmp_path / "eski.json", tmp_path / "yeni.json"
     eski.write_text(json.dumps({"traderlar": [trader("K08", 0, 1087.389, [{"gecerli": True}], "tamam", 1000.0), trader("B17", 1437, 752.4506, [{"gecerli": False}], "fiyatsiz", 1000.0)]}))
     yeni.write_text(json.dumps({"traderlar": [trader("K08", 0, 1087.389, [{"gecerli": True}], "tamam", 1000.0),
                                               trader("B17", 0, 760.0, [{"gecerli": True}, {"gecerli": True}, {"gecerli": False}], "tamam", 1000.0)]}))
     metin = v3_yan_yana(eski, yeni)
-    assert "| B17 | 1437 → 0 | 752.45 → 760.00 | 1 → 3 | 0 → 2 | fiyatsiz → tamam | 1000.00 → 1000.00 |" in metin
-    assert "| K08 | 0 → 0 | 1087.39 → 1087.39 | 1 → 1 | 1 → 1 | tamam → tamam | 1000.00 → 1000.00 |" in metin
+    assert "| B17 | 1437 → 0 | 752.45 → 760.00 | 1 → 3 | 0 → 2 | fiyatsiz → tamam | 1000.00 → 1000.00 | 0/0 |" in metin
+    assert "| K08 | 0 → 0 | 1087.39 → 1087.39 | 1 → 1 | 1 → 1 | tamam → tamam | 1000.00 → 1000.00 | 0/0 |" in metin

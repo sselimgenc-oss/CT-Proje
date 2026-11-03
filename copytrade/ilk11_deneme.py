@@ -185,7 +185,7 @@ def v3_yan_yana(eski: Path, yeni: Path) -> str:
     sanal kopya v1 bakiye $. İki taraf aynı veriyi okumalı (aynı koşu, dakikalar arayla); fark yalnız kodun etkisi + o dakikalardaki yeni dolumlar olmalı."""
     a = {t["id"]: t for t in json.loads(eski.read_text(encoding="utf-8"))["traderlar"]}
     b = {t["id"]: t for t in json.loads(yeni.read_text(encoding="utf-8"))["traderlar"]}
-    out = ["### v3 eski ↔ yeni (aynı traderlar)", "", "| id | v3 fiyatsız | v3 bakiye $ | v3 kapanan | v3 geçerli | veri_durumu | v1 bakiye $ |", "|---|---|---|---|---|---|---|"]
+    out = ["### v3 eski ↔ yeni (aynı traderlar)", "", "| id | v3 fiyatsız | v3 bakiye $ | v3 kapanan | v3 geçerli | veri_durumu | v1 bakiye $ | mum eksik yeni (hedef/önbellekten) |", "|---|---|---|---|---|---|---|---|"]
     ac = lambda t, k: (t.get("sanal_kopya_v3") or {}).get(k)                                         # noqa: E731
     sayi = lambda x: "—" if x is None else (f"{x:.2f}" if isinstance(x, float) else str(x))      # noqa: E731
     for kimlik in sorted(set(a) | set(b)):
@@ -193,7 +193,8 @@ def v3_yan_yana(eski: Path, yeni: Path) -> str:
         kx, ky = len(ac(x, "kapanan_islemler") or []), len(ac(y, "kapanan_islemler") or [])
         gx, gy = sum(1 for i in ac(x, "kapanan_islemler") or [] if i.get("gecerli") is True), sum(1 for i in ac(y, "kapanan_islemler") or [] if i.get("gecerli") is True)
         out.append(f"| {kimlik} | {sayi(ac(x, 'fiyatsiz_eylem'))} → {sayi(ac(y, 'fiyatsiz_eylem'))} | {sayi(ac(x, 'bakiye_usd'))} → {sayi(ac(y, 'bakiye_usd'))} | {kx} → {ky} | {gx} → {gy} | "
-                   f"{x.get('veri_durumu')} → {y.get('veri_durumu')} | {sayi((x.get('sanal_kopya') or {}).get('bakiye_usd'))} → {sayi((y.get('sanal_kopya') or {}).get('bakiye_usd'))} |")
+                   f"{x.get('veri_durumu')} → {y.get('veri_durumu')} | {sayi((x.get('sanal_kopya') or {}).get('bakiye_usd'))} → {sayi((y.get('sanal_kopya') or {}).get('bakiye_usd'))} | "
+                   f"{(y.get('mum_eksik') or {}).get('hedef', '—')}/{(y.get('mum_eksik') or {}).get('onbellekten', '—')} |")
     return "\n".join(out) + "\n"
 
 
