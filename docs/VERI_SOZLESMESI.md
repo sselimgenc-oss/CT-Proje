@@ -1,4 +1,4 @@
-# Veri sözleşmesi — copy trade izleme (v1.16, 2026-11-03; v1.16 `mum_eksik` + negatif mum önbelleği (K-18), v1.15 `veri_durumu` + sağlık ışığı `bilinmiyor` (K-14), v1.14 İlk 11 hesap katmanı kodda (A2 PR-1: `ilk11_alanlar`, kapı bilgi sütunları, `kapanan_islemler`), v1.13 İlk 11 puan alanları (§6, tanım), v1.12 `sanal_kopya_v3` tasfiye/aşamalı çıkış (E3), v1.11 `sanal_kopya_v3` (E2 sabit tutar), v1.10 `sanal_kopya_v2.kapanis_nedenleri` (E3), v1.9 `sanal_kopya_v2`, v1.8 `gecikme.json` taze pencere, v1.7 `gecikme.json`, v1.6 `saglik_hatti`, v1.5 `kol`, v1.2 olay kimliği, v1.3 tarz, v1.4 veri geçerliliği ve karar gizliliği)
+# Veri sözleşmesi — copy trade izleme (v1.17, 2026-11-03; v1.17 `olay_ozeti` + olay arşivi (A4-2), v1.16 `mum_eksik` + negatif mum önbelleği (K-18), v1.15 `veri_durumu` + sağlık ışığı `bilinmiyor` (K-14), v1.14 İlk 11 hesap katmanı kodda (A2 PR-1: `ilk11_alanlar`, kapı bilgi sütunları, `kapanan_islemler`), v1.13 İlk 11 puan alanları (§6, tanım), v1.12 `sanal_kopya_v3` tasfiye/aşamalı çıkış (E3), v1.11 `sanal_kopya_v3` (E2 sabit tutar), v1.10 `sanal_kopya_v2.kapanis_nedenleri` (E3), v1.9 `sanal_kopya_v2`, v1.8 `gecikme.json` taze pencere, v1.7 `gecikme.json`, v1.6 `saglik_hatti`, v1.5 `kol`, v1.2 olay kimliği, v1.3 tarz, v1.4 veri geçerliliği ve karar gizliliği)
 
 sözleşmeye göre çalışır; alan eklemek/değiştirmek lider onayıyla `surum` artırılarak yapılır.
 
@@ -54,6 +54,10 @@ yalnız olay kimliği, karar ve neden. Trader adresleri zaten herkese açık zin
 ```
 - `egri`: son 90 gün, günlük, t0'dan bağımsız trader'ın kümülatif PnL / hesap değeri (Hyperliquid `portfolio`).
 - `olaylar`: son 200 olay, yeniden eskiye. `id` kalıcı ve tekildir (bildirim tekrarını ve kararı buna bağlarız).
+- **`olay_ozeti` ve olay arşivi (v1.17, A4-2):** `olaylar` penceresi DEĞİŞMEDİ (en yeni 200, tüketiciler kırılmaz). `olay_ozeti` = `{toplam, yayimlanan, tasan, trader_basina}` (adet; `trader_basina` TÜM olaylar,
+  taşanlar dahil, trader kimliği → adet). Penceresinden taşan olaylar artık atılmaz: motor `olay_tasan.jsonl` yazar (JSONL, bir satır bir olay, `olaylar` ile aynı şema), yayın betiği (`izleme_yayimla.sh`)
+  bunu `copytrade-izleme:izleme/olay_arsivi.jsonl` dosyasına EKLER (eklemeli, `id` başına tekil, (zaman, id) artan; mevcut kayıt asla değişmez/silinmez). `olay_tasan.jsonl` dala girmez.
+  Olayın tamamı için: son 200 = `durum.json.olaylar`; daha eskisi = `olay_arsivi.jsonl`. Zaman UTC.
 - **Olay kimliği (v1.2):** `{trader}-{oid}-{tur}` (ör. `T1-123456789-acilis`); ışık olayı `{trader}-{ms}-isik`.
   Olaylar **emir (`oid`) düzeyinde** üretilir: aynı emrin dolumları birleştirilir (tek açılış sahte büyütmeler doğurmaz).
   Saatlik motor ve Cloudflare Worker aynı kuralla aynı kimliği üretir.
