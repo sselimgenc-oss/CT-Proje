@@ -179,6 +179,8 @@ def durum_ozeti(durum: Path, sure_sn: float | None, artimli_sn: float | None) ->
                    f"{form.get('dolu_alan', form.get('hata'))} | {(t.get('mum_eksik') or {}).get('hedef', '—')}/{(t.get('mum_eksik') or {}).get('onbellekten', '—')} | {olay.get(t['id'], 0)} |")
     oz = d.get("olay_ozeti") or {}
     out += ["", f"olay özeti: toplam {oz.get('toplam', '—')}, yayımlanan {oz.get('yayimlanan', '—')}, taşan {oz.get('tasan', '—')} (taşan olaylar olay_tasan.jsonl → veri dalı arşivi)"]
+    for tid, toplam in sorted((oz.get("trader_basina") or {}).items()):
+        out.append(f"- olay {tid}: yayın {olay.get(tid, 0)} / taşan→arşiv {toplam - olay.get(tid, 0)} / toplam {toplam}")
     return "\n".join(out + ["", "### İzleme süresi", ""] + sure_tahmini(len(d["traderlar"]), sure_sn, artimli_sn)) + "\n"
 
 

@@ -789,7 +789,40 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
     return trader
 
 
-OLAY_YAYIN_SINIRI = 200      # durum.json.olaylar: en yeni N olay (sözleşme: son 200); taşanlar olay_tasan.jsonl -> veri dalı arşivi
+OLAY_YAYIN_SINIRI = 200      # durum.json.olaylar toplam üst sınırı; trader'lara adil paylaştırılır; taşanlar olay_tasan.jsonl -> veri dalı arşivi
+
+
+def olay_paylari(sayim: dict[str, int], sinir: int = OLAY_YAYIN_SINIRI) -> dict[str, int]:
+    """Adil pay (su doldurma): toplam <= ``sinir``; kotadan az olayı olan trader'ın hepsi yayında, artan kota çok olay üretenlere eşit bölünür (kalan tek tek kimlik sırasıyla)."""
+    pay = {k: 0 for k in sayim}
+    kalan_ler = sorted(k for k, n in sayim.items() if n > 0)
+    kalan = sinir
+    while kalan_ler and kalan > 0:
+        esit, artik = divmod(kalan, len(kalan_ler))
+        kucuk = [k for k in kalan_ler if sayim[k] - pay[k] <= esit]
+        if kucuk:                                                    # tam sığanlar: hepsi alınır, kota artar
+            for k in kucuk:
+                kalan -= sayim[k] - pay[k]
+                pay[k] = sayim[k]
+            kalan_ler = [k for k in kalan_ler if k not in kucuk]
+            continue
+        for i, k in enumerate(kalan_ler):                            # hepsi esit'ten büyük: eşit böl, artık kimlik sırasıyla +1
+            pay[k] += esit + (1 if i < artik else 0)
+        break
+    return pay
+
+
+def olay_yayin_ayir(tum: list[dict], sinir: int = OLAY_YAYIN_SINIRI) -> tuple[list[dict], list[dict]]:
+    """``tum`` (yeniden eskiye) -> (yayımlanan, taşan); her trader'ın EN YENİ ``olay_paylari`` kadar olayı yayımlanır. İkisi de yeniden eskiye; birleşimleri ``tum``."""
+    sayim: dict[str, int] = {}
+    for olay in tum:
+        sayim[olay['trader']] = sayim.get(olay['trader'], 0) + 1
+    hak, goruldu = olay_paylari(sayim, sinir), {k: 0 for k in sayim}
+    yayin, tasan = [], []
+    for olay in tum:
+        goruldu[olay['trader']] += 1
+        (yayin if goruldu[olay['trader']] <= hak[olay['trader']] else tasan).append(olay)
+    return yayin, tasan
 
 
 def olay_ozeti(tum: list[dict], yayimlanan: list[dict]) -> dict:
@@ -849,7 +882,7 @@ def run(root: Path, output: Path, client=None, now=None, symbols=None, liste: Pa
         raise RuntimeError('Tüm trader verileri hatalı; önceki durum yayımlanmadı.')
     rules = load_rules()
     tum_olaylar = sorted(all_events.values(), key=lambda e: (e['zaman'], e['id']), reverse=True)
-    yayimlanan_olaylar, tasan_olaylar = tum_olaylar[:OLAY_YAYIN_SINIRI], tum_olaylar[OLAY_YAYIN_SINIRI:]
+    yayimlanan_olaylar, tasan_olaylar = olay_yayin_ayir(tum_olaylar)
     result = {'surum': 1, 'uretildi': iso(now), 'kaynak': 'hyperliquid', 'traderlar': [durum_icin_kirp(bayat_isle(t, now, rules), now, rules) for t in traders],
               'kasa_egri': {'oda': kasa_egrisi(traders, 'oda'), 'kontrol': kasa_egrisi(traders, 'kontrol')},
               'olaylar': yayimlanan_olaylar,

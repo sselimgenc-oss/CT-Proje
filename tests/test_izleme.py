@@ -569,6 +569,45 @@ def test_olay_arsivi_eklemeli_tekil_ve_degismez(tmp_path):
     assert arsiv.read_text() == once
 
 
+def _olay(trader, i):
+    return {'id': f'{trader}-{i}', 'zaman': m.at_ms(m.millis(NOW) - i * m.MINUTE), 'trader': trader, 'tur': 'isik'}
+
+
+def test_olay_adil_pay_uc_trader_biri_500():
+    """Elle: A 500, B 10, C 5 olay, sınır 200 -> B 10 + C 5 tam; A kalan 185; taşan 315; toplam kayıp 0."""
+    tum = sorted([_olay('A', i) for i in range(500)] + [_olay('B', i) for i in range(10)] + [_olay('C', i) for i in range(5)],
+                 key=lambda e: (e['zaman'], e['id']), reverse=True)
+    yayin, tasan = m.olay_yayin_ayir(tum)
+    sayim = lambda lst, t: sum(1 for e in lst if e['trader'] == t)           # noqa: E731
+    assert (sayim(yayin, 'A'), sayim(yayin, 'B'), sayim(yayin, 'C')) == (185, 10, 5) and len(yayin) == 200
+    assert sayim(tasan, 'A') == 315 and len(tasan) == 315
+    assert {e['id'] for e in yayin} | {e['id'] for e in tasan} == {e['id'] for e in tum} and not {e['id'] for e in yayin} & {e['id'] for e in tasan}
+    assert {f'A-{i}' for i in range(185)} == {e['id'] for e in yayin if e['trader'] == 'A'}        # A'nın EN YENİ 185'i
+    assert [e['zaman'] for e in yayin] == sorted((e['zaman'] for e in yayin), reverse=True)
+
+
+def test_olay_paylari_uc_durumlar():
+    assert m.olay_paylari({}) == {}
+    assert m.olay_paylari({'A': 0}) == {'A': 0}
+    assert m.olay_paylari({'A': 200}) == {'A': 200}                           # tam sınır: taşan yok
+    assert m.olay_paylari({'A': 201}) == {'A': 200}
+    assert m.olay_paylari({'A': 150, 'B': 50}) == {'A': 150, 'B': 50}         # toplam tam 200
+    assert m.olay_paylari({'A': 300, 'B': 300, 'C': 300}) == {'A': 67, 'B': 67, 'C': 66}   # 200 = 3*66 + 2; artık kimlik sırasıyla
+    assert m.olay_yayin_ayir([]) == ([], [])
+
+
+def test_olay_yayin_run_adil_ve_ozet(tmp_path):
+    root, client = project(tmp_path), Client([])
+    output = root / 'out'
+    output.mkdir()
+    events = {e['id']: e for e in [_olay('A', i) for i in range(500)] + [_olay('B', i) for i in range(3)]}
+    (output / 'motor.json').write_text(json.dumps({'surum': 1, 'traderlar': {}, 'olaylar': events}))
+    result = m.run(root, output, client, NOW)
+    assert result['olay_ozeti'] == {'toplam': 503, 'yayimlanan': 200, 'tasan': 303, 'trader_basina': {'A': 500, 'B': 3}}
+    assert sum(1 for e in result['olaylar'] if e['trader'] == 'B') == 3
+    assert len((output / 'olay_tasan.jsonl').read_text().splitlines()) == 303
+
+
 # ---------------------------------------------------------------- v1.3: tarza göre gecikme
 def styled_row(**extra):
     return {'id': 'T1', 'adres': ADDRESS, 'takma_ad': 'Test', 'durum': 'izlemede', 't0': str(T0.date()), **extra}
