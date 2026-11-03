@@ -128,6 +128,9 @@ class Olcum:
         self.abone: dict[str, int] = {}              # abonelik anahtarı -> aboneliğin gönderildiği an (ms); bundan ÖNCEKİ dolum canlı olay sayılmaz
         self.abone_coinler: set[str] = set()         # trades kanalına abone olunan coin evreni (sınıflama için)
         self.ilk_abone_bitis_ms = 0                  # ilk bağlantıda son aboneliğin gönderildiği an: REST hakem penceresi bundan önceyi kapsamaz
+        self.son_mesaj_ms = 0                        # son alınan WS mesajının anı (kopma aralığının başlangıcı)
+        self.kopma_bas_ms: int | None = None         # açık kopma: yeniden abonelik bitene kadar
+        self.kopma_araliklari: list[tuple[int, int]] = []   # [son mesaj, yeniden abonelik bitişi]: bu aralıktaki REST'te-olup-görülmeyen dolum = `kopma_araligi`
 
     def olay(self, o: Olay) -> bool:
         """Yeni dolum ise True. Tekrar (aynı `{adres}:{tid}`) sayılır ama ikinci kez ölçülmez. Snapshot: kabul ve gecikme örneği YOK."""
@@ -164,7 +167,7 @@ class Olcum:
             kimlik = f"{adres}:{f['tid']}"
             if kimlik not in self.gorulen:
                 self.gorulen[kimlik] = int(f["time"])
-                sinif = self.kacan_sinifi(str(f.get("coin", "")))
+                sinif = self.kacan_sinifi(str(f.get("coin", "")), int(f["time"]))
                 for pencere in (self.toplam, self.saat):
                     pencere[ad].kacan_sinif[sinif] = pencere[ad].kacan_sinif.get(sinif, 0) + 1
                 if sinif == "gercek":
@@ -173,13 +176,13 @@ class Olcum:
             pencere[ad].kacan += gercek
         return gercek
 
-    def kacan_sinifi(self, coin: str) -> str:
+    def kacan_sinifi(self, coin: str, zaman_ms: int = 0) -> str:
         if coin.startswith("@") or "/" in coin:
             return "spot"
-        if ":" in coin:
-            return "hip3"
         if self.abone_coinler and coin not in self.abone_coinler:
-            return "abonesiz_perp"
+            return "hip3" if ":" in coin else "abonesiz_perp"          # abone evreninde olmayan (yeni listelenen / evren dışı) coin
+        if any(bas <= zaman_ms <= bit for bas, bit in self.kopma_araliklari):
+            return "kopma_araligi"          # bağlantı kopukken / yeniden abone olunurken olan dolum: gerçek ama açıklanmış kayıp (yeniden bağlanınca REST ile tamamlanması gerekir)
         return "gercek"
 
     def temizle(self, simdi_ms: int, saklama_ms: int = 2 * SAAT_MS) -> None:
@@ -272,9 +275,13 @@ class Dinleyici:
             self.olcum.abone[f"userFills:{i.adres}"] = self.saat_ms()
         if not self.olcum.ilk_abone_bitis_ms:
             self.olcum.ilk_abone_bitis_ms = self.saat_ms()
+        if self.olcum.kopma_bas_ms is not None:
+            self.olcum.kopma_araliklari.append((self.olcum.kopma_bas_ms, self.saat_ms()))
+            self.olcum.kopma_bas_ms = None
 
     def mesaj_isle(self, ham: str | bytes) -> None:
         alma = self.saat_ms()                                   # alma anı: mesaj çözülmeden ÖNCE damgalanır
+        self.olcum.son_mesaj_ms = alma
         mesaj = json.loads(ham.decode("utf-8") if isinstance(ham, bytes) else ham)
         kanal = mesaj.get("channel") if isinstance(mesaj, dict) else None
         if kanal == "trades":
@@ -347,6 +354,8 @@ class Dinleyici:
                     raise
                 except Exception:        # noqa: BLE001 - her bağlantı/akış hatası kopma sayılır; ayrıntı (sağlayıcı metni) yazılmaz
                     self.olcum.genel["kopma"] += 1
+                    if self.olcum.kopma_bas_ms is None:
+                        self.olcum.kopma_bas_ms = self.olcum.son_mesaj_ms or self.saat_ms()
                     try:
                         await asyncio.wait_for(self._dur.wait(), timeout=bekleme)
                     except asyncio.TimeoutError:

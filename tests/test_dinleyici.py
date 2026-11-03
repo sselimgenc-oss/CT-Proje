@@ -341,3 +341,23 @@ def test_calistirici_abonelik_anlari_ve_ilk_abonelik_bitisi_kaydedilir(tmp_path)
     din, ws, ozet = calistir(IZ, [[]], tmp_path, saat=saat, ayar=d.Ayar(sure_sn=0.2, geri_cekilme_ilk_sn=0.01))
     assert din.olcum.abone["BTC"] == 7_000 and din.olcum.abone[f"userFills:{A}"] == 7_000 and din.olcum.ilk_abone_bitis_ms == 7_000
     assert din.olcum.abone_coinler == {"BTC", "ETH"}
+
+
+def test_golden_kopma_araligindaki_kacan_ayri_sinif_aralik_disi_gercek():
+    """Elle: kopma aralığı [50_000, 60_000]; abone evreni {BTC}. tid1 t=55_000 BTC -> kopma_araligi; tid2 t=70_000 BTC -> gercek; tid3 t=49_999 -> gercek (aralık dışı);
+    tid4 t=55_000 'zzz:Y' (abone evreninde yok) -> hip3; tid5 t=55_000 'XYZ' -> abonesiz_perp. `kacan` yalnız gercek = 2."""
+    o = d.Olcum(IZ)
+    o.abone_coinler = {"BTC"}
+    o.kopma_araliklari = [(50_000, 60_000)]
+    rest = [{"tid": 1, "time": 55_000, "coin": "BTC"}, {"tid": 2, "time": 70_000, "coin": "BTC"}, {"tid": 3, "time": 49_999, "coin": "BTC"},
+            {"tid": 4, "time": 55_000, "coin": "zzz:Y"}, {"tid": 5, "time": 55_000, "coin": "XYZ"}]
+    assert o.rest_karsilastir("aaaa", A, rest, simdi_ms=10_000_000, tolerans_ms=120_000) == 2
+    assert o.toplam["aaaa"].kacan_sinif == {"kopma_araligi": 1, "gercek": 2, "hip3": 1, "abonesiz_perp": 1}
+
+
+def test_calistirici_kopma_araligi_son_mesajdan_yeniden_abonelik_bitisine(tmp_path):
+    saat = Saat(ms=1_000_000)
+    din, ws, ozet = calistir(IZ, [[100, trades((1, 1_000_050, [A]))], []], tmp_path, saat=saat, ayar=d.Ayar(sure_sn=0.4, geri_cekilme_ilk_sn=0.01, geri_cekilme_max_sn=0.02))
+    # ilk bağlantı: son mesaj anı 1_000_100 (saat 100 ms ilerledi), sonra kopma; yeniden aboneliğin bitişi >= son mesaj
+    assert din.olcum.kopma_araliklari and din.olcum.kopma_araliklari[0][0] == 1_000_100 and din.olcum.kopma_araliklari[0][1] >= 1_000_100
+    assert din.olcum.kopma_bas_ms is None
