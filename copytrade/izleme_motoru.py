@@ -862,9 +862,11 @@ def run(root: Path, output: Path, client=None, now=None, symbols=None, liste: Pa
         if retained and (retained['adres'] != row['adres'].lower() or retained['t0'] != iso(timestamp(row['t0']))):
             raise ValueError(f"{row['id']}: adres/t0 değiştirilemez; yeni izleme için yeni id kullanın.")
         try:
-            _t_basla = time.monotonic()
+            _t_basla, _i0, _a0, _w0 = time.monotonic(), dict(getattr(client, 'stats', {})), getattr(getattr(client, 'limiter', None), 'weight_used', 0), getattr(getattr(client, 'limiter', None), 'waited', 0.0)
             traders.append(update_trader(root, client, dexes, state, all_events, row, now, symbols))
-            print(f"{row['id']}: okuma süresi {time.monotonic() - _t_basla:.0f} sn")
+            _i1 = getattr(client, 'stats', {})                   # tanı: süre API mi, hesap mı (istek / 429 / ağırlık / hız sınırı beklemesi)
+            print(f"{row['id']}: okuma süresi {time.monotonic() - _t_basla:.0f} sn, istek {_i1.get('istek', 0) - _i0.get('istek', 0)}, 429 {_i1.get('429', 0) - _i0.get('429', 0)}, "
+                  f"ağırlık {getattr(getattr(client, 'limiter', None), 'weight_used', 0) - _a0}, hız sınırı bekleme {getattr(getattr(client, 'limiter', None), 'waited', 0.0) - _w0:.0f} sn")
         except Exception as error:
             failed += 1
             print(f"{row['id']}: veri hatası: {data_error_reason(error)}")
