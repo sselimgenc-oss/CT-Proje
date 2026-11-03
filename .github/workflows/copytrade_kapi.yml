@@ -1,6 +1,6 @@
 name: CT-Kapı haftalık tam koşu
 
-# Cumartesi 18:43 UTC (TSİ 21:43) + elle. Tam koşu: 32 parça + birleştirme + akıl sağlığı. Sonuçlar main'e değil `copytrade-kapi` veri dalına yazılır.
+# Cumartesi 18:43 UTC (TSİ 21:43) + elle. Tam koşu: 48 parça + birleştirme + akıl sağlığı. Sonuçlar main'e değil `copytrade-kapi` veri dalına yazılır.
 # Süre bütçesi: plan 10 dk, parça ≤ 120 dk, birleştirme ≤ 90 dk (toplam ≤ 4 sa; Pazar 10:00 UTC'ye ≥ 11 sa pay). Kısmi koşu `durum: eksik` yayımlanır ve iş KIRMIZI biter.
 on:
   workflow_dispatch:
@@ -36,7 +36,7 @@ jobs:
       - id: p
         # Gün BİR KEZ burada seçilir ve tüm parçalara + birleştirmeye aynen geçer (gece yarısını aşan koşu iki klasöre bölünmesin).
         run: |
-          count=32
+          count=48
           echo "count=$count" >> "$GITHUB_OUTPUT"
           echo "shards=$(python3 -c "import json;print(json.dumps(list(range($count))))")" >> "$GITHUB_OUTPUT"
           echo "day=$(date -u +%F)" >> "$GITHUB_OUTPUT"

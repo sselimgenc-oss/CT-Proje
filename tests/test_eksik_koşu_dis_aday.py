@@ -57,6 +57,16 @@ def test_altin_ornek_ortak_evren_parcalari_cakismadan_birlesir(tmp_path):
     assert [row["address"] for row in read_universe_snapshot(snapshot)] == [A, B, C]
 
 
+def test_48_parca_birlesim_evren_kesisim_bos_ve_az_adreste_bos_parca_zararsiz():
+    """48 parça: her adres tam bir parçada; evren parçadan küçükse bazı parçalar boş kalır."""
+    for n in (100, 48, 5):
+        evren = [{"address": f"0x{i:040x}"} for i in range(n)]
+        parcalar = [shard_universe(evren, i, 48) for i in range(48)]
+        adresler = [r["address"] for p in parcalar for r in p]
+        assert len(adresler) == n and set(adresler) == {r["address"] for r in evren}      # birleşim = evren, kesişim boş
+        assert sum(1 for p in parcalar if not p) == max(0, 48 - n)
+
+
 def test_run_status_incomplete_when_shard_missing_or_coverage_low():
     assert run_status(32, 32, 985, 1000, "tam", RULES)["durum"] == "tamam"
     missing = run_status(31, 32, 990, 1000, "tam", RULES)
