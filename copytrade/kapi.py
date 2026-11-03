@@ -27,7 +27,7 @@ from copytrade.ilk11_alanlar import kapi_bilgi_sutunlari
 from copytrade.kurallar import load_rules
 from copytrade.mum_saglik import mum_kontrol, ozet as mum_ozet
 from copytrade.olcut import _funding_amount, asset_class, calculate_metrics, closed_round_trips, perp_fills
-from copytrade.tarama import PublicClient, RateLimitError, RateLimiter, _address, prefilter
+from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimitError, RateLimiter, _address, prefilter
 from kapi.istatistik import deflated_sharpe_ratio, nw_alpha
 
 # Maliyet parametreleri kurallar.yaml'dan (izleme motoru bu adlarla içe aktarır)
@@ -1022,6 +1022,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--beklenen-parca", type=int, help="birleştirme: beklenen parça sayısı (eksik parça → durum: eksik)")
     parser.add_argument("--mod", default="tam", help="birleştirme: tam | hizli | eksik")
     parser.add_argument("--adres", action="append", default=[], help="kapıya zorla eklenen adres (dis_aday); tekrarlanabilir")
+    parser.add_argument("--yeniden-dene-gun", metavar="YYYY-MM-DD",
+                        help="o günün `hata` dolu satırlarını yeniden koş, mevcut sonuc.csv ile bayt bayt birleştir, durum.json'ı yeniden hesapla (hesap sürümü / kod hash'i farklıysa reddeder)")
+    parser.add_argument("--en-fazla", type=int, help="--yeniden-dene-gun: en çok bu kadar hatalı satır (küçük gerçek veri denemesi)")
     parser.add_argument("--evren-yaz", type=Path, help="yalnız ortak evren anlık görüntüsünü yazıp çık")
     parser.add_argument("--evren-dosyasi", type=Path, help="plan işinin ortak evren anlık görüntüsünü kullan")
     parser.add_argument("--binance-dosyasi", type=Path, help="plan işinin ortak Binance vadeli listesi")
@@ -1029,13 +1032,20 @@ def main(argv: list[str] | None = None) -> None:
     if args.birlestir:
         merge_shards(args.birlestir, args.root, args.beklenen_parca, args.mod, evren_addresses(args.evren_dosyasi) if args.evren_dosyasi else None)
         return
+    if args.yeniden_dene_gun:
+        from copytrade.kapi_yeniden import YenidenKosuReddedildi, calistir
+        try:
+            calistir(args.root, args.yeniden_dene_gun, en_fazla=args.en_fazla)
+        except YenidenKosuReddedildi as hata:
+            raise SystemExit(str(hata)) from hata
+        return
     if args.shard_count < 1 or not 0 <= args.shard_index < args.shard_count:
         parser.error("shard index/count geçersiz")
     rules = load_rules()
     now, today = datetime.now(UTC), args.tarih or datetime.now(UTC).date().isoformat()
     out = args.root / "kapi" / today
     out.mkdir(parents=True, exist_ok=True)
-    client = PublicClient(limiter=RateLimiter(1000))
+    client = PublicClient(limiter=RateLimiter(1000), yeniden_bekleme=KAPI_YENIDEN_BEKLEME)      # 5xx / 429 / ağ hatasında 3 yeniden deneme (5/15/45 sn)
     external = sorted(set(external_candidates()) | {a.lower() for a in args.adres})
     if args.evren_yaz:
         leaders = write_universe_snapshot(args.evren_yaz, client.leaderboard(), external, client)
@@ -1368,16 +1378,23 @@ def sanity_by_source(table: pd.DataFrame) -> dict[str, list[str]]:
     return out
 
 
-def run_status(finished: int, expected: int | None, processed: int, universe: int | None, mod: str, rules: dict) -> dict:
-    """Koşu durumu (görev 24): beklenen parçalardan biri bitmediyse veya (hızlı dışı) kapsam hedefin altındaysa ``eksik``."""
+def run_status(finished: int, expected: int | None, processed: int, universe: int | None, mod: str, rules: dict,
+               hatali: int = 0, satir: int = 0) -> dict:
+    """Koşu durumu (görev 24): beklenen parçalardan biri bitmediyse veya (hızlı dışı) kapsam hedefin altındaysa ``eksik``.
+    VERİ BÜTÜNLÜĞÜ (kapı kuralı değil): ``hatali`` (hata sütunu dolu satır) / ``satir`` > ``veri_butunlugu_hatali_oran_max`` ise de ``eksik`` (neden ``hatali_satir``).
+    ``kapsam`` hatalı satırları da kapsanmış sayar; bu yüzden ``hatali_satir`` / ``hatali_oran`` ayrıca yayımlanır."""
     reasons = []
     if expected is not None and finished < expected:
         reasons.append(f"{expected} parçanın yalnız {finished} tanesi bitti (zaman aşımı / hata)")
     coverage = processed / universe if universe else None
     if mod != "hizli" and coverage is not None and coverage < float(rules["kapsam_hedefi"]):
         reasons.append(f"kapsam %{100 * coverage:.1f} < hedef %{100 * float(rules['kapsam_hedefi']):.0f}")
+    hatali_oran = hatali / satir if satir else 0.0
+    if hatali_oran > float(rules["veri_butunlugu_hatali_oran_max"]):
+        reasons.append(f"hatali_satir {hatali}/{satir} (%{100 * hatali_oran:.2f}) > %{100 * float(rules['veri_butunlugu_hatali_oran_max']):.0f}")
     return {"durum": "eksik" if reasons else "tamam", "parca_beklenen": expected, "parca_biten": finished,
-            "islenen": processed, "evren": universe, "kapsam": round(coverage, 4) if coverage is not None else None, "neden": "; ".join(reasons)}
+            "islenen": processed, "evren": universe, "kapsam": round(coverage, 4) if coverage is not None else None,
+            "hatali_satir": int(hatali), "hatali_oran": round(hatali_oran, 6), "neden": "; ".join(reasons)}
 
 
 def mum_ozeti(table: pd.DataFrame) -> dict[str, float] | None:
@@ -1400,6 +1417,28 @@ def gunluk_kaydet(gunluk: dict | None, address: str, statuses: dict, daily: pd.S
     """Adım 1 ve 2'yi geçen adresin günlük kopya net getirisini (gecikmesiz defter) toplar; seçim raporu (A14) oda yoğunlaşması ve puan tutarlılığı için okur."""
     if gunluk is not None and daily is not None and len(daily) and statuses.get("adim1") == "Geçti" and statuses.get("adim2") == "Geçti":
         gunluk[address] = daily
+
+
+def hatali_satir_say(table: pd.DataFrame) -> int:
+    """Hata sütunu dolu satır sayısı (adres başı hata yalıtımı: ``HTTPError: 500``, ``ValueError: …``)."""
+    return int(table["hata"].notna().sum()) if "hata" in table else 0
+
+
+def rapor_yaz(output: Path, table: pd.DataFrame, status: dict, evren_sayisi: int | None, expected: int | None, hashes: list[str]) -> None:
+    """RAPOR.md (birleştirme ve yeniden koşu AYNI yerden: kural 7)."""
+    cols = [c for c in ["address", "tarz", "katman", "genc_aday", "profitable_month_ratio", "max_drawdown", "return_12m", "closed_trades",
+                        "median_holding_hours", "median_leverage", "kisa_islem_payi", "son90_dongu", "son_islem_gun", "gece_payi", "gecikme_gun", "gecikme_30dk_net", "gecikme_120dk_net",
+                        "gecikme_480dk_net", "plasebo_p", "nw_t", "alfa_kiyas", "bhy_q", "adim3", "adim4", "adim5", "adim6", "adim7", "sinif"] if c in table]
+    near = table[table.get("adim2") == "Geçti"].sort_values("nw_t", ascending=False)[cols].head(15)
+    banner = (f"> **DURUM: EKSİK** — {status['neden']}. Bu sonuç eksik koşudur; karar için kullanılmaz.\n\n" if status["durum"] == "eksik"
+              else f"Durum: tamam (parça {status['parca_biten']}/{status['parca_beklenen']}).\n\n" if expected is not None else "")
+    failed = hatali_satir_say(table)
+    banner += f"Hatalı adres: {failed}/{len(table)} (hata sütunu; sınıf Yetersiz).\n\n"
+    banner += mum_rapor(status.get("mum_ozeti"))
+    (output / "RAPOR.md").write_text("# CT-Kapı v1.1\n\n" + banner + funnel_report(table, evren_sayisi)
+                                     + "\n\n## Kod özeti\n\n" + ("- Tek hash: `" + hashes[0] + "`" if len(hashes) == 1 else "- Farklı kod hash'leri: " + (", ".join("`" + h + "`" for h in hashes) if hashes else "yok"))
+                                     + "\n\n" + freeze_report(table) + "\n\n## Adım 2'yi geçenler (alfa t'ye göre ilk 15)\n\n" + _md(near)
+                                     + "\n\nGecikme saat başına yuvarlandı (üst sınır). Karar önerisi yok.\n", encoding="utf-8")
 
 
 def merge_shards(shards: Path, root: Path, expected: int | None = None, mod: str = "tam", universe: set[str] | None = None) -> dict[str, dict]:
@@ -1449,7 +1488,8 @@ def merge_shards(shards: Path, root: Path, expected: int | None = None, mod: str
         if len(legacy):
             legacy.to_csv(output / "sonuc_eski_hesap.csv.gz", index=False, compression="gzip")
         status = run_status(len(list(shards.rglob(f"{date}/bitti.json"))), expected, len(table) if covered is None else covered,
-                            len(universe) if universe is not None else evren.get(date), mod, load_rules())
+                            len(universe) if universe is not None else evren.get(date), mod, load_rules(),
+                            hatali_satir_say(table), len(table))
         if covered is not None:
             status.update({"islenen": int(len(table)), "kapsanan": covered, "evren_disi_satir": int(len(table)) - covered})
         mum = mum_ozeti(table)
@@ -1476,19 +1516,7 @@ def merge_shards(shards: Path, root: Path, expected: int | None = None, mod: str
         pd.DataFrame({"address": table.address}).to_csv(output / "asama1.csv.gz", index=False, compression="gzip")
         if evren.get(date):
             (output / "evren.json").write_text(json.dumps({"evren": evren[date]}), encoding="utf-8")
-        cols = [c for c in ["address", "tarz", "katman", "genc_aday", "profitable_month_ratio", "max_drawdown", "return_12m", "closed_trades",
-                            "median_holding_hours", "median_leverage", "kisa_islem_payi", "son90_dongu", "son_islem_gun", "gece_payi", "gecikme_gun", "gecikme_30dk_net", "gecikme_120dk_net",
-                            "gecikme_480dk_net", "plasebo_p", "nw_t", "alfa_kiyas", "bhy_q", "adim3", "adim4", "adim5", "adim6", "adim7", "sinif"] if c in table]
-        near = table[table.get("adim2") == "Geçti"].sort_values("nw_t", ascending=False)[cols].head(15)
-        banner = (f"> **DURUM: EKSİK** — {status['neden']}. Bu sonuç eksik koşudur; karar için kullanılmaz.\n\n" if status["durum"] == "eksik"
-                  else f"Durum: tamam (parça {status['parca_biten']}/{status['parca_beklenen']}).\n\n" if expected is not None else "")
-        failed = int(table["hata"].notna().sum()) if "hata" in table else 0
-        banner += f"Hatalı adres: {failed}/{len(table)} (hata sütunu; sınıf Yetersiz).\n\n"
-        banner += mum_rapor(status.get("mum_ozeti"))
-        (output / "RAPOR.md").write_text("# CT-Kapı v1.1\n\n" + banner + funnel_report(table, evren.get(date))
-                                         + "\n\n## Kod özeti\n\n" + ("- Tek hash: `" + hashes[0] + "`" if len(hashes) == 1 else "- Farklı kod hash'leri: " + (", ".join("`" + h + "`" for h in hashes) if hashes else "yok"))
-                                         + "\n\n" + freeze_report(table) + "\n\n## Adım 2'yi geçenler (alfa t'ye göre ilk 15)\n\n" + _md(near)
-                                         + "\n\nGecikme saat başına yuvarlandı (üst sınır). Karar önerisi yok.\n", encoding="utf-8")
+        rapor_yaz(output, table, status, evren.get(date), expected, hashes)
     return statuses
 
 

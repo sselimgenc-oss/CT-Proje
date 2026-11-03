@@ -130,6 +130,9 @@ saglik_max_kaldirac: 200
 saglik_min_satir_sabit_kontrolu: 50
 # Adres başı hata (hata sütunu dolu) oranı bunu aşarsa kapı kırmızı
 saglik_max_hata_orani: 0.05
+# VERİ BÜTÜNLÜĞÜ kuralı (kapı kuralı DEĞİL, kapı eşiklerini/kararını değiştirmez): hata sütunu dolu satır oranı (hatali_satir / tablo satırı, ORAN) bunu AŞARSA
+# koşu `durum: eksik` (neden `hatali_satir`). Sonuç yayımlanır ama İlk 11 seçiminde kullanılmaz; hatalı satırlar `--yeniden-dene-gun` ile yeniden koşulur.
+veri_butunlugu_hatali_oran_max: 0.01
 # Oran sütunlarında kayan nokta farkı için tolerans (ör. paylar toplamı 1,0000000000000002)
 saglik_oran_toleransi: 1.0e-9
 # Kopya net getirisi (kopya sermayesine oran) makul aralığı: −1 (tüm sermaye) .. +100 (yüz katı); dışı satırda `hata`, sütunda kapı kırmızı

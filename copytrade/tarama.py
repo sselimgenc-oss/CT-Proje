@@ -45,46 +45,66 @@ class RateLimitError(RuntimeError):
     """Persistent 429 for one request; the address is skipped, the run continues."""
 
 
-SERVER_ERROR_ATTEMPTS = 3          # HTTP 5xx için toplam deneme
-SERVER_ERROR_WAITS = (2, 6)        # denemeler arası artan bekleme (sn)
+SERVER_ERROR_ATTEMPTS = 3          # (eski ilke) HTTP 5xx için toplam deneme
+SERVER_ERROR_WAITS = (2, 6)        # (eski ilke) denemeler arası artan bekleme (sn)
+RATE_LIMIT_WAITS = (5, 10, 20, 40, 60)           # (eski ilke) 429: 5 yeniden deneme
+KAPI_YENIDEN_BEKLEME = (5, 15, 45)               # kapı ilkesi: 5xx, 429 ve ağ hatasında 3 yeniden deneme, bekleme (sn); 4xx (429 hariç) yeniden denenmez
+_AG_HATALARI = (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.ChunkedEncodingError)
 
 
 class PublicClient:
-    def __init__(self, session: requests.Session | None = None, limiter: RateLimiter | None = None, sleep=time.sleep):
+    def __init__(self, session: requests.Session | None = None, limiter: RateLimiter | None = None, sleep=time.sleep,
+                 yeniden_bekleme: tuple[float, ...] | None = None):
+        """``yeniden_bekleme`` verilirse (kapı: ``KAPI_YENIDEN_BEKLEME``) 5xx, 429 VE ağ hatasının her biri için o kadar yeniden deneme (bekleme sn). ``None`` = eski ilke
+        (5xx: 2 yeniden deneme 2/6 sn, 429: 5 yeniden deneme 5-60 sn, ağ hatası yeniden denenmez; izleme / H1 gibi diğer tüketiciler değişmez)."""
         self.session, self.limiter, self.sleep = session or requests.Session(), limiter or RateLimiter(), sleep
-        self.stats = {"istek": 0, "429": 0, "5xx": 0}  # ilerleme günlüğü için sayaçlar
+        self.yeniden_bekleme = yeniden_bekleme
+        self.stats = {"istek": 0, "429": 0, "5xx": 0, "ag": 0}  # ilerleme günlüğü için sayaçlar
         self.uclar: dict[str, list[int]] = {}           # uç türü (info `type`, ya da GET) -> [istek, ağırlık]; ağır trader teşhisi (A4-1)
 
+    def _waits(self, kind: str) -> tuple[float, ...]:
+        if self.yeniden_bekleme is not None:
+            return self.yeniden_bekleme
+        return {"5xx": SERVER_ERROR_WAITS, "429": RATE_LIMIT_WAITS, "ag": ()}[kind]
+
     def _request(self, method: str, url: str, *, payload: dict | None = None, weight: int = 1) -> Any:
-        server_errors = 0
-        for attempt in range(6):
+        used = {"5xx": 0, "429": 0, "ag": 0}          # hata türü başına yapılan yeniden deneme
+        while True:
             self.limiter.acquire(weight)
-            response = self.session.request(method, url, json=payload, timeout=30)
+            try:
+                response = self.session.request(method, url, json=payload, timeout=30)
+            except _AG_HATALARI:
+                self.stats["ag"] += 1
+                waits = self._waits("ag")
+                if used["ag"] >= len(waits):
+                    raise
+                self.sleep(waits[used["ag"]])
+                used["ag"] += 1
+                continue
             self.stats["istek"] += 1
             uc = self.uclar.setdefault(str(payload.get("type", "?")) if isinstance(payload, dict) else method, [0, 0])
             uc[0] += 1
             uc[1] += weight
-            if response.status_code >= 500:
-                self.stats["5xx"] += 1
-                # Geçici sunucu hatası (ör. 500/502/503): 3 deneme, artan bekleme; sonra hata olarak yükselir.
-                server_errors += 1
-                if server_errors >= SERVER_ERROR_ATTEMPTS:
+            kind = "5xx" if response.status_code >= 500 else "429" if response.status_code == 429 else None
+            if kind is not None:
+                self.stats[kind] += 1
+                waits = self._waits(kind)
+                if used[kind] >= len(waits):       # yeniden deneme tükendi: 5xx -> HTTPError, 429 -> RateLimitError
+                    if kind == "429":
+                        raise RateLimitError("Hyperliquid rate limit exceeded after retries")
                     response.raise_for_status()
-                self.sleep(SERVER_ERROR_WAITS[server_errors - 1])
+                self.sleep(waits[used[kind]])
+                used[kind] += 1
                 continue
-            if response.status_code != 429:
-                response.raise_for_status()
-                data = response.json()
-                # Yanıt boyutuna göre ek ağırlık (Hyperliquid belgesi): dolum/fonlama listelerinde 20 kayıt başına 1;
-                # candleSnapshot'ta 60 mum başına 1 (belgeden hatırlanan değer; 429 artarsa günlükte görünür).
-                per = 60 if isinstance(payload, dict) and payload.get("type") == "candleSnapshot" else 20
-                if isinstance(data, list) and len(data) >= per:
-                    self.limiter.acquire(len(data) // per)
-                    uc[1] += len(data) // per
-                return data
-            self.stats["429"] += 1
-            self.sleep(min(60, 5 * 2 ** attempt))
-        raise RateLimitError("Hyperliquid rate limit exceeded after retries")
+            response.raise_for_status()           # diğer 4xx: yeniden denenmez
+            data = response.json()
+            # Yanıt boyutuna göre ek ağırlık (Hyperliquid belgesi): dolum/fonlama listelerinde 20 kayıt başına 1;
+            # candleSnapshot'ta 60 mum başına 1 (belgeden hatırlanan değer; 429 artarsa günlükte görünür).
+            per = 60 if isinstance(payload, dict) and payload.get("type") == "candleSnapshot" else 20
+            if isinstance(data, list) and len(data) >= per:
+                self.limiter.acquire(len(data) // per)
+                uc[1] += len(data) // per
+            return data
 
     def leaderboard(self) -> list[dict]:
         data = self._request("GET", LEADERBOARD)
