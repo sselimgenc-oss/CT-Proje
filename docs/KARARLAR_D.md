@@ -157,6 +157,13 @@ Görev: `docs/GOREV_D_YOLU.md`.
 - Şu an GitHub'da `CLOUDFLARE_API_TOKEN` (ve muhtemelen diğer Worker secret'ları) yok; `worker.yml` dağıtımı "Gerekli secret'ları doğrula"
   adımında kırmızı biter — bu beklenen durumdur. Canlıdaki eski Worker sürümü dokunulmadan kalır.
 
+### K‑14. v3 doğruluk düzeltmeleri v3'ün yerinde yapılır; trader tek bir eksik yüzünden düşmez (kullanıcı onayı 2026-11-02)
+- v3 gerçek veride hiç yayımlanmadığı için v3 doğruluk düzeltmeleri v3'ün YERİNDE yapılır, **v4 açılmaz** (AGENTS kural 6 istisnası; PR'larda eski ↔ yeni sayılar
+  yine yan yana gösterilir). #434 kapatıldı; değerli fikirleri güncel koda göre yeniden yazılır (referans dal: `origin/claude/zen-heisenberg-lx1ond`;
+  2c5a3a8, 0996016, ea58c0a, 9b22dc7 — kopyalanmaz, güncel koda uyarlanır).
+- A4‑1: gecikmeli mum eksiği, perp hesap değeri 0 ve t0 sağlık paydası yokluğu trader'ı takipten düşürmez; eksik atlanır ve sayılır, v3 / olaylar sürer, trader başına
+  `veri_durumu` kodu (`tamam | fiyatsiz | perp_bos | okuma_hatasi | bayat`) yayımlanır; sağlık paydası yoksa ışık `bilinmiyor`. Sözleşme: `docs/VERI_SOZLESMESI.md` v1.15.
+
 ### K‑15. Faz 2 işlem panosu ve otonom yürütme (kullanıcı kararı 2026-11-02)
 - Faz 2'de kullanıcı dostu işlem panosu yapılır: telefonda ve PC'de çalışan statik HTML; içerik ve düzen `docs/FAZ2_PANO.md`
   (örnek ekran `docs/img/pano_ornek_2026-11-02.webp`). Sıra değişmez: önce Faz 1 (veri, trader seçimi, motor) tamamlanır.
