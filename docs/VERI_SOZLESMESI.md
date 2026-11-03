@@ -361,3 +361,27 @@ Günlük döner (UTC gün sınırında `risk_kararlari.<YYYY-MM-DD>.jsonl`), son
 
 ### Liste alanı
 Dinleyici listesinde İlk 11 üyeliği `takim: ilk11` alanıyla gelir (`ilk11/izleme_listesi.yaml`, K-12.8; `izleme_liste.load_list` şeması). Pilot liste `copytrade/izleme_listesi.yaml`'da `takim` yoktur → risk kapısı niyet üretmez. Yalnız DENEME için `--risk-tum-liste` listedeki herkesi "ilk11 sayar".
+
+## 8. Dinleyici REST koruması — dolgu / hakem / başlangıç pozisyonu (v1.20; `copytrade/dinleyici.py`)
+Sunucuda yeniden bağlanmada ~92 adresin `userFillsByTime` dolgusu art arda yapılıp 429 aldığı için (4 saatte `genel.dolgu_hata: 78`) **tüm REST işleri** (dolgu, hakem, başlangıç pozisyonu) tek desene bağlandı:
+- **Arka plan:** hiçbiri WS akışını / gecikme-kaçan ölçümünü beklemez (REST çağrısı `asyncio.to_thread` içinde). Hakem turu sürerken yeni tur gelirse atlanır (`genel.rest_tur_atlanan`, adet). Hakem, bekleyen dolguyu önce bitirir (aynı aralıktaki dolumlar "kopma aralığı kaçanı" diye görülmüş işaretlenmesin).
+- **İstek aralığı (iki ayrı ayar, lider kararı):** `userFillsByTime` (dolgu ve hakem; sayfa istekleri dahil, ortak sayaç) ardışık istekleri arası en az **1,5 sn** (`Ayar.rest_dolum_ara_sn`; ağırlık ≥ 20 → ≈ 13–15 ağırlık/sn ≈ 800–880/dk, HL IP sınırı 1.200/dk'nın altında, dinleyicinin diğer isteklerine pay kalır); `clearinghouseState` (başlangıç pozisyonu, ağırlık 2) arası **0,5 sn** (`Ayar.rest_poz_ara_sn`). Sunucudaki `dolgu_hata_tur` verisine bakılıp gerekirse değiştirilir.
+- **Yeniden deneme:** dolgu ve hakemde bir adres için 429 / ağ / geçersiz yanıt hatasında en çok 3 yeniden deneme, öncesinde 2 / 5 / 15 sn bekleme (`Ayar.rest_bekleme_sn`). Dolgu: 3'ü de başarısızsa `genel.dolgu_hata` +1; adres **doldurulamayan en eski kopma aralığı başlangıcıyla** bekleyende kalır ve sonraki REST turunda (varsayılan 600 sn) yeniden denenir; yeni bir kopma bekleyen başlangıcı geriye çekmez (en eski korunur). Hakem: `genel.hakem_hata` +1; pencere (2 tur) sonraki turda yeniden kapsandığı için o adres sonraki turda yeniden denenmiş olur. Hakem hatası artık oturumu **koparmaz** (eski davranış: istisna → `kopma` → yeniden bağlanma → yeni dolgu fırtınası).
+- **Kapanış turu** (servis durdurulurken son hakem; durdurma süresi 90 sn'yi aşmasın diye): bekleme / yeniden deneme yok ve **en fazla 60 sn** (`Ayar.kapanis_sinir_sn`). Yetişmeyen adresler (o an süren adres dahil) `genel.kapanis_atlanan` (adet) ile sayılır; son özet (`ozet.json`) her durumda yazılır. 91 adres × 1,5 sn ≈ 136 sn sürerdi → ≈ 40 adres taranır. Not: sınırda iptal edilen son istek bir iş parçacığında bitene kadar sürebilir (en çok istek zaman aşımı, 20 sn).
+
+`ozet.json` → `genel` (hepsi adet, çalışma başından beri kümülatif; `*_bekleyen` anlık gösterge):
+| Alan | Anlam |
+|---|---|
+| `dolgu` | dolguyla kurtarılan dolum (mevcut) |
+| `dolgu_hata` | 3 yeniden deneme de tükenen dolgu adresi sayısı (mevcut; artık yalnız tükenmede) |
+| `dolgu_yeniden_deneme` | dolgudaki yeniden deneme sayısı (2 / 5 / 15 sn beklemeli denemeler) |
+| `dolgu_bekleyen` | hâlâ doldurulamayan adres sayısı (anlık) |
+| `dolgu_hata_tur` | `{hata türü: adet}`; `dolgu_hata` ile aynı olaylar, tükenen turun SON hatasının sınıfı (toplam = `dolgu_hata`). Örn. `{"HTTP 429": 70, "Timeout": 8}` |
+| `hakem_yeniden_deneme`, `hakem_hata`, `hakem_hata_tur` | aynı anlamlar, REST hakem için |
+| `baslangic_poz_hata_tur` | `{hata türü: adet}`, başlangıç pozisyonu okuması için (toplam = `baslangic_poz_hata`); yalnız risk açıkken |
+| `rest_tur_atlanan` | önceki hakem turu sürdüğü için atlanan tur |
+| `kapanis_atlanan` | kapanıştaki son hakem turunda 60 sn sınırına yetişmeyen adres sayısı (adet) |
+
+**Hata türü** = hatanın SINIFI (`hata_turu`): `HTTP <kod>` (örn. `HTTP 429`), `Timeout`, `Ağ (URLError)`, `Geçersiz yanıt`, ya da istisna sınıf adı. **Adres, URL ve sağlayıcı metni hiçbir yerde yazılmaz** (`ozet.json` adres içeremez, testli).
+**Journal:** her REST hatası (yeniden denemeler dahil) stderr'e TEK satır: `UYARI REST hatası kaynak=<dolgu|hakem|baslangic_poz> trader=<takma ad> tur=<hata türü>` (`journalctl -u sg-dinleyici | grep "UYARI REST"`).
+

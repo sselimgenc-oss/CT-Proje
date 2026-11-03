@@ -80,11 +80,12 @@ def trades_a(tid, ms, yon="B", sz=5):
     return {"channel": "trades", "data": [{"coin": "BTC", "side": yon, "px": "100", "sz": str(sz), "time": ms, "tid": tid, "users": [A, kars] if yon == "B" else [kars, A]}]}
 
 
-HIZLI = dict(baslangic_bekleme_sn=(0.01, 0.01, 0.01), baslangic_istek_ara_sn=0.0, baslangic_yeniden_sn=0.05)
+HIZLI = dict(baslangic_bekleme_sn=(0.01, 0.01, 0.01), rest_dolum_ara_sn=0.0, rest_poz_ara_sn=0.0, baslangic_yeniden_sn=0.05)
 
 
-class Http429(Exception):
-    pass
+def Http429(mesaj=""):
+    import urllib.error
+    return urllib.error.HTTPError("https://x/info", 429, "Too Many Requests", {}, None)
 
 
 def kos(post, baglantilar, tmp_path, dex_adlari=None, sure=0.4, ayar_ek=None, ws_sinifi=None, mono_saat=None):
@@ -219,7 +220,7 @@ def test_dinleyici_hala_pandas_gerektirmez():
 # ------------------------------------------------------------------ 429 koruması ve arka plan (lider kararı)
 def test_varsayilan_bekleme_ve_aralik_lider_karari():
     a = d.Ayar()
-    assert (a.baslangic_bekleme_sn, a.baslangic_istek_ara_sn, a.baslangic_yeniden_sn) == ((2.0, 5.0, 15.0), 0.5, 300.0)
+    assert (a.baslangic_bekleme_sn, a.rest_poz_ara_sn, a.baslangic_yeniden_sn, a.rest_bekleme_sn) == ((2.0, 5.0, 15.0), 0.5, 300.0, (2.0, 5.0, 15.0))
 
 
 def test_a_429_yeniden_deneme_basari(tmp_path):
@@ -308,7 +309,7 @@ def test_istekler_arasi_en_az_ara_suresi(tmp_path):
             zamanlar.append(_t.monotonic())
             return durum()
         return []
-    kos(post, [[]], tmp_path, dex_adlari=["xyz", "flx"], ayar_ek=dict(baslangic_istek_ara_sn=0.05), sure=0.5)
+    kos(post, [[]], tmp_path, dex_adlari=["xyz", "flx"], ayar_ek=dict(rest_poz_ara_sn=0.05), sure=0.5)
     assert len(zamanlar) >= 3 and all(b - a >= 0.045 for a, b in zip(zamanlar, zamanlar[1:]))   # 3 dex isteği (ana + 2) en az 50 ms arayla
 
 
@@ -318,3 +319,27 @@ def test_okuma_ani_dex_basina_cift_sayim_korumasi():
     dolum(rd, coin="xyz:GOLD", sz=1, bas=None, t=T + 4000)         # xyz okumasından ÖNCE: dahil, eklenmez
     dolum(rd, coin="BTC", sz=1, bas=None, t=T + 4000)              # ana dex okumasından SONRA: yeni dolum, eklenir
     assert rd.lider[("aaaa", "xyz:GOLD")] == 2.0 and rd.lider[("aaaa", "BTC")] == 11.0
+
+
+def test_dolgu_eski_dolum_okumadan_tazeyi_ezmez():
+    """Arka plan dolgusu (startPosition'lı, okumadan ÖNCEki dolum) REST okumasının tazeliğini bozmaz."""
+    rd = yeni()
+    rd.baslangic_ayarla("aaaa", {"BTC": 7.0}, T + 5000)
+    k = dolum(rd, sz=2, bas=3.0, t=T + 1000)                       # eski dolum: o an trader 3 -> 5; izleme 7 kalmalı
+    assert rd.lider[("aaaa", "BTC")] == 7.0 and k[0]["aksiyon"] == "add"
+    dolum(rd, sz=1, bas=7.0, t=T + 9000)                           # okumadan sonraki dolum izlemeyi sürdürür
+    assert rd.lider[("aaaa", "BTC")] == 8.0
+
+
+def test_baslangic_hata_turu_sayilir_ve_journal_tek_satir_adres_yok(tmp_path, capsys):
+    def post(yuk):
+        if yuk["type"] == "clearinghouseState":
+            raise Http429()
+        return []
+    din, ozet = kos(post, [[]], tmp_path, ayar_ek=dict(baslangic_yeniden_sn=10.0), sure=0.3)
+    g = ozet["genel"]
+    assert g["baslangic_poz_hata"] >= 1 and g["baslangic_poz_hata_tur"] == {"HTTP 429": g["baslangic_poz_hata"]}       # tükenen tur başına, SON hatanın sınıfı
+    assert sum(g["baslangic_poz_hata_tur"].values()) == g["baslangic_poz_hata"]
+    satirlar = [s for s in capsys.readouterr().err.splitlines() if "kaynak=baslangic_poz" in s]
+    assert len(satirlar) >= 4 and set(satirlar) == {"UYARI REST hatası kaynak=baslangic_poz trader=aaaa tur=HTTP 429"} and all("0x" not in s for s in satirlar)
+    assert "0x" not in (tmp_path / "ozet.json").read_text()
