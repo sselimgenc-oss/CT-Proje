@@ -21,7 +21,7 @@ concurrency:
 jobs:
   plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     outputs:
       shards: ${{ steps.p.outputs.shards }}
       count: ${{ steps.p.outputs.count }}
