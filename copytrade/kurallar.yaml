@@ -139,7 +139,7 @@ saglik_oran_toleransi: 1.0e-9
 saglik_net_min: -1.0
 saglik_net_max: 100.0
 # Tamamen boş olmasına izin verilen (isteğe bağlı / yalnız sorun varsa dolan) sütunlar; bunların DIŞINDA tamamen boş sütun kapıyı kırar (görev: ölü sütunlar sessiz kalmasın)
-saglik_bos_olabilir: [plasebo_hata, plasebo_not, hata, not, plasebo_gercek_skor, neden, bhy_q, mum_sayisi, mum_bozuk, mum_sicrama, mum_bosluk, mum_hacimsiz, mum_gecerli]
+saglik_bos_olabilir: [plasebo_hata, plasebo_not, hata, not, plasebo_gercek_skor, neden, bhy_q, mum_sayisi, mum_bozuk, mum_sicrama, mum_bosluk, mum_hacimsiz, mum_gecerli, hesap_zamani]
 # Arşiv: ardışık kayıt arası > 3 × hedef aralık boşluktur; günlük boşluk > %10 ise iş kırmızıdır.
 arsiv_bosluk_carpani: 3
 arsiv_bosluk_esigi: 0.10

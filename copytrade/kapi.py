@@ -1024,8 +1024,6 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--adres", action="append", default=[], help="kapıya zorla eklenen adres (dis_aday); tekrarlanabilir")
     parser.add_argument("--yeniden-dene-gun", metavar="YYYY-MM-DD",
                         help="o günün `hata` dolu satırlarını yeniden koş, mevcut sonuc.csv ile bayt bayt birleştir, durum.json'ı yeniden hesapla (hesap sürümü / kod hash'i farklıysa reddeder)")
-    parser.add_argument("--hash-istisnasi", action="store_true",
-                        help="--yeniden-dene-gun: kod hash'i farklı dosyada TEK SEFERLİK istisna (önce 20 başarılı satırın ham sütunları bayt bayt aynı çıkmalı; aksi halde durur)")
     parser.add_argument("--en-fazla", type=int, help="--yeniden-dene-gun: en çok bu kadar hatalı satır (küçük gerçek veri denemesi)")
     parser.add_argument("--evren-yaz", type=Path, help="yalnız ortak evren anlık görüntüsünü yazıp çık")
     parser.add_argument("--evren-dosyasi", type=Path, help="plan işinin ortak evren anlık görüntüsünü kullan")
@@ -1037,7 +1035,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.yeniden_dene_gun:
         from copytrade.kapi_yeniden import YenidenKosuReddedildi, calistir
         try:
-            calistir(args.root, args.yeniden_dene_gun, en_fazla=args.en_fazla, hash_istisnasi=args.hash_istisnasi)
+            calistir(args.root, args.yeniden_dene_gun, en_fazla=args.en_fazla)
         except YenidenKosuReddedildi as hata:
             raise SystemExit(str(hata)) from hata
         return

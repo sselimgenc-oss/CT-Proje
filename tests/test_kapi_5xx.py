@@ -244,7 +244,7 @@ def test_d_yeniden_kosu_diger_satirlar_bayt_bayt_ayni_hatalilar_yenilenmis(tmp_p
     ozet = kapi_yeniden.calistir(kok, "2026-11-03", client=SahteIstemci(), degerlendir=degerlendir, semboller=set(), log=lambda *_: None)
     sonra = (gun / "sonuc.csv").read_bytes().decode("utf-8")
     assert sorted(degerlendir.cagrilar) == ["0x0003", "0x0007"]                  # yalnız hata dolu satırlar koşuldu
-    eski_k, yeni_k = kapi_yeniden.kayitlar(once), kapi_yeniden.kayitlar(sonra)
+    eski_k, yeni_k = kapi_yeniden.kayitlar(kapi_yeniden.sutun_ekle(once)), kapi_yeniden.kayitlar(sonra)       # eski + sonda `hesap_zamani` (boş)
     assert len(eski_k) == len(yeni_k) == 61 and eski_k[0] == yeni_k[0]                               # başlık aynı
     degisen = [kapi_yeniden.kayit_adresi(a) for a, b in zip(eski_k, yeni_k) if a != b]
     assert degisen == ["0x0003", "0x0007"]                                                           # DİĞER 58 KAYIT BAYT BAYT AYNI (satır sonlu 0x0005 dahil)
@@ -256,7 +256,7 @@ def test_d_yeniden_kosu_diger_satirlar_bayt_bayt_ayni_hatalilar_yenilenmis(tmp_p
     assert (ozet["hatali_once"], ozet["denenen"], ozet["duzelen"], ozet["hala_hatali"]) == (2, 2, 1, 1)
     durum = json.loads((gun / "durum.json").read_text())
     assert (durum["hatali_satir"], durum["hatali_oran_aday"], durum["hatali_oran_evren"]) == (1, round(1 / 60, 6), round(1 / 60, 6)) and durum["durum"] == "eksik" and "hatali_satir" in durum["neden"]
-    assert durum["yeniden_kosu"]["duzelen"] == 1 and durum["kapsam"] == 1.0 and durum["parca_biten"] == 48
+    assert durum["yeniden_denenen"] == 2 and durum["yeniden_kosu"]["duzelen"] == 1 and durum["kapsam"] == 1.0 and durum["parca_biten"] == 48
     assert durum["yeniden_kosu"]["yeniden_kosan_adresler"] == ["0x0003", "0x0007"] and durum["yeniden_kosu"]["finalize_farkli_diger_satir"] == 0
     assert durum["satir_kaynagi"] == {"bu_kosu": 60}                           # İlk 11 uygunluğu `bu_kosu` ister: yeniden koşulan satırlar dışlanmaz
     assert "Hatalı adres: 1/60" in (gun / "RAPOR.md").read_text(encoding="utf-8")
@@ -301,98 +301,42 @@ def test_kayit_bolucu_tirnak_icindeki_satir_sonunu_bolmez():
     assert kapi_yeniden.kayitlar(metin) == ['a,b\n', '1,"x\ny"\n', '2,"he said ""hi"""\n', '3,z'] and "".join(kapi_yeniden.kayitlar(metin)) == metin
 
 
-# ------------------------------------------------------------------ hash istisnası (lider kararı: tek seferlik, açık girdiyle, kontrol örneği şartıyla)
-ESKI_HASH = "a" * 64
-
-
-def _eski_kodlu(tmp_path, **kwargs):
-    kok, gun = _kurulum(tmp_path, **kwargs)
-    tablo = pd.read_csv(gun / "sonuc.csv", low_memory=False, float_precision="round_trip")
-    tablo["kod_hash"] = ESKI_HASH                                           # dosya BAŞKA bir kod sürümüyle üretilmiş (11-03'te olan bu)
+# ------------------------------------------------------------------ hash kuralı: istisna YOK; hesap_zamani
+def test_hash_farkliysa_reddeder_istisna_yolu_yok(tmp_path):
+    kok, gun = _kurulum(tmp_path)
+    tablo = pd.read_csv(gun / "sonuc.csv", low_memory=False)
+    tablo["kod_hash"] = "a" * 64
     tablo.to_csv(gun / "sonuc.csv", index=False)
-    return kok, gun
-
-
-def _tekrar_uretici(gun, hedefler, degisiklik=None):
-    """Kontrol örneği için: hedef olmayan adreslerde dosyadaki satırın AYNISINI üretir (hesap mantığı değişmedi); hedeflerde başarılı satır."""
-    tablo = pd.read_csv(gun / "sonuc.csv", low_memory=False, float_precision="round_trip").set_index("address", drop=False)
-    basari = _degerlendirici({a: "basari" for a in hedefler})
-    cagrilar = []
-
-    def degerlendir(lider, *args, **kwargs):
-        adres = lider["address"]
-        cagrilar.append(adres)
-        if adres in hedefler:
-            return basari(lider, *args, **kwargs)
-        satir = {c: (None if pd.isna(v) else v) for c, v in tablo.loc[adres].items()}
-        satir.update(degisiklik or {})
-        return satir
-    degerlendir.cagrilar = cagrilar
-    return degerlendir
-
-
-def test_hash_farkliysa_varsayilan_reddeder_mesaj_istisnayi_gosterir(tmp_path):
-    kok, gun = _eski_kodlu(tmp_path)
     once = (gun / "sonuc.csv").read_bytes()
-    degerlendir = _tekrar_uretici(gun, {"0x0003", "0x0007"})
-    with pytest.raises(kapi_yeniden.YenidenKosuReddedildi, match="--hash-istisnasi"):
+    degerlendir = _degerlendirici({"0x0003": "basari", "0x0007": "basari"})
+    with pytest.raises(kapi_yeniden.YenidenKosuReddedildi, match="`kod_hash` uyuşmuyor"):
         kapi_yeniden.calistir(kok, "2026-11-03", client=SahteIstemci(), degerlendir=degerlendir, semboller=set(), log=lambda *_: None)
     assert (gun / "sonuc.csv").read_bytes() == once and degerlendir.cagrilar == []
+    assert not hasattr(kapi_yeniden, "HASH_ISTISNASI_METNI") and "hash_istisnasi" not in kapi_yeniden.calistir.__code__.co_varnames
+    with pytest.raises(SystemExit):
+        kapi.main(["--root", str(kok), "--yeniden-dene-gun", "2026-11-03", "--hash-istisnasi"])
 
 
-def test_hash_istisnasi_kontrol_ornegi_tutarsa_isler_durum_json_kaydi(tmp_path):
-    kok, gun = _eski_kodlu(tmp_path)
+def test_hesap_zamani_yalniz_yeniden_cekilen_satirlarda_digerleri_bos_yeniden_denenen_sayisi(tmp_path):
+    kok, gun = _kurulum(tmp_path, hatali_adresler=("0x0003", "0x0007"))
     once = (gun / "sonuc.csv").read_bytes().decode("utf-8")
-    degerlendir = _tekrar_uretici(gun, {"0x0003", "0x0007"})
-    ozet = kapi_yeniden.calistir(kok, "2026-11-03", client=SahteIstemci(), degerlendir=degerlendir, semboller=set(), log=lambda *_: None, hash_istisnasi=True)
-    kontrol = [a for a in degerlendir.cagrilar if a not in ("0x0003", "0x0007")]
-    assert len(kontrol) == 20 and len(set(kontrol)) == 20 and degerlendir.cagrilar[:20] == kontrol            # önce 20 kontrol satırı, sonra hedefler
-    assert not {"0x0003", "0x0007"} & set(kontrol)                                                          # kontrol örneği başarılı (hata boş) satırlardan
-    durum = json.loads((gun / "durum.json").read_text())
-    assert durum["kod_hash_orijinal"] == ESKI_HASH and durum["kod_hash_yeniden"] == kapi.HESAP_KOD_HASH
-    assert durum["hash_istisnasi"] == "kapi-5xx yeniden deneme; hesap mantığı değişmedi" and (durum["kontrol_ornek"], durum["kontrol_ayni"]) == (20, 20)
-    assert durum["hatali_satir"] == 0 and ozet["duzelen"] == 2
-    sonra = (gun / "sonuc.csv").read_bytes().decode("utf-8")
-    degisen = [kapi_yeniden.kayit_adresi(a) for a, b in zip(kapi_yeniden.kayitlar(once), kapi_yeniden.kayitlar(sonra)) if a != b]
-    assert degisen == ["0x0003", "0x0007"] and ozet["finalize_farkli_diger_satir"] == 0                       # kontrol satırları dahil diğerleri bayt bayt aynı
-    assert durum["kod_hashler"] == sorted([ESKI_HASH, kapi.HESAP_KOD_HASH]) and durum["kod_hash_farkli"] is True
-
-
-def test_hash_istisnasi_kontrol_ornegi_tek_fark_varsa_durur_hicbir_sey_yazilmaz(tmp_path):
-    kok, gun = _eski_kodlu(tmp_path)
-    once, durum_once = (gun / "sonuc.csv").read_bytes(), (gun / "durum.json").read_bytes()
-    degerlendir = _tekrar_uretici(gun, {"0x0003", "0x0007"}, degisiklik={"max_drawdown": 0.9999})
-    with pytest.raises(kapi_yeniden.YenidenKosuReddedildi, match="kontrol örneği tutmadı"):
-        kapi_yeniden.calistir(kok, "2026-11-03", client=SahteIstemci(), degerlendir=degerlendir, semboller=set(), log=lambda *_: None, hash_istisnasi=True)
-    assert (gun / "sonuc.csv").read_bytes() == once and (gun / "durum.json").read_bytes() == durum_once
-    assert len(degerlendir.cagrilar) == 1                                                                   # ilk farkta durdu; hedef satırlara hiç geçilmedi
-
-
-def test_hash_istisnasi_sure_telemetri_sutunlari_karsilastirilmaz(tmp_path):
-    """`sure_*` (duvar saati süresi, önbellek sayaçları) hesap değildir; her koşuda farklıdır → kontrol örneğinde karşılaştırılmaz."""
-    kok, gun = _eski_kodlu(tmp_path)
-    degerlendir = _tekrar_uretici(gun, {"0x0003", "0x0007"}, degisiklik={"sure_toplam_sn": 9999.0})
-    kapi_yeniden.calistir(kok, "2026-11-03", client=SahteIstemci(), degerlendir=degerlendir, semboller=set(), log=lambda *_: None, hash_istisnasi=True)
-    assert json.loads((gun / "durum.json").read_text())["kontrol_ayni"] == 20
-
-
-def test_hash_istisnasi_hesap_surumu_farkliysa_yine_reddeder(tmp_path):
-    kok, gun = _eski_kodlu(tmp_path)
-    tablo = pd.read_csv(gun / "sonuc.csv", low_memory=False)
-    tablo.loc[10, "hesap"] = "v0-eski"
-    tablo.to_csv(gun / "sonuc.csv", index=False)
-    once = (gun / "sonuc.csv").read_bytes()
-    with pytest.raises(kapi_yeniden.YenidenKosuReddedildi, match="`hesap` uyuşmuyor"):
-        kapi_yeniden.calistir(kok, "2026-11-03", client=SahteIstemci(), degerlendir=_tekrar_uretici(gun, set()), semboller=set(), log=lambda *_: None, hash_istisnasi=True)
-    assert (gun / "sonuc.csv").read_bytes() == once
-
-
-def test_hash_ayniysa_istisna_girdisi_kullanilmaz_kayit_yok(tmp_path):
-    kok, gun = _kurulum(tmp_path)
-    kapi_yeniden.calistir(kok, "2026-11-03", client=SahteIstemci(), degerlendir=_degerlendirici({"0x0003": "basari", "0x0007": "basari"}), semboller=set(),
-                          log=lambda *_: None, hash_istisnasi=True)
-    durum = json.loads((gun / "durum.json").read_text())
-    assert "hash_istisnasi" not in durum and "kontrol_ornek" not in durum                                   # istisna gerekmedi, kontrol koşulmadı
+    assert "hesap_zamani" not in once.split("\n")[0]
+    # 1. koşu: yalnız ilk hatalı satır
+    kapi_yeniden.calistir(kok, "2026-11-03", en_fazla=1, client=SahteIstemci(), degerlendir=_degerlendirici({"0x0003": "basari", "0x0007": "basari"}), semboller=set(), log=lambda *_: None)
+    bir = pd.read_csv(gun / "sonuc.csv", low_memory=False, dtype={"hesap_zamani": str}).set_index("address")
+    assert list(bir.columns)[-1] == "hesap_zamani" and bir["hesap_zamani"].notna().sum() == 1
+    zaman = bir.loc["0x0003", "hesap_zamani"]
+    assert pd.Timestamp(zaman).tzinfo is not None and zaman.endswith("Z") and bir.loc["0x0007", "hesap_zamani"] != bir.loc["0x0007", "hesap_zamani"]       # UTC; diğerleri NaN (boş)
+    assert json.loads((gun / "durum.json").read_text())["yeniden_denenen"] == 1
+    # eski alanlar bayt bayt aynı: yalnız sonuna boş alan eklendi
+    for eski_k, yeni_k in zip(kapi_yeniden.kayitlar(once)[1:], kapi_yeniden.kayitlar((gun / "sonuc.csv").read_bytes().decode("utf-8"))[1:]):
+        if kapi_yeniden.kayit_adresi(eski_k) != "0x0003":
+            assert yeni_k == eski_k.rstrip("\n") + ",\n"
+    # 2. koşu: kalan hatalı satır; ilk satırın zamanı DEĞİŞMEZ, sayı kümülatif
+    kapi_yeniden.calistir(kok, "2026-11-03", client=SahteIstemci(), degerlendir=_degerlendirici({"0x0003": "basari", "0x0007": "basari"}), semboller=set(), log=lambda *_: None)
+    iki = pd.read_csv(gun / "sonuc.csv", low_memory=False, dtype={"hesap_zamani": str}).set_index("address")
+    assert iki.loc["0x0003", "hesap_zamani"] == zaman and iki["hesap_zamani"].notna().sum() == 2
+    assert json.loads((gun / "durum.json").read_text())["yeniden_denenen"] == 2
 
 
 # ------------------------------------------------------------------ BHY ailesi: aile büyüyünce tüm satırların aileye bağlı sütunları yeniden hesaplanır
@@ -425,6 +369,7 @@ def test_bhy_ailesi_tam_yeniden_hesap_ham_sutunlar_bayt_bayt_ayni(tmp_path):
         return satir
     ozet = kapi_yeniden.calistir(tmp_path / "root", "2026-11-03", client=SahteIstemci(), degerlendir=degerlendir, semboller=set(), log=lambda *_: None)
     sonra = (gun / "sonuc.csv").read_bytes().decode("utf-8")
+    once = kapi_yeniden.sutun_ekle(once)                                                                   # eski + sonda `hesap_zamani` (boş)
     baslik = kapi_yeniden.kayitlar(once)[0].rstrip("\n").split(",")
     final_j = {baslik.index(c) for c in kapi_yeniden.FINAL_SUTUNLAR}
     degisen = []

@@ -7,9 +7,9 @@ Kurallar (lider kararı):
 - Ardından `durum.json` yeniden hesaplanır (hatali_satir / hatali_oran dahil), RAPOR.md ve günlük getiri dosyası güncellenir.
 - Ağ yalnız halka açık Hyperliquid + Binance listesi; yeniden koşu satırları ilk koşunun `now_ms` değeriyle (satırda kayıtlı) hesaplanır.
 
-Hash istisnası (lider kararı 2026-11-03, tek seferlik, YALNIZ açık girdiyle `--hash-istisnasi` / iş akışı `hash_istisnasi`): kod hash'i farklı dosya, ancak önce
-11-03'te başarılı olmuş (hata boş, `asama1` Geçti) 20 satır YENİ kodla yeniden hesaplanıp satır başı ham sütunların HEPSİ bayt bayt aynı çıkarsa işlenir; tek fark → durur,
-hiçbir şey yazılmaz. `hesap` sürümü her durumda aynı olmalıdır. Varsayılan davranış reddetmektir.
+Hash kuralı (lider kararı 2026-11-03): kod farklıysa yeniden koşu REDDEDİLİR (istisna yok). Amaç: kod değişmeden bir günde 5xx kalırsa yalnız o satırlar yeniden çekilir.
+Yeniden çekilen satırlara `hesap_zamani` (UTC) yazılır, diğer satırlarda boş kalır; `durum.json` `yeniden_denenen` = dosyada `hesap_zamani` dolu satır sayısı.
+Hesabın değişmediğinin kanıtı yeniden koşuda değil, A/B teşhisindedir (`copytrade/kapi_ab.py`).
 
 BHY ailesi (lider kararı): bayt kuralı yalnız satır başı HAM sütunlar içindir. `bhy_q` ve ona bağlı karar sütunları (`FINAL_SUTUNLAR`) aile değişince TÜM satırlar için
 yeniden hesaplanır (eski q'lar eksik aileyle hesaplanmıştı); değişen hücreler yerinde değiştirilir, ham sütunlar dokunulmaz. `finalize_farkli_diger_satir` artık hata işareti değil, bilgidir.
@@ -33,10 +33,7 @@ from copytrade.kurallar import load_rules
 from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter
 
 FINAL_SUTUNLAR = ("bhy_q", "adim7", "sinif", "katman", "neden", "genc_aday", "gecmis_gun")     # finalize'ın tüm aileye bağlı hesapladığı sütunlar
-KONTROL_DISI = FINAL_SUTUNLAR + ("kod_hash", "satir_kaynagi", "evren_disi")                       # kontrol örneğinde karşılaştırılmayan sütunlar (HAM olmayan / kasıtlı farklı)
-KONTROL_DISI_ONEK = "sure_"                                                                       # süre / telemetri sütunları (duvar saati, önbellek isabeti): hesap değil, bayt bayt aynı olamaz
-HASH_ISTISNASI_METNI = "kapi-5xx yeniden deneme; hesap mantığı değişmedi"
-KONTROL_ORNEK = 20
+HESAP_ZAMANI = "hesap_zamani"                                                                  # yeniden çekilen satırın UTC hesap zamanı (diğer satırlarda boş)
 
 
 class YenidenKosuReddedildi(RuntimeError):
@@ -61,23 +58,23 @@ def kayit_adresi(kayit: str) -> str:
     return next(csv.reader(io.StringIO(kayit)))[0]
 
 
-def surum_kontrol(tablo: pd.DataFrame, hash_istisnasi: bool = False) -> bool:
-    """Dosyadaki TÜM satırlar çalışan kodun hesap sürümüyle üretilmiş olmalı; kod hash'i de aynı olmalı, yalnız `hash_istisnasi` açıksa farklı hash'e izin verilir
-    (o zaman kontrol örneği zorunludur). Dönüş: kod hash'i farklı mı (istisna kullanılıyor mu)."""
-    farkli = False
+def surum_kontrol(tablo: pd.DataFrame) -> None:
+    """Dosyadaki TÜM satırlar çalışan kodun hesap sürümü VE kod hash'iyle üretilmiş olmalı; değilse reddedilir (istisna yok)."""
     for sutun, beklenen in (("hesap", kapi.HESAP_SURUMU), ("kod_hash", kapi.HESAP_KOD_HASH)):
         if sutun not in tablo or tablo[sutun].isna().any():
             raise YenidenKosuReddedildi(f"reddedildi: sonuc.csv'de `{sutun}` eksik")
         bulunan = sorted(set(tablo[sutun].astype(str)))
-        if bulunan == [beklenen]:
-            continue
-        if sutun == "kod_hash" and hash_istisnasi:
-            farkli = True
-            continue
-        raise YenidenKosuReddedildi(f"reddedildi: `{sutun}` uyuşmuyor (dosya: {', '.join(v[:16] + '…' if sutun == 'kod_hash' else v for v in bulunan)}; "
-                                    f"çalışan kod: {beklenen[:16] + '…' if sutun == 'kod_hash' else beklenen})"
-                                    + ("; tek seferlik istisna için `--hash-istisnasi` (kontrol örneği şartıyla)" if sutun == "kod_hash" else ""))
-    return farkli
+        if bulunan != [beklenen]:
+            raise YenidenKosuReddedildi(f"reddedildi: `{sutun}` uyuşmuyor (dosya: {', '.join(v[:16] + '…' if sutun == 'kod_hash' else v for v in bulunan)}; "
+                                        f"çalışan kod: {beklenen[:16] + '…' if sutun == 'kod_hash' else beklenen})")
+
+
+def sutun_ekle(metin: str, ad: str = HESAP_ZAMANI) -> str:
+    """CSV'ye en sona boş bir sütun ekler (başlıkta yoksa): her kaydın sonuna ',' (boş alan) eklenir; mevcut alanlara dokunulmaz."""
+    parcalar = kayitlar(metin)
+    if not parcalar or ad in _alanlar(parcalar[0]):
+        return metin
+    return "".join((k[:-1] + ("," + ad if i == 0 else ",") + "\n") if k.endswith("\n") else (k + ("," + ad if i == 0 else ",")) for i, k in enumerate(parcalar))
 
 
 def bayt_birlestir(eski_metin: str, hedefler: dict[str, str]) -> str:
@@ -137,7 +134,7 @@ class _MumKaydi:
 
 def calistir(root: Path, gun: str, *, en_fazla: int | None = None, client: Any = None, degerlendir: Callable[..., dict] | None = None,
              semboller: set[str] | None = None, rules: dict | None = None, log: Callable[[str], None] = print,
-             hash_istisnasi: bool = False, kontrol_ornek: int = KONTROL_ORNEK) -> dict[str, Any]:
+) -> dict[str, Any]:
     """Bir günün hatalı satırlarını yeniden koşar, `sonuc.csv`'yi bayt bayt birleştirir, `durum.json`/RAPOR.md/gunluk.csv.gz'yi günceller. Özet sözlüğü döner."""
     rules = rules or load_rules()
     degerlendir = degerlendir or kapi.evaluate_address
@@ -145,9 +142,10 @@ def calistir(root: Path, gun: str, *, en_fazla: int | None = None, client: Any =
     yol = cikti / "sonuc.csv"
     if not yol.is_file():
         raise YenidenKosuReddedildi(f"reddedildi: {yol} yok")
-    eski_metin = yol.read_bytes().decode("utf-8")
+    ilk_metin = yol.read_bytes().decode("utf-8")
+    eski_metin = sutun_ekle(ilk_metin)                    # `hesap_zamani` yoksa EN SONA eklenir (diğer kayıtlarda boş alan); mevcut alanlar bayt bayt aynı kalır
     tablo = pd.read_csv(io.StringIO(eski_metin), low_memory=False, float_precision="round_trip", dtype={"kod_hash": str, "hesap": str})
-    istisna = surum_kontrol(tablo, hash_istisnasi)
+    surum_kontrol(tablo)
     hatali = tablo[tablo["hata"].notna()] if "hata" in tablo else tablo.iloc[0:0]
     hedef_adresler = [str(a) for a in hatali["address"]][: en_fazla or None]
     ozet: dict[str, Any] = {"gun": gun, "hatali_once": len(hatali), "denenen": len(hedef_adresler), "duzelen": 0, "hala_hatali": 0, "finalize_farkli_diger_satir": 0}
@@ -177,42 +175,15 @@ def calistir(root: Path, gun: str, *, en_fazla: int | None = None, client: Any =
         return degerlendir(lider, kayit, onbellek, now, start, start_200, semboller, rules, False, dexes=dexes, gunluk=gunluk)
 
     eski_kayit = {kayit_adresi(k): k for k in kayitlar(eski_metin)[1:]}
-    orijinal_hashler = sorted(str(v) for v in tablo["kod_hash"].dropna().unique())
-
-    def metin_satiri(adres: str, deger_al: Callable[[str], Any]) -> list[str]:
-        """Bir adresin yeni satırının CSV alanları: sütun biçimi tabloyla aynı (float sütunu "12.0"), eksik sütun boş."""
-        satir = pd.DataFrame([[_hucre(deger_al(c), turler[c]) for c in baslik]], columns=baslik, dtype=object)
-        return _alanlar(kayitlar(satir.to_csv(index=False, lineterminator="\n"))[1])
-
-    # ---- Hash istisnası: kontrol örneği (önce 20 başarılı satır yeni kodla yeniden hesaplanır; ham sütunlar bayt bayt aynı olmalı)
-    kontrol_sayi = kontrol_ayni = 0
-    if istisna:
-        uygun = tablo[(tablo["hata"].isna() if "hata" in tablo else True) & (tablo["asama1"] == "Geçti")]
-        eskiler = uygun[uygun["kod_hash"].astype(str) != kapi.HESAP_KOD_HASH]
-        adaylar = sorted(str(a) for a in (eskiler if len(eskiler) else uygun)["address"])
-        if not adaylar:
-            raise YenidenKosuReddedildi("reddedildi: hash istisnası için kontrol örneği yok (başarılı, analize girmiş satır bulunamadı)")
-        secim = [adaylar[int(i * len(adaylar) / min(kontrol_ornek, len(adaylar)))] for i in range(min(kontrol_ornek, len(adaylar)))]
-        karsilastir = [j for j, c in enumerate(baslik) if c not in KONTROL_DISI and not c.startswith(KONTROL_DISI_ONEK)]
-        log(f"hash istisnası: {len(secim)} başarılı satır yeni kodla yeniden hesaplanıp ham sütunlar karşılaştırılıyor")
-        for sira, adres in enumerate(secim, 1):
-            log(f"[kontrol {sira}/{len(secim)}] {adres}")
-            yeni_satir = kos(adres, {})
-            kontrol_sayi += 1
-            yeni_alan, eski_alan = metin_satiri(adres, lambda c, y=yeni_satir: y.get(c)), _alanlar(eski_kayit[adres])
-            farkli = [baslik[j] for j in karsilastir if yeni_alan[j] != eski_alan[j]]
-            if farkli:
-                ornek = ", ".join(f"{c}: {eski_alan[baslik.index(c)]!r} → {yeni_alan[baslik.index(c)]!r}" for c in farkli[:5])
-                raise YenidenKosuReddedildi(f"reddedildi: kontrol örneği tutmadı ({adres}: {len(farkli)} ham sütun farklı — {ornek}); hesap mantığı aynı sayılamaz, hiçbir şey yazılmadı")
-            kontrol_ayni += 1
-        log(f"hash istisnası: kontrol {kontrol_ayni}/{kontrol_sayi} satırda ham sütunlar bayt bayt aynı")
 
     # ---- Hatalı satırları yeniden koş
     gunluk: dict[str, pd.Series] = {}
     yeni_satirlar: list[dict] = []
+    zamanlar: dict[str, str] = {}                   # adres -> yeniden çekilme zamanı (UTC)
     for sira, adres in enumerate(hedef_adresler, 1):
         log(f"[{sira}/{len(hedef_adresler)}] {adres}")
         yeni_satirlar.append(kos(adres, gunluk))
+        zamanlar[adres] = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     yeni = pd.DataFrame(yeni_satirlar)
     hedef_maske = tablo["address"].astype(str).isin(hedef_adresler)
     diger_tablo = tablo[~hedef_maske].copy()
@@ -240,6 +211,9 @@ def calistir(root: Path, gun: str, *, en_fazla: int | None = None, client: Any =
         for sutun in baslik:
             if sutun == "address":
                 continue
+            if sutun == HESAP_ZAMANI:
+                cikti_tablo.loc[i, sutun] = zamanlar[adres]
+                continue
             if sutun in ("satir_kaynagi", "evren_disi"):
                 continue        # `satir_kaynagi` "bu_kosu" KALIR: İlk 11 uygunluğu (şartname §2.3) bunu şart koşar; yeniden koşu izi durum.json `yeniden_kosu`da. Evren üyeliği değişmez
             cikti_tablo.loc[i, sutun] = _hucre(son.loc[adres, sutun], turler[sutun]) if sutun in son.columns else None
@@ -263,7 +237,7 @@ def calistir(root: Path, gun: str, *, en_fazla: int | None = None, client: Any =
     # Doğrulama: hedef olmayan satırlarda FINAL_SUTUNLAR dışındaki (ham) hücreler bayt bayt aynı olmalı
     final_indeks = {baslik.index(c) for c in FINAL_SUTUNLAR if c in baslik}
     ham_fark = 0
-    for eski_k, yeni_k in zip(kayitlar(eski_metin), kayitlar(yeni_metin)):
+    for eski_k, yeni_k in zip(kayitlar(ilk_metin), kayitlar(yeni_metin)):
         adres = kayit_adresi(eski_k)
         if eski_k != yeni_k and adres not in set(hedef_adresler):
             a, b = _alanlar(eski_k), _alanlar(yeni_k)
@@ -288,12 +262,10 @@ def calistir(root: Path, gun: str, *, en_fazla: int | None = None, client: Any =
     eski_durum = json.loads(durum_yolu.read_text(encoding="utf-8")) if durum_yolu.is_file() else {}
     durum = kapi.run_status(int(eski_durum.get("parca_biten", 0)), eski_durum.get("parca_beklenen"), int(eski_durum.get("islenen", len(cikti_tablo))),
                             eski_durum.get("evren"), "tam", rules, kapi.hatali_satir_say(cikti_tablo), kapi.aday_say(cikti_tablo), len(cikti_tablo))
-    for anahtar in ("kapsanan", "evren_disi_satir", "eski_hesap_satir", "kod_hash_orijinal", "kod_hash_yeniden", "hash_istisnasi", "kontrol_ornek", "kontrol_ayni"):
+    for anahtar in ("kapsanan", "evren_disi_satir", "eski_hesap_satir"):
         if anahtar in eski_durum:
             durum[anahtar] = eski_durum[anahtar]
-    if istisna:             # bu koşu istisna kullandı: kayıt (önceki istisna kaydı varsa orijinal hash korunur)
-        durum.update({"kod_hash_orijinal": eski_durum.get("kod_hash_orijinal") or (orijinal_hashler[0] if len(orijinal_hashler) == 1 else orijinal_hashler),
-                      "kod_hash_yeniden": kapi.HESAP_KOD_HASH, "hash_istisnasi": HASH_ISTISNASI_METNI, "kontrol_ornek": kontrol_sayi, "kontrol_ayni": kontrol_ayni})
+    durum["yeniden_denenen"] = int(cikti_tablo[HESAP_ZAMANI].notna().sum())         # dosyada `hesap_zamani` dolu (yeniden çekilmiş) satır sayısı, kümülatif
     mum = kapi.mum_ozeti(cikti_tablo)
     if mum:
         durum["mum_ozeti"] = mum
@@ -306,8 +278,7 @@ def calistir(root: Path, gun: str, *, en_fazla: int | None = None, client: Any =
                      "coin_hatalari": kayit.hatalar.get(str(r["address"]), {}),
                      "diyez_coin": any(str(c).startswith("#") for c in kayit.hatalar.get(str(r["address"]), {}))} for _, r in hala.iterrows()]
     ozet.update({"hala_hatali": len(hala), "finalize_farkli_diger_satir": int(diger_degisen.sum()), "bhy_q_degisen_satir": bhy_degisen,
-                 "karar_degisen": karar_degisen, "ham_sutun_farki_diger_satir": ham_fark, "hala_hatali_ayrinti": ayrinti_hata,
-                 "kontrol_ornek": kontrol_sayi, "kontrol_ayni": kontrol_ayni})
+                 "karar_degisen": karar_degisen, "ham_sutun_farki_diger_satir": ham_fark, "hala_hatali_ayrinti": ayrinti_hata})
     ozet["duzelen"] = ozet["denenen"] - ozet["hala_hatali"]
     durum["yeniden_kosu"] = {**{k: ozet[k] for k in ("gun", "hatali_once", "denenen", "duzelen", "hala_hatali", "finalize_farkli_diger_satir", "bhy_q_degisen_satir",
                                                     "ham_sutun_farki_diger_satir")},
