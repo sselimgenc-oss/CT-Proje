@@ -90,7 +90,7 @@ Dosya her dolumda kontrol edilir; yeniden başlatma gerekmez.
 ```bash
 journalctl -u sg-dinleyici --since "4 hours ago" | grep "UYARI REST" | sed 's/.*kaynak=\([a-z_]*\) trader=[^ ]* tur=/\1 /' | sort | uniq -c | sort -rn | head
 ```
-`ozet.json` → `genel.dolgu_hata_tur` / `hakem_hata_tur` / `baslangic_poz_hata_tur` aynı dağılımı sayıyla verir (`HTTP 429` baskınsa istek aralığı yetmiyor demektir). Dolgu, hakem ve başlangıç okuması arka planda ve ortak 0,5 sn aralıkla çalışır; WS ölçümü beklemez.
+`ozet.json` → `genel.dolgu_hata_tur` / `hakem_hata_tur` / `baslangic_poz_hata_tur` aynı dağılımı sayıyla verir (`HTTP 429` baskınsa istek aralığı yetmiyor demektir). Dolgu ve hakem (`userFillsByTime`) arka planda ve istekler arası 1,5 sn, başlangıç okuması (`clearinghouseState`) 0,5 sn aralıkla çalışır; WS ölçümü beklemez. Servis durdurulurken son hakem turu en çok 60 sn sürer; yetişmeyen adresler `genel.kapanis_atlanan`.
 
 ## 9. Durdur
 ```bash

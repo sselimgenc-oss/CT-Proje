@@ -329,7 +329,9 @@ class Ayar:
     geri_cekilme_max_sn: float = 30.0
     sure_sn: float | None = None
     baslangic_bekleme_sn: tuple[float, ...] = (2.0, 5.0, 15.0)    # H5b: başlangıç pozisyonu okuması hata verirse yeniden denemeden önce bekleme (sn); 3 yeniden deneme
-    rest_istek_ara_sn: float = 0.5                                # REST (başlangıç pozisyonu, dolgu, hakem) ardışık istekleri arası en az (sn; tüm görevler için ORTAK)
+    rest_dolum_ara_sn: float = 1.5                                # `userFillsByTime` (dolgu, hakem; sayfalar dahil) ardışık istekleri arası en az (sn; ağırlık ≥ 20 → ≈ 13-15 ağırlık/sn, HL sınırı 20/sn)
+    rest_poz_ara_sn: float = 0.5                                  # `clearinghouseState` (H5b başlangıç pozisyonu; ağırlık 2) ardışık istekleri arası en az (sn)
+    kapanis_sinir_sn: float = 60.0                                # kapanıştaki son hakem turu için en fazla süre (sn); yetişmeyen adresler `genel.kapanis_atlanan`
     rest_bekleme_sn: tuple[float, ...] = (2.0, 5.0, 15.0)         # dolgu / hakem: 429-ağ hatasında yeniden denemeden önce bekleme (sn); 3 yeniden deneme
     baslangic_yeniden_sn: float = 300.0                           # H5b: 3 yeniden deneme de başarısızsa o adres için arka plan deneme aralığı (sn)
 
@@ -358,12 +360,13 @@ class Dinleyici:
         if risk is not None:
             self.olcum.genel.update({"baslangic_poz_okundu": 0, "baslangic_poz_hata": 0, "baslangic_poz_yeniden_deneme": 0, "baslangic_poz_arka_plan": 0, "baslangic_poz_bekleyen": 0})
         self._bas_gorevler: dict[str, asyncio.Task] = {}
-        self._aralik = IstekAralik(self.ayar.rest_istek_ara_sn)
+        self._aralik_dolum = IstekAralik(self.ayar.rest_dolum_ara_sn)       # iki ayrı sayaç: istek türüne göre ağırlık farklı
+        self._aralik_poz = IstekAralik(self.ayar.rest_poz_ara_sn)
         self._dolgu_bekleyen: dict[str, int] = {}                # takma ad -> doldurulamayan en eski kopma aralığı başlangıcı (ms): kopma aralığı UNUTULMAZ
         self._dolgu_gorevi: asyncio.Task | None = None
         self._hakem_gorevi: asyncio.Task | None = None
         self.olcum.genel.update({"dolgu_yeniden_deneme": 0, "dolgu_bekleyen": 0, "dolgu_hata_tur": {}, "hakem_yeniden_deneme": 0, "hakem_hata": 0, "hakem_hata_tur": {},
-                                 "rest_tur_atlanan": 0})
+                                 "rest_tur_atlanan": 0, "kapanis_atlanan": 0})
         if risk is not None:
             self.olcum.genel["baslangic_poz_hata_tur"] = {}
 
@@ -409,8 +412,8 @@ class Dinleyici:
         d[tur] = d.get(tur, 0) + 1
 
     def _rest_post(self, yuk: dict) -> Any:
-        """`to_thread` içinden: istekler arası en az `rest_istek_ara_sn` (ortak sayaç), sonra gerçek post."""
-        self._aralik.bekle()
+        """`to_thread` içinden (`userFillsByTime`): istekler arası en az `rest_dolum_ara_sn` (dolgu + hakem ORTAK sayaç), sonra gerçek post."""
+        self._aralik_dolum.bekle()
         return self.post(yuk)
 
     async def _bas_oku(self, i: Izlenen) -> tuple[bool, str | None]:
@@ -419,7 +422,7 @@ class Dinleyici:
         okuma: dict[str, int] = {}
         try:
             for dex in ["", *self.dex_adlari]:
-                await self._aralik.abekle()
+                await self._aralik_poz.abekle()
                 okuma[dex] = self.saat_ms()
                 pozlar.update(clearinghouse_ayristir(await asyncio.to_thread(self.post, clearinghouse_yuk(i.adres, dex))))
         except asyncio.CancelledError:
@@ -503,7 +506,7 @@ class Dinleyici:
                 self.risk_isle(o, True, alma)
 
     async def _rest_dolum_al(self, i: Izlenen, bas_fn: Callable[[int], int], onek: str) -> tuple[list[dict] | None, int, str | None]:
-        """Bir adresin `userFillsByTime` dolumları: her istek arası ≥ `rest_istek_ara_sn` (ortak), 429-ağ hatasında en çok 3 yeniden deneme (2 / 5 / 15 sn). `to_thread` korunur.
+        """Bir adresin `userFillsByTime` dolumları: her istek arası ≥ `rest_dolum_ara_sn` (dolgu + hakem ortak), 429-ağ hatasında en çok 3 yeniden deneme (2 / 5 / 15 sn). `to_thread` korunur.
         Döner (dolumlar, bitiş_ms, None) ya da (None, bitiş_ms, SON hata türü). Her hata journal'a tek satır uyarı olarak yazılır."""
         tur, bit = "Bilinmiyor", self.saat_ms()
         for k in range(len(self.ayar.rest_bekleme_sn) + 1):
@@ -561,16 +564,27 @@ class Dinleyici:
 
     async def rest_karsilastir(self, yeniden: bool = True) -> None:
         """REST hakem: her adres için son 2 tur penceresi. Adres hatası (3 yeniden deneme sonrası) `genel.hakem_hata` (+ `hakem_hata_tur`); o adresin penceresi sonraki turda (pencere 2 tur) yeniden kapsanır.
-        ASLA istisna yükseltmez (eski davranış: tek 429 oturumu kopma sayıyordu). `yeniden=False`: kapanış turu — bekleme/yeniden deneme yok."""
+        ASLA istisna yükseltmez (eski davranış: tek 429 oturumu kopma sayıyordu). `yeniden=False`: KAPANIŞ turu — bekleme/yeniden deneme yok ve en fazla `kapanis_sinir_sn`;
+        yetişmeyen adresler `genel.kapanis_atlanan` (servis durdurma süresi aşılmasın)."""
         dolgu = self._dolgu_gorevi
         if yeniden and dolgu is not None and not dolgu.done():
             await asyncio.wait({dolgu})       # önce dolgu: hakem aynı aralıktaki dolumları "kopma aralığı kaçanı" diye görülmüş işaretlemesin (dolgu onları kurtaracak)
         eski = self.ayar
         if not yeniden:
             self.ayar = replace(eski, rest_bekleme_sn=())
+        dongu = asyncio.get_running_loop()
+        son = None if yeniden else dongu.time() + eski.kapanis_sinir_sn
         try:
-            for i in self.liste:
-                dolumlar, bit, tur = await self._rest_dolum_al(i, lambda b: b - int(2 * eski.rest_aralik_sn * 1000), "hakem")
+            for sira, i in enumerate(self.liste):
+                kalan = None if son is None else son - dongu.time()
+                if kalan is not None and kalan <= 0:
+                    self.olcum.genel["kapanis_atlanan"] += len(self.liste) - sira
+                    break
+                try:
+                    dolumlar, bit, tur = await asyncio.wait_for(self._rest_dolum_al(i, lambda b: b - int(2 * eski.rest_aralik_sn * 1000), "hakem"), timeout=kalan)
+                except asyncio.TimeoutError:      # sınır bu adresin ortasında doldu: bu ve kalan adresler atlanır
+                    self.olcum.genel["kapanis_atlanan"] += len(self.liste) - sira
+                    break
                 if dolumlar is None:
                     self.olcum.genel["hakem_hata"] += 1
                     self._hata_say("hakem", tur or "Bilinmiyor")
@@ -651,12 +665,14 @@ class Dinleyici:
                         except Exception:  # noqa: BLE001
                             pass
         finally:
-            isler = [*self._bas_iptal(), *(g for g in (self._dolgu_gorevi, self._hakem_gorevi) if g is not None)]
-            for g in isler:
-                g.cancel()
-            await asyncio.gather(*isler, return_exceptions=True)
-            await self.rest_karsilastir_guvenli()
-            self.ozet_yaz()
+            try:
+                isler = [*self._bas_iptal(), *(g for g in (self._dolgu_gorevi, self._hakem_gorevi) if g is not None)]
+                for g in isler:
+                    g.cancel()
+                await asyncio.gather(*isler, return_exceptions=True)
+                await self.rest_karsilastir_guvenli()
+            finally:
+                self.ozet_yaz()               # son özet HER durumda yazılır (kapanış turu hata verse / iptal edilse de)
         return self.ozet()
 
     async def rest_karsilastir_guvenli(self) -> None:

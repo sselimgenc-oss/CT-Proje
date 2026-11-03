@@ -18,7 +18,7 @@ def h429():
 
 
 def ayar(**ek):
-    return d.Ayar(**{**dict(rest_istek_ara_sn=0.0, rest_bekleme_sn=(0.01, 0.01, 0.01), sure_sn=0.5, geri_cekilme_ilk_sn=0.01, geri_cekilme_max_sn=0.02, rest_tolerans_ms=0), **ek})
+    return d.Ayar(**{**dict(rest_dolum_ara_sn=0.0, rest_poz_ara_sn=0.0, rest_bekleme_sn=(0.01, 0.01, 0.01), sure_sn=0.5, geri_cekilme_ilk_sn=0.01, geri_cekilme_max_sn=0.02, rest_tolerans_ms=0), **ek})
 
 
 class Canli(SahteWS):
@@ -58,7 +58,8 @@ def test_istek_aralik_ortak_sayac_en_az_ara_birakir():
     t0 = time.monotonic()
     r.bekle(); r.bekle(); asyncio.run(r.abekle())                  # eşzamanlı/ardışık üç kullanıcı aynı sayacı paylaşır
     assert time.monotonic() - t0 >= 0.1 - 0.005
-    assert d.Ayar().rest_istek_ara_sn == 0.5 and d.Ayar().rest_bekleme_sn == (2.0, 5.0, 15.0)
+    a = d.Ayar()
+    assert (a.rest_dolum_ara_sn, a.rest_poz_ara_sn, a.rest_bekleme_sn, a.kapanis_sinir_sn) == (1.5, 0.5, (2.0, 5.0, 15.0), 60.0)       # lider kararı: ayrı ayarlar
 
 
 # ------------------------------------------------------------------ (a) 429 -> yeniden deneme -> dolum kurtarılır
@@ -168,3 +169,69 @@ def test_c_dolgu_surerken_gelen_dolumlar_olculur(tmp_path):
     ozet = asyncio.run(din.calis())
     assert ozet["toplam"]["aaaa"]["n"] == 2 and ozet["genel"]["trades_mesaj"] == 2           # dolgu sürerken gelen canlı dolum ölçüldü
     assert ozet["toplam"]["aaaa"]["gecikme_max_sn"] <= 0.5 and ozet["genel"]["dolgu"] == 2   # gecikme dolgu beklemesiyle şişmedi; dolgu sonra tamamlandı
+
+
+# ------------------------------------------------------------------ kapanış turu en fazla 60 sn (testte küçültülmüş), özet her durumda yazılır
+def _alti_adres():
+    return [d.Izlenen(f"t{n}", "0x" + str(n) * 40) for n in range(1, 7)]
+
+
+def _kapanis(tmp_path, post, **ek):
+    saat = Saat(ms=1_000_000)
+    din = d.Dinleyici(_alti_adres(), ["BTC"], None, post, tmp_path, ayar(sure_sn=0.0, rest_dolum_ara_sn=0.25, kapanis_sinir_sn=0.6, **ek), saat.saat_ms)
+
+    async def baglan():
+        return Canli([], "bekle", saat)
+    din.baglan = baglan
+    t = time.monotonic()
+    ozet = asyncio.run(din.calis())
+    return din, ozet, time.monotonic() - t
+
+
+def test_kapanis_turu_sinirda_kesilir_ozet_yazilir_atlanan_dogru(tmp_path):
+    cagrilar = []
+
+    def post(yuk):
+        cagrilar.append(yuk["user"])
+        return []
+    din, ozet, sure = _kapanis(tmp_path, post)
+    # 0,25 sn aralıkla istekler 0 / 0,25 / 0,5 sn'de başlar (3 adres biter); 4. istek 0,75 sn'de başlayacaktı > 0,6 sn sınır -> kalan 3 adres atlanır
+    assert ozet["genel"]["kapanis_atlanan"] == 3 and len(set(cagrilar[:3])) == 3
+    assert sure < 1.5                                              # 6 adres × 0,25 = 1,5 sn sürecekti: sınırda kesildi
+    yazilan = json.loads((tmp_path / "ozet.json").read_text())
+    assert yazilan["genel"]["kapanis_atlanan"] == 3 and "toplam" in yazilan and "0x" not in (tmp_path / "ozet.json").read_text()
+
+
+def test_kapanis_turu_yetisirse_atlanan_sifir(tmp_path):
+    saat = Saat(ms=1_000_000)
+    din = d.Dinleyici(IZ, ["BTC"], None, lambda y: [], tmp_path, ayar(sure_sn=0.0, rest_dolum_ara_sn=0.05, kapanis_sinir_sn=5.0), saat.saat_ms)
+
+    async def baglan():
+        return Canli([], "bekle", saat)
+    din.baglan = baglan
+    ozet = asyncio.run(din.calis())
+    assert ozet["genel"]["kapanis_atlanan"] == 0 and (tmp_path / "ozet.json").is_file()
+
+
+def test_kapanis_turu_hata_verse_de_ozet_yazilir(tmp_path):
+    saat = Saat(ms=1_000_000)
+    din = d.Dinleyici(IZ, ["BTC"], None, lambda y: [], tmp_path, ayar(sure_sn=0.0), saat.saat_ms)
+
+    async def baglan():
+        return Canli([], "bekle", saat)
+
+    async def bozuk(yeniden=True):
+        raise RuntimeError("beklenmeyen")
+    din.baglan, din.rest_karsilastir = baglan, bozuk
+    ozet = asyncio.run(din.calis())
+    assert ozet["genel"]["error"] == 1 and (tmp_path / "ozet.json").is_file()
+
+
+def test_kapanis_turunda_yeniden_deneme_yok(tmp_path):
+    cagrilar = []
+
+    def post(yuk):
+        cagrilar.append(1)
+        raise h429()
+    din, ozet, _ = _kapanis(tmp_path, post)
+    assert ozet["genel"]["hakem_yeniden_deneme"] == 0 and ozet["genel"]["hakem_hata"] >= 1 and ozet["genel"]["hakem_hata_tur"] == {"HTTP 429": ozet["genel"]["hakem_hata"]}

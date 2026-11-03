@@ -80,7 +80,7 @@ def trades_a(tid, ms, yon="B", sz=5):
     return {"channel": "trades", "data": [{"coin": "BTC", "side": yon, "px": "100", "sz": str(sz), "time": ms, "tid": tid, "users": [A, kars] if yon == "B" else [kars, A]}]}
 
 
-HIZLI = dict(baslangic_bekleme_sn=(0.01, 0.01, 0.01), rest_istek_ara_sn=0.0, baslangic_yeniden_sn=0.05)
+HIZLI = dict(baslangic_bekleme_sn=(0.01, 0.01, 0.01), rest_dolum_ara_sn=0.0, rest_poz_ara_sn=0.0, baslangic_yeniden_sn=0.05)
 
 
 def Http429(mesaj=""):
@@ -220,7 +220,7 @@ def test_dinleyici_hala_pandas_gerektirmez():
 # ------------------------------------------------------------------ 429 koruması ve arka plan (lider kararı)
 def test_varsayilan_bekleme_ve_aralik_lider_karari():
     a = d.Ayar()
-    assert (a.baslangic_bekleme_sn, a.rest_istek_ara_sn, a.baslangic_yeniden_sn, a.rest_bekleme_sn) == ((2.0, 5.0, 15.0), 0.5, 300.0, (2.0, 5.0, 15.0))
+    assert (a.baslangic_bekleme_sn, a.rest_poz_ara_sn, a.baslangic_yeniden_sn, a.rest_bekleme_sn) == ((2.0, 5.0, 15.0), 0.5, 300.0, (2.0, 5.0, 15.0))
 
 
 def test_a_429_yeniden_deneme_basari(tmp_path):
@@ -309,7 +309,7 @@ def test_istekler_arasi_en_az_ara_suresi(tmp_path):
             zamanlar.append(_t.monotonic())
             return durum()
         return []
-    kos(post, [[]], tmp_path, dex_adlari=["xyz", "flx"], ayar_ek=dict(rest_istek_ara_sn=0.05), sure=0.5)
+    kos(post, [[]], tmp_path, dex_adlari=["xyz", "flx"], ayar_ek=dict(rest_poz_ara_sn=0.05), sure=0.5)
     assert len(zamanlar) >= 3 and all(b - a >= 0.045 for a, b in zip(zamanlar, zamanlar[1:]))   # 3 dex isteği (ana + 2) en az 50 ms arayla
 
 
