@@ -98,6 +98,38 @@ def _sabit_tutar_signed(sign: float, signed: float, before_leader: float, own: f
     return sign * abs(own) * f
 
 
+def _risk_kirp(coin: str, signed: float, own: float, price: float, when: int, held: dict[str, float], entry: dict[str, float], market: "Market",
+               realized_so_far: float, base_usd: float, lim: dict, kirpma: list[dict]) -> float:
+    """v4 H5 risk sınırları (sabit tutar modu): dolumun kopyaya etkisi (`signed`, defter birimi = coin / ``base_usd``) YALNIZ artış kısmında (açılış / ekleme / ters dönüşte
+    yeni açılan kısım) sınırlanır; azaltma ve kapama serbesttir. Sınırlar ``lim`` içinde ($ = ``base_usd`` ölçeği; `kurallar.yaml` `risk_dry_run`, kodda sayı yok):
+    ``emir_tavan_usd`` (emir başına artış), ``trader_tavan_usd`` (kopyanın brüt pozisyonu), ``azami_kaldirac`` ({coin: HL azami kaldıraç}; verilmişse başlangıç teminatı
+    Σ notional / azami_kaldirac ≤ kopya özsermayesi; coin'in azami kaldıracı yoksa bu sınır o coin için uygulanmaz). Kırpılan her dolum ``kirpma``'ya nedenle yazılır;
+    ``neden`` en kısıtlayıcı sınırdır (emir_tavani | trader_tavani | kaldirac_siniri)."""
+    kapanan = min(abs(own), abs(signed)) if own * signed < 0 else 0.0
+    artis = abs(signed) - kapanan
+    if artis <= 1e-15 or price <= 0:
+        return signed
+    olcek = base_usd / float(lim["referans_kasa_usd"])             # sınırlar referans kasa ölçeğinde; base_usd farklıysa orantılanır
+    usd = lambda q: q * price * base_usd                          # noqa: E731 - defter birimi -> $
+    mark = lambda c: market.mark(c, when) or entry.get(c) or price     # noqa: E731
+    brut = sum(abs(q) * mark(c) * base_usd for c, q in held.items() if abs(q) > 1e-15) - usd(kapanan)
+    istenen = usd(artis)
+    izinler = {"emir_tavani": float(lim["emir_tavan_usd"]) * olcek,
+               "trader_tavani": max(0.0, float(lim["trader_tavan_usd"]) * olcek - max(0.0, brut))}
+    azami = lim.get("azami_kaldirac") or {}
+    if azami.get(coin):
+        unrealized = sum(q * (mark(c) - entry[c]) for c, q in held.items() if abs(q) > 1e-15 and c in entry)
+        ozsermaye = max(0.0, base_usd * (1.0 + realized_so_far + unrealized))
+        teminat = sum(abs(q) * mark(c) * base_usd / float(azami[c]) for c, q in held.items() if abs(q) > 1e-15 and azami.get(c)) - usd(kapanan) / float(azami[coin])
+        izinler["kaldirac_siniri"] = max(0.0, ozsermaye - max(0.0, teminat)) * float(azami[coin])
+    neden, izin = min(izinler.items(), key=lambda kv: kv[1])
+    if izin >= istenen - 1e-9:
+        return signed
+    yon = 1.0 if signed > 0 else -1.0
+    kirpma.append({"coin": coin, "zaman_ms": when, "istenen_usd": istenen, "uygulanan_usd": max(0.0, izin), "neden": neden})
+    return yon * (kapanan + max(0.0, izin) / price / base_usd)
+
+
 def _zorla_kapat(coin: str, hour: int, mark: float, neden: str, held: dict[str, float], entry: dict[str, float],
                  acilis: dict[str, int], son_kontrol: dict[str, int], rate: float, realized: float, costs: float,
                  flow: dict[int, float], timeline: dict[str, list[tuple[int, float, float]]],
@@ -392,7 +424,7 @@ def capital_scale(account: Any):
 def copy_ledger(fills: list[dict], market: Market, account: Any, delay_min: int, start_ms: int, end_ms: int,
                 rates: FundingRates | None = None, rules: dict | None = None, daily: bool = False,
                 tutar_egrisi: Any = None, base_usd: float = 1000.0, style: str | None = None,
-                islem_kaydi: bool = False) -> dict[str, Any]:
+                islem_kaydi: bool = False, risk_limitleri: dict | None = None, acik_liste: bool = False) -> dict[str, Any]:
     """Tek kopya defteri. ``fills``: kaynak dolumlar (coin, side A/B, sz, startPosition, time, px), zamana göre sıralı olmak zorunda değil.
 
     Döner: ``net`` (gerçekleşen − maliyet + funding + pencere sonu gerçekleşmemiş K/Z; hesap değerine oranla), ``missing`` (eksik dolum),
@@ -409,7 +441,11 @@ def copy_ledger(fills: list[dict], market: Market, account: Any, delay_min: int,
     ``[{"coin","acilis_ms","kapanis_ms","sonuc_usd","acilan_usd","neden","gecerli"}]`` (``base_usd`` ölçeğinde $; sonuç = gerçekleşen K/Z −
     taker/kayma maliyeti + funding; ``neden`` trader | zarar_kes | kar_al | likidasyon). ``gecerli`` ⇔ işlemi açan trader dolumu pencereden
     (``start_ms``) sonra ve trader yatay iken (ya da ters dönüşle) açıldı — miras pozisyon ya da kaçırılmış açılış değil — ve işlem açıkken
-    hiçbir dolum fiyatsız (``missing``) kalmadı. Açık işlemler listelenmez.
+    hiçbir dolum fiyatsız (``missing``) kalmadı. Açık işlemler ``islemler``'de listelenmez.
+
+    ``risk_limitleri`` (v4; yalnız sabit tutar modunda, bkz. ``_risk_kirp``): verilmezse hesap v3 ile BİREBİR aynıdır; verilirse artış dolumları sınırlanır ve
+    sonuca ``risk_kirpma`` ([{coin, zaman_ms, istenen_usd, uygulanan_usd, neden}]) eklenir. ``acik_liste=True``: sonuca ``acik_pozisyonlar`` eklenir (pencere sonu açık kopya
+    pozisyonları: coin, yon, buyukluk_usd, giris, son, kz_usd, acilis_ms; `base_usd` ölçeğinde $, K/Z funding hariç).
     """
     if tutar_egrisi is None:
         scale = capital_scale(account)
@@ -432,6 +468,8 @@ def copy_ledger(fills: list[dict], market: Market, account: Any, delay_min: int,
     suppressed: set[str] = set()      # zorunlu çıkıştan sonra trader pozisyonu sıfırlanana dek kopyalanmaz
     kayit = _IslemKaydi(start_ms) if islem_kaydi else None
     zorunlu: list[dict] | None = [] if islem_kaydi else None
+    kirpma: list[dict] = []           # v4 risk sınırı kırpmaları
+    tepe_poz = tepe_brut = 0.0        # pencere boyunca en büyük tek coin notional'ı ve brüt notional (yürütme fiyatında, `base_usd` ölçeğinde $)
     islenen = 0
     for fill in sorted(fills, key=_by_time):   # kararlı sıralama: aynı ms'deki dolumlar API sırasını korur
         coin = fill["coin"]
@@ -482,6 +520,8 @@ def copy_ledger(fills: list[dict], market: Market, account: Any, delay_min: int,
         else:
             signed = _sabit_tutar_signed(sign, signed, before_leader, own, price, when, held, entry, market,
                                          realized, tutar_egrisi, base_usd)
+            if risk_limitleri is not None:
+                signed = _risk_kirp(coin, signed, own, price, when, held, entry, market, realized, base_usd, risk_limitleri, kirpma)
         if abs(signed) < 1e-15:
             continue
         executed += 1
@@ -530,6 +570,8 @@ def copy_ledger(fills: list[dict], market: Market, account: Any, delay_min: int,
                 if own == 0.0 or own * after < 0:   # taze açılış ya da flip: risk saati sıfırlanır
                     acilis[coin] = when
                 son_kontrol[coin] = when
+                tepe_poz = max(tepe_poz, abs(after) * price * base_usd)
+                tepe_brut = max(tepe_brut, sum(abs(q) * (price if c == coin else (market.mark(c, when) or entry.get(c) or price)) for c, q in held.items()) * base_usd)
     if tutar_egrisi is not None:
         realized, costs = _risk_denetle(held, entry, acilis, son_kontrol, market, end_ms, rules, style, rate,
                                         realized, costs, flow, timeline, olaylar, suppressed, zorunlu)
@@ -591,6 +633,18 @@ def copy_ledger(fills: list[dict], market: Market, account: Any, delay_min: int,
                               "funding": funding_total, "realized": realized, "unrealized_end": unrealized_end, "mark_missing": unknown_end,
                               "mark_time": mark_time, "acik_pozisyon_sayisi": len(open_positions), "acik_pozisyon_notional": open_notional,
                               "olaylar": olaylar}
+    if tutar_egrisi is not None:
+        result.update({"tepe_pozisyon_usd": tepe_poz, "tepe_brut_usd": tepe_brut})
+    if risk_limitleri is not None:
+        result["risk_kirpma"] = kirpma
+    if acik_liste:
+        acik_poz = []
+        for coin, size in sorted(open_positions.items()):
+            found = market.mark_at(coin, end_ms)
+            acik_poz.append({"coin": coin, "yon": "long" if size > 0 else "short", "buyukluk_usd": None if found is None else abs(size) * found[1] * base_usd,
+                             "giris": entry.get(coin), "son": None if found is None else found[1],
+                             "kz_usd": None if found is None else size * (found[1] - entry[coin]) * base_usd, "acilis_ms": acilis.get(coin)})
+        result["acik_pozisyonlar"] = acik_poz
     if daily:
         days: dict[int, float] = {}
         previous_u = 0.0
