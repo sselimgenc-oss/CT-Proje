@@ -616,6 +616,11 @@ function kasaKartiniCiz(takim) {
   const takimAdEl = document.getElementById('kasa-takim-ad');
 
   if (takimAdEl) takimAdEl.textContent = kacis(takim.ad);
+  // Ölçek notları motordan gelir (pano.json): kasa "N × 1.000 $ sanal (trader başına)"; açık işlemler "açık kopya pozisyonu henüz motorda yok"
+  const kasaNotEl = document.getElementById('kasa-olcek-notu');
+  if (kasaNotEl) kasaNotEl.textContent = kasa.olcek_notu ? String(kasa.olcek_notu) : '';
+  const acikNotEl = document.getElementById('acik-olcek-notu');
+  if (acikNotEl) acikNotEl.textContent = (panoVerisi.olcek && panoVerisi.olcek.acik_islemler) ? String(panoVerisi.olcek.acik_islemler) : '';
   if (bakiyeEl) bakiyeEl.textContent = formatPara(kasa.bakiye_usd);
 
   if (degisimEl) {
@@ -1308,17 +1313,13 @@ function toplamSatiriniCiz(acikListesi) {
   const tfoot = document.getElementById('acik-islemler-foot');
   if (!tfoot) return;
 
-  let toplamTeminat = 0;
-  let toplamBuyukluk = 0;
-  let toplamKzUsd = 0;
-
-  acikListesi.forEach(pos => {
-    toplamTeminat += Number(pos.teminat_usd) || 0;
-    toplamBuyukluk += Number(pos.buyukluk_usd) || 0;
-    toplamKzUsd += Number(pos.kz_usd) || 0;
-  });
-
-  const toplamKzOran = toplamTeminat > 0 ? (toplamKzUsd / toplamTeminat) : 0;
+  // Eksik alan uydurulmaz: bir satırda değer yoksa (null) toplam da yoktur ("—"); sıfır gösterilmez.
+  const topla = (alan) => (acikListesi.length && acikListesi.every(p => typeof p[alan] === 'number' && isFinite(p[alan])))
+    ? acikListesi.reduce((t, p) => t + p[alan], 0) : null;
+  const toplamTeminat = topla('teminat_usd');
+  const toplamBuyukluk = topla('buyukluk_usd');
+  const toplamKzUsd = topla('kz_usd');
+  const toplamKzOran = (toplamKzUsd !== null && toplamTeminat !== null && toplamTeminat > 0) ? (toplamKzUsd / toplamTeminat) : null;
   const kzCls = kzSinifi(toplamKzUsd);
 
   tfoot.innerHTML = `

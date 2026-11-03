@@ -24,9 +24,9 @@ def durum():
     poz_a = [{"coin": "BTC", "yon": "long", "giris": 68000.0, "buyukluk_usd": 50000.0, "kaldirac": 5.0, "anlik_kz_usd": 2000.0, "acilis": "2026-11-03T02:00:00Z"},
              {"coin": "ETH", "yon": "short", "giris": 2600.0, "buyukluk_usd": 20000.0, "kaldirac": 4.0, "anlik_kz_usd": -500.0, "acilis": "2026-11-02T20:00:00Z"}]
     poz_b = [{"coin": "SOL", "yon": "long", "giris": 150.0, "buyukluk_usd": 40000.0, "kaldirac": 10.0, "anlik_kz_usd": 1000.0, "acilis": "2026-11-03T03:00:00Z"}]
-    v3_a = {"surum": "v3", "baslangic_usd": 1000, "bakiye_usd": 1100.0, "toplam": 0.1, "egri": [["2026-11-01", 1000.0], ["2026-11-02", 1050.0], ["2026-11-03", 1100.0]],
+    v3_a = {"surum": "v3", "baslangic_usd": 1000, "bakiye_usd": 1100.0, "getiri": 0.1, "toplam": 0.1, "egri": [["2026-11-01", 1000.0], ["2026-11-02", 1050.0], ["2026-11-03", 1100.0]],
             "kapanan_islemler": [{"coin": "BTC", "acilis": "2026-11-03T01:00:00Z", "kapanis": "2026-11-03T05:00:00Z", "sonuc_usd": 20.0, "getiri": 0.2, "neden": "trader", "gecerli": True}]}
-    v3_b = {"surum": "v3", "baslangic_usd": 1000, "bakiye_usd": 990.0, "toplam": -0.01, "egri": [["2026-11-01", 1000.0], ["2026-11-02", 995.0], ["2026-11-03", 990.0]],
+    v3_b = {"surum": "v3", "baslangic_usd": 1000, "bakiye_usd": 990.0, "getiri": -0.01, "toplam": -0.01, "egri": [["2026-11-01", 1000.0], ["2026-11-02", 995.0], ["2026-11-03", 990.0]],
             "kapanan_islemler": [{"coin": "SOL", "acilis": "2026-11-02T08:00:00Z", "kapanis": "2026-11-02T10:00:00Z", "sonuc_usd": -5.0, "getiri": -0.05, "neden": "zarar_kes", "gecerli": True}]}
     return {"surum": 1, "uretildi": REF, "traderlar": [trader(A, "aaaa", 10000.0, poz_a, v3_a), trader(B, "bbbb", 20000.0, poz_b, v3_b)]}
 
@@ -46,29 +46,31 @@ def test_altin_ornek_iki_takim_uc_acik_iki_kapanmis():
     i, y = takim(v, "İlk 11"), takim(v, "Yedek 11")
     # İlk 11 / kasa: 1.000 -> 1.100 (+100 $, +%10)
     assert i["kasa"] == {"baslangic_usd": 1000.0, "bakiye_usd": 1100.0, "degisim_usd": 100.0, "degisim_oran": 0.1,
-                         "egri": [["2026-11-01T00:00:00Z", 1000.0], ["2026-11-02T00:00:00Z", 1050.0], ["2026-11-03T00:00:00Z", 1100.0]]}
-    # açık işlemler (ölçek 0,1): BTC büyüklük 5.000, teminat 1.000, K/Z 200 $ (+%20 teminata); ETH 2.000 / 500 / −50 $ (−%10)
+                         "egri": [["2026-11-01T00:00:00Z", 1000.0], ["2026-11-02T00:00:00Z", 1050.0], ["2026-11-03T00:00:00Z", 1100.0]],
+                         "olcek_notu": "1 × 1.000 $ sanal (trader başına)"}
+    # açık işlemler: yalnız trader pozisyon bilgisi (lider kararı); $ alanları ve kz_oran null — oranlı ölçek sayıları yayımlanmaz
     btc, eth = (next(a for a in i["acik"] if a["coin"] == c) for c in ("BTC", "ETH"))
-    assert (btc["buyukluk_usd"], btc["teminat_usd"], btc["kz_usd"], btc["kz_oran"], btc["kaldirac"], btc["trader"]) == (5000.0, 1000.0, 200.0, 0.2, 5.0, "aaaa")
-    assert (eth["buyukluk_usd"], eth["teminat_usd"], eth["kz_usd"], eth["kz_oran"]) == (2000.0, 500.0, -50.0, -0.1)
-    assert btc["son"] is None and btc["likidasyona_uzaklik_oran"] is None                              # motorda yok -> null
+    assert (btc["coin"], btc["yon"], btc["kaldirac"], btc["trader"], btc["acilis"]) == ("BTC", "long", 5.0, "aaaa", "2026-11-03T02:00:00Z")
+    assert (eth["yon"], eth["kaldirac"]) == ("short", 4.0)
+    for a in i["acik"] + takim(v, "Yedek 11")["acik"]:
+        assert all(a[k] is None for k in ("teminat_usd", "buyukluk_usd", "giris", "son", "kz_usd", "kz_oran", "likidasyona_uzaklik_oran")), a
     o = i["ozet"]
-    assert (o["acik_islem"], o["acik_teminat_usd"], o["acik_kz_usd"]) == (2, 1500.0, 150.0)
+    assert (o["acik_islem"], o["acik_teminat_usd"], o["acik_kz_usd"]) == (2, None, None)                  # acik'tan türeyen $ alanları null; sayı trader pozisyon adedi
     assert (o["bugun_acilan"], o["bugun_kapanan"], o["son24_islem"], o["son24_kazanma_orani"]) == (2, 1, 1, 1.0)       # BTC açık + BTC kapanan bugün açıldı
     assert (o["kadro_dolu"], o["kadro_toplam"], o["nakit_usd"], o["islem_basi_usd"]) == (1, 2, None, None)
+    assert i["kasa"]["olcek_notu"] == "1 × 1.000 $ sanal (trader başına)" and "henüz motorda yok" in v["olcek"]["acik_islemler"]
     # kapanan: ana para = 20 / 0,2 = 100 $; neden trader -> trader_kapatti
     assert i["kapanan"] == [{"coin": "BTC", "yon": None, "kaldirac": None, "trader": "aaaa", "acilis": "2026-11-03T01:00:00Z", "kapanis": "2026-11-03T05:00:00Z",
                              "neden": "trader_kapatti", "ana_para_usd": 100.0, "kz_usd": 20.0, "kz_oran": 0.2}]
     m = i["metrik"]
     assert m["bugun_oran"] == pytest.approx(50 / 1050, abs=1e-6) and m["toplam_oran"] == 0.1 and m["hafta_oran"] is None and m["ay_oran"] is None
-    assert m["maruziyet_oran"] == pytest.approx(1500 / 1100, abs=1e-6) and (m["kazanma_orani"], m["ort_kazanc_oran"], m["beklenti_oran"], m["islem_sayisi"]) == (1.0, 0.2, 0.2, 1)
+    assert m["maruziyet_oran"] is None and (m["kazanma_orani"], m["ort_kazanc_oran"], m["beklenti_oran"], m["islem_sayisi"]) == (1.0, 0.2, 0.2, 1)
     assert m["kar_faktoru"] is None and m["ort_kayip_oran"] is None                                      # kayıp yok -> tanımsız
     assert i["seriler"]["bakiye"][-1] == ["2026-11-03", 1100.0] and i["seriler"]["kumulatif_kz"][-1] == ["2026-11-03", 100.0]
     assert i["seriler"]["gunluk_kz"] == [["2026-11-02", 0.05], ["2026-11-03", 0.047619]] and i["seriler"]["dusus"][-1] == ["2026-11-03", 0.0]
     assert i["traderlar"] == [{"ad": "aaaa", "islem": 1, "kazanma_orani": 1.0, "net_oran": 0.1, "son_islem": "2026-11-03T05:00:00Z"}]
-    # Yedek 11 (ölçek 0,05): SOL büyüklük 2.000, teminat 200, K/Z 50 $ (+%25); kasa 1.000 -> 990 (−10 $, −%1)
-    s = y["acik"][0]
-    assert (s["buyukluk_usd"], s["teminat_usd"], s["kz_usd"], s["kz_oran"]) == (2000.0, 200.0, 50.0, 0.25)
+    # Yedek 11: SOL açık (yalnız trader bilgisi); kasa 1.000 -> 990 (−10 $, −%1)
+    assert y["acik"][0]["coin"] == "SOL" and y["acik"][0]["kaldirac"] == 10.0
     assert (y["kasa"]["bakiye_usd"], y["kasa"]["degisim_usd"], y["kasa"]["degisim_oran"]) == (990.0, -10.0, -0.01)
     assert (y["ozet"]["bugun_acilan"], y["ozet"]["bugun_kapanan"], y["ozet"]["son24_islem"], y["ozet"]["son24_kazanma_orani"]) == (1, 0, 0, None)
     assert (y["metrik"]["kazanma_orani"], y["metrik"]["kar_faktoru"], y["metrik"]["ort_kayip_oran"]) == (0.0, 0.0, -0.05)
@@ -79,23 +81,19 @@ def test_altin_ornek_iki_takim_uc_acik_iki_kapanmis():
 
 def test_eksik_alan_null_uydurulmaz():
     d = durum()
-    p = d["traderlar"][0]["pozisyonlar"][0]
-    del p["anlik_kz_usd"], p["kaldirac"]
-    del d["traderlar"][1]["sanal_kopya_v3"]["toplam"]
+    del d["traderlar"][0]["pozisyonlar"][0]["kaldirac"]
+    del d["traderlar"][1]["sanal_kopya_v3"]["getiri"]
     d["traderlar"][1]["sanal_kopya_v3"]["kapanan_islemler"][0]["getiri"] = None
     v = pano_veri.pano_uret(d, LISTE, SNAP, SIMDI)
     btc = next(a for a in takim(v, "İlk 11")["acik"] if a["coin"] == "BTC")
-    assert (btc["kz_usd"], btc["kz_oran"], btc["teminat_usd"], btc["kaldirac"]) == (None, None, None, None) and btc["buyukluk_usd"] == 5000.0
-    o = takim(v, "İlk 11")["ozet"]
-    assert o["acik_teminat_usd"] is None and o["acik_kz_usd"] is None and o["acik_islem"] == 2          # biri eksikse toplam null; sayı sıfır değil
-    assert takim(v, "İlk 11")["metrik"]["maruziyet_oran"] is None
+    assert btc["kaldirac"] is None and btc["coin"] == "BTC"
     y = takim(v, "Yedek 11")
     assert y["traderlar"][0]["net_oran"] is None and y["kapanan"][0]["ana_para_usd"] is None and y["kapanan"][0]["kz_oran"] is None and y["kapanan"][0]["kz_usd"] == -5.0
     # v3 hiç yoksa takım verisi null (0 değil)
     d2 = durum()
     d2["traderlar"][0]["sanal_kopya_v3"] = {"surum": "v3", "durum": "hesaplanamadi"}
     t = takim(pano_veri.pano_uret(d2, LISTE, SNAP, SIMDI), "İlk 11")
-    assert t["kasa"]["bakiye_usd"] is None and t["ozet"]["acik_islem"] is None and t["acik"] == [] and t["ozet"]["kadro_dolu"] == 0
+    assert t["kasa"]["bakiye_usd"] is None and t["kasa"]["olcek_notu"] is None and t["ozet"]["acik_islem"] is None and t["acik"] == [] and t["ozet"]["kadro_dolu"] == 0
 
 
 def test_baslamamis_uye_t0_gelecekte_toplamlara_girmez():
@@ -114,10 +112,17 @@ def test_acilis_bos_metin_null_olur():
     assert next(a for a in takim(pano_veri.pano_uret(d, LISTE, SNAP, SIMDI), "İlk 11")["acik"] if a["coin"] == "BTC")["acilis"] is None
 
 
+def test_net_oran_getiri_kullanir_tasfiyede_toplam_degil():
+    """Tasfiye olan kopyada `toplam` (gerçekleşen+açık) −0,888 olabilir ama bakiye 0'dır (`getiri` −1,0): pano bakiye ile tutarlı `getiri`'yi gösterir."""
+    d = durum()
+    d["traderlar"][0]["sanal_kopya_v3"].update({"bakiye_usd": 0.0, "getiri": -1.0, "toplam": -0.888, "tasfiye": True})
+    assert takim(pano_veri.pano_uret(d, LISTE, SNAP, SIMDI), "İlk 11")["traderlar"][0]["net_oran"] == -1.0
+
+
 def test_bos_takim():
     v = pano_veri.pano_uret(durum(), LISTE, SNAP, SIMDI)
     paf = takim(v, "PAF")
-    assert paf["kasa"] == {"baslangic_usd": None, "bakiye_usd": None, "degisim_usd": None, "degisim_oran": None, "egri": []}
+    assert paf["kasa"] == {"baslangic_usd": None, "bakiye_usd": None, "degisim_usd": None, "degisim_oran": None, "egri": [], "olcek_notu": None}
     assert paf["acik"] == [] and paf["kapanan"] == [] and paf["traderlar"] == [] and all(x == [] for x in paf["seriler"].values())
     assert (paf["ozet"]["kadro_dolu"], paf["ozet"]["kadro_toplam"], paf["ozet"]["acik_islem"]) == (0, 1, None)
     assert all(x is None for x in paf["metrik"].values())
@@ -139,7 +144,7 @@ def test_bicim_ornek_veri_ile_ayni_ek_alanlar_haric_ve_gizlilik():
     assert set(v) - set(ornek) == {"tazelik", "olcek"} and set(ornek) <= set(v)
     for ad in ("İlk 11", "Yedek 11"):
         t, o = takim(v, ad), ornek["takimlar"][0]
-        assert set(t) == set(o) and all(set(t[k]) == set(o[k]) for k in ("kasa", "ozet", "metrik", "seriler"))
+        assert set(t) == set(o) and all(set(t[k]) == set(o[k]) for k in ("ozet", "metrik", "seriler")) and set(t["kasa"]) - set(o["kasa"]) == {"olcek_notu"}
         assert t["acik"] == [] or set(t["acik"][0]) == set(o["acik"][0])
         assert t["kapanan"] == [] or set(t["kapanan"][0]) == set(o["kapanan"][0])
         assert t["traderlar"] == [] or set(t["traderlar"][0]) == set(o["traderlar"][0])
