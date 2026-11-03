@@ -297,7 +297,7 @@ class Dinleyici:
 
     def __init__(self, izlenenler: list[Izlenen], coinler: list[str], baglan: Callable[[], Awaitable[Any]], post: Callable[[dict], Any], cikti: Path,
                  ayar: Ayar | None = None, saat_ms: Callable[[], int] | None = None, mono: Callable[[], float] | None = None, onceki_baslama: int = 0,
-                 risk: RiskDefteri | None = None, risk_gunlugu: KararGunlugu | None = None, dur_yolu: Path | None = None) -> None:
+                 risk: RiskDefteri | None = None, risk_gunlugu: KararGunlugu | None = None, dur_yolu: Path | None = None, dex_adlari: list[str] | None = None) -> None:
         if not izlenenler:
             raise ValueError("izlenen adres listesi boş (fail-closed)")
         self.izlenen = {i.adres: i for i in izlenenler}
@@ -312,6 +312,9 @@ class Dinleyici:
         self.baslangic_ms = self.saat_ms()
         self._dur = asyncio.Event()
         self.risk, self.risk_gunlugu, self.dur_yolu = risk, risk_gunlugu, dur_yolu      # H5: dry-run risk kapısı (None = kapalı)
+        self.dex_adlari = list(dex_adlari or [])
+        if risk is not None:
+            self.olcum.genel.update({"baslangic_poz_okundu": 0, "baslangic_poz_hata": 0})
 
     def durdur(self) -> None:
         self._dur.set()
@@ -329,6 +332,23 @@ class Dinleyici:
         if self.olcum.kopma_bas_ms is not None:
             self.olcum.kopma_araliklari.append((self.olcum.kopma_bas_ms, self.saat_ms()))
             self.olcum.kopma_bas_ms = None
+
+    async def baslangic_pozisyonlari(self) -> None:
+        """H5b: her (yeniden) bağlanmada İlk 11 adreslerinin açık pozisyonlarını REST `clearinghouseState` ile okuyup risk defterine başlangıç/tazeleme olarak verir.
+        Bir adresin okuması başarısızsa o adresin önceki izlemesi KORUNUR, `genel.baslangic_poz_hata` artar; dinleme ve gecikme/kaçan ölçümü ASLA durmaz."""
+        if self.risk is None:
+            return
+        for i in self.liste:
+            if i.ad not in self.risk.ilk11:
+                continue
+            okuma_ms = self.saat_ms()
+            try:
+                pozlar = await asyncio.to_thread(clearinghouse_pozisyonlari, self.post, i.adres, self.dex_adlari)
+            except Exception:       # noqa: BLE001 - ağ / API / yanıt hatası: sayılır, varsayıma düşülür, dinleme sürer
+                self.olcum.genel["baslangic_poz_hata"] += 1
+                continue
+            self.risk.baslangic_ayarla(i.ad, pozlar, okuma_ms)
+            self.olcum.genel["baslangic_poz_okundu"] += 1
 
     def risk_isle(self, o: Olay, canli: bool, simdi_ms: int, kaynak: str | None = None) -> None:
         """H5: yeni (tekilleştirilmiş) dolumu risk defterine verir; karar satırları günlüğe yazılır. Risk hatası dinlemeyi/ölçümü ASLA durdurmaz."""
@@ -446,6 +466,7 @@ class Dinleyici:
                     await self._abone_ol(ws)
                     if len(self.olcum.kopma_araliklari) > onceki_aralik:
                         await self.dolgu(self.olcum.kopma_araliklari[-1])         # H2b: kopmada kaçan işlem = kayıp -> REST ile tamamla
+                    await self.baslangic_pozisyonlari()                           # H5b: trader'ın açık pozisyonları (dolgudan SONRA: REST gerçektir)
                     bekleme = self.ayar.geri_cekilme_ilk_sn
                     await self._oturum(ws)
                 except asyncio.CancelledError:
@@ -488,6 +509,26 @@ async def ws_baglan(ws_url: str = DEFAULT_WS_URL) -> Any:
     except ImportError as hata:
         raise RuntimeError("websockets paketi kurulmalı: pip install -r requirements-dinleyici.txt") from hata
     return await connect(ws_url, open_timeout=20, ping_interval=None, max_size=2 ** 24)       # ping uygulama düzeyinde (HL {"method":"ping"})
+
+
+def clearinghouse_pozisyonlari(post: Callable[[dict], Any], adres: str, dex_adlari: list[str]) -> dict[str, float]:
+    """H5b: REST `clearinghouseState` (ana perp dex + her HIP-3 dex) -> {coin: işaretli miktar (coin birimi, + long / − short)}. Herhangi bir çağrı ya da yanıt bozuksa ValueError/istisna
+    YÜKSELTİR (kısmi sonuç dönmez: çağıran trader'ı "okunamadı" sayar). Spot kopyalanmadığı için okunmaz."""
+    sonuc: dict[str, float] = {}
+    for dex in ["", *dex_adlari]:
+        yuk = {"type": "clearinghouseState", "user": adres}
+        if dex:
+            yuk["dex"] = dex
+        yanit = post(yuk)
+        if not isinstance(yanit, dict) or not isinstance(yanit.get("assetPositions"), list):
+            raise ValueError("clearinghouseState yanıtı geçersiz")
+        for ap in yanit["assetPositions"]:
+            poz = ap.get("position") if isinstance(ap, dict) else None
+            miktar = _sayi(poz.get("szi")) if isinstance(poz, dict) else None
+            if miktar is None or not poz.get("coin"):
+                raise ValueError("clearinghouseState pozisyonu geçersiz")
+            sonuc[str(poz["coin"])] = sonuc.get(str(poz["coin"]), 0.0) + miktar
+    return sonuc
 
 
 def coin_listesi(post: Callable[[dict], Any]) -> list[str]:
@@ -587,8 +628,12 @@ def main(argv: list[str] | None = None) -> int:
         ilk11 = {i.ad for i in izlenenler if args.risk_tum_liste or i.takim == "ilk11"}
         dur_yolu = Path(str(kural["risk_dry_run"]["dur_dosyasi"]).replace("$STATE_DIRECTORY", str(args.cikti)))
         risk = RiskDefteri(ilk11, kural, baslangic_ms=int(time.time() * 1000))
+        try:
+            dexler = perp_dex_names(post({"type": "perpDexs"}))
+        except Exception:        # noqa: BLE001 - dex listesi okunamazsa yalnız ana dex (coin_listesi zaten aynı çağrıyı yaptı)
+            dexler = []
         d = Dinleyici(izlenenler, coinler, ws_baglan, post, args.cikti, Ayar(userfills_adet=args.userfills_adet, sure_sn=args.sure_sn),
-                      onceki_baslama=baslama_sayaci(args.cikti / "durum.json"), risk=risk, risk_gunlugu=KararGunlugu(args.cikti), dur_yolu=dur_yolu)
+                      onceki_baslama=baslama_sayaci(args.cikti / "durum.json"), risk=risk, risk_gunlugu=KararGunlugu(args.cikti), dur_yolu=dur_yolu, dex_adlari=dexler)
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGINT, signal.SIGTERM):
             loop.add_signal_handler(sig, d.durdur)

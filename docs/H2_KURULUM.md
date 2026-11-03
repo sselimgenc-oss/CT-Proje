@@ -84,6 +84,7 @@ Kaldırmak için:
 rm /var/lib/sg-dinleyici/DUR
 ```
 Dosya her dolumda kontrol edilir; yeniden başlatma gerekmez.
+**Başlangıç pozisyonu (H5b):** servis her başlangıçta/yeniden bağlanmada `takim: ilk11` adreslerinin açık pozisyonlarını REST `clearinghouseState` ile okur (adres başına 1 + HIP-3 dex sayısı istek, ~2 ağırlık). `ozet.json` → `genel.baslangic_poz_hata` sürekli artıyorsa (429/ağ) loga bakın; dinleme sürer, risk eski varsayıma düşer (`risk.lider_pozisyon_varsayimi`).
 
 ## 9. Durdur
 ```bash
