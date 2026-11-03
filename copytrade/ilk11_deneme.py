@@ -152,7 +152,7 @@ def liste_sec(kaynak: Path, idler: list[str], cikti: Path) -> list[dict]:
 def durum_ozeti(durum: Path, sure_sn: float | None, artimli_sn: float | None) -> str:
     """Trader başına `veri_durumu`, sağlık ışığı, hesap, v3 ve form alanı özeti + süre tahmini (A4-1 gerçek veri denemesi)."""
     d = json.loads(durum.read_text(encoding="utf-8"))
-    out = ["### Trader durumları", "", "| id | gecerli | veri_durumu | neden | ışık | hesap (perp) $ | v3 bakiye $ | v3 fiyatsız | v3 kapanan | form dolu | olay |", "|---|---|---|---|---|---|---|---|---|---|---|"]
+    out = ["### Trader durumları", "", "| id | gecerli | veri_durumu | neden | ışık | hesap (perp) $ | v3 bakiye $ | v3 fiyatsız | v3 kapanan | form dolu | mum eksik (hedef/önbellekten) | olay |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     olay = {}
     for e in d.get("olaylar", []):
         olay[e["trader"]] = olay.get(e["trader"], 0) + 1
@@ -161,7 +161,7 @@ def durum_ozeti(durum: Path, sure_sn: float | None, artimli_sn: float | None) ->
         form = t.get("ilk11_form_ham") or {}
         out.append(f"| {t['id']} | {t['gecerli']} | {t.get('veri_durumu')} | {t.get('veri_durumu_neden', '')} | {t['saglik']['isik']} ({t['saglik']['nedenler'][0]}) | "
                    f"{t.get('hesap_degeri', 0):.0f} | {v3.get('bakiye_usd', '—')} | {v3.get('fiyatsiz_eylem', '—')} | {len(v3.get('kapanan_islemler') or [])}/{v3.get('kapanan_islemler_toplam', '—')} | "
-                   f"{form.get('dolu_alan', form.get('hata'))} | {olay.get(t['id'], 0)} |")
+                   f"{form.get('dolu_alan', form.get('hata'))} | {(t.get('mum_eksik') or {}).get('hedef', '—')}/{(t.get('mum_eksik') or {}).get('onbellekten', '—')} | {olay.get(t['id'], 0)} |")
     return "\n".join(out + ["", "### İzleme süresi", ""] + sure_tahmini(len(d["traderlar"]), sure_sn, artimli_sn)) + "\n"
 
 

@@ -34,6 +34,7 @@ from copytrade.kurallar import load_rules
 
 MINUTE = 60_000
 DAY = 86_400_000
+NEGATIF_MUM_YENIDEN_MS = 6 * 60 * MINUTE      # eksik mum (coin, hedef) bu süre sonra yeniden denenir (K-18); kalıcı atlama yok
 STYLES = {'intraday', 'swing'}
 KOLLAR = {'oda', 'kontrol', 'taban', 'elle', 'referans_oda', 'referans_kontrol', 'cikarilan', 'havuz'}
 
@@ -247,18 +248,42 @@ def cached_candle(value: object) -> tuple[float, bool]:
     return float(value), False
 
 
+def _mum_eksik(eksik: list[dict] | None, negatif: dict | None, coin: str, target: int, now_ms: int) -> None:
+    if eksik is not None:
+        eksik.append({'coin': coin, 'hedef': target})
+    if negatif is not None:
+        negatif.setdefault(coin, {})[str(target)] = now_ms
+
+
+def _negatif_sil(negatif: dict | None, coin: str, target: int) -> None:
+    if negatif is not None and coin in negatif:
+        negatif[coin].pop(str(target), None)
+        if not negatif[coin]:
+            del negatif[coin]
+
+
 def execution_candles(client, fills: list[dict], cache: dict, now_ms: int, delay: int = 30,
-                      eksik: list[dict] | None = None) -> tuple[dict[str, list[dict]], bool]:
+                      eksik: list[dict] | None = None, negatif: dict | None = None) -> tuple[dict[str, list[dict]], bool]:
     """Use 1m opens when retained; fall back to the matching 1h opening, never a later price.
 
     Hedef için mum yok / fiyatı ≤ 0 ise hedef ATLANIR (önbelleğe girmez, sonraki saat yeniden denenir) ve ``eksik``e ``{"coin", "hedef"}`` eklenir;
-    trader düşürülmez (K-14). Ağ / API hatası ise yine istisnadır (okuma hatası)."""
+    trader düşürülmez (K-14). Ağ / API hatası ise yine istisnadır (okuma hatası).
+
+    Negatif önbellek (K-18): ``negatif`` = ``{coin: {hedef: son_deneme_ms}}``. Eksik çıkan hedef kaydedilir; ``NEGATIF_MUM_YENIDEN_MS`` (6 saat) dolmadan
+    API'ye YENİDEN SORULMAZ (saatlik koşu süresini şişirmesin) ama ``eksik``e ``onbellek: True`` ile yine yazılır (sayılır, fiyatsız kalır).
+    Süre dolunca bir kez yeniden denenir: mum gelmişse kayıt silinir ve fiyat önbelleğe girer; gelmemişse kayıt tazelenir (kalıcı atlama yok)."""
     needed = {}
     approximate = any(cached_candle(value)[1] for rows in cache.values() for value in rows.values())
     for fill in fills:
         target = math.ceil((int(fill['time']) + delay * MINUTE) / MINUTE) * MINUTE
         if target <= now_ms and str(target) not in cache.get(fill['coin'], {}):
-            needed.setdefault(fill['coin'], []).append(target)
+            son = (negatif or {}).get(fill['coin'], {}).get(str(target))
+            if son is not None and now_ms - int(son) < NEGATIF_MUM_YENIDEN_MS:
+                if eksik is not None and not any(e['coin'] == fill['coin'] and e['hedef'] == target for e in eksik):
+                    eksik.append({'coin': fill['coin'], 'hedef': target, 'onbellek': True})
+                continue
+            if target not in needed.setdefault(fill['coin'], []):
+                needed[fill['coin']].append(target)
     for coin, targets in needed.items():
         exact = [target for target in targets if target >= now_ms - 4999 * MINUTE]
         older = [target for target in targets if target < now_ms - 4999 * MINUTE]
@@ -267,10 +292,10 @@ def execution_candles(client, fills: list[dict], cache: dict, now_ms: int, delay
             prices = {int(c['t']): float(c['o']) for c in candles}
             for target in exact:
                 if target not in prices or prices[target] <= 0:
-                    if eksik is not None:
-                        eksik.append({'coin': coin, 'hedef': target})
+                    _mum_eksik(eksik, negatif, coin, target, now_ms)
                     continue
                 cache.setdefault(coin, {})[str(target)] = {'fiyat': prices[target], 'yaklasik': False}
+                _negatif_sil(negatif, coin, target)
         if older:
             hourly = client.candles(coin, min(target // (60 * MINUTE) * (60 * MINUTE) for target in older),
                                     now_ms, interval='1h')
@@ -278,10 +303,10 @@ def execution_candles(client, fills: list[dict], cache: dict, now_ms: int, delay
             for target in older:
                 hour = target // (60 * MINUTE) * (60 * MINUTE)
                 if hour not in prices or prices[hour] <= 0:
-                    if eksik is not None:
-                        eksik.append({'coin': coin, 'hedef': target})
+                    _mum_eksik(eksik, negatif, coin, target, now_ms)
                     continue
                 cache.setdefault(coin, {})[str(target)] = {'fiyat': prices[hour], 'yaklasik': True}
+                _negatif_sil(negatif, coin, target)
                 approximate = True
     return ({coin: [{'t': int(t), 'o': cached_candle(value)[0]} for t, value in rows.items()]
              for coin, rows in cache.items()}, approximate)
@@ -585,7 +610,7 @@ def unavailable_trader(root: Path, row: dict, error: Exception) -> dict:
             'form': {'skor': 0.0, 'getiri_30g': 0.0, 'getiri_90g': 0.0},
             'hesap_degeri': 0.0, 'pozisyonlar': [], 'egri': [],
             'son_islem': {'coin': '', 'yon': '', 'acilis': '', 'kapanis': '', 'net_yuzde': 0.0},
-            'veri_durumu': 'okuma_hatasi', 'veri_durumu_neden': data_error_reason(error),
+            'veri_durumu': 'okuma_hatasi', 'veri_durumu_neden': data_error_reason(error), 'mum_eksik': {'hedef': 0, 'onbellekten': 0},
             'sanal_kopya': {'baslangic_usd': 1000, 'bakiye_usd': 1000.0, 'getiri': 0.0, 'dusus': 0.0,
                             'gecikme_dk': delay_for_style(style), 't0': str(timestamp(row['t0']).date()), 'egri': [], 'yer_tutucu': True},
             'sanal_kopya_v2': {'surum': 'v2', 'durum': 'hesaplanamadi', 'yer_tutucu': True, 'neden': 'hiç okunmadı'},
@@ -651,14 +676,15 @@ def durum_icin_kirp(trader: dict, now: pd.Timestamp, rules: dict | None = None) 
     return {**trader, 'sanal_kopya_v3': {**v3, 'kapanan_islemler': kalan, 'kapanan_islemler_toplam': len(islemler)}}
 
 
-def veri_durumu_belirle(account: float, paper: dict, paper_v3: dict, eksik_hedef: int, isaret_eksik: list[str] | None = None) -> tuple[str, str]:
+def veri_durumu_belirle(account: float, paper: dict, paper_v3: dict, eksik_hedef: int, isaret_eksik: list[str] | None = None, eksik_onbellek: int = 0) -> tuple[str, str]:
     """Trader başına veri durumu kodu (K-14; ``durum`` izleme listesinin kendi alanıdır, bu yüzden ``veri_durumu``). Öncelik: perp_bos > fiyatsiz > tamam.
     ``okuma_hatasi`` okuması başarısız saatte ``with_data_error`` / ``unavailable_trader`` tarafından yazılır; ``bayat`` yayın anında ``bayat_isle`` ile.
     Fiyat eksiği = yürütme mumu eksik dolum (v1 atlanan, v3 ``fiyatsiz_eylem``) ya da açık kopya coini için işaret fiyatı eksik (``isaret_eksik``: coin listesi)."""
     if account <= 0:
         return 'perp_bos', 'perp hesap değeri 0 (ana + HIP-3); v1 yer tutucu, v3 / olaylar sürer'
     fiyatsiz = max(int(paper_v3.get('fiyatsiz_eylem', 0) or 0), eksik_hedef, int(paper.get('fiyatsiz_eylem', 0) or 0))
-    nedenler = ([f'{fiyatsiz} dolum için mum fiyatı eksik (atlandı, sayıldı)'] if fiyatsiz else []) + \
+    nedenler = ([f'{fiyatsiz} dolum için mum fiyatı eksik (atlandı, sayıldı)'
+                 + (f'; {eksik_onbellek} hedef negatif önbellekten (6 saatte bir yeniden denenir)' if eksik_onbellek else '')] if fiyatsiz else []) + \
                ([f"işaret fiyatı eksik: {', '.join(isaret_eksik)}"] if isaret_eksik else [])
     return ('fiyatsiz', '; '.join(nedenler)) if nedenler else ('tamam', '')
 
@@ -679,7 +705,7 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
                   row: dict, now: pd.Timestamp, symbols: set[str] | None) -> dict:
     ident, address, t0 = row['id'], row['adres'], timestamp(row['t0'])
     saved = state['traderlar'].setdefault(ident, {'adres': address.lower(), 't0': iso(t0),
-                                                   'fills': [], 'funding': [], 'mumlar': {}})
+                                                   'fills': [], 'funding': [], 'mumlar': {}, 'mum_eksik': {}})
     if saved['adres'] != address.lower() or saved['t0'] != iso(t0):
         raise ValueError(f'{ident}: adres/t0 değiştirilemez; yeni izleme için yeni id kullanın.')
     start = min(millis(t0), millis(now) - 90 * DAY)
@@ -721,7 +747,7 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
     style = resolve_style(root, row)
     delay = delay_for_style(style)
     eksik_mum: list[dict] = []
-    candles, approximate = execution_candles(client, actions, saved['mumlar'], millis(now), delay, eksik_mum)
+    candles, approximate = execution_candles(client, actions, saved['mumlar'], millis(now), delay, eksik_mum, saved.setdefault('mum_eksik', {}))
     marks = mark_candles(client, actions, millis(now))
     priced = {coin: rows + marks.get(coin, []) for coin, rows in {**{c: [] for c in marks}, **candles}.items()}
     if account > 0:
@@ -786,9 +812,11 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
         last_trade = {'coin': last['coin'], 'yon': 'long' if float(ending.get('startPosition', 0)) > 0 else 'short',
                       'acilis': iso(last['open_time']) if last['open_time'] is not None else '',
                       'kapanis': iso(last['close_time']), 'net_yuzde': last['net_pnl'] / notional if notional else 0.0}
-    veri_durumu, veri_durumu_neden = veri_durumu_belirle(account, paper, paper_v3, len(eksik_mum), sorted(open_copy_coins(actions) - set(marks)))
+    veri_durumu, veri_durumu_neden = veri_durumu_belirle(account, paper, paper_v3, len(eksik_mum), sorted(open_copy_coins(actions) - set(marks)),
+                                                           sum(1 for e in eksik_mum if e.get('onbellek')))
     trader = {**{k: v for k, v in row.items() if k != 'tarz'}, 'tarz': style, 'veri_zamani': iso(now), 'gecerli': True,
               'veri_durumu': veri_durumu, 'veri_durumu_neden': veri_durumu_neden,
+              'mum_eksik': {'hedef': len(eksik_mum), 'onbellekten': sum(1 for e in eksik_mum if e.get('onbellek'))},
               'kapi': gate_result(root, address), 'saglik': light,
               'form': {'skor': ret30 / volatility if volatility > 0 and math.isfinite(volatility) else 0.0,
                        'getiri_30g': ret30, 'getiri_90g': float(recent.iloc[-1] - recent.iloc[0]) if len(recent) else 0.0},

@@ -1,4 +1,4 @@
-# Veri sözleşmesi — copy trade izleme (v1.15, 2026-11-02; v1.15 `veri_durumu` + sağlık ışığı `bilinmiyor` (K-14), v1.14 İlk 11 hesap katmanı kodda (A2 PR-1: `ilk11_alanlar`, kapı bilgi sütunları, `kapanan_islemler`), v1.13 İlk 11 puan alanları (§6, tanım), v1.12 `sanal_kopya_v3` tasfiye/aşamalı çıkış (E3), v1.11 `sanal_kopya_v3` (E2 sabit tutar), v1.10 `sanal_kopya_v2.kapanis_nedenleri` (E3), v1.9 `sanal_kopya_v2`, v1.8 `gecikme.json` taze pencere, v1.7 `gecikme.json`, v1.6 `saglik_hatti`, v1.5 `kol`, v1.2 olay kimliği, v1.3 tarz, v1.4 veri geçerliliği ve karar gizliliği)
+# Veri sözleşmesi — copy trade izleme (v1.16, 2026-11-03; v1.16 `mum_eksik` + negatif mum önbelleği (K-18), v1.15 `veri_durumu` + sağlık ışığı `bilinmiyor` (K-14), v1.14 İlk 11 hesap katmanı kodda (A2 PR-1: `ilk11_alanlar`, kapı bilgi sütunları, `kapanan_islemler`), v1.13 İlk 11 puan alanları (§6, tanım), v1.12 `sanal_kopya_v3` tasfiye/aşamalı çıkış (E3), v1.11 `sanal_kopya_v3` (E2 sabit tutar), v1.10 `sanal_kopya_v2.kapanis_nedenleri` (E3), v1.9 `sanal_kopya_v2`, v1.8 `gecikme.json` taze pencere, v1.7 `gecikme.json`, v1.6 `saglik_hatti`, v1.5 `kol`, v1.2 olay kimliği, v1.3 tarz, v1.4 veri geçerliliği ve karar gizliliği)
 
 sözleşmeye göre çalışır; alan eklemek/değiştirmek lider onayıyla `surum` artırılarak yapılır.
 
@@ -94,6 +94,10 @@ yalnız olay kimliği, karar ve neden. Trader adresleri zaten herkese açık zin
   - `bayat`: trader'ın `veri_zamani` değeri yayın anındaki `uretildi`'den `ilk11_form_tazelik_dk` (120) dakikadan DAHA eski (sınır dahil değil) ve başka bir kod yok
     (öncelik: okuma_hatasi > perp_bos > fiyatsiz > bayat > tamam). `veri_durumu_neden`: "veri N dk eski (> 120 dk)".
   - `tamam`: yukarıdakilerin hiçbiri. `veri_durumu_neden`: kısa Türkçe metin (`tamam`da boş).
+- **`traderlar[].mum_eksik` ve negatif önbellek (v1.16, K-18):** `{hedef, onbellekten}` (adet). `hedef` = bu koşuda fiyatı olmayan yürütme hedefi sayısı; `onbellekten` = bunların kaç tanesi
+  API'ye YENİDEN SORULMADAN negatif önbellekten geldi. Eksik çıkan (coin, hedef dakika) `motor.json`'da `traderlar[ID].mum_eksik = {coin: {hedef_ms: son_deneme_ms}}` olarak
+  saklanır (UTC ms, koşu `now`'u); 6 saat (`NEGATIF_MUM_YENIDEN_MS`) dolmadan sorulmaz, dolunca BİR kez yeniden denenir: mum gelmişse kayıt silinir ve dolum hesaba girer,
+  gelmemişse kayıt tazelenir (kalıcı atlama yok; her 6 saatte bir yeniden). Önbellekten gelen hedef de `fiyatsiz` sayılır (`veri_durumu_neden` bunu söyler).
 - **v1 yer tutucusu:** `sanal_kopya.yer_tutucu: true` (bakiye 1.000 $, getiri 0, `egri: []`; `perp_bos` ise `neden` da yazılır) — gerçek hesap DEĞİL.
   Tüketici `yer_tutucu` olanı ortalamaya / toplama katmamalı (v3 `durum: hesaplanamadi` ile aynı kural).
 - **Sağlık ışığı `bilinmiyor` (K-14):** t0 için pozitif hesap değeri (sağlık paydası) yoksa ya da portfolio PnL eğrisi kurulamıyorsa `saglik.isik = "bilinmiyor"`,

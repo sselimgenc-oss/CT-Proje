@@ -386,6 +386,6 @@ def test_izleme_deneme_listesi_ve_ozeti(tmp_path):
     durum = tmp_path / "durum.json"
     durum.write_text(json.dumps({"olaylar": [{"trader": "K01"}], "traderlar": [
         {"id": "K01", "gecerli": True, "veri_durumu": "fiyatsiz", "veri_durumu_neden": "2 dolum", "saglik": {"isik": "yesil", "nedenler": ["kaldıraç normal"]}, "hesap_degeri": 10.0,
-         "sanal_kopya_v3": {"bakiye_usd": 1000.5, "fiyatsiz_eylem": 2, "kapanan_islemler": [{}], "kapanan_islemler_toplam": 3}, "ilk11_form_ham": {"dolu_alan": 9}}]}))
+         "sanal_kopya_v3": {"bakiye_usd": 1000.5, "fiyatsiz_eylem": 2, "kapanan_islemler": [{}], "kapanan_islemler_toplam": 3}, "ilk11_form_ham": {"dolu_alan": 9}, "mum_eksik": {"hedef": 2, "onbellekten": 1}}]}))
     metin = durum_ozeti(durum, 100, 10)
-    assert "| K01 | True | fiyatsiz | 2 dolum | yesil (kaldıraç normal) | 10 | 1000.5 | 2 | 1/3 | 9 | 1 |" in metin and "ilk okuma: 1 trader 100 sn" in metin
+    assert "| K01 | True | fiyatsiz | 2 dolum | yesil (kaldıraç normal) | 10 | 1000.5 | 2 | 1/3 | 9 | 2/1 | 1 |" in metin and "ilk okuma: 1 trader 100 sn" in metin

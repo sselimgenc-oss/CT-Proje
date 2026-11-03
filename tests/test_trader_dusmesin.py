@@ -64,13 +64,64 @@ def test_tum_mumlar_eksik_iki_dolum_hepsi_sayilir_trader_yine_dusmez(tmp_path):
     assert t['sanal_kopya_v3']['bakiye_usd'] == pytest.approx(1000.0) and t['sanal_kopya']['bakiye_usd'] == 1000
 
 
-def test_eksik_mum_sonraki_saat_tamamlanirsa_sayilan_dolum_hesaba_girer(tmp_path):
-    """Atlanan hedef önbelleğe girmez: mum sonradan gelince aynı dolum bir sonraki saatte hesaplanır, durum `tamam` olur."""
+class GecikmeliMum(MumsuzSaat):
+    """`mum_var` açılana kadar hedef mumu yok; kaç kez API'ye (1 dk / 1 sa, işaretleme hariç) sorulduğunu sayar."""
+    mum_var = False
+    hedef_sorgu = 0
+
+    def candles(self, coin, start, end, interval='1m'):
+        self.hedef_sorgu += int(start == HEDEF_BAS and interval == '1m')
+        if self.mum_var:
+            return Client.candles(self, coin, start, end, interval)
+        return super().candles(coin, start, end, interval)
+
+
+def test_eksik_mum_negatif_onbellek_6_saat_sonra_bir_kez_yeniden_denenir_sayilir(tmp_path):
+    """K-18 altın örnek: hedef mum 10:30 yok. Saat 12:00 (NOW): API'ye sorulur (okuma 1), negatif kayıt yazılır. +1 saat ve +5 saat: API'ye SORULMAZ (okuma hâlâ 1),
+    trader `fiyatsiz`, `mum_eksik` = {hedef 1, onbellekten 1}, neden metni önbelleği söyler. +6 saat: yeniden sorulur (okuma 2); mum gelmişse hesaba girer, `tamam`, kayıt silinir."""
     root = project(tmp_path)
-    m.run(root, root / 'out', MumsuzSaat(), NOW)
-    t = trader_of(m.run(root, root / 'out', Client(), NOW + pd.Timedelta(hours=1)))
-    assert t['veri_durumu'] == 'tamam' and t['sanal_kopya']['bakiye_usd'] == pytest.approx(1000 - 102 * .00095)
-    assert 'fiyatsiz_eylem' not in t['sanal_kopya']
+    client = GecikmeliMum()
+    t0 = trader_of(m.run(root, root / 'out', client, NOW))
+    assert t0['veri_durumu'] == 'fiyatsiz' and t0['mum_eksik'] == {'hedef': 1, 'onbellekten': 0} and client.hedef_sorgu == 1
+    saved = json.loads((root / 'out/motor.json').read_text())['traderlar']['T1']
+    assert saved['mum_eksik'] == {'BTC': {str(HEDEF_BAS): m.millis(NOW)}}
+    for saat in (1, 5):
+        t = trader_of(m.run(root, root / 'out', client, NOW + pd.Timedelta(hours=saat)))
+        assert t['veri_durumu'] == 'fiyatsiz' and t['mum_eksik'] == {'hedef': 1, 'onbellekten': 1} and 'negatif önbellekten' in t['veri_durumu_neden']
+        assert client.hedef_sorgu == 1                                                      # API'ye yeniden sorulmadı
+    client.mum_var = True
+    t6 = trader_of(m.run(root, root / 'out', client, NOW + pd.Timedelta(hours=6)))
+    assert client.hedef_sorgu == 2 and t6['veri_durumu'] == 'tamam' and t6['mum_eksik'] == {'hedef': 0, 'onbellekten': 0}
+    assert t6['sanal_kopya']['bakiye_usd'] == pytest.approx(1000 - 102 * .00095) and 'fiyatsiz_eylem' not in t6['sanal_kopya']
+    assert json.loads((root / 'out/motor.json').read_text())['traderlar']['T1']['mum_eksik'] == {}
+
+
+def test_eksik_mum_6_saat_sonra_hala_yoksa_kayit_tazelenir_kalici_atlama_yok(tmp_path):
+    root = project(tmp_path)
+    client = GecikmeliMum()
+    m.run(root, root / 'out', client, NOW)
+    t = trader_of(m.run(root, root / 'out', client, NOW + pd.Timedelta(hours=6)))
+    assert client.hedef_sorgu == 2 and t['veri_durumu'] == 'fiyatsiz' and t['mum_eksik'] == {'hedef': 1, 'onbellekten': 0}       # yeniden denendi, hâlâ yok
+    saved = json.loads((root / 'out/motor.json').read_text())['traderlar']['T1']
+    assert saved['mum_eksik'] == {'BTC': {str(HEDEF_BAS): m.millis(NOW + pd.Timedelta(hours=6))}}                                   # kayıt tazelendi
+    m.run(root, root / 'out', client, NOW + pd.Timedelta(hours=7))
+    assert client.hedef_sorgu == 2                                                                                            # 6 saat dolmadan yine sorulmaz
+    client.mum_var = True
+    assert trader_of(m.run(root, root / 'out', client, NOW + pd.Timedelta(hours=12)))['veri_durumu'] == 'tamam'                    # kalıcı atlama yok
+
+
+def test_execution_candles_negatif_birim_altin_ornek():
+    """Elle: now=T; negatif {BTC: {hedef: T-5 sa}} -> sorulmaz, eksik'te onbellek True; T-6 sa -> sorulur."""
+    f = fill()
+    hedef = f['time'] + 30 * m.MINUTE
+    client = Client()
+    simdi = hedef + 5 * 60 * m.MINUTE
+    eksik, negatif = [], {'BTC': {str(hedef): simdi - 5 * 60 * m.MINUTE}}
+    candles, _ = m.execution_candles(client, [f], {}, simdi, eksik=eksik, negatif=negatif)
+    assert client.candle_reads == 0 and candles == {} and eksik == [{'coin': 'BTC', 'hedef': hedef, 'onbellek': True}]
+    eksik, negatif = [], {'BTC': {str(hedef): simdi - 6 * 60 * m.MINUTE}}
+    candles, _ = m.execution_candles(client, [f], {}, simdi, eksik=eksik, negatif=negatif)
+    assert client.candle_reads == 1 and candles['BTC'][0]['o'] == 102 and eksik == [] and negatif == {}
 
 
 def test_perp_hesap_degeri_sifir_v3_ve_olaylar_surer_v1_yer_tutucu(tmp_path):
