@@ -60,3 +60,15 @@ def test_spot_usdc_tek_yerde_account_value_parts_davranisi_degismedi():
     assert kapi.account_value_parts(client, 'x', []) == {'ana': 6000.0, 'hip3': 0.0, 'spot_usdc': 999.0}
     client.spot = []
     assert kapi.spot_usdc(client, 'x') == 0.0
+
+
+
+def test_golden_deneme_ozeti_hesap_tablosu_i_f_yan_yana():
+    """Elle: İ hesap 14.405, F hesap 14.400 -> F/İ = 14400/14405 = 0,99965 -> '1.000'; izleme perp 4.345, toplam 14.400. İ yoksa oran '—'."""
+    from copytrade.ilk11_deneme import hesap_tablosu
+    ilk = {"0xaaaaaaaaaa": ({"hesap": 14405.0}, {})}
+    d = {"traderlar": [{"id": "D2", "adres": "0xAAAAAAAAAA", "hesap_degeri": 4345.0, "hesap_degeri_toplam": 14400.0, "ilk11_form_ham": {"alanlar": {"hesap": 14400.0}}},
+                       {"id": "D9", "adres": "0xbbbbbbbbbb", "hesap_degeri": 1.0, "hesap_degeri_toplam": None}]}
+    satirlar = hesap_tablosu(ilk, d)
+    assert "| D2 | `0xaaaaaaaa…` | 14405 | 14400 | 4345 | 14400 | 1.000 |" in satirlar
+    assert "| D9 | `0xbbbbbbbb…` | — | — | 1 | — | — |" in satirlar
