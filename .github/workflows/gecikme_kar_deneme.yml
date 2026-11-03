@@ -1,0 +1,59 @@
+name: H1 gecikme-kâr (küçük gerçek veri denemesi)
+
+# Kural 1: H1 ölçümü önce 2-3 trader üzerinde gerçek veriyle. Üretim R2'sine ve veri dallarına YAZMAZ (salt okunur).
+# Tetik: elle ya da `copytrade/izleme_deneme/H1` dosyasına push.
+on:
+  workflow_dispatch:
+    inputs:
+      idler:
+        description: "izleme listesinden virgülle ayrılmış trader kimlikleri"
+        default: "O01,K08,B17"
+  push:
+    paths:
+      - copytrade/izleme_deneme/H1
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+jobs:
+  h1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: H1 dakika penceresi (karar penceresi)
+        env:
+          IDLER: ${{ inputs.idler || 'O01,K08,B17' }}
+        run: python -m copytrade.gecikme_kar --idler "$IDLER" --pencere dakika --cikti h1_dakika
+      - name: H1 tam pencere (t0'dan; mevcut v3 ile karşılaştırma)
+        env:
+          IDLER: ${{ inputs.idler || 'O01,K08,B17' }}
+        run: python -m copytrade.gecikme_kar --idler "$IDLER" --pencere tam --cikti h1_tam
+      - name: Mevcut izleme v3 (aynı traderlar; karşılaştırma tabanı)
+        env:
+          IDLER: ${{ inputs.idler || 'O01,K08,B17' }}
+        run: |
+          mkdir -p deneme izleme_h1
+          python -m copytrade.ilk11_deneme liste --kaynak copytrade/izleme_listesi.yaml --idler "$IDLER" --cikti deneme
+          python -m copytrade.izleme_motoru --root . --output izleme_h1 --liste deneme/izleme_listesi.yaml
+      - name: Özet ve yan yana
+        run: python .github/scripts/h1_ozet.py | tee h1_ozet.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: h1-gecikme-kar
+          path: |
+            h1_dakika
+            h1_tam
+            h1_ozet.md
+            izleme_h1/durum.json
+          if-no-files-found: ignore

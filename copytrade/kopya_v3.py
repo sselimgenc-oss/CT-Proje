@@ -32,6 +32,11 @@ MINUTE = 60_000
 BASE_USD = 1000.0
 
 
+def hedef_ms(dolum_ms: int, delay: int) -> int:
+    """Yürütme hedefi (ms): dolum + gecikme, sonraki tam dakikaya yukarı yuvarlanır (execution_candles ile AYNI formül)."""
+    return math.ceil((dolum_ms + delay * MINUTE) / MINUTE) * MINUTE
+
+
 def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str, list[dict]],
             yurutme: dict[str, dict[int, float]], funding: list[dict],
             t0: pd.Timestamp, now: pd.Timestamp, delay: int, style: str, rules: dict | None = None) -> dict:
@@ -42,8 +47,16 @@ def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str,
     t0_ms, now_ms = int(t0.value // 1_000_000), int(now.value // 1_000_000)
     base = {'surum': 'v3', 'baslangic_usd': BASE_USD, 'gecikme_dk': delay, 't0': str(t0.date())}
     annotated = []
+    bozuk_px = 0
     for fill in fills:
-        target = math.ceil((int(fill['time']) + delay * MINUTE) / MINUTE) * MINUTE
+        if delay <= 0:         # H1: anlık kopya = trader'ın dolum fiyatı + (ledger'daki) taker/kayma; mum gerekmez, bekleme yok
+            px = float(fill.get('px') or 0)
+            if px > 0 and math.isfinite(px) and int(fill['time']) <= now_ms:
+                annotated.append(dict(fill, _execution_time=int(fill['time']), _execution_price=px))
+            elif int(fill['time']) <= now_ms:
+                bozuk_px += 1  # dolum fiyatı yok/≤0: gerçekten fiyatsız (mum aranmaz)
+            continue
+        target = hedef_ms(int(fill['time']), delay)
         if target > now_ms:        # A4-3b: yürütme zamanı henüz gelmemiş (gecikme dolmamış) dolum "fiyatsız" DEĞİL, bekliyor: ledger'a verilmez, sayılmaz, işlem geçerliliğini bozmaz
             continue
         price = yurutme.get(str(fill['coin']), {}).get(target)
@@ -83,6 +96,6 @@ def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str,
             'egri': [[str(day.date()), float(value)] for day, value in equity.items()],
             'gerceklesen': ledger['realized'] + ledger['funding'], 'acik': ledger['unrealized_end'],
             'toplam': ledger['net'], 'funding': ledger['funding'], 'maliyet': ledger['costs'],
-            'fiyatsiz_eylem': int(ledger.get('missing', 0)), 'tasfiye': when is not None,
+            'fiyatsiz_eylem': int(ledger.get('missing', 0)) + bozuk_px, 'tasfiye': when is not None,
             'tasfiye_zamani': tasfiye_zamani, 'tasfiye_kaynagi': source,
             'kapanis_nedenleri': kapanis_nedenleri, 'kapanan_islemler': kapanan_islemler}
