@@ -359,9 +359,11 @@ def test_exact_candle_required_and_cache_survives_window_rollover():
     assert client.candle_reads == 1
     candles, approximate = m.execution_candles(client, [f], {}, m.millis(NOW) + 10 * m.DAY)
     assert approximate and candles['BTC'][0]['o'] == 102
+    # K-14: hedef dakikada mum yoksa (31. dakikadaki mum hedef değildir, "sonraki fiyat" asla kullanılmaz) hedef ATLANIR, sayılır, önbelleğe girmez; trader düşmez.
     client.candles = lambda *args, **kwargs: [{'t': f['time'] + 31 * m.MINUTE, 'o': 999}]
-    with pytest.raises(ValueError, match='mum eksik'):
-        m.execution_candles(client, [f], {}, m.millis(NOW))
+    cache, eksik = {}, []
+    candles, approximate = m.execution_candles(client, [f], cache, m.millis(NOW), eksik=eksik)
+    assert candles == {} and cache == {} and eksik == [{'coin': 'BTC', 'hedef': f['time'] + 30 * m.MINUTE}] and not approximate
 
 
 def test_failure_preserves_last_successful_payloads(tmp_path):
@@ -369,7 +371,7 @@ def test_failure_preserves_last_successful_payloads(tmp_path):
     m.run(root, root / 'out', client, NOW)
     previous = {p.name: p.read_bytes() for p in (root / 'out').iterdir()}
     client.rows.append(fill('2026-10-27T12:00Z', 2, 'B', 1, 1))
-    client.candles = lambda *args, **kwargs: []
+    client.fills = lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError('ağ hatası'))      # okuma hatası (eksik mum artık trader'ı düşürmez, K-14)
     with pytest.raises(RuntimeError, match='Tüm trader'):
         m.run(root, root / 'out', client, NOW + pd.Timedelta(hours=1))
     assert previous == {p.name: p.read_bytes() for p in (root / 'out').iterdir()}
