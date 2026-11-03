@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import re
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -861,7 +862,9 @@ def run(root: Path, output: Path, client=None, now=None, symbols=None, liste: Pa
         if retained and (retained['adres'] != row['adres'].lower() or retained['t0'] != iso(timestamp(row['t0']))):
             raise ValueError(f"{row['id']}: adres/t0 değiştirilemez; yeni izleme için yeni id kullanın.")
         try:
+            _t_basla = time.monotonic()
             traders.append(update_trader(root, client, dexes, state, all_events, row, now, symbols))
+            print(f"{row['id']}: okuma süresi {time.monotonic() - _t_basla:.0f} sn")
         except Exception as error:
             failed += 1
             print(f"{row['id']}: veri hatası: {data_error_reason(error)}")
