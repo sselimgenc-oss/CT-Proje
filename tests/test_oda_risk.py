@@ -121,11 +121,13 @@ def test_motor_yonsuz_bayrak_gunde_bir_onbellek_ve_kalabalik_alani(tmp_path):
     t = bir["traderlar"][0]
     assert t["yonsuz_bayrak"]["bayrak"] is False and "hata" not in t["yonsuz_bayrak"] and set(t["yonsuz_bayrak"]) >= {"funding_payi", "spot_perp_ters", "maker_payi", "sezgisel"}
     assert bir["kalabalik"]["n_oda"] == 3 and "zaman" in bir["kalabalik"] and bir["kalabalik"]["sezgisel"] is True
+    n = len(bir["traderlar"])
     okuma, funding_cagri = client.spot_okuma, sum(c["type"] == "userFunding" and c["startTime"] < m.millis(NOW) - 80 * m.DAY for c in client.calls)
     m.run(root, root / "out", client, NOW + pd.Timedelta(hours=1))                     # aynı gün: spot ve 90 günlük funding yeniden çekilmez
-    assert client.spot_okuma == okuma and sum(c["type"] == "userFunding" and c["startTime"] < m.millis(NOW) - 80 * m.DAY for c in client.calls) == funding_cagri
+    # spot_okuma = saatlik `hesap_degeri_toplam` okuması (A2-4; her koşuda trader başına +1) + yönsüz önbelleği (günde 1): aynı gün yalnız saatlik okuma artar
+    assert client.spot_okuma == okuma + n and sum(c["type"] == "userFunding" and c["startTime"] < m.millis(NOW) - 80 * m.DAY for c in client.calls) == funding_cagri
     m.run(root, root / "out", client, NOW + pd.Timedelta(days=1))                      # ertesi gün: yeniden
-    assert client.spot_okuma > okuma
+    assert client.spot_okuma == okuma + n + 2 * n                                      # ertesi gün: saatlik okuma + yönsüz önbelleğin yenilenmesi (trader başına)
 
 
 def test_motor_spot_hatasi_gizlenmez_ve_gune_onbellege_girmez(tmp_path):

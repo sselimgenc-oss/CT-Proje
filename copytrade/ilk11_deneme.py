@@ -100,6 +100,20 @@ def sure_tahmini(n: int, ilk_sn: float | None, artimli_sn: float | None) -> list
     return out or ["- süre ölçülmedi"]
 
 
+def hesap_tablosu(ilk: dict, d: dict) -> list[str]:
+    """A2-4 kabul kanıtı: aynı adreste İ `hesap` (kapı `hesap_degeri_bugun` = perp + spot), F `hesap` (izleme `ilk11_form_ham.alanlar.hesap`), izlemenin yalnız perp değeri
+    (`hesap_degeri`) ve toplamı (`hesap_degeri_toplam` = perp + spot USDC). Hepsi $, trader hesabı ölçeği. F/İ ≈ 1 beklenir (iki okuma arası saatler fark yaratır)."""
+    out = ["", "### hesap: İ ve F aynı adreste (A2-4)", "", "| id | adres | İ hesap $ | F hesap $ | izleme perp $ | izleme toplam (perp+spot) $ | F/İ |", "|---|---|---|---|---|---|---|"]
+    for t in d["traderlar"]:
+        adres = str(t["adres"]).lower()
+        i_h = (ilk.get(adres) or ({}, {}))[0].get("hesap")
+        f_h = ((t.get("ilk11_form_ham") or {}).get("alanlar") or {}).get("hesap")
+        oran = f"{f_h / i_h:.3f}" if i_h and f_h is not None else "—"
+        f = lambda x: "—" if x is None else f"{x:.0f}"      # noqa: E731
+        out.append(f"| {t['id']} | `{adres[:10]}…` | {f(i_h)} | {f(f_h)} | {f(t.get('hesap_degeri'))} | {f(t.get('hesap_degeri_toplam'))} | {oran} |")
+    return out
+
+
 def ozet(kapi_sonuc: Path, durum: Path, pazar_alanlar: Path | None, sure_sn: float | None, artimli_sn: float | None = None) -> str:
     satirlar = pd.read_csv(kapi_sonuc, low_memory=False).to_dict("records")
     ilk = {str(s["address"]).lower(): ilk11_alanlar.ilk_alanlar(s) for s in satirlar}
@@ -115,6 +129,7 @@ def ozet(kapi_sonuc: Path, durum: Path, pazar_alanlar: Path | None, sure_sn: flo
         fa, fk = f.get("alanlar") or {}, f.get("alan_kaynagi") or {}
         out.append(f"| `{adres[:10]}…` F | " + " | ".join(f"{fa[a]:.5g}" if fa.get(a) is not None else (f"**{fk.get(a)}**" if fk.get(a) else "—") for a in KALDIRAC_ALANLARI)
                    + f" |  dolu_alan={f.get('dolu_alan', f.get('hata'))}")
+    out += hesap_tablosu(ilk, d)
     out += ["", "### Sütun min / medyan / max", "", "| sütun | n | min | medyan | max |", "|---|---|---|---|---|"]
     for a in KALDIRAC_ALANLARI:
         out.append(_istatistik(f"İ {a}", [v[0][a] for v in ilk.values()]))
