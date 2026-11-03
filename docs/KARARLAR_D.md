@@ -186,3 +186,10 @@ Görev: `docs/GOREV_D_YOLU.md`.
 - Kullanıcıda kalan: **canlıya geçiş (son karar)**, para/hesap/anahtar/cüzdan, sunucu hesabı. Lider ayrıca geri alınamaz veri silmeyi
   kullanıcıya sorar. `AGENTS.md` değişmez kuralları (gizli bilgi yok, emir yok, testler zayıflatılmaz, main'e doğrudan push yok) aynen geçerli.
 - Kontroller: model sınırı bitince 05:05 ve 10:05 TR'de kaldığı yerden devam.
+
+### K‑19. İşçiler: ikinci hesap + Argon yalnız pano (kullanıcı kararı 2026-11-03)
+- Lider limiti korunur: lider plan/denetim/birleştirme yapar; kod işleri `docs/GOREV_*.md` belgesiyle ikinci hesaptaki Sonnet 5.5
+  oturumuna verilir (köprü repo; kullanıcı görevi yapıştırır, "PR #N hazır" der).
+- **Argon** ikinci işçi; **yalnız Faz 2 pano arayüzü** (statik HTML/JS/CSS, salt okur, hesap yapmaz — kural 7). Motor, veri, seçim,
+  kapı, dinleyici ve risk koduna dokunmaz. Kodu kullanıcı lidere getirir; lider denetler ve PR ile girer (kural 8'in pano istisnası).
+- Argon'un çıktısı beğenilmezse iş hemen kesilir; yarım kod birleştirilmez.
