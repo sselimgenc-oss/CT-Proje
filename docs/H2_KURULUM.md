@@ -86,6 +86,12 @@ rm /var/lib/sg-dinleyici/DUR
 Dosya her dolumda kontrol edilir; yeniden başlatma gerekmez.
 **Başlangıç pozisyonu (H5b):** servis her başlangıçta/yeniden bağlanmada `takim: ilk11` adreslerinin açık pozisyonlarını REST `clearinghouseState` ile okur (adres başına 1 + HIP-3 dex sayısı istek, ~2 ağırlık). Okuma arka planda yapılır, istekler arası 0,5 sn; hata/429'da 3 yeniden deneme (2/5/15 sn), sonra o adres her 5 dk'da yeniden denenir. `ozet.json` → `genel.baslangic_poz_bekleyen` > 0 uzun süre sürüyorsa (429/ağ) o adres için risk eski varsayımda kalmıştır (`risk.lider_pozisyon_varsayimi`); dinleme ve ölçüm etkilenmez.
 
+**REST hataları (429 koruması):** her REST hatası journal'a tek satır uyarıdır; türlere göre dağılım için:
+```bash
+journalctl -u sg-dinleyici --since "4 hours ago" | grep "UYARI REST" | sed 's/.*kaynak=\([a-z_]*\) trader=[^ ]* tur=/\1 /' | sort | uniq -c | sort -rn | head
+```
+`ozet.json` → `genel.dolgu_hata_tur` / `hakem_hata_tur` / `baslangic_poz_hata_tur` aynı dağılımı sayıyla verir (`HTTP 429` baskınsa istek aralığı yetmiyor demektir). Dolgu ve hakem (`userFillsByTime`) arka planda ve istekler arası 1,5 sn, başlangıç okuması (`clearinghouseState`) 0,5 sn aralıkla çalışır; WS ölçümü beklemez. Servis durdurulurken son hakem turu en çok 60 sn sürer; yetişmeyen adresler `genel.kapanis_atlanan`.
+
 ## 9. Durdur
 ```bash
 systemctl stop sg-dinleyici

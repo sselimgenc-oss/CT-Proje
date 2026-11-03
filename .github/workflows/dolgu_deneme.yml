@@ -1,0 +1,41 @@
+name: Dolgu 429 koruması (küçük gerçek veri denemesi)
+
+# Kural 1: listedeki tüm adreslerle bir dolgu turu; salt okunur, hiçbir yere yazmaz.
+# Tetik: elle ya da `copytrade/izleme_deneme/DOLGU` dosyasına push.
+on:
+  workflow_dispatch:
+    inputs:
+      pencere_dk:
+        description: "dolgu penceresi (dk)"
+        default: "60"
+  push:
+    paths:
+      - copytrade/izleme_deneme/DOLGU
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+jobs:
+  dolgu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-dinleyici.txt
+      - name: Dolgu turu (korumalı) + karşılaştırma (eski desen)
+        env:
+          PENCERE: ${{ inputs.pencere_dk || '60' }}
+        run: python -m copytrade.dolgu_deneme --pencere-dk "$PENCERE" --eski-davranis 2> dolgu_uyari.log | tee dolgu_ozet.json
+      - name: Uyarı satırları (hata türü dağılımı; adres yok)
+        if: always()
+        run: |
+          echo "UYARI satırı: $(grep -c 'UYARI REST' dolgu_uyari.log || true)"
+          sed 's/.*kaynak=\([a-z_]*\) trader=[^ ]* tur=/\1 /' dolgu_uyari.log | sort | uniq -c | sort -rn | head -20 || true
