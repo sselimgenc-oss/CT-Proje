@@ -69,7 +69,7 @@ def test_veri_dali_yazimlari_yalniz_veri_dallarina():
 
 def test_zamanlamalar_sartnameyle_ayni():
     assert yukle("copytrade_kapi.yml")["on"]["schedule"] == [{"cron": "43 18 * * 6"}] and "workflow_dispatch" in yukle("copytrade_kapi.yml")["on"]
-    assert yukle("izleme.yml")["on"]["schedule"] == [{"cron": "23 * * * *"}]
+    assert yukle("izleme.yml")["on"]["schedule"] == [{"cron": "23 */2 * * *"}]
     assert yukle("ilk11_pazar.yml")["on"]["schedule"] == [{"cron": "7 10-18/2 * * 0"}]
     assert yukle("izleme.yml")["concurrency"]["cancel-in-progress"] is False and yukle("ilk11_pazar.yml")["concurrency"]["cancel-in-progress"] is False
     toplam = sum(yukle("copytrade_kapi.yml")["jobs"][j]["timeout-minutes"] for j in ("plan", "stage1", "publish"))
@@ -78,10 +78,19 @@ def test_zamanlamalar_sartnameyle_ayni():
     assert toplam <= 4 * 60 + 40 and yukle("copytrade_kapi.yml")["jobs"]["stage1"]["timeout-minutes"] <= 120 and yukle("copytrade_kapi.yml")["jobs"]["publish"]["timeout-minutes"] <= 90
 
 
+def test_izleme_araligi_ile_tazelik_esigi_tutarli_k18():
+    """Cron aralığı (kurallar.yaml `izleme_aralik_dk`) ile tazelik eşiği ilişkisi: eşik = 2 × aralık + tampon. Biri değişirse diğeri de değişmeli."""
+    kural = yaml.safe_load((ROOT / "copytrade" / "kurallar.yaml").read_text(encoding="utf-8"))
+    cron = yukle("izleme.yml")["on"]["schedule"][0]["cron"].split()
+    assert cron[0] == "23" and cron[1] == f"*/{kural['izleme_aralik_dk'] // 60}" and cron[2:] == ["*", "*", "*"]
+    assert kural["izleme_aralik_dk"] == 120 and kural["izleme_tazelik_tampon_dk"] == 30
+    assert kural["ilk11_form_tazelik_dk"] == 2 * kural["izleme_aralik_dk"] + kural["izleme_tazelik_tampon_dk"] == 270
+
+
 def test_izleme_ilk_okuma_icin_timeout_300_dk_kuyruk_bekler():
     wf = yukle("izleme.yml")
     assert wf["jobs"]["izleme"]["timeout-minutes"] == 300 <= 360                               # 86 trader ilk okuma ≈ 192 dk (ölçüm); GitHub sınırı 360
-    assert wf["concurrency"] == {"group": "copytrade-izleme", "cancel-in-progress": False}      # saatlik koşular uzun ilk koşunun arkasında bekler
+    assert wf["concurrency"] == {"group": "copytrade-izleme", "cancel-in-progress": False}      # sonraki koşular uzun ilk koşunun arkasında bekler
 
 
 def test_worker_telegram_adimlari_geri_gelmedi_k13():

@@ -217,14 +217,17 @@ def test_veri_durumu_belirle_oncelik_perp_bos_fiyatsiz_tamam():
     assert belirle(0, {}, {'fiyatsiz_eylem': 3}, 4, ['ETH'])[0] == 'perp_bos'
 
 
-def test_bayat_veri_zamani_uretildiden_120_dk_ve_daha_eskiyse_ve_oncelikler_korunur():
-    """Altın örnek: yayın anı 12:00. veri_zamani 09:00 (3 sa = 180 dk > 120) -> bayat; 11:00 (1 sa) -> değil; tam 120 dk (10:00) -> değil (sınır dahil değil)."""
+def test_bayat_veri_zamani_uretildiden_270_dk_ve_daha_eskiyse_ve_oncelikler_korunur():
+    """Altın örnek (K-18: 2 saatlik izleme; eşik = 2 × 120 + 30 = 270 dk): yayın anı 12:00. veri_zamani 07:00 (300 dk > 270) -> bayat;
+    10:00 (120 dk, bir koşu aralığı) -> değil; tam 270 dk (07:30) -> değil (sınır dahil değil); 269 dk önce de değil."""
     uretildi = m.timestamp('2026-10-27T12:00:00Z')
-    tamam = {'id': 'T1', 'veri_durumu': 'tamam', 'veri_durumu_neden': '', 'veri_zamani': '2026-10-27T09:00:00Z'}
+    tamam = {'id': 'T1', 'veri_durumu': 'tamam', 'veri_durumu_neden': '', 'veri_zamani': '2026-10-27T07:00:00Z'}
     eski = m.bayat_isle(tamam, uretildi)
-    assert (eski['veri_durumu'], eski['veri_durumu_neden']) == ('bayat', 'veri 180 dk eski (> 120 dk)') and tamam['veri_durumu'] == 'tamam'       # girdi değişmez
-    assert m.bayat_isle({**tamam, 'veri_zamani': '2026-10-27T11:00:00Z'}, uretildi)['veri_durumu'] == 'tamam'
+    assert (eski['veri_durumu'], eski['veri_durumu_neden']) == ('bayat', 'veri 300 dk eski (> 270 dk)') and tamam['veri_durumu'] == 'tamam'       # girdi değişmez
     assert m.bayat_isle({**tamam, 'veri_zamani': '2026-10-27T10:00:00Z'}, uretildi)['veri_durumu'] == 'tamam'
+    assert m.bayat_isle({**tamam, 'veri_zamani': '2026-10-27T07:30:00Z'}, uretildi)['veri_durumu'] == 'tamam'
+    assert m.bayat_isle({**tamam, 'veri_zamani': '2026-10-27T07:31:00Z'}, uretildi)['veri_durumu'] == 'tamam'
+    assert m.bayat_isle({**tamam, 'veri_zamani': '2026-10-27T07:29:00Z'}, uretildi)['veri_durumu'] == 'bayat'
     for durum in ('okuma_hatasi', 'perp_bos', 'fiyatsiz'):                                          # öncelik: bayat bunları ezmez
         assert m.bayat_isle({**tamam, 'veri_durumu': durum}, uretildi)['veri_durumu'] == durum
     assert m.bayat_isle({**tamam, 'veri_zamani': None}, uretildi)['veri_durumu'] == 'tamam'          # hiç okunmamış yer tutucu zaten okuma_hatasi

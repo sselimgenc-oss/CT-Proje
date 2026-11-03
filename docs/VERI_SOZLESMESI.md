@@ -7,7 +7,7 @@ sözleşmeye göre çalışır; alan eklemek/değiştirmek lider onayıyla `suru
 |---|---|---|---|
 | `izleme/durum.json` | sg-arge, `copytrade-izleme` dalı (main büyümesin) | Codex işi (Actions) | saatte bir |
 | `izleme/ornek_durum.json` | sg-arge `main` (sabit örnek, 4 trader) | lider (hazır) | sabit; Sonnet bununla başlar |
-| `izleme/kararlar.jsonl` (açtım/atladım) | sg-arge, `copytrade-izleme` dalı | saatlik iş, Worker'ın `GET /kararlar`'ından (Cloudflare'de GitHub anahtarı yok) | saatte bir |
+| `izleme/kararlar.jsonl` (açtım/atladım) | sg-arge, `copytrade-izleme` dalı | izleme işi (2 saatte bir, K-18), Worker'ın `GET /kararlar`'ından (Cloudflare'de GitHub anahtarı yok) | saatte bir |
 | `izleme/gecikme.json` (gerçek algılama gecikmesi, v1.7, E1 devamı) | sg-arge, `copytrade-izleme` dalı | saatlik iş, Worker'ın `GET /gecikme`'sinden (`copytrade/gecikme.py`) | saatte bir, `GECIKME_URL` tanımlıysa (yoksa adım atlanır, saatlik durum bozulmaz) |
 
 Repolar herkese açık (kullanıcı kararı 2026-10-27). Bu yüzden karar kaydında **tutar, bakiye, hesap, isim yoktur**;
@@ -91,8 +91,8 @@ yalnız olay kimliği, karar ve neden. Trader adresleri zaten herkese açık zin
   - `fiyatsiz`: en az bir dolum için gecikmeli yürütme mumu yok (1 dk, ya da 1 sa yedek). Hedef atlanır ve sayılır (önbelleğe girmez, sonraki saat yeniden
     denenir); asla "sonraki fiyat" kullanılmaz. v1'de `sanal_kopya.fiyatsiz_eylem` (adet; atlanan dolum) ve `not`; v3'te `fiyatsiz_eylem` (`copy_ledger` sayısı).
     Açık kopya coini için son 15 dakikada işaret (1 dk) mumu yoksa da `fiyatsiz`: neden "işaret fiyatı eksik: <coin listesi>" (işaret eksiği bir FİYAT eksiğidir).
-  - `bayat`: trader'ın `veri_zamani` değeri yayın anındaki `uretildi`'den `ilk11_form_tazelik_dk` (120) dakikadan DAHA eski (sınır dahil değil) ve başka bir kod yok
-    (öncelik: okuma_hatasi > perp_bos > fiyatsiz > bayat > tamam). `veri_durumu_neden`: "veri N dk eski (> 120 dk)".
+  - `bayat`: trader'ın `veri_zamani` değeri yayın anındaki `uretildi`'den `ilk11_form_tazelik_dk` (270 dk = 2 × `izleme_aralik_dk` 120 + 30 tampon; K-18: izleme 2 saatte bir) dakikadan DAHA eski (sınır dahil değil) ve başka bir kod yok
+    (öncelik: okuma_hatasi > perp_bos > fiyatsiz > bayat > tamam). `veri_durumu_neden`: "veri N dk eski (> 270 dk)".
   - `tamam`: yukarıdakilerin hiçbiri. `veri_durumu_neden`: kısa Türkçe metin (`tamam`da boş).
 - **`traderlar[].mum_eksik` ve negatif önbellek (v1.16, K-18):** `{hedef, onbellekten}` (adet). `hedef` = bu koşuda fiyatı olmayan yürütme hedefi sayısı; `onbellekten` = bunların kaç tanesi
   API'ye YENİDEN SORULMADAN negatif önbellekten geldi. Eksik çıkan (coin, hedef dakika) `motor.json`'da `traderlar[ID].mum_eksik = {coin: {hedef_ms: son_deneme_ms}}` olarak

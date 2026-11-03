@@ -7,7 +7,7 @@ Amaç: canlıda kâr. Trader'ın kendi getirisi değil, **bizim kopyamızın mal
 - **Seçim 30–120 dk gecikmeyle ölçülüyor.** Kapı adım 3 ve plasebo `kopya_gecikme_dk` (intraday 30, swing 120) ile hesaplanır;
   yürütme fiyatı saatlik mum açılışıdır (`defter.py`). Yani seçim "geç kopyalayan" birine göre yapılıyor: hızlı trader'lar
   cezalanıyor, anlık kopyada kârlı olabilecekler eleniyor olabilir.
-- **İzleme saatlik** (`izleme.yml`): canlıda 60 dk'ya kadar geç giriş demek. Canlı için kabul edilemez.
+- **İzleme 2 saatte bir** (`izleme.yml`, K‑18; önce saatlikti): canlıda 120 dk'ya kadar geç giriş demek. Gerekçe: gerçek ölçüm artımlı koşu 5 trader 293 sn → 86 trader ≈ 84 dk > saatlik 55 dk bütçe; anlık dinleyici (K‑17) asıl akış, izleme yedek. Canlı için kabul edilemez.
 - **Anlık dinleyici kodu zaten var ama kurulmadı:** `hl_public_adapter.py` (WebSocket `userFills` + `userFillsByTime` dolgu),
   `hl_ws_runtime.py`, `hl_ws_dry_run.py`, `faz3_dry_run_service.py` (yalnız dry-run, emir/anahtar yok; `docs/FAZ3_DRY_RUN_SERVIS.md`).
   24 saatlik gerçek koşu hiç yapılmadı.

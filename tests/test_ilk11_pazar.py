@@ -413,8 +413,10 @@ def test_golden_18_form_gecerlilik_ve_aktiflik():
     assert satir(trader())["bu_pazar_gecerli"] is True
     assert satir(trader(dolu=8))["bu_pazar_gecerli"] is True                                    # 8/10: sınırda geçerli
     assert satir(trader(dolu=7))["bu_pazar_gecerli"] is False                                   # 7 alan dolu -> hareket yok
-    assert satir(trader(uretildi="2026-11-08T07:00:00Z"))["bu_pazar_gecerli"] is False          # veri 3 saat eski (> 120 dk)
-    assert satir(trader(uretildi="2026-11-08T08:00:00Z"))["bu_pazar_gecerli"] is True           # tam 120 dk: sınırda geçerli
+    assert satir(trader(uretildi="2026-11-08T04:00:00Z"))["bu_pazar_gecerli"] is False          # veri 6 saat eski (> 270 dk)
+    assert satir(trader(uretildi="2026-11-08T05:29:00Z"))["bu_pazar_gecerli"] is False          # 271 dk
+    assert satir(trader(uretildi="2026-11-08T05:30:00Z"))["bu_pazar_gecerli"] is True           # as_of 10:00; tam 270 dk (2 × 120 + 30): sınırda geçerli
+    assert satir(trader(uretildi="2026-11-08T07:00:00Z"))["bu_pazar_gecerli"] is True           # 2,5 saat (2 saatlik izleme + koşu süresi): geçerli
     assert satir(trader(gecerli=False))["bu_pazar_gecerli"] is False
     assert satir(trader(ilk11_form_ham={"hata": "x"}))["bu_pazar_gecerli"] is False
     assert satir(None)["bu_pazar_gecerli"] is False and satir(None)["bu_pazar_aktif"] is None
