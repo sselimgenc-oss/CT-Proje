@@ -182,7 +182,7 @@ def test_empty_list_writes_contract_and_never_uses_network(tmp_path):
             raise AssertionError(name)
     result = m.run(root, root / 'out', NoNetwork(), NOW)
     assert result == {'surum': 1, 'uretildi': '2026-10-27T12:00:00Z', 'kaynak': 'hyperliquid', 'traderlar': [],
-                      'kasa_egri': {'oda': [], 'kontrol': []}, 'olaylar': []}
+                      'kasa_egri': {'oda': [], 'kontrol': []}, 'olaylar': [], 'olay_ozeti': {'toplam': 0, 'yayimlanan': 0, 'tasan': 0, 'trader_basina': {}}}
     assert json.loads((root / 'out/durum.json').read_text()) == result
 
 
@@ -544,6 +544,68 @@ def test_event_feed_is_recent_200_with_stable_archive(tmp_path):
     assert len(result['olaylar']) == 200
     assert '249' not in {e['id'] for e in result['olaylar']}
     assert len(json.loads((output / 'motor.json').read_text())['olaylar']) == 250
+    # A4-2: taşan 50 olay sessizce atılmaz: özet + JSONL (veri dalı arşivine)
+    assert result['olay_ozeti'] == {'toplam': 250, 'yayimlanan': 200, 'tasan': 50, 'trader_basina': {'retained': 250}}
+    tasan = [json.loads(satir) for satir in (output / 'olay_tasan.jsonl').read_text().splitlines()]
+    assert [e['id'] for e in tasan] == [str(i) for i in range(200, 250)]                      # en eski 50 (zaman azalan sırada yayın penceresinin devamı)
+    assert {e['id'] for e in result['olaylar']} | {e['id'] for e in tasan} == {str(i) for i in range(250)} and not {e['id'] for e in result['olaylar']} & {e['id'] for e in tasan}
+
+
+def test_olay_arsivi_eklemeli_tekil_ve_degismez(tmp_path):
+    """Elle: arşivde a(1), b(2); yeni taşan b'nin DEĞİŞMİŞ kopyası + c(3) -> arşiv a, b(eski kayıt), c; ikinci kez aynı girdi -> aynı."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('olay_arsivle', ROOT / '.github/scripts/olay_arsivle.py')
+    arsivle = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(arsivle)
+    arsiv, tasan = tmp_path / 'olay_arsivi.jsonl', tmp_path / 'olay_tasan.jsonl'
+    olay = lambda i, z, **ek: {'id': i, 'zaman': z, 'trader': 'T1', **ek}                  # noqa: E731
+    arsiv.write_text(''.join(json.dumps(o) + '\n' for o in [olay('b', '2026-10-27T00:00:02Z', not_='eski'), olay('a', '2026-10-27T00:00:01Z')]))
+    tasan.write_text(''.join(json.dumps(o) + '\n' for o in [olay('b', '2026-10-27T00:00:02Z', not_='YENI'), olay('c', '2026-10-27T00:00:03Z')]))
+    assert arsivle.main(['x', str(tasan), str(arsiv)]) == 0
+    satirlar = [json.loads(s) for s in arsiv.read_text().splitlines()]
+    assert [o['id'] for o in satirlar] == ['a', 'b', 'c'] and satirlar[1]['not_'] == 'eski'
+    once = arsiv.read_text()
+    arsivle.main(['x', str(tasan), str(arsiv)])
+    assert arsiv.read_text() == once
+
+
+def _olay(trader, i):
+    return {'id': f'{trader}-{i}', 'zaman': m.at_ms(m.millis(NOW) - i * m.MINUTE), 'trader': trader, 'tur': 'isik'}
+
+
+def test_olay_adil_pay_uc_trader_biri_500():
+    """Elle: A 500, B 10, C 5 olay, sınır 200 -> B 10 + C 5 tam; A kalan 185; taşan 315; toplam kayıp 0."""
+    tum = sorted([_olay('A', i) for i in range(500)] + [_olay('B', i) for i in range(10)] + [_olay('C', i) for i in range(5)],
+                 key=lambda e: (e['zaman'], e['id']), reverse=True)
+    yayin, tasan = m.olay_yayin_ayir(tum)
+    sayim = lambda lst, t: sum(1 for e in lst if e['trader'] == t)           # noqa: E731
+    assert (sayim(yayin, 'A'), sayim(yayin, 'B'), sayim(yayin, 'C')) == (185, 10, 5) and len(yayin) == 200
+    assert sayim(tasan, 'A') == 315 and len(tasan) == 315
+    assert {e['id'] for e in yayin} | {e['id'] for e in tasan} == {e['id'] for e in tum} and not {e['id'] for e in yayin} & {e['id'] for e in tasan}
+    assert {f'A-{i}' for i in range(185)} == {e['id'] for e in yayin if e['trader'] == 'A'}        # A'nın EN YENİ 185'i
+    assert [e['zaman'] for e in yayin] == sorted((e['zaman'] for e in yayin), reverse=True)
+
+
+def test_olay_paylari_uc_durumlar():
+    assert m.olay_paylari({}) == {}
+    assert m.olay_paylari({'A': 0}) == {'A': 0}
+    assert m.olay_paylari({'A': 200}) == {'A': 200}                           # tam sınır: taşan yok
+    assert m.olay_paylari({'A': 201}) == {'A': 200}
+    assert m.olay_paylari({'A': 150, 'B': 50}) == {'A': 150, 'B': 50}         # toplam tam 200
+    assert m.olay_paylari({'A': 300, 'B': 300, 'C': 300}) == {'A': 67, 'B': 67, 'C': 66}   # 200 = 3*66 + 2; artık kimlik sırasıyla
+    assert m.olay_yayin_ayir([]) == ([], [])
+
+
+def test_olay_yayin_run_adil_ve_ozet(tmp_path):
+    root, client = project(tmp_path), Client([])
+    output = root / 'out'
+    output.mkdir()
+    events = {e['id']: e for e in [_olay('A', i) for i in range(500)] + [_olay('B', i) for i in range(3)]}
+    (output / 'motor.json').write_text(json.dumps({'surum': 1, 'traderlar': {}, 'olaylar': events}))
+    result = m.run(root, output, client, NOW)
+    assert result['olay_ozeti'] == {'toplam': 503, 'yayimlanan': 200, 'tasan': 303, 'trader_basina': {'A': 500, 'B': 3}}
+    assert sum(1 for e in result['olaylar'] if e['trader'] == 'B') == 3
+    assert len((output / 'olay_tasan.jsonl').read_text().splitlines()) == 303
 
 
 # ---------------------------------------------------------------- v1.3: tarza göre gecikme
@@ -656,3 +718,32 @@ def test_health_blind_keeps_leverage_and_staleness():
     result = m.health(h, h.index[-1], NOW, 10.01, False, m.millis(NOW) - 30 * m.DAY, performans_konisi=False)
     assert result['isik'] == 'kirmizi'
     assert result['nedenler'] == ['gerçek kaldıraç > 10x', 'son 30 günde işlem yok']
+
+
+def test_publication_arsivler_tasan_olaylari_eklemeli_ve_tasan_dosyasini_dala_koymaz(tmp_path):
+    """A4-2: iki yayında taşan olaylar veri dalındaki `izleme/olay_arsivi.jsonl` dosyasına birikir (tekil, eski kayıt değişmez); `olay_tasan.jsonl` dala girmez."""
+    remote, checkout = tmp_path / 'remote.git', tmp_path / 'checkout'
+    remote.mkdir(); checkout.mkdir()
+    git(remote, 'init', '--bare')
+    git(checkout, 'init')
+    git(checkout, 'config', 'user.name', 'Test')
+    git(checkout, 'config', 'user.email', 'test@example.com')
+    git(checkout, 'remote', 'add', 'origin', str(remote))
+    (checkout / 'source.py').write_text('source must stay off data branch')
+    git(checkout, 'add', '.')
+    git(checkout, 'commit', '-m', 'source')
+    command = ['bash', str(ROOT / '.github/scripts/izleme_yayimla.sh')]
+    olay = lambda i, z: json.dumps({'id': i, 'zaman': z, 'trader': 'T1'}) + '\n'                # noqa: E731
+
+    def yayimla(durum, tasan):
+        (checkout / 'izleme').mkdir(exist_ok=True)
+        (checkout / 'izleme/durum.json').write_text(durum)
+        (checkout / 'izleme/motor.json').write_text('{}')
+        (checkout / 'izleme/olay_tasan.jsonl').write_text(tasan)
+        subprocess.run(command, cwd=checkout, env={**os.environ, 'GITHUB_ACTIONS': 'true'}, check=True, capture_output=True)
+    yayimla('{"uretildi":"1"}', olay('b', '2026-10-27T00:00:02Z') + olay('a', '2026-10-27T00:00:01Z'))
+    arsiv = (checkout / 'izleme/olay_arsivi.jsonl').read_text().splitlines()
+    assert [json.loads(s)['id'] for s in arsiv] == ['a', 'b'] and not (checkout / 'izleme/olay_tasan.jsonl').exists()
+    yayimla('{"uretildi":"2"}', olay('c', '2026-10-27T00:00:03Z') + olay('b', '2026-10-27T00:00:02Z'))
+    assert [json.loads(s)['id'] for s in (checkout / 'izleme/olay_arsivi.jsonl').read_text().splitlines()] == ['a', 'b', 'c']
+    assert 'olay_tasan.jsonl' not in git(checkout, 'ls-tree', '-r', '--name-only', 'HEAD') and 'izleme/olay_arsivi.jsonl' in git(checkout, 'ls-tree', '-r', '--name-only', 'HEAD')

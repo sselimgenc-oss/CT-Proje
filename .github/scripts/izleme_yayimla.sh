@@ -4,7 +4,10 @@ set -euo pipefail
 [ "${GITHUB_ACTIONS:-}" = true ] || { echo 'Yalnız GitHub Actions için.' >&2; exit 1; }
 archive=$(mktemp -d)
 trap 'rm -rf "$archive"' EXIT
-for path in durum.json binance_vadeli.txt kararlar.jsonl degisim.json gecikme.json; do
+# Veri dalına geçince main'in dosyaları kaybolur: arşiv yardımcısını önceden kopyala (A4-2).
+cp "$(cd "$(dirname "$0")" && pwd)/olay_arsivle.py" "$archive.olay_arsivle.py"
+trap 'rm -rf "$archive" "$archive.olay_arsivle.py"' EXIT
+for path in durum.json binance_vadeli.txt kararlar.jsonl degisim.json gecikme.json olay_tasan.jsonl; do
   if [ -f "izleme/$path" ]; then cp "izleme/$path" "$archive/"; fi
 done
 [ -s "$archive/durum.json" ]
@@ -25,11 +28,16 @@ else
 fi
 mkdir -p izleme
 cp -r "$archive"/. izleme/
+# A4-2: yayın penceresinden (son 200) taşan olaylar kalıcı arşive eklenir (eklemeli, kimlik başına tekil, mevcut kayıt değişmez); geçici taşan dosyası dala girmez.
+if [ -f izleme/olay_tasan.jsonl ]; then
+  python3 "$archive.olay_arsivle.py" izleme/olay_tasan.jsonl izleme/olay_arsivi.jsonl
+  rm -f izleme/olay_tasan.jsonl
+fi
 # Eski motor.json veri dalından kaldırılır (artık R2'de).
 git rm -q --cached --ignore-unmatch izleme/motor.json
 # Worker'ın kararlar.jsonl dosyası ve diğer arşivleri korunur.
-for path in durum.json binance_vadeli.txt kararlar.jsonl degisim.json gecikme.json; do
-  if [ -f "$archive/$path" ]; then git add -f "izleme/$path"; fi
+for path in durum.json binance_vadeli.txt kararlar.jsonl degisim.json gecikme.json olay_arsivi.jsonl; do
+  if [ -f "izleme/$path" ]; then git add -f "izleme/$path"; fi
 done
 if git diff --cached --quiet; then exit 0; fi
 git commit -m "izleme: saatlik durum $(date -u +%FT%TZ)"
