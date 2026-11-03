@@ -77,4 +77,5 @@ Kaldırmak için ek olarak `systemctl disable sg-dinleyici` ve Droplet'i silin. 
 
 ## Bilinen sınırlar
 - `trades` coin evreni = izleme motorunun kopyaladığı evren (kural 7): ana perp piyasası + HER HIP-3 dex'inin coinleri (`dex:coin`; `perpDexs` + `meta` `dex`). Spot kopyalanmaz (`olcut.perp_fills`): abone olunmaz, REST hakemde görülürse yalnız `kacan_sinif.spot` olarak sayılır. Abonelik reddi `genel.error` ve `error` çerçeveleriyle görünür.
+- Kopma sonrası REST dolgusu (H2b): yeniden bağlanınca [son WS mesajı, yeniden abonelik bitişi] aralığı `userFillsByTime` ile doldurulur; kurtarılan dolum `dolgu` (trader başına adet + `dolgu_gecikme_max_sn`, canlı gecikmeden AYRI) ve `genel.dolgu` olarak yazılır, REST hatası `genel.dolgu_hata`. Dolgu ile alınan dolum görülmüş sayılır: REST hakem `kopma_araligi` / `gercek` kaçan saymaz. Spot dolgu dışıdır.
 - `userFills` çapraz kontrolü ilk 10 adresle sınırlıdır (varsayılan; Adım 0 sonucuna göre değişir).

@@ -85,7 +85,8 @@ def test_sifir_dolumlu_trader_ozeti_ve_ozet_adres_icermez(tmp_path):
     o = d.Olcum(IZ)
     o.olay(d.Olay(f"{A}:1", "aaaa", A, 1000, 1400, "trades"))
     ozet = o.ozet(2000, 0)
-    assert ozet["toplam"]["bbbb"] == {"n": 0, "gecikme_medyan_sn": None, "gecikme_p95_sn": None, "gecikme_max_sn": None, "kacan": 0, "kacan_sinif": {}, "snapshot": 0, "negatif_gecikme": 0}
+    assert ozet["toplam"]["bbbb"] == {"n": 0, "gecikme_medyan_sn": None, "gecikme_p95_sn": None, "gecikme_max_sn": None, "kacan": 0, "kacan_sinif": {}, "snapshot": 0, "negatif_gecikme": 0,
+                                         "dolgu": 0, "dolgu_gecikme_max_sn": None}
     assert ozet["toplam"]["aaaa"]["gecikme_medyan_sn"] == 0.4
     d.ozet_yaz(tmp_path / "ozet.json", ozet)
     metin = (tmp_path / "ozet.json").read_text()
@@ -361,3 +362,30 @@ def test_calistirici_kopma_araligi_son_mesajdan_yeniden_abonelik_bitisine(tmp_pa
     # ilk bağlantı: son mesaj anı 1_000_100 (saat 100 ms ilerledi), sonra kopma; yeniden aboneliğin bitişi >= son mesaj
     assert din.olcum.kopma_araliklari and din.olcum.kopma_araliklari[0][0] == 1_000_100 and din.olcum.kopma_araliklari[0][1] >= 1_000_100
     assert din.olcum.kopma_bas_ms is None
+
+
+def test_golden_dolgu_kopma_araliginda_3_dolum_dolgu_3_kacan_0():
+    """Elle: kopma aralığı [50_000, 60_000]; REST'te aralıkta 3 dolum (t=51_000, 55_000, 59_000), 1 aralık dışı (t=49_000), 1 spot ('@107', t=52_000), 1 canlı görülmüş (tid 9).
+    Dolgu: şimdi=70_000 -> kurtarılan 3; gecikmeler 19, 15, 11 sn (max 19); sonra REST hakem (simdi 10_000_000) aralık dışı tid 4'ü ve spot'u sayar: dolgunun 3'ü kaçan DEĞİL."""
+    o = d.Olcum(IZ)
+    o.abone_coinler = {"BTC"}
+    o.ilk_abone_bitis_ms = 1_000
+    o.olay(d.Olay(f"{A}:9", "aaaa", A, 56_000, 56_100, "trades", False, "BTC"))                   # canlı görülen
+    rest = [{"tid": 1, "time": 51_000, "coin": "BTC"}, {"tid": 2, "time": 55_000, "coin": "BTC"}, {"tid": 3, "time": 59_000, "coin": "BTC"},
+            {"tid": 4, "time": 49_000, "coin": "BTC"}, {"tid": 5, "time": 52_000, "coin": "@107"}, {"tid": 9, "time": 56_000, "coin": "BTC"}]
+    assert o.dolgu("aaaa", A, rest, 50_000, 70_000) == 3
+    t = o.toplam["aaaa"]
+    assert t.dolgu == 3 and sorted(t.dolgu_gecikme) == [11.0, 15.0, 19.0] and t.ozet()["dolgu_gecikme_max_sn"] == 19.0 and t.gecikme == [0.1]       # canlı gecikme örneği ayrı
+    assert o.dolgu("aaaa", A, rest, 50_000, 70_000) == 0                                         # ikinci dolgu: hepsi görülmüş
+    assert o.rest_karsilastir("aaaa", A, rest, simdi_ms=10_000_000, tolerans_ms=120_000) == 1    # yalnız aralık dışı tid 4 gerçek kaçan; dolgu'nun 3'ü ve canlı kaçan değil
+    assert t.kacan_sinif == {"spot": 1, "gercek": 1}
+
+
+def test_calistirici_kopma_sonrasi_dolgu_rest_ile_kopma_araligi_kapanir(tmp_path):
+    """Uçtan uca: bağlantı 1 mesajdan sonra kopar (son mesaj 1_000_100); yeniden bağlanınca REST dolgusu aralıktaki 2 dolumu alır (dolgu 2); REST hakem kaçan 0."""
+    saat = Saat(ms=1_000_000)
+    rest = {A: [{"tid": 11, "time": 1_000_150, "coin": "BTC"}, {"tid": 12, "time": 1_000_160, "coin": "BTC"}], B: []}
+    din, ws, ozet = calistir(IZ, [[100, trades((1, 1_000_050, [A])), 400], []], tmp_path, saat=saat, post=lambda y: rest[y["user"]],
+                             ayar=d.Ayar(sure_sn=0.4, geri_cekilme_ilk_sn=0.01, geri_cekilme_max_sn=0.02, rest_tolerans_ms=0))
+    assert ozet["genel"]["dolgu"] == 2 and ozet["toplam"]["aaaa"]["dolgu"] == 2 and ozet["toplam"]["aaaa"]["kacan"] == 0
+    assert ozet["genel"].get("dolgu_hata", 0) == 0
