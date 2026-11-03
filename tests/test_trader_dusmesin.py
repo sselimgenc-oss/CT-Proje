@@ -252,3 +252,17 @@ def test_uc_ozeti_altin_ornek():
     once = {'candleSnapshot': [2, 40], 'userFillsByTime': [1, 20]}
     simdi = {'candleSnapshot': [5, 130], 'userFillsByTime': [1, 20], 'portfolio': [1, 20]}
     assert m.uc_ozeti(simdi, once) == 'candleSnapshot 3/90, portfolio 1/20' and m.uc_ozeti({}, {}) == '—'
+
+
+def test_a43a_v3_fiyat_hedefi_ham_dolumlar_icin_cekilir_devralinan_kapatma_fiyatsiz_kalmaz(tmp_path):
+    """A4-3a altın örnek. Dolum 1 (10:00, satış 4, startPosition +10): devralınan pozisyonu KAPATIR -> `copy_actions` süzgecinde düşer (yeni pozisyon açmaz) ama v3 ham dolumu kullanır;
+    yürütme hedefi 10:30 (30 dk). Dolum 2 (11:00 alış 1, hedef 11:30 > NOW 12:00 değil: 11:30 <= 12:00 olgun). Eski kod yalnız dolum 2'nin hedefini çekiyordu (1 dk mum aralığı 11:30'dan başlar):
+    10:30 fiyatı yok -> v3 `fiyatsiz_eylem` 1. Yeni kod ham dolumların hedefini çeker: 2 hedef, fiyatsız 0, durum `tamam`."""
+    root = project(tmp_path)
+    client = Client([fill('2026-10-27T10:00:00Z', 1, 'A', 4, 10, 100), fill('2026-10-27T11:00:00Z', 2, 'B', 1, 6, 110)])
+    assert [a['tid'] for a in m.copy_actions(client.rows)] == [2]                                    # dolum 1 süzgeçte düştü (girdi doğrulaması)
+    t = trader_of(m.run(root, root / 'out', client, NOW))
+    v3 = t['sanal_kopya_v3']
+    assert v3.get('fiyatsiz_eylem', 0) == 0 and t['veri_durumu'] == 'tamam'
+    hedefler = sorted(int(x) for x in json.loads((root / 'out/motor.json').read_text())['traderlar']['T1']['mumlar']['BTC'])
+    assert hedefler == [m.millis(m.timestamp('2026-10-27T10:30:00Z')), m.millis(m.timestamp('2026-10-27T11:30:00Z'))]
