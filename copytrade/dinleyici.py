@@ -25,6 +25,8 @@ from typing import Any, Awaitable, Callable
 
 from copytrade.hl_public_adapter import DEFAULT_INFO_URL, DEFAULT_WS_URL, HyperliquidPublicAdapter
 from copytrade.izleme_liste import load_list, perp_dex_names
+from copytrade.kurallar import load_rules
+from copytrade.risk_defter import KararGunlugu, RiskDefteri
 
 REST_SAYFA = 2000                      # userFillsByTime tek yanıtta en çok bu kadar dolum döner (API sınırı; eşik değil)
 ADRES = re.compile(r"0x[0-9a-fA-F]{40}")
@@ -36,6 +38,7 @@ SAAT_MS = 3_600_000
 class Izlenen:
     ad: str          # takma ad (özette görünen); adres özete ASLA yazılmaz
     adres: str       # küçük harf
+    takim: str = ""  # ilk11 | yedek11 | paf | "" (listede `takim` yoksa boş; H5 risk kapısı yalnız ilk11 için niyet üretir)
 
 
 def liste_oku(yol: Path) -> list[Izlenen]:
@@ -46,7 +49,7 @@ def liste_oku(yol: Path) -> list[Izlenen]:
     if not satirlar:
         raise ValueError("izleme listesi boş (fail-closed)")
     adlar = [r["takma_ad"] for r in satirlar]
-    return [Izlenen(r["takma_ad"] if adlar.count(r["takma_ad"]) == 1 else f"{r['takma_ad']}-{r['id']}", r["adres"].lower()) for r in satirlar]
+    return [Izlenen(r["takma_ad"] if adlar.count(r["takma_ad"]) == 1 else f"{r['takma_ad']}-{r['id']}", r["adres"].lower(), r.get("takim", "")) for r in satirlar]
 
 
 def p_sira(degerler: list[float], q: float) -> float | None:
@@ -85,6 +88,11 @@ class Olay:
     kaynak: str          # trades | userFills | rest
     snapshot: bool = False
     abone: str = ""      # abonelik anahtarı: trades için coin, userFills için "userFills:<adres>" (abonelikten ÖNCEKİ dolum = canlı değil)
+    coin: str = ""       # H5: dolum ayrıntısı (risk kapısı için). px $/coin, sz coin miktarı, yon "B"=alış "A"=satış (izlenen adresin tarafı), bas_poz = dolum öncesi işaretli pozisyon
+    px: float | None = None
+    sz: float | None = None
+    yon: str = ""
+    bas_poz: float | None = None    # yalnız userFills / REST `startPosition`; trades kanalında YOK (None)
 
 
 def _tam_sayi(deger: Any) -> int | None:
@@ -94,6 +102,14 @@ def _tam_sayi(deger: Any) -> int | None:
         return None
 
 
+def _sayi(deger: Any) -> float | None:
+    try:
+        x = float(deger)
+    except (TypeError, ValueError):
+        return None
+    return x if math.isfinite(x) else None
+
+
 def trades_olaylari(mesaj: dict, izlenen: dict[str, Izlenen], alma_ms: int) -> list[Olay]:
     """`trades` kanalı: her işlemdeki `users: [alıcı, satıcı]` içinden izlenen adresler. Bir işlem iki izlenen adresi de içeriyorsa iki olay."""
     cikti = []
@@ -101,9 +117,13 @@ def trades_olaylari(mesaj: dict, izlenen: dict[str, Izlenen], alma_ms: int) -> l
         users, tid, zaman = t.get("users"), t.get("tid"), _tam_sayi(t.get("time"))
         if not isinstance(users, list) or tid is None or zaman is None:
             continue
-        for adres in {str(u).lower() for u in users}:
+        kucuk = [str(u).lower() for u in users]
+        for adres in set(kucuk):
             if adres in izlenen:
-                cikti.append(Olay(f"{adres}:{tid}", izlenen[adres].ad, adres, zaman, alma_ms, "trades", False, str(t.get("coin", ""))))
+                # `users` = [alıcı, satıcı]; aynı adres iki tarafta (kendi kendine işlem) ise net etki yok: yön boş
+                yon = "" if kucuk.count(adres) > 1 else ("B" if kucuk and kucuk[0] == adres else "A")
+                coin = str(t.get("coin", ""))
+                cikti.append(Olay(f"{adres}:{tid}", izlenen[adres].ad, adres, zaman, alma_ms, "trades", False, coin, coin, _sayi(t.get("px")), _sayi(t.get("sz")), yon))
     return cikti
 
 
@@ -113,7 +133,8 @@ def userfills_olaylari(mesaj: dict, izlenen: dict[str, Izlenen], alma_ms: int) -
     if adres not in izlenen:
         return []
     snapshot = veri.get("isSnapshot") is True
-    return [Olay(f"{adres}:{f['tid']}", izlenen[adres].ad, adres, int(f["time"]), alma_ms, "userFills", snapshot, f"userFills:{adres}")
+    return [Olay(f"{adres}:{f['tid']}", izlenen[adres].ad, adres, int(f["time"]), alma_ms, "userFills", snapshot, f"userFills:{adres}",
+                 str(f.get("coin", "")), _sayi(f.get("px")), _sayi(f.get("sz")), str(f.get("side", "")), _sayi(f.get("startPosition")))
             for f in veri.get("fills") or [] if f.get("tid") is not None and _tam_sayi(f.get("time")) is not None]
 
 
@@ -133,7 +154,12 @@ class Olcum:
         self.ilk_abone_bitis_ms = 0                  # ilk bağlantıda son aboneliğin gönderildiği an: REST hakem penceresi bundan önceyi kapsamaz
         self.son_mesaj_ms = 0                        # son alınan WS mesajının anı (kopma aralığının başlangıcı)
         self.kopma_bas_ms: int | None = None         # açık kopma: yeniden abonelik bitene kadar
+        self.dolgu_yeni: list[tuple[str, dict]] = []  # H5: dolguyla kurtarılan dolumlar (takma ad, REST dolumu); Dinleyici risk defterine verip boşaltır
         self.kopma_araliklari: list[tuple[int, int]] = []   # [son mesaj, yeniden abonelik bitişi]: bu aralıktaki REST'te-olup-görülmeyen dolum = `kopma_araligi`
+
+    def snapshot_mi(self, o: Olay) -> bool:
+        """Kanalın snapshot dediği ya da abonelikten ÖNCE gerçekleşmiş dolum: canlı olay değildir (H5: niyet üretilmez, yalnız trader pozisyonu izlenir)."""
+        return o.snapshot or o.zaman_ms < self.abone.get(o.abone, 0)
 
     def olay(self, o: Olay) -> bool:
         """Yeni dolum ise True. Tekrar (aynı `{adres}:{tid}`) sayılır ama ikinci kez ölçülmez. Snapshot: kabul ve gecikme örneği YOK."""
@@ -141,7 +167,7 @@ class Olcum:
             self.genel["tekrar"] += 1
             return False
         self.gorulen[o.kimlik] = o.zaman_ms
-        if not o.snapshot and o.zaman_ms < self.abone.get(o.abone, 0):
+        if not o.snapshot and self.snapshot_mi(o):
             o = replace(o, snapshot=True)           # abonelikten önce gerçekleşmiş: sunucu abonelik anında geçmişi gönderir (trades kanalı dahil)
             self.genel["abonelik_oncesi_snapshot_gibi"] += 1
         if not o.snapshot and o.alma_ms - o.zaman_ms > 60_000:
@@ -192,6 +218,7 @@ class Olcum:
             if not bas_ms <= zaman <= simdi_ms or kimlik in self.gorulen or coin.startswith("@") or "/" in coin:
                 continue
             self.gorulen[kimlik] = zaman
+            self.dolgu_yeni.append((ad, f))
             kurtarilan += 1
             for pencere in (self.toplam, self.saat):
                 pencere[ad].dolgu += 1
@@ -269,7 +296,8 @@ class Dinleyici:
     """WS kanalları + REST hakem + saatlik özet. `baglan()` bir WS nesnesi (send/recv/close) döndürür; `post` REST yükünü yanıtlar (tests sahte verir)."""
 
     def __init__(self, izlenenler: list[Izlenen], coinler: list[str], baglan: Callable[[], Awaitable[Any]], post: Callable[[dict], Any], cikti: Path,
-                 ayar: Ayar | None = None, saat_ms: Callable[[], int] | None = None, mono: Callable[[], float] | None = None, onceki_baslama: int = 0) -> None:
+                 ayar: Ayar | None = None, saat_ms: Callable[[], int] | None = None, mono: Callable[[], float] | None = None, onceki_baslama: int = 0,
+                 risk: RiskDefteri | None = None, risk_gunlugu: KararGunlugu | None = None, dur_yolu: Path | None = None) -> None:
         if not izlenenler:
             raise ValueError("izlenen adres listesi boş (fail-closed)")
         self.izlenen = {i.adres: i for i in izlenenler}
@@ -283,6 +311,7 @@ class Dinleyici:
         self.olcum.genel["yeniden_baslama"] = onceki_baslama
         self.baslangic_ms = self.saat_ms()
         self._dur = asyncio.Event()
+        self.risk, self.risk_gunlugu, self.dur_yolu = risk, risk_gunlugu, dur_yolu      # H5: dry-run risk kapısı (None = kapalı)
 
     def durdur(self) -> None:
         self._dur.set()
@@ -301,6 +330,21 @@ class Dinleyici:
             self.olcum.kopma_araliklari.append((self.olcum.kopma_bas_ms, self.saat_ms()))
             self.olcum.kopma_bas_ms = None
 
+    def risk_isle(self, o: Olay, canli: bool, simdi_ms: int, kaynak: str | None = None) -> None:
+        """H5: yeni (tekilleştirilmiş) dolumu risk defterine verir; karar satırları günlüğe yazılır. Risk hatası dinlemeyi/ölçümü ASLA durdurmaz."""
+        if self.risk is None:
+            return
+        try:
+            if self.dur_yolu is not None:
+                self.risk.dur_aktif = self.dur_yolu.exists()
+            kararlar = self.risk.isle(ad=o.ad, coin=o.coin, yon=o.yon, sz=o.sz, px=o.px, bas_poz=o.bas_poz, zaman_ms=o.zaman_ms, simdi_ms=simdi_ms,
+                                      kaynak=kaynak or o.kaynak, canli=canli and not self.olcum.snapshot_mi(o))
+            if self.risk_gunlugu is not None:
+                for k in kararlar:
+                    self.risk_gunlugu.yaz(k)
+        except Exception:        # noqa: BLE001 - risk katmanı ölçümü bozmasın; sayılır
+            self.olcum.genel["risk_hata"] = self.olcum.genel.get("risk_hata", 0) + 1
+
     def mesaj_isle(self, ham: str | bytes) -> None:
         alma = self.saat_ms()                                   # alma anı: mesaj çözülmeden ÖNCE damgalanır
         self.olcum.son_mesaj_ms = alma
@@ -309,6 +353,11 @@ class Dinleyici:
         if kanal == "trades":
             self.olcum.genel["trades_mesaj"] += 1
             olaylar = trades_olaylari(mesaj, self.izlenen, alma)
+            if self.risk is not None and self.risk.pozlar:
+                for t in mesaj.get("data") or []:
+                    px = _sayi(t.get("px"))
+                    if px is not None and isinstance(t, dict):
+                        self.risk.fiyat(str(t.get("coin", "")), px, alma)         # açık kopya pozisyonu olan coin'in son işlem fiyatı
         elif kanal == "userFills":
             self.olcum.genel["userfills_mesaj"] += 1
             olaylar = userfills_olaylari(mesaj, self.izlenen, alma)
@@ -320,8 +369,9 @@ class Dinleyici:
             return
         else:
             return                                               # pong ve diğer kontrol çerçeveleri
-        for o in olaylar:
-            self.olcum.olay(o)
+        for o in sorted(olaylar, key=lambda x: x.zaman_ms):
+            if self.olcum.olay(o):
+                self.risk_isle(o, True, alma)
 
     async def dolgu(self, aralik: tuple[int, int]) -> None:
         """Yeniden bağlanınca kopma aralığını (son mesaj → şimdi) `userFillsByTime` ile doldurur. Bir adresin REST hatası diğerlerini engellemez (`genel.dolgu_hata`)."""
@@ -333,6 +383,10 @@ class Dinleyici:
                 self.olcum.genel["dolgu_hata"] = self.olcum.genel.get("dolgu_hata", 0) + 1
                 continue
             self.olcum.genel["dolgu"] = self.olcum.genel.get("dolgu", 0) + self.olcum.dolgu(i.ad, i.adres, dolumlar, bas, simdi)
+        yeni, self.olcum.dolgu_yeni = sorted(self.olcum.dolgu_yeni, key=lambda x: int(x[1]["time"])), []
+        for ad, f in yeni:       # H5: dolgu geç gelir -> girişler `gec_sinyal` ile reddedilir, çıkışlar serbest
+            self.risk_isle(Olay("", ad, "", int(f["time"]), simdi, "dolgu", False, "", str(f.get("coin", "")), _sayi(f.get("px")), _sayi(f.get("sz")),
+                                str(f.get("side", "")), _sayi(f.get("startPosition"))), True, simdi)
 
     async def rest_karsilastir(self) -> None:
         simdi = self.saat_ms()
@@ -342,8 +396,16 @@ class Dinleyici:
             self.olcum.rest_karsilastir(i.ad, i.adres, dolumlar, simdi, self.ayar.rest_tolerans_ms)
         self.olcum.temizle(simdi)
 
+    def ozet(self) -> dict[str, Any]:
+        o = self.olcum.ozet(self.saat_ms(), self.baslangic_ms)
+        if self.risk is not None:
+            if self.dur_yolu is not None:
+                self.risk.dur_aktif = self.dur_yolu.exists()
+            o["risk"] = self.risk.ozet()
+        return o
+
     def ozet_yaz(self) -> None:
-        ozet_yaz(self.cikti / "ozet.json", self.olcum.ozet(self.saat_ms(), self.baslangic_ms))
+        ozet_yaz(self.cikti / "ozet.json", self.ozet())
 
     async def _oturum(self, ws: Any) -> None:
         son_ping = son_rest = son_ozet = self.mono()
@@ -406,7 +468,7 @@ class Dinleyici:
         finally:
             await self.rest_karsilastir_guvenli()
             self.ozet_yaz()
-        return self.olcum.ozet(self.saat_ms(), self.baslangic_ms)
+        return self.ozet()
 
     async def rest_karsilastir_guvenli(self) -> None:
         try:
@@ -508,6 +570,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cikti", type=Path, default=Path(os.environ.get("STATE_DIRECTORY", "/var/lib/sg-dinleyici")))
     ap.add_argument("--sure-sn", type=float, default=None, help="calis: toplam süre (varsayılan sonsuz); adim0: dinleme süresi (varsayılan 300)")
     ap.add_argument("--userfills-adet", type=int, default=10)
+    ap.add_argument("--risk-tum-liste", action="store_true", help="YALNIZ DENEME: listedeki herkes 'ilk11 sayılır' (pilot listede `takim: ilk11` yoksa); üretimde kullanılmaz")
     args = ap.parse_args(argv)
     izlenenler = liste_oku(args.liste)
     post = rest_post_fabrikasi()
@@ -520,8 +583,12 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     async def kos() -> dict[str, Any]:
+        kural = load_rules()
+        ilk11 = {i.ad for i in izlenenler if args.risk_tum_liste or i.takim == "ilk11"}
+        dur_yolu = Path(str(kural["risk_dry_run"]["dur_dosyasi"]).replace("$STATE_DIRECTORY", str(args.cikti)))
+        risk = RiskDefteri(ilk11, kural, baslangic_ms=int(time.time() * 1000))
         d = Dinleyici(izlenenler, coinler, ws_baglan, post, args.cikti, Ayar(userfills_adet=args.userfills_adet, sure_sn=args.sure_sn),
-                      onceki_baslama=baslama_sayaci(args.cikti / "durum.json"))
+                      onceki_baslama=baslama_sayaci(args.cikti / "durum.json"), risk=risk, risk_gunlugu=KararGunlugu(args.cikti), dur_yolu=dur_yolu)
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGINT, signal.SIGTERM):
             loop.add_signal_handler(sig, d.durdur)

@@ -69,6 +69,22 @@ cat /var/lib/sg-dinleyici/ozet.json
 `yeniden_baglanma`, `yeniden_baslama`. Göz kontrolü: **gecikme medyanı birkaç saniye içinde, kaçan = 0**. Çıktıyı yapıştırın (adres içermez).
 Sonra 24 saat, sonra 7 gün aynı servis çalışır; "bitti" = 7 günlük özet.
 
+## 8b. Güncelleme ve elle durdurma (H5 risk kapısı, dry-run)
+Güncelleme:
+```bash
+cd /home/sg/sg-arge && sudo -u sg git pull && systemctl restart sg-dinleyici
+```
+`ozet.json`'da `risk` bloğu ve `/var/lib/sg-dinleyici/risk_kararlari.jsonl` (günlük döner, 7 gün) görünür; emir gönderilmez (`emir_gonderildi: false`). İlk 11 üyeliği listedeki `takim: ilk11` alanından gelir; yalnız deneme için `ExecStart`'a `--risk-tum-liste` eklenir.
+**`/dur` (yeni giriş/eklemeyi durdur; çıkış serbest):**
+```bash
+touch /var/lib/sg-dinleyici/DUR
+```
+Kaldırmak için:
+```bash
+rm /var/lib/sg-dinleyici/DUR
+```
+Dosya her dolumda kontrol edilir; yeniden başlatma gerekmez.
+
 ## 9. Durdur
 ```bash
 systemctl stop sg-dinleyici

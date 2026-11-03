@@ -21,7 +21,7 @@ from typing import Any
 
 import numpy as np
 
-from copytrade.kurallar import load_rules
+from copytrade.kurallar import load_rules, sabit_tutar_egrisi  # noqa: F401 - sabit_tutar_egrisi numpy'siz modüle taşındı (dinleyici/risk_defter sunucuda numpy'siz çalışır); burada yeniden dışa verilir
 from copytrade.mum_saglik import mum_kontrol
 
 HOUR = 3_600_000
@@ -54,20 +54,6 @@ def v2_sinir(style: str, gecen_gun: float, getiri: float, rules: dict | None = N
     if limits["kar_al"] is not None and getiri >= float(limits["kar_al"]):
         return "kar_al"
     return None
-
-
-def sabit_tutar_egrisi(rules: dict | None = None) -> Any:
-    """Hesap değerinden sabit işlem tutarı üreten eğriyi döndürür."""
-    rules = rules or load_rules()
-    ref_kasa = float(rules["sabit_tutar_ref_kasa_usd"])
-    ref_islem = float(rules["sabit_tutar_ref_islem_usd"])
-    us = float(rules["sabit_tutar_us"])
-    tavan = float(rules["sabit_tutar_tavan_kasa_usd"])
-
-    def tutar(hesap_usd: float) -> float:
-        e = max(1.0, min(float(hesap_usd), tavan))
-        return ref_islem * (e / ref_kasa) ** us
-    return tutar
 
 
 def _fresh_open(sign: float, price: float, when: int, held: dict[str, float], entry: dict[str, float],
