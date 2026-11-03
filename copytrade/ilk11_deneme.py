@@ -180,6 +180,24 @@ def durum_ozeti(durum: Path, sure_sn: float | None, artimli_sn: float | None) ->
     return "\n".join(out + ["", "### İzleme süresi", ""] + sure_tahmini(len(d["traderlar"]), sure_sn, artimli_sn)) + "\n"
 
 
+def v3_yan_yana(eski: Path, yeni: Path) -> str:
+    """Kural 6: aynı traderlar için eski (main) ↔ yeni v3 sayıları yan yana (A4-3a). Sütunlar: v3 fiyatsız eylem, v3 bakiye $ (1.000 $ sanal kopya), v3 kapanan işlem, `veri_durumu`,
+    sanal kopya v1 bakiye $. İki taraf aynı veriyi okumalı (aynı koşu, dakikalar arayla); fark yalnız kodun etkisi + o dakikalardaki yeni dolumlar olmalı."""
+    a = {t["id"]: t for t in json.loads(eski.read_text(encoding="utf-8"))["traderlar"]}
+    b = {t["id"]: t for t in json.loads(yeni.read_text(encoding="utf-8"))["traderlar"]}
+    out = ["### v3 eski ↔ yeni (aynı traderlar)", "", "| id | v3 fiyatsız | v3 bakiye $ | v3 kapanan | v3 geçerli | veri_durumu | v1 bakiye $ | mum eksik yeni (hedef/önbellekten) |", "|---|---|---|---|---|---|---|---|"]
+    ac = lambda t, k: (t.get("sanal_kopya_v3") or {}).get(k)                                         # noqa: E731
+    sayi = lambda x: "—" if x is None else (f"{x:.2f}" if isinstance(x, float) else str(x))      # noqa: E731
+    for kimlik in sorted(set(a) | set(b)):
+        x, y = a.get(kimlik, {}), b.get(kimlik, {})
+        kx, ky = len(ac(x, "kapanan_islemler") or []), len(ac(y, "kapanan_islemler") or [])
+        gx, gy = sum(1 for i in ac(x, "kapanan_islemler") or [] if i.get("gecerli") is True), sum(1 for i in ac(y, "kapanan_islemler") or [] if i.get("gecerli") is True)
+        out.append(f"| {kimlik} | {sayi(ac(x, 'fiyatsiz_eylem'))} → {sayi(ac(y, 'fiyatsiz_eylem'))} | {sayi(ac(x, 'bakiye_usd'))} → {sayi(ac(y, 'bakiye_usd'))} | {kx} → {ky} | {gx} → {gy} | "
+                   f"{x.get('veri_durumu')} → {y.get('veri_durumu')} | {sayi((x.get('sanal_kopya') or {}).get('bakiye_usd'))} → {sayi((y.get('sanal_kopya') or {}).get('bakiye_usd'))} | "
+                   f"{(y.get('mum_eksik') or {}).get('hedef', '—')}/{(y.get('mum_eksik') or {}).get('onbellekten', '—')} |")
+    return "\n".join(out) + "\n"
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     alt = ap.add_subparsers(dest="komut", required=True)
@@ -196,6 +214,9 @@ def main(argv: list[str] | None = None) -> None:
     ls.add_argument("--kaynak", type=Path, required=True)
     ls.add_argument("--idler", required=True, help="virgülle ayrılmış izleme listesi kimlikleri")
     ls.add_argument("--cikti", type=Path, required=True)
+    yy = alt.add_parser("v3-yan-yana")
+    yy.add_argument("--eski", type=Path, required=True)
+    yy.add_argument("--yeni", type=Path, required=True)
     ds = alt.add_parser("durum-ozeti")
     ds.add_argument("--durum", type=Path, required=True)
     ds.add_argument("--sure-sn", type=float, default=None)
@@ -203,6 +224,8 @@ def main(argv: list[str] | None = None) -> None:
     a = ap.parse_args(argv)
     if a.komut == "liste":
         print(json.dumps([r["id"] for r in liste_sec(a.kaynak, [i.strip() for i in a.idler.split(",") if i.strip()], a.cikti)]))
+    elif a.komut == "v3-yan-yana":
+        print(v3_yan_yana(a.eski, a.yeni))
     elif a.komut == "durum-ozeti":
         print(durum_ozeti(a.durum, a.sure_sn, a.artimli_sn))
     elif a.komut == "hazirla":

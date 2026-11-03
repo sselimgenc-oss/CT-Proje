@@ -19,7 +19,7 @@ from test_izleme import ADDRESS, NOW, Client, project
 ROOT = Path(__file__).resolve().parents[1]
 WF = ROOT / ".github/workflows"
 SCRIPTS = ROOT / ".github/scripts"
-ISLER = ("copytrade_kapi.yml", "izleme.yml", "ilk11_pazar.yml", "ilk11_deneme.yml", "dinleyici_deneme.yml", "izleme_deneme.yml")
+ISLER = ("copytrade_kapi.yml", "izleme.yml", "ilk11_pazar.yml", "ilk11_deneme.yml", "dinleyici_deneme.yml", "izleme_deneme.yml", "izleme_v3_yan_yana.yml")
 
 
 def yukle(ad: str) -> dict:
@@ -55,7 +55,7 @@ def test_hata_or_true_ile_orulmez_ve_main_e_yazilmaz():
 
 
 def test_veri_dali_yazimlari_yalniz_veri_dallarina():
-    hedef = {"copytrade_kapi.yml": None, "izleme.yml": None, "ilk11_pazar.yml": "copytrade-kapi", "ilk11_deneme.yml": None, "dinleyici_deneme.yml": None, "izleme_deneme.yml": None}
+    hedef = {"copytrade_kapi.yml": None, "izleme.yml": None, "ilk11_pazar.yml": "copytrade-kapi", "ilk11_deneme.yml": None, "dinleyici_deneme.yml": None, "izleme_deneme.yml": None, "izleme_v3_yan_yana.yml": None}
     for ad in ISLER:
         for satir in (WF / ad).read_text(encoding="utf-8").splitlines():
             if "git push" in satir:
@@ -391,3 +391,19 @@ def test_izleme_deneme_listesi_ve_ozeti(tmp_path):
          "sanal_kopya_v3": {"bakiye_usd": 1000.5, "fiyatsiz_eylem": 2, "kapanan_islemler": [{}], "kapanan_islemler_toplam": 3}, "ilk11_form_ham": {"dolu_alan": 9}, "mum_eksik": {"hedef": 2, "onbellekten": 1}}]}))
     metin = durum_ozeti(durum, 100, 10)
     assert "| K01 | True | fiyatsiz | 2 dolum | yesil (kaldıraç normal) | 10 | 1000.5 | 2 | 1/3 | 9 | 2/1 | 1 |" in metin and "ilk okuma: 1 trader 100 sn" in metin
+
+
+def test_v3_yan_yana_altin_ornek(tmp_path):
+    """Elle: B17 eski v3 fiyatsız 1437 / bakiye 752,4506 / kapanan 1 (geçerli 0); yeni fiyatsız 0 / bakiye 760 / kapanan 3 (geçerli 2); veri_durumu fiyatsiz -> tamam. K08 aynı kalır."""
+    from copytrade.ilk11_deneme import v3_yan_yana
+
+    def trader(kimlik, fiyatsiz, bakiye, kapanan, durum, v1):
+        return {"id": kimlik, "veri_durumu": durum, "sanal_kopya": {"bakiye_usd": v1}, "mum_eksik": {"hedef": fiyatsiz, "onbellekten": 0},
+                "sanal_kopya_v3": {"fiyatsiz_eylem": fiyatsiz, "bakiye_usd": bakiye, "kapanan_islemler": kapanan}}
+    eski, yeni = tmp_path / "eski.json", tmp_path / "yeni.json"
+    eski.write_text(json.dumps({"traderlar": [trader("K08", 0, 1087.389, [{"gecerli": True}], "tamam", 1000.0), trader("B17", 1437, 752.4506, [{"gecerli": False}], "fiyatsiz", 1000.0)]}))
+    yeni.write_text(json.dumps({"traderlar": [trader("K08", 0, 1087.389, [{"gecerli": True}], "tamam", 1000.0),
+                                              trader("B17", 0, 760.0, [{"gecerli": True}, {"gecerli": True}, {"gecerli": False}], "tamam", 1000.0)]}))
+    metin = v3_yan_yana(eski, yeni)
+    assert "| B17 | 1437 → 0 | 752.45 → 760.00 | 1 → 3 | 0 → 2 | fiyatsiz → tamam | 1000.00 → 1000.00 | 0/0 |" in metin
+    assert "| K08 | 0 → 0 | 1087.39 → 1087.39 | 1 → 1 | 1 → 1 | tamam → tamam | 1000.00 → 1000.00 | 0/0 |" in metin

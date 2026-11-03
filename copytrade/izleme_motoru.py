@@ -690,7 +690,8 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
     style = resolve_style(root, row)
     delay = delay_for_style(style)
     eksik_mum: list[dict] = []
-    candles, approximate = execution_candles(client, actions, saved['mumlar'], millis(now), delay, eksik_mum, saved.setdefault('mum_eksik', {}))
+    # A4-3a: yürütme fiyatı v3'ün gördüğü HAM dolumlar (copy_fills) için çekilir; `actions` süzgecinde (devralınan pozisyonu kapatma) düşen dolumlar v3'te fiyatsız kalıyordu.
+    candles, approximate = execution_candles(client, copy_fills, saved['mumlar'], millis(now), delay, eksik_mum, saved.setdefault('mum_eksik', {}))
     marks = mark_candles(client, actions, millis(now))
     priced = {coin: rows + marks.get(coin, []) for coin, rows in {**{c: [] for c in marks}, **candles}.items()}
     if account > 0:
