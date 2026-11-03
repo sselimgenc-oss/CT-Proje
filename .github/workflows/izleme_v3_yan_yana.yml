@@ -48,7 +48,7 @@ jobs:
         run: python -m copytrade.izleme_motoru --root ../deneme_kok_eski --output ../deneme_izleme_eski --liste ../deneme/izleme_listesi.yaml
       - name: YENİ kod ilk okuma
         run: python -m copytrade.izleme_motoru --root deneme_kok --output deneme_izleme --liste deneme/izleme_listesi.yaml
-      - name: ESKİ kod tekrar (sapma ölçümü: aynı kod, ~20 dk sonra)
+      - name: "ESKİ kod tekrar (sapma ölçümü, aynı kod ~20 dk sonra)"
         working-directory: eski
         run: |
           mkdir -p ../deneme_kok_eski2/copytrade ../deneme_izleme_eski2
