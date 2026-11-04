@@ -2,7 +2,7 @@ name: Copy trade izleme (2 saatte bir)
 
 # T1 (K-19): eski kadroyu izlediği için zamanlama (cron) KALDIRILDI; yalnız elle (workflow_dispatch) çalışır. Radar kadrosu için zamanlama T4'te geri gelir.
 # İzlenen liste: `copytrade/izleme_listesi.yaml` (main).
-# Sonuç: `copytrade-izleme:izleme/durum.json` (git geçmişi 2 saatlik sürümleri tutar); `motor.json` (ham dolum önbelleği) R2'de `izleme/motor.json.gz`.
+# Sonuç: `copytrade-izleme:izleme/durum.json` (git geçmişi 2 saatlik sürümleri tutar); `motor.json` (ham dolum önbelleği) aynı dalda sıkıştırılmış: `izleme/motor.json.gz`.
 # Telegram / Worker bu iş akışında YOK (K-13).
 on:
   workflow_dispatch:
@@ -44,39 +44,12 @@ jobs:
             status=$?
             if [ "$status" -ne 2 ]; then exit "$status"; fi
           fi
-      - name: Motor durumunu R2'den indir
-        # motor.json (dolum önbelleği) GitHub'ın 100 MB dosya sınırını aşar, bu yüzden veri dalında değil R2'de (gzip) tutulur. R2'de YOK ise (404) veri dalındaki
-        # eski kopya kullanılır (ilk geçiş); başka her hata (ağ, yetki) işi kırmızı bitirir — durum sessizce sıfırlanıp R2'nin üzerine yazılmasın.
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      - name: Motor durumunu veri dalındaki sıkıştırılmış dosyadan aç
+        # `izleme/motor.json.gz` (K-20) yukarıda veri dalından geldi; yoksa (ilk koşu) motor sıfırdan başlar. Bozuk dosyada iş kırmızı biter (pipefail).
         run: |
-          endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
-          if hata=$(aws s3api head-object --bucket "$R2_BUCKET" --key izleme/motor.json.gz --endpoint-url "$endpoint" 2>&1); then
-            aws s3 cp "s3://${R2_BUCKET}/izleme/motor.json.gz" motor.json.gz --endpoint-url "$endpoint" --no-progress
-            gunzip -c motor.json.gz > izleme/motor.json
-            rm motor.json.gz
-          else
-            case "$hata" in
-              *"Not Found"*|*404*|*NoSuchKey*) echo "R2'de motor durumu yok; veri dalındaki kopya kullanılıyor." ;;
-              *) echo "R2 motor durumu okunamadı: $hata" >&2; exit 1 ;;
-            esac
-          fi
+          if [ -f izleme/motor.json.gz ]; then gunzip -c izleme/motor.json.gz > izleme/motor.json; fi
       - name: Halka açık veriyi oku ve sanal defteri güncelle
         # Tüm trader'lar hatalıysa motor yayımlamaz (RuntimeError) ve iş kırmızı biter; tek trader hatası önceki yükünü korur.
         run: python -m copytrade.izleme_motoru --root . --output izleme
-      - name: Motor durumunu R2'ye yükle
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
-        run: |
-          gzip -c izleme/motor.json > motor.json.gz
-          aws s3 cp motor.json.gz "s3://${R2_BUCKET}/izleme/motor.json.gz" --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" --no-progress
       - name: Arşivi ayrı veri dalına yaz
         run: bash .github/scripts/izleme_yayimla.sh

@@ -7,11 +7,13 @@ trap 'rm -rf "$archive"' EXIT
 # Veri dalına geçince main'in dosyaları kaybolur: arşiv yardımcısını önceden kopyala (A4-2).
 cp "$(cd "$(dirname "$0")" && pwd)/olay_arsivle.py" "$archive.olay_arsivle.py"
 trap 'rm -rf "$archive" "$archive.olay_arsivle.py"' EXIT
-for path in durum.json binance_vadeli.txt kararlar.jsonl degisim.json gecikme.json olay_tasan.jsonl; do
+for path in durum.json binance_vadeli.txt olay_tasan.jsonl; do
   if [ -f "izleme/$path" ]; then cp "izleme/$path" "$archive/"; fi
 done
 [ -s "$archive/durum.json" ]
-# motor.json R2'de tutulur (izleme.yml); GitHub 100 MB sınırı için yayımlanan her dosya 90 MB altında olmalı.
+# Motor durumu (ham dolum önbelleği) veri dalında SIKIŞTIRILMIŞ tutulur: `izleme/motor.json.gz` (K-20). `gzip -n`: zaman damgası yok, aynı içerik aynı bayt (gereksiz commit olmaz).
+if [ -f izleme/motor.json ]; then gzip -n -9 -c izleme/motor.json > "$archive/motor.json.gz"; fi
+# GitHub 100 MB sınırı için yayımlanan her dosya 90 MB altında olmalı.
 for f in "$archive"/*; do
   if [ "$(stat -c %s "$f")" -gt 94371840 ]; then echo "Çok büyük: $(basename "$f") ($(stat -c %s "$f") bayt)" >&2; exit 1; fi
 done
@@ -33,10 +35,10 @@ if [ -f izleme/olay_tasan.jsonl ]; then
   python3 "$archive.olay_arsivle.py" izleme/olay_tasan.jsonl izleme/olay_arsivi.jsonl
   rm -f izleme/olay_tasan.jsonl
 fi
-# Eski motor.json veri dalından kaldırılır (artık R2'de).
+# Sıkıştırılmamış motor.json dala hiç girmez (yalnız motor.json.gz); olay arşivi ve diğer yayımlanmış dosyalar korunur.
 git rm -q --cached --ignore-unmatch izleme/motor.json
-# Worker'ın kararlar.jsonl dosyası ve diğer arşivleri korunur.
-for path in durum.json binance_vadeli.txt kararlar.jsonl degisim.json gecikme.json olay_arsivi.jsonl; do
+rm -f izleme/motor.json
+for path in durum.json binance_vadeli.txt motor.json.gz olay_arsivi.jsonl; do
   if [ -f "izleme/$path" ]; then git add -f "izleme/$path"; fi
 done
 if git diff --cached --quiet; then exit 0; fi

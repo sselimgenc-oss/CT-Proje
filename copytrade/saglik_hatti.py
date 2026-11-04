@@ -7,8 +7,7 @@ yalnız rapor. ``olc()`` saf ölçü fonksiyonu, ``kontrol()`` saf eşik fonksiy
 
 **Kasıtlı olarak İÇERMEZ:** veri tazeliği/bayatlık kontrolü. Bu modül `durum.json` içindeki (geçmişte üretilmiş)
 alanları okur; yayım anında hesaplanan bir "şu an"a göre tazelik burada her zaman ~0 döner ve durmuş bir akışı
-anında kendi gerçek saatiyle yaptığı mevcut kontrolündedir (`worker/src/index.js` `checkStateAlerts`, 3 saatlik
-eşik) — tek yerde (AGENTS.md kural 7), tekrarlanmaz.
+anında kendi gerçek saatiyle okuma anında yapılır (`bayat_isle`, pano 2 saat uyarısı; Worker K‑20 ile kaldırıldı) — tek yerde (AGENTS.md kural 7), tekrarlanmaz.
 """
 
 from __future__ import annotations
@@ -45,7 +44,7 @@ def olc(durum: dict, kol: str = ODA_KOLU) -> dict:
 
     ``acik_pozisyon_yasi_dk_medyan``: son `POZISYON_YASI_TAVAN_DK` dakika içinde açılmış kol pozisyonlarının
     `uretildi`ye göre medyan yaşı (dk). Bu **pozisyon yaşıdır, gerçek sinyal/algılama gecikmesi değildir** —
-    trader'ın gerçek işlem zamanı ile Worker'ın onu ne zaman gördüğü arasındaki fark ayrıca ölçülmeli (henüz yok).
+    trader'ın gerçek işlem zamanı ile bizim onu ne zaman gördüğümüz arasındaki fark (dinleyici ölçer) ayrıca ölçülmeli (henüz yok).
     """
     uyeler = _kol_uyeleri(durum.get('traderlar') or [], kol)
     n = len(uyeler)
@@ -95,8 +94,8 @@ def olc(durum: dict, kol: str = ODA_KOLU) -> dict:
 def kontrol(olcu: dict, esikler: dict | None = None) -> dict:
     """Saf fonksiyon: ölçüden ışık + neden listesi üretir (kırmızı nedenler sarıdan önce).
 
-    Veri tazeliğini **kasıtlı olarak değerlendirmez** — bkz. modül docstring'i; Worker'ın kendi tazelik
-    alarmıyla birleştirilmeli, bu ışığın yerine geçmemeli.
+    Veri tazeliğini **kasıtlı olarak değerlendirmez** — bkz. modül docstring'i; tüketicinin okuma anındaki tazelik
+    kontrolüyle birleştirilmeli, bu ışığın yerine geçmemeli.
     """
     e = {**ESIKLER, **(esikler or {})}
 

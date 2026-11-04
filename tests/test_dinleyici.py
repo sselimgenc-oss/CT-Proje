@@ -300,7 +300,7 @@ def test_systemd_birimi_restart_on_failure_secretsiz_yalniz_state_dizinine_yazar
 
 def test_kurulum_rehberi_gerekli_adimlar_ve_gizli_bilgi_yazdirmaz():
     r = (ROOT / "docs/H2_KURULUM.md").read_text()
-    for gerekli in ("ssh-keygen -t ed25519", "SGP1", "Ubuntu 24.04", "Basic 1 GB", "adduser", "apt install -y python3-venv git", "timedatectl", "git clone",
+    for gerekli in ("ssh-keygen -t ed25519", "Ubuntu 24.04", "adduser", "apt install -y python3-venv git", "timedatectl", "git clone",
                     "pip install -r requirements-dinleyici.txt", "systemctl enable --now sg-dinleyici", "systemctl status sg-dinleyici", "journalctl -u sg-dinleyici -n 50",
                     "cat /var/lib/sg-dinleyici/ozet.json", "systemctl stop sg-dinleyici", "yalnız 22", "adim0"):
         assert gerekli in r, gerekli

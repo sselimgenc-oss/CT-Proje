@@ -9,7 +9,8 @@ teyit edenler İlk 11 → 28 gün ileri deneme ve kontrol grubu sınavı → can
 ## İş sırası
 | İş | Durum |
 |---|---|
-| T1 eski sistemi sil (`docs/GOREV_T1_ESKI_SISTEM_SIL.md`) | **PR'da, lider denetimi bekliyor** (`docs/sonnet_durum_t1.md`) |
+| T1 eski sistemi sil | birleşti |
+| T1b Worker/sunucu bağımlılıklarını kaldır (`docs/GOREV_T1B_SUNUCUSUZ.md`) | **PR'da, lider denetimi bekliyor** |
 | T2 R0+R1 tarama | lider yazacak (T1 birleşince) |
 | T3 R2 form puanı | bekliyor |
 | T4 R3 kadro + ileri deneme + günlük iş akışı | bekliyor |
@@ -18,7 +19,7 @@ teyit edenler İlk 11 → 28 gün ileri deneme ve kontrol grubu sınavı → can
 
 ## Kalan altyapı (yeni sistem kullanır)
 Kopya motoru (`defter.py`, `kopya_v2…v4`, `golge.py` çıkış kuralları), HL istemcisi (`tarama.py`, `hl_public_adapter.py`), anlık dinleyici
-(`dinleyici.py`, `risk_defter.py`, VPS), gecikme ölçümü, izleme motoru çekirdeği, Worker (Telegram), pano iskeleti, Faz 3 hazırlık modülleri.
+(`dinleyici.py`, `risk_defter.py`; canlıda sunucu gerekir, K‑20), gecikme ölçümü (`gecikme_kar.py`), izleme motoru çekirdeği, pano iskeleti, Faz 3 hazırlık modülleri.
 
 ## Belgeler
 `AGENTS.md` (kurallar) · `docs/KARARLAR.md` · `docs/RADAR_V1.md` (strateji) · `docs/VERI_SOZLESMESI.md` · `docs/GOREV_T*.md`

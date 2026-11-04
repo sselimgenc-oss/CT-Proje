@@ -21,8 +21,3 @@ jobs:
         run: pip install -r requirements.txt
       - name: Run unit and specification tests
         run: python -m pytest -q
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-      - name: Run Worker tests
-        run: npm test --prefix worker

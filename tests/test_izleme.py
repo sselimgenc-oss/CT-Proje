@@ -11,7 +11,6 @@ import pytest
 import yaml
 
 from copytrade import izleme_motoru as m
-from copytrade.kararlar import merge
 
 ROOT = Path(__file__).resolve().parents[1]
 ADDRESS = '0x' + '1' * 40
@@ -93,23 +92,6 @@ def test_hourly_fallback_marks_virtual_copy_approximate(tmp_path):
     now = m.timestamp('2026-10-27T12:00Z')
     result = m.run(root, root / 'out', client, now)
     assert result['traderlar'][0]['sanal_kopya']['not'] == 'yaklaşık fiyat'
-
-
-def test_kararlar_merges_last_decision_without_personal_fields(tmp_path):
-    path = tmp_path / 'kararlar.jsonl'
-    rows = merge(path, [
-        {'olay_id': 'T1-1-acilis', 'zaman': '2026-10-27T10:00:00Z', 'karar': 'acti', 'neden': 'diger', 'not': ''},
-        {'olay_id': 'T1-1-acilis', 'zaman': '2026-10-27T10:01:00Z', 'karar': 'atladi', 'neden': 'gec_gordum', 'not': ''},
-    ])
-    assert rows == [{'olay_id': 'T1-1-acilis', 'zaman': '2026-10-27', 'karar': 'atladi', 'neden': 'gec_gordum', 'not': ''}]
-    with pytest.raises(ValueError):
-        merge(path, [{'olay_id': 'x', 'zaman': 'now', 'karar': 'acti', 'neden': 'diger', 'not': '', 'tutar': '1'}])
-    # Altın örnek: eski bakiye_yok kaydı tarihe indirgenir ve gizlilik nedeniyle diger olur.
-    assert merge(tmp_path / 'legacy.jsonl', [
-        {'olay_id': 'T1-2-acilis', 'zaman': '2026-10-27T10:02:03Z', 'karar': 'atladi', 'neden': 'bakiye_yok', 'not': ''},
-    ]) == [{'olay_id': 'T1-2-acilis', 'zaman': '2026-10-27', 'karar': 'atladi', 'neden': 'diger', 'not': ''}]
-    with pytest.raises(ValueError, match='etiketi'):
-        merge(tmp_path / 'etiket.jsonl', [{'olay_id': 'x', 'zaman': '2026-10-27', 'karar': 'acti', 'neden': 'diger', 'not': 'serbest'}])
 
 
 def position(size=1, coin='BTC', value=100):
@@ -459,7 +441,8 @@ def git(cwd, *args):
     return subprocess.run(['git', '-C', str(cwd), *args], check=True, capture_output=True, text=True).stdout.strip()
 
 
-def test_publication_creates_orphan_and_preserves_worker_decisions(tmp_path):
+def test_publication_creates_orphan_publishes_compressed_motor_and_preserves_archive(tmp_path):
+    import gzip
     remote, checkout = tmp_path / 'remote.git', tmp_path / 'checkout'
     remote.mkdir(); checkout.mkdir()
     git(remote, 'init', '--bare')
@@ -471,20 +454,25 @@ def test_publication_creates_orphan_and_preserves_worker_decisions(tmp_path):
     git(checkout, 'add', '.')
     git(checkout, 'commit', '-m', 'source')
     (checkout / 'izleme').mkdir()
-    for name in ['motor.json', 'durum.json']:
-        (checkout / 'izleme' / name).write_text('{}')
+    (checkout / 'izleme/motor.json').write_text('{"surum": 1}')
+    (checkout / 'izleme/durum.json').write_text('{}')
     command = ['bash', str(ROOT / '.github/scripts/izleme_yayimla.sh')]
     subprocess.run(command, cwd=checkout, env={**os.environ, 'GITHUB_ACTIONS': 'true'}, check=True, capture_output=True)
     assert git(checkout, 'rev-list', '--count', 'HEAD') == '1'
     assert not (checkout / 'source.py').exists()
-    (checkout / 'izleme/kararlar.jsonl').write_text('{"olay_id":"public-test"}\n')
-    git(checkout, 'add', '.')
-    git(checkout, 'commit', '-m', 'worker decision')
+    # K-20: motor durumu veri dalında yalnız sıkıştırılmış (`motor.json.gz`) tutulur; sıkıştırılmamış motor.json dala girmez.
+    assert gzip.decompress((checkout / 'izleme/motor.json.gz').read_bytes()) == b'{"surum": 1}'
+    assert 'izleme/motor.json\n' not in git(checkout, 'ls-files') + '\n'
+    (checkout / 'izleme/olay_arsivi.jsonl').write_text('{"id":"public-test"}\n')
+    git(checkout, 'add', '-f', '.')
+    git(checkout, 'commit', '-m', 'archive')
     git(checkout, 'push', 'origin', 'copytrade-izleme')
     (checkout / 'izleme/durum.json').write_text('{"uretildi":"next"}')
+    (checkout / 'izleme/motor.json').write_text('{"surum": 1, "yeni": true}')
     subprocess.run(command, cwd=checkout, env={**os.environ, 'GITHUB_ACTIONS': 'true'}, check=True, capture_output=True)
-    assert (checkout / 'izleme/kararlar.jsonl').read_text() == '{"olay_id":"public-test"}\n'
+    assert (checkout / 'izleme/olay_arsivi.jsonl').read_text() == '{"id":"public-test"}\n'
     assert json.loads((checkout / 'izleme/durum.json').read_text())['uretildi'] == 'next'
+    assert json.loads(gzip.decompress((checkout / 'izleme/motor.json.gz').read_bytes()))['yeni'] is True
     assert git(checkout, 'rev-parse', 'HEAD') == git(remote, 'rev-parse', 'refs/heads/copytrade-izleme')
 
 
