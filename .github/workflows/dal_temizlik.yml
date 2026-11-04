@@ -1,8 +1,11 @@
 # Tek seferlik: eski sisteme ait uzak dalları siler (kullanıcı onayı 2026-11-04, K-19). Liste açık yazılıdır; liste dışında hiçbir dala dokunmaz.
-# Yalnız elle tetiklenir. İş bitince bu dosya bir sonraki PR'da kaldırılır.
+# Elle ya da bu dosya main'e girince bir kez çalışır (oturumun elle tetikleme yetkisi yok). İş bitince bu dosya bir sonraki PR'da kaldırılır.
 name: Dal temizliği (tek seferlik)
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/dal_temizlik.yml']
 permissions:
   contents: write
 defaults:
