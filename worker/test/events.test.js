@@ -33,10 +33,10 @@ test("ilk cron imleci şimdiye koyar, geçmiş bildirimi göndermez", async () =
   }; } }; } } };
   const fetcher = async () => new Response(JSON.stringify({ uretildi: new Date().toISOString(), traderlar: [{ id: "T1", kol: "oda", adres: "0x1", takma_ad: "Test", hesap_degeri: 1000, pozisyonlar: [], saglik: { isik: "yesil" } }] }));
   await runCron(env, fetcher);
-  // imlec yazısına ek olarak durum uyarılarının (veri yaşı, kalabalık) ilk kez görülen taban durumu da D1'e yazılır
+  // imlec yazısına ek olarak durum uyarısının (veri yaşı) ilk kez görülen taban durumu da D1'e yazılır
   // (bildirim DEĞİL — yalnız sonraki karşılaştırma için; bkz. "yalnız durum değişince uyarı" testleri aşağıda).
   assert.equal(writes.filter(([sql]) => /INSERT INTO imlec/.test(sql)).length, 1);
-  assert.equal(writes.filter(([sql]) => /INSERT INTO uyari_durum/.test(sql)).length, 2);
+  assert.equal(writes.filter(([sql]) => /INSERT INTO uyari_durum/.test(sql)).length, 1);   // T1: kalabalık uyarısı kalktı (2 → 1)
 });
 
 test("ilk görülen kırmızı ışık bildirim üretmez; yeşilden kırmızıya geçiş üretir", async () => {
@@ -179,19 +179,4 @@ test("/durum: kol alanı yoksa tüm liste 'İzlenen' sayılır, taze veri uyarı
   assert.match(text, /🕐 Veri 10 dk önce/);
   assert.match(text, /İzlenen · 1 trader/);
   assert.doesNotMatch(text, /Sessiz izleme/);
-});
-
-
-test("/durum: kalabalık ve yönsüz bayrak yalnız uyarı varsa tek satır", () => {
-  const base = { uretildi: "2026-10-30T12:00:00Z", traderlar: [
-    { takma_ad: "A", kol: "oda", t0: "2026-10-29", saglik: { isik: "yesil", nedenler: [] }, pozisyonlar: [], yonsuz_bayrak: { bayrak: true } },
-    { takma_ad: "B", kol: "oda", t0: "2026-10-29", saglik: { isik: "yesil", nedenler: [] }, pozisyonlar: [], yonsuz_bayrak: { bayrak: false } },
-    { takma_ad: "K", kol: "kontrol", t0: "2026-10-29", saglik: { isik: "yesil", nedenler: [] }, pozisyonlar: [], yonsuz_bayrak: { bayrak: true } }] };
-  const now = Date.parse("2026-10-30T12:05:00Z");
-  const temiz = formatStatus({ ...base, traderlar: base.traderlar.map(t => ({ ...t, yonsuz_bayrak: { bayrak: false } })), kalabalik: { uyari: false, uyari_metni: null } }, now);
-  assert.equal(temiz.split("\n").filter(l => l.includes("⚠️")).length, 0);
-  const uyari = formatStatus({ ...base, kalabalik: { uyari: true, uyari_metni: "Kalabalık: ETH net long oda payı %48, 2/3 trader aynı yönde" } }, now);
-  const satirlar = uyari.split("\n").filter(l => l.includes("⚠️"));
-  assert.deepEqual(satirlar, ["⚠️ Kalabalık: ETH net long oda payı %48, 2/3 trader aynı yönde · yönsüz bayrak: A"]);   // tek satır; kontrol üyesi oda satırına girmez
-  assert.equal(formatStatus(base, now).split("\n").filter(l => l.includes("⚠️")).join(), "⚠️ yönsüz bayrak: A");
 });

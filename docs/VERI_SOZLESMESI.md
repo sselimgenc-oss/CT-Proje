@@ -1,4 +1,4 @@
-# Veri sözleşmesi — copy trade izleme (v1.22, 2026-11-03; v1.22 `pano.json` (§10), v1.21 kapı `durum.json` `hatali_satir`/`hatali_oran_aday`/`hatali_oran_evren`/`yeniden_denenen`/`yeniden_kosu`, `sonuc.csv` `hesap_zamani` (§9), v1.20 dinleyici başlangıç pozisyonu (H5b: REST `clearinghouseState`, `genel.baslangic_poz_*`, 429 koruması), v1.19 `gecikme_kar.json` H1 gecikme–kâr ölçümü + `ilk_dolum` + `kopya_v3.hesapla` gecikme 0 (anlık), v1.18 dinleyici `risk` bloğu + `risk_kararlari.jsonl` (H5), v1.17 `olay_ozeti` + trader başına adil pay + olay arşivi (A4-2), v1.16 `mum_eksik` + negatif mum önbelleği (K-18), v1.15 `veri_durumu` + sağlık ışığı `bilinmiyor` (K-14), v1.14 İlk 11 hesap katmanı kodda (A2 PR-1: `ilk11_alanlar`, kapı bilgi sütunları, `kapanan_islemler`), v1.13 İlk 11 puan alanları (§6, tanım), v1.12 `sanal_kopya_v3` tasfiye/aşamalı çıkış (E3), v1.11 `sanal_kopya_v3` (E2 sabit tutar), v1.10 `sanal_kopya_v2.kapanis_nedenleri` (E3), v1.9 `sanal_kopya_v2`, v1.8 `gecikme.json` taze pencere, v1.7 `gecikme.json`, v1.6 `saglik_hatti`, v1.5 `kol`, v1.2 olay kimliği, v1.3 tarz, v1.4 veri geçerliliği ve karar gizliliği)
+# Veri sözleşmesi — copy trade izleme (v1.23, 2026-11-04; T1: eski sistem — kapı, İlk 11 puan alanları, oda/kol — sözleşmeden çıkarıldı; yeni radar alanları T2+ ile eklenecek)
 
 sözleşmeye göre çalışır; alan eklemek/değiştirmek lider onayıyla `surum` artırılarak yapılır.
 
@@ -28,7 +28,6 @@ yalnız olay kimliği, karar ve neden. Trader adresleri zaten herkese açık zin
       "t0": "2026-10-28",
       "veri_zamani": "2026-10-28T10:00:00Z",
       "gecerli": true,
-      "kapi": {"sinif": "Geçti | Yetersiz | Kaldı", "tarih": "2026-10-27", "not": "en büyük işlem payı %36"},
       "saglik": {"isik": "yesil | sari | kirmizi | bilinmiyor", "nedenler": ["konide", "kaldıraç normal"]},
       "form": {"skor": 0.8, "getiri_30g": 0.042, "getiri_90g": 0.11},
       "hesap_degeri": 139680,
@@ -64,13 +63,7 @@ yalnız olay kimliği, karar ve neden. Trader adresleri zaten herkese açık zin
   Saatlik motor ve Cloudflare Worker aynı kuralla aynı kimliği üretir.
 - `traderlar[].kol` (v1.5, ek alan; `surum` 1 kalır): `oda` | `kontrol` | `taban` | `elle` | `referans_oda` | `referans_kontrol` | `cikarilan` | `havuz` (K-8, sessiz ileri ölçüm); `kollar` adresin bulunduğu tüm kollar. İzleme listesinden
   aynen taşınır; Telegram Worker bildirimi yalnız `kol = oda` için gönderir (diğerleri sessiz izlenir).
-- `traderlar[].secim` (v1.8, isteğe bağlı): izleme listesindeki değişmez seçim etiketi
-  (`<secim_surumu>@<kapı tarihi>`). Tüketici, aynı etiketi en son `secim.json` ile
-  eşleştirerek seçimin onaylı olduğunu gösterebilir. Sabit referans üyeleri eski
-  `id`, `t0` ve etiketiyle `referans_oda` / `referans_kontrol` olarak sessiz izlenir.
-- `traderlar[].yonsuz_bayrak` (isteğe bağlı, yalnız `kol` = `oda` | `kontrol`; `surum` 1 kalır; Argon A26, **yalnız bilgi**): `funding_payi`, `spot_perp_ters`, `maker_payi` — her biri `{deger, esik, asildi}`
-  (`deger` hesaplanamazsa `null`; `spot_perp_ters` ayrıca `coin`), `bayrak` (herhangi biri aşıldıysa `true`), `pencere_gun` (90), `sezgisel: true`, okunamayan kaynak varsa `hata`.
-  Funding ve spot durumu günde bir kez çekilir (önbellek `motor.json`'da). Eşikler `kurallar.yaml` `yonsuz_*`, sezgiseldir; seçim/kapı/oda kararını değiştirmez.
+- `traderlar[].secim` (v1.8, isteğe bağlı): izleme listesindeki değişmez etiket; eski seçim sistemi silindi (T1), alan yalnız listeden aynen taşınır.
   deseninden esinlenilmiş — `copytrade/saglik_hatti.py`, saf fonksiyon, **yalnız rapor**; hiçbir pozisyon/kopya
   bundan etkilenmez; oda için **performans ışığından (`traderlar[].saglik.isik`) ayrı**, veri hattının kendisinin
   sağlığıdır): `{kol: "oda", n, yetim_golge_orani, isaret_eksik_toplam, veri_hata_orani, kirmizi_sayisi,
@@ -82,11 +75,7 @@ yalnız olay kimliği, karar ve neden. Trader adresleri zaten herkese açık zin
   Eşikler `saglik_hatti.ESIKLER`. **Veri tazeliği burada değerlendirilmez** — yayım anında hesaplanırsa her zaman
   ~0 döner ve durmuş akışı yakalayamaz; tazelik tek yerde Worker'ın okuma anındaki gerçek saatiyle yaptığı mevcut
   3 saatlik kontrolündedir (`worker/src/index.js` `checkStateAlerts`).
-- `kalabalik` (üst düzey, isteğe bağlı, oda üyesi varsa; Argon A27): `{n_oda, coinler: [{coin, net_yon, net_pay, ayni_yon, toplam, cakisma}], uyari, uyari_metni, zaman, sezgisel}`.
-  `net_pay` = |Σ x·yön| / Σ|x|, x = kopya ağırlığı × pozisyon nosyoneli / trader hesap değeri (kaldıraç ikinci kez çarpılmaz). `uyari_metni` yalnız `uyari` iken dolu (tek satır; Telegram `/durum`).
-  Eşikler `kalabalik_*` (sezgisel). Otomatik işlem yoktur.
-- `traderlar[].tarz` (v1.3): `intraday` | `swing` (izleme listesinde `tarz` varsa o, yoksa en son kapı sonucundan; ikisi de yoksa
-  `bilinmiyor` ve 30 dk gecikme). Sanal kopya gecikmesi tarza göre (intraday 30 dk, swing 120 dk);
+- `traderlar[].tarz` (v1.3): `intraday` | `swing` (izleme listesindeki `tarz`; yoksa `bilinmiyor` ve 30 dk gecikme; kapı sonucundan okuma T1'de kaldırıldı). Sanal kopya gecikmesi tarza göre (intraday 30 dk, swing 120 dk);
   Telegram mesajında `[Intraday]` / `[Swing]` etiketi.
 - **`traderlar[].veri_durumu` + `veri_durumu_neden` (v1.15, K-14):** tek bir eksik yüzünden trader takipten düşmez; durumu kodlanır. (`durum`
   izleme listesinin kendi alanıdır — `kopyala | izlemede | durdu` — ve değişmez; bu yüzden yeni alan `veri_durumu`.) Değerler, öncelik sırasıyla:
@@ -96,7 +85,7 @@ yalnız olay kimliği, karar ve neden. Trader adresleri zaten herkese açık zin
   - `fiyatsiz`: en az bir dolum için gecikmeli yürütme mumu yok (1 dk, ya da 1 sa yedek). Hedef atlanır ve sayılır (önbelleğe girmez, sonraki saat yeniden
     denenir); asla "sonraki fiyat" kullanılmaz. v1'de `sanal_kopya.fiyatsiz_eylem` (adet; atlanan dolum) ve `not`; v3'te `fiyatsiz_eylem` (`copy_ledger` sayısı).
     Açık kopya coini için son 15 dakikada işaret (1 dk) mumu yoksa da `fiyatsiz`: neden "işaret fiyatı eksik: <coin listesi>" (işaret eksiği bir FİYAT eksiğidir).
-  - `bayat`: trader'ın `veri_zamani` değeri yayın anındaki `uretildi`'den `ilk11_form_tazelik_dk` (270 dk = 2 × `izleme_aralik_dk` 120 + 30 tampon; K-18: izleme 2 saatte bir) dakikadan DAHA eski (sınır dahil değil) ve başka bir kod yok
+  - `bayat`: trader'ın `veri_zamani` değeri yayın anındaki `uretildi`'den `veri_tazelik_dk` (270 dk = 2 × 120 dk koşu aralığı + 30 dk tampon) dakikadan DAHA eski (sınır dahil değil) ve başka bir kod yok
     (öncelik: okuma_hatasi > perp_bos > fiyatsiz > bayat > tamam). `veri_durumu_neden`: "veri N dk eski (> 270 dk)".
   - `tamam`: yukarıdakilerin hiçbiri. `veri_durumu_neden`: kısa Türkçe metin (`tamam`da boş).
 - **`traderlar[].mum_eksik` ve negatif önbellek (v1.16, K-18):** `{hedef, onbellekten}` (adet). `hedef` = bu koşuda fiyatı olmayan yürütme hedefi sayısı; `onbellekten` = bunların kaç tanesi
@@ -123,7 +112,7 @@ yalnız olay kimliği, karar ve neden. Trader adresleri zaten herkese açık zin
   hesaplanır: kararı `acti` olan olayların `sanal_sonuc`'u ↔ tüm olaylarınki.
 - **Yetersiz veri eşiği** (v1.1): bir trader için kapanmış ve kararı verilmiş olay sayısı < 10 ise istatistik
   sekmesi "yetersiz veri" yazar.
-- `sanal_kopya`: t0 sonrası, 30 dk gecikmeli, maliyetli (taker %0,045 + kayma %0,05 + funding) — CT-Kapı
+- `sanal_kopya`: t0 sonrası, 30 dk gecikmeli, maliyetli (taker %0,045 + kayma %0,05 + funding) —
   `delayed_copy` ile aynı hesap.
 
 ### `traderlar[].sanal_kopya_v2` (v1.9 E2, v1.10 E3)
@@ -137,7 +126,7 @@ kodu. v1'e göre dört gerçek düzeltme (`docs/DENETIM_TRADER_2026-10-30.md` K2
 - **Pozisyon tavanı:** `golge_pozisyon_tavan_carpani` (3,0 = %300 notional) — v1'de yok; büyük/kaldıraçlı tek
   pozisyonun kopya hesabını orantısız oynatması (K5/K6) engellenir.
 - **Aşamalı zarar_kes/kar_al (E3, v1.10):** ön kayıtlı/dondurulmuş eşikler (`kurallar.yaml` `golge_v2`,
-  ONKAYIT_D v1.1 — **değiştirilmedi**): intraday zarar_kes −%50; swing gün 0 zarar_kes −%50, gün 7 zarar_kes
+  dondurulmuş eşikler — **değiştirilmedi**): intraday zarar_kes −%50; swing gün 0 zarar_kes −%50, gün 7 zarar_kes
   −%30/kar_al %60, gün 14 zarar_kes −%20/kar_al %40 (ayrılmış teminata oranlı K/Z). Eşiğe değen pozisyon o saatin
   mumunda zorunlu kapanır (tasfiyeden ayrı; tasfiye eşiği her zaman önce denetlenir). `kapanis_nedenleri`:
 - **Zamanla değişen payda:** her koşuda trader hesap değeri `hesap_serisi`ye eklenir (motor.json, en çok 3000
@@ -189,7 +178,7 @@ yalnız yeni `tutar_egrisi` parametresiyle — `golge.calistir`'in ön işlemesi
 | **yeşil** | hiçbiri |
 
 **Form skoru** = son 30 gün sanal kopya getirisi / son 90 gün günlük oynaklık. **Yalnız ekran sıralaması içindir**;
-kopyalama kararını değiştirmez (karar: kapı + ışık).
+kopyalama kararını değiştirmez.
 
 ## 4. Kararlar (açtım / atladım)
 Kayıt: `{"olay_id", "zaman", "karar": "acti | atladi", "neden": "gec_gordum | begenmedim | diger",
@@ -211,7 +200,7 @@ sayısıdır — eski bir trader örneği artık oda genelindeki "gerçek hız" 
 yok (ilk koşu, sakin piyasa ya da tüm örnekler eski); medyan/maks `null`. Yalnız rapor; kopya ekonomisini değiştirmez.
 
 ## 4b. `gecikme_kar.json` — H1 gecikme–kâr ölçümü (v1.19, 2026-11-03; K‑17)
-YALNIZ ölçüm (bilgi amaçlı; seçim, kapı, eşik ve `durum.json` değişmez). Üretim: `python -m copytrade.gecikme_kar` (görev: `docs/GOREV_H1_GECIKME_KAR.md`).
+YALNIZ ölçüm (bilgi amaçlı; eşik ve `durum.json` değişmez). Üretim: `python -m copytrade.gecikme_kar`.
 Hesap tek motorda: `kopya_v3.hesapla` → `defter.copy_ledger` (kural 7). `kopya_v3.hesapla(delay=0)` = **anlık**: yürütme fiyatı trader'ın dolum fiyatı `px`,
 yürütme zamanı dolum zamanı, maliyet ledger'daki taker + kayma (`kurallar.yaml` `maliyet_taker` + `maliyet_kayma`); `delay > 0` davranışı değişmedi.
 Anlıkta `px` yok/≤ 0 ise dolum `fiyatsiz_eylem`e girer (mum aranmaz, sahte fiyat yok).
@@ -258,82 +247,6 @@ Geçmişte dakikalık fiyat ~4999 dk ile sınırlıdır; `tam` pencerede 1/5/30 
 - Bot anahtarı ve sohbet kimliği yalnız GitHub Secrets'ta (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`,
   `TELEGRAM_WEBHOOK_SECRET`); dağıtım işi bunları Cloudflare secret'ına aktarır. Repoya, günlüğe, sohbete yazılmaz.
 
-## 6. İlk 11 puan alanları (v1.13, 2026-11-02; K‑12)
-Tanım belgesi: `docs/ILK11_SECIM_SARTNAME.md` §3–4. **Durum (v1.14):** 10 ham alanın hesap katmanı kodda (`copytrade/ilk11_alanlar.py`),
-kapı `sonuc.csv` bilgi sütunları ve `sanal_kopya_v3.kapanan_islemler` üretiliyor; `traderlar[].ilk11_form_ham` (izleme) ve
-`ilk11/<pazar>/` çıktıları A2 PR-2'de. Bu bölümde yazmayan
-alan tüketilmez (kalite kuralı 2). Puan kodu `copytrade/ilk11.py` (değişmez); ham alanların tek hesap yeri `copytrade/ilk11_alanlar.py`.
-
-**Ortak:** getiri ve oranlar **kesir** (0,012 = %1,2); zaman UTC; pencere sonu = Pazar snapshot `as_of` (Pazar 13:00 TSİ = 10:00 UTC)
-ya da izleme okuma zamanı (`veri_zamani`). Eksik = `null` → alan puanı 35. Akıl sağlığı dışı değer `null` olur ve
-`alan_kaynagi[alan] = "akil_sagligi_ihlali:<değer>"`. İ = ilk seçim (kapı satırı, uygun evren), F = haftalık form (izleme, kadro 50).
-
-| Alan | Anlam | Birim / ölçek | Pencere İ / F | Kaynak İ / F | Aralık |
-|---|---|---|---|---|---|
-| `golge` | Kopya sonucu | oran; İ: trader hesabına oranlı defter neti; F: v3 işlem başı getirinin büzülmüş ortalaması (1.000 $ sanal kopya) | 200 g / 30 g | `secim.puan` (`gecikme_{kapi_gecikme_dk}dk_net`) / `golge_ozeti(sanal_kopya_v3.kapanan_islemler[].getiri)` | İ [−1, 10]; F [−1, 3] |
-| `ay_roi` | Aylık getiri (zaman ağırlıklı, yatırma/çekme hariç) | oran, trader hesabı | 30 g / 30 g | `portfolio.month` → `kapi.twr_chain` (kapı sütunu `ilk11_ay_roi`) / aynı | [−1, 10] |
-| `hafta_roi` | Haftalık getiri | oran, trader hesabı | 7 g / 7 g | `portfolio.week` → `twr_chain` (`ilk11_hafta_roi`) / aynı | [−1, 5] |
-| `hesap` | Hesap büyüklüğü | $, trader hesabı | anlık / anlık | `hesap_degeri_bugun` (ana + HIP-3 + spot USDC) / `traderlar[].hesap_degeri_toplam` (AYNI tanım: ana + HIP-3 + spot USDC; `kapi.spot_usdc`) | [5.000, 1e9] |
-| `dusus` | Aylık en büyük düşüş (düşük iyi) | oran, pozitif büyüklük (0,25 = %25) | 30 g / 30 g | `twr_chain` özsermayesi, `max(1 − e/cummax)` (`ilk11_dusus_30g`) / aynı | [0, 1] |
-| `kazanma` | Kazanan kapanmış işlem payı (ücret dahil net > 0) | oran | 365 g / 30 g | `olcut.closed_round_trips` (`kazanma_orani`) / aynı, kapanışı pencerede | [0, 1] |
-| `siklik` | Kapanmış işlem / gün | adet/gün | 365 g / 30 g | `gunluk_islem_sikligi` / pencere işlem sayısı ÷ 30 | [0, 200] |
-| `tutma` | Medyan tutma süresi | **dakika** (saat × 60) | 365 g / 30 g | `median_holding_hours × 60` / `closed_round_trips` medyanı × 60 | (0, 525.600] |
-| `kaldirac` | Efektif kaldıraç (pozisyon değeri / o anki hesap değeri), zaman ağırlıklı medyan | x | 365 g / 30 g | `median_leverage` / `olcut.effective_leverage_detail` | [0, 200] |
-| `tutarli` | Pozitif gün oranı (ΔPnL > 0 gün / ΔPnL ≠ 0 gün, UTC gün) | oran | 30 g / 30 g | `portfolio.month.pnlHistory` (`ilk11_tutarli_30g`) / aynı | [0, 1] |
-
-**Yeni alanlar (A2):**
-- Kapı `sonuc.csv` bilgi sütunları (adım/eşik kullanmaz): `ilk11_ay_roi`, `ilk11_hafta_roi`, `ilk11_dusus_30g`, `ilk11_tutarli_30g`,
-  `kazanma_orani` (yukarıdaki birimlerle; oran sütunları akıl sağlığı kapısında 0–1).
-- `traderlar[].ilk11_form_ham` (izleme, saatlik; `ilk11_alanlar.form_ham_30g` çıktısı): `{alanlar: {10 alan, birimler yukarıdaki},
-  alan_kaynagi: {alan: str|null}, pencere_bitis: UTC ISO (okuma zamanı, `YYYY-MM-DDTHH:MM:SSZ`), dolu_alan: int}`. `dolu_alan` = akıl sağlığı
-  SONRASI `null` olmayan alan sayısı (0–10). Dolum verisi alınamadıysa (`fills = None`) `kazanma/siklik/tutma/kaldirac` `null`; alındı ama
-  pencerede kapanmış işlem yoksa `siklik = 0`, `kazanma/tutma = null`.
-- **`traderlar[].hesap_degeri_toplam` (v1.16, A2‑4):** $, trader hesabı ölçeği; ana + HIP-3 (`marginSummary.accountValue`) + spot USDC (`spotClearinghouseState`, yalnız USDC; kapının `hesap_degeri_bugun` ile AYNI tanım,
-  tek kod: `kapi.spot_usdc`). `hesap_degeri` (yalnız ana + HIP-3) olay `hesap_payi` ve mutabakat içindir, değişmedi. Spot okunamazsa `null` (`ilk11_form_ham.alanlar.hesap` = `null`, ihlal değil; trader düşmez);
-  hiç okunmamış trader'da `null`. Gerekçe: deneme 41477749941'de 0x0cd16f3f İ 14.405 $ ↔ F 4.352 $ idi (spot yoktu) ve F `hesap` 5.000 $ altı sayılıp ihlal oluyordu.
-- **Pencere kuralları (`ilk11_alanlar`):** pencere sonu = ilgili `portfolio` serisinin SON noktası (F'de ayrıca `pencere_bitis`). Getiri / düşüş
-  zinciri `kapi.twr_chain` (Modified Dietz; yatırma-çekme getiri sayılmaz, sermaye ≤ 0 dönem 0 getiri): pencere = (son − N gün, son]; zincirin
-  TABANI, `son − N gün` anında ya da ondan önceki SON noktadır (taban öncesi PnL sayılmaz); geçmiş pencereden kısaysa ilk nokta taban.
-  `pozitif_gun_orani`: günün PnL'i = o UTC günün SON `pnlHistory` noktası, nokta olmayan gün önceki değeri taşır (ΔPnL = 0, paydaya girmez);
-  pencere = son noktanın günü dahil son N takvim günü. `ilk11_ay_roi`/`ilk11_dusus_30g`/`ilk11_tutarli_30g` `portfolio.month`, `ilk11_hafta_roi`
-  `portfolio.week` kullanır; pencere gün sayıları `kurallar.yaml` `ilk11_form_pencere_gun` (30) ve `ilk11_hafta_pencere_gun` (7).
-- **Akıl sağlığı** (`ilk11_alanlar.akil_sagligi`, aralıklar `kurallar.yaml` `ilk11_saglik` + `saglik_max_kaldirac`): aralık dışı değer `null`,
-  `alan_kaynagi[alan] = "akil_sagligi_ihlali:<değer>"` (tam sayı ise `1805`, değilse `repr`; `inf` → `inf`). Sınırlar DAHİL; `tutma` alt sınırı
-  (0 dk) DIŞLANIR. Eksik (`null`/NaN) ihlal değildir (`alan_kaynagi = null`). Aday listesinde alan başına ihlal / aday > `saglik_max_hata_orani`
-  (0,05) → koşu kırmızı (`saglik_sorunlari`); dolu / aday < `ilk11_min_doluluk` (0,90) → snapshot yok (`doluluk_sorunlari`).
-- `traderlar[].sanal_kopya_v3.kapanan_islemler` (izleme): `[{coin, acilis, kapanis (UTC ISO), sonuc_usd ($, 1.000 $ sanal kopya
-  ölçeği; maliyet + funding dahil), getiri (oran = sonuc_usd / işlemde açılan toplam $), neden (trader|zarar_kes|kar_al|likidasyon),
-  gecerli (bool)}]`. Bakiye/getiri hesabını değiştirmez (kural 6; PR'da eski ↔ yeni fark 0). Üretim: `defter.copy_ledger(islem_kaydi=True)`.
-  - **İşlem** = kopya pozisyonunun bir coinde 0'dan açılıp 0'a dönmesi; ters dönüşte kapanan kısım biter (satır), kalan miktar yeni işlemi açar;
-    kısmi azaltmalar ve eklemeler aynı işleme yazılır. **Açık işlem listelenmez.** Satırlar kapanış sırasıyla.
-  - `sonuc_usd` = gerçekleşen K/Z − taker/kayma maliyeti (ters dönüş dolumunda ücret miktarla bölünür: kapanan kısım / açılan kısım) +
-    funding (işlemin açık kaldığı saat aralıklarının funding'i). `getiri` = `sonuc_usd` / işlemde açılan toplam $ (açılış + eklemeler, fiyat × adet ×
-    1.000). `acilis`/`kapanis` = kopyanın YÜRÜTME zamanı (trader dolum zamanı + gecikme, mum açılışı); zorunlu kapanışta (zarar_kes, kar_al,
-    likidasyon) risk denetimi saati.
-  - `gecerli = true` ⇔ (a) işlemi açan trader dolumunun `time` değeri pencere başından (`t0`) sonra ve o an trader pozisyonu yatay (ya da dolum
-    ters dönüştü) — trader'ın pencere öncesinden taşıdığı pozisyona eklemesi ya da kaçırılmış (fiyatsız) açılıştan sonraki ekleme **miras** sayılır,
-    `false` — ve (b) işlem açıkken hiçbir trader dolumu fiyatsız (mum yok → `fiyatsiz_eylem`) kalmadı. Zorunlu kapanışlar (mum işaretiyle) geçerlidir.
-    `false` satırlar listede kalır (sonuç gerçektir) ama `paper_sonuclari` ve `golge` (F) hesabına girmez.
-  - Not: sabit tutarlı v3 yolunda `ledger.net` hiçbir zaman `None` olmaz; `durum: "hesaplanamadi"` dalı (kopya_v3) artık tetiklenmez.
-  - Büyüklük: işlem sayısı t0'dan beri birikir (pencere süzgeci tüketicidedir); satır başına ~150 bayt.
-- **İzleme `durum.json` trader alanları (A2 PR-2):**
-  - `ilk11_gecerli_saat` = `{baslangic, saat, son_saat}`: trader'ın kadroya SON girişinden (`baslangic` = izleme listesindeki `takim_hafta`; yoksa `t0` günü) itibaren `gecerli == true` saatlik okuma sayısı (`saat`, tam sayı; `son_saat` UTC ISO). Her yeni `izleme_aralik_dk` kovası (UTC'ye hizalı, 120 dk) `izleme_aralik_dk/60` = 2 saat ekler (K-18; 24 saatte 12 koşu = 24 saat), aynı kovada ikinci koşu saymaz; `takim_hafta` değişince sıfırlanır; sayım bu motorun okumalarından başlar. Kalıcı kopya: `motor.json`. Pazar işi `gecerli_gozlem_suresi` (gün) = `saat / 24` (yalnız `baslangic == takim_hafta` ise).
-  - `son_perp_dolum` (UTC ISO | `null`): trader'ın bilinen en son PERP dolumunun zamanı (spot hariç). `bu_pazar_aktif` ⇔ `(as_of − 7 gün, as_of]` içinde.
-  - `ilk11_form_ham` hata durumunda `{"hata": "<metin>"}` (okuma düşmez; Pazar işi o trader için `bu_pazar_gecerli = false`); hiç okunmamış trader'da `{"hata": "hiç okunmadı"}`.
-  - **`kapanan_islemler` kırpması (yalnız `durum.json`):** `sanal_kopya_v3.kapanan_islemler` yayında yalnız kapanışı `(now − ilk11_form_pencere_gun, now]` içinde olanlar VE (pencereden eski olsa da) en son `ilk11_durum_min_gecerli_islem` (6) GEÇERLİ işlemdir; `kapanan_islemler_toplam` tam geçmişin sayısıdır. TAM geçmiş `motor.json`'daki `son_trader`'da silinmeden tutulur.
-- **Kapı `sonuc.csv` `ilk11_bilgi_hatasi`** (metin, yalnız hata olan satırda dolu): `kapi_bilgi_sutunlari` hesabı istisna fırlatırsa `ilk11_ay_roi`, `ilk11_hafta_roi`, `ilk11_dusus_30g`, `ilk11_tutarli_30g` boş (`NaN`) kalır ve hata `TürAdı: ileti` olarak yazılır; adım / katman / neden / `hata` ALANLARI değişmez (bilgi sütunu kapı sonucunu etkilemez, K-12.11).
-- **İzleme listesi (`ilk11/izleme_listesi.yaml`, K-12.8):** kadro 50 (`takim`, `snapshot_id`, `form_puani` 0–100, `takim_hafta` YYYY-MM-DD) + 36 sabit referans satırı: mevcut listede `kol`/`kollar` içinde `oda` (18) ve `kontrol` (18) olan satırlar `referans_oda` / `referans_kontrol` olarak etiketlenir (`id`, `t0` korunur); taban / elle / havuz / cikarilan çıkar. Aynı adres tek satır. `id` yeni kadro üyesinde `K` + adresin ilk 10 hex'i, `t0` = snapshot günü.
-- `ilk11/<pazar>/snapshot.json` (`copytrade-kapi` dalı): `snapshot_id` (gövdenin kanonik JSON SHA-256'sı), `sema`
-  (`ilk11-pazar-v1` ilk seçim | `ilk11-form-v1` form), `as_of` (Pazar 13:00 TSİ, ISO +03:00), `kaynak_surumu`, `adaylar[]`
-  (`id`, `uygun`, `uygunluk_nedeni`, `alanlar`, `alan_kaynagi`, `kapi_puani` (oran), `gecerli_gozlem_suresi` (gün)), `kadro[]`
-  (`id`, `takim`, `puan` 0–100). Formda ayrıca `form_puani` (0–100), `bu_pazar_gecerli`, `bu_pazar_aktif`, `onceki_pazar_aktif` (bool|null).
-  Form snapshot'ı (`ilk11-form-v1`) ayrıca `plan` (pazar_gecis çıktısı), `boslugu_dolduranlar` (K-12.6; bu hafta formdan çıkanlar aynı hafta geri alınmaz), `kadro_sonrasi`
-  (`[{id, grup, takim_hafta}]`; sonraki haftanın "önceki kadro"su) ve `uyari` taşır. `kaynak_surumu`: `izleme` (durum.json commit SHA + `uretildi`), `onceki_snapshot`,
-  `kapi` + `kapi_sonuc_sha256` (varsa), `ilk11_alanlar`, `kurallar`. `snapshot.json` adaylarda `id` = küçük harf trader ADRESİ. `akis.json`: `{deneme_sayisi, snapshot_id,
-  son_basarisiz_at, basarili}`. `ilk11_pazar` çıkış kodu: 0 başarı/bekle/tamamla; 1 girdi-kalite hatası (yalnız RAPOR, snapshot yok); 2 form yayımlandı ama kapı eski/yok.
-- **Kullanılmaz:** leaderboard `windowPerformances.roi` (payda yatırma/çekmeyle bozulur; acil kadroda 1805 = %180.500) ve leaderboard
-  `accountValue`.
-
 ## 7. Dinleyici risk kapısı — DRY-RUN (v1.18, H5; `copytrade/risk_defter.py`, `copytrade/live_koruma.py`)
 **Emir, anahtar, cüzdan, imza YOK; yalnız karar kaydı.** Her satır/blokta `emir_gonderildi` = `false`. Sınırlar `kurallar.yaml` `risk_dry_run:` bloğundan (tek kaynak).
 Tüm tutarlar **notional $, 1.000 $ sanal kopya ölçeğinde** (trader hesabı DEĞİL); zaman UTC; fiyat $/coin; maliyet (taker/kayma) hesaba katılmaz.
@@ -360,7 +273,7 @@ Günlük zarar şalteri **kilitlidir**: eşiğe değince UTC gün sonuna kadar (
 Günlük döner (UTC gün sınırında `risk_kararlari.<YYYY-MM-DD>.jsonl`), son 7 gün tutulur. Satır: `zaman` (karar anı, UTC ISO ms), `gun` (UTC `YYYY-MM-DD`), `trader` (takma ad), `coin`, `aksiyon` (`open|add|exit`), `kabul` (bool), `nedenler` ([str]), `notional_usd` ($; fiyat yokken niyet tutarı), `fiyat` ($/coin | null), `dolum_zamani` (UTC ISO ms), `gecikme_sn` (sn), `kaynak` (`trades|userFills|dolgu`), `dur_aktif` (bool), `emir_gonderildi` (`false`).
 
 ### Liste alanı
-Dinleyici listesinde İlk 11 üyeliği `takim: ilk11` alanıyla gelir (`ilk11/izleme_listesi.yaml`, K-12.8; `izleme_liste.load_list` şeması). Pilot liste `copytrade/izleme_listesi.yaml`'da `takim` yoktur → risk kapısı niyet üretmez. Yalnız DENEME için `--risk-tum-liste` listedeki herkesi "ilk11 sayar".
+Dinleyici listesinde İlk 11 üyeliği `takim: ilk11` alanıyla gelir (`copytrade/izleme_listesi.yaml`; `izleme_liste.load_list` şeması). Pilot liste `copytrade/izleme_listesi.yaml`'da `takim` yoktur → risk kapısı niyet üretmez. Yalnız DENEME için `--risk-tum-liste` listedeki herkesi "ilk11 sayar".
 
 ## 8. Dinleyici REST koruması — dolgu / hakem / başlangıç pozisyonu (v1.20; `copytrade/dinleyici.py`)
 Sunucuda yeniden bağlanmada ~92 adresin `userFillsByTime` dolgusu art arda yapılıp 429 aldığı için (4 saatte `genel.dolgu_hata: 78`) **tüm REST işleri** (dolgu, hakem, başlangıç pozisyonu) tek desene bağlandı:
@@ -385,30 +298,8 @@ Sunucuda yeniden bağlanmada ~92 adresin `userFillsByTime` dolgusu art arda yap�
 **Hata türü** = hatanın SINIFI (`hata_turu`): `HTTP <kod>` (örn. `HTTP 429`), `Timeout`, `Ağ (URLError)`, `Geçersiz yanıt`, ya da istisna sınıf adı. **Adres, URL ve sağlayıcı metni hiçbir yerde yazılmaz** (`ozet.json` adres içeremez, testli).
 **Journal:** her REST hatası (yeniden denemeler dahil) stderr'e TEK satır: `UYARI REST hatası kaynak=<dolgu|hakem|baslangic_poz> trader=<takma ad> tur=<hata türü>` (`journalctl -u sg-dinleyici | grep "UYARI REST"`).
 
-## 9. Kapı `durum.json` (`copytrade-kapi` veri dalı, `copytrade/kapi/<YYYY-MM-DD>/durum.json`) — veri bütünlüğü (v1.21)
-Alanlar (sayılar adet, oranlar ORAN: 0,01 = %1): `durum` (`tamam` \| `eksik`), `neden` (metin; birden çok neden `; ` ile), `parca_beklenen`, `parca_biten`, `islenen` (kapsanan satır), `evren`, `kapsam` (= işlenen / evren, ORAN;
-**hatalı satırlar da kapsanmış sayılır**), `kapsanan`, `evren_disi_satir`, `eski_hesap_satir`, `hesap` (hesap sürümü), `kod_hashler`, `kod_hash_farkli`, `satir_kaynagi` ({kaynak: adet}), `mum_ozeti`, `kapi_sorunlari`.
-**Yeni (v1.21):**
-| Alan | Anlam |
-|---|---|
-| `hatali_satir` | `sonuc.csv`'de `hata` sütunu dolu satır sayısı (adres başı hata yalıtımı: `HTTPError: 500…`, `ValueError: …`; sınıf `Yetersiz`) |
-| `aday_satir` | analize giren satır sayısı = `asama1 == Geçti` (1. aşamayı geçen; API'ye bu adresler için tam analiz çağrıları gider). 2026-11-03: 1.354 |
-| `hatali_oran_aday` | `hatali_satir` / `aday_satir`, ORAN (6 hane; 0,01 = %1; aday yoksa 0). **Veri bütünlüğü kuralı (kapı kuralı DEĞİL; kapı eşiklerini ve kararını değiştirmez):** `hatali_oran_aday > veri_butunlugu_hatali_oran_max` (`kurallar.yaml`, 0,01) ise `durum: eksik`, `neden` `hatali_satir …` ile başlar. Tam %1 eşik AŞILMAMIŞTIR (`tamam`). Eksik sonuç yayımlanır ama İlk 11 seçiminde kullanılmaz (şartname §2.1). Payda evren değildir: evrenin büyük çoğunluğu (2026-11-03: 15.240 satırın 12.017'si) API'ye hiç gitmez |
-| `hatali_oran_evren` | `hatali_satir` / tüm satırlar (`sonuc.csv` satır sayısı), ORAN (6 hane). **Yalnız bilgi**; eşik uygulanmaz. (`hatali_oran` adlı tek alan yoktur: belirsiz payda olmasın diye ikiye ayrıldı) |
-| `yeniden_denenen` | yeniden çekilmiş satır sayısı = `sonuc.csv`'de `hesap_zamani` dolu satır (kümülatif; yeniden koşu yoksa alan yok) |
-| `yeniden_kosu` | yalnız yeniden koşudan sonra: `{gun, hatali_once, denenen, duzelen, hala_hatali, finalize_farkli_diger_satir, bhy_q_degisen_satir, ham_sutun_farki_diger_satir, karar_degisen[], yeniden_kosan_adresler[], hala_hatali_ayrinti[]}` (adet; `karar_degisen`: `{adres, katman?, adim7?, sinif?: [eski, yeni]}`; `hala_hatali_ayrinti`: `{adres, hata, coin_hatalari{coin: hata}, diyez_coin}` — hata hangi coin'de, `#<sayı>` coin mi) |
-
-**Yeniden koşu** (`python -m copytrade.kapi --yeniden-dene-gun YYYY-MM-DD [--en-fazla N]`, `copytrade_kapi.yml` girdileri `yeniden_dene_gun`, `en_fazla`): o günün `hata` dolu satırları yeniden hesaplanır; satır `now_ms` değeriyle (ilk koşunun zamanı) hesaplanır; satırın `satir_kaynagi` değeri `bu_kosu` KALIR (İlk 11 uygunluğu §2.3). Ardından `durum.json`, `RAPOR.md` ve `gunluk.csv.gz` güncellenir.
-- **Bayt kuralı yalnız satır başı HAM sütunlar için:** hedef olmayan satırların ham sütunları bayt bayt aynı kalır (`ham_sutun_farki_diger_satir` = 0 olmalı; değilse koşu reddedilir). Yeniden koşulan satırların kayıtları yeni değerlerle değişir.
-- **BHY ailesi tam yeniden hesaplanır:** çoklu test düzeltmesi (adım 7, `bhy_q`) tüm aileye bağlıdır; eski q'lar eksik aileyle hesaplanmıştı. Aile tamamlanınca `bhy_q` ve ona bağlı sütunlar (`adim7`, `sinif`, `katman`, `neden`, `genc_aday`, `gecmis_gun`) TÜM satırlar için yeniden hesaplanır; yalnız değişen hücreler yerinde değişir (hedef olmayan satırlarda ham sütunlara dokunulmaz). `finalize_farkli_diger_satir` (hedef olmayan ve aileye bağlı sütunu değişen satır sayısı) artık hata işareti değil, BİLGİDİR; `bhy_q_degisen_satir` ve `karar_degisen` (katman / adım 7 / sınıf eski → yeni) değişimi gösterir.
-- **Reddedilir** (dosyaya dokunulmaz, ağa çıkılmaz): dosyadaki herhangi bir satırın `hesap` değeri `HESAP_SURUMU`'ndan farklıysa (her durumda); `kod_hash` değeri çalışan `kapi.py`'nin hash'inden farklıysa (varsayılan); yeni satırlar dosyada olmayan sütun üretiyorsa.
-- **Hash kuralı (istisna YOK; lider kararı 2026-11-03):** kod farklıysa yeniden koşu reddedilir. Amaç: kod değişmeden bir günde 5xx kalırsa yalnız o satırlar yeniden çekilir. "Hesap değişmedi" kanıtı yeniden koşuda değil, A/B teşhisindedir (aşağıda).
-- **`hesap_zamani`** (`sonuc.csv` sütunu, UTC `YYYY-MM-DDTHH:MM:SSZ`, metin): yeniden çekilen (yeniden koşulan) satırın hesaplandığı an; diğer satırlarda BOŞ. Sütun ilk yeniden koşuda dosyanın en sonuna eklenir (mevcut alanlar bayt bayt aynı, diğer kayıtlara boş alan eklenir); normal tam koşuda sütun yoktur. `durum.json` `yeniden_denenen` = dosyada `hesap_zamani` dolu satır sayısı (adet, kümülatif; bir satır tekrar çekilirse zamanı güncellenir, sayı artmaz).
-- **A/B teşhisi** (`python -m copytrade.kapi_ab --eski-kok <eski kodun çalışma ağacı> --sonuc sonuc.csv --basarili N --hatali M`): hesabın değişmediğinin kanıtı. Eski ve yeni kod AYNI adresleri AYNI API yanıtlarıyla değerlendirir (yanıtlar bir kez çekilir, iki koda aynen verilir; canlı `portfolio` ucu her çağrıda değiştiğinden ayrı çekimler karşılaştırılamaz). Karşılaştırma dışı: `KONTROL_DISI = ("sure_",)` önekli süre/telemetri sütunları ve `kod_hash` (kodda açık sabit). Çıktı: karşılaştırılan adres, `KONTROL_DISI` dışı fark sayısı (beklenen 0).
-**REST ilkesi (kapı):** 5xx ve ağ hatasında 3 yeniden deneme, bekleme 5 / 15 / 45 sn (`tarama.KAPI_YENIDEN_BEKLEME`). **429** (tüm `PublicClient` tüketicileri): 5 yeniden deneme, 5 / 10 / 20 / 40 / 60 sn (toplam 135 sn; kısaltılmaz) ve varsa `Retry-After` başlığına uyulur (bekleme = en çok takvim ve başlık; başlık 300 sn ile sınırlı). 4xx (429 hariç) yeniden denenmez. Diğer `PublicClient` tüketicileri (izleme, H1) 5xx / ağ hatasında eski ilkeyle kalır.
-
 ## 10. `pano.json` (Faz 2 pano; GitHub Pages `pano.json`, üretici `copytrade/pano_veri.py`, iş akışı `.github/workflows/pano.yml`) — v1.22
-Girdiler (yalnız okunur): `copytrade-izleme:izleme/durum.json`, `copytrade-kapi:ilk11/izleme_listesi.yaml` (alan `takim`: `ilk11` | `yedek11` | `paf`), `copytrade-kapi:ilk11/<son tarih>/snapshot.json` (`kadro[].takim`).
+Girdiler (yalnız okunur): `copytrade-izleme:izleme/durum.json`, `copytrade/izleme_listesi.yaml` (alan `takim`: `ilk11` | `yedek11` | `paf`). (Eski İlk 11 snapshot girdisi T1'de kaldırıldı.)
 Biçim `pano/ornek_veri.json` ile aynıdır; **panonun JS'i hiçbir şey hesaplamaz** (AGENTS kural 7). Motorda olmayan alan **`null`** (pano "—" gösterir); eksik alan sıfır sayılmaz, uydurulmaz: bir toplamın bir bileşeni `null` ise toplam `null`.
 Oranlar kesirdir (0,012 = %1,2); zaman UTC; üyelik yalnız `takim` alanından (`kol` / `kollar` kullanılmaz). Takımlar sabit sırayla: `İlk 11`, `Yedek 11`, `PAF`.
 
@@ -428,7 +319,7 @@ Oranlar kesirdir (0,012 = %1,2); zaman UTC; üyelik yalnız `takim` alanından (
 | `ozet.acik_teminat_usd` / `acik_kz_usd` | $: `acik[].teminat_usd` / `kz_usd` toplamı (TOPLAM satırı ile aynı; bir satırda eksikse `null`) |
 | `ozet.bugun_acilan` / `bugun_kapanan` | adet; "bugün" = `uretildi` (kaynak) tarihinin UTC günü. Açılan = bugün açılan `acik` (trader pozisyonu) + bugün açılıp bugün/sonra kapanan işlemler (kırpılmış `kapanan_islemler`); kapanan = `kapanis` bugün olanlar |
 | `ozet.son24_islem` / `son24_kazanma_orani` | adet / oran: `kapanis` ∈ (`uretildi` − 24 sa, `uretildi`] olan kapanmış işlemler; kazanma = `sonuc_usd` > 0 (işlem yoksa oran `null`) |
-| `ozet.kadro_dolu` / `kadro_toplam` | adet: `durum.json`'da geçerli v3 verisi olan üye (kopyası henüz başlamamış olanlar dahil) / snapshot `kadro`'da o takımın üye sayısı (snapshot yoksa `null`) |
+| `ozet.kadro_dolu` / `kadro_toplam` | adet: `durum.json`'da geçerli v3 verisi olan üye (kopyası henüz başlamamış olanlar dahil) / her zaman `null` (kadro büyüklüğü kaynağı T1'de kaldırıldı; radar kadrosu T4'te) |
 | `metrik.bugun_oran` / `hafta_oran` / `ay_oran` | oran: `kasa.egri` son gün / (1, 7, 30 gün önceki gün) − 1; o gün seride yoksa `null` (komşu günle yaklaşıklama yok) |
 | `metrik.toplam_oran` | oran = `kasa.degisim_oran` |
 | `metrik.maruziyet_oran` | oran = `acik_teminat_usd` / `kasa.bakiye_usd` |

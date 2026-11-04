@@ -56,7 +56,7 @@ def closed_round_trips(fills: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
     Tersine dönen dolum (ör. +10 pozisyonda 15 satış): ``closedPnl`` kapanan işleme yazılır; ücret **miktarla bölünerek** kapanan
     (10/15) ve açılan (5/15) işleme dağıtılır. Her işlem ``fills`` ile döner: işlemi oluşturan dolum parçaları (``time``, ``side``,
-    ``sz`` = o işleme düşen miktar, ``startPosition`` = işlem içi göreli pozisyon, ``px``, ``tid``); plasebo bunları aynı sırayla yeniden
+    ``sz`` = o işleme düşen miktar, ``startPosition`` = işlem içi göreli pozisyon, ``px``, ``tid``); dolum yeniden kurulumu bunları aynı sırayla
     yerleştirir.
     """
     data = _frame(fills)

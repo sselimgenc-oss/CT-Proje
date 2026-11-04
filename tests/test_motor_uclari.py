@@ -3,7 +3,6 @@ Her test önce hatayı yeniden üretir (altın örnekle), sonra düzeltmeyle ye�
 import pytest
 
 from copytrade import izleme_motoru as m
-from copytrade import secim
 from copytrade.defter import DAY, HOUR, Market, copy_ledger
 from copytrade.golge import calistir, kirp_pozisyon
 from copytrade.kurallar import load_rules
@@ -106,47 +105,7 @@ def test_e4_canli_sonuc_eksik_isaretleme_notu_tasir():
 
 
 # ---------------------------------------------------------------- E6: bayrak önbelleği
-def secim_sonucu(adaylar):
-    return {"secim_surumu": "v1.3", "kapi_tarihi": "2026-10-28",
-            "adresler": {"0x" + n * 40: {"kollar": ["aday", "havuz"], "hesap_degeri": 1000.0} for n in adaylar}}
 
 
-def test_e6_bayrak_onbellegi_yeniden_kosuda_cagri_tekrarlamaz():
-    calls = []
-
-    def fn(address, value):
-        calls.append(address)
-        return {"bayrak_rol": "x"}
-    result = secim_sonucu("abc")
-    saved = []
-    first = secim.bayrak_hesapla(result, fn, kaydet=lambda body: saved.append(dict(body, bayraklar=dict(body["bayraklar"]))))
-    assert len(calls) == 3 and first["tamam"] is True and len(first["bayraklar"]) == 3
-    assert [len(s["bayraklar"]) for s in saved] == [1, 2, 3, 3] and [s["tamam"] for s in saved] == [False, False, False, True]   # her adresten sonra checkpoint
-    again = secim.bayrak_hesapla(result, fn, onbellek=first)
-    assert len(calls) == 3 and again["bayraklar"] == first["bayraklar"]                    # tüm çağrılar önbellekten
 
 
-def test_e6_yarim_kalan_kosu_yalniz_eksikleri_hesaplar_ve_surum_degisince_gecersiz():
-    calls, state = [], {"fail": True}
-
-    def fn(address, value):
-        calls.append(address)
-        if address == "0x" + "b" * 40 and state["fail"]:
-            state["fail"] = False                      # yalnız ilk denemede 429
-            raise RuntimeError("429")
-        return {"bayrak_rol": "x"}
-    result = secim_sonucu("abc")
-    checkpoints = []
-    with pytest.raises(RuntimeError):
-        secim.bayrak_hesapla(result, fn, kaydet=lambda body: checkpoints.append(dict(body, bayraklar=dict(body["bayraklar"]))))
-    partial = checkpoints[-1]
-    assert list(partial["bayraklar"]) == ["0x" + "a" * 40] and partial["tamam"] is False
-    calls.clear()
-    done = secim.bayrak_hesapla(result, fn, onbellek=partial)
-    assert calls == ["0x" + "b" * 40, "0x" + "c" * 40] and done["tamam"] is True            # a önbellekten; yalnız eksikler hesaplandı
-    calls.clear()
-    secim.bayrak_hesapla(result, fn, onbellek=dict(done, bayrak_surumu="eski-kod"))        # bayrak.py değişti: önbellek geçersiz
-    assert len(calls) == 3
-    calls.clear()
-    secim.bayrak_hesapla(result, fn, onbellek=dict(done, kapi_tarihi="2026-10-21"))        # başka kapı/sürüm: önbellek geçersiz
-    assert len(calls) == 3

@@ -1,21 +1,14 @@
-"""Daily public Hyperliquid scanner; all HTTP reads are unauthenticated."""
+"""Public Hyperliquid client (rate limiter + retries); all HTTP reads are unauthenticated.
+
+Eski günlük aday tarayıcı (prefilter/run/main) T1'de silindi; yeni tarama T2'de yazılacak."""
 from __future__ import annotations
 
-import argparse
-import json
 import time
-from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from typing import Any
 
-import pandas as pd
 import requests
 
-from copytrade.izleme import load as load_watchlist
-from copytrade.izleme import update
-from copytrade.kopya import simulate
-from copytrade.kurallar import evaluate, load_rules
-from copytrade.olcut import calculate_metrics
+from copytrade.kurallar import load_rules
 
 LEADERBOARD = "https://stats-data.hyperliquid.xyz/Mainnet/leaderboard"
 INFO = "https://api.hyperliquid.xyz/info"
@@ -198,113 +191,3 @@ def _window(row: dict, name: str, field: str) -> float:
     wanted_key = f"{name}{field}".lower().replace("_", "")
     return next((float(value or 0) for key, value in row.items()
                  if str(key).lower().replace("_", "") == wanted_key), 0.0)
-
-
-def prefilter(rows: list[dict], watchlist: list[dict] | None = None) -> list[dict]:
-    """CT-Kapı evreni: lider tablosundaki tüm yeterli büyüklükte, pozitif PnL'li hesaplar.
-
-    ``watchlist`` eski günlük tarayıcı çağrılarıyla uyumluluk içindir; kapı evrenini genişletmez veya daraltmaz.
-    """
-    watch = {x["address"].lower() for x in watchlist or []}
-    esik = float(load_rules()["evren_min_hesap_degeri"])      # BİR kez okunur: satır başına YAML okumak 48 bin satırda ~17 dk sürüyordu (A2-3b ölçümü)
-    accepted = []
-    for row in rows:
-        address = _address(row)
-        account = float(row.get("accountValue", row.get("account_value", 0)) or 0)
-        all_time_pnl = _window(row, "allTime", "pnl")
-        if address and account >= esik and all_time_pnl > 0:
-            row = dict(row); row["address"] = address; row["accountValue"] = account; accepted.append(row)
-    return sorted(accepted, key=lambda x: x["address"].lower())
-
-
-def _write_gzip(rows: list[dict], path: Path, append: bool = False) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    frame = pd.DataFrame(rows)
-    if append and path.exists():
-        old = pd.read_csv(path, compression="gzip")
-        frame = pd.concat([old, frame], ignore_index=True)
-        keys = [key for key in ("tid", "time", "coin", "sz", "px") if key in frame]
-        if keys:
-            frame = frame.drop_duplicates(keys, keep="first")
-    frame.to_csv(path, index=False, compression="gzip")
-
-
-def _write_report(root: Path, today: str, table: pd.DataFrame, copies: list[dict]) -> None:
-    tested = len(table)
-    candidates = int((table["sonuc"] == "aday").sum()) if not table.empty else 0
-    flags = int(table["martingale_signal"].fillna(False).astype(bool).sum()) if not table.empty and "martingale_signal" in table else 0
-    lines = ["# Copy trade günlük raporu", "", f"Tarih: {today}", "", f"- Test edilen adres: {tested}",
-             f"- Yeni aday: {candidates}", f"- Martingale kırmızı bayrağı: {flags}", "",
-             "## t0 sonrası yaklaşık sanal kopya", "", "| Adres | Net (USD) | MDD | İşlem |", "|---|---:|---:|---:|"]
-    for item in copies:
-        lines.append(f"| {item['address']} | {item['net']:.2f} | {item['mdd']:.2%} | {item['trades']} |")
-    if not copies:
-        lines.append("| Henüz izlenen adres yok | — | — | — |")
-    lines.extend(["", "Kopya sonuçları günlük tarama nedeniyle **yaklaşıktır**; emir, cüzdan ve gerçek para kullanılmaz."])
-    (root / "RAPOR.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
-def run(root: Path, client: PublicClient, today: str | None = None, version: str = "v1", limit: int | None = None) -> pd.DataFrame:
-    today = today or datetime.now(UTC).date().isoformat()
-    watch_path = root / "izleme.csv"
-    watchlist = load_watchlist(watch_path)
-    leaders = prefilter(client.leaderboard(), watchlist)
-    if limit is not None:
-        leaders = leaders[:limit]
-    _write_gzip(leaders, root / "veri" / "lider" / f"{today}.csv.gz")
-    liquid = {"BTC", "ETH", "SOL", "HYPE", "XRP", "DOGE", "ADA", "AVAX", "LINK", "SUI", "LTC", "BCH", "PEPE", "WIF", "AAVE", "CRV", "ARB", "OP", "APT", "INJ"}
-    rules = load_rules()
-    # 180 gün geçmiş şartının ölçülebilmesi için pencere ondan uzun olmalı.
-    start = int((datetime.now(UTC) - timedelta(days=int(rules["fills_lookback_days"]))).timestamp() * 1000)
-    rows = []
-    copies = []
-    for leader in leaders:
-        address = leader["address"]
-        try:
-            fills = client.fills(address, start)
-            funding = client.info({"type": "userFunding", "user": address, "startTime": start}, weight=20)
-            state = client.info({"type": "clearinghouseState", "user": address}, weight=2)
-        except (RateLimitError, requests.RequestException) as exc:
-            # Missing data is never a pass or a fail: recorded as "veri_yok" and retried tomorrow.
-            rows.append({"address": address, "account_value": leader["accountValue"], "sonuc": "veri_yok",
-                         "neden": type(exc).__name__})
-            continue
-        leverage = [float(x.get("position", {}).get("leverage", {}).get("value", 0)) for x in state.get("assetPositions", [])]
-        metrics = calculate_metrics(fills, funding=funding, liquid_coins=liquid, leverages=leverage,
-                                    account_value=leader["accountValue"],
-                                    martingale_max_ratio=float(rules["martingale_max_ratio"]),
-                                    martingale_min_additions=int(rules["martingale_min_additions"]))
-        decision, reason = evaluate(metrics)
-        rows.append({"address": address, "account_value": leader["accountValue"], "sonuc": decision, "neden": reason, **metrics})
-        _write_gzip(fills, root / "veri" / "fills" / f"{address.lower()}.csv.gz", append=True)
-        if address.lower() in {x["address"].lower() for x in watchlist}:
-            for slip in (0.0005, 0.0015):
-                copy = simulate(fills, leader["accountValue"], slippage=slip, funding=funding)
-                (root / "kopya").mkdir(parents=True, exist_ok=True)
-                copy.to_csv(root / "kopya" / f"{address.lower()}_{int(slip * 10000)}bp.csv", index=False)
-                if slip == 0.0005 and not copy.empty:
-                    drawdown = copy.equity / copy.equity.cummax() - 1
-                    copies.append({"address": address, "net": float(copy.equity.iloc[-1] - 1000),
-                                   "mdd": abs(float(drawdown.min())), "trades": metrics["closed_trades"]})
-    table = pd.DataFrame(rows)
-    (root / "veri" / "adaylar").mkdir(parents=True, exist_ok=True)
-    table.to_csv(root / "veri" / "adaylar" / f"{today}.csv", index=False)
-    candidates = table.loc[table.sonuc == "aday", "address"].tolist() if not table.empty else []
-    statuses = {str(x["address"]).lower(): str(x["sonuc"]) for x in rows}
-    update(watch_path, candidates, today, version, statuses, int(rules["max_watchlist"]))
-    _write_report(root, today, table, copies)
-    return table
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Read-only Hyperliquid candidate scanner")
-    parser.add_argument("--root", type=Path, default=Path("copytrade"))
-    parser.add_argument("--version", default="v1")
-    parser.add_argument("--limit", type=int, help="only inspect this many prefiltered addresses (for a short run)")
-    args = parser.parse_args()
-    table = run(args.root, PublicClient(), version=args.version, limit=args.limit)
-    print(json.dumps({"tested": len(table), "candidates": int((table.sonuc == 'aday').sum()) if not table.empty else 0}))
-
-
-if __name__ == "__main__":
-    main()

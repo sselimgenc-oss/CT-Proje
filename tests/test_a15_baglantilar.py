@@ -44,45 +44,9 @@ def test_defter_bozuk_son_mum_yuzunden_mark_missing_sayar_ve_acigi_isaretlemez()
 
 
 # ---------------------------------------------------------------- kapı akıl sağlığı raporu: mum özeti
-def _shard(base, rows):
-    import json
-    import pandas as pd
-    folder = base / "stage1-0" / "2026-10-28"
-    folder.mkdir(parents=True)
-    pd.DataFrame(rows).to_csv(folder / "sonuc.csv", index=False)
-    (folder / "evren.json").write_text(json.dumps({"evren": len(rows)}))
-    (folder / "bitti.json").write_text("{}")
 
 
-def test_candle_cache_mum_saglik_ozeti_coin_basina_bir_kez_hesaplanir():
-    from copytrade.kapi import CandleCache
-
-    class Client:
-        calls = 0
-        def candles(self, coin, s, e, interval="1h"):
-            return [mum(0, 100), mum(1, 100, h=90, l=110), mum(2, 100), mum(5, 100)]            # 1 bozuk + 1 boşluk (2→5)
-
-    cache = CandleCache(Client(), T0, T0 + 10 * HOUR)
-    first = cache.saglik("BTC")
-    assert first == {"mum_sayisi": 4, "mum_bozuk": 1, "mum_sicrama": 0, "mum_bosluk": 1, "mum_hacimsiz": 0, "mum_gecerli": 2}
-    assert cache.saglik("BTC") is first and cache.requests == 1                                  # önbellek: yeniden hesap/istek yok
 
 
-def test_kapi_satirina_mum_ozeti_ve_birlestirmede_rapor_ve_durum(tmp_path):
-    """Uçtan uca: iki adresin mum sütunları → RAPOR.md 'Mum sağlığı' bölümü ve durum.json `mum_ozeti` (toplamlar, geçerli oran)."""
-    import json
-    import pandas as pd
-    from copytrade.kapi import merge_shards
-    rows = [{"address": "0xa", "asama1": "Yetersiz", "mum_sayisi": 100, "mum_bozuk": 2, "mum_sicrama": 1, "mum_bosluk": 3, "mum_hacimsiz": 0, "mum_gecerli": 94},
-            {"address": "0xb", "asama1": "Yetersiz", "mum_sayisi": 300, "mum_bozuk": 0, "mum_sicrama": 3, "mum_bosluk": 0, "mum_hacimsiz": 2, "mum_gecerli": 295}]
-    _shard(tmp_path / "shards", rows)
-    status = merge_shards(tmp_path / "shards", tmp_path / "root", 1, "tam")["2026-10-28"]
-    assert status["mum_ozeti"] == {"mum_sayisi": 400, "mum_bozuk": 2, "mum_sicrama": 4, "mum_bosluk": 3, "mum_hacimsiz": 2, "mum_gecerli": 389, "gecerli_orani": 389 / 400}
-    report = (tmp_path / "root/kapi/2026-10-28/RAPOR.md").read_text(encoding="utf-8")
-    assert "## Mum sağlığı (A15)" in report and "bozuk 2" in report and "sıçrama 4" in report and "%97,2" in report
-    assert json.loads((tmp_path / "root/kapi/2026-10-28/durum.json").read_text())["mum_ozeti"]["mum_sayisi"] == 400
 
 
-def test_mum_sutunlari_bos_olabilir_listesinde():
-    for name in ("mum_sayisi", "mum_bozuk", "mum_sicrama", "mum_bosluk", "mum_hacimsiz", "mum_gecerli"):
-        assert name in RULES["saglik_bos_olabilir"]

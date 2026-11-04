@@ -35,10 +35,9 @@ python3 -m venv .venv
 ```
 
 ## 5. İzlenecek liste
-Pazar işi (`ilk11_pazar`) kadro 50 + referans listesini `copytrade-kapi` dalına yazar. İlk Pazar'dan önce pilot listesi kullanılır:
+İzlenecek liste: repodaki `copytrade/izleme_listesi.yaml` (T1: eski Pazar işi ve `copytrade-kapi` dalı kalktı; radar kadrosu listesi T4'te gelir).
 ```bash
-git fetch origin copytrade-kapi
-git show origin/copytrade-kapi:ilk11/izleme_listesi.yaml > ~/liste.yaml 2>/dev/null || cp copytrade/izleme_listesi.yaml ~/liste.yaml
+cp copytrade/izleme_listesi.yaml ~/liste.yaml
 wc -l ~/liste.yaml          # boş olmamalı; boş ya da yoksa dinleyici BAŞLAMAZ
 ```
 

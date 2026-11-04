@@ -10,11 +10,6 @@
    "durum": "kopyala",
    "t0": "2026-09-01",
    "tarz": "intraday",
-   "kapi": {
-    "sinif": "Geçti",
-    "tarih": "2026-09-01",
-    "not": ""
-   },
    "saglik": {
     "isik": "yesil",
     "nedenler": [
@@ -906,11 +901,6 @@
    "durum": "kopyala",
    "t0": "2026-09-01",
    "tarz": "swing",
-   "kapi": {
-    "sinif": "Geçti",
-    "tarih": "2026-09-01",
-    "not": ""
-   },
    "saglik": {
     "isik": "sari",
     "nedenler": [
@@ -1788,11 +1778,6 @@
    "durum": "kopyala",
    "t0": "2026-09-01",
    "tarz": "intraday",
-   "kapi": {
-    "sinif": "Geçti",
-    "tarih": "2026-09-01",
-    "not": ""
-   },
    "saglik": {
     "isik": "yesil",
     "nedenler": [
@@ -2695,11 +2680,6 @@
    "durum": "izlemede",
    "t0": "2026-09-01",
    "tarz": "intraday",
-   "kapi": {
-    "sinif": "Yetersiz",
-    "tarih": "2026-09-01",
-    "not": ""
-   },
    "saglik": {
     "isik": "kirmizi",
     "nedenler": [

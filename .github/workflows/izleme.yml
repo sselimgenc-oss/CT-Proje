@@ -1,11 +1,10 @@
 name: Copy trade izleme (2 saatte bir)
 
-# Her 2 saatte bir, :23 (K-18: gerçek ölçüm 86 trader ≈ 84 dk > eski saatlik 55 dk bütçe; anlık dinleyici asıl akış, izleme yedek). İzlenen liste: `copytrade-kapi:ilk11/izleme_listesi.yaml` (İlk 11 kadro 50 + sabit referans kolları; ilk Pazar'dan önce main'deki pilot listesi).
+# T1 (K-19): eski kadroyu izlediği için zamanlama (cron) KALDIRILDI; yalnız elle (workflow_dispatch) çalışır. Radar kadrosu için zamanlama T4'te geri gelir.
+# İzlenen liste: `copytrade/izleme_listesi.yaml` (main).
 # Sonuç: `copytrade-izleme:izleme/durum.json` (git geçmişi 2 saatlik sürümleri tutar); `motor.json` (ham dolum önbelleği) R2'de `izleme/motor.json.gz`.
-# Telegram / Worker bu iş akışında YOK (K-13): kararlar / gecikme / oda değişim adımları geri getirilmedi.
+# Telegram / Worker bu iş akışında YOK (K-13).
 on:
-  schedule:
-    - cron: "23 */2 * * *"
   workflow_dispatch:
 
 permissions:
@@ -66,22 +65,9 @@ jobs:
               *) echo "R2 motor durumu okunamadı: $hata" >&2; exit 1 ;;
             esac
           fi
-      - name: Kapı sonuçları ve İlk 11 izleme listesi (copytrade-kapi)
-        # Trader tarzı kapı sonucundan; izlenecek liste İlk 11 işinin yazdığı dosyadan (dal ya da dosya yoksa main'deki liste).
-        run: |
-          if git ls-remote --exit-code --heads origin refs/heads/copytrade-kapi >/dev/null 2>&1; then
-            git fetch --depth=1 origin copytrade-kapi
-            git archive FETCH_HEAD copytrade/kapi | tar -x
-            if git cat-file -e FETCH_HEAD:ilk11/izleme_listesi.yaml 2>/dev/null; then
-              git show FETCH_HEAD:ilk11/izleme_listesi.yaml > ilk11_izleme_listesi.yaml
-            fi
-          fi
       - name: Halka açık veriyi oku ve sanal defteri güncelle
         # Tüm trader'lar hatalıysa motor yayımlamaz (RuntimeError) ve iş kırmızı biter; tek trader hatası önceki yükünü korur.
-        run: |
-          liste=()
-          if [ -f ilk11_izleme_listesi.yaml ]; then liste=(--liste ilk11_izleme_listesi.yaml); fi
-          python -m copytrade.izleme_motoru --root . --output izleme "${liste[@]}"
+        run: python -m copytrade.izleme_motoru --root . --output izleme
       - name: Motor durumunu R2'ye yükle
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}

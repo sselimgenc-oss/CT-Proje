@@ -1,4 +1,4 @@
-"""Kopya defteri (docs/GOREV_TRADER_SECIMI.md 19–21): gerçek kopya ve plasebo AYNI fonksiyondan geçer.
+"""Kopya defteri: tek hesap yeri (AGENTS kural 7).
 
 Bir trader'ın dolumlarını, gecikmeli ve maliyetli olarak, kendi pozisyonumuz olarak yürütür:
 
@@ -196,7 +196,7 @@ def _risk_denetle(held: dict[str, float], entry: dict[str, float], acilis: dict[
 
 
 class _IslemKaydi:
-    """Kopya pozisyonunun kapanan işlemlerini listeler (İlk 11 `paper_sonuclari`, docs/ILK11_SECIM_SARTNAME.md §4.2).
+    """Kopya pozisyonunun kapanan işlemlerini listeler (`paper_sonuclari`).
 
     YALNIZ RAPORLAMA: defterin bakiye / getiri / funding hesabına hiçbir şey geri yazmaz. Bir işlem = kopya pozisyonunun bir coinde 0'dan
     açılıp 0'a dönmesi (ters dönüşte kapanan kısım biter, kalan miktar yeni işlem açar; `olcut.closed_round_trips` ile aynı kural; kısmi
