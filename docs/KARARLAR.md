@@ -97,3 +97,7 @@
   aynı slot. `kopya_koruma = kopya_getiri / ayna_getiri`; ayna ≤ 0 → `kopya_koruma_dusuk`. Eşik 0,50 ve `kopya_zarar` (kopya > 0) değişmez.
   `trader_getiri_7g` yalnız R0 sırası ve bilgi. Görev T3.
 
+### K‑33. Kadro N'den küçükse boş slot nakit (lider, 2026-11-04)
+- **Neden:** T3 ilk günlük koşu (#498, run 41885556829): 300 adaydan 10 geçti → kadro 10 (İlk 11'de 1 boş, Yedek boş).
+- **Kural:** saha = min(N, kadro); slot `kasa / N` sabit, boş slot nakit; kadro 36 sa'ten eskiyse yeni giriş yok + alarm. `GOREV_T4` §0.
+

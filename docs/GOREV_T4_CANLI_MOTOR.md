@@ -5,6 +5,14 @@ Dayanak: `docs/RADAR_V1.md` §5–§6, K‑22/K‑23/K‑26/K‑28. Dal: `claude
 kayıt **aynı**; yalnız yürütücünün arka ucu değişir. Varsayılan `sanal`; `gercek` yalnız anahtar varsa ve `kurallar.yaml` `canli_kip: gercek` ise.
 Kip geçişi = anahtar + bu ayar, motor yeniden başlatılır; sanal dönemin kasası/pozisyonları gerçek hesaba **taşınmaz** (gerçek hesap HL'den okunur).
 
+## 0. T3 gerçek çıktısından gelen kurallar (K‑33, lider)
+- **Kadro N'den küçük olabilir** (ilk günlük koşu: 10 kişi geçti, Yedek boş). Saha = min(N, kadrodaki kişi). Boş slot **nakit kalır**; slot tutarı
+  yine `kasa / N`, boş slotun parası başka trader'a dağıtılmaz (risk büyümesin). Kadro büyüdükçe boş slot §5 giriş kuralıyla dolar (günde ≤ 2 değişiklik sayılır).
+- `kadro.json` kaynağı: veri dalı `radar`, `radar/son/kadro.json` (`radar_yayimla.sh`). Dosya yoksa ya da `kosu_ms` 36 saatten eskiyse: saha olduğu gibi
+  kalır, **yeni giriş yok**, düşme kuralları çalışır, Telegram alarmı (günde 1 kez).
+- Korelasyon (`kadro.json` `korelasyon`): ilk günlerde az günlük veriyle (8 gün) hesaplı; kural yine uygulanır (≥ 0,7 → en fazla 2), kayıtta `kor_kirpildi`.
+- `min_islem` eşiği bilgi koşusu sonrası lider kararıyla değişebilir; motor eşik okumaz, yalnız `kadro.json`'u okur (T4'ü etkilemez).
+
 ## 1. Yapı (`copytrade/canli/`)
 - `motor.py` — tek süreç: `dinleyici.py` WebSocket (userFills, İlk 11'in sahadaki adresleri) → `boyut.hedef_emir` → risk (`risk.py`) → `yurutucu.py`.
   Mevcut `dinleyici.py` / `live_koruma.py` yeniden kullanılır (kural 7); `risk_defter.py`'nin sabit tutar boyutu **kullanılmaz** (yerini `boyut.py` aldı).
