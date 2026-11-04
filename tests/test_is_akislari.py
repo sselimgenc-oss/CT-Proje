@@ -16,7 +16,7 @@ from test_izleme import ADDRESS, NOW, Client, project
 ROOT = Path(__file__).resolve().parents[1]
 WF = ROOT / ".github/workflows"
 SCRIPTS = ROOT / ".github/scripts"
-ISLER = ("izleme.yml", "dinleyici_deneme.yml", "izleme_deneme.yml")
+ISLER = ("izleme.yml", "dinleyici_deneme.yml", "izleme_deneme.yml", "radar_deneme.yml")
 
 
 def yukle(ad: str) -> dict:
@@ -153,7 +153,7 @@ def test_izleme_listesi_main_den_okunur_ve_veri_dalina_yazilir():
 
 # ---------------------------------------------------------------------------------------------------- artık dosya temizliği
 def test_eski_sistem_is_akislari_ve_betikleri_yok():
-    kalanlar = {"ci.yml", "dinleyici_deneme.yml", "dolgu_deneme.yml", "gecikme_kar_deneme.yml", "izleme.yml", "izleme_deneme.yml", "pano.yml", "sonnet_isci.yml", "worker.yml"}
+    kalanlar = {"ci.yml", "dinleyici_deneme.yml", "dolgu_deneme.yml", "gecikme_kar_deneme.yml", "izleme.yml", "izleme_deneme.yml", "pano.yml", "radar_deneme.yml", "sonnet_isci.yml", "worker.yml"}
     assert {p.name for p in WF.glob("*.yml")} == kalanlar          # eski sistem iş akışları (kapı, Pazar kadrosu, İlk 11 denemesi, v3 yan yana) geri gelmedi
     assert not (SCRIPTS / "kapi_yayimla.sh").exists()
     assert (SCRIPTS / "izleme_yayimla.sh").exists() and ".github/scripts/izleme_yayimla.sh" in (WF / "izleme.yml").read_text(encoding="utf-8")

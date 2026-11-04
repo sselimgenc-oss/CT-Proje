@@ -1,4 +1,4 @@
-# Veri sözleşmesi — copy trade izleme (v1.23, 2026-11-04; T1: eski sistem — kapı, İlk 11 puan alanları, oda/kol — sözleşmeden çıkarıldı; yeni radar alanları T2+ ile eklenecek)
+# Veri sözleşmesi — copy trade izleme (v1.24 §12 Radar havuzu; v1.23, 2026-11-04; T1: eski sistem — kapı, İlk 11 puan alanları, oda/kol — sözleşmeden çıkarıldı; yeni radar alanları T2+ ile eklenecek)
 
 sözleşmeye göre çalışır; alan eklemek/değiştirmek lider onayıyla `surum` artırılarak yapılır.
 
@@ -341,3 +341,36 @@ Gizlilik: dosyada API anahtarı, token, URL ya da sunucu IP'si yoktur (testle de
 - v3 alanları aynı anlamda: `baslangic_usd`, `bakiye_usd`, `getiri`, `dusus`, `egri`, `gerceklesen`, `acik` (oran), `toplam`, `funding`, `maliyet`, `fiyatsiz_eylem`, `tasfiye*`, `kapanis_nedenleri`, `kapanan_islemler` (§6; `durum.json`'da v3 ile aynı kırpma).
 - **Yeni alanlar:** `limitler` (`emir_tavan_usd`, `trader_tavan_usd`, `referans_kasa_usd`, `azami_kaldirac_uygulandi`), `tepe_pozisyon_usd` ($, pencere boyunca en büyük tek coin notional'ı, yürütme fiyatında), `tepe_brut_usd` ($, en büyük brüt notional), `acik_pozisyonlar[]` (pencere sonu açık kopya pozisyonları): `coin`, `yon` (`long`|`short`), `buyukluk_usd` ($, son işaretle; işaret yoksa `null`), `giris` ($/coin), `son` ($/coin), `kz_usd` ($, funding hariç), `acilis` (UTC ISO) / `acilis_ms`, `azami_kaldirac` (x | `null`), `teminat_usd` ($ = büyüklük / azami kaldıraç | `null`), `kz_oran` (oran = `kz_usd` / `teminat_usd` | `null`).
 - Hesaplanamazsa `{"surum":"v4","durum":"hesaplanamadi","neden":…}`; v3'ü etkilemez. Hiç okunmamış trader için `yer_tutucu: true`.
+
+## 12. Radar havuzu (R0/R1) — `radar/<YYYY-MM-DD>/havuz.json` (v1.24, T2; `copytrade/radar_tarama.py`, strateji: `docs/RADAR_V1.md` §2–3)
+Üretici: `python -m copytrade.radar_tarama` (iş akışı `radar_deneme.yml`; günlük zamanlama T4'te). Salt okunur, herkese açık Hyperliquid verisi. **Birim kuralları:** oranlar kesirdir (0,10 = %10); `*_usd` alanlarında ölçek
+adıyla yazılır: `trader_$` = trader'ın kendi hesabı, `kopya_$` = 1.000 $ sanal kopya kasası; zaman UTC milisaniye; tutma süresi saat; kaldıraç "x" (pozisyon değeri / hesap değeri).
+**Pencere** `son7g` = `[kosu_ms − radar_pencere_saat × 3.600.000, kosu_ms)` (koşu BAŞLANGICI; okuma zamanı değil). **Kopya oynatma** pencere başında BOŞ başlar (pencere başında açık pozisyon kopyalanmaz); gecikme `radar_kopya_gecikme_dk` (1 dk),
+maliyet taker + kayma (`kurallar.yaml`), `kopya_v4.hesapla` (sabit tutar + v4 risk sınırları, tarz `intraday`); funding oynatmaya **girmez**. Yürütme fiyatı: son ≈ 3,5 gün için 1 dk mumun açılışı, daha eskisi için 1 sa mumun açılışı
+(Hyperliquid `candleSnapshot` yalnız son 5.000 dakikalık mumu verir); eksik mum fiyatı uydurulmaz (eylem atlanır, `fiyatsiz_eylem` ile sayılır).
+
+Üst düzey: `sema` (`"radar-havuz-v1"`), `kosu_ms` (UTC ms, koşu başlangıcı), `pencere_bas_ms` (UTC ms), `evren_toplam` (ön filtreyi geçen kişi sayısı), `evren_kesilen` (aday tavanı nedeniyle dışarıda kalan kişi sayısı),
+`satirlar` (aday başına bir satır, hafta pnl'e göre azalan sırada).
+
+| Alan | Birim / ölçek | Anlam |
+|---|---|---|
+| `adres` | metin | trader adresi (herkese açık) |
+| `hesap_usd` | trader_$ | lider tablosundaki `accountValue`, koşu anı |
+| `hafta_pnl_usd` | trader_$ | lider tablosu `week` penceresi `pnl` (yatırma/çekme içermez) |
+| `trader_getiri_7g` | oran | `hafta_pnl / (hesap − hafta_pnl)`; payda ≤ 0 ise `null` (`neden: payda_yok`) |
+| `islem_sayisi` | adet | pencerede KAPANAN round trip (pencere başında açık pozisyonun kapanışı dahil) |
+| `medyan_tutma_saat` | saat | kapanan işlemlerin medyan tutma süresi (başlangıcı pencere öncesi olanlar hariç); yoksa `null` |
+| `kisa_islem_payi` | oran | tutma süresi `radar_kisa_islem_dk`'dan KISA işlemlerin (süresi bilinenler içinde) payı |
+| `max_kaldirac` | x | pencere boyunca en yüksek (toplam pozisyon değeri / `hesap_usd`); payda koşu anındaki hesap değeridir, o anki değil |
+| `likit_pay` | oran | nosyonelin (px × sz, tüm perp dolumları) 24 sa hacmi ≥ `radar_likit_coin_hacim_usd` ($, `metaAndAssetCtxs.dayNtlVlm`) coinlerdeki payı |
+| `kopya_getiri_7g` | oran, kopya_$ ölçeği | 1.000 $ sanal kopyanın pencere getirisi (gecikme + maliyet dahil); hesaplanamazsa `null` |
+| `kopya_koruma` | oran | `kopya_getiri_7g / trader_getiri_7g` |
+| `devir_hafta` | kat | hafta `vlm` / `hesap_usd` (`vlm` trader_$ nosyonel) |
+| `kopya_alt20` | oran, kopya_$ ölçeği | kopya işlem sonuçlarından (`sonuc_usd / 1.000`, geçersiz işlem hariç) `radar_bootstrap_tekrar` yeniden örneklemenin TOPLAMININ `radar_bootstrap_alt_yuzdelik` alt yüzdeliği; tohum adresten türetilir |
+| `fiyatsiz_eylem` | adet | yürütme fiyatı bulunamadığı için kopyalanamayan eylem sayısı (`null`: kopya hesaplanmadı) |
+| `gecti` | bool | R1'in tüm kuralları geçildi mi (radar havuzu) |
+| `neden` | kod \| `null` | ilk başarısız kuralın kodu; sıra: `vault`, `payda_yok`, `islem_az`, `tutma_kisa`, `kisa_islem_fazla`, `kaldirac_yuksek`, `likidite_dusuk`, `kopya_zarar`, `kopya_koruma_dusuk`, `devir_yuksek`, `sans_riski`, `akil_sagligi`; istek hatasında `veri_hatasi` |
+| `hata` | metin \| `null` | `veri_hatasi` ise ilk satır hata iletisi (uydurma yok) |
+
+Eşikler `kurallar.yaml` `radar_*` anahtarlarındadır; sınırlar DAHİLDİR (tam 10 işlem, 1,0 sa, %25, 20x, %80, %50, 100 kat geçer; `kopya_alt20` için tam 0 ELENİR, `kopya_getiri_7g` tam +%300 geçer, tam 0 elenir).
+`vault` ve `payda_yok` satırlarında ölçü alanları (`islem_sayisi` …) `null`'dır; diğer elenenlerde tüm ölçüler yazılır (teşhis). Evrene yalnız `accountValue ≥ radar_min_hesap_usd`, hafta `pnl > 0`, hafta `vlm > 0` girer.

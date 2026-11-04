@@ -1,0 +1,50 @@
+name: Radar deneme (R0 + R1 taraması)
+
+# T2 (docs/RADAR_V1.md §2–3): lider tablosundan aday + R1 kopyalanabilirlik. Salt okunur, secret YOK, veri dallarına YAZMAZ; çıktı `havuz.json` artifact'ı + iş özeti.
+# Günlük zamanlama (cron) T4'te. `aday_sayisi`: hafta pnl'e göre ilk N aday (varsayılan 20; tam tarama 300 = kurallar.yaml radar_aday_tavan).
+on:
+  workflow_dispatch:
+    inputs:
+      aday_sayisi:
+        description: "ilk N aday (hafta pnl'e göre); tam tarama için 300"
+        default: "20"
+  push:
+    paths:
+      - copytrade/radar_deneme/CALISTIR
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Radar taraması (R0 + R1)
+        env:
+          GIRDI_ADAY_SAYISI: ${{ inputs.aday_sayisi }}
+        run: |
+          # elle koşuda girdi; push ile tetiklenen koşuda `copytrade/radar_deneme/CALISTIR` son satırının ilk sözcüğü (sayı değilse 20)
+          aday="${GIRDI_ADAY_SAYISI:-$(tail -n 1 copytrade/radar_deneme/CALISTIR | cut -d' ' -f1)}"
+          case "$aday" in ''|*[!0-9]*) aday=20 ;; esac
+          mkdir -p radar
+          python -u -m copytrade.radar_tarama --cikti radar --aday-sayisi "$aday" --ozet-md radar/OZET.md
+      - name: Özet
+        if: ${{ always() && hashFiles('radar/OZET.md') != '' }}
+        run: cat radar/OZET.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: radar-havuz
+          path: radar
+          if-no-files-found: ignore

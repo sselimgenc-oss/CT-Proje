@@ -79,3 +79,21 @@ risk_dry_run:
   gunluk_zarar_usd: 30.0
   sinyal_tazelik_sn: 10
   dur_dosyasi: "$STATE_DIRECTORY/DUR"
+# ---- Radar v1 (docs/RADAR_V1.md §2–3; T2: R0 evren + R1 kopyalanabilirlik). Eşikler v1'de donar; kodda sayı sabiti yok.
+# Birimler: *_usd = trader hesabı ölçeği ($, trader_$) — radar_likit_coin_hacim_usd coin 24 sa nosyonel hacmi ($); oranlar kesirdir (0,25 = %25); süre saat/dakika adıyla.
+radar_min_hesap_usd: 10000              # trader_$ (accountValue)
+radar_aday_tavan: 300                   # kişi (hafta pnl'e göre ilk N)
+radar_pencere_saat: 168                 # saat (son7g)
+radar_min_islem: 10                     # kapanmış round trip, sınır dahil
+radar_min_medyan_tutma_saat: 1.0        # saat, sınır dahil
+radar_kisa_islem_dk: 5                  # dakika (bundan KISA tutma "kısa işlem")
+radar_kisa_islem_payi_max: 0.25         # oran, sınır dahil
+radar_max_kaldirac: 20.0                # x, sınır dahil
+radar_likit_coin_hacim_usd: 1000000     # $ (coin 24 sa nosyonel hacmi, metaAndAssetCtxs.dayNtlVlm), sınır dahil
+radar_likit_pay_min: 0.80               # oran (nosyonel), sınır dahil
+radar_kopya_gecikme_dk: 1               # dakika (kopya oynatma gecikmesi)
+radar_kopya_koruma_min: 0.50            # oran (kopya getirisi / trader getirisi), sınır dahil
+radar_max_devir_hafta: 100              # kat (hafta vlm / accountValue), sınır dahil
+radar_bootstrap_tekrar: 1000            # tekrar (tohum adresten türetilir: aynı girdi aynı sonuç)
+radar_bootstrap_alt_yuzdelik: 0.20      # oran (alt yüzdelik)
+radar_akil_sagligi_getiri_max: 3.0      # oran (+%300), üstü veri hatası şüphesi

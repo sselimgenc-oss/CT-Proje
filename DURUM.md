@@ -10,7 +10,7 @@ teyit edenler İlk 11 → 28 gün ileri deneme ve kontrol grubu sınavı → can
 | İş | Durum |
 |---|---|
 | T1 eski sistemi sil (`docs/GOREV_T1_ESKI_SISTEM_SIL.md`) | **PR'da, lider denetimi bekliyor** (`docs/sonnet_durum_t1.md`) |
-| T2 R0+R1 tarama | lider yazacak (T1 birleşince) |
+| T2 R0+R1 tarama (`docs/GOREV_T2_RADAR_TARAMA.md`) | **PR'da, lider denetimi bekliyor** (`docs/sonnet_durum_t2.md`) |
 | T3 R2 form puanı | bekliyor |
 | T4 R3 kadro + ileri deneme + günlük iş akışı | bekliyor |
 | T5 R4 risk + R5 kontrol grubu / canlı kapısı raporu | bekliyor |
