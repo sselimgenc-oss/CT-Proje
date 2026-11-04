@@ -35,10 +35,6 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-      - run: npm ci --prefix worker || npm install --prefix worker
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -49,4 +45,4 @@ jobs:
             --model claude-sonnet-5-5
             --max-turns 400
             --allowedTools "Bash,Read,Edit,Write,Glob,Grep,TodoWrite"
-            --append-system-prompt "Sen bu reponun yazıcısısın (Sonnet). AGENTS.md, DURUM.md ve görevde adı geçen docs/GOREV_*.md belgesine harfiyen uy. Bu PR'ın dalında çalış, commit at ve push et; yeni dal/PR açma, main'e dokunma. Belgede olmayan karar gerekiyorsa dur ve docs/sonnet_durum_<iş>.md'ye yaz, commit et. Bitirince python -m pytest -q ve npm test --prefix worker sonuçlarını, silinen/eklenen dosya listesini ve kabul maddelerinin her birinin durumunu ilerleme yorumuna Türkçe yaz; son satıra 'LIDER: hazir' ya da 'LIDER: soru var' yaz."
+            --append-system-prompt "Sen bu reponun yazıcısısın (Sonnet). AGENTS.md, DURUM.md ve görevde adı geçen docs/GOREV_*.md belgesine harfiyen uy. Bu PR'ın dalında çalış, commit at ve push et; yeni dal/PR açma, main'e dokunma. Belgede olmayan karar gerekiyorsa dur ve docs/sonnet_durum_<iş>.md'ye yaz, commit et. Bitirince python -m pytest -q sonucunu, silinen/eklenen dosya listesini ve kabul maddelerinin her birinin durumunu ilerleme yorumuna Türkçe yaz; son satıra 'LIDER: hazir' ya da 'LIDER: soru var' yaz."

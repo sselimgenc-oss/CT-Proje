@@ -2,7 +2,7 @@ name: Dinleyici deneme (gerçek ağ, GitHub runner)
 
 # H2 kural 1: dinleyici kodu gerçek Hyperliquid WebSocket / REST ile ilk kez burada denenir (sunucu kurulumundan ÖNCE). Adım 0 (5 dk) + kısa dinleme (15 dk).
 # NOT: runner IP'si (ABD/Azure) kullanıcının sunucusundan (SGP1) farklıdır; gecikme değerleri sunucuyu TEMSİL ETMEZ, protokol / sayaçlar / kaçan mantığı doğrulanır.
-# Hiçbir secret kullanılmaz; veri dallarına ve R2'ye YAZMAZ. Tetik: elle ya da `copytrade/dinleyici_deneme/CALISTIR` dosyasına push.
+# Hiçbir secret kullanılmaz; veri dallarına YAZMAZ. Tetik: elle ya da `copytrade/dinleyici_deneme/CALISTIR` dosyasına push.
 on:
   workflow_dispatch:
   push:

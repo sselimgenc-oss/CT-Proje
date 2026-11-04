@@ -1,6 +1,6 @@
 name: H1 gecikme-kâr (küçük gerçek veri denemesi)
 
-# Kural 1: H1 ölçümü önce 2-3 trader üzerinde gerçek veriyle. Üretim R2'sine ve veri dallarına YAZMAZ (salt okunur).
+# Kural 1: H1 ölçümü önce 2-3 trader üzerinde gerçek veriyle. Veri dallarına YAZMAZ (salt okunur).
 # Tetik: elle ya da `copytrade/izleme_deneme/H1` dosyasına push.
 on:
   workflow_dispatch:

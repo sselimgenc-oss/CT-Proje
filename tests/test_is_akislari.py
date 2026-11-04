@@ -75,45 +75,44 @@ def test_izleme_ilk_okuma_icin_timeout_300_dk_kuyruk_bekler():
     assert wf["concurrency"] == {"group": "copytrade-izleme", "cancel-in-progress": False}      # sonraki koşular uzun ilk koşunun arkasında bekler
 
 
+YASAK = "|".join(["KARAR_" + "URL", "GECIKME_" + "URL", "TELE" + "GRAM", "CLOUD" + "FLARE", r"copytrade\.kararlar", r"copytrade\.gecikme\b", "degisim_rapor"])
+YASAK_DEPO = "|".join(["R" + "2_", "aws s" + "3", "cloud" + "flare", "wrang" + "ler", "AWS_"])
+
+
 def test_worker_telegram_adimlari_geri_gelmedi_k13():
     for ad in ISLER:
         metin = (WF / ad).read_text(encoding="utf-8")
-        assert not re.search(r"KARAR_URL|GECIKME_URL|TELEGRAM|CLOUDFLARE|copytrade\.kararlar|copytrade\.gecikme|degisim_rapor", metin), ad
+        assert not re.search(YASAK, metin), ad
 
 
-# ---------------------------------------------------------------------------------------------------- izleme: R2 geri yükleme, kısmi sonuç, hepsi hatalı
-def r2_kabuk(tmp_path: Path, mod: str):
-    aws = tmp_path / "bin/aws"
-    aws.parent.mkdir(exist_ok=True)
-    aws.write_text("""#!/bin/sh
-case "$1 $2" in
-  "s3api head-object")
-    case "$FAKE_MOD" in
-      var) exit 0 ;;
-      yok) echo "An error occurred (404) when calling the HeadObject operation: Not Found" >&2; exit 254 ;;
-      *) echo "Could not connect to the endpoint URL" >&2; exit 255 ;;
-    esac ;;
-  "s3 cp") printf '{"surum": 1, "traderlar": {}, "olaylar": {}}' | gzip -c > "$4" ;;
-esac
-""")
-    os.chmod(aws, 0o755)
+# ---------------------------------------------------------------------------------------------------- izleme: motor durumu geri yükleme, kısmi sonuç, hepsi hatalı
+def motor_ac(tmp_path: Path, gz: bytes | None):
+    """izleme.yml'deki 'Motor durumunu ... aç' adımını çalıştırır (K-20; veri dalındaki `izleme/motor.json.gz`)."""
     (tmp_path / "izleme").mkdir(exist_ok=True)
-    run = adim(yukle("izleme.yml"), "izleme", "R2'den indir")["run"]
-    return subprocess.run(["bash", "-euo", "pipefail", "-c", run], cwd=tmp_path, capture_output=True, text=True,
-                          env={**os.environ, "PATH": f"{aws.parent}:{os.environ['PATH']}", "FAKE_MOD": mod, "R2_ACCOUNT_ID": "hesap", "R2_BUCKET": "kova"})
+    if gz is not None:
+        (tmp_path / "izleme/motor.json.gz").write_bytes(gz)
+    run = adim(yukle("izleme.yml"), "izleme", "Motor durumunu veri dalındaki")["run"]
+    return subprocess.run(["bash", "-euo", "pipefail", "-c", run], cwd=tmp_path, capture_output=True, text=True)
 
 
-def test_izleme_r2_motor_durumu_geri_yuklenir(tmp_path):
-    sonuc = r2_kabuk(tmp_path, "var")
+def test_izleme_motor_durumu_veri_dalindaki_gz_den_acilir(tmp_path):
+    import gzip
+    sonuc = motor_ac(tmp_path, gzip.compress(b'{"surum": 1, "traderlar": {}, "olaylar": {}}'))
     assert sonuc.returncode == 0, sonuc.stderr
-    assert json.loads((tmp_path / "izleme/motor.json").read_text())["surum"] == 1 and not (tmp_path / "motor.json.gz").exists()
+    assert json.loads((tmp_path / "izleme/motor.json").read_text())["surum"] == 1
 
 
-def test_izleme_r2_yoksa_ilk_gecis_ama_baska_hata_isi_kirmizi_yapar(tmp_path):
-    yok = r2_kabuk(tmp_path, "yok")
-    assert yok.returncode == 0 and "R2'de motor durumu yok" in yok.stdout and not (tmp_path / "izleme/motor.json").exists()
-    ag = r2_kabuk(tmp_path, "ag")
-    assert ag.returncode == 1 and "okunamadı" in ag.stderr                                      # sessizce sıfırlanıp R2 üzerine yazılmaz
+def test_izleme_motor_durumu_yoksa_ilk_kosu_ama_bozuk_dosya_isi_kirmizi_yapar(tmp_path):
+    yok = motor_ac(tmp_path, None)
+    assert yok.returncode == 0 and not (tmp_path / "izleme/motor.json").exists()                 # ilk koşu: motor sıfırdan başlar
+    bozuk = motor_ac(tmp_path, b"gzip degil")
+    assert bozuk.returncode != 0                                                                 # sessizce sıfırlanıp üzerine yazılmaz
+
+
+def test_is_akislari_harici_depo_ve_sunucusuz_servis_kullanmaz():
+    for ad in ISLER:
+        metin = (WF / ad).read_text(encoding="utf-8")
+        assert not re.search(YASAK_DEPO, metin, re.I), ad
 
 
 class Bozuk(Client):
@@ -153,7 +152,7 @@ def test_izleme_listesi_main_den_okunur_ve_veri_dalina_yazilir():
 
 # ---------------------------------------------------------------------------------------------------- artık dosya temizliği
 def test_eski_sistem_is_akislari_ve_betikleri_yok():
-    kalanlar = {"ci.yml", "dinleyici_deneme.yml", "dolgu_deneme.yml", "gecikme_kar_deneme.yml", "izleme.yml", "izleme_deneme.yml", "pano.yml", "radar_deneme.yml", "sonnet_isci.yml", "worker.yml"}
+    kalanlar = {"ci.yml", "dinleyici_deneme.yml", "dolgu_deneme.yml", "gecikme_kar_deneme.yml", "izleme.yml", "izleme_deneme.yml", "pano.yml", "radar_deneme.yml", "sonnet_isci.yml"}
     assert {p.name for p in WF.glob("*.yml")} == kalanlar          # eski sistem iş akışları (kapı, Pazar kadrosu, İlk 11 denemesi, v3 yan yana) geri gelmedi
     assert not (SCRIPTS / "kapi_yayimla.sh").exists()
     assert (SCRIPTS / "izleme_yayimla.sh").exists() and ".github/scripts/izleme_yayimla.sh" in (WF / "izleme.yml").read_text(encoding="utf-8")
