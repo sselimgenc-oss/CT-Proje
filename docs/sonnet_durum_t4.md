@@ -23,3 +23,11 @@
 15. **Gerçek kipte kasa değişimi:** `hesap.json` kasa ayarı/etkin kasa değişince SIFIRLANMAZ (pozisyon/K‑Z kaydı korunur), yalnız `kasa_usd` güncellenir; slot ve N yeniden hesaplanır.
 16. **Marj tavanı** başlangıç marjını `nosyonel / 3` (giriş fiyatı) sayar; serbest kasa = özsermaye (mark dahil). Sayaç `marj_yok` hem kırpmayı hem sıfırlamayı sayar.
 
+## Gerçek vardiya gözlemi — LİDER KARARI GEREKİR (artırma kuralı)
+17. **Açılış 11 $'a yuvarlanınca, sonraki "artırma" oransal olarak patlıyor.** İlk gerçek sanal vardiyada (run 41904629030, kayıt `canli-durum-deneme:kayit/2026-11-04.jsonl`) trader `0xc932b572…` `xyz:GEV` (HIP‑3) üzerinde açtı:
+    (a) `ac`: kendi payına düşen hedef < 11 $ → `min_emir_yuvarlandi` **11 $**; (b) hemen ardından aynı emrin sonraki dolumu (`artir`, trader pozisyonunun küçük bir önceki değerine göre büyük bağıl artış) → kural §5b "trader'ın değişim oranıyla" = bizim 11 $ × (sonra − önce)/önce
+    = **261,73 $** (`tavan_kirpildi`, yani tavana dayandı: 272,73 − 11). Trader'ın gerçek payı (slot × nosyonel/hesap) bunun çok altındaydı; tek bir partial-fill zinciri slotun tamamını bir coine bağladı.
+    Neden: büyük trader emirleri birden çok kısmi dolumla gelir; ilk dolum küçüktür (11 $'a yuvarlanır), ikinci dolum "önceki pozisyona göre %2000 artış" gibi görünür. **Öneri (kod değiştirmedim; §5b metni "değişim oranı" diyor):** artırmayı hedef‑tabanlı yap:
+    `hedef_toplam = slot × (trader nosyonel sonra / trader hesap)` (tavanlı), `emir = max(0, hedef_toplam − bizim mevcut)`; açılışta olduğu gibi yuvarlama yalnız en küçük hedefte. Karar lider + kullanıcıdadır (RADAR §5b değişikliği, K‑28 etkisi: R1/6 de aynı kuralı görmeli).
+    K‑35 slot toplam tavanı bu durumun zararını 3 × slot ile sınırlar ama her seferinde tavana kadar dolması hâlâ beklenen davranış değil.
+
