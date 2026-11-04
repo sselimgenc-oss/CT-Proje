@@ -1,9 +1,10 @@
 # GÖREV T1b — Cloudflare/VPS bağımlılıklarını kaldır (Sonnet)
 
-Dayanak: **K‑20**. Dal: `claude/t1b-sunucusuz` (main'den, T1 birleştikten sonra). Tek PR. Küçük iş.
+Dayanak: **K‑20, K‑21** (Cloudflare yok; anlık motor kalır, kâğıt kipi şimdilik Actions'ta vardiyalı, canlı sunucuda). Dal: `claude/t1b-sunucusuz` (main'den, T1 birleştikten sonra). Tek PR. Küçük iş.
 
 ## Silinecek
-- `worker/` (tamamı), `.github/workflows/worker.yml`, `deploy/sg-dinleyici.service`, `docs/H2_KURULUM.md`.
+- `worker/` (tamamı), `.github/workflows/worker.yml`. (`deploy/sg-dinleyici.service` ve `docs/H2_KURULUM.md` **kalır**: sağlayıcıdan bağımsız
+  systemd kurulumu olarak sadeleştir — DigitalOcean'a özgü adımları çıkar; canlı sunucuda kullanılacak.)
 - `copytrade/gecikme.py` ve `copytrade/kararlar.py` (yalnız Worker D1'den okuyordu) + testleri; `izleme.yml`/diğer iş akışlarındaki `GECIKME_URL`,
   `KARAR_URL`, R2/Cloudflare adımları.
 - `ci.yml`'deki Worker test adımı (node).

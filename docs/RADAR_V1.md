@@ -59,6 +59,8 @@ H = trader'ın `son7g` brüt kârının erken-trend girişlerden gelen payı (0�
 
 ## 5. R3 — İleri deneme ve kadro (gelecek)
 Katmanlar: **PAF (28) → Yedek 11 → İlk 11.** Yalnız İlk 11 canlıya aday olur.
+- **İleri deneme nasıl ölçülür (K‑21):** anlık motor kâğıt kipinde (canlıyla aynı kod; emir gönderilmez, dolum o anki L2 defterinden).
+  PAF/Yedek: trader başına 1.000 `kopya_$` sanal slot; İlk 11: portföy kasası/11 slot (canlıya geçecek olan bu).
 - **Radar → PAF:** günlük koşuda form sırası en iyi 28 içinde olan (kadroda olmayan) PAF'a girer; `t0` atanır, **ileri sanal kopya**
   t0'da 1.000 `kopya_$` ile başlar. t0'da açık olan pozisyonlar kopyalanmaz; yalnız t0 sonrası açılışlar (canlıda da böyle olacak).
 - **PAF → Yedek 11:** ileri süre ≥ 24 sa ve ileri getiri ≥ 0; boş yer form sırasıyla dolar.
@@ -96,4 +98,4 @@ Bilgi ölçüsü (karar değil): **form → ileri getiri bağı** = her gün for
 
 ## 9. İş sırası
 T1 eski sistemi sil · T2 R0+R1 tarama · T3 R2 form puanı · T4 R3 kadro + ileri deneme + günlük iş akışı · T5 R4 risk + R5 kontrol grubu ve
-canlı kapısı raporu · T6 pano. Her biri ayrı görev belgesi, ayrı PR.
+canlı kapısı raporu · T6 pano. Anlık motorun kâğıt/canlı kipi T4'te (K‑21). Her biri ayrı görev belgesi, ayrı PR.
