@@ -11,8 +11,8 @@ Form Radarı v1 (`docs/RADAR_V1.md`, K‑22…K‑26): her gün son 7 günde for
 |---|---|
 | T1 eski sistemi sil | **bitti** (#492) |
 | T1b Cloudflare/VPS kaldır (`docs/GOREV_T1B_SUNUCUSUZ.md`, K‑20) | **bitti** (#494) |
-| T2 R0+R1 tarama (`docs/GOREV_T2_RADAR_TARAMA.md`) | Sonnet, PR #495 (lider kararları uygulanıyor) |
-| T3 tek boyut + R2 form + günlük kadro (`docs/GOREV_T3_FORM_KADRO.md`, K‑28) | T2 sonrası Sonnet |
+| T2 R0+R1 tarama (`docs/GOREV_T2_RADAR_TARAMA.md`) | **Bitti** (#495): 300 aday 33 dk, 429 = 0; gecti 0/300 → K‑31 (getiri sırası), K‑32 (koruma = kopya/ayna, T3'te) |
+| T3 tek boyut + K‑32 + R2 form + günlük kadro (`docs/GOREV_T3_FORM_KADRO.md`, K‑28, K‑32) | Sonnet'te |
 | T4 canlı motor (`docs/GOREV_T4_CANLI_MOTOR.md`) | T3 sonrası Sonnet |
 | T5 sunucu + canlıya alma (kullanıcı: sunucu, API cüzdanı, 1.000 $) | bekliyor |
 | T6 rapor + pano | bekliyor |

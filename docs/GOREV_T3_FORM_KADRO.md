@@ -12,6 +12,14 @@ Dayanak: `docs/RADAR_V1.md` §3–§5b, K‑26…K‑28. Dal: `claude/t3-form-ka
 - Altın örnekler (elle): kasa 100 → N 4, slot 25; kasa 250 → N 10, slot 25; kasa 500 → N 11, slot 45,45; kasa 1000 → slot 90,91; trader hesap 100.000, 30.000 $ açılış → 27,27 $; 5.000 $ açılış → 4,55 → 11 $; trader %50 azaltır, biz 27,27 →
   13,64 $ satış; biz 15 $ iken trader %40 azaltır → 6 $ < 11 ve kalan 9 < 11 → 15 $ tam kapanış; tavan: 400.000 $ açılış → 272,73 $.
 
+## 1b. R1/6 kopya koruma (K‑32) ve tarama dayanıklılığı
+- `radar_tarama` kopya testi v5'e geçer ve **iki oynatma** yapar: kopya (1 dk gecikme + maliyet) ve ayna (`kopya_v5`, gecikme 0, maliyet 0); ikisi pencere başında boş,
+  aynı slot. `kopya_koruma = kopya_getiri_7g / ayna_getiri_7g`; ayna ≤ 0 → `kopya_koruma_dusuk`. Yeni alan `ayna_getiri_7g` (oran, kasa ölçeğinde) sözleşmeye.
+  Altın örnek (elle): tek long 100→110, slot 90,91, trader nosyonel/hesap 0,5 → ayna ve kopya sayıları testte yazılı; oran elle.
+- HL 5xx yanıtı (300 koşusunda 1 kez `500 Internal Server Error`): `PublicClient` 5xx'i 429 gibi en çok 3 kez artan beklemeyle yeniden dener; sonra `veri_hatasi`. Test ile.
+- **Bilgi (karar değil):** 300 koşusunda `islem_az` 184/300 (medyan 3 işlem). `radar_deneme.yml`'e yalnız deneme için `kural_ust` girdisi (`anahtar=deger`)
+  eklenir (günlük `radar.yml`'de YOK); `radar_min_islem=5` ile ikinci koşu, iki koşunun `gecti` sayısı ve neden dağılımı PR'da yan yana. Eşik kararını lider verir.
+
 ## 2. R2 form puanı (`copytrade/radar_form.py`)
 - Girdi: T2 `havuz.json` (yalnız `gecti`). `RADAR_V1.md` §4 aynen: G (0,35), K (0,15), İ1 kârlı gün oranı (0,10), İ2 düşüş (0,10, az = iyi),
   Y yayılma (0,10), H hype (0,20); her biri havuz içi yüzdelik (0–100, eşitlikte ortalama sıra); `form` = ağırlıklı toplam.
@@ -31,5 +39,6 @@ Dayanak: `docs/RADAR_V1.md` §3–§5b, K‑26…K‑28. Dal: `claude/t3-form-ka
 ## 4. Testler ve kabul
 - Altın örnekler: §1 boyut örnekleri; yüzdelik (3 kişi [1,2,3] → 0/50/100), ağırlıklı form elle; H için 1 trend + 1 trend dışı coinle elle pay;
   `soguyor` sınırı (tam −%2 geçer). Sözleşme: `VERI_SOZLESMESI.md` "Radar kadro" bölümü (birimler).
+- Gerçek veri (önce): `radar_deneme.yml` aday 300, v5 + K‑32 ile → `gecti`, neden dağılımı, `kopya_koruma`/`ayna_getiri_7g` min/medyan/max; ardından `radar_min_islem=5` bilgi koşusu (§1b).
 - Gerçek veri: `radar.yml` elle 1 kez (aday 300) → `kadro.json` PR'da: İlk 11 + Yedek listesi, her bileşenin min/medyan/max'ı, v4 ↔ v5 tablosu.
 - `python -m pytest -q` yeşil; `DURUM.md` güncel.
