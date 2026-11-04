@@ -55,12 +55,41 @@ def test_azaltma_oran_kucuk_kalan_ve_atlama():
     assert boyut.hedef_emir('azalt', 10.0, 9.0, 0.0, 60.0, SLOT, 100.0, RULES) == (0.0, 'min_emir_atlandi')   # %10 → 6 $ < 11, kalan 54 ≥ 11 → atla
 
 
-def test_artirma_oran_atlama_ve_tavan():
-    emir, neden = boyut.hedef_emir('artir', 10.0, 15.0, 0.0, 40.0, SLOT, 100.0, RULES)           # trader %50 artırır → 20 $
-    assert emir == pytest.approx(20.0) and neden == 'tamam'
-    assert boyut.hedef_emir('artir', 10.0, 11.0, 0.0, 40.0, SLOT, 100.0, RULES) == (0.0, 'min_emir_atlandi')  # 4 $ < 11 → atla
-    emir, neden = boyut.hedef_emir('artir', 10.0, 30.0, 0.0, 200.0, SLOT, 100.0, RULES)         # istenen 400 $; toplam tavan 272,73 → 72,73 $
-    assert emir == pytest.approx(3 * SLOT - 200.0) and neden == 'slot_tavani'            # K‑35: toplam tavan etiketi
+GEV_HESAP, GEV_FIYAT = 1_000_000.0, 11_000_000.0     # slot × coin × fiyat / hesap = 90,909… × coin × 11 → coin başına 1000/11 × 11 = 1000 $ → 0,002 coin = 2 $, 0,05 coin = 50 $
+
+
+def test_artirma_k36_gev_senaryosu():
+    """K‑36 (a): açılış hedefi 2 $ → 11 $'a yuvarlanır; trader 0,002 → 0,05 (hedef 90,909 × 0,05 × 11e6 / 1e6 = 50 $) → emir 50 − 11 = 39 $.
+    Eski oransal kural: 11 × (0,05 − 0,002) / 0,002 = 264 $ → toplam tavanla 272,727 − 11 = 261,727 $ verirdi."""
+    emir, neden = boyut.hedef_emir('ac', 0.0, 0.002, GEV_HESAP, 0.0, SLOT, GEV_FIYAT, RULES)
+    assert emir == 11.0 and neden == 'min_emir_yuvarlandi'
+    emir, neden = boyut.hedef_emir('artir', 0.002, 0.05, GEV_HESAP, 11.0, SLOT, GEV_FIYAT, RULES)
+    assert emir == pytest.approx(39.0) and neden == 'tamam'
+    assert 11.0 * (0.05 - 0.002) / 0.002 == pytest.approx(264.0)                                  # eski kural (kanıt)
+    assert 3 * SLOT - 11.0 == pytest.approx(261.727, abs=1e-3)
+
+
+def test_artirma_k36_hedef_mevcudun_altinda_sifir_ve_gecersiz_girdi():
+    """K‑36 (b): hedef 50 $ < mevcut 60 $ → emir max(0, −10) = 0 (`min_emir_atlandi`); hedef = mevcut → 0; hesap/fiyat ≤ 0 → `hesap_yok`."""
+    assert boyut.hedef_emir('artir', 0.002, 0.05, GEV_HESAP, 60.0, SLOT, GEV_FIYAT, RULES) == (0.0, 'min_emir_atlandi')
+    assert boyut.hedef_emir('artir', 0.002, 0.05, GEV_HESAP, 50.0, SLOT, GEV_FIYAT, RULES) == (0.0, 'min_emir_atlandi')
+    assert boyut.hedef_emir('artir', 0.002, 0.05, 0.0, 11.0, SLOT, GEV_FIYAT, RULES) == (0.0, 'hesap_yok')
+    assert boyut.hedef_emir('artir', 0.002, 0.05, GEV_HESAP, 11.0, SLOT, 0.0, RULES) == (0.0, 'hesap_yok')
+    assert boyut.hedef_emir('artir', 0.002, 0.0502, GEV_HESAP, 50.0, SLOT, GEV_FIYAT, RULES) == (0.0, 'min_emir_atlandi')   # hedef 50,2 → emir 0,2 $ < 11
+
+
+def test_artirma_k36_hedef_uc_slotu_asarsa_3xslot_eksi_mevcut():
+    """K‑36 (c): trader 0,6 coin → hedef 90,909 × 0,6 × 11 = 600 $ > 3 × slot = 272,727 → hedef 272,727; mevcut 50 → emir 222,727 $."""
+    emir, neden = boyut.hedef_emir('artir', 0.2, 0.6, GEV_HESAP, 50.0, SLOT, GEV_FIYAT, RULES)
+    assert emir == pytest.approx(3 * SLOT - 50.0) and emir == pytest.approx(222.727, abs=1e-3) and neden == 'tamam'
+
+
+def test_artirma_k36_slot_toplam_tavani_kirpar():
+    """K‑35 + K‑36: hedef 50, mevcut 11 → istenen 39 $; ama trader'ın toplam kopyası 250 $ → kalan 272,727 − 250 = 22,727 $ → `slot_tavani`;
+    kalan < 11 (toplam 265) → 0 `slot_tavani`."""
+    emir, neden = boyut.hedef_emir('artir', 0.002, 0.05, GEV_HESAP, 11.0, SLOT, GEV_FIYAT, RULES, biz_slot_toplam_usd=250.0)
+    assert emir == pytest.approx(22.727, abs=1e-3) and neden == 'slot_tavani'
+    assert boyut.hedef_emir('artir', 0.002, 0.05, GEV_HESAP, 11.0, SLOT, GEV_FIYAT, RULES, biz_slot_toplam_usd=265.0) == (0.0, 'slot_tavani')
 
 
 def test_trader_tam_kapanis_bizim_tamami_ve_bilinmeyen_eylem():
@@ -135,11 +164,13 @@ def test_k35_slot_toplam_tavani_altin_ornek_72_73():
 
 
 def test_k35_artirma_toplam_tavan_diger_coinler_sayilir():
-    """Bu coinde 40 $, diğer coinlerde 220 $ (toplam 260): trader %50 artırır (istenen 20 $) → kalan 272,73 − 260 = 12,73 $ → 12,73 $ ('slot_tavani'); toplam 268 → kalan 4,73 < 11 → 0."""
-    emir, neden = boyut.hedef_emir('artir', 10.0, 15.0, 0.0, 40.0, SLOT, 100.0, RULES, biz_slot_toplam_usd=260.0)
+    """K‑36 hedefi: trader hesap 25000/11 = 2272,73 $, 15 coin × 100 $ = 1500 $ → hedef 90,909 × 1500 / 2272,73 = 60 $; bu coinde 40 $ → istenen 20 $.
+    Diğer coinlerde 220 $ (toplam 260): kalan 272,73 − 260 = 12,73 $ → 12,73 ('slot_tavani'); toplam 268 → kalan 4,73 < 11 → 0."""
+    h = 25000 / 11
+    emir, neden = boyut.hedef_emir('artir', 10.0, 15.0, h, 40.0, SLOT, 100.0, RULES, biz_slot_toplam_usd=260.0)
     assert emir == pytest.approx(12.7273, abs=1e-4) and neden == 'slot_tavani'
-    assert boyut.hedef_emir('artir', 10.0, 15.0, 0.0, 40.0, SLOT, 100.0, RULES, biz_slot_toplam_usd=268.0) == (0.0, 'slot_tavani')
-    assert boyut.hedef_emir('artir', 10.0, 15.0, 0.0, 40.0, SLOT, 100.0, RULES, biz_slot_toplam_usd=None) == (pytest.approx(20.0), 'tamam')      # None: eski coin başına davranış
+    assert boyut.hedef_emir('artir', 10.0, 15.0, h, 40.0, SLOT, 100.0, RULES, biz_slot_toplam_usd=268.0) == (0.0, 'slot_tavani')
+    assert boyut.hedef_emir('artir', 10.0, 15.0, h, 40.0, SLOT, 100.0, RULES, biz_slot_toplam_usd=None) == (pytest.approx(20.0), 'tamam')      # None: coin başına davranış
 
 
 def test_k35_kopya_v5_uc_coinde_ayni_toplam_tavan_radar_ayni_sayiyi_gorur():

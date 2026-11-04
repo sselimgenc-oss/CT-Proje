@@ -24,7 +24,7 @@
 16. **Marj tavanı** başlangıç marjını `nosyonel / 3` (giriş fiyatı) sayar; serbest kasa = özsermaye (mark dahil). Sayaç `marj_yok` hem kırpmayı hem sıfırlamayı sayar.
 
 ## Gerçek vardiya gözlemi — LİDER KARARI GEREKİR (artırma kuralı)
-17. **Açılış 11 $'a yuvarlanınca, sonraki "artırma" oransal olarak patlıyor.** İlk gerçek sanal vardiyada (run 41904629030, kayıt `canli-durum-deneme:kayit/2026-11-04.jsonl`) trader `0xc932b572…` `xyz:GEV` (HIP‑3) üzerinde açtı:
+17. **✅ K‑36 ile çözüldü (artırma hedef tabanlı; `boyut.hedef_emir`, altın örnekler `tests/test_boyut.py::test_artirma_k36_*`).** Açılış 11 $'a yuvarlanınca, sonraki "artırma" oransal olarak patlıyor.** İlk gerçek sanal vardiyada (run 41904629030, kayıt `canli-durum-deneme:kayit/2026-11-04.jsonl`) trader `0xc932b572…` `xyz:GEV` (HIP‑3) üzerinde açtı:
     (a) `ac`: kendi payına düşen hedef < 11 $ → `min_emir_yuvarlandi` **11 $**; (b) hemen ardından aynı emrin sonraki dolumu (`artir`, trader pozisyonunun küçük bir önceki değerine göre büyük bağıl artış) → kural §5b "trader'ın değişim oranıyla" = bizim 11 $ × (sonra − önce)/önce
     = **261,73 $** (`tavan_kirpildi`, yani tavana dayandı: 272,73 − 11). Trader'ın gerçek payı (slot × nosyonel/hesap) bunun çok altındaydı; tek bir partial-fill zinciri slotun tamamını bir coine bağladı.
     Neden: büyük trader emirleri birden çok kısmi dolumla gelir; ilk dolum küçüktür (11 $'a yuvarlanır), ikinci dolum "önceki pozisyona göre %2000 artış" gibi görünür. **Öneri (kod değiştirmedim; §5b metni "değişim oranı" diyor):** artırmayı hedef‑tabanlı yap:
