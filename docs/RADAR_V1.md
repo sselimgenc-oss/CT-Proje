@@ -57,45 +57,58 @@ H = trader'ın `son7g` brüt kârının erken-trend girişlerden gelen payı (0�
 
 **Form sürüyor mu (sert kural):** son 72 saatte kopya getirisi ≥ −%2. Altındaysa puanlanmaz (soğuyan hype).
 
-## 5. R3 — İleri deneme ve kadro (gelecek)
-Katmanlar: **PAF (28) → Yedek 11 → İlk 11.** Yalnız İlk 11 canlıya aday olur.
-- **İleri deneme nasıl ölçülür (K‑21):** anlık motor kâğıt kipinde (canlıyla aynı kod; emir gönderilmez, dolum o anki L2 defterinden).
-  PAF/Yedek: trader başına 1.000 `kopya_$` sanal slot; İlk 11: portföy kasası/11 slot (canlıya geçecek olan bu).
-- **Radar → PAF:** günlük koşuda form sırası en iyi 28 içinde olan (kadroda olmayan) PAF'a girer; `t0` atanır, **ileri sanal kopya**
-  t0'da 1.000 `kopya_$` ile başlar. t0'da açık olan pozisyonlar kopyalanmaz; yalnız t0 sonrası açılışlar (canlıda da böyle olacak).
+## 5. R3 — Kadro ve ileri kanıt (gelecek) — K‑22: denemesiz, doğrudan canlı
+Katmanlar: **PAF (28) → Yedek 11 → İlk 11.** İlk 11'in ilk **N**'i **sahada** (gerçek para), geri kalanı **gölgede**.
+- **Saha sayısı:** `N = min(11, taban(kasa / radar_canli_slot_min_usd))`, `radar_canli_slot_min_usd = 25` → 100 $ kasada **N = 4**.
+  Slot kasası = kasa / N (gerçek USDC).
+- **Gölge:** sahada olmayan herkes (İlk 11'in kalanı, Yedek, PAF) **aynı motorda emirsiz** izlenir: dolum o anki L2 defterinden, bizim tutarımızla.
+  Bu bir "deneme aşaması" değildir, canlıyı geciktirmez; yalnız terfi kararı için ileri kanıt üretir. PAF/Yedek gölge slotu 25 $.
+- **Başlangıç (bir kez):** ilk günlük koşuda R1'den geçen form sırasının ilk 11'i doğrudan İlk 11 olur, ilk N'i sahaya çıkar (teyit beklenmez).
+  Sonra aşağıdaki kurallar.
+- **Radar → PAF:** günlük koşuda form sırası en iyi 28 içinde olan (kadroda olmayan) PAF'a girer; `t0` atanır, gölge kopya t0'da başlar.
+  t0'da açık olan pozisyonlar kopyalanmaz; yalnız t0 sonrası açılışlar (sahada da aynı).
 - **PAF → Yedek 11:** ileri süre ≥ 24 sa ve ileri getiri ≥ 0; boş yer form sırasıyla dolar.
-- **Yedek → İlk 11 (teyit):** ileri süre ≥ 48 sa, ileri kapanmış kopya işlemi ≥ 3, ileri getiri > 0 (maliyet+gecikme dahil),
-  güncel form sırası ≤ 22. Boş yer form sırasıyla dolar.
+- **Yedek → İlk 11 (teyit):** ileri süre ≥ 48 sa, ileri kapanmış kopya işlemi ≥ 3, ileri getiri > 0 (maliyet dahil),
+  güncel form sırası ≤ 22. Boş yer form sırasıyla dolar. Saha boşalınca İlk 11'in sıradaki üyesi sahaya çıkar.
 - **Değiştirme (histerezis):** dolu İlk 11'de bir üyenin yerini aday ancak aday form sırası ≤ 11 **ve** üye form sırası > 22 ise alır.
   Günde en fazla **3** İlk 11 değişikliği (devir maliyeti).
 - **İlk 11'den düşme:**
-  - Anında: İlk 11'e girişten beri ileri düşüş ≥ %10 (slot kasasında) → Yedek'e; R1/4 (kaldıraç > 20x) ihlali → PAF dışı.
+  - Anında: İlk 11'e girişten beri düşüş ≥ %10 (slot kasasında) → Yedek'e; R1/4 (kaldıraç > 20x) ihlali → PAF dışı.
   - Günlük: form sırası 2 gün üst üste > 33 → Yedek; 72 sa yeni işlem yok → Yedek.
 - **PAF/Yedek'ten çıkış:** form sırası 3 gün üst üste > 50, ya da ileri getiri ≤ −%10, ya da R1 ihlali → radardan çıkar (14 gün bekleme).
-- **Düşen üyenin açık kopya pozisyonları:** yeni açılış durur, trader'ın kapanışları izlenir, 24 sa sonra açık kalan zorla kapatılır.
+- **Sahadan inen üyenin açık pozisyonları:** yeni açılış durur, trader'ın kapanışları izlenir, 24 sa sonra açık kalan kapatılır.
 
-## 6. R4 — Portföy riski (İlk 11 kopya kasası)
-- Slot = kasa / 11. Slot başına pozisyon tavanı 3,0x (mevcut `golge_pozisyon_tavan_carpani`), mevcut tasfiye ve aşamalı çıkış (v4) aynen.
-- **Coin yoğunlaşması:** aynı coinde tüm slotların toplam brüt nosyoneli ≤ kasanın %30'u (hype coininde herkes aynı yere yığılır);
-  aşan yeni açılış kırpılır.
-- **Benzer trader:** İlk 11'de `son7g` günlük kopya getirisi korelasyonu ≥ 0,7 olan en fazla 2 kişi; fazlası form sırasıyla Yedek'te kalır.
-- Günlük kasa kaybı ≥ %5 → o gün yeni açılış yok. Kasa zirveden düşüş ≥ **%20** → her şey durur, kullanıcıya bildirilir (K‑19).
+## 5b. Canlı yürütme ve boyutlandırma (sahada)
+- **Açılış:** hedef nosyonel = slot kasası × (trader'ın pozisyon nosyoneli / trader hesap değeri), tavan **3,0 × slot kasası**.
+  Hedef < `radar_min_emir_usd` (**11 $**; HL alt sınırı 10 $ + pay): 3,0 × slot ≥ 11 $ ise 11 $'a yuvarlanır, değilse atlanır (`min_emir_atlandi`).
+- **Artırma / azaltma:** trader'ın pozisyon değişim oranıyla aynı oran. Emir < 11 $ çıkarsa: azaltmada kalan < 11 $ olacaksa pozisyonun tamamı
+  kapatılır, değilse atlanır; artırmada atlanır. Trader tamamen kapatınca biz de tamamen kapatırız (reduce‑only).
+- **Marj:** coin başına **izole, 3x** (bir pozisyonun tasfiyesi kasanın geri kalanını yakmaz).
+- **Emir:** IOC limit, fiyat = en iyi karşı fiyat ± **%0,5** kayma tavanı; dolmayan kısım yeniden denenmez (`dolmadi` kaydı).
+- Her emir için kayıt: trader dolum zamanı, bizim görme zamanımız, emir/dolum fiyatı, kayma, ücret, neden. Gölge aynı kaydı üretir (emir hariç).
+- **Güvenlik:** HL **API cüzdanı** (işlem yetkili, para çekme yetkisiz); ana cüzdan anahtarı hiçbir yere konmaz. API anahtarı yalnız sunucuda.
 
-## 7. R5 — Canlı kapısı (sistemin sınavı; son karar kullanıcının)
-Hepsi gerekli, ileri sanal kopya verisiyle:
-1. ≥ 28 gün ileri deneme, ≥ 100 kapanmış ileri kopya işlemi (İlk 11).
-2. İlk 11 portföyü net getiri > 0 (maliyet + gecikme dahil), en büyük düşüş ≤ %15.
-3. **Kontrol grubunu yener:** her gün radar havuzundan rastgele 11 kişi aynı kurallarla "kadro" yapılır; 1.000 rastgele kadroya karşı
-   İlk 11 ileri getirisinin tek yönlü p ≤ 0,10.
-4. Veri sağlığı: günlük koşuların ≥ %98'i başarılı, eksik ölçüler raporlu.
-Bilgi ölçüsü (karar değil): **form → ileri getiri bağı** = her gün form puanı ile sonraki 7 gün ileri getiri arasındaki Spearman (IC).
-4 hafta sonra IC ≤ 0 ise tasarım gözden geçirilir.
+## 6. R4 — Portföy riski
+- Slot başına pozisyon tavanı 3,0x (yukarıda), mevcut tasfiye ve aşamalı çıkış (v4) aynen.
+- **Coin yoğunlaşması:** aynı coinde tüm saha slotlarının toplam brüt nosyoneli ≤ kasanın %30'u; aşan açılış kırpılır.
+- **Benzer trader:** sahada `son7g` günlük kopya getirisi korelasyonu ≥ 0,7 olan en fazla 2 kişi; fazlası sıradaki üyeye yer verir.
+- Günlük kasa kaybı ≥ %5 → o gün yeni açılış yok. Kasa zirveden düşüş ≥ **%20** → tüm pozisyonlar kapatılır, motor durur, Telegram (K‑19).
+- **/dur şalteri:** Telegram komutu ya da sunucuda dosya → aynı kapanış.
+
+## 7. R5 — Büyütme kapısı (kasaya para eklemek; son karar kullanıcının)
+Kasa 100 $'da kalır; artırım ancak hepsi sağlanırsa **önerilir**:
+1. ≥ 28 gün canlı, ≥ 100 kapanmış saha işlemi.
+2. Net getiri > 0 (ücret + kayma + funding dahil), en büyük düşüş ≤ %15.
+3. **Kontrol grubunu yener:** her gün R1 havuzundan rastgele 11 kişi gölgede aynı kurallarla izlenir; 1.000 rastgele kadroya karşı
+   İlk 11 ileri getirisinin tek yönlü p ≤ 0,10 (form gerçekten işe yarıyor mu).
+4. Yürütme sağlığı: kaçan dolum ≈ 0, medyan kayma ve gecikme raporlu; motor çalışma süresi ≥ %98.
+Bilgi ölçüsü: **form → ileri getiri bağı** (Spearman IC, günlük form puanı ↔ sonraki 7 gün). 4 hafta sonra IC ≤ 0 ise tasarım gözden geçirilir.
 
 ## 8. Kilit ve değişiklik
 - Tüm eşik ve ağırlıklar **v1'de donar**, `kurallar.yaml` `radar_*` anahtarlarında tek yerde (kodda sayı sabiti yok).
-- 28 günlük değerlendirme bitmeden ayar değişmez (aşırı uydurma koruması). Değişiklik yeni sürüm olur (v1.1), eski seri silinmez.
+- 28 günlük canlı değerlendirme bitmeden ayar değişmez (aşırı uydurma koruması). Değişiklik yeni sürüm olur (v1.1), eski seri silinmez.
 - Veri/kod hatası düzeltmesi serbesttir; sonuç sayılarını değiştiriyorsa PR'da eski ↔ yeni yan yana.
 
 ## 9. İş sırası
-T1 eski sistemi sil · T2 R0+R1 tarama · T3 R2 form puanı · T4 R3 kadro + ileri deneme + günlük iş akışı · T5 R4 risk + R5 kontrol grubu ve
-canlı kapısı raporu · T6 pano. Anlık motorun kâğıt/canlı kipi T4'te (K‑21). Her biri ayrı görev belgesi, ayrı PR.
+T1 eski sistemi sil · T1b Cloudflare kalıntıları · T2 R0+R1 tarama · T3 R2 form puanı · **T4 canlı motor** (kadro, saha/gölge, yürütücü, §5b
+boyutlandırma, §6 risk, Telegram) · **T5 sunucu + canlıya alma** (kullanıcı: sunucu, API cüzdanı, 100 $ USDC) · T6 kontrol grubu raporu + pano.
