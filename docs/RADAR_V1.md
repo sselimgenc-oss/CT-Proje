@@ -79,6 +79,8 @@ gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez
 - **Sahadan inen üyenin açık pozisyonları:** yeni açılış durur, trader'ın kapanışları izlenir, 24 sa sonra açık kalan kapatılır.
 
 ## 5b. Canlı yürütme ve boyutlandırma (sahada)
+- **Kip (K‑29):** `sanal` (cüzdan bağlı değil, 1.000 $ yatırılmış gibi; dolum o anki emir defterinden) ya da `gercek` (API cüzdanı). Kod yolu aynı;
+  kullanıcı hazır olunca anahtar + `canli_kip: gercek`.
 - **Açılış:** hedef nosyonel = slot kasası × (trader'ın pozisyon nosyoneli / trader hesap değeri), tavan **3,0 × slot kasası**.
   Hedef < `radar_min_emir_usd` (**11 $**; HL alt sınırı 10 $ + pay): 3,0 × slot ≥ 11 $ ise 11 $'a yuvarlanır, değilse atlanır (`min_emir_atlandi`).
 - **Artırma / azaltma:** trader'ın pozisyon değişim oranıyla aynı oran. Emir < 11 $ çıkarsa: azaltmada kalan < 11 $ olacaksa pozisyonun tamamı
