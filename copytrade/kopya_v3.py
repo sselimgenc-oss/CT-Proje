@@ -40,13 +40,15 @@ def hedef_ms(dolum_ms: int, delay: int) -> int:
 def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str, list[dict]],
             yurutme: dict[str, dict[int, float]], funding: list[dict],
             t0: pd.Timestamp, now: pd.Timestamp, delay: int, style: str, rules: dict | None = None,
-            risk_limitleri: dict | None = None, surum: str = 'v3', tepe: bool = False) -> dict:
+            risk_limitleri: dict | None = None, surum: str = 'v3', tepe: bool = False,
+            base_usd: float | None = None, boyutlayici=None) -> dict:
     """v3 sanal kopya sonucu (1.000 $ ölçeğinde, v1/v2 ile aynı ölçek). Girdiler `kopya_v2.hesapla` ile aynı anlamda;
     ``serisi`` (trader hesap değeri serisi) burada gerekmez — sabit tutar trader'ın hesabına bakmaz, yalnız kopyanın
     KENDİ değerine; ``style`` E3'ün aşamalı zarar_kes/kar_al eşiği için gerekli (intraday/swing)."""
     rules = rules or load_rules()
+    baz = BASE_USD if base_usd is None else float(base_usd)         # v5: kopya kasası (canli_kasa_usd); varsayılan 1.000 $ (v3/v4 değişmez)
     t0_ms, now_ms = int(t0.value // 1_000_000), int(now.value // 1_000_000)
-    base = {'surum': surum, 'baslangic_usd': BASE_USD, 'gecikme_dk': delay, 't0': str(t0.date())}
+    base = {'surum': surum, 'baslangic_usd': baz, 'gecikme_dk': delay, 't0': str(t0.date())}
     annotated = []
     bozuk_px = 0
     for fill in fills:
@@ -65,15 +67,15 @@ def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str,
     candles = {coin: sorted(saatlik.get(coin, []) + isaret.get(coin, []), key=lambda c: c['t'])
                for coin in {*saatlik, *isaret}}
     ledger = copy_ledger(annotated, Market(candles), None, delay, t0_ms, now_ms, FundingRates(funding), rules,
-                         daily=True, tutar_egrisi=sabit_tutar_egrisi(rules), base_usd=BASE_USD, style=style,
-                         islem_kaydi=True, risk_limitleri=risk_limitleri, acik_liste=risk_limitleri is not None)
+                         daily=True, tutar_egrisi=sabit_tutar_egrisi(rules), base_usd=baz, style=style,
+                         islem_kaydi=True, risk_limitleri=risk_limitleri, acik_liste=risk_limitleri is not None, boyutlayici=boyutlayici)
     if ledger.get('net') is None:
         return {**base, 'durum': 'hesaplanamadi', 'neden': 'yürütülebilir dolum yok'}
     days = pd.date_range(t0.normalize(), now.normalize(), freq='1D')
     net = pd.Series(0.0, index=days)
     if len(ledger['daily']):
         net = net.add(ledger['daily'].reindex(days, fill_value=0.0), fill_value=0.0)
-    equity = BASE_USD * (1 + net.cumsum())
+    equity = baz * (1 + net.cumsum())
     kapanis_nedenleri = [{'coin': e['coin'], 'neden': e['neden'], 'zaman': iso_ms(e['zaman_ms'])}
                         for e in ledger['olaylar']]
     # İlk 11 `paper_sonuclari` girdisi (yalnız raporlama; bakiye/getiri aşağıda değişmeden hesaplanır): kapanan kopya işlemleri, 1.000 $ ölçeğinde.
@@ -89,11 +91,11 @@ def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str,
         day = pd.Timestamp(int(when), unit='ms', tz='UTC').normalize()
         equity[equity.index >= day] = 0.0
     equity = equity.clip(lower=0.0)
-    balance = float(equity.iloc[-1]) if len(equity) else BASE_USD
-    base_series = pd.concat([pd.Series([BASE_USD]), equity.reset_index(drop=True)])
+    balance = float(equity.iloc[-1]) if len(equity) else baz
+    base_series = pd.concat([pd.Series([baz]), equity.reset_index(drop=True)])
     drawdown = float((1 - base_series / base_series.cummax()).max())
     tasfiye_zamani = iso_ms(when) if when is not None else None
-    return {**base, 'bakiye_usd': balance, 'getiri': balance / BASE_USD - 1, 'dusus': drawdown,
+    return {**base, 'bakiye_usd': balance, 'getiri': balance / baz - 1, 'dusus': drawdown,
             'egri': [[str(day.date()), float(value)] for day, value in equity.items()],
             'gerceklesen': ledger['realized'] + ledger['funding'], 'acik': ledger['unrealized_end'],
             'toplam': ledger['net'], 'funding': ledger['funding'], 'maliyet': ledger['costs'],

@@ -1,0 +1,61 @@
+name: Radar (günlük tarama + kadro)
+
+# T3 (docs/RADAR_V1.md §2, §4, §5): her gün 00:37 UTC (03:37 TSİ) T2 taraması (aday = radar_aday_tavan = 300, 7 gün getiriye göre; K-31) → R2 form puanı → kadro.
+# Salt okunur halka açık Hyperliquid verisi; secret YOK. Çıktı veri dalı `radar` (kök commit yalnız ilk koşuda; sonra tarihli klasör eklenir, 90 gün tutulur):
+#   radar/<tarih>/{havuz,kadro}.json  +  radar/son/kadro.json  (T4 motoru `son/kadro.json`'u okur).
+# Eksik koşuda (zaman bütçesi aşıldı / satır eksik) `radar_kadro` çıkış kodu 2 verir → iş kırmızı biter ve `son/` GÜNCELLENMEZ. Hata örtülmez (başarısızlık gizlenmez).
+# `kural_ust` / `aday_sayisi` girdisi YOK (donmuş kurallar; deneme `radar_deneme.yml`'de).
+# Dal doğrulaması: `copytrade/radar/CALISTIR` dosyasına satır eklenen push (main dışı dal) AYNI iş akışını koşturur ama veri dalı `radar-deneme`'ye yazar (gerçek `radar` dalı yalnız main'den dokunulur).
+on:
+  schedule:
+    - cron: "37 0 * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - copytrade/radar/CALISTIR
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+concurrency:
+  group: radar
+  cancel-in-progress: false
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Radar taraması (R0 + R1 + R2 girdileri)
+        run: |
+          mkdir -p radar
+          python -u -m copytrade.radar_tarama --cikti radar --ozet-md radar/OZET.md
+      - name: Günlük kadro (R2 form puanı)
+        run: |
+          havuz="$(ls radar/*/havuz.json | tail -n 1)"
+          python -u -m copytrade.radar_kadro --havuz "$havuz"
+      - name: Özet
+        if: ${{ always() && hashFiles('radar/OZET.md') != '' }}
+        run: cat radar/OZET.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: radar-havuz-kadro
+          path: radar
+          if-no-files-found: ignore
+      - name: Veri dalına yaz (radar)
+        env:
+          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
+        run: bash .github/scripts/radar_yayimla.sh

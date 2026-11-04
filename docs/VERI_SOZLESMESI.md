@@ -313,15 +313,15 @@ Gizlilik: dosyada API anahtarı, token, URL ya da sunucu IP'si yoktur (testle de
 
 ## 12. Radar havuzu (R0/R1) — `radar/<YYYY-MM-DD>/havuz.json` (v1.24, T2; `copytrade/radar_tarama.py`, strateji: `docs/RADAR_V1.md` §2–3)
 Üretici: `python -m copytrade.radar_tarama` (iş akışı `radar_deneme.yml`; günlük zamanlama T4'te). Salt okunur, herkese açık Hyperliquid verisi. **Birim kuralları:** oranlar kesirdir (0,10 = %10); `*_usd` alanlarında ölçek
-adıyla yazılır: `trader_$` = trader'ın kendi hesabı, `kopya_$` = 1.000 $ sanal kopya kasası; zaman UTC milisaniye; tutma süresi saat; kaldıraç "x" (pozisyon değeri / hesap değeri).
+adıyla yazılır: `trader_$` = trader'ın kendi hesabı, `kopya_$` = sanal kopya kasası (`canli_kasa_usd`, varsayılan 1.000 $; K‑28); zaman UTC milisaniye; tutma süresi saat; kaldıraç "x" (pozisyon değeri / hesap değeri).
 **Pencere** `son7g` = `[kosu_ms − radar_pencere_saat × 3.600.000, kosu_ms)` (koşu BAŞLANGICI; okuma zamanı değil). **Kopya oynatma** pencere başında BOŞ başlar (pencere başında açık pozisyon kopyalanmaz); gecikme `radar_kopya_gecikme_dk` (1 dk),
-maliyet taker + kayma (`kurallar.yaml`), `kopya_v4.hesapla` (sabit tutar + v4 risk sınırları, tarz `intraday`); funding oynatmaya **girmez** (v1 kararı). Yürütme fiyatı: son ≈ 3,5 gün için hedef dakikanın 1 dk mumunun açılışı;
+maliyet taker + kayma (`kurallar.yaml`), **`kopya_v5.hesapla`** (K‑28: §5b oransal boyut `boyut.hedef_emir` + v4 risk sınırları, tarz `intraday`; slot = `canli_kasa_usd` / N; trader hesap payda = `hesap_usd`, koşu anı `accountValue`); R1/6 **iki oynatma** yapar (K‑32): **kopya** (gecikme + maliyet) ve **ayna** (gecikme 0 = trader'ın dolum fiyatı, maliyet 0; aynı slot, ikisi de pencere başında boş); funding oynatmaya **girmez** (v1 kararı). Yürütme fiyatı: son ≈ 3,5 gün için hedef dakikanın 1 dk mumunun açılışı;
 daha eskisi için (Hyperliquid `candleSnapshot` yalnız son 5.000 dakikalık mumu verir) hedefi içeren **5 dk mumun açılış ve kapanışından bizim yönümüze kötü olanı** (alışta büyük, satışta küçük; aynı hedefte karışık yön varsa açılış) — temkinli yaklaşık fiyat,
 `yaklasik_fiyat_eylem` ile sayılır; eksik mum fiyatı uydurulmaz (eylem atlanır, `fiyatsiz_eylem` ile sayılır). **Ölçüm sırası ucuzdan pahalıya** (lider kararı 2026-11-04): lider tablosundan elemeler (`payda_yok`, `devir_yuksek`) → `vault` → dolum
 (en çok `radar_dolum_tavan`; tavana ulaşırsa `dolum_fazla`) → dolum tabanlı kurallar (işlem, tutma, kısa işlem, kaldıraç, likidite) → yalnız hepsi geçtiyse kopya oynatma ve kalan kurallar. **Ölçülmeyen alan `null`**'dır. Radar istemcisi hız sınırı `radar_api_agirlik_dk`
 (ağırlık/dk); koşu süresi `radar_zaman_butcesi_dk`'yı aşarsa kalan adaylar `zaman_yok` olur (ölçüsüz).
 
-Üst düzey: `sema` (`"radar-havuz-v1"`), `kosu_ms` (UTC ms, koşu başlangıcı), `pencere_bas_ms` (UTC ms), `evren_toplam` (ön filtreyi geçen kişi sayısı), `evren_kesilen` (aday tavanı nedeniyle dışarıda kalan kişi sayısı),
+Üst düzey: `sema` (`"radar-havuz-v1"`), `kural_ust` (YALNIZ deneme koşusunda, varsa: üstüne yazılan `radar_*` anahtarları; günlük koşuda yok), `kosu_ms` (UTC ms, koşu başlangıcı), `pencere_bas_ms` (UTC ms), `evren_toplam` (ön filtreyi geçen kişi sayısı), `evren_kesilen` (aday tavanı nedeniyle dışarıda kalan kişi sayısı),
 `satirlar` (aday başına bir satır, `trader_getiri_7g`'ye göre azalan sırada (K‑31)).
 
 | Alan | Birim / ölçek | Anlam |
@@ -335,15 +335,37 @@ daha eskisi için (Hyperliquid `candleSnapshot` yalnız son 5.000 dakikalık mum
 | `kisa_islem_payi` | oran | tutma süresi `radar_kisa_islem_dk`'dan KISA işlemlerin (süresi bilinenler içinde) payı |
 | `max_kaldirac` | x | pencere boyunca en yüksek (toplam pozisyon değeri / `hesap_usd`); payda **koşu anındaki** hesap değeridir (dolum anındaki değil; v1 kararı) |
 | `likit_pay` | oran | nosyonelin (px × sz, tüm perp dolumları) 24 sa hacmi ≥ `radar_likit_coin_hacim_usd` ($, `metaAndAssetCtxs.dayNtlVlm`) coinlerdeki payı |
-| `kopya_getiri_7g` | oran, kopya_$ ölçeği | 1.000 $ sanal kopyanın pencere getirisi (gecikme + maliyet dahil); hesaplanamazsa `null` |
-| `kopya_koruma` | oran | `kopya_getiri_7g / trader_getiri_7g` |
+| `kopya_getiri_7g` | oran, kopya_$ ölçeği | sanal kopyanın (v5, kasa = `canli_kasa_usd`) pencere getirisi (gecikme + maliyet dahil); hesaplanamazsa `null` |
+| `ayna_getiri_7g` | oran, kopya_$ ölçeği | AYNI slot ve dolumlarla gecikmesiz + maliyetsiz oynatmanın getirisi (K‑32); kopya yoksa `null` |
+| `kopya_koruma` | oran | **K‑32:** `kopya_getiri_7g / ayna_getiri_7g`; ayna ≤ 0 ya da yok → `null` (`kopya_koruma_dusuk`) |
+| `v4_kopya_getiri_7g` | oran, kopya_$ ölçeği | YALNIZ bilgi (deneme koşuları `--v4-yan-yana`): aynı dolumlar `kopya_v4` (sabit tutar) ile; karar girdisi DEĞİL; yoksa `null` |
 | `devir_hafta` | kat | hafta `vlm` / `hesap_usd` (`vlm` trader_$ nosyonel) |
 | `kopya_alt20` | oran, kopya_$ ölçeği | kopya işlem sonuçlarından (`sonuc_usd / 1.000`, geçersiz işlem hariç) `radar_bootstrap_tekrar` yeniden örneklemenin TOPLAMININ `radar_bootstrap_alt_yuzdelik` alt yüzdeliği; tohum adresten türetilir |
 | `fiyatsiz_eylem` | adet | yürütme fiyatı bulunamadığı için kopyalanamayan eylem sayısı (`null`: kopya hesaplanmadı) |
 | `yaklasik_fiyat_eylem` | adet | yürütme fiyatı 5 dk mumdan (yönümüze kötü olan fiyat) alınan kopya eylemi sayısı (`null`: kopya hesaplanmadı) |
+| `kopya_gunluk` | liste (kasa oranı) | **R2 girdisi, yalnız `gecti` satırlarında** (aksi `null`): günlük kopya getirisi = (özsermaye_gün − önceki) / kasa, pencere gün sayısı kadar (UTC günleri, ilk gün önceki = kasa) |
+| `kopya_kazanc_gun_orani` | oran | R2 İ1 (yalnız `gecti`): aktif günlerde (getiri ≠ 0) getirisi > 0 olan gün oranı; aktif gün yoksa 0 |
+| `kopya_dusus` | oran | R2 İ2 (yalnız `gecti`): kopya özsermaye eğrisinin pencere içi en büyük zirveden düşüşü (kesir) |
+| `yayilma` | oran | R2 Y (yalnız `gecti`): 1 − (en iyi tek kopya işleminin kârlı işlemler toplamındaki payı); kâr yoksa 0 |
+| `kopya_getiri_72s` | oran, kopya_$ ölçeği | "form sürüyor" (yalnız `gecti`): aynı dolumlarla kopya, penceresi son `radar_soguyor_saat` saat ve o pencerenin başında BOŞ; hesaplanamazsa 0 |
+| `hype_payi` | oran | R2 H (yalnız `gecti`): trader'ın kârlı round trip `net_pnl` toplamının erken-trend girişlerden gelen payı (trader_$ ölçeğinden bağımsız oran); kâr yoksa 0 |
 | `gecti` | bool | R1'in tüm kuralları geçildi mi (radar havuzu) |
 | `neden` | kod \| `null` | ilk başarısız kuralın kodu; sıra: `veri_hatasi` (istek hatası), `payda_yok`, `devir_yuksek`, `vault`, `dolum_fazla`, `islem_az`, `tutma_kisa`, `kisa_islem_fazla`, `kaldirac_yuksek`, `likidite_dusuk`, `kopya_zarar`, `kopya_koruma_dusuk`, `sans_riski`, `akil_sagligi`, `zaman_yok` |
 | `hata` | metin \| `null` | `veri_hatasi` ise ilk satır hata iletisi (uydurma yok) |
 
 Eşikler `kurallar.yaml` `radar_*` anahtarlarındadır; sınırlar DAHİLDİR (tam 10 işlem, 1,0 sa, %25, 20x, %80, %50, 100 kat geçer; `kopya_alt20` için tam 0 ELENİR, `kopya_getiri_7g` tam +%300 geçer, tam 0 elenir).
 Ölçülmeyen alan `null`'dır: `payda_yok`, `devir_yuksek`, `vault`, `dolum_fazla`, `zaman_yok` satırlarında dolum alanları; dolum tabanlı bir kuralla elenenlerde kopya alanları; her zaman ölçülenler (ör. `devir_hafta`) yazılır. Evrene yalnız `accountValue ≥ radar_min_hesap_usd`, hafta `pnl > 0`, hafta `vlm > 0` girer.
+
+## 13. Radar kadro — `radar/<YYYY-MM-DD>/kadro.json` ve `radar/son/kadro.json` (v1.25, T3; `copytrade/radar_form.py`, `copytrade/radar_kadro.py`, strateji: `docs/RADAR_V1.md` §4–5)
+Üretici: `python -m copytrade.radar_kadro` (günlük iş akışı `radar.yml`, 00:37 UTC; yayın veri dalı `radar`, 90 gün tutulur; `son/kadro.json` yalnız tam koşuda güncellenir: `zaman_yok` yok ve satır sayısı = min(`radar_aday_tavan`, `evren_toplam`)).
+**Birimler:** oranlar kesirdir; `form` ve `bilesenler` 0–100 yüzdelik puandır; `kasa_usd`/`slot_usd` kopya kasası ölçeğinde $ (kopya_$); zaman UTC ms.
+**Form puanı (`radar_form.py`):** `gecti` satırlarından; "form sürüyor" (`kopya_getiri_72s` ≥ `radar_soguyor_min_getiri`, tam sınır geçer; ölçü yok = geçmez) değilse puanlanmaz (`soguyan[]`, neden `soguyor`) ve yüzdelik havuzundan çıkarılır.
+Her bileşen kalan havuzda 0–100 yüzdelik sıra (eşitlikte ortalama sıra; 1 kişi 50; İ2 ters): G=`kopya_alt20`, K=`kopya_getiri_7g`, İ1=`kopya_kazanc_gun_orani`, İ2=`kopya_dusus`, Y=`yayilma`, H=`hype_payi`; `form = Σ radar_agirlik_* × yüzdelik`
+(0,35 / 0,15 / 0,10 / 0,10 / 0,10 / 0,20). **H:** trend coin = HL perp coinleri içinde |7 g getiri| (saatlik açılış mumları, pencere başı → son) üst `radar_hype_trend_oran` (nicelik ≥) **ya da** listelenme ≤ `radar_hype_yeni_gun` gün (ilk saatlik mum zamanı);
+erken giriş = açılışı bilinen kârlı işlem, trend coin, coinin hareketi işlem yönünde ve açılış anında bu hareketin `radar_hype_erken_pay`'ından azı gerçekleşmiş.
+
+Üst düzey: `sema` (`"radar-kadro-v1"`), `kosu_ms`, `kasa_usd`, `slot_usd` (= kasa / `saha_n`), `saha_n` (N = min(`radar_saha_max`, taban(kasa / `radar_canli_slot_min_usd`))), `gecti_sayisi`, `soguyan` ([{adres, neden, kopya_getiri_72s}]),
+`satirlar` (form azalan, en çok `radar_kadro_toplam`), `korelasyon` ({`adresler` (İlk 11), `gun_sayisi`, `matris` (Pearson, günlük `kopya_gunluk`; sabit seri `null`)}).
+`satirlar[]`: `adres`, `sira` (1…30), `katman` (`ilk11` ≤ `radar_kadro_ilk` < `yedek`), `form`, `bilesenler` {G,K,I1,I2,Y,H}, `kopya_getiri_7g` (oran, kopya_$), `max_kaldirac` (x).
+**Saha kararları (slot −%10, bekleme, günde 2 değişiklik, benzer trader ≥ 0,7) kadroda DEĞİL:** T4 motoru okuyup §5/§6 kurallarını uygular.
+

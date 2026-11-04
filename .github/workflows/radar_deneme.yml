@@ -1,13 +1,18 @@
 name: Radar deneme (R0 + R1 taraması)
 
-# T2 (docs/RADAR_V1.md §2–3): lider tablosundan aday + R1 kopyalanabilirlik. Salt okunur, secret YOK, veri dallarına YAZMAZ; çıktı `havuz.json` artifact'ı + iş özeti.
-# Günlük zamanlama (cron) T4'te. `aday_sayisi`: hafta pnl'e göre ilk N aday (varsayılan 20; tam tarama 300 = kurallar.yaml radar_aday_tavan).
+# T2/T3 (docs/RADAR_V1.md §2–4): lider tablosundan aday + R1 kopyalanabilirlik + R2 ham girdileri. Salt okunur, secret YOK, veri dallarına YAZMAZ; çıktı `havuz.json` (+ `kadro.json`) artifact'ı + iş özeti.
+# Günlük zamanlı koşu `radar.yml`'dir; bu iş akışı YALNIZ deneme içindir. `aday_sayisi`: 7 gün getiriye göre ilk N aday (K-31; varsayılan 20; tam tarama 300 = kurallar.yaml radar_aday_tavan).
+# `kural_ust` (YALNIZ deneme; `radar.yml`'de YOK): boşlukla ayrılmış `radar_<anahtar>=<değer>` (ör. `radar_min_islem=5`, T3 §1b bilgi koşusu); `havuz.json` `kural_ust` alanında görünür. Karar değildir.
+# Deneme koşuları v4 ↔ v5 yan yana bilgi alanını (`v4_kopya_getiri_7g`) da yazar.
 on:
   workflow_dispatch:
     inputs:
       aday_sayisi:
-        description: "ilk N aday (hafta pnl'e göre); tam tarama için 300"
+        description: "ilk N aday (7 gün getiriye göre, K-31); tam tarama için 300"
         default: "20"
+      kural_ust:
+        description: "YALNIZ deneme: boşlukla ayrılmış radar_<anahtar>=<değer> (ör. radar_min_islem=5); boş = kurallar.yaml aynen"
+        default: ""
   push:
     paths:
       - copytrade/radar_deneme/CALISTIR
@@ -33,12 +38,19 @@ jobs:
       - name: Radar taraması (R0 + R1)
         env:
           GIRDI_ADAY_SAYISI: ${{ inputs.aday_sayisi }}
+          GIRDI_KURAL_UST: ${{ inputs.kural_ust }}
         run: |
-          # elle koşuda girdi; push ile tetiklenen koşuda `copytrade/radar_deneme/CALISTIR` son satırının ilk sözcüğü (sayı değilse 20)
-          aday="${GIRDI_ADAY_SAYISI:-$(tail -n 1 copytrade/radar_deneme/CALISTIR | cut -d' ' -f1)}"
+          # elle koşuda girdiler; push ile tetiklenen koşuda `copytrade/radar_deneme/CALISTIR` son satırı: ilk sözcük = aday sayısı (sayı değilse 20), kalan `radar_x=deger` sözcükleri = kural_ust
+          satir="$(tail -n 1 copytrade/radar_deneme/CALISTIR)"
+          aday="${GIRDI_ADAY_SAYISI:-${satir%% *}}"
           case "$aday" in ''|*[!0-9]*) aday=20 ;; esac
+          if [ -n "${GIRDI_ADAY_SAYISI:-}" ]; then ust="${GIRDI_KURAL_UST:-}"; else ust="${satir#* }"; fi
+          kural=()
+          for sozcuk in $ust; do
+            case "$sozcuk" in radar_*=*) kural+=(--kural-ust "$sozcuk") ;; esac
+          done
           mkdir -p radar
-          python -u -m copytrade.radar_tarama --cikti radar --aday-sayisi "$aday" --ozet-md radar/OZET.md
+          python -u -m copytrade.radar_tarama --cikti radar --aday-sayisi "$aday" --v4-yan-yana "${kural[@]}" --ozet-md radar/OZET.md
       - name: Özet
         if: ${{ always() && hashFiles('radar/OZET.md') != '' }}
         run: cat radar/OZET.md >> "$GITHUB_STEP_SUMMARY"

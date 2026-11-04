@@ -27,22 +27,22 @@ import pandas as pd
 import requests
 
 from copytrade import izleme_motoru as im
-from copytrade import kopya_v2, kopya_v3, kopya_v4
+from copytrade import kopya_v2, kopya_v3, kopya_v4, kopya_v5, radar_form
 from copytrade.defter import HOUR
 from copytrade.izleme_liste import perp_dex_names
 from copytrade.kurallar import load_rules
 from copytrade.olcut import closed_round_trips, effective_leverage_detail, perp_fills
-from copytrade.tarama import PublicClient, RateLimiter, RateLimitError, _address, _window
+from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter, RateLimitError, _address, _window
 
 MINUTE = 60_000
 SEMA = "radar-havuz-v1"
-BASE_USD = kopya_v3.BASE_USD            # sanal kopya kasası ($, kopya_$ ölçeği)
 KOPYA_TARZ = "intraday"                 # kopya_v3 çıkış kuralları (E3) için tarz; radar henüz tarz sınıflamaz (kurallar.yaml golge_v2.intraday)
 NEDENLER = ("veri_hatasi", "payda_yok", "devir_yuksek", "vault", "dolum_fazla", "islem_az", "tutma_kisa", "kisa_islem_fazla", "kaldirac_yuksek",
             "likidite_dusuk", "kopya_zarar", "kopya_koruma_dusuk", "sans_riski", "akil_sagligi", "zaman_yok")        # ucuzdan pahalıya ölçüm sırası (lider kararı 2026-11-04)
 DOLUM_KURALI = 5                  # NEDENLER içinde dolum tabanlı kurallar (islem_az … likidite_dusuk): bunlardan biri başarısızsa kopya oynatılmaz
 SAYISAL = ("hesap_usd", "hafta_pnl_usd", "trader_getiri_7g", "islem_sayisi", "medyan_tutma_saat", "kisa_islem_payi", "max_kaldirac", "likit_pay",
-           "kopya_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem")
+           "kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "v4_kopya_getiri_7g",
+           "kopya_kazanc_gun_orani", "kopya_dusus", "yayilma", "kopya_getiri_72s", "hype_payi")        # son beşi yalnız `gecti` satırlarında (R2 girdisi)
 HATALAR = (RateLimitError, requests.RequestException, ValueError, KeyError, TypeError)
 
 
@@ -121,20 +121,25 @@ def islem_olculeri(fills: list[dict], hesap_usd: float, likit: set[str], rules: 
             "likit_pay": sum(v for c, v in nosyonel.items() if c in likit) / toplam if toplam > 0 else None}
 
 
-def kopya_olculeri(sonuc: dict | None, trader_getiri: float | None, adres: str, rules: dict | None = None) -> dict:
-    """Kopya oynatma sonucundan R1/6–9 ölçüleri (kopya_$ = 1.000 $ sanal kasa ölçeği). Sonuç yok / hesaplanamadı → kopya alanları None."""
+def kopya_olculeri(sonuc: dict | None, adres: str, rules: dict | None = None) -> dict:
+    """Kopya oynatma sonucundan R1/6–9 ölçüleri (kopya_$ = kopya kasası ölçeği, `canli_kasa_usd`; K‑28/K‑32). `sonuc` = `Baglam.kopya_oynat` çıktısı: kopya (1 dk gecikme + maliyet) ve `ayna`
+    (gecikmesiz, maliyetsiz; aynı slot). `kopya_koruma` = kopya getirisi / ayna getirisi (ayna ≤ 0 ya da yok → None: `kopya_koruma_dusuk`). Sonuç yok / hesaplanamadı → kopya alanları None."""
     rules = rules or load_rules()
-    bos = {"kopya_getiri_7g": None, "kopya_koruma": None, "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None}
+    bos = {"kopya_getiri_7g": None, "ayna_getiri_7g": None, "kopya_koruma": None, "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None,
+           "v4_kopya_getiri_7g": None}
     if not sonuc:
         return bos
+    v4 = _sayi((sonuc.get("v4") or {}).get("getiri"))
     if sonuc.get("durum") == "hesaplanamadi":
-        return {**bos, "fiyatsiz_eylem": sonuc.get("fiyatsiz_eylem"), "yaklasik_fiyat_eylem": sonuc.get("yaklasik_fiyat_eylem")}
+        return {**bos, "fiyatsiz_eylem": sonuc.get("fiyatsiz_eylem"), "yaklasik_fiyat_eylem": sonuc.get("yaklasik_fiyat_eylem"), "v4_kopya_getiri_7g": v4}
     getiri = _sayi(sonuc.get("getiri"))
-    islem = [t["sonuc_usd"] / BASE_USD for t in sonuc.get("kapanan_islemler") or [] if t.get("gecerli") is not False and _sayi(t.get("sonuc_usd")) is not None]
-    return {"kopya_getiri_7g": getiri,
-            "kopya_koruma": None if getiri is None or not trader_getiri else getiri / trader_getiri,
+    ayna = _sayi((sonuc.get("ayna") or {}).get("getiri"))
+    kasa = _sayi(sonuc.get("baslangic_usd")) or float(rules["canli_kasa_usd"])
+    islem = [t["sonuc_usd"] / kasa for t in sonuc.get("kapanan_islemler") or [] if t.get("gecerli") is not False and _sayi(t.get("sonuc_usd")) is not None]
+    return {"kopya_getiri_7g": getiri, "ayna_getiri_7g": ayna,
+            "kopya_koruma": None if getiri is None or ayna is None or ayna <= 0 else getiri / ayna,
             "kopya_alt20": bootstrap_alt(islem, int(rules["radar_bootstrap_tekrar"]), float(rules["radar_bootstrap_alt_yuzdelik"]), adres_tohumu(adres)),
-            "fiyatsiz_eylem": sonuc.get("fiyatsiz_eylem"), "yaklasik_fiyat_eylem": sonuc.get("yaklasik_fiyat_eylem")}
+            "fiyatsiz_eylem": sonuc.get("fiyatsiz_eylem"), "yaklasik_fiyat_eylem": sonuc.get("yaklasik_fiyat_eylem"), "v4_kopya_getiri_7g": v4}
 
 
 def on_eleme(aday: dict, vlm: float, rules: dict | None = None) -> str | None:
@@ -210,12 +215,15 @@ class MumOnbellegi:
 class Baglam:
     """Koşu boyunca adaylar arasında paylaşılan piyasa verisi (kural 7: veri bir kez çekilir)."""
 
-    def __init__(self, client: Any, kosu_ms: int, pencere_bas_ms: int, rules: dict):
+    def __init__(self, client: Any, kosu_ms: int, pencere_bas_ms: int, rules: dict, v4_yan_yana: bool = False):
         self.client, self.kosu_ms, self.pencere_bas_ms, self.rules = client, kosu_ms, pencere_bas_ms, rules
+        self.v4_yan_yana = v4_yan_yana                       # bilgi: aynı dolumları kopya_v4 (sabit tutar) ile de oynat (v4 ↔ v5 yan yana; hesabı/kararı değiştirmez)
         self.gecikme_dk = int(rules["radar_kopya_gecikme_dk"])
         self.mum = MumOnbellegi(client, kosu_ms, pencere_bas_ms)
         self.hacim: dict[str, float] = {}          # coin -> 24 sa nosyonel hacim ($)
         self.azami_kaldirac: dict[str, float] | None = None
+        self.son_girdi: dict | None = None            # son kopya_oynat'ın mum girdileri (R2 72 sa oynatması yeniden kullanır)
+        self._hareket: dict[str, dict] | None = None   # H için coin hareketleri (koşu başına en çok bir kez, yalnız `gecti` aday çıkarsa)
 
     def piyasa_oku(self) -> None:
         """Perp dex listesi, coin başına 24 sa hacim (`metaAndAssetCtxs.dayNtlVlm`) ve HL azami kaldıracı (v4 sınırı)."""
@@ -233,10 +241,11 @@ class Baglam:
         esik = float(self.rules["radar_likit_coin_hacim_usd"])
         return {c for c, v in self.hacim.items() if v >= esik}
 
-    def kopya_oynat(self, dolumlar: list[dict]) -> dict:
-        """Tek adayın pencere dolumlarını `kopya_v4.hesapla` ile oynatır: t0 = pencere başı (başlangıçta kopya BOŞ), gecikme `radar_kopya_gecikme_dk`, maliyet
-        `kurallar.yaml` (taker + kayma). Mumlar `MumOnbellegi`'nden (coin başına bir kez çekilir); son ≈ 3,5 gün 1 dk mum, daha eskisi 5 dk mumun yönümüze KÖTÜ fiyatı (`yaklasik_fiyat_eylem` ile sayılır);
-        eksik hedef `fiyatsiz_eylem` sayılır, fiyat uydurulmaz."""
+    def kopya_oynat(self, dolumlar: list[dict], trader_hesap_usd: float) -> dict:
+        """Tek adayın pencere dolumlarını `kopya_v5` ile İKİ kez oynatır (K‑28/K‑32; ikisi de pencere başında BOŞ, aynı slot, `trader_hesap_usd` = oranın paydası):
+        **kopya** = `radar_kopya_gecikme_dk` gecikme + maliyet (`kurallar.yaml` taker + kayma); mumlar `MumOnbellegi`'nden (coin başına bir kez), son ≈ 3,5 gün 1 dk mum,
+        daha eskisi 5 dk mumun yönümüze KÖTÜ fiyatı (`yaklasik_fiyat_eylem`); eksik hedef `fiyatsiz_eylem`, fiyat uydurulmaz. **ayna** = gecikmesiz (trader'ın dolum fiyatı), maliyetsiz.
+        `v4_yan_yana` açıksa `v4` = aynı kopya, `kopya_v4` (sabit tutar) ile (yalnız rapor)."""
         t0, simdi = pd.Timestamp(self.pencere_bas_ms, unit="ms", tz="UTC"), pd.Timestamp(self.kosu_ms, unit="ms", tz="UTC")
         yerel: dict = {}
         mum, _ = im.execution_candles(self.mum, dolumlar, yerel, self.kosu_ms, self.gecikme_dk, [], {}, eski_aralik="5m")
@@ -245,8 +254,36 @@ class Baglam:
         isaret = im.mark_candles(self.mum, eylemler, self.kosu_ms)
         saatlik = kopya_v2.saatlik_mumlar(self.mum, {}, dolumlar, im.open_copy_coins(eylemler), self.kosu_ms)
         yurutme = {coin: {int(c["t"]): float(c["o"]) for c in rows} for coin, rows in mum.items()}
-        sonuc = kopya_v4.hesapla(dolumlar, saatlik, isaret, yurutme, [], t0, simdi, self.gecikme_dk, KOPYA_TARZ, self.rules, azami_kaldirac=self.azami_kaldirac)
+        sonuc = kopya_v5.hesapla(dolumlar, saatlik, isaret, yurutme, [], t0, simdi, self.gecikme_dk, KOPYA_TARZ, self.rules,
+                                 azami_kaldirac=self.azami_kaldirac, trader_hesap_usd=trader_hesap_usd)
+        sifir = {**self.rules, "maliyet_taker": 0.0, "maliyet_kayma": 0.0}
+        sonuc["ayna"] = kopya_v5.hesapla(dolumlar, saatlik, isaret, {}, [], t0, simdi, 0, KOPYA_TARZ, sifir, azami_kaldirac=self.azami_kaldirac, trader_hesap_usd=trader_hesap_usd)
+        self.son_girdi = {"saatlik": saatlik, "isaret": isaret, "yurutme": yurutme}
+        if self.v4_yan_yana:
+            sonuc["v4"] = kopya_v4.hesapla(dolumlar, saatlik, isaret, yurutme, [], t0, simdi, self.gecikme_dk, KOPYA_TARZ, self.rules, azami_kaldirac=self.azami_kaldirac)
         return {**sonuc, "yaklasik_fiyat_eylem": yaklasik}
+
+
+    def hareket(self, log=print) -> dict[str, dict]:
+        if self._hareket is None:
+            coinler = sorted(c for c in self.hacim if ":" not in c)       # builder dex coinleri (`xyz:AAPL` …) candleSnapshot'ta mum vermez ve hız sınırını boşuna harcar: H yalnız ana HL perp coinleri
+            log(f"H: {len(coinler)}/{len(self.hacim)} ana perp coini için saatlik mum okunuyor (trend coin)")
+            self._hareket = radar_form.coin_hareketleri(self.client, coinler, self.kosu_ms, self.pencere_bas_ms, self.rules, log)
+        return self._hareket
+
+    def form_girdileri(self, dolumlar: list[dict], sonuc: dict, trader_hesap_usd: float, log=print) -> dict:
+        """R2 ham girdileri (yalnız `gecti` adaylar için; docs/VERI_SOZLESMESI.md "Radar havuzu"): günlük kopya getirisi serisi → İ1; kopya düşüşü → İ2; yayılma → Y; son 72 sa kopya getirisi
+        (aynı dolumlar, kopya_v5, pencere = son `radar_soguyor_saat` saat, başlangıçta BOŞ); hype payı → H."""
+        kasa = float(sonuc.get("baslangic_usd") or self.rules["canli_kasa_usd"])
+        gunluk = radar_form.gunluk_getiriler(sonuc.get("egri") or [], kasa)
+        t72 = pd.Timestamp(self.kosu_ms - int(self.rules["radar_soguyor_saat"]) * HOUR, unit="ms", tz="UTC")
+        g = self.son_girdi or {}
+        son72 = kopya_v5.hesapla(dolumlar, g.get("saatlik", {}), g.get("isaret", {}), g.get("yurutme", {}), [], t72, pd.Timestamp(self.kosu_ms, unit="ms", tz="UTC"),
+                                 self.gecikme_dk, KOPYA_TARZ, self.rules, azami_kaldirac=self.azami_kaldirac, trader_hesap_usd=trader_hesap_usd)
+        return {"kopya_gunluk": gunluk, "kopya_kazanc_gun_orani": radar_form.kazanc_gun_orani(gunluk), "kopya_dusus": _sayi(sonuc.get("dusus")),
+                "yayilma": radar_form.yayilma(sonuc.get("kapanan_islemler") or []),
+                "kopya_getiri_72s": 0.0 if son72.get("durum") == "hesaplanamadi" else _sayi(son72.get("getiri")),
+                "hype_payi": radar_form.hype_payi(closed_round_trips(perp_fills(dolumlar)), self.hareket(log), self.rules)}
 
 
 # ------------------------------------------------------------------------------------------------------------------------------ koşu
@@ -254,9 +291,10 @@ def _bos_satir(aday: dict, vlm: float, rules: dict) -> dict:
     getiri = trader_getiri_7g(aday["hesap_usd"], aday["hafta_pnl_usd"])
     return {"adres": aday["adres"], "hesap_usd": aday["hesap_usd"], "hafta_pnl_usd": aday["hafta_pnl_usd"], "trader_getiri_7g": getiri,
             "islem_sayisi": None, "medyan_tutma_saat": None, "kisa_islem_payi": None, "max_kaldirac": None, "likit_pay": None,
-            "kopya_getiri_7g": None, "kopya_koruma": None,
+            "kopya_getiri_7g": None, "ayna_getiri_7g": None, "kopya_koruma": None,
             "devir_hafta": vlm / aday["hesap_usd"] if aday["hesap_usd"] > 0 else None,
-            "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None, "gecti": False, "neden": None, "hata": None}
+            "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None, "v4_kopya_getiri_7g": None, "kopya_gunluk": None, "kopya_kazanc_gun_orani": None, "kopya_dusus": None, "yayilma": None,
+            "kopya_getiri_72s": None, "hype_payi": None, "gecti": False, "neden": None, "hata": None}
 
 
 def kopyalanabilirlik(aday: dict, dolumlar: list[dict] | None, hata: str | None, baglam: Baglam) -> dict:
@@ -277,15 +315,21 @@ def kopyalanabilirlik(aday: dict, dolumlar: list[dict] | None, hata: str | None,
     if satir["neden"]:
         return satir                                                       # dolum tabanlı kural başarısız: kopya oynatılmaz (kopya alanları null)
     try:
-        sonuc = baglam.kopya_oynat(dolumlar)
+        sonuc = baglam.kopya_oynat(dolumlar, aday["hesap_usd"])
     except HATALAR as hata_:
         return {**satir, "gecti": False, "neden": "veri_hatasi", "hata": im.data_error_reason(hata_)}
-    satir.update(kopya_olculeri(sonuc, satir["trader_getiri_7g"], aday["adres"], rules))
+    satir.update(kopya_olculeri(sonuc, aday["adres"], rules))
     satir["gecti"], satir["neden"] = degerlendir(satir, rules)
+    if satir["gecti"]:                                                     # R2 ham girdileri (T3): yalnız radar havuzundaki adaylar için
+        try:
+            satir.update(baglam.form_girdileri(dolumlar, sonuc, aday["hesap_usd"]))
+        except HATALAR as hata_:
+            return {**satir, "gecti": False, "neden": "veri_hatasi", "hata": im.data_error_reason(hata_)}
     return satir
 
 
-def kos(client: Any, kosu_ms: int, cikti: Path, aday_sayisi: int | None = None, rules: dict | None = None, log=print, saat=time.monotonic) -> dict:
+def kos(client: Any, kosu_ms: int, cikti: Path, aday_sayisi: int | None = None, rules: dict | None = None, log=print, saat=time.monotonic, v4_yan_yana: bool = False,
+        kural_ust: dict | None = None) -> dict:
     """R0 + R1 + yazım. `aday_sayisi` verilirse `radar_aday_tavan` yerine o (küçük deneme). Ucuzdan pahalıya: lider tablosundan elemeler (`payda_yok`, `devir_yuksek`) dolum
     ÇEKİLMEDEN; sonra `vault`; sonra dolum (en çok `radar_dolum_tavan`). Süre `radar_zaman_butcesi_dk`'yı aşınca kalan adaylar `zaman_yok`. Döner: havuz.json sözlüğü."""
     rules = rules or load_rules()
@@ -293,7 +337,7 @@ def kos(client: Any, kosu_ms: int, cikti: Path, aday_sayisi: int | None = None, 
     butce_sn = float(rules["radar_zaman_butcesi_dk"]) * 60.0
     pencere_bas = kosu_ms - int(rules["radar_pencere_saat"]) * HOUR
     adaylar, toplam, kesilen = evren(client.leaderboard(), rules, aday_sayisi)
-    baglam = Baglam(client, kosu_ms, pencere_bas, rules)
+    baglam = Baglam(client, kosu_ms, pencere_bas, rules, v4_yan_yana)
     baglam.piyasa_oku()
     log(f"R0: evren {toplam} kişi, aday {len(adaylar)}, kesilen {kesilen}; likit coin {len(baglam.likit_coinler())}/{len(baglam.hacim)}")
     satirlar = []
@@ -324,7 +368,7 @@ def kos(client: Any, kosu_ms: int, cikti: Path, aday_sayisi: int | None = None, 
     if zaman_yok:
         log(f"UYARI: zaman bütçesi ({rules['radar_zaman_butcesi_dk']} dk) aşıldı; {zaman_yok} aday `zaman_yok`")
     sonuc = {"sema": SEMA, "kosu_ms": kosu_ms, "pencere_bas_ms": pencere_bas, "evren_toplam": toplam, "evren_kesilen": kesilen,
-             "satirlar": satirlar}
+             **({"kural_ust": kural_ust} if kural_ust else {}), "satirlar": satirlar}
     klasor = cikti / datetime.fromtimestamp(kosu_ms / 1000, UTC).date().isoformat()
     klasor.mkdir(parents=True, exist_ok=True)
     gecici = klasor / "havuz.json.tmp"
@@ -352,13 +396,39 @@ def ozet_md(sonuc: dict) -> str:
     return "\n".join(cikti) + "\n"
 
 
+def radar_istemcisi(session=None, sleep=time.sleep, rules: dict | None = None) -> PublicClient:
+    """Radar için `PublicClient`: radar hız sınırı (`radar_api_agirlik_dk`) + HL 5xx / ağ hatasında en çok 3 yeniden deneme, artan bekleme (`KAPI_YENIDEN_BEKLEME` 5/15/45 sn); sonra `veri_hatasi`.
+    429 ilkesi değişmez (5 yeniden deneme + `Retry-After`)."""
+    rules = rules or load_rules()
+    return PublicClient(session=session, limiter=RateLimiter(limit=int(rules["radar_api_agirlik_dk"]), sleep=sleep), sleep=sleep, yeniden_bekleme=KAPI_YENIDEN_BEKLEME)
+
+
+def kural_ust_uygula(rules: dict, atamalar: list[str]) -> tuple[dict, dict]:
+    """YALNIZ deneme koşusu için (`radar_deneme.yml` `kural_ust`; günlük `radar.yml`'de YOK): `anahtar=deger` atamaları `radar_*` anahtarlarının üstüne yazılır (değer, mevcut değerin türüne çevrilir).
+    Döner: (yeni kurallar, uygulanan {anahtar: değer}); `radar_` ile başlamayan / bilinmeyen anahtar ValueError (donmuş kuralları kazara değiştirme)."""
+    yeni, uygulanan = dict(rules), {}
+    for atama in atamalar:
+        anahtar, ayrac, deger = atama.partition("=")
+        anahtar = anahtar.strip()
+        if not ayrac or not anahtar.startswith("radar_") or anahtar not in rules:
+            raise ValueError(f"kural_ust 'radar_<anahtar>=<değer>' olmalı ve anahtar kurallar.yaml'da bulunmalı: {atama!r}")
+        eski = rules[anahtar]
+        yeni[anahtar] = uygulanan[anahtar] = type(eski)(float(deger)) if isinstance(eski, int) and not isinstance(eski, bool) else type(eski)(deger)
+    return yeni, uygulanan
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--cikti", type=Path, default=Path("radar"))
     ap.add_argument("--aday-sayisi", type=int, default=None, help="7 gün getiriye göre ilk N aday (varsayılan: kurallar.yaml radar_aday_tavan)")
     ap.add_argument("--ozet-md", type=Path, default=None, help="özet tabloyu bu dosyaya da yaz (iş özeti için)")
+    ap.add_argument("--v4-yan-yana", action="store_true", help="bilgi: kopya oynatmayı kopya_v4 (sabit tutar) ile de yap, `v4_kopya_getiri_7g` alanına yaz")
+    ap.add_argument("--kural-ust", action="append", default=[], metavar="radar_x=deger", help="YALNIZ deneme: radar_* kuralının üstüne yaz (havuz.json `kural_ust` alanında görünür)")
     args = ap.parse_args(argv)
-    sonuc = kos(PublicClient(limiter=RateLimiter(limit=int(load_rules()["radar_api_agirlik_dk"]))), int(time.time() * 1000), args.cikti, args.aday_sayisi)
+    rules, kural_ust = kural_ust_uygula(load_rules(), args.kural_ust)
+    if kural_ust:
+        print(f"UYARI: deneme koşusu, kural üstüne yazma: {kural_ust}")
+    sonuc = kos(radar_istemcisi(rules=rules), int(time.time() * 1000), args.cikti, args.aday_sayisi, rules, v4_yan_yana=args.v4_yan_yana, kural_ust=kural_ust)
     ozet = ozet_md(sonuc)
     print(ozet)
     if args.ozet_md:

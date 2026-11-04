@@ -92,7 +92,7 @@ radar_max_kaldirac: 20.0                # x, sınır dahil
 radar_likit_coin_hacim_usd: 1000000     # $ (coin 24 sa nosyonel hacmi, metaAndAssetCtxs.dayNtlVlm), sınır dahil
 radar_likit_pay_min: 0.80               # oran (nosyonel), sınır dahil
 radar_kopya_gecikme_dk: 1               # dakika (kopya oynatma gecikmesi)
-radar_kopya_koruma_min: 0.50            # oran (kopya getirisi / trader getirisi), sınır dahil
+radar_kopya_koruma_min: 0.50            # oran (K-32: kopya getirisi / ayna getirisi; ayna = aynı slotla gecikmesiz + maliyetsiz oynatma; ayna <= 0 elenir), sınır dahil
 radar_max_devir_hafta: 100              # kat (hafta vlm / accountValue), sınır dahil
 radar_bootstrap_tekrar: 1000            # tekrar (tohum adresten türetilir: aynı girdi aynı sonuç)
 radar_bootstrap_alt_yuzdelik: 0.20      # oran (alt yüzdelik)
@@ -100,3 +100,25 @@ radar_akil_sagligi_getiri_max: 3.0      # oran (+%300), üstü veri hatası şü
 radar_dolum_tavan: 5000                 # dolum (7 günde bu kadar ya da fazlası = ≈ 2 dk'da bir dolum: kopyalanamaz; `dolum_fazla`, kopya oynatılmaz, dolum alanları null)
 radar_api_agirlik_dk: 1100              # ağırlık/dk (radar istemcisi hız sınırı; HL IP sınırı 1.200)
 radar_zaman_butcesi_dk: 120             # dakika (koşu süresi; aşılınca kalan adaylar `zaman_yok`)
+# ---- Canlı boyut (K-28, K-30; RADAR_V1.md §5/§5b): tek yer copytrade/boyut.py. Birim: $ (kasa = sanal/gerçek kopya kasası, kopya_$) ----
+canli_kasa_usd: 1000                    # $ (kullanıcı ayarı; üst sınır 1.000, AGENTS.md)
+canli_kasa_ust_usd: 1000                # $ (güvenlik üst sınırı; aşan kasa ValueError)
+radar_canli_slot_min_usd: 25            # $ (N = min(radar_saha_max, taban(kasa / bu)))
+radar_saha_max: 11                      # kişi (İlk 11)
+radar_min_emir_usd: 11                  # $ (HL alt emir sınırı 10 $ + pay)
+radar_slot_tavan_carpan: 3.0            # x (slot kasası başına pozisyon tavanı = çarpan x slot)
+# ---- R2 form puanı + günlük kadro (RADAR_V1.md §4, §5; v1'de donar). Ağırlıklar toplamı 1,0; oranlar kesir ----
+radar_agirlik_g: 0.35                   # G güven ayarlı getiri (bootstrap alt yüzdelik)
+radar_agirlik_k: 0.15                   # K kopya getirisi
+radar_agirlik_i1: 0.10                  # İ1 kârlı gün oranı
+radar_agirlik_i2: 0.10                  # İ2 düşüş (az = iyi)
+radar_agirlik_y: 0.10                   # Y yayılma
+radar_agirlik_h: 0.20                   # H hype yakalama
+radar_hype_trend_oran: 0.25             # oran (|7 g getiri| HL perp coinleri içinde üst %25 = trend coin)
+radar_hype_yeni_gun: 30                 # gün (listelenme <= bu kadar gün = trend coin)
+radar_hype_erken_pay: 0.5               # oran (coinin 7 g hareketinin bu payı gerçekleşmeden açılmış = erken giriş)
+radar_soguyor_saat: 72                  # saat (form sürüyor mu penceresi)
+radar_soguyor_min_getiri: -0.02         # oran (son 72 sa kopya getirisi bunun ALTINDAYSA puanlanmaz; sınır dahil geçer)
+radar_kadro_toplam: 30                  # kişi (İlk 11 + Yedek 19)
+radar_kadro_ilk: 11                     # kişi (İlk katman)
+
