@@ -101,3 +101,9 @@
 - **Neden:** T3 ilk günlük koşu (#498, run 41885556829): 300 adaydan 10 geçti → kadro 10 (İlk 11'de 1 boş, Yedek boş).
 - **Kural:** saha = min(N, kadro); slot `kasa / N` sabit, boş slot nakit; kadro 36 sa'ten eskiyse yeni giriş yok + alarm. `GOREV_T4` §0.
 
+### K‑34. `radar_min_islem` 10 kalır (lider, 2026-11-04)
+- **Veri (aynı gün, 300 aday, K‑32):** eşik 10 → kopya aşamasına 25, `gecti` 10 (%40). Eşik 5 (bilgi koşusu, run 41896859450) → kopya aşamasına 64,
+  `gecti` 16. Ek 39 kişiden (5–9 işlem) yalnız 6'sı geçti (%15); `sans_riski` 8 → 26, `kopya_zarar` 6 → 17.
+- **Karar:** eşik 10 kalır. 5–9 işlemlik grup çoğunlukla şans/zarar; az işlemde bootstrap (şans süzgeci) zayıf. Kadroyu doldurmak için kapı gevşetilmez;
+  boş slot nakit (K‑33). Yeniden değerlendirme: 28 günlük canlı dönemden sonra §7b isabet ölçümüyle.
+
