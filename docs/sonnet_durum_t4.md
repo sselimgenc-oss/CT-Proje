@@ -13,7 +13,7 @@
 9. **Vardiya devri:** `concurrency` kuyruğu (iptal yok) + `kilit.json` (20 dk nabız). 4 saatte bir cron, vardiya 4 sa 15 dk: kuyrukta hep bir sonraki bekler, eski bitince hemen başlar (boşluk/çift emir yok). Durum 15 dk'da bir veri dalına yazılır.
 10. **Telegram:** `/dur` ve `/durum`; gönderim arka plan iş parçacığında (emir hattı beklemez). `K‑13` iş akışı taramasına tek istisna: `canli_vardiya.yml` Telegram secret'larını ortama geçirir. Secret yoksa kanal kapalı (yalnız kayıt).
 11. **Gerçek kip kodu yazıldı ve sahte exchange ile sınandı, ÇALIŞTIRILMADI.** SDK sürümü `hyperliquid-python-sdk==0.24.0` (2026-06-04, ≥ 2 hafta). `kip_belirle`: `GITHUB_ACTIONS=true` iken ret.
-12. Funding hesaba girmez (T2 ile aynı v1 kararı).
+12. ~~Funding hesaba girmez~~ → **K‑37 (T4b §2) ile değişti:** SANAL kipte funding hesaba girer (saatlik `−sz × mark × oran`, `metaAndAssetCtxs`); gerçek kipte HL kendi funding'ini hesaplar. Ayrıca K‑37 §5: gecikmiş AÇILIŞ emri yoktur (`gec_acilis`, olay yaşı > `canli_olay_stale_sn`); eski "geç görüldü ama mevcut defterle emir" davranışı kaldırıldı, kapanış/azaltma yaşa bakmaz.
 
 ## K-35 (lider denetimi) notları
 13. **v4 sınırları v5'ten kaldırıldı (lider onayına):** `kopya_v5` gerçekte `kopya_v4` risk katmanını da uyguluyordu — emir başına 100 $ ve trader başına toplam 200 $ (referans kasa 1.000 $). Bu, 272,7 $'lık slot toplam tavanından ÖNCE devreye girip toplamı 200 $'da tutuyordu; canlı motor ise 272,7 $'a kadar açardı → R1/6 canlıdan farklı sayı görürdü

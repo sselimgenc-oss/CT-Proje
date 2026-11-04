@@ -1,10 +1,12 @@
 """Telegram bildirimi + komutlar (Bot API doğrudan; görev T4 §1). Token/chat YALNIZ ortamdan (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`); yoksa kanal KAPALI (mesajlar yalnız kayda yazılır, motor çökmez).
 
-`post(url, json) -> dict` enjekte edilir (testte sahte). Komutlar yalnız yapılandırılmış `chat_id`'den kabul edilir: `/dur` (motoru durdur: pozisyonları kapat) ve `/durum`. Mesajlar kısa, adres kısaltılır (ilk 8 karakter).
+`post(url, json) -> dict` enjekte edilir (testte sahte). K‑37: komut yalnız `chat.id == chat_id` VE `from.id == chat_id` (özel sohbet) ise kabul edilir; yetkisiz komut kayda alınır; motor başlangıcından ÖNCE tarihli mesajlar yok sayılır (eski /dur yeniden tetiklenmez); `offset` motor.json'da kalıcıdır. Komutlar: `/dur` (motoru durdur: pozisyonları kapat) ve `/durum`. Mesajlar kısa, adres kısaltılır (ilk 8 karakter).
 """
 from __future__ import annotations
 
 import os
+import re
+import time
 from typing import Any, Callable
 
 KOMUTLAR = ("/dur", "/durum")
@@ -23,13 +25,16 @@ def varsayilan_post(url: str, yuk: dict) -> dict:
 
 class Telegram:
     def __init__(self, token: str | None = None, chat_id: str | None = None, post: Callable[[str, dict], dict] | None = None, ortam: dict | None = None,
-                 kayit: Callable[[dict], None] | None = None, arka_plan: bool = False) -> None:
+                 kayit: Callable[[dict], None] | None = None, arka_plan: bool = False, baslangic_s: float | None = None) -> None:
         ortam = os.environ if ortam is None else ortam
         self.token = (token if token is not None else ortam.get("TELEGRAM_BOT_TOKEN", "")).strip()
         self.chat_id = str(chat_id if chat_id is not None else ortam.get("TELEGRAM_CHAT_ID", "")).strip()
         self.post = post or varsayilan_post
         self.kayit = kayit
         self.offset = 0
+        self.baslangic_s = float(time.time() if baslangic_s is None else baslangic_s)       # bundan önce tarihli mesajlar yok sayılır
+        self.yetkisiz_sayisi = 0
+        self.maske: list[str] = []                     # mesajlarda gizlenecek değerler (ör. kendi HL hesap adresimiz)
         self.hata_sayisi = 0
         self.gonderilen: list[str] = []
         self._havuz = None
@@ -46,6 +51,8 @@ class Telegram:
 
     def gonder(self, metin: str) -> bool:
         """Mesaj gönderir; hata motoru DURDURMAZ (sayılır). Token günlüğe/hata metnine ASLA yazılmaz."""
+        for m in self.maske:
+            metin = re.sub(re.escape(m), "[hesap]", metin, flags=re.I)
         self.gonderilen.append(metin)
         if self.kayit:
             self.kayit({"olay": "telegram", "metin": metin[:300], "acik": self.acik})
@@ -81,9 +88,18 @@ class Telegram:
         for u in (yanit or {}).get("result", []):
             self.offset = max(self.offset, int(u.get("update_id", 0)) + 1)
             m = u.get("message") or {}
-            if str((m.get("chat") or {}).get("id", "")) != self.chat_id:
-                continue
             metin = str(m.get("text", "")).strip().split("@")[0].lower()
+            if not metin.startswith("/"):
+                continue
+            if str((m.get("chat") or {}).get("id", "")) != self.chat_id or str((m.get("from") or {}).get("id", "")) != self.chat_id:
+                self.yetkisiz_sayisi += 1
+                if self.kayit:
+                    self.kayit({"olay": "telegram_yetkisiz", "komut": metin[:20], "chat": str((m.get("chat") or {}).get("id", ""))[:3] + "…"})
+                continue
+            if float(m.get("date", 0) or 0) < self.baslangic_s:
+                if self.kayit:
+                    self.kayit({"olay": "telegram_eski_komut", "komut": metin[:20]})
+                continue
             if metin in KOMUTLAR:
                 komutlar.append(metin)
         return komutlar
@@ -99,6 +115,7 @@ def msg_emir(adres: str, coin: str, yon: str, usd: float, px: float | None, kaym
         + (f" kayma {kayma * 1e4:+.1f}bp" if kayma is not None else "") + f" [{durum}]"
 
 
-def msg_gunluk(kip: str, kasa: float, ozsermaye: float, gun_getiri: float, toplam_getiri: float, saha: int, n: int, acik: list[str]) -> str:
-    return (f"GÜNLÜK ÖZET [{kip}] kasa {kasa:.0f}$ · özsermaye {ozsermaye:.2f}$ · gün {gun_getiri * 100:+.2f}% · toplam {toplam_getiri * 100:+.2f}% · saha {saha}/{n}\n"
+def msg_gunluk(kip: str, kasa: float, ozsermaye: float, gun_getiri: float, toplam_getiri: float, saha: int, n: int, acik: list[str], funding_usd: float | None = None) -> str:
+    return (f"GÜNLÜK ÖZET [{kip}] kasa {kasa:.0f}$ · özsermaye {ozsermaye:.2f}$ · gün {gun_getiri * 100:+.2f}% · toplam {toplam_getiri * 100:+.2f}% · saha {saha}/{n}"
+            + (f" · funding {funding_usd:+.4f}$" if funding_usd is not None else "") + "\n"
             + ("açık: " + ", ".join(acik) if acik else "açık pozisyon yok"))
