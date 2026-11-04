@@ -1,6 +1,6 @@
 """Radar taraması: R0 evren + R1 kopyalanabilirlik (docs/RADAR_V1.md §2–3, görev T2). Salt okunur: yalnız herkese açık Hyperliquid verisi.
 
-Akış: lider tablosu → `evren` (R0, hafta pnl'e göre ilk N) → vault süzgeci → her aday için son 7 günün dolumları → `islem_olculeri` + kopya oynatma
+Akış: lider tablosu → `evren` (R0, hafta getirisine göre ilk N; K‑31) → vault süzgeci → her aday için son 7 günün dolumları → `islem_olculeri` + kopya oynatma
 (`kopya_v4.hesapla`, 1 dk gecikme + maliyet, pencere başında BOŞ) → `degerlendir` (R1 kuralları sırayla) → `radar/<tarih>/havuz.json`.
 
 Kural 7 (tek yer): HL istekleri yalnız `tarama.PublicClient`; işlem eşleme `olcut.closed_round_trips`, kaldıraç `olcut.effective_leverage_detail`;
@@ -56,9 +56,9 @@ def _sayi(deger: Any) -> float | None:
 
 
 def evren(satirlar: list[dict], rules: dict | None = None, aday_tavan: int | None = None) -> tuple[list[dict], int, int]:
-    """R0: lider tablosu satırlarından aday listesi. Ön filtre: `accountValue ≥ radar_min_hesap_usd` (trader_$), hafta `pnl > 0`, hafta `vlm > 0`;
-    hafta `pnl`'e göre azalan sıra (eşitlikte adres), ilk `aday_tavan` (varsayılan `radar_aday_tavan`) alınır. Eksik / sayı olmayan alanlı satır evrene girmez.
-    Döner: (adaylar, evren_toplam = ön filtreyi geçen kişi, evren_kesilen = tavan nedeniyle dışarıda kalan)."""
+    """R0 (K‑31): lider tablosu satırlarından aday listesi. Ön filtre: hafta başı sermaye `accountValue − hafta pnl ≥ radar_min_hesap_usd` (trader_$; yatırma şişirmesini önler),
+    hafta `pnl > 0`, hafta `vlm > 0`; sıra `trader_getiri_7g` (= pnl / (accountValue − pnl)) AZALAN (eşitlikte adres), ilk `aday_tavan` (varsayılan `radar_aday_tavan`) alınır.
+    Eksik / sayı olmayan alanlı satır evrene girmez. Döner: (adaylar, evren_toplam = ön filtreyi geçen kişi, evren_kesilen = tavan nedeniyle dışarıda kalan)."""
     rules = rules or load_rules()
     tavan = int(rules["radar_aday_tavan"] if aday_tavan is None else aday_tavan)
     esik = float(rules["radar_min_hesap_usd"])
@@ -67,9 +67,9 @@ def evren(satirlar: list[dict], rules: dict | None = None, aday_tavan: int | Non
         adres = _address(satir)
         hesap = _sayi(satir.get("accountValue", satir.get("account_value")))
         pnl, vlm = _sayi(_window(satir, "week", "pnl")), _sayi(_window(satir, "week", "vlm"))
-        if adres and hesap is not None and pnl is not None and vlm is not None and hesap >= esik and pnl > 0 and vlm > 0:
+        if adres and hesap is not None and pnl is not None and vlm is not None and hesap - pnl >= esik and pnl > 0 and vlm > 0:
             gecenler.append({"adres": adres, "hesap_usd": hesap, "hafta_pnl_usd": pnl, "hafta_vlm_usd": vlm})
-    gecenler.sort(key=lambda a: (-a["hafta_pnl_usd"], a["adres"]))
+    gecenler.sort(key=lambda a: (-(a["hafta_pnl_usd"] / (a["hesap_usd"] - a["hafta_pnl_usd"])), a["adres"]))
     return gecenler[:tavan], len(gecenler), max(0, len(gecenler) - tavan)
 
 
@@ -181,13 +181,13 @@ def degerlendir(satir: dict, rules: dict | None = None, yalniz_dolum: bool = Fal
 class MumOnbellegi:
     """`PublicClient.candles` ile aynı yüzey; her coinin dakikalık (Hyperliquid yalnız son 5.000 dakikayı verir), 5 dakikalık ve saatlik serisini koşu boyunca BİR kez çeker, sonraki
     çağrıları dilimden yanıtlar. Böylece mevcut hazırlayıcılar (`izleme_motoru.execution_candles` / `mark_candles`, `kopya_v2.saatlik_mumlar`) DEĞİŞMEDEN kullanılır
-    ve aynı coini kullanan yüzlerce aday API'yi yeniden yormaz. Bellek: yalnız (t, o) çiftleri."""
+    ve aynı coini kullanan yüzlerce aday API'yi yeniden yormaz. Bellek: yalnız (t, açılış, kapanış) üçlüleri (5 dk yürütme fiyatı kapanışı da okur)."""
 
     DAKIKA_SINIRI = 4999            # execution_candles ile aynı: 1 dk mum geçmişi sınırı (dakika)
 
     def __init__(self, client: Any, kosu_ms: int, pencere_bas_ms: int):
         self.client, self.kosu_ms, self.pencere_bas_ms = client, kosu_ms, pencere_bas_ms
-        self.seriler: dict[tuple[str, str], list[tuple[int, float]]] = {}
+        self.seriler: dict[tuple[str, str], list[tuple[int, float, float | None]]] = {}
 
     def _seri(self, coin: str, aralik: str) -> list[tuple[int, float]]:
         anahtar = (coin, aralik)
@@ -197,11 +197,11 @@ class MumOnbellegi:
             else:                                                                  # 5 dk (5.000 mum ≈ 17 gün) ve 1 sa: pencerenin tamamı
                 bas = self.pencere_bas_ms // HOUR * HOUR
             satirlar = self.client.candles(coin, bas, self.kosu_ms, interval=aralik)
-            self.seriler[anahtar] = sorted((int(c["t"]), float(c["o"])) for c in satirlar if _sayi(c.get("o")) is not None)
+            self.seriler[anahtar] = sorted((int(c["t"]), float(c["o"]), _sayi(c.get("c"))) for c in satirlar if _sayi(c.get("o")) is not None)
         return self.seriler[anahtar]
 
     def candles(self, coin: str, start_ms: int, end_ms: int, interval: str = "1m") -> list[dict]:
-        return [{"t": t, "o": o} for t, o in self._seri(coin, interval) if start_ms <= t <= end_ms]
+        return [{"t": t, "o": o, **({"c": k} if k is not None else {})} for t, o, k in self._seri(coin, interval) if start_ms <= t <= end_ms]
 
     def info(self, payload: dict, weight: int = 20) -> Any:
         return self.client.info(payload, weight=weight)
@@ -319,7 +319,7 @@ def kos(client: Any, kosu_ms: int, cikti: Path, aday_sayisi: int | None = None, 
             hata = im.data_error_reason(hata_)
         satir = kopyalanabilirlik(aday, dolumlar, hata, baglam)
         satirlar.append(satir)
-        log(f"{etiket} dolum {len(dolumlar or [])}, işlem {satir['islem_sayisi']}, gecti {satir['gecti']} ({satir['neden']}); {saat() - t_aday:.0f} sn (toplam {(saat() - baslangic) / 60:.1f} dk)")
+        log(f"{etiket} dolum {len(dolumlar or [])}, işlem {satir['islem_sayisi']}, gecti {satir['gecti']} ({satir['neden']}{': ' + satir['hata'] if satir.get('hata') else ''}); {saat() - t_aday:.0f} sn (toplam {(saat() - baslangic) / 60:.1f} dk)")
     zaman_yok = sum(1 for x in satirlar if x["neden"] == "zaman_yok")
     if zaman_yok:
         log(f"UYARI: zaman bütçesi ({rules['radar_zaman_butcesi_dk']} dk) aşıldı; {zaman_yok} aday `zaman_yok`")
@@ -355,7 +355,7 @@ def ozet_md(sonuc: dict) -> str:
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--cikti", type=Path, default=Path("radar"))
-    ap.add_argument("--aday-sayisi", type=int, default=None, help="hafta pnl'e göre ilk N aday (varsayılan: kurallar.yaml radar_aday_tavan)")
+    ap.add_argument("--aday-sayisi", type=int, default=None, help="7 gün getiriye göre ilk N aday (varsayılan: kurallar.yaml radar_aday_tavan)")
     ap.add_argument("--ozet-md", type=Path, default=None, help="özet tabloyu bu dosyaya da yaz (iş özeti için)")
     args = ap.parse_args(argv)
     sonuc = kos(PublicClient(limiter=RateLimiter(limit=int(load_rules()["radar_api_agirlik_dk"]))), int(time.time() * 1000), args.cikti, args.aday_sayisi)

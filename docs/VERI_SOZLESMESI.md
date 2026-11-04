@@ -322,7 +322,7 @@ daha eskisi için (Hyperliquid `candleSnapshot` yalnız son 5.000 dakikalık mum
 (ağırlık/dk); koşu süresi `radar_zaman_butcesi_dk`'yı aşarsa kalan adaylar `zaman_yok` olur (ölçüsüz).
 
 Üst düzey: `sema` (`"radar-havuz-v1"`), `kosu_ms` (UTC ms, koşu başlangıcı), `pencere_bas_ms` (UTC ms), `evren_toplam` (ön filtreyi geçen kişi sayısı), `evren_kesilen` (aday tavanı nedeniyle dışarıda kalan kişi sayısı),
-`satirlar` (aday başına bir satır, hafta pnl'e göre azalan sırada).
+`satirlar` (aday başına bir satır, `trader_getiri_7g`'ye göre azalan sırada (K‑31)).
 
 | Alan | Birim / ölçek | Anlam |
 |---|---|---|

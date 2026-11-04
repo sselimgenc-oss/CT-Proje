@@ -31,14 +31,24 @@ def lider(adres, hesap, pnl, vlm):
 
 # -------------------------------------------------------------------------------------------------------------------------------- R0
 def test_evren_filtre_siniri_dahil_siralama_ve_kesilen():
-    satirlar = [lider("0xa", 10_000, 5, 1), lider("0xb", 9_999.99, 500, 1), lider("0xc", 20_000, 0, 1), lider("0xd", 20_000, 7, 0),
-                lider("0xe", 50_000, 9, 3), lider("0xf", 30_000, 5, 2)]
+    """Hafta başı sermaye = hesap − pnl ≥ 10.000 (tam sınır girer). 0xa 10.005−5 = 10.000 (girer, getiri 5e-4); 0xg 10.004,99−5 = 9.999,99 elenir; 0xb 9.499,99 elenir;
+    0xe 9/49.991 = 1,80e-4; 0xf 5/29.995 = 1,67e-4; 0xc pnl 0 ve 0xd vlm 0 elenir."""
+    satirlar = [lider("0xa", 10_005, 5, 1), lider("0xb", 9_999.99, 500, 1), lider("0xc", 20_000, 0, 1), lider("0xd", 20_000, 7, 0),
+                lider("0xe", 50_000, 9, 3), lider("0xf", 30_000, 5, 2), lider("0xg", 10_004.99, 5, 1)]
     adaylar, toplam, kesilen = r.evren(satirlar, RULES)
-    assert [a["adres"] for a in adaylar] == ["0xe", "0xa", "0xf"]       # pnl 9 > 5 (eşitlikte adres sırası: 0xa < 0xf); hesap 9.999,99 / pnl 0 / vlm 0 elendi
-    assert (toplam, kesilen) == (3, 0)
+    assert [a["adres"] for a in adaylar] == ["0xa", "0xe", "0xf"] and (toplam, kesilen) == (3, 0)
     adaylar, toplam, kesilen = r.evren(satirlar, RULES, aday_tavan=2)
-    assert [a["adres"] for a in adaylar] == ["0xe", "0xa"] and (toplam, kesilen) == (3, 1)
-    assert adaylar[0] == {"adres": "0xe", "hesap_usd": 50_000.0, "hafta_pnl_usd": 9.0, "hafta_vlm_usd": 3.0}
+    assert [a["adres"] for a in adaylar] == ["0xa", "0xe"] and (toplam, kesilen) == (3, 1)
+    assert adaylar[0] == {"adres": "0xa", "hesap_usd": 10_005.0, "hafta_pnl_usd": 5.0, "hafta_vlm_usd": 1.0}
+
+
+def test_evren_siralama_getiriye_gore_altin_ornek_k31():
+    """K‑31 altın örnek (elle): A hesap 110.000 pnl 100.000 → sermaye 10.000 (sınırda girer), getiri 10,0 · C hesap 1.000.000 pnl 200.000 → sermaye 800.000, getiri 0,25 ·
+    B hesap 50.000 pnl 5.000 → sermaye 45.000, getiri 0,1111 · D hesap 15.000 pnl 6.000 → sermaye 9.000 < 10.000 (yatırma şişirmesi) elenir.
+    Beklenen sıra A, C, B (pnl $ sırası C, A, B olurdu)."""
+    satirlar = [lider("0xB", 50_000, 5_000, 9), lider("0xC", 1_000_000, 200_000, 9), lider("0xD", 15_000, 6_000, 9), lider("0xA", 110_000, 100_000, 9)]
+    adaylar, toplam, kesilen = r.evren(satirlar, RULES)
+    assert [a["adres"] for a in adaylar] == ["0xA", "0xC", "0xB"] and (toplam, kesilen) == (3, 0)
 
 
 def test_evren_eksik_alan_ve_bozuk_satir_evrene_girmez():
@@ -168,6 +178,7 @@ class Sahte:
         self.liderler, self.dolumlar, self.fiyat, self.vaultlar, self.hata = liderler, dolumlar, fiyat, set(vaultlar), hata or {}
         self.hacim = hacim or {"BTC": 5e8, "ETH": 3e8, "ALT": 1000.0}
         self.cagrilar: list = []
+        self.dk_siniri = None
 
     def leaderboard(self):
         return self.liderler
@@ -182,7 +193,9 @@ class Sahte:
         return [f for f in self.dolumlar.get(adres, []) if int(f["time"]) >= bas and (end_ms is None or int(f["time"]) <= end_ms)]
 
     def candles(self, coin, bas, son, interval="1m"):
-        adim = MIN if interval == "1m" else HOUR
+        adim = {"1m": MIN, "5m": 5 * MIN}.get(interval, HOUR)
+        if interval == "1m" and self.dk_siniri:                                 # gerçek HL: 1 dk mum yalnız son 5.000 dakika
+            bas = max(bas, son - self.dk_siniri * MIN)
         t = bas // adim * adim
         satirlar = []
         while t <= son:
@@ -386,3 +399,24 @@ def test_eski_hedef_5dk_mumun_kotu_fiyati_alis_buyuk_satis_kucuk_ve_varsayilan_d
     eksik = []
     im.execution_candles(type("I", (), {"candles": lambda *a, **k: []})(), alis, {}, simdi, 1, eksik, {}, eski_aralik="5m")
     assert eksik == [{"coin": "BTC", "hedef": ms("10:08:00")}]                          # 5 dk mum yoksa fiyat uydurulmaz
+
+
+def test_eski_dolumlar_5dk_mum_yolu_gercek_sekilli_mumlarla_veri_hatasi_vermez(tmp_path):
+    """Gerçek koşu hatası (300 aday, 9/9 `veri_hatasi`, hata = "'c'"): 1 dk mum yalnız son 5.000 dk olduğundan 3,5 günden eski dolumlar 5 dk mum yolundan geçer ve o yol
+    kapanışı (`c`) okur; `MumOnbellegi` yalnız `t`/`o` döndürünce KeyError('c') çıkıyordu. Burada 5 gün önce 100'den açılıp 110'dan kapanan işlem, 5 dk mum açılış 100 → 110 (kapanış aynı):
+    `veri_hatasi` OLMAZ, kopya alanları dolar, `yaklasik_fiyat_eylem` 2 (iki eylem de 5 dk mumdan)."""
+    t_ac, t_kapa = KOSU - 5 * 24 * HOUR, KOSU - 5 * 24 * HOUR + HOUR
+    dolumlar = {A1: [dolum(t_ac, "BTC", "B", 10, 0, 100), dolum(t_kapa, "BTC", "A", 10, 10, 110, kapanan=100.0)]}
+    fiyat = lambda coin, t: 110.0 if t >= t_kapa else 100.0                       # noqa: E731
+    c = Sahte([lider(A1, 20_000, 100, 5_000)], dolumlar, fiyat)
+    c.dk_siniri = 4999
+    s = satir_al(kos(c, tmp_path, rules=RULES1), A1)
+    assert s["hata"] is None and s["neden"] != "veri_hatasi"
+    assert isinstance(s["kopya_getiri_7g"], float) and s["kopya_getiri_7g"] > 0 and s["yaklasik_fiyat_eylem"] == 2
+
+
+def test_mum_onbellegi_kapanisi_korur():
+    c = Sahte([], {}, lambda coin, t: 100.0)
+    m = r.MumOnbellegi(c, KOSU, KOSU - HOUR)
+    satir = m.candles("BTC", KOSU - HOUR, KOSU, interval="5m")
+    assert satir and all(x["o"] == 100.0 and x["c"] == 100.0 for x in satir)

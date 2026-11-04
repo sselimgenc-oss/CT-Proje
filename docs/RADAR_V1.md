@@ -20,8 +20,8 @@ Akış: **R0 evren → R1 kopyalanabilirlik (şimdi) → R2 form puanı (son 7 g
 ## 2. R0 — Evren ve tarama ritmi (K‑26: günde bir, kayan 7 gün)
 - Kaynak: Hyperliquid lider tablosu (`stats-data` leaderboard; `week` penceresi: `pnl`, `vlm`, `accountValue`). Leaderboard ROI **kullanılmaz**
   (yatırma/çekme bozuyor); getiri kendi kopya hesabımızdan gelir.
-- Ön filtre: `accountValue ≥ 10.000 trader_$`, hafta `pnl > 0`, hafta `vlm > 0`, vault/alt hesap değil.
-- **Günlük tarama (00:37 UTC):** ön filtreden geçenler hafta `pnl`'e göre sıralanır, ilk **300** için son 7 gün dolumları çekilir → R1 → R2 →
+- Ön filtre (K‑31): hafta başı sermaye `accountValue − hafta pnl ≥ 10.000 trader_$` (yatırma şişirmesini önler), hafta `pnl > 0`, hafta `vlm > 0`, vault/alt hesap değil.
+- **Günlük tarama (00:37 UTC):** ön filtreden geçenler **7 günlük getiriye** (`pnl / (accountValue − pnl)`, azalan; K‑31) göre sıralanır, ilk **300** için son 7 gün dolumları çekilir → R1 → R2 →
   kadro yeniden sıralanır (giriş ve çıkış). Kesilen kişi sayısı raporlanır.
 - **Kayan pencere:** her gün o ana kadarki son 7 gün ölçülür; her gün verinin ~1/7'si değiştiği için sıra kendiliğinden sakindir
   (bir günde yükselen yakalanır, tek kötü günde düşülmez).
