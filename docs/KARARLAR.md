@@ -107,3 +107,9 @@
 - **Karar:** eşik 10 kalır. 5–9 işlemlik grup çoğunlukla şans/zarar; az işlemde bootstrap (şans süzgeci) zayıf. Kadroyu doldurmak için kapı gevşetilmez;
   boş slot nakit (K‑33). Yeniden değerlendirme: 28 günlük canlı dönemden sonra §7b isabet ölçümüyle.
 
+### K‑35. Slot toplam tavanı + toplam marj tavanı + tek payda (lider denetimi, 2026-11-04)
+- **Bulgu:** `boyut` 3 × slot tavanını coin başına uyguluyor; trader çok coinde açarsa slotun katları kadar risk. Toplam marj kasayla sınırlı değil (sanal kip
+  imkânsız pozisyon tutabilir). Motorun trader hesap paydası (ana dex) radarınkinden (lider tablosu) farklı.
+- **Karar:** trader başına tüm coinler toplamı ≤ 3 × slot; toplam başlangıç marjı ≤ özsermaye; payda = tüm perp dex + spot USDC; gerçek kipte kasa = min(ayar, hesap).
+  `kopya_v5` aynı kuralı uygular (R1/6 ile motor aynı). `GOREV_T4` §0b.
+
