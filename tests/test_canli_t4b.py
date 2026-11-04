@@ -481,3 +481,16 @@ def test_kendi_hesap_adresi_hicbir_dosyaya_ve_telegram_mesajina_yazilmaz(tmp_pat
             assert HLADR.lower() not in f.read_text(encoding="utf-8").lower(), f
     assert all(HLADR.lower() not in x.lower() for x in tgp.gonderilen) and any("[hesap]" in x for x in tgp.gonderilen)
     assert adr(1) in (tmp_path / "durum" / "hesap.json").read_text(encoding="utf-8")           # trader adresi (halka açık) kalır
+
+
+def test_baska_vardiya_aktifse_baslamama_telegram_alarmi_ve_kayit(tmp_path):
+    """Kilit başka vardiyada (20 dk içinde nabız): motor KipHatasi ile BAŞLAMAZ, Telegram'a alarm gider ve `vardiya_baslamadi` kaydı yazılır (T4b vardiya düşmesi gözlemi)."""
+    saat = Saat()
+    m1, *_ = kur(tmp_path, saat=saat)
+    m1.vardiya_id = "41904629030"
+    m1.baslat()
+    m2, _, _, tgp = kur(tmp_path, saat=saat)
+    m2.vardiya_id = "41932130886"
+    with pytest.raises(mt.KipHatasi):
+        m2.baslat()
+    assert any("BAŞLAMADI" in x and "41904629030" in x for x in tgp.gonderilen) and kayitlar(tmp_path, "vardiya_baslamadi")

@@ -238,7 +238,10 @@ class Motor:
         """`durum/kilit.json`: başka bir vardiya `canli_kilit_dk` içinde nabız attıysa BAŞLAMAZ (çift emir yok). Temiz kapanışta bırakılır; çökme/zaman aşımında nabız eskir ve sonraki vardiya devralır."""
         k = _oku(self.durum_dizin / "kilit.json") or {}
         if k.get("vardiya") not in (None, self.vardiya_id) and not k.get("birakildi") and self.saat_ms() - int(k.get("nabiz_ms", 0)) < float(self.rules["canli_kilit_dk"]) * DAKIKA:
-            raise KipHatasi(f"başka vardiya aktif ({k.get('vardiya')}); kilit {self.rules['canli_kilit_dk']} dk içinde nabız attı")
+            mesaj = f"başka vardiya aktif ({k.get('vardiya')}); kilit {self.rules['canli_kilit_dk']} dk içinde nabız attı"
+            self.kayit({"olay": "vardiya_baslamadi", "neden": mesaj, "vardiya": self.vardiya_id})
+            self.tg.gonder(f"ALARM: vardiya {self.vardiya_id} BAŞLAMADI — {mesaj}")
+            raise KipHatasi(mesaj)
         nabiz = int(k.get("nabiz_ms", 0))
         if k and nabiz and (self.saat_ms() - nabiz) > float(self.rules["canli_bosluk_dk"]) * DAKIKA and k.get("vardiya") != self.vardiya_id:
             bosluk = (self.saat_ms() - nabiz) / DAKIKA
