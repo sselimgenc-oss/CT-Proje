@@ -1,17 +1,18 @@
-# Ajan kuralları (Codex ve diğer ajanlar her oturumda okur)
+# Ajan kuralları (Sonnet ve diğer ajanlar her oturumda okur)
 
-Bu repo bir copy trade araştırma projesidir (Hyperliquid; 2026-10-27 itibarıyla strateji araştırması kapandı ve silindi). Lider: Claude (denetler, birleştirir). Karar: kullanıcı.
+Bu repo bir copy trade projesidir (Hyperliquid). Strateji: **Form Radarı v1** (`docs/RADAR_V1.md`, K‑19). Lider: Claude (Opus; tasarım, görev, denetim, birleştirme). Yazıcı: Sonnet. Son karar: kullanıcı.
 
 ## Başlarken
-1. `main`'i çek; işe `main`'den yeni bir dal aç: `codex/<iş-adı>`.
+1. `main`'i çek; işe `main`'den yeni bir dal aç: `claude/<iş-adı>`.
 2. Önce `DURUM.md`'yi oku (güncel durum ve kararlar), sonra sana verilen görev belgesini (`docs/GOREV_*.md`).
-3. Belgede yazmayan bir karar gerekiyorsa **dur**, soruyu `docs/codex_durum_<iş>.md`'ye yaz; tahminle ilerleme.
+3. Belgede yazmayan bir karar gerekiyorsa **dur**, soruyu `docs/sonnet_durum_<iş>.md`'ye yaz; tahminle ilerleme.
 
 ## Değişmez kurallar
 - **Repo herkese açık:** API anahtarı, şifre, token, kişisel veri asla commit edilmez. Anahtarlar yalnız GitHub
   Secrets'ta; para çekme yetkisi kapalı.
-- **Gerçek para, aracı kurum bağlantısı, emir yok.** Paper yalnız sanaldır.
-- **Yöntem, kapı, eşik ve karar kodu değişmez** (`docs/KAPI_V3.md`, `copytrade/kurallar.yaml`) — görev belgesi
+- **Gerçek para, aracı kurum bağlantısı, emir yok.** Paper yalnız sanaldır. Bu yasak yalnız canlı kapısı (`RADAR_V1.md` §7) geçilip
+  kullanıcı açıkça karar verince kalkar.
+- **Yöntem, eşik, ağırlık ve karar kodu değişmez** (`docs/RADAR_V1.md`, `copytrade/kurallar.yaml` `radar_*`) — görev belgesi
   açıkça istemedikçe. Yeni ölçümler bilgi amaçlıdır.
 - **Testler zayıflatılmaz, atlanmaz, silinmez.** Yeni kod test ile gelir.
 - **`main`'e doğrudan push yok.** PR açılır; birleştirmeyi lider yapar.
@@ -43,8 +44,8 @@ Belgeler ve durum notları Türkçe, kısa ve maddeli.
    çıktıya (sayı, ekran görüntüsü, rapor) bakar ve akıl sağlığını kontrol eder (ör. getiri milyonlarca % olamaz, sanal kasa 1.000 $
 
 ## Sadeleştirme kuralları (kullanıcı kararı 2026-10-30; K‑10; kural 4 K‑11 ile kaldırıldı)
-5. **Strateji kilitli.** Seçim sürümü, oda/kontrol listeleri, eşikler ve ön kayıt yalnız kullanıcının açık kararıyla değişir.
+5. **Strateji kilitli.** `RADAR_V1.md` eşik ve ağırlıkları 28 günlük ileri deneme bitmeden değişmez; değişiklik lider + kullanıcı kararıyla yeni sürüm olur.
 6. **Hesap değişikliği yan yana.** Kopya hesabını değiştiren iş eski seriyi silmez/yeniden yazmaz; yeni sürüm (v2) yanında yayımlanır.
-   PR'da eski ↔ yeni sayılar yan yana (oda, kontrol, O10); açıklanamayan fark varsa birleştirilmez. O10 altın örnek testi zorunlu.
+   PR'da eski ↔ yeni sayılar yan yana; açıklanamayan fark varsa birleştirilmez. Altın örnek testi zorunlu.
 7. **Her iş tek yerde.** Aynı hesap ikinci bir yerde yazılmaz: veri bir kez çekilir, hesap yalnız motorda yapılır, ekranlar
-8. **Tek yazar, tek denetçi.** Bir dönemde kodu bir ajan yazar (K‑11 ile Sonnet, tek lider ve birleştirme yetkili), bir ajan denetler (Codex/Sol).
+8. **Tek yazar, tek denetçi.** Kodu Sonnet yazar ve PR açar; Claude (lider) gerçek çıktıya bakarak denetler ve birleştirir (K‑19).
