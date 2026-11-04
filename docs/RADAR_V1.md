@@ -86,8 +86,10 @@ gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez
   kullanıcı hazır olunca anahtar + `canli_kip: gercek`.
 - **Açılış:** hedef nosyonel = slot kasası × (trader'ın pozisyon nosyoneli / trader hesap değeri), tavan **3,0 × slot kasası**.
   Hedef < `radar_min_emir_usd` (**11 $**; HL alt sınırı 10 $ + pay): 3,0 × slot ≥ 11 $ ise 11 $'a yuvarlanır, değilse atlanır (`min_emir_atlandi`).
-- **Artırma / azaltma:** trader'ın pozisyon değişim oranıyla aynı oran. Emir < 11 $ çıkarsa: azaltmada kalan < 11 $ olacaksa pozisyonun tamamı
-  kapatılır, değilse atlanır; artırmada atlanır. Trader tamamen kapatınca biz de tamamen kapatırız (reduce‑only).
+- **Artırma (K‑36, hedef tabanlı):** hedef toplam = slot × (trader'ın dolum SONRASI nosyoneli / trader hesap), tek coin tavanı 3,0 × slot ve slot toplam
+  tavanı (K‑35); emir = max(0, hedef toplam − bizim mevcut pozisyon). Emir < 11 $ → atlanır. (Eski "değişim oranı" kuralı, 11 $'a yuvarlanmış açılıştan sonra
+  kısmi dolum zincirinde patlıyordu.)
+- **Azaltma:** trader'ın pozisyon azaltma oranıyla aynı oran. Emir < 11 $ çıkarsa: kalan < 11 $ olacaksa pozisyonun tamamı kapatılır, değilse atlanır. Trader tamamen kapatınca biz de tamamen kapatırız (reduce‑only).
 - **Marj:** coin başına **izole, 3x** (bir pozisyonun tasfiyesi kasanın geri kalanını yakmaz).
 - **Emir:** IOC limit, fiyat = en iyi karşı fiyat ± **%0,5** kayma tavanı; dolmayan kısım yeniden denenmez (`dolmadi` kaydı).
 - Her emir için kayıt: trader dolum zamanı, bizim görme zamanımız, emir/dolum fiyatı, kayma, ücret, neden.

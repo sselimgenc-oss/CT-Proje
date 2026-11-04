@@ -40,7 +40,8 @@ def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trad
     `slot`: slot kasası ($); `fiyat`: yürütme fiyatı; `biz_slot_toplam_usd`: bu trader'ın TÜM coinlerdeki kopya nosyoneli toplamı ($, K‑35; verilmezse yalnız bu coinin `biz_poz_usd`'ü — eski coin başına davranış).
     - `ac`: slot × (trader nosyonel / trader hesap), tek emir tavanı `radar_slot_tavan_carpan` × slot; **slot toplam tavanı (K‑35, RADAR §6 "slot başına 3,0x"):** trader'ın tüm coinlerdeki toplamı ≤ çarpan × slot, aşan kısım kırpılır (`slot_tavani`;
       kalan < `radar_min_emir_usd` ise 0). Hedef < minimum ise: tavandan kalan ≥ minimum → minimum'a yuvarlanır (`min_emir_yuvarlandi`), değilse 0 (`min_emir_atlandi` / kalan yetmiyorsa `slot_tavani`).
-    - `artir`: bizim pozisyon × trader'ın artış oranı; **toplam** (tüm coinler) tavanı aşılmaz (`slot_tavani`); < minimum → 0.
+    - `artir` (K‑36, hedef tabanlı): hedef = slot × trader nosyonel(sonra) / trader hesap, coin tavanı 3 × slot; emir = max(0, hedef − mevcut); sonra K‑35 toplam tavanı
+      (`slot_tavani`); emir < minimum → 0 (`min_emir_atlandi`); hesap/fiyat ≤ 0 → 0 (`hesap_yok`).
     - `azalt`: bizim pozisyon × trader'ın azaltma oranı; < minimum ise kalan < minimum → tamamı kapat (`kucuk_kalan_kapat`), değilse 0 (`min_emir_atlandi`).
     - `kapat`: bizim pozisyonun tamamı (trader tam kapattı)."""
     rules = rules or load_rules()
@@ -67,9 +68,13 @@ def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trad
             return (minimum, "min_emir_yuvarlandi") if kalan >= minimum - EPS else (0.0, "slot_tavani")
         return hedef, neden
     if eylem == "artir":
-        if once <= 0:
-            return 0.0, "min_emir_atlandi"
-        emir, neden = biz * (sonra - once) / once, "tamam"
+        # K‑36: hedef tabanlı. hedef = slot × trader nosyonel(sonra) / trader hesap; coin tavanı; emir = max(0, hedef − mevcut); sonra K‑35 toplam tavanı.
+        if trader_hesap_usd <= 0 or fiyat <= 0:
+            return 0.0, "hesap_yok"
+        hedef = float(slot) * sonra * float(fiyat) / float(trader_hesap_usd)
+        if hedef > tavan + EPS:
+            hedef = tavan
+        emir, neden = max(0.0, hedef - biz), "tamam"
         if emir > kalan + EPS:
             emir, neden = kalan, "slot_tavani"
         if emir >= minimum - EPS:

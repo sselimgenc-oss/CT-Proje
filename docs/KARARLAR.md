@@ -113,3 +113,8 @@
 - **Karar:** trader başına tüm coinler toplamı ≤ 3 × slot; toplam başlangıç marjı ≤ özsermaye; payda = tüm perp dex + spot USDC; gerçek kipte kasa = min(ayar, hesap).
   `kopya_v5` aynı kuralı uygular (R1/6 ile motor aynı). `GOREV_T4` §0b.
 
+### K‑36. Artırma hedef tabanlı (lider, 2026-11-04; Sonnet bulgusu, `sonnet_durum_t4.md` #17)
+- **Bulgu:** ilk sanal vardiya (run 41904629030), `xyz:GEV`: açılış hedefi < 11 $ → 11 $'a yuvarlandı; aynı emrin sonraki kısmi dolumu "önceki pozisyona göre
+  büyük artış" göründü → 11 $ × oran = 261,73 $ (tavana dayandı). Oransal artırma, yuvarlanmış küçük açılışı ve kısmi dolum zincirini büyütüyor.
+- **Karar (`RADAR_V1.md` §5b):** artırma = max(0, hedef − mevcut), hedef = slot × trader nosyonel sonra / trader hesap (3 × slot ve K‑35 tavanlı); < 11 $ atlanır.
+  Azaltma ve kapanış oransal kalır. `boyut.hedef_emir` tek yer → `kopya_v5` (R1/6) ve motor aynı anda değişir (K‑28). Eski/yeni R1 sayıları yan yana (kural 6).
