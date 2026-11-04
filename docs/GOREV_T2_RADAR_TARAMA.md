@@ -4,8 +4,7 @@ Dayanak: `docs/RADAR_V1.md` §1–3 (K‑19). Dal: `claude/t2-radar-tarama` (mai
 
 ## 1. Kod
 - Yeni modül **`copytrade/radar_tarama.py`**: `evren(...)` (R0), `kopyalanabilirlik(...)` (R1), `kos(...)` (ikisi + yazım), `main()` (CLI).
-  İki kip (`RADAR_V1.md` §2, K‑25): `--kip tam` (hafta pnl ilk 300) ve `--kip sicak` (gün pnl ilk 50, kadroda olmayan, son 6 sa değerlendirilmiş
-  olan atlanır; `--kadro` dosyası verilirse onun üyeleri de eklenir). Kadro/sıralama mantığı T3–T4'te; T2 yalnız havuzu üretir.
+  Tek kip: günlük tarama (`RADAR_V1.md` §2, K‑26). Kadro/sıralama mantığı T3–T4'te; T2 yalnız havuzu üretir.
 - **Kural 7 (tek yer):** HL istekleri yalnız `tarama.PublicClient` ile; işlem eşleme `olcut.closed_round_trips`, kaldıraç `olcut.effective_leverage_detail`;
   kopya oynatma **yalnız** mevcut motorla (`kopya_v4.hesapla`, sabit tutar + v4 risk sınırları), piyasa/mum verisi `izleme_motoru`'nun mevcut
   hazırlayıcısıyla (gerekirse oradan ortak fonksiyona çıkar, kopyalama). Maliyet `hl_ortak.TAKER/SLIPPAGE`.
@@ -14,9 +13,7 @@ Dayanak: `docs/RADAR_V1.md` §1–3 (K‑19). Dal: `claude/t2-radar-tarama` (mai
 | Anahtar | Değer | Birim |
 |---|---|---|
 | `radar_min_hesap_usd` | 10000 | trader_$ |
-| `radar_aday_tavan` | 300 | kişi (tam) |
-| `radar_sicak_aday_tavan` | 50 | kişi (sıcak, gün pnl) |
-| `radar_sicak_tekrar_saat` | 6 | saat |
+| `radar_aday_tavan` | 300 | kişi |
 | `radar_pencere_saat` | 168 | saat |
 | `radar_min_islem` | 10 | kapanmış round trip |
 | `radar_min_medyan_tutma_saat` | 1.0 | saat |
@@ -43,7 +40,7 @@ Dayanak: `docs/RADAR_V1.md` §1–3 (K‑19). Dal: `claude/t2-radar-tarama` (mai
 - Sınırlar **dahil**: tam 10 işlem geçer, tam 1,0 sa geçer, tam %25 geçer, tam 20x geçer, tam %80 geçer, tam %50 geçer.
 
 ## 3. Çıktı ve sözleşme
-- `radar/<YYYY-MM-DD>/havuz.json` (tam) ve `radar/<YYYY-MM-DD>/sicak_<HH>.json` (sıcak): `{"sema": "radar-havuz-v1", "kip", "kosu_ms", "pencere_bas_ms", "evren_toplam", "evren_kesilen", "satirlar": [...]}`;
+- `radar/<YYYY-MM-DD>/havuz.json`: `{"sema": "radar-havuz-v1", "kosu_ms", "pencere_bas_ms", "evren_toplam", "evren_kesilen", "satirlar": [...]}`;
   satır: `adres, hesap_usd (trader_$), hafta_pnl_usd (trader_$), trader_getiri_7g (oran), islem_sayisi, medyan_tutma_saat, kisa_islem_payi (oran),
   max_kaldirac (x), likit_pay (oran), kopya_getiri_7g (oran, 1.000 kopya_$ ölçeğinde), kopya_koruma (oran), gecti (bool), neden (kod|null), hata (str|null)`.
 - `docs/VERI_SOZLESMESI.md`'ye yeni bölüm **"Radar havuzu (R0/R1)"**: her alanın birimi/ölçeği/zamanı, yukarıdaki gibi. Sözleşmeye yazılmayan alan yazılmaz.

@@ -10,7 +10,7 @@ Bu repo bir copy trade projesidir (Hyperliquid). Strateji: **Form Radarı v1** (
 ## Değişmez kurallar
 - **Repo herkese açık:** API anahtarı, şifre, token, kişisel veri asla commit edilmez. Anahtarlar yalnız GitHub
   Secrets'ta; para çekme yetkisi kapalı.
-- **Gerçek para yalnız K‑22 sınırında:** tek Hyperliquid hesabı, kasa ≤ 100 $ (artırım yalnız kullanıcı kararıyla), yalnız para çekme yetkisiz
+- **Gerçek para yalnız K‑22/K‑26 sınırında:** tek Hyperliquid hesabı, kasa ≤ 1.000 $ (artırım yalnız kullanıcı kararıyla), yalnız para çekme yetkisiz
   API cüzdanı, anahtar yalnız sunucuda / GitHub Secrets'ta. Emir kodu yalnız `RADAR_V1.md` §5b–§6 kurallarıyla ve testlerle gelir.
 - **Yöntem, eşik, ağırlık ve karar kodu değişmez** (`docs/RADAR_V1.md`, `copytrade/kurallar.yaml` `radar_*`) — görev belgesi
   açıkça istemedikçe. Yeni ölçümler bilgi amaçlıdır.
@@ -44,7 +44,7 @@ Belgeler ve durum notları Türkçe, kısa ve maddeli.
    çıktıya (sayı, ekran görüntüsü, rapor) bakar ve akıl sağlığını kontrol eder (ör. getiri milyonlarca % olamaz, sanal kasa 1.000 $
 
 ## Sadeleştirme kuralları (kullanıcı kararı 2026-10-30; K‑10; kural 4 K‑11 ile kaldırıldı)
-5. **Strateji kilitli.** `RADAR_V1.md` eşik ve ağırlıkları 28 günlük ileri deneme bitmeden değişmez; değişiklik lider + kullanıcı kararıyla yeni sürüm olur.
+5. **Strateji kilitli.** `RADAR_V1.md` eşik ve ağırlıkları ilk 28 günlük canlı dönem bitmeden değişmez; değişiklik lider + kullanıcı kararıyla yeni sürüm olur.
 6. **Hesap değişikliği yan yana.** Kopya hesabını değiştiren iş eski seriyi silmez/yeniden yazmaz; yeni sürüm (v2) yanında yayımlanır.
    PR'da eski ↔ yeni sayılar yan yana; açıklanamayan fark varsa birleştirilmez. Altın örnek testi zorunlu.
 7. **Her iş tek yerde.** Aynı hesap ikinci bir yerde yazılmaz: veri bir kez çekilir, hesap yalnız motorda yapılır, ekranlar

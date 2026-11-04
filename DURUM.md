@@ -3,7 +3,7 @@
 Son güncelleme: 2026-11-04, lider Claude (Opus). Yazıcı: Sonnet.
 
 ## Hedef
-Form Radarı v1 (`docs/RADAR_V1.md`, K‑22): son 7 günde formu yüksek, kopyalanabilir trader'ları bul → İlk 11 → ilk 4'ü 100 $ kasayla
+Form Radarı v1 (`docs/RADAR_V1.md`, K‑22…K‑26): her gün son 7 günde formu yüksek, kopyalanabilir trader'ları bul → İlk 11'in tamamını 1.000 $ kasayla
 **doğrudan canlı** kopyala (deneme yok, K‑23) → 28 gün sonra büyütme kapısı (kullanıcı kararı).
 
 ## İş sırası
@@ -14,7 +14,7 @@ Form Radarı v1 (`docs/RADAR_V1.md`, K‑22): son 7 günde formu yüksek, kopyal
 | T2 R0+R1 tarama (`docs/GOREV_T2_RADAR_TARAMA.md`) | Sonnet (T1b ile paralel) |
 | T3 R2 form puanı | bekliyor |
 | T4 canlı motor (kadro, saha, yürütücü, boyutlandırma, risk, Telegram) | bekliyor |
-| T5 sunucu + canlıya alma (kullanıcı: sunucu, API cüzdanı, 100 $) | bekliyor |
+| T5 sunucu + canlıya alma (kullanıcı: sunucu, API cüzdanı, 1.000 $) | bekliyor |
 | T6 rapor + pano | bekliyor |
 
 ## Kalan altyapı (yeni sistem kullanır)

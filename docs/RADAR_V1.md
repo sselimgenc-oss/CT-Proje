@@ -8,7 +8,7 @@ Eski sistem (Kapı v3, İlk 11 puanı, oda/kontrol, ön kayıt) **kaldırıldı*
   (bootstrap alt sınırı, yayılma, istikrar) ve kopyalanabilirlik **bugün** gecikme + maliyetle sınanır (R1/6).
 - **Kanıt = sahadaki gerçek para sonucu.** Tek motor canlıdır; deneme, kâğıt ya da gölge yoktur (K‑23). Sahadaki kişi kendi canlı sonucu
   ve günlük formuyla kalır ya da düşer.
-- Kayıp kasa ile sınırlıdır (100 $, −%20'de durur); kasa büyütmek ayrı kapıdır (§7).
+- Kayıp kasa ile sınırlıdır (1.000 $, −%20'de = 200 $ kayıpta durur); kasa büyütmek ayrı kapıdır (§7).
 
 Akış: **R0 evren → R1 kopyalanabilirlik (şimdi) → R2 form puanı (son 7 gün) → R3 kadro + canlı saha (gelecek) → R4 risk → R5 büyütme kapısı.**
 
@@ -17,20 +17,15 @@ Akış: **R0 evren → R1 kopyalanabilirlik (şimdi) → R2 form puanı (son 7 g
 - Kaldıraç **x** (nosyonel / hesap değeri). Süre: tutma **saat**, gecikme **dakika**. Zaman **UTC ms**; `t0` = adayın radara giriş anı.
 - Sıra/yüzdelik puanlar **0–100**. Pencere: `son7g` = [koşu zamanı − 7×24 sa, koşu zamanı).
 
-## 2. R0 — Evren ve tarama ritmi (K‑25: her gün + her saat)
-- Kaynak: Hyperliquid lider tablosu (`stats-data` leaderboard; `day` ve `week` pencereleri: `pnl`, `vlm`, `accountValue`). Leaderboard ROI
-  **kullanılmaz** (yatırma/çekme bozuyor); getiri kendi kopya hesabımızdan gelir.
-- Ön filtre (iki taramada aynı): `accountValue ≥ 10.000 trader_$`, hafta `pnl > 0`, hafta `vlm > 0`, vault/alt hesap değil.
-- **Tam tarama (günde 1, 00:37 UTC):** ön filtreden geçenler hafta `pnl`'e göre sıralanır, ilk **300** için son 7 gün dolumları çekilir →
-  R1 → R2 → **kadro yeniden sıralanır** (giriş ve çıkış). Kesilen kişi sayısı raporlanır.
-- **Sıcak tarama (her saat, :07 UTC):** "şu an başarılı işlem yapanları hemen yakala".
-  - Adaylar: ön filtreyi geçen ve **gün `pnl`'ine göre ilk 50**'de olup kadroda olmayanlar; son 6 saatte değerlendirilmiş olan atlanır.
-  - Bunlar için aynı R1 + R2 (son 7 gün, aynı eşikler, puan **son tam taramanın havuzuna göre** yüzdelik — ölçek aynı kalsın).
-  - Ayrıca kadronun 30 üyesinin puanı da aynı yolla güncellenir (sıra canlı kalsın).
-  - **Hızlı giriş, sakin çıkış:** sıcak tarama yalnız **ekler/yükseltir** (Yedek'e giriş, İlk 11'e yükselme, §5 histerezisiyle sahaya çıkış);
-    **düşürme** kararları (sıra > 22 / > 30) yalnız tam taramada verilir. Anında düşme kuralları (slot −%10, kaldıraç) her an geçerli.
-  - Kadro 30'u aşarsa en düşük puanlı Yedek çıkar.
-- Her iki tarama GitHub Actions'ta (salt okunur); çıktı `kadro.json` veri dalına yazılır; canlı motor sunucuda bunu **5 dakikada bir** okur.
+## 2. R0 — Evren ve tarama ritmi (K‑26: günde bir, kayan 7 gün)
+- Kaynak: Hyperliquid lider tablosu (`stats-data` leaderboard; `week` penceresi: `pnl`, `vlm`, `accountValue`). Leaderboard ROI **kullanılmaz**
+  (yatırma/çekme bozuyor); getiri kendi kopya hesabımızdan gelir.
+- Ön filtre: `accountValue ≥ 10.000 trader_$`, hafta `pnl > 0`, hafta `vlm > 0`, vault/alt hesap değil.
+- **Günlük tarama (00:37 UTC):** ön filtreden geçenler hafta `pnl`'e göre sıralanır, ilk **300** için son 7 gün dolumları çekilir → R1 → R2 →
+  kadro yeniden sıralanır (giriş ve çıkış). Kesilen kişi sayısı raporlanır.
+- **Kayan pencere:** her gün o ana kadarki son 7 gün ölçülür; her gün verinin ~1/7'si değiştiği için sıra kendiliğinden sakindir
+  (bir günde yükselen yakalanır, tek kötü günde düşülmez).
+- Tarama GitHub Actions'ta (salt okunur); çıktı `kadro.json` veri dalına yazılır; canlı motor sunucuda bunu **5 dakikada bir** okur.
 
 ## 3. R1 — Kopyalanabilirlik (şimdi; sert filtreler, hepsi gerekli)
 | # | Kural | Eşik | Gerekçe |
@@ -67,12 +62,12 @@ H = trader'ın `son7g` brüt kârının erken-trend girişlerden gelen payı (0�
 ## 5. R3 — Kadro (K‑22/K‑23: tek motor, canlı; deneme/gölge yok)
 Kadro günlük radar koşusunun **form sırasıdır**, toplam **30**: 1–11 **İlk 11**, 12–30 **Yedek 19** (K‑24; PAF yok). Yalnız İlk 11'in ilk **N**'i
 gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez, emir yok. Havuzda 30'dan az kişi varsa kadro o kadardır.
-- **Saha sayısı:** `N = min(11, taban(kasa / radar_canli_slot_min_usd))`, `radar_canli_slot_min_usd = 25` → 100 $ kasada **N = 4**.
+- **Saha sayısı:** `N = min(11, taban(kasa / radar_canli_slot_min_usd))`, `radar_canli_slot_min_usd = 25` → **1.000 $ kasada N = 11** (slot ≈ 90,9 $).
   Slot kasası = kasa / N (gerçek USDC).
 - **İlk gün:** form sırasının ilk N'i sahaya çıkar.
 - **Sahaya giriş (sonraki günler):** saha slotu boşalınca İlk 11'in sahada olmayan en iyi sıralısı girer.
 - **Değiştirme (histerezis):** dolu sahada bir üyenin yerini aday ancak aday form sırası ≤ N **ve** üye form sırası > 11 ise alır.
-  Günde en fazla **2** saha değişikliği (devir maliyeti; sıcak + tam tarama toplamı).
+  Günde en fazla **2** saha değişikliği (devir maliyeti).
 - **Sahadan düşme:**
   - Anında: sahaya girişten beri slot düşüşü ≥ %10; R1/4 (kaldıraç > 20x) ihlali.
   - Günlük: form sırası 2 gün üst üste > 22, ya da 1 gün kadro dışı (> 30); 72 sa yeni işlem yok; R1'den elendi.
@@ -97,7 +92,7 @@ gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez
 - **/dur şalteri:** Telegram komutu ya da sunucuda dosya → aynı kapanış.
 
 ## 7. R5 — Büyütme kapısı (kasaya para eklemek; son karar kullanıcının)
-Kasa 100 $'da kalır; artırım ancak hepsi sağlanırsa **önerilir**:
+Kasa 1.000 $'da kalır; artırım ancak hepsi sağlanırsa **önerilir**:
 1. ≥ 28 gün canlı, ≥ 100 kapanmış saha işlemi.
 2. Net getiri > 0 (ücret + kayma + funding dahil), en büyük düşüş ≤ %15.
 3. Yürütme sağlığı: kaçan dolum ≈ 0, medyan kayma ve gecikme raporlu; motor çalışma süresi ≥ %98.
@@ -110,4 +105,4 @@ Bilgi ölçüsü (yalnız rapor, ek motor yok): günlük radar dosyalarından fo
 
 ## 9. İş sırası
 T1 eski sistemi sil · T1b Cloudflare kalıntıları · T2 R0+R1 tarama · T3 R2 form puanı · **T4 canlı motor** (kadro, saha, yürütücü, §5b
-boyutlandırma, §6 risk, Telegram) · **T5 sunucu + canlıya alma** (kullanıcı: sunucu, API cüzdanı, 100 $ USDC) · T6 rapor + pano.
+boyutlandırma, §6 risk, Telegram) · **T5 sunucu + canlıya alma** (kullanıcı: sunucu, API cüzdanı, 1.000 $ USDC) · T6 rapor + pano.
