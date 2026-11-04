@@ -13,6 +13,17 @@ Kip geçişi = anahtar + bu ayar, motor yeniden başlatılır; sanal dönemin ka
 - Korelasyon (`kadro.json` `korelasyon`): ilk günlerde az günlük veriyle (8 gün) hesaplı; kural yine uygulanır (≥ 0,7 → en fazla 2), kayıtta `kor_kirpildi`.
 - `min_islem` eşiği bilgi koşusu sonrası lider kararıyla değişebilir; motor eşik okumaz, yalnız `kadro.json`'u okur (T4'ü etkilemez).
 
+## 0b. Lider denetimi düzeltmeleri (K‑35, PR #504 birleşmeden önce)
+1. **Slot toplam tavanı (kritik):** `boyut` tavanı bugün coin başına (3 × slot) — bir trader 5 coinde açarsa 5 × 3 × slot olur. RADAR §6 "slot başına 3,0x".
+   Kural: bir trader'ın **tüm coinlerdeki** kopya nosyoneli toplamı ≤ `radar_slot_tavan_carpan` × slot; açılış/artırma bu kalana kırpılır (< 11 $ → atla, `slot_tavani`).
+   `boyut.hedef_emir`'e `biz_slot_toplam_usd` girdisi; aynı kural `kopya_v5`'te (R1/6 aynı sayıyı görsün, K‑28). Altın örnek: slot 90,91, mevcut 2 coin 200 $ → yeni açılış en çok 72,73 $.
+2. **Toplam marj tavanı (kritik):** açık pozisyonların başlangıç marjı toplamı (nosyonel / 3) + yeni emrin marjı ≤ serbest kasa (özsermaye). Aşan kısım kırpılır (`marj_yok`).
+   Gerçek kipte HL zaten reddeder; sanal kipte bu olmadan getiri şişer.
+3. **Trader hesap paydası (yüksek):** motor `clearinghouseState` yalnız ana dex okuyor; radar lider tablosu `accountValue` kullanıyor. Payda = tüm perp dex'lerin
+   `accountValue` toplamı + spot USDC (`hl_ortak.spot_usdc`). Böylece birleşik/spot hesaplı trader'da oran şişip her emir tavana vurmaz.
+4. **Gerçek kipte kasa (orta):** kullanılan kasa = min(`canli_kasa_usd`, HL hesap değeri); `--kontrol` bunu raporlar.
+5. Her biri testle; sanal vardiya kaydında `slot_tavani` / `marj_yok` sayıları PR özetine.
+
 ## 1. Yapı (`copytrade/canli/`)
 - `motor.py` — tek süreç: `dinleyici.py` WebSocket (userFills, İlk 11'in sahadaki adresleri) → `boyut.hedef_emir` → risk (`risk.py`) → `yurutucu.py`.
   Mevcut `dinleyici.py` / `live_koruma.py` yeniden kullanılır (kural 7); `risk_defter.py`'nin sabit tutar boyutu **kullanılmaz** (yerini `boyut.py` aldı).
