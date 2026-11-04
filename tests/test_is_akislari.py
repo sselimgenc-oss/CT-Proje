@@ -16,7 +16,7 @@ from test_izleme import ADDRESS, NOW, Client, project
 ROOT = Path(__file__).resolve().parents[1]
 WF = ROOT / ".github/workflows"
 SCRIPTS = ROOT / ".github/scripts"
-ISLER = ("izleme.yml", "dinleyici_deneme.yml", "izleme_deneme.yml", "radar_deneme.yml", "radar.yml")
+ISLER = ("izleme.yml", "dinleyici_deneme.yml", "izleme_deneme.yml", "radar_deneme.yml", "radar.yml", "canli_vardiya.yml")
 
 
 def yukle(ad: str) -> dict:
@@ -80,9 +80,12 @@ YASAK_DEPO = "|".join(["R" + "2_", "aws s" + "3", "cloud" + "flare", "wrang" + "
 
 
 def test_worker_telegram_adimlari_geri_gelmedi_k13():
+    """Eski Worker/Telegram adımları (K‑13) geri gelmedi. İSTİSNA (T4, K‑19 canlı motor): yalnız `canli_vardiya.yml` motorun Telegram secret'larını ortam değişkeni olarak geçirir (bildirim/komut `copytrade/canli/telegram.py`);
+    diğer yasaklı ifadeler orada da yasak."""
     for ad in ISLER:
         metin = (WF / ad).read_text(encoding="utf-8")
-        assert not re.search(YASAK, metin), ad
+        yasak = YASAK.replace("TELE" + "GRAM|", "") if ad == "canli_vardiya.yml" else YASAK
+        assert not re.search(yasak, metin), ad
 
 
 # ---------------------------------------------------------------------------------------------------- izleme: motor durumu geri yükleme, kısmi sonuç, hepsi hatalı
@@ -152,7 +155,7 @@ def test_izleme_listesi_main_den_okunur_ve_veri_dalina_yazilir():
 
 # ---------------------------------------------------------------------------------------------------- artık dosya temizliği
 def test_eski_sistem_is_akislari_ve_betikleri_yok():
-    kalanlar = {"ci.yml", "dinleyici_deneme.yml", "dolgu_deneme.yml", "gecikme_kar_deneme.yml", "izleme.yml", "izleme_deneme.yml", "dal_temizlik.yml", "pano.yml", "radar.yml", "radar_deneme.yml", "sonnet_isci.yml"}
+    kalanlar = {"canli_vardiya.yml", "ci.yml", "dinleyici_deneme.yml", "dolgu_deneme.yml", "gecikme_kar_deneme.yml", "izleme.yml", "izleme_deneme.yml", "dal_temizlik.yml", "pano.yml", "radar.yml", "radar_deneme.yml", "sonnet_isci.yml"}
     assert {p.name for p in WF.glob("*.yml")} == kalanlar          # eski sistem iş akışları (kapı, Pazar kadrosu, İlk 11 denemesi, v3 yan yana) geri gelmedi
     assert not (SCRIPTS / "kapi_yayimla.sh").exists()
     assert (SCRIPTS / "izleme_yayimla.sh").exists() and ".github/scripts/izleme_yayimla.sh" in (WF / "izleme.yml").read_text(encoding="utf-8")
@@ -189,3 +192,28 @@ def test_radar_deneme_kural_ust_girdisi_var_yazamaz():
     wf = yukle("radar_deneme.yml")
     assert "kural_ust" in wf["on"]["workflow_dispatch"]["inputs"] and wf["permissions"] == {"contents": "read"}
     assert "--kural-ust" in adim(wf, "radar", "Radar taraması")["run"] and "--v4-yan-yana" in adim(wf, "radar", "Radar taraması")["run"]
+
+
+# ---------------------------------------------------------------------------------------------------- canlı vardiya (T4)
+def test_canli_vardiya_yalniz_sanal_anahtarsiz_kuyruklu_ve_dal_ayrimi():
+    metin = (WF / "canli_vardiya.yml").read_text(encoding="utf-8")
+    wf = yukle("canli_vardiya.yml")
+    assert wf["on"]["schedule"] == [{"cron": "7 */4 * * *"}] and wf["on"]["push"] == {"paths": ["copytrade/canli/CALISTIR"]}
+    assert wf["concurrency"] == {"group": "canli-vardiya", "cancel-in-progress": False} and wf["permissions"] == {"contents": "write"}
+    assert "HL_API_CUZDAN_ANAHTARI" not in metin and "HL_HESAP_ADRESI" not in metin and "--kip gercek" not in metin and "--kip sanal" in metin             # gerçek kip Actions'ta ASLA
+    env = wf["jobs"]["vardiya"]["env"]
+    assert env["VERI_DALI"] == "${{ github.ref == 'refs/heads/main' && 'canli-durum' || 'canli-durum-deneme' }}"
+    assert env["KADRO_DALI"] == "${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}"
+    assert wf["jobs"]["vardiya"]["timeout-minutes"] >= 285                                                                                                  # 4 sa 15 dk vardiya + kurulum payı
+    ad = adimlar(wf, "vardiya")
+    assert ad.index("Açılış kontrolü (anahtarsız, emir göndermez)") < ad.index("Canlı motor (sanal kip)") < ad.index("Durumu veri dalına yaz")
+    assert adim(wf, "vardiya", "Durumu veri dalına yaz")["if"] == "${{ always() }}" and "255" in adim(wf, "vardiya", "Canlı motor")["run"]
+
+
+def test_canli_yayimla_ayri_worktree_yalniz_canli_dallarina_14_gun():
+    metin = (SCRIPTS / "canli_yayimla.sh").read_text(encoding="utf-8")
+    for satir in metin.splitlines():
+        if "push" in satir and "git" in satir:
+            assert 'HEAD:$veri_dali' in satir, satir
+    assert 'case "$veri_dali" in canli-durum|canli-durum-deneme)' in metin and "git worktree add" in metin and "14 days ago" in metin and "|| true" not in metin
+    assert "git checkout -f" not in metin                                                                                  # motorun çalıştığı dizini değiştirmez

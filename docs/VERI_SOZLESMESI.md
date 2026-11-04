@@ -369,3 +369,21 @@ erken giriş = açılışı bilinen kârlı işlem, trend coin, coinin hareketi 
 `satirlar[]`: `adres`, `sira` (1…30), `katman` (`ilk11` ≤ `radar_kadro_ilk` < `yedek`), `form`, `bilesenler` {G,K,I1,I2,Y,H}, `kopya_getiri_7g` (oran, kopya_$), `max_kaldirac` (x).
 **Saha kararları (slot −%10, bekleme, günde 2 değişiklik, benzer trader ≥ 0,7) kadroda DEĞİL:** T4 motoru okuyup §5/§6 kurallarını uygular.
 
+
+## 14. Canlı motor — durum ve kayıt (v1.26, T4; `copytrade/canli/`, strateji: `docs/RADAR_V1.md` §5–§6, K‑29/K‑30/K‑33)
+Motor kipi `sanal` (varsayılan; cüzdan yok) | `gercek` (yalnız sunucuda; Actions'ta ASLA). **Birimler:** `$` kasa ölçeğinde (`canli_kasa_usd`, kullanıcı ayarı, ≤ 1.000; kopya_$), oranlar kesir, fiyat $/coin, `sz` coin miktarı (işaretli: + long / − short),
+zaman UTC ms. Yürütme: IOC, fiyat = en iyi karşı fiyat ± `canli_ioc_bant` (%0,5); sanal kipte `l2Book` yürüyüşü + taker ücreti (`maliyet_taker`), kayma ayrıca eklenmez; coin başına izole 3x marj, tasfiye fiyatı yerelde. **Funding hesaba girmez** (v1, T2 ile aynı).
+Veri dalı `canli-durum` (dal doğrulamasında `canli-durum-deneme`): `durum/*.json`, `durum/DUR` (varsa), `kayit/<YYYY-MM-DD>.jsonl` (14 gün).
+
+**`durum/hesap.json`** — `kasa_usd`, `kaldirac`, `poz` {adres → coin → {`sz` (coin, işaretli), `giris` ($/coin ağırlıklı), `acilis_ms`, `kaldirac`}}, `realize` {adres → girişten beri gerçekleşen K/Z, ücret hariç}, `ucret` {adres → ücret},
+`slot_bas` {adres → giriş anı slot $}, `kapanmis_net` (sahadan silinen üyelerin net K/Z'si), `tasfiyeler`. Özsermaye = kasa + Σ gerçekleşen − Σ ücret + gerçekleşmemiş (mark) + `kapanmis_net`.
+**`durum/saha.json`** — `uyeler` {adres → {`giris_ms`, `giris_sira`, `sira_ust` (art arda sıra > 22 gün), `son_islem_ms`}}, `inen` {adres → {`inis_ms`, `neden`}}, `bekleme` {adres → bitiş ms (sonuçla düşen, 14 gün)},
+`degisiklik` {gun, adet}, `son_kosu_ms`, `kurulu`, `alarm_gunu`. **`durum/risk.json`** — `zirve`, `gun`, `gun_basi`, `dur`, `dur_neden`, `fren_bitis`, `yeni_coin`, `acilis_durdu` {neden → aktif}.
+**`durum/motor.json`** — `islenen` (son `canli_islenen_sakla` dolum kimliği `{adres}:{tid}`: yeniden başlatmada çift emir yok), `poz_tr` (izlenen trader pozisyonları, coin işaretli), `hesap_tr` {adres → {`deger` trader_$, `ms`}}, `son_olay_ms`, `kip`, `kasa_usd`, `vardiya`.
+**`durum/kilit.json`** — `vardiya`, `nabiz_ms`, `birakildi` (başka vardiya `canli_kilit_dk` içinde nabız attıysa motor başlamaz). **`durum/ozet.json`** — vardiya özeti: `kip`, `sure_dk`, `kasa_usd`, `ozsermaye_usd`, `getiri`, `saha`, `saha_n`, `slot_usd`,
+`emir` {emir, dolu, kismi, dolmadi, red, atlandi, engel, gec_goruldu}, `ortalama_kayma_trader`, `ortalama_kayma_ref`, `kayma_n`, `brut_usd`, `tasfiye`, `dur`, `uyeler`, `dinleyici` (kopma / yeniden bağlanma / mesaj sayaçları).
+**`kayit/<tarih>.jsonl`** — satır başına bir olay, ortak alan `zaman_ms`, `olay`:
+- `emir`: `kip`, `adres`, `coin`, `eylem` (ac | artir | azalt | kapat), `yon` (B/A), `usd_istenen` ($), `usd_dolan` ($), `sz`, `reduce_only`, `durum` (dolu | kismi | dolmadi | red), `red_neden`, `boyut_neden`, `trader_px`, **`trader_dolum_ms`** (trader dolum zamanı),
+  **`gorme_ms`** (bizim gördüğümüz an), `emir_ms`, `dolum_ms`, `referans_px` (en iyi karşı fiyat), `dolum_px` (yürünen ortalama), **`kayma_ref`** (dolum ↔ en iyi karşı fiyat) ve **`kayma_trader`** (dolum ↔ trader'ın dolum fiyatı) — ikisi de oran, **pozitif = aleyhimize**, `ucret` ($), `gec_goruldu` (REST/dolgu ile geç tamamlandı), `kaynak`.
+- `emir_yok` (`karar`: atlandi | engel, `neden`), `saha_giris` / `saha_dus` (`sonuc`: sonuçla mı), `kor_kirpildi`, `tasfiye`, `risk`, `dur`, `mutabakat_alarm` / `mutabakat_duzeldi`, `poz_senkron`, `kacan_tamamlandi`, `eski_dolum_atlandi`, `kadro_yok` / `kadro_bayat`, `telegram` (metin ≤ 300; token ASLA), `kapanis` (vardiya özeti).
+Adresler trader'ların halka açık adresleridir; API anahtarı, hesap adresimiz ve Telegram token'ı hiçbir dosyaya yazılmaz.
