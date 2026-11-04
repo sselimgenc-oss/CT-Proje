@@ -9,11 +9,12 @@ Bu rehberde hiçbir adım parola, token ya da özel anahtar yazdırmaz; özel an
 ssh-keygen -t ed25519 -C "sg-dinleyici"
 type $env:USERPROFILE\.ssh\id_ed25519.pub
 ```
-Yalnız **`.pub`** (genel anahtar) satırını DigitalOcean → Settings → Security → *Add SSH Key*'e yapıştırın.
+Yalnız **`.pub`** (genel anahtar) satırını sunucu sağlayıcınızın SSH anahtarı ekranına (ya da sunucudaki `~/.ssh/authorized_keys` dosyasına) yapıştırın.
 
-## 2. Sunucu (Droplet)
-- Bölge: **Singapore SGP1** (Hyperliquid'e yakın), imaj: **Ubuntu 24.04**, plan: **Basic 1 GB**, kimlik doğrulama: SSH key (yukarıdaki).
-- Güvenlik duvarı (Networking → Firewalls): **yalnız 22 (SSH) açık**; dinleyici dışarıdan bağlantı kabul etmez.
+## 2. Sunucu (sağlayıcıdan bağımsız)
+- Canlıda **sürekli açık bir sunucu gerekir** (K‑20; canlı GitHub Actions'ta koşmaz). İstediğiniz sağlayıcı olur.
+- Öneri: Hyperliquid'e yakın bölge (Asya), **Ubuntu 24.04**, 1 GB RAM yeter, kimlik doğrulama: SSH anahtarı.
+- Güvenlik duvarı: **yalnız 22 (SSH) açık**; dinleyici dışarıdan bağlantı kabul etmez.
 
 ## 3. Bağlan, kullanıcı ve paketler
 ```bash
@@ -95,7 +96,7 @@ journalctl -u sg-dinleyici --since "4 hours ago" | grep "UYARI REST" | sed 's/.*
 ```bash
 systemctl stop sg-dinleyici
 ```
-Kaldırmak için ek olarak `systemctl disable sg-dinleyici` ve Droplet'i silin. Servis çökerse `Restart=on-failure` yeniden başlatır; sayısı `yeniden_baslama` alanındadır.
+Kaldırmak için ek olarak `systemctl disable sg-dinleyici` ve sunucuyu silin. Servis çökerse `Restart=on-failure` yeniden başlatır; sayısı `yeniden_baslama` alanındadır.
 
 ## Bilinen sınırlar
 - `trades` coin evreni = izleme motorunun kopyaladığı evren (kural 7): ana perp piyasası + HER HIP-3 dex'inin coinleri (`dex:coin`; `perpDexs` + `meta` `dex`). Spot kopyalanmaz (`olcut.perp_fills`): abone olunmaz, REST hakemde görülürse yalnız `kacan_sinif.spot` olarak sayılır. Abonelik reddi `genel.error` ve `error` çerçeveleriyle görünür.

@@ -180,7 +180,7 @@ def test_gelecek_tarihli_dolum_anlikta_yok_sayilir_ve_fiyatsiz_tek_dolum_net_sif
 def test_sozlesme_ciktidaki_her_alan_veri_sozlesmesinde_yazili():
     """Tüketen/üreten kod sözleşmeye göre sınanır (AGENTS kural 2): çıktıdaki her anahtar docs/VERI_SOZLESMESI.md §4b'de geçer."""
     belge = (Path(__file__).resolve().parents[1] / 'docs/VERI_SOZLESMESI.md').read_text(encoding='utf-8')
-    bolum = belge[belge.index('## 4b.'):belge.index('## 5.')]
+    bolum = belge[belge.index('## 4b.'):belge.index('## 7.')]
     fills = [fill('2026-10-27T10:00:00Z', 'B', 1, 0, 100)]
     s = calistir(fills, {}, gecikmeler=(0,))[0]
     satir = gk.trader_satiri('X', '0xabc', 'intraday', T0, {0: s}, 0, 1)

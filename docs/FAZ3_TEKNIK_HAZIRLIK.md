@@ -14,17 +14,14 @@ Bu modüllerin kodda bulunması, hosting kurulumu, servis işletimi, gözlemlenm
 
 ## Mevcut durum: kod kanıtı
 
-- `worker/wrangler.toml` içindeki cron `* * * * *`'dır. Bu dakikalık tetikleme hedefidir; çalışma anının kesin zaman garantisi değildir (`docs/VERI_SOZLESMESI.md`, “Worker oda tarama sağlığı”).
-- `worker/src/index.js` içindeki `scheduled()` `runCron()` çağırır. `runCron()` `durum.json`'dan `kol == "oda"` traderlarını alır, `userFillsByTime` ile son imleçten itibaren dolumları sorgular, sonuçları D1'de biriktirir ve imleci ilerletir. Yeni dolum gecikmesini de kaydeder. Bu, REST yoklamasıdır; websocket dinleyicisi değildir.
-- Aynı Worker kodu olayları Telegram'a ancak `BILDIRIM_KIPI=islem` ise yollar; aksi halde günlük özet/durum akışı vardır. Telegram callback'leri kullanıcı kararını kaydeder, emir göndermez.
-- `.github/workflows/izleme.yml` saatte bir, `.github/workflows/arsiv.yml` 15 dakikada bir çalışır. Bunlar geçmiş veriyi/izlemeyi tamamlayan işlerdir; saniyelik yürütme döngüsü değildir.
+- `.github/workflows/izleme.yml` (şimdilik yalnız elle) geçmiş veriyi/izlemeyi tamamlayan bir iştir; saniyelik yürütme döngüsü değildir. (Worker ve REST yoklaması K‑20 ile kaldırıldı.)
 - `copytrade/tarama.py` ve diğer `copytrade` modülleri HL public bilgi/dolum verisini analiz eder. `copytrade/__init__.py` paketin imzalama, cüzdan veya emir yerleştirme kodu içermediğini açıkça belirtir. Kod tabanında HL emir gönderme ya da cüzdan imzalama çağrısı bulunmuyor.
 
 ## Saniyelik canlı kopya için açık boşluklar
 
-Mevcut dakikalık cron yeni dolumu ancak sonraki başarılı taramada fark eder. Gerçek gecikme ağ, cron gecikmesi, trader sayısı, API sınırlaması ve hata tekrarlarına bağlıdır; her dakika çalışacağı ya da her dolumu anında yakalayacağı garanti edilmez. Dakikalık REST taraması Telegram bildirimi için yararlı bir yedek/uzlaştırma yolu olabilir, fakat saniyelik emir kopyalama gereksinimini tek başına karşılamaz.
+GitHub Actions zamanlaması yeni dolumu ancak sonraki başarılı koşuda fark eder. Gerçek gecikme ağ, cron gecikmesi, trader sayısı, API sınırlaması ve hata tekrarlarına bağlıdır; her dakika çalışacağı ya da her dolumu anında yakalayacağı garanti edilmez. REST taraması saniyelik emir kopyalama gereksinimini tek başına karşılamaz.
 
-Saniyelik akış için sürekli çalışan bir süreç gerekir. Read-only/dry-run runtime ve public HL `userFills` adapter'ı bu sürecin kaynak kod iskeletini/uygulamasını sağlar: reconnect, heartbeat/sessizlik, backfill ve olay tekilleştirme davranışları vardır. Ancak servis hosting'e kurulmamış ve gerçek veriyle 24 saat çalıştırılmamıştır; bu nedenle işletim dayanıklılığı doğrulanmış sayılmaz. Cloudflare Worker'ın dakikalık scheduled handler'ı kalıcı websocket oturumu değildir. Durable Object ya da ayrı bir sürekli servis teknik adaydır; kapasite, ücret, işletim ve ağ erişimi kararı ayrıca verilmelidir. Mevcut tekilleştirme durumu süreç içi bellektedir, kalıcı kuyruk/restart recovery garantisi değildir.
+Saniyelik akış için sürekli çalışan bir süreç gerekir. Read-only/dry-run runtime ve public HL `userFills` adapter'ı bu sürecin kaynak kod iskeletini/uygulamasını sağlar: reconnect, heartbeat/sessizlik, backfill ve olay tekilleştirme davranışları vardır. Ancak servis hosting'e kurulmamış ve gerçek veriyle 24 saat çalıştırılmamıştır; bu nedenle işletim dayanıklılığı doğrulanmış sayılmaz. Canlıda sürekli açık bir sunucu gerekir (K‑20). Durable Object ya da ayrı bir sürekli servis teknik adaydır; kapasite, ücret, işletim ve ağ erişimi kararı ayrıca verilmelidir. Mevcut tekilleştirme durumu süreç içi bellektedir, kalıcı kuyruk/restart recovery garantisi değildir.
 
 Canlı kopya karar/hesap hattı henüz emir yürütücüsüne bağlı değildir. Önce mevcut `copytrade` hesaplarının hangi olayda ne boyutta emir önereceği, fiyat/işaret tazeliği, kaldıraç/marjin sınırı, maksimum notional, açık emir/pozisyon mutabakatı, iptal ve acil durdurma davranışları tanımlanmalı; her öneri kaynak HL olayıyla izlenebilir olmalıdır. Bu belge strateji eşiklerini veya emir boyutunu belirlemez.
 
@@ -32,7 +29,7 @@ Canlı kopya karar/hesap hattı henüz emir yürütücüsüne bağlı değildir.
 
 1. Hesap sahibi önce yalnız MetaMask bağlantısıyla adresini seçer; adres eşleşmesi ve salt okunur bakiye/pozisyon görünümü yapılır. Salt okunur keşif için imza veya özel anahtar gerekmez. Bağlantı tek başına emir izni sayılmaz.
 2. Emir yetkisi gerekiyorsa, ana MetaMask cüzdanının özel anahtarı servise aktarılmaz. Hyperliquid'in desteklediği agent/API-wallet yetkilendirme akışı incelenip kullanıcı cüzdanında açıkça onaylanır; hizmet yalnız sınırlı işlem imzası yetkisi olan ayrı anahtarı kullanır. Para çekme yetkisi verilmez. Her ortam ve hesap için ayrı anahtar, en az bakiye ve iptal/yenileme prosedürü kullanılır.
-3. Ürün akışında kullanıcıya imzalanan izin kapsamı, bağlı HL hesabı, ağ, anahtarın amacı ve iptal adımı açık gösterilir. İzin/agent adresi sunucu tarafında doğrulanır; beklenmeyen hesap, ağ veya izin kapsamı durumunda emir yolu kapalı kalır. Anahtarlar yalnız secret manager'da tutulur; log, D1, JSON, repo veya Telegram'a asla yazılmaz.
+3. Ürün akışında kullanıcıya imzalanan izin kapsamı, bağlı HL hesabı, ağ, anahtarın amacı ve iptal adımı açık gösterilir. İzin/agent adresi sunucu tarafında doğrulanır; beklenmeyen hesap, ağ veya izin kapsamı durumunda emir yolu kapalı kalır. Anahtarlar yalnız secret manager'da tutulur; log, veritabanı, JSON, repo veya Telegram'a asla yazılmaz.
 4. Hyperliquid'in güncel imza türü, agent kapsamı, süre/iptal davranışı ve MetaMask mesaj gösterimi entegrasyondan önce resmi güncel dokümantasyonla doğrulanmalıdır. Bu depoda bunları doğrulayan veya uygulayan kod yoktur; belge bu nedenle imzalama payload'ı ya da API detayını varsaymaz.
 
 ## Emir kapısından önce dry-run / salt okunur ön kontrol

@@ -5,13 +5,12 @@ sözleşmeye göre çalışır; alan eklemek/değiştirmek lider onayıyla `suru
 ## 1. Dosyalar ve yer
 | Dosya | Nerede | Kim yazar | Sıklık |
 |---|---|---|---|
-| `izleme/durum.json` | sg-arge, `copytrade-izleme` dalı (main büyümesin) | Codex işi (Actions) | saatte bir |
+| `izleme/durum.json` | sg-arge, `copytrade-izleme` dalı (main büyümesin) | izleme işi (Actions) | 2 saatte bir |
+| `izleme/motor.json.gz` (ham dolum önbelleği, sıkıştırılmış; K‑20) | sg-arge, `copytrade-izleme` dalı | izleme işi (`gzip -n`; sıkıştırılmamış `motor.json` dala girmez) | 2 saatte bir |
 | `izleme/ornek_durum.json` | sg-arge `main` (sabit örnek, 4 trader) | lider (hazır) | sabit; Sonnet bununla başlar |
-| `izleme/kararlar.jsonl` (açtım/atladım) | sg-arge, `copytrade-izleme` dalı | izleme işi (2 saatte bir, K-18), Worker'ın `GET /kararlar`'ından (Cloudflare'de GitHub anahtarı yok) | saatte bir |
-| `izleme/gecikme.json` (gerçek algılama gecikmesi, v1.7, E1 devamı) | sg-arge, `copytrade-izleme` dalı | saatlik iş, Worker'ın `GET /gecikme`'sinden (`copytrade/gecikme.py`) | saatte bir, `GECIKME_URL` tanımlıysa (yoksa adım atlanır, saatlik durum bozulmaz) |
 
-Repolar herkese açık (kullanıcı kararı 2026-10-27). Bu yüzden karar kaydında **tutar, bakiye, hesap, isim yoktur**;
-yalnız olay kimliği, karar ve neden. Trader adresleri zaten herkese açık zincir verisidir.
+Repolar herkese açık (kullanıcı kararı 2026-10-27). Bu yüzden yayımlanan dosyalarda **tutar, bakiye, hesap, isim yoktur**
+(trader adresleri zaten herkese açık zincir verisidir).
 
 ## 2. `durum.json` şeması
 ```json
@@ -60,9 +59,8 @@ yalnız olay kimliği, karar ve neden. Trader adresleri zaten herkese açık zin
   (eklemeli, `id` başına tekil, (zaman, id) artan; mevcut kayıt asla değişmez/silinmez). `olay_tasan.jsonl` dala girmez. Bir trader'ın tüm olayı = `durum.json.olaylar` (yayın payı) + `olay_arsivi.jsonl` (daha eski/taşan). Zaman UTC.
 - **Olay kimliği (v1.2):** `{trader}-{oid}-{tur}` (ör. `T1-123456789-acilis`); ışık olayı `{trader}-{ms}-isik`.
   Olaylar **emir (`oid`) düzeyinde** üretilir: aynı emrin dolumları birleştirilir (tek açılış sahte büyütmeler doğurmaz).
-  Saatlik motor ve Cloudflare Worker aynı kuralla aynı kimliği üretir.
 - `traderlar[].kol` (v1.5, ek alan; `surum` 1 kalır): `oda` | `kontrol` | `taban` | `elle` | `referans_oda` | `referans_kontrol` | `cikarilan` | `havuz` (K-8, sessiz ileri ölçüm); `kollar` adresin bulunduğu tüm kollar. İzleme listesinden
-  aynen taşınır; Telegram Worker bildirimi yalnız `kol = oda` için gönderir (diğerleri sessiz izlenir).
+  aynen taşınır.
 - `traderlar[].secim` (v1.8, isteğe bağlı): izleme listesindeki değişmez etiket; eski seçim sistemi silindi (T1), alan yalnız listeden aynen taşınır.
   deseninden esinlenilmiş — `copytrade/saglik_hatti.py`, saf fonksiyon, **yalnız rapor**; hiçbir pozisyon/kopya
   bundan etkilenmez; oda için **performans ışığından (`traderlar[].saglik.isik`) ayrı**, veri hattının kendisinin
@@ -73,10 +71,9 @@ yalnız olay kimliği, karar ve neden. Trader adresleri zaten herkese açık zin
   içinde açılmış oda pozisyonlarının (`pozisyonlar[].acilis`) `uretildi`'ye göre medyan **yaşı** (dk) — bu **pozisyon
   yaşıdır, gerçek sinyal/algılama gecikmesi değildir** (Sol denetimi 2026-10-30); kopya ekonomisini değiştirmez.
   Eşikler `saglik_hatti.ESIKLER`. **Veri tazeliği burada değerlendirilmez** — yayım anında hesaplanırsa her zaman
-  ~0 döner ve durmuş akışı yakalayamaz; tazelik tek yerde Worker'ın okuma anındaki gerçek saatiyle yaptığı mevcut
-  3 saatlik kontrolündedir (`worker/src/index.js` `checkStateAlerts`).
+  ~0 döner ve durmuş akışı yakalayamaz; tazelik, tüketicinin okuma anındaki gerçek saatiyle `uretildi` karşılaştırmasıyla yapılır (pano: 2 saat; `bayat_isle`).
 - `traderlar[].tarz` (v1.3): `intraday` | `swing` (izleme listesindeki `tarz`; yoksa `bilinmiyor` ve 30 dk gecikme; kapı sonucundan okuma T1'de kaldırıldı). Sanal kopya gecikmesi tarza göre (intraday 30 dk, swing 120 dk);
-  Telegram mesajında `[Intraday]` / `[Swing]` etiketi.
+
 - **`traderlar[].veri_durumu` + `veri_durumu_neden` (v1.15, K-14):** tek bir eksik yüzünden trader takipten düşmez; durumu kodlanır. (`durum`
   izleme listesinin kendi alanıdır — `kopyala | izlemede | durdu` — ve değişmez; bu yüzden yeni alan `veri_durumu`.) Değerler, öncelik sırasıyla:
   - `okuma_hatasi`: bu saatin okuması başarısız (ağ / API). Önceki başarılı yük korunur (`gecerli: false`, `veri_zamani` eski); hiç okunmamışsa yer tutucu.
@@ -180,25 +177,6 @@ yalnız yeni `tutar_egrisi` parametresiyle — `golge.calistir`'in ön işlemesi
 **Form skoru** = son 30 gün sanal kopya getirisi / son 90 gün günlük oynaklık. **Yalnız ekran sıralaması içindir**;
 kopyalama kararını değiştirmez.
 
-## 4. Kararlar (açtım / atladım)
-Kayıt: `{"olay_id", "zaman", "karar": "acti | atladi", "neden": "gec_gordum | begenmedim | diger",
-"not": ""}` — `zaman` yalnız `YYYY-MM-DD`; `not` izinli etiket listesinden yalnız boş değerdir. Tutar, bakiye,
-hesap, isim ve serbest metin yazılmaz. Eski `bakiye_yok` kayıtları içe aktarmada `diger`e çevrilir.
-`copytrade-izleme` dalında `izleme/kararlar.jsonl`; v1'de karar yalnız Telegram düğmesiyle verilir.
-İstatistik: aynı trader için "tüm olaylar" ile "açtıklarım" sanal sonuçları ayrı hesaplanır.
-
-## 4a. Gerçek algılama gecikmesi (`izleme/gecikme.json`, v1.8, E1 devamı)
-`{"n": <int>, "n_toplam": <int>, "gecikme_dk_medyan": <float|null>, "gecikme_dk_maks": <float|null>,
-"uretildi": <iso>, "trader_detay": [{"trader", "gecikme_dk", "zaman"}]}`.
-`gecikme_dk` = Worker'ın bir dolumu gördüğü an ile o dolumun Hyperliquid'deki **gerçek** zamanı arasındaki fark
-(dakika) — `copytrade/saglik_hatti.py`'deki `acik_pozisyon_yasi_dk_medyan` (pozisyon yaşı) ile **karıştırılmamalı**;
-bu gerçek uçtan uca algılama süresidir. Worker yalnız her trader için **en son** örneği tutar (D1 ücretsiz yazma
-kotası) — bu yüzden `trader_detay` oda üyesi sayısı kadar satır taşır, geçmiş birikmez, ve uzun süre işlem
-yapmayan bir trader'ın örneği D1'de eskiyebilir. **v1.8 (Sol 2. denetimi, YÜKSEK bulgu):** `n`/medyan/maks yalnız
-`zaman`'ı `uretildi`den en çok 120 dk eski olan ("taze") örnekleri sayar; `n_toplam` tüm `trader_detay` satır
-sayısıdır — eski bir trader örneği artık oda genelindeki "gerçek hız" ölçüsünü bozmaz. `n=0` → henüz taze örnek
-yok (ilk koşu, sakin piyasa ya da tüm örnekler eski); medyan/maks `null`. Yalnız rapor; kopya ekonomisini değiştirmez.
-
 ## 4b. `gecikme_kar.json` — H1 gecikme–kâr ölçümü (v1.19, 2026-11-03; K‑17)
 YALNIZ ölçüm (bilgi amaçlı; eşik ve `durum.json` değişmez). Üretim: `python -m copytrade.gecikme_kar`.
 Hesap tek motorda: `kopya_v3.hesapla` → `defter.copy_ledger` (kural 7). `kopya_v3.hesapla(delay=0)` = **anlık**: yürütme fiyatı trader'ın dolum fiyatı `px`,
@@ -237,15 +215,6 @@ Büyük `bekleyen` (B17: 120 dk gecikmede ~4.500) hata değildir: son 120 dk'dak
 
 Varsayım/sınır: anlık = bizim emrimizin trader dolumuyla AYNI fiyattan, kayma+taker ile dolması (algılama + emir gecikmesi 0 sayılır; gerçek gecikme H2 ile ölçülür).
 Geçmişte dakikalık fiyat ~4999 dk ile sınırlıdır; `tam` pencerede 1/5/30 dk yaklaşık olur — karar için `dakika` penceresi esas alınır.
-
-## 5. Telegram
-- Gönderen: Cloudflare Worker, 5 dakikada bir (`docs/GOREV_TELEGRAM.md`). Olay türleri: `acilis`, `kapanis`, `buyutme`,
-  ışığın `kirmizi`ya dönmesi. Her `olay.id` bir kez bildirilir.
-- Metin: `🟢 Trader-1 · BTC LONG açtı · giriş 68.400 · hesabın %8'i · 2x · Binance: var`
-- Düğmeler (yalnız `acilis`/`buyutme`): **[Açtım] [Atladım]** → Atladım ise neden düğmeleri (Geç gördüm / Beğenmedim / Diğer).
-- Gizlilik (v1.4, kullanıcı kararı): yayımlanan karar kaydında `zaman` yalnız tarih; `bakiye_yok` nedeni yok.
-- Bot anahtarı ve sohbet kimliği yalnız GitHub Secrets'ta (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`,
-  `TELEGRAM_WEBHOOK_SECRET`); dağıtım işi bunları Cloudflare secret'ına aktarır. Repoya, günlüğe, sohbete yazılmaz.
 
 ## 7. Dinleyici risk kapısı — DRY-RUN (v1.18, H5; `copytrade/risk_defter.py`, `copytrade/live_koruma.py`)
 **Emir, anahtar, cüzdan, imza YOK; yalnız karar kaydı.** Her satır/blokta `emir_gonderildi` = `false`. Sınırlar `kurallar.yaml` `risk_dry_run:` bloğundan (tek kaynak).

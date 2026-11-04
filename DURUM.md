@@ -9,9 +9,9 @@ Form Radarı v1 (`docs/RADAR_V1.md`, K‑22…K‑26): her gün son 7 günde for
 ## İş sırası
 | İş | Durum |
 |---|---|
-| T1 eski sistemi sil | **bitti** (#492; 468 test, gerçek veri denemeleri yeşil) |
-| T1b Cloudflare/VPS kaldır (`docs/GOREV_T1B_SUNUCUSUZ.md`, K‑20) | Sonnet |
-| T2 R0+R1 tarama (`docs/GOREV_T2_RADAR_TARAMA.md`) | Sonnet (T1b ile paralel) |
+| T1 eski sistemi sil | **bitti** (#492) |
+| T1b Cloudflare/VPS kaldır (`docs/GOREV_T1B_SUNUCUSUZ.md`, K‑20) | **bitti** (#494) |
+| T2 R0+R1 tarama (`docs/GOREV_T2_RADAR_TARAMA.md`) | Sonnet, PR #495 (lider kararları uygulanıyor) |
 | T3 R2 form puanı | bekliyor |
 | T4 canlı motor (kadro, saha, yürütücü, boyutlandırma, risk, Telegram) | bekliyor |
 | T5 sunucu + canlıya alma (kullanıcı: sunucu, API cüzdanı, 1.000 $) | bekliyor |
@@ -19,7 +19,7 @@ Form Radarı v1 (`docs/RADAR_V1.md`, K‑22…K‑26): her gün son 7 günde for
 
 ## Kalan altyapı (yeni sistem kullanır)
 Kopya motoru (`defter.py`, `kopya_v2…v4`, `golge.py` çıkış kuralları), HL istemcisi (`tarama.py`, `hl_public_adapter.py`), anlık dinleyici
-(`dinleyici.py`, `risk_defter.py`; canlıda sunucu gerekir, K‑20), izleme motoru çekirdeği, pano iskeleti, Faz 3 hazırlık modülleri.
+(`dinleyici.py`, `risk_defter.py`; canlıda sunucu gerekir, K‑20), gecikme ölçümü (`gecikme_kar.py`), izleme motoru çekirdeği, pano iskeleti, Faz 3 hazırlık modülleri.
 Cloudflare ve DigitalOcean yok (K‑20): her şey GitHub Actions + veri dalı.
 
 ## Belgeler

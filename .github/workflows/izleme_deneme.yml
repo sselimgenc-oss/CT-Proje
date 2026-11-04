@@ -1,7 +1,7 @@
 name: İzleme deneme (küçük gerçek veri)
 
 # Kalite kuralı 1: izleme değişiklikleri tam koşudan önce küçük gerçek veriyle denenir. Ana izleme listesinden seçilen trader'larla ilk okuma + aynı durumla artımlı koşu;
-# üretim R2'sine ve veri dallarına YAZMAZ, çıktı yalnız iş günlüğü / özeti ve artifact'tır.
+# veri dallarına YAZMAZ, çıktı yalnız iş günlüğü / özeti ve artifact'tır.
 # Tetik: elle ya da `copytrade/izleme_deneme/CALISTIR` dosyasına push (kendi dalından deneme).
 on:
   workflow_dispatch:
