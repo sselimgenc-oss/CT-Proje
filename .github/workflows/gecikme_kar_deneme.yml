@@ -43,7 +43,7 @@ jobs:
           IDLER: ${{ inputs.idler || 'O01,K08,B17' }}
         run: |
           mkdir -p deneme izleme_h1
-          python -m copytrade.ilk11_deneme liste --kaynak copytrade/izleme_listesi.yaml --idler "$IDLER" --cikti deneme
+          python -m copytrade.deneme_arac liste --kaynak copytrade/izleme_listesi.yaml --idler "$IDLER" --cikti deneme
           python -m copytrade.izleme_motoru --root . --output izleme_h1 --liste deneme/izleme_listesi.yaml
       - name: Özet ve yan yana
         run: python .github/scripts/h1_ozet.py | tee h1_ozet.md >> "$GITHUB_STEP_SUMMARY"

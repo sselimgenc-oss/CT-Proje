@@ -35,7 +35,6 @@ def durum():
 
 LISTE = {"traderlar": [{"id": "X1", "adres": A, "takma_ad": "aaaa", "takim": "ilk11"}, {"id": "X2", "adres": B, "takma_ad": "bbbb", "takim": "yedek11"},
                        {"id": "O1", "adres": "0x" + "c" * 40, "takma_ad": "cccc", "kol": "referans_oda"}]}
-SNAP = {"kadro": [{"id": A, "takim": "ilk11"}, {"id": "0x1", "takim": "ilk11"}, {"id": B, "takim": "yedek11"}, {"id": "0x2", "takim": "paf"}]}
 
 
 def takim(veri, ad):
@@ -43,7 +42,7 @@ def takim(veri, ad):
 
 
 def test_altin_ornek_iki_takim_uc_acik_iki_kapanmis():
-    v = pano_veri.pano_uret(durum(), LISTE, SNAP, SIMDI)
+    v = pano_veri.pano_uret(durum(), LISTE, SIMDI)
     assert [t["ad"] for t in v["takimlar"]] == ["İlk 11", "Yedek 11", "PAF"] and v["dinleyici"] is None and v["uretildi"] == REF
     i, y = takim(v, "İlk 11"), takim(v, "Yedek 11")
     # İlk 11 / kasa: 1.000 -> 1.100 (+100 $, +%10)
@@ -59,7 +58,7 @@ def test_altin_ornek_iki_takim_uc_acik_iki_kapanmis():
     o = i["ozet"]
     assert (o["acik_islem"], o["acik_teminat_usd"], o["acik_kz_usd"], o["nakit_usd"]) == (2, 27.0, 3.6, 1073.0)       # nakit = bakiye 1.100 − teminat 27
     assert (o["bugun_acilan"], o["bugun_kapanan"], o["son24_islem"], o["son24_kazanma_orani"]) == (2, 1, 1, 1.0)       # BTC açık + BTC kapanan bugün açıldı
-    assert (o["kadro_dolu"], o["kadro_toplam"], o["islem_basi_usd"]) == (1, 2, None)
+    assert (o["kadro_dolu"], o["kadro_toplam"], o["islem_basi_usd"]) == (1, None, None)
     assert i["kasa"]["olcek_notu"] == "1 × 1.000 $ sanal (trader başına)" and "v4" in v["olcek"]["acik_islemler"]
     # kapanan: ana para = 20 / 0,2 = 100 $; neden trader -> trader_kapatti
     assert i["kapanan"] == [{"coin": "BTC", "yon": None, "kaldirac": None, "trader": "aaaa", "acilis": "2026-11-03T01:00:00Z", "kapanis": "2026-11-03T05:00:00Z",
@@ -86,7 +85,7 @@ def test_eksik_alan_null_uydurulmaz():
     del d["traderlar"][0]["sanal_kopya_v4"]["acik_pozisyonlar"][0]["teminat_usd"]               # BTC teminatı (HL azami kaldıracı bilinmiyor) yok
     del d["traderlar"][1]["sanal_kopya_v4"]["getiri"]
     d["traderlar"][1]["sanal_kopya_v4"]["kapanan_islemler"][0]["getiri"] = None
-    v = pano_veri.pano_uret(d, LISTE, SNAP, SIMDI)
+    v = pano_veri.pano_uret(d, LISTE, SIMDI)
     btc = next(a for a in takim(v, "İlk 11")["acik"] if a["coin"] == "BTC")
     assert btc["teminat_usd"] is None and btc["kaldirac"] is None and btc["buyukluk_usd"] == 150.0
     o = takim(v, "İlk 11")["ozet"]
@@ -97,7 +96,7 @@ def test_eksik_alan_null_uydurulmaz():
     # v3 hiç yoksa takım verisi null (0 değil)
     d2 = durum()
     d2["traderlar"][0]["sanal_kopya_v4"] = {"surum": "v4", "durum": "hesaplanamadi"}
-    t = takim(pano_veri.pano_uret(d2, LISTE, SNAP, SIMDI), "İlk 11")
+    t = takim(pano_veri.pano_uret(d2, LISTE, SIMDI), "İlk 11")
     assert t["kasa"]["bakiye_usd"] is None and t["kasa"]["olcek_notu"] is None and t["ozet"]["acik_islem"] is None and t["acik"] == [] and t["ozet"]["kadro_dolu"] == 0
 
 
@@ -105,7 +104,7 @@ def test_baslamamis_uye_t0_gelecekte_toplamlara_girmez():
     d = durum()
     d["traderlar"][0]["t0"] = "2026-11-08"                       # A'nın kopyası henüz başlamadı
     d["traderlar"][1]["t0"] = "2026-11-03"                       # B bugün başladı
-    v = pano_veri.pano_uret(d, LISTE, SNAP, SIMDI)
+    v = pano_veri.pano_uret(d, LISTE, SIMDI)
     i, y = takim(v, "İlk 11"), takim(v, "Yedek 11")
     assert i["acik"] == [] and i["kasa"]["bakiye_usd"] is None and i["ozet"]["acik_islem"] is None and i["ozet"]["kadro_dolu"] == 1     # kadroda var, toplamlarda yok
     assert len(y["acik"]) == 1 and y["kasa"]["baslangic_usd"] == 1000.0
@@ -114,38 +113,38 @@ def test_baslamamis_uye_t0_gelecekte_toplamlara_girmez():
 def test_acilis_bos_metin_null_olur():
     d = durum()
     d["traderlar"][0]["sanal_kopya_v4"]["acik_pozisyonlar"][0]["acilis"] = ""
-    assert next(a for a in takim(pano_veri.pano_uret(d, LISTE, SNAP, SIMDI), "İlk 11")["acik"] if a["coin"] == "BTC")["acilis"] is None
+    assert next(a for a in takim(pano_veri.pano_uret(d, LISTE, SIMDI), "İlk 11")["acik"] if a["coin"] == "BTC")["acilis"] is None
 
 
 def test_net_oran_getiri_kullanir_tasfiyede_toplam_degil():
     """Tasfiye olan kopyada `toplam` (gerçekleşen+açık) −0,888 olabilir ama bakiye 0'dır (`getiri` −1,0): pano bakiye ile tutarlı `getiri`'yi gösterir."""
     d = durum()
     d["traderlar"][0]["sanal_kopya_v4"].update({"bakiye_usd": 0.0, "getiri": -1.0, "toplam": -0.888, "tasfiye": True})
-    assert takim(pano_veri.pano_uret(d, LISTE, SNAP, SIMDI), "İlk 11")["traderlar"][0]["net_oran"] == -1.0
+    assert takim(pano_veri.pano_uret(d, LISTE, SIMDI), "İlk 11")["traderlar"][0]["net_oran"] == -1.0
 
 
 def test_bos_takim():
-    v = pano_veri.pano_uret(durum(), LISTE, SNAP, SIMDI)
+    v = pano_veri.pano_uret(durum(), LISTE, SIMDI)
     paf = takim(v, "PAF")
     assert paf["kasa"] == {"baslangic_usd": None, "bakiye_usd": None, "degisim_usd": None, "degisim_oran": None, "egri": [], "olcek_notu": None}
     assert paf["acik"] == [] and paf["kapanan"] == [] and paf["traderlar"] == [] and all(x == [] for x in paf["seriler"].values())
-    assert (paf["ozet"]["kadro_dolu"], paf["ozet"]["kadro_toplam"], paf["ozet"]["acik_islem"]) == (0, 1, None)
+    assert (paf["ozet"]["kadro_dolu"], paf["ozet"]["kadro_toplam"], paf["ozet"]["acik_islem"]) == (0, None, None)
     assert all(x is None for x in paf["metrik"].values())
-    v0 = pano_veri.pano_uret({"traderlar": []}, {}, None, SIMDI)             # girdi tamamen boş: çökmez
+    v0 = pano_veri.pano_uret({"traderlar": []}, {}, SIMDI)             # girdi tamamen boş: çökmez
     assert [t["ad"] for t in v0["takimlar"]] == ["İlk 11", "Yedek 11", "PAF"] and v0["uretildi"] is None and v0["tazelik"]["bayat"] is True
 
 
 def test_tazelik_iki_saatten_eskiyse_bayat():
-    taze = pano_veri.pano_uret(durum(), LISTE, SNAP, datetime(2026, 11, 3, 13, 59, tzinfo=UTC))["tazelik"]
-    sinir = pano_veri.pano_uret(durum(), LISTE, SNAP, datetime(2026, 11, 3, 14, 0, tzinfo=UTC))["tazelik"]
-    eski = pano_veri.pano_uret(durum(), LISTE, SNAP, datetime(2026, 11, 3, 14, 1, tzinfo=UTC))["tazelik"]
+    taze = pano_veri.pano_uret(durum(), LISTE, datetime(2026, 11, 3, 13, 59, tzinfo=UTC))["tazelik"]
+    sinir = pano_veri.pano_uret(durum(), LISTE, datetime(2026, 11, 3, 14, 0, tzinfo=UTC))["tazelik"]
+    eski = pano_veri.pano_uret(durum(), LISTE, datetime(2026, 11, 3, 14, 1, tzinfo=UTC))["tazelik"]
     assert (taze["bayat"], taze["yas_dk"]) == (False, 119.0) and sinir["bayat"] is False and (eski["bayat"], eski["yas_dk"]) == (True, 121.0)
     assert eski["kaynak_uretildi"] == REF and eski["pano_uretildi"] == "2026-11-03T14:01:00Z" and eski["esik_dk"] == 120
 
 
 def test_bicim_ornek_veri_ile_ayni_ek_alanlar_haric_ve_gizlilik():
     ornek = json.loads((Path(__file__).parent.parent / "pano" / "ornek_veri.json").read_text(encoding="utf-8"))
-    v = pano_veri.pano_uret(durum(), LISTE, SNAP, SIMDI)
+    v = pano_veri.pano_uret(durum(), LISTE, SIMDI)
     assert set(v) - set(ornek) == {"tazelik", "olcek"} and set(ornek) <= set(v)
     for ad in ("İlk 11", "Yedek 11"):
         t, o = takim(v, ad), ornek["takimlar"][0]
@@ -159,13 +158,9 @@ def test_bicim_ornek_veri_ile_ayni_ek_alanlar_haric_ve_gizlilik():
 
 
 def test_main_dosyadan_uretir(tmp_path):
-    (tmp_path / "ilk11" / "2026-11-02").mkdir(parents=True)
-    (tmp_path / "ilk11" / "2026-11-08").mkdir()
-    (tmp_path / "ilk11" / "2026-11-02" / "snapshot.json").write_text(json.dumps({"kadro": []}))
-    (tmp_path / "ilk11" / "2026-11-08" / "snapshot.json").write_text(json.dumps(SNAP))
     (tmp_path / "durum.json").write_text(json.dumps(durum()))
     import yaml
     (tmp_path / "liste.yaml").write_text(yaml.safe_dump(LISTE))
-    pano_veri.main(["--durum", str(tmp_path / "durum.json"), "--liste", str(tmp_path / "liste.yaml"), "--ilk11", str(tmp_path / "ilk11"), "--cikti", str(tmp_path / "pano.json")])
+    pano_veri.main(["--durum", str(tmp_path / "durum.json"), "--liste", str(tmp_path / "liste.yaml"), "--cikti", str(tmp_path / "pano.json")])
     cikti = json.loads((tmp_path / "pano.json").read_text(encoding="utf-8"))
-    assert takim(cikti, "İlk 11")["ozet"]["kadro_toplam"] == 2                                            # en son tarihli snapshot
+    assert takim(cikti, "İlk 11")["ozet"]["kadro_dolu"] == 1 and takim(cikti, "İlk 11")["ozet"]["kadro_toplam"] is None       # snapshot kaynağı kaldırıldı (T1)

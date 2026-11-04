@@ -9,9 +9,9 @@ Form Radarı v1 (`docs/RADAR_V1.md`, K‑22): son 7 günde formu yüksek, kopyal
 ## İş sırası
 | İş | Durum |
 |---|---|
-| T1 eski sistemi sil (`docs/GOREV_T1_ESKI_SISTEM_SIL.md`) | **Sonnet'te** |
-| T1b Cloudflare/VPS kaldır (`docs/GOREV_T1B_SUNUCUSUZ.md`, K‑20) | T1 sonrası Sonnet |
-| T2 R0+R1 tarama (`docs/GOREV_T2_RADAR_TARAMA.md`) | T1b ile paralel Sonnet |
+| T1 eski sistemi sil | **bitti** (#492; 468 test, gerçek veri denemeleri yeşil) |
+| T1b Cloudflare/VPS kaldır (`docs/GOREV_T1B_SUNUCUSUZ.md`, K‑20) | Sonnet |
+| T2 R0+R1 tarama (`docs/GOREV_T2_RADAR_TARAMA.md`) | Sonnet (T1b ile paralel) |
 | T3 R2 form puanı | bekliyor |
 | T4 canlı motor (kadro, saha, yürütücü, boyutlandırma, risk, Telegram) | bekliyor |
 | T5 sunucu + canlıya alma (kullanıcı: sunucu, API cüzdanı, 100 $) | bekliyor |
@@ -24,3 +24,8 @@ Cloudflare ve DigitalOcean yok (K‑20): her şey GitHub Actions + veri dalı.
 
 ## Belgeler
 `AGENTS.md` (kurallar) · `docs/KARARLAR.md` · `docs/RADAR_V1.md` (strateji) · `docs/VERI_SOZLESMESI.md` · `docs/GOREV_T*.md`
+
+## T1 notu (2026-11-04, Sonnet)
+- Eski sistem (kapı, İlk 11 puanı, oda/kontrol, ön kayıt, araştırma, ilgili iş akışı/test/belge) silindi; kalan kod `hl_ortak.py`/`deneme_arac.py`'ye taşınanlarla çalışıyor. Python testleri 872 → 470 (+32 anahtar testi), Worker 28 → 26.
+- Açık sorular lider için: `ilk11` adı kalan altyapıda (dinleyici/risk/faz3) duruyor, Worker `kol=oda` bildirimi duruyor, `son_yaz.py` silinmedi — ayrıntı `docs/sonnet_durum_t1.md`.
+- `izleme.yml` zamanlaması kapalı (T4'te radar kadrosu için geri gelir); veri dalı `copytrade-kapi` ve eski dallar PR birleşince lider tarafından silinir.

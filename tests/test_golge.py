@@ -4,7 +4,6 @@ from copytrade.kurallar import load_rules
 import pytest
 import pandas as pd
 from copytrade.tarama import PublicClient
-from copytrade.golge_saglama import _summary, pencere_ici_dolumlar, pozisyon_dokumu
 
 T0 = 20_833 * DAY
 RULES = load_rules()
@@ -51,7 +50,7 @@ def test_altin_v2_8_gunde_eksi31_cikar_6_gunde_eksi49_kalir():
     assert v2_sinir("swing", 14, 0.40) == "kar_al"
 
 
-def test_altin_v2_onkayit_d_ile_ayni_donmus_esikleri_kullanir():
+def test_altin_v2_donmus_esikleri_kullanir():
     assert RULES["golge_v2"]["intraday"]["zarar_kes"] == -0.50
     assert RULES["golge_v2"]["swing"]["gun_7"] == {"zarar_kes": -0.30, "kar_al": 0.60}
     assert RULES["golge_v2"]["swing"]["gun_14"] == {"zarar_kes": -0.20, "kar_al": 0.40}
@@ -164,59 +163,16 @@ def test_altin_10000_ustu_dolum_zaman_penceresiyle_sayfalanir():
     assert len(rows) == 10_001 and rows[-1]["tid"] == 10_000
 
 
-def test_altin_pencere_oncesi_acik_pozisyon_kapanisi_saglama_kiyasindan_cikar():
-    old_close = fill(0, "A", 10, 10, 90, 1) | {"closedPnl": "-100"}
-    opening = fill(10, "B", 10, 0, 100, 2) | {"closedPnl": "0"}
-    closing = fill(20, "A", 10, 10, 110, 3) | {"closedPnl": "100"}
-    assert pencere_ici_dolumlar([old_close, opening, closing]) == [opening, closing]
-    assert pencere_ici_dolumlar([opening]) == [opening]  # açık kalsa da sonraki kısmi kapanışların tabanı korunur
 
 
-def test_altin_pencere_ici_flip_kapanisi_alir_yeni_yonu_sonraki_kapanisa_tasir():
-    opening = fill(0, "B", 10, 0, 100, 1)
-    flip = fill(10, "A", 15, 10, 110, 2) | {"closedPnl": "100"}
-    close_short = fill(20, "B", 5, -5, 100, 3) | {"closedPnl": "50"}
-    selected = pencere_ici_dolumlar([opening, flip, close_short])
-    assert [(row["side"], float(row["sz"]), float(row["startPosition"])) for row in selected] == [
-        ("B", 10, 0), ("A", 10, 10), ("A", 5, 0), ("B", 5, -5)]
 
 
-def test_altin_sabit_olcekli_saglama_hesap_buyumesinden_bagimsizdir():
-    account = pd.Series([1_000.0, 2_000.0], index=pd.to_datetime([T0, T0 + HOUR], unit="ms"))
-    rows = [fill(0, "B", 10, 0, 100, 1) | {"closedPnl": "0"},
-            fill(60, "A", 10, 10, 110, 2) | {"closedPnl": "100"}]
-    market = candles(100, 110)
-    assert _summary(rows, market, account, T0, T0 + HOUR)["fark"] == pytest.approx(0.05)
-    assert _summary(rows, market, account, T0, T0 + HOUR, fixed_scale=True)["fark"] == pytest.approx(0.0)
 
 
-def test_altin_saglama_toplam_net_ve_eksik_isaretleme_notu():
-    """Açık BTC için son mum yoksa gerçekleşmiş kıyas korunur ama sonuç eksik işaretlemeyi açıkça not eder; toplam net de ayrıca kıyaslanır."""
-    rows = [fill(0, "B", 10, 0, 100, 1) | {"closedPnl": "0"}]
-    summary = _summary(rows, {"BTC": []}, 1_000.0, T0, T0 + HOUR)
-    assert summary["mark_missing"] == 1 and summary["not"] == "eksik işaretleme"
-    assert summary["trader_toplam_net"] == pytest.approx(summary["golge_toplam_net"])
-    assert summary["toplam_net_fark"] == pytest.approx(0.0)
 
 
-def test_altin_trader_toplam_net_golge_unrealizedini_kullanmaz():
-    """Trader 10 BTC @100 açar; pencere sonunda hesap 2000 $, işaret 110. Trader açık K/Z = 10·10/2000=0,05.
-    Gölge ise giriş anındaki 1000 $ ölçekle 0,10 taşır; trader toplamı gölgenin 0,10'u değil kendi 0,05'i olmalıdır."""
-    account = pd.Series([1_000.0, 2_000.0], index=pd.to_datetime([T0, T0 + HOUR], unit="ms"))
-    rows = [fill(0, "B", 10, 0, 100, 1) | {"closedPnl": "0"}]
-    summary = _summary(rows, candles(100, 110), account, T0, T0 + HOUR)
-    assert summary["trader_toplam_net"] == pytest.approx(0.05)
-    assert summary["golge_toplam_net"] == pytest.approx(0.1)
-    assert summary["toplam_net_fark"] == pytest.approx(0.05)
 
 
-def test_altin_kapanir_yeniden_acilir_ve_sonda_acik_kalir_ilk_tur_saglamaya_girer():
-    rows = [fill(0, "B", "0.1", 0, 100, 1), fill(10, "A", "0.1", "0.1", 110, 2),
-            fill(20, "B", "0.2", 0, 100, 3)]
-    selected = pencere_ici_dolumlar(rows)
-    assert selected == rows
-    diag = pozisyon_dokumu(rows)["BTC"]
-    assert diag == {"son_pozisyon": "0.2", "en_kucuk_mutlak_pozisyon": "0.0", "sifira_donus_sayisi": 1}
 
 
 def test_v2_mark_eksik_olan_pozisyon_her_dolumda_bastan_taranmaz():

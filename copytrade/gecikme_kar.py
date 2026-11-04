@@ -151,7 +151,7 @@ def olc_trader(root: Path, client, row: dict, now: pd.Timestamp, pencere: str, r
         mumlar, _ = im.execution_candles(onbellek, copy_fills, cache, now_ms, gecikme)
         yurutme[gecikme] = {coin: {int(c['t']): float(c['o']) for c in rows} for coin, rows in mumlar.items()}
         yaklasik[gecikme] = sum(1 for rows in cache.values() for v in rows.values() if im.cached_candle(v)[1])
-    style = im.resolve_style(root, row)
+    style = im.resolve_style(row)
     sonuc = olc(copy_fills, saatlik, isaret, yurutme, funding, t0, now, style, rules, yaklasik=yaklasik)
     return trader_satiri(row['id'], address.lower(), style, t0, sonuc, im.delay_for_style(style, rules), len(copy_fills),
                         min((int(f['time']) for f in copy_fills), default=None))

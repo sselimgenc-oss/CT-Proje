@@ -258,13 +258,6 @@ async function checkStateAlerts(env, status, fetcher = fetch) {
   }
   if (oncekiYas !== yasDurum) await uyariDurumYaz(env, "veri_yas", yasDurum);
 
-  const kalabalikAcik = !!status.kalabalik?.uyari, kalabalikDurum = kalabalikAcik ? "acik" : "kapali";
-  const oncekiKalabalik = await uyariDurumGetir(env, "kalabalik");
-  if (kalabalikAcik && oncekiKalabalik !== "acik") {
-    await telegram(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text: `⚠️ Kalabalık uyarısı başladı: ${status.kalabalik.uyari_metni || "ayrıntı yok"}` }, fetcher);
-  }
-  if (oncekiKalabalik !== kalabalikDurum) await uyariDurumYaz(env, "kalabalik", kalabalikDurum);
-
   // yeşil/sarıdan kırmızıya geçişte uyarır; aynı kırmızı durumda tekrarlanmaz (diğer durum uyarılarıyla aynı desen).
   const hatIsik = status.saglik_hatti?.isik;
   if (hatIsik) {
@@ -291,15 +284,6 @@ async function sendDailySummaryIfDue(env, fetcher = fetch, nowMs = Date.now()) {
   await env.DB.prepare("INSERT OR IGNORE INTO ozet_gonderildi(gun) VALUES (?)").bind(gun).run();
 }
 
-// Oda risk bayrakları (GOREV_ODA_RISK): yalnız uyarı varsa tek satır; bilgi amaçlı, otomasyon yok.
-function riskLine(status, room) {
-  const parts = [];
-  if (status.kalabalik?.uyari && status.kalabalik.uyari_metni) parts.push(status.kalabalik.uyari_metni);
-  const flagged = room.filter(t => t.yonsuz_bayrak?.bayrak).map(t => t.takma_ad);
-  if (flagged.length) parts.push(`yönsüz bayrak: ${flagged.slice(0, 3).join(", ")}${flagged.length > 3 ? ` +${flagged.length - 3}` : ""}`);
-  return parts.length ? `⚠️ ${parts.join(" · ")}` : "";
-}
-
 // /durum: yalnız oda (bildirimli kol) ayrıntılı; diğer kollar sayı.
 function formatStatus(status, nowMs = Date.now()) {
   const all = status.traderlar || [];
@@ -324,8 +308,6 @@ function formatStatus(status, nowMs = Date.now()) {
     for (const t of rows.slice(0, 5)) lines.push(`• ${t.takma_ad} · ${(t.saglik.nedenler || []).join(", ") || LIGHT[colour]}`);
     if (rows.length > 5) lines.push(`• +${rows.length - 5} trader daha`);
   }
-  const risk = riskLine(status, room);
-  if (risk) lines.push("", risk);
   lines.push("");
   if (hasArms) lines.push(`👀 Sessiz izleme: ${all.length - room.length} trader (kontrol, taban, elle)`);
   return lines.join("\n");

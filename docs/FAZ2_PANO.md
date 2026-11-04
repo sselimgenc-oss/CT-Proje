@@ -5,7 +5,7 @@ Kullanıcı: "Pano olarak kullanıcı dostu, işlemlerin şu tarz gözüktüğü
 
 ## Sıra (değişmez)
 - Pano **Faz 1 tamamlandıktan sonra** yapılır: veri, trader seçimi ve motor önce (K‑12, DURUM "tamamlandı kanıtları").
-- Pano yalnız **okur**: `copytrade-izleme:izleme/durum.json` ve `copytrade-kapi:ilk11/…` (veri dalları). Hesap yapmaz (AGENTS kural 7);
+- Pano yalnız **okur**: `copytrade-izleme:izleme/durum.json` (veri dalı) ve `copytrade/izleme_listesi.yaml`. Hesap yapmaz (AGENTS kural 7);
   gösterilen her sayı motorun yayımladığı alandır. Eksik alan uydurulmaz, "—" / "bilinmiyor" gösterilir.
 - Gerçek para yok: başlıkta `SİM` rozeti (PAPER).
 
@@ -13,7 +13,7 @@ Kullanıcı: "Pano olarak kullanıcı dostu, işlemlerin şu tarz gözüktüğü
 1. **Başlık:** kol/takım adı (İlk 11, Yedek 11, PAF), "Hyperliquid perps", `SİM` rozeti.
 2. **Kasa kartı:** sanal kasa $ (v3, 1.000 $ ölçeğinde; birim sözleşmeye göre), başlangıçtan $ ve % değişim, küçük kasa eğrisi (son 1–3 gün).
 3. **Özet kutuları:** Nakit (serbest teminat) · Açık teminat (işlem sayısı) · Açık K/Z (gerçekleşmemiş) · Bugün (açılan/kapanan sayısı) ·
-   Yatırılan · İşlem başı tutar · Son 24 sa işlem sayısı + kazanma oranı · Oda/kadro doluluğu.
+   Yatırılan · İşlem başı tutar · Son 24 sa işlem sayısı + kazanma oranı · Kadro doluluğu (radar kadrosu T4'te gelene dek boş durum: "Radar kadrosu T4'te").
 4. **Açık işlemler tablosu:** coin · yön/kaldıraç rozeti (L/S + x) · trader kısa adresi · yaş (dk/sa) · likidasyona uzaklık % · teminat $ ·
    büyüklük $ · K/Z $ · K/Z %. Alt satır: TOPLAM. Uzun liste "+N işlem daha" ile kısaltılır.
 5. **Son kapananlar:** coin · rozet · kapanış nedeni (trader kapattı / azalttı / yön değiştirdi / stop / tasfiye) · süre · trader · ana para · K/Z $ · K/Z %.

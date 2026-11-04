@@ -1,15 +1,12 @@
-"""Altın örnekler (görev 25): elle hesaplanmış küçük senaryolar. HER senaryo hem kopya defterinden hem plasebo motorundan (kimlik yerleştirmesi)
-geçer ve ikisi de AYNI beklenen sayıyı verir (görev 20: gerçek skor ile plasebo skoru aynı fonksiyondan çıkar).
+"""Altın örnekler (görev 25): elle hesaplanmış küçük senaryolar, kopya defterinden (copy_ledger) geçer. (T1: eski ikinci motor kolu silindi; defter kolu ve beklenen sayılar aynen.)
 
 Ortak: hesap 1000 $, maliyet %0,095 (taker %0,045 + kayma %0,05) her dolumda; sonuçlar hesaba oranla.
 """
 from __future__ import annotations
 
-import pandas as pd
 import pytest
 
 from copytrade.defter import DAY, HOUR, FundingRates, Market, copy_ledger
-from copytrade.kapi import placebo_scores
 from copytrade.kurallar import load_rules
 
 T0 = 20_833 * DAY
@@ -26,17 +23,10 @@ def fill(minutes, side, size, before, px, coin="BTC", tid=0):
             "closedPnl": "0", "fee": "0", "tid": tid}
 
 
-def identity(templates, start, end, seed, notes=None):
-    return list(templates)
-
-
 def both(fills, market, delay, end_hours, rates=None):
-    """(kopya defteri neti, plasebo motorunun kimlik yerleştirmesi neti)."""
+    """Kopya defteri neti."""
     start_ms, end_ms = T0 - DAY, T0 + end_hours * HOUR
-    ledger = copy_ledger(fills, Market(market), A, delay, start_ms, end_ms, rates, RULES)["net"]
-    scores, actual = placebo_scores(fills, market, A, pd.Timestamp(start_ms, unit="ms", tz="UTC"), pd.Timestamp(end_ms, unit="ms", tz="UTC"),
-                                    1, delay, None, rates, RULES, place=identity, return_actual=True)
-    return ledger, (scores[0] if scores else 0.0), actual
+    return copy_ledger(fills, Market(market), A, delay, start_ms, end_ms, rates, RULES)["net"]
 
 
 SCENARIOS = {
@@ -65,52 +55,10 @@ SCENARIOS = {
 
 
 @pytest.mark.parametrize("name", list(SCENARIOS))
-def test_scenario_gives_the_hand_computed_number_in_both_engines(name):
+def test_scenario_gives_the_hand_computed_number_in_the_ledger(name):
     fills, market, delay, end_hours, rates, expected = SCENARIOS[name]
-    ledger, placebo, actual = both(fills, market, delay, end_hours, rates)
-    assert ledger == pytest.approx(expected, abs=1e-9)
-    assert placebo == pytest.approx(expected, abs=1e-9)
-    assert actual is None or actual == pytest.approx(expected, abs=1e-9)
+    assert both(fills, market, delay, end_hours, rates) == pytest.approx(expected, abs=1e-9)
 
 
 def test_there_are_at_least_six_golden_scenarios():
     assert len(SCENARIOS) >= 6
-
-
-def test_golden_8_account_value_floor_sums_main_and_hip3_dexes_and_stops_at_kaldi():
-    """Görev 27. Bugünkü hesap değeri = ana piyasa + tüm HIP-3 dex toplamı; tabanın (10.000 $) altı 1. aşamada Kaldı, neden "hesap değeri tabanı".
-    Birleşik hesapta bakiye spot USDC'de durur (canlı: 0x69b0 ana 0 $, HIP-3 0 $, spot USDC 602.437 $, portfolio son 611.243 $), bu yüzden spot USDC toplama girer.
-    El hesabı: ana 6.000 + xyz 3.000 + spot USDC 999 = 9.999 $ → Kaldı; 6.000 + 3.000 + 1.000 = 10.000 $ → geçer (eşik dahil); 0 $ → Kaldı;
-    yalnız spot USDC 602.437,23 $ (0x69b0 durumu) → geçer."""
-    from datetime import datetime, timezone
-    from test_asama1_payda import portfolio
-    import copytrade.kapi as kapi
-
-    def client(values):
-        class Client:
-            requests = 0
-            def info(self, body, weight=1):
-                if body["type"] == "perpDexs":
-                    return [None, {"name": "xyz"}, {"name": "flx"}]
-                if body["type"] == "spotClearinghouseState":
-                    return {"balances": [{"coin": "USDC", "total": str(values.get("spot", 0))}, {"coin": "MAX", "total": "1073320.26"}]}   # USDC dışı bakiye sayılmaz
-                return {"marginSummary": {"accountValue": str(values.get(body.get("dex", ""), 0))}}
-            def portfolio(self, address):
-                return portfolio([i * 100 for i in range(14)], [1000 + i * 100 for i in range(14)])   # 1. aşamayı geçen eğri
-        return Client()
-
-    assert kapi.hip3_dex_names(client({})) == ["xyz", "flx"]
-    assert kapi.total_account_value(client({"": 6000, "xyz": 3000, "spot": 999}), "0xa", ["xyz", "flx"]) == 9999.0
-    assert kapi.total_account_value(client({"": 6000, "xyz": 3000, "spot": 1000}), "0xa", ["xyz", "flx"]) == 10000.0
-    assert kapi.account_value_parts(client({"spot": 602437.2312561}), "0x69b0", ["xyz", "flx"]) == {"ana": 0.0, "hip3": 0.0, "spot_usdc": 602437.2312561}
-    rules = kapi.load_rules()
-    for values, passes in (({}, False), ({"": 3000, "xyz": 1000, "spot": 999}, False), ({"": 3000, "xyz": 1000, "spot": 1000}, True), ({"spot": 602437.23}, True)):
-        row = kapi.evaluate_address({"address": "0xa", "accountValue": 50000.0}, client(values), type("C", (), {"requests": 0})(),
-                                    datetime.now(timezone.utc), 0, 0, None, rules, dexes=["xyz", "flx"])
-        if not passes:
-            assert row["asama1"] == "Kaldı" and row["neden"] == "hesap değeri tabanı" and row["hesap_degeri_bugun"] < 5000
-        else:
-            # Taban geçildi: satır tabanda kesilmedi (sonraki aşamada bu sahte istemci dolum veremediğinden veri hatası olması beklenir).
-            assert row.get("neden") != "hesap değeri tabanı" and row["asama1"] != "Kaldı" and row["hesap_degeri_bugun"] >= 5000.0
-    table = kapi.finalize(pd.DataFrame([{"address": "0xa", "asama1": "Kaldı", "neden": "hesap değeri tabanı"}]), rules)
-    assert table.loc[0, "sinif"] == "Kaldı"

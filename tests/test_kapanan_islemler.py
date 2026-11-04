@@ -1,4 +1,4 @@
-"""`kapanan_islemler` (v3) / `copy_ledger(islem_kaydi=True)` altın örnekleri (docs/ILK11_SECIM_SARTNAME.md §4.2, §6 madde 12).
+"""`kapanan_islemler` (v3) / `copy_ledger(islem_kaydi=True)` altın örnekleri .
 
 Sözleşme: bir işlem = kopya pozisyonunun bir coinde 0'dan açılıp 0'a dönmesi (ters dönüşte iki satır); `sonuc_usd` = gerçekleşen K/Z − taker/kayma maliyeti
 ± funding, 1.000 $ sanal kopya ölçeğinde; `getiri` = sonuc_usd / işlemde açılan toplam $. YALNIZ raporlama: bakiye / getiri DEĞİŞMEZ (kural 6).
