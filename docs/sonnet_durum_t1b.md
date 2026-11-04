@@ -18,3 +18,9 @@ Görevi o dalın belgelerinden okudum; kodu `main` tabanlı dalda yazdım.
 - `ci.yml` ve `sonnet_isci.yml`: node/Worker adımları kalktı.
 - Belgeler: `H2_KURULUM.md` (sağlayıcıdan bağımsız), `VERI_SOZLESMESI.md` (Worker/D1/R2, kararlar, gecikme.json, Telegram bölümü çıktı; `gecikme_kar.json` kaldı), `FAZ1`, `FAZ3_TEKNIK_HAZIRLIK`, `saglik_hatti.py` docstring, `DURUM.md`.
 - `deploy/sg-dinleyici.service`, `dinleyici.py`, `risk_defter.py`, `live_koruma.py`, `hl_ws_*`, `faz3_*`, `dinleyici_deneme.yml` aynen kaldı.
+
+## Lider kararları (2026-11-04, Claude)
+1. Veri dalı büyümez: `izleme_yayimla.sh` her yayımda `--orphan` commit yazıyor (geçmiş birikmez); `izleme.yml` zaten yalnız elle. İş yok.
+2. "R2 form puanı" eşleşmesi kabul (strateji aşaması, Cloudflare değil).
+3. Kol adları T4'te.
+Denetim: `pytest` 458 geçti (yerel), Cloudflare/D1/Worker kalıntısı yok, `izleme_deneme` (K08) yeşil. Birleştirilir.
