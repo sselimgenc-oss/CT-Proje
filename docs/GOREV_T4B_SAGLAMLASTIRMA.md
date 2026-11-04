@@ -1,6 +1,6 @@
 # Görev T4b — Motor sağlamlaştırma (bağımsız denetim sonrası, K‑37)
 
-Kaynak: bağımsız denetim raporu (2026-11-05). Lider her bulguyu kodda doğruladı. Bu görev **gerçek kipten (T5) önce zorunlu**; sanal kip T4 ile çalışmayı sürdürür.
+Kaynak: bağımsız denetim raporu (2026-11-05). Lider her bulguyu kodda doğruladı. Madde 1–5 ve 7 gerçek kipten önce zorunlu (para güvenliği); geçiş zamanı kullanıcı kararı. Sanal kip T4 ile çalışmayı sürdürür.
 Dal: `claude/t4b-saglamlastirma` (T4 main'e girdiyse main'den, girmediyse `claude/t4-canli-motor`'dan). Her madde testle gelir (AGENTS.md).
 
 ## 1. Kapanış teyidi (Kritik)
@@ -41,9 +41,7 @@ Dal: `claude/t4b-saglamlastirma` (T4 main'e girdiyse main'den, girmediyse `claud
   60 dk penceresinden eski kapanışlar senkronda trader pozisyonu 0 görülünce kapatılır.
 - Belge (`sonnet_durum_t4.md` #12, motor docstring) ve testler bu kurala göre düzeltilir. 5 dk eski açılış testi artık emir ÜRETMEMELİ.
 
-## 6. Kuyruk önceliği ve gecikme (Orta)
-- Olay kuyruğu öncelikli: kapat/azalt → ac/artir. Kuyruk sınırı 10.000 olay. Taşarsa açılışlar düşer, kapanışlar kalır; durum alarmla bildirilir.
-- `kuyruk_gecikme_ms` ölçülür (p50/max) ve vardiya özetine yazılır. Açılışta yaş kuralı (§5) kuyruk bekleme süresini de içerir.
+## 6. (çıkarıldı, K‑37: kuyruk önceliği; küçük emirlerde önemsiz. Yalnız `kuyruk_gecikme_ms` p50/max vardiya özetine yazılır.)
 
 ## 7. Telegram (Orta)
 - Komut yalnız `chat.id == TELEGRAM_CHAT_ID` **ve** `from.id == TELEGRAM_CHAT_ID` ise kabul edilir (özel sohbet).
@@ -56,8 +54,7 @@ Dal: `claude/t4b-saglamlastirma` (T4 main'e girdiyse main'den, girmediyse `claud
   Böylece deneme vardiyası üretimi bekletmez.
 - Vardiya açılışında önceki kilit nabzı 30 dk'dan eskiyse Telegram'a "vardiya boşluğu X dk" gönderilir ve olay `vardiya_boslugu` olarak kaydedilir.
 
-## 9. Sanal defter derinliği (Orta)
-- Aynı coinde 5 sn içindeki ardışık sanal emirler, öncekilerin tükettiği defter seviyelerini düşerek yürür. Kısmi dolum ve `dolmadi` gerçekçi olur.
+## 9. (çıkarıldı, K‑37: sanal defter derinliği; 11–90 $ emirde önemsiz.)
 
 ## 10. Herkese açık veri
 - Gerçek kipte kendi HL hesap adresimiz hiçbir durum/kayıt dosyasına ve Telegram mesajına yazılmaz. Test: çıktılarda `HL_HESAP_ADRESI` geçmez.
