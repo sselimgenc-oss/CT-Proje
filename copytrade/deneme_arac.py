@@ -1,4 +1,4 @@
-"""Kural 1 küçük gerçek veri denemeleri için yardımcılar (eski `ilk11_deneme` modülünden kalan genel parçalar, T1).
+"""Kural 1 küçük gerçek veri denemeleri için yardımcılar (silinen eski deneme modülünden kalan genel parçalar, T1).
 
 Deneme iş akışları (`izleme_deneme.yml`, `gecikme_kar_deneme.yml`) çağırır; üretim verisine yazmaz.
 
