@@ -7,9 +7,9 @@ Dayanak: `docs/RADAR_V1.md` §3–§5b, K‑26…K‑28. Dal: `claude/t3-form-ka
   `hedef_emir(eylem, trader_poz_once, trader_poz_sonra, trader_hesap_usd, biz_poz_usd, slot_usd, fiyat, rules) -> (emir_usd | 0, neden)`.
   Kurallar: açılış = slot × (trader nosyonel / trader hesap), tavan 3,0 × slot; < 11 $ → 3,0 × slot ≥ 11 ise 11 $, değilse 0 (`min_emir_atlandi`);
   artırma/azaltma trader'ın değişim oranıyla; < 11 $ azaltmada kalan < 11 $ ise tamamı kapat, değilse 0; artırmada 0; trader tam kapanış → tam kapanış.
-- Yeni `copytrade/kopya_v5.py` = `kopya_v4` risk katmanı + `boyut.hedef_emir` (sabit tutar eğrisi yerine). Slot = `radar_kasa_usd / 11`
-  (`radar_kasa_usd = 1000`). Kural 6: v4 **silinmez**; R1/6 kopya testi v5'e geçer; PR'da aynı havuzda v4 ↔ v5 kopya getirisi yan yana (20 aday).
-- Altın örnekler (elle): slot 90,91; trader hesap 100.000, 30.000 $ açılış → 27,27 $; 5.000 $ açılış → 4,55 → 11 $; trader %50 azaltır, biz 27,27 →
+- Yeni `copytrade/kopya_v5.py` = `kopya_v4` risk katmanı + `boyut.hedef_emir` (sabit tutar eğrisi yerine). Slot = `canli_kasa_usd / N`, `N = min(11, taban(canli_kasa_usd / radar_canli_slot_min_usd))`
+  (`canli_kasa_usd` kullanıcı ayarı, varsayılan 1000; K‑30). R1/6 kopya testi de bu slotla oynatır. Kural 6: v4 **silinmez**; R1/6 kopya testi v5'e geçer; PR'da aynı havuzda v4 ↔ v5 kopya getirisi yan yana (20 aday).
+- Altın örnekler (elle): kasa 100 → N 4, slot 25; kasa 250 → N 10, slot 25; kasa 500 → N 11, slot 45,45; kasa 1000 → slot 90,91; trader hesap 100.000, 30.000 $ açılış → 27,27 $; 5.000 $ açılış → 4,55 → 11 $; trader %50 azaltır, biz 27,27 →
   13,64 $ satış; biz 15 $ iken trader %40 azaltır → 6 $ < 11 ve kalan 9 < 11 → 15 $ tam kapanış; tavan: 400.000 $ açılış → 272,73 $.
 
 ## 2. R2 form puanı (`copytrade/radar_form.py`)

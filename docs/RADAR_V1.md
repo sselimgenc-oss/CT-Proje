@@ -64,7 +64,9 @@ H = trader'ın `son7g` brüt kârının erken-trend girişlerden gelen payı (0�
 ## 5. R3 — Kadro (K‑22/K‑23: tek motor, canlı; deneme/gölge yok)
 Kadro günlük radar koşusunun **form sırasıdır**, toplam **30**: 1–11 **İlk 11**, 12–30 **Yedek 19** (K‑24; PAF yok). Yalnız İlk 11'in ilk **N**'i
 gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez, emir yok. Havuzda 30'dan az kişi varsa kadro o kadardır.
-- **Saha sayısı:** `N = min(11, taban(kasa / radar_canli_slot_min_usd))`, `radar_canli_slot_min_usd = 25` → **1.000 $ kasada N = 11** (slot ≈ 90,9 $).
+- **Saha sayısı:** `N = min(11, taban(kasa / radar_canli_slot_min_usd))`, `radar_canli_slot_min_usd = 25` → **kasa kullanıcı ayarıdır** (`canli_kasa_usd`, K‑30): 100 $ → N = 4 (slot 25 $), 250 $ → 10 (25 $), 500 $ → 11 (45,5 $), 750 $ → 11 (68,2 $),
+  1.000 $ → 11 (90,9 $). Üst sınır 1.000 $ (`AGENTS.md`). Kasa değişince N ve slot bir sonraki kadro okumasında yeniden hesaplanır; fazla slot sahadan
+  **sonuç dışı** nedenle iner (bekleme cezası yok), açık pozisyonları §5 kuralıyla kapanır.
   Slot kasası = kasa / N (gerçek USDC).
 - **İlk gün:** form sırasının ilk N'i sahaya çıkar.
 - **Sahaya giriş (sonraki günler):** saha slotu boşalınca İlk 11'in sahada olmayan en iyi sıralısı girer.

@@ -13,7 +13,8 @@ Kip geçişi = anahtar + bu ayar, motor yeniden başlatılır; sanal dönemin ka
   72 sa işlem yok, R1 elemesi); sonuçla düşene 14 gün bekleme, sonuç dışına yok; korelasyon ≥ 0,7 en fazla 2. Durum `durum/saha.json`.
 - `yurutucu.py` — ortak arayüz `emir(coin, yon, usd, reduce_only) -> dolum`; iki arka uç:
   - **Sanal:** emir anında HL `l2Book` alınır, bizim tutarımızla defter yürünür (IOC: ± %0,5 bandı dışında kalan kısım dolmaz), dolum fiyatı = yürünen
-    ortalama, ücret = taker; izole 3x marj ve tasfiye fiyatı yerelde hesaplanır (mark fiyatı her dakika). Kasa `canli_sanal_kasa_usd = 1000`.
+    ortalama, ücret = taker; izole 3x marj ve tasfiye fiyatı yerelde hesaplanır (mark fiyatı her dakika). Kasa `canli_kasa_usd` (kullanıcı ayarı: 100/250/500/750/1000…, üst sınır 1.000; K‑30) — sanal ve gerçek kipte aynı ayar;
+    gerçek kipte motor bu tutarın üstünü kullanmaz (hesapta daha fazla olsa bile).
   - **Gerçek:** HL resmi Python SDK (`hyperliquid-python-sdk`, sürüm sabit, ≥ 2 haftalık). Coin başına **izole 3x** (`update_leverage`), **IOC limit**,
   fiyat = en iyi karşı fiyat ± %0,5; azaltma/kapama **reduce-only**. Dolmayan kısım yeniden denenmez. Anahtar yalnız ortam değişkeninden
   (`HL_API_CUZDAN_ANAHTARI` = para çekme yetkisiz API cüzdanı; `HL_HESAP_ADRESI` = ana hesap, açık). Anahtar yoksa motor başlamaz.
