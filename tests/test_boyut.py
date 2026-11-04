@@ -1,0 +1,120 @@
+"""Tek boyutlandırma (K‑28, RADAR_V1.md §5/§5b): `copytrade/boyut.py` ve `kopya_v5` için elle hesaplanmış altın örnekler."""
+import pandas as pd
+import pytest
+
+from copytrade import boyut, kopya_v5
+from copytrade import izleme_motoru as m
+from copytrade.kurallar import load_rules
+
+RULES = load_rules()
+T0 = pd.Timestamp('2026-10-27T00:00:00Z')
+NOW = pd.Timestamp('2026-10-27T12:00:00Z')
+ms = lambda s: m.millis(m.timestamp(s if len(s) > 6 else f'2026-10-27T{s}:00Z'))   # noqa: E731  ('10:00' → 2026-10-27T10:00:00Z)
+SLOT = 1000 / 11                                              # 90,909…
+
+
+@pytest.mark.parametrize('kasa, n, slot', [(100, 4, 25.0), (250, 10, 25.0), (500, 11, 500 / 11), (750, 11, 750 / 11), (1000, 11, 1000 / 11)])
+def test_saha_sayisi_ve_slot(kasa, n, slot):
+    assert boyut.saha_sayisi(kasa, RULES) == n and boyut.slot_usd(kasa, RULES) == pytest.approx(slot)
+    assert boyut.slot_usd(500, RULES) == pytest.approx(45.4545, abs=1e-4) and boyut.slot_usd(1000, RULES) == pytest.approx(90.91, abs=1e-2)
+
+
+@pytest.mark.parametrize('kasa', [0, -5, 24.99, 1000.01, float('nan')])
+def test_kasa_sinirlari_hata(kasa):
+    with pytest.raises(ValueError):
+        boyut.saha_sayisi(kasa, RULES)
+
+
+def test_kasa_tam_sinirlar_gecer():
+    assert boyut.saha_sayisi(25, RULES) == 1 and boyut.saha_sayisi(1000, RULES) == 11
+
+
+def acilis(nosyonel, hesap=100_000.0, fiyat=100.0):
+    return boyut.hedef_emir('ac', 0.0, nosyonel / fiyat, hesap, 0.0, SLOT, fiyat, RULES)
+
+
+def test_acilis_orantili_min_ve_tavan():
+    emir, neden = acilis(30_000)                                 # 90,91 × 0,30 = 27,27 $
+    assert emir == pytest.approx(27.27, abs=1e-2) and neden == 'tamam'
+    emir, neden = acilis(5_000)                                  # 4,55 $ < 11 → 3 × slot ≥ 11 → 11 $
+    assert emir == 11.0 and neden == 'min_emir_yuvarlandi'
+    emir, neden = acilis(400_000)                                # 363,6 $ → tavan 3 × 90,91 = 272,73 $
+    assert emir == pytest.approx(272.73, abs=1e-2) and neden == 'tavan_kirpildi'
+
+
+def test_min_emir_atlandi_kucuk_slot():
+    """slot 2 $ → 3 × slot = 6 < 11: küçük açılış yuvarlanamaz → atlanır."""
+    assert boyut.hedef_emir('ac', 0.0, 10.0, 100_000.0, 0.0, 2.0, 100.0, RULES) == (0.0, 'min_emir_atlandi')
+
+
+def test_azaltma_oran_kucuk_kalan_ve_atlama():
+    emir, neden = boyut.hedef_emir('azalt', 10.0, 5.0, 0.0, 27.27, SLOT, 100.0, RULES)          # trader %50 azaltır → 13,635 $
+    assert emir == pytest.approx(13.635) and neden == 'tamam'
+    emir, neden = boyut.hedef_emir('azalt', 10.0, 6.0, 0.0, 15.0, SLOT, 100.0, RULES)           # %40 → 6 $ < 11, kalan 9 < 11 → 15 $ tam
+    assert emir == 15.0 and neden == 'kucuk_kalan_kapat'
+    assert boyut.hedef_emir('azalt', 10.0, 9.0, 0.0, 60.0, SLOT, 100.0, RULES) == (0.0, 'min_emir_atlandi')   # %10 → 6 $ < 11, kalan 54 ≥ 11 → atla
+
+
+def test_artirma_oran_atlama_ve_tavan():
+    emir, neden = boyut.hedef_emir('artir', 10.0, 15.0, 0.0, 40.0, SLOT, 100.0, RULES)           # trader %50 artırır → 20 $
+    assert emir == pytest.approx(20.0) and neden == 'tamam'
+    assert boyut.hedef_emir('artir', 10.0, 11.0, 0.0, 40.0, SLOT, 100.0, RULES) == (0.0, 'min_emir_atlandi')  # 4 $ < 11 → atla
+    emir, neden = boyut.hedef_emir('artir', 10.0, 30.0, 0.0, 200.0, SLOT, 100.0, RULES)         # istenen 400 $; toplam tavan 272,73 → 72,73 $
+    assert emir == pytest.approx(3 * SLOT - 200.0) and neden == 'tavan_kirpildi'
+
+
+def test_trader_tam_kapanis_bizim_tamami_ve_bilinmeyen_eylem():
+    assert boyut.hedef_emir('kapat', 10.0, 0.0, 0.0, 7.0, SLOT, 100.0, RULES) == (7.0, 'tam_kapanis')      # 11 $ altı olsa da tamamı
+    with pytest.raises(ValueError):
+        boyut.hedef_emir('x', 0, 0, 0, 0, SLOT, 100.0, RULES)
+
+
+def fill(time, side, size, before, price, coin='BTC'):
+    return {'time': ms(time), 'coin': coin, 'side': side, 'sz': str(size), 'startPosition': str(before), 'px': str(price),
+            'tid': ms(time), 'oid': str(ms(time)), 'closedPnl': '0', 'fee': '0'}
+
+
+def saat_mumlari(fiyat=100.0):
+    return {'BTC': [{'t': ms(f'2026-10-27T{h:02d}:00:00Z'), 'o': fiyat} for h in range(0, 13)]}
+
+
+def oynat(delay, rules, fills=None, hesap=20_000.0):
+    fills = fills or [fill('10:00', 'B', 100, 0, 100), fill('11:00', 'A', 100, 100, 110)]
+    yurut = {'BTC': {ms('2026-10-27T10:01:00Z'): 100.0, ms('2026-10-27T11:01:00Z'): 110.0}}
+    return kopya_v5.hesapla(fills, saat_mumlari(), {}, yurut, [], T0, NOW, delay, 'intraday', rules, trader_hesap_usd=hesap, kasa_usd=1000.0)
+
+
+def test_v5_altin_ornek_ayna_ve_kopya_tek_long_100_den_110a():
+    """Trader hesap 20.000 $, 100 BTC × 100 = 10.000 $ (oran 0,5) açar, 110'dan tamamını kapatır. Slot 90,909 $ → açılış 45,4545 $ = 0,454545 BTC.
+    Ayna (gecikme 0, maliyet 0): kâr 0,454545 × 10 = 4,54545 $ → getiri 0,00454545. Kopya (1 dk gecikme, aynı mum fiyatları, maliyet 0,00095): maliyet = (45,4545 + 50) × 0,00095 = 0,0906818 $
+    → net 4,454773 $ → getiri 0,004454773; kopya_koruma = 0,98005."""
+    sifir = {**RULES, 'maliyet_taker': 0.0, 'maliyet_kayma': 0.0}
+    ayna, kopya = oynat(0, sifir), oynat(1, RULES)
+    assert ayna['surum'] == 'v5' and ayna['kasa_usd'] == 1000.0 and ayna['slot_usd'] == pytest.approx(1000 / 11)
+    assert ayna['getiri'] == pytest.approx(0.00454545, abs=1e-8)
+    assert kopya['getiri'] == pytest.approx(0.004454773, abs=1e-8)
+    assert kopya['getiri'] / ayna['getiri'] == pytest.approx(0.98005, abs=1e-5)
+
+
+def test_v5_kopya_kasasi_olcegi_getiri_kasaya_gore():
+    """Kasa 500 → N 11, slot 45,4545 $, açılış 22,7273 $: kâr 2,27273 $ / 500 = 0,00454545 (oran slot/kasa aynı → getiri aynı)."""
+    sifir = {**RULES, 'maliyet_taker': 0.0, 'maliyet_kayma': 0.0}
+    sonuc = kopya_v5.hesapla([fill('10:00', 'B', 100, 0, 100), fill('11:00', 'A', 100, 100, 110)], saat_mumlari(), {}, {}, [], T0, NOW, 0, 'intraday', sifir,
+                             trader_hesap_usd=20_000.0, kasa_usd=500.0)
+    assert sonuc['getiri'] == pytest.approx(0.00454545, abs=1e-8) and sonuc['baslangic_usd'] == 500.0
+
+
+def test_v5_trader_yari_azaltir_kalan_sonra_kapanir():
+    """Aç 100 BTC → 45,4545 $ (0,454545 BTC); trader 50 BTC satar (%50) → 22,7273 $ (0,227273 BTC) 105'ten; kalanı 110'dan: kâr = 0,227273×5 + 0,227273×10 = 3,40909 $."""
+    sifir = {**RULES, 'maliyet_taker': 0.0, 'maliyet_kayma': 0.0}
+    fills = [fill('10:00', 'B', 100, 0, 100), fill('10:30', 'A', 50, 100, 105), fill('11:00', 'A', 50, 50, 110)]
+    sonuc = kopya_v5.hesapla(fills, saat_mumlari(), {}, {}, [], T0, NOW, 0, 'intraday', sifir, trader_hesap_usd=20_000.0, kasa_usd=1000.0)
+    assert sonuc['getiri'] * 1000 == pytest.approx(3.40909, abs=1e-5)
+
+
+def test_v5_varsayilan_v3_v4_ayni_kaldi():
+    """Kural 6: v5 eklemesi v3'ü değiştirmez (defter `boyutlayici=None` yolu)."""
+    from copytrade import kopya_v3
+    a = kopya_v3.hesapla([fill('10:00', 'B', 100, 0, 100), fill('11:00', 'A', 100, 100, 110)], saat_mumlari(), {}, {'BTC': {ms('2026-10-27T10:01:00Z'): 100.0, ms('2026-10-27T11:01:00Z'): 110.0}},
+                         [], T0, NOW, 1, 'intraday', RULES)
+    assert a['surum'] == 'v3' and a['baslangic_usd'] == 1000.0 and a['getiri'] == pytest.approx(0.0020340, abs=1e-6)

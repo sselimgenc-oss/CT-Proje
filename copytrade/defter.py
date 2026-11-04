@@ -424,7 +424,7 @@ def capital_scale(account: Any):
 def copy_ledger(fills: list[dict], market: Market, account: Any, delay_min: int, start_ms: int, end_ms: int,
                 rates: FundingRates | None = None, rules: dict | None = None, daily: bool = False,
                 tutar_egrisi: Any = None, base_usd: float = 1000.0, style: str | None = None,
-                islem_kaydi: bool = False, risk_limitleri: dict | None = None, acik_liste: bool = False) -> dict[str, Any]:
+                islem_kaydi: bool = False, risk_limitleri: dict | None = None, acik_liste: bool = False, boyutlayici: Any = None) -> dict[str, Any]:
     """Tek kopya defteri. ``fills``: kaynak dolumlar (coin, side A/B, sz, startPosition, time, px), zamana göre sıralı olmak zorunda değil.
 
     Döner: ``net`` (gerçekleşen − maliyet + funding + pencere sonu gerçekleşmemiş K/Z; hesap değerine oranla), ``missing`` (eksik dolum),
@@ -446,6 +446,9 @@ def copy_ledger(fills: list[dict], market: Market, account: Any, delay_min: int,
     ``risk_limitleri`` (v4; yalnız sabit tutar modunda, bkz. ``_risk_kirp``): verilmezse hesap v3 ile BİREBİR aynıdır; verilirse artış dolumları sınırlanır ve
     sonuca ``risk_kirpma`` ([{coin, zaman_ms, istenen_usd, uygulanan_usd, neden}]) eklenir. ``acik_liste=True``: sonuca ``acik_pozisyonlar`` eklenir (pencere sonu açık kopya
     pozisyonları: coin, yon, buyukluk_usd, giris, son, kz_usd, acilis_ms; `base_usd` ölçeğinde $, K/Z funding hariç).
+
+    ``boyutlayici`` (v5, K‑28; yalnız sabit tutar modunda): verilirse `_sabit_tutar_signed` YERİNE çağrılır, imza
+    ``(sign, signed, before_leader, own, price, when, held, entry, market, realized, base_usd) -> signed`` (defter birimi = coin / ``base_usd``); verilmezse hesap aynıdır.
     """
     if tutar_egrisi is None:
         scale = capital_scale(account)
@@ -518,8 +521,11 @@ def copy_ledger(fills: list[dict], market: Market, account: Any, delay_min: int,
             else:
                 signed = signed * factor
         else:
-            signed = _sabit_tutar_signed(sign, signed, before_leader, own, price, when, held, entry, market,
-                                         realized, tutar_egrisi, base_usd)
+            if boyutlayici is not None:
+                signed = boyutlayici(sign, signed, before_leader, own, price, when, held, entry, market, realized, base_usd)
+            else:
+                signed = _sabit_tutar_signed(sign, signed, before_leader, own, price, when, held, entry, market,
+                                             realized, tutar_egrisi, base_usd)
             if risk_limitleri is not None:
                 signed = _risk_kirp(coin, signed, own, price, when, held, entry, market, realized, base_usd, risk_limitleri, kirpma)
         if abs(signed) < 1e-15:

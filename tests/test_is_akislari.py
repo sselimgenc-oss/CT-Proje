@@ -16,7 +16,7 @@ from test_izleme import ADDRESS, NOW, Client, project
 ROOT = Path(__file__).resolve().parents[1]
 WF = ROOT / ".github/workflows"
 SCRIPTS = ROOT / ".github/scripts"
-ISLER = ("izleme.yml", "dinleyici_deneme.yml", "izleme_deneme.yml", "radar_deneme.yml")
+ISLER = ("izleme.yml", "dinleyici_deneme.yml", "izleme_deneme.yml", "radar_deneme.yml", "radar.yml")
 
 
 def yukle(ad: str) -> dict:
@@ -152,7 +152,40 @@ def test_izleme_listesi_main_den_okunur_ve_veri_dalina_yazilir():
 
 # ---------------------------------------------------------------------------------------------------- artık dosya temizliği
 def test_eski_sistem_is_akislari_ve_betikleri_yok():
-    kalanlar = {"ci.yml", "dinleyici_deneme.yml", "dolgu_deneme.yml", "gecikme_kar_deneme.yml", "izleme.yml", "izleme_deneme.yml", "pano.yml", "radar_deneme.yml", "sonnet_isci.yml"}
+    kalanlar = {"ci.yml", "dinleyici_deneme.yml", "dolgu_deneme.yml", "gecikme_kar_deneme.yml", "izleme.yml", "izleme_deneme.yml", "pano.yml", "radar.yml", "radar_deneme.yml", "sonnet_isci.yml"}
     assert {p.name for p in WF.glob("*.yml")} == kalanlar          # eski sistem iş akışları (kapı, Pazar kadrosu, İlk 11 denemesi, v3 yan yana) geri gelmedi
     assert not (SCRIPTS / "kapi_yayimla.sh").exists()
     assert (SCRIPTS / "izleme_yayimla.sh").exists() and ".github/scripts/izleme_yayimla.sh" in (WF / "izleme.yml").read_text(encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------------------------------- radar (T3)
+def test_radar_yml_gunluk_00_37_utc_kadro_ve_yayim_sirasi():
+    wf = yukle("radar.yml")
+    assert wf["on"]["schedule"] == [{"cron": "37 0 * * *"}] and "workflow_dispatch" in wf["on"] and wf["on"]["push"] == {"paths": ["copytrade/radar/CALISTIR"]}
+    assert adim(wf, "radar", "Veri dalına yaz")["env"]["VERI_DALI"] == "${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}"        # dal koşusu gerçek radar dalına yazmaz
+    assert "inputs" not in (wf["on"]["workflow_dispatch"] or {})                              # donmuş kurallar: aday sayısı / kural_ust girdisi YOK
+    assert wf["permissions"] == {"contents": "write"} and wf["concurrency"]["cancel-in-progress"] is False
+    ad = adimlar(wf, "radar")
+    assert ad.index("Radar taraması (R0 + R1 + R2 girdileri)") < ad.index("Günlük kadro (R2 form puanı)") < ad.index("Veri dalına yaz (radar)")
+    tarama, kadro = adim(wf, "radar", "Radar taraması")["run"], adim(wf, "radar", "Günlük kadro")["run"]
+    assert "--aday-sayisi" not in tarama and "--kural-ust" not in tarama and "kural_ust" not in (WF / "radar.yml").read_text(encoding="utf-8").replace("`kural_ust`", "")
+    assert "copytrade.radar_kadro" in kadro
+    assert adim(wf, "radar", "Veri dalına yaz")["run"] == "bash .github/scripts/radar_yayimla.sh" and "if" not in adim(wf, "radar", "Veri dalına yaz")      # yalnız başarıda (varsayılan success())
+    artifact = next(a for a in wf["jobs"]["radar"]["steps"] if str(a.get("uses", "")).startswith("actions/upload-artifact"))
+    assert artifact["if"] == "always()"                                                       # eksik koşuda da havuz.json artifact'ı kalır
+
+
+def test_radar_yayimla_yalniz_radar_dalina_ve_90_gun():
+    metin = (SCRIPTS / "radar_yayimla.sh").read_text(encoding="utf-8")
+    for satir in metin.splitlines():
+        if "git push" in satir:
+            assert 'HEAD:$veri_dali' in satir, satir
+    assert 'case "$veri_dali" in radar|radar-deneme)' in metin                               # yalnız bu iki veri dalı
+    assert "90 days ago" in metin and "radar/son/kadro.json" in metin and '--orphan "$veri_dali"' in metin
+    assert "|| true" not in metin
+
+
+def test_radar_deneme_kural_ust_girdisi_var_yazamaz():
+    wf = yukle("radar_deneme.yml")
+    assert "kural_ust" in wf["on"]["workflow_dispatch"]["inputs"] and wf["permissions"] == {"contents": "read"}
+    assert "--kural-ust" in adim(wf, "radar", "Radar taraması")["run"] and "--v4-yan-yana" in adim(wf, "radar", "Radar taraması")["run"]

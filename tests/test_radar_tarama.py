@@ -229,20 +229,40 @@ def satir_al(sonuc, adres):
 
 
 def test_kopya_oynatma_altin_ornek_tek_coin_100_den_110a(tmp_path):
-    """10 BTC trader 10:00'da 100'den açar, 11:00'de 110'dan kapatır. Kopya 1 dk gecikmeli: dolumlar 10:01 (açılış mumu 100) ve 11:01 (açılış mumu 110).
-    Açılış tutarı N = 5,2 × (1.000 / 200)^0,86 $ (sabit tutar eğrisi); brüt = N × 0,10; maliyet = (N + 1,1 N) × (taker 0,00045 + kayma 0,0005);
-    net = N × (0,10 − 2,1 × 0,00095) = 0,098005 N; getiri = net / 1.000 (kopya_$ ölçeği)."""
-    n = float(sabit_tutar_egrisi(RULES)(1000.0))
-    assert n == pytest.approx(5.2 * 5 ** 0.86)
+    """K‑28/K‑32 (v5). 10 BTC trader 10:00'da 100'den açar (nosyonel 1.000 $, hesap 20.000 $ → oran 0,05), 11:00'de 110'dan kapatır. Slot = 1.000/11 = 90,909 $ → hedef 4,545 $ < 11 → 11 $'a yuvarlanır (0,11 BTC).
+    Ayna (gecikmesiz, maliyetsiz): kâr 0,11 × 10 = 1,10 $ → 0,0011. Kopya (1 dk gecikme; mum 10:01 → 100, 11:01 → 110): maliyet (11 + 12,1) × 0,00095 = 0,021945 $ → net 1,078055 $ → 0,001078055.
+    kopya_koruma = 1,078055 / 1,10 = 0,98005 ≥ 0,50 → geçer (eski v4 sabit tutar ölçüsünde 0,40 ile elenirdi)."""
     dolumlar = {A1: [dolum(ms("10:00:00"), "BTC", "B", 10, 0, 100), dolum(ms("11:00:00"), "BTC", "A", 10, 10, 110, kapanan=100.0)]}
     fiyat = lambda coin, t: 110.0 if t >= ms("11:00:00") else 100.0               # noqa: E731
     c = Sahte([lider(A1, 20_000, 100, 5_000)], dolumlar, fiyat)
     s = satir_al(kos(c, tmp_path, rules=RULES1), A1)
-    beklenen = n * (0.10 - 2.1 * (RULES["maliyet_taker"] + RULES["maliyet_kayma"])) / 1000.0
-    assert s["kopya_getiri_7g"] == pytest.approx(beklenen, rel=1e-9) and s["kopya_getiri_7g"] == pytest.approx(0.0020340, abs=1e-6)
-    assert s["trader_getiri_7g"] == pytest.approx(100 / 19_900) and s["islem_sayisi"] == 1 and s["fiyatsiz_eylem"] == 0
-    assert s["kopya_koruma"] == pytest.approx(s["kopya_getiri_7g"] / s["trader_getiri_7g"])
-    assert s["gecti"] is False and s["neden"] == "kopya_koruma_dusuk" and s["yaklasik_fiyat_eylem"] == 0       # kopya 0,00203 / trader 0,00503 = 0,40 < 0,50
+    assert s["ayna_getiri_7g"] == pytest.approx(0.0011, abs=1e-9)
+    assert s["kopya_getiri_7g"] == pytest.approx(0.001078055, abs=1e-9)
+    assert s["kopya_koruma"] == pytest.approx(0.98005, abs=1e-5) and s["trader_getiri_7g"] == pytest.approx(100 / 19_900)
+    assert s["islem_sayisi"] == 1 and s["fiyatsiz_eylem"] == 0 and s["yaklasik_fiyat_eylem"] == 0
+    assert s["gecti"] is True and s["neden"] is None and s["hata"] is None and s["v4_kopya_getiri_7g"] is None
+    # R2 ham girdileri (yalnız gecti satırı): işlem 27 Eki'de → günlük getiri serisi 8 gün (20–27 Eki), yalnız son gün 0,001078055 (= kopya net / kasa)
+    assert len(s["kopya_gunluk"]) == 8 and s["kopya_gunluk"][-1] == pytest.approx(0.001078055, abs=1e-9) and all(g == 0.0 for g in s["kopya_gunluk"][:-1])
+    assert s["kopya_kazanc_gun_orani"] == 1.0 and s["kopya_dusus"] == 0.0 and s["yayilma"] == 0.0        # 1 aktif gün, kazançlı; düşüş yok; tek işlem → 1 − 1/1
+    assert s["kopya_getiri_72s"] == pytest.approx(0.001078055, abs=1e-9)                                  # işlem son 72 sa içinde
+    assert s["hype_payi"] == 1.0         # tüm coinler +%10 (trend) ve long 100'den (hareketin %0'ı gerçekleşmeden = erken) açıldı: kârın tamamı erken-trend
+
+
+def test_v4_yan_yana_bilgi_alani_hesabi_degistirmez(tmp_path):
+    """`v4_yan_yana`: aynı dolumlar kopya_v4 (sabit tutar N = 5,2 × 5^0,86 $) ile de oynanır: net = N × (0,10 − 2,1 × 0,00095), getiri ≈ 0,002034 (T2 altın örneği); v5 sayıları aynı kalır."""
+    dolumlar = {A1: [dolum(ms("10:00:00"), "BTC", "B", 10, 0, 100), dolum(ms("11:00:00"), "BTC", "A", 10, 10, 110, kapanan=100.0)]}
+    fiyat = lambda coin, t: 110.0 if t >= ms("11:00:00") else 100.0               # noqa: E731
+    s = satir_al(r.kos(Sahte([lider(A1, 20_000, 100, 5_000)], dolumlar, fiyat), KOSU, tmp_path / "radar", None, RULES1, log=lambda *_: None, v4_yan_yana=True), A1)
+    assert s["v4_kopya_getiri_7g"] == pytest.approx(0.0020340, abs=1e-6) and s["kopya_getiri_7g"] == pytest.approx(0.001078055, abs=1e-9)
+
+
+def test_ayna_sifir_ya_da_negatifse_kopya_koruma_none_ve_elenir(tmp_path):
+    """Trader zararda (110'dan açıp 100'e kapatır): ayna ≤ 0 → `kopya_koruma` None → `kopya_zarar` (kopya < 0) ELENİR; ayna 0 (fiyat aynı) → kopya (maliyet) < 0 → `kopya_zarar`."""
+    dolumlar = {A1: [dolum(ms("10:00:00"), "BTC", "B", 10, 0, 110), dolum(ms("11:00:00"), "BTC", "A", 10, 10, 100, kapanan=-100.0)]}
+    fiyat = lambda coin, t: 100.0 if t >= ms("11:00:00") else 110.0              # noqa: E731
+    s = satir_al(kos(Sahte([lider(A1, 20_000, 100, 5_000)], dolumlar, fiyat), tmp_path, rules=RULES1), A1)
+    assert s["ayna_getiri_7g"] < 0 and s["kopya_koruma"] is None and s["gecti"] is False and s["neden"] == "kopya_zarar"
+    assert r.degerlendir({**s, "kopya_getiri_7g": 0.001, "ayna_getiri_7g": 0.0, "kopya_koruma": None, "kopya_alt20": 0.1, "hesap_usd": 1.0}, RULES1) == (False, "kopya_koruma_dusuk")
 
 
 def test_eksik_mum_koşuyu_dusurmez_fiyat_uydurulmaz(tmp_path):
@@ -256,13 +276,19 @@ def test_eksik_mum_koşuyu_dusurmez_fiyat_uydurulmaz(tmp_path):
 
 
 def test_kopya_olculeri_hesaplanamadi_ve_bos_sonuc():
-    assert r.kopya_olculeri(None, 0.1, A1, RULES) == {"kopya_getiri_7g": None, "kopya_koruma": None, "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None}
-    yok = r.kopya_olculeri({"durum": "hesaplanamadi", "neden": "yürütülebilir dolum yok"}, 0.1, A1, RULES)
+    bos = {"kopya_getiri_7g": None, "ayna_getiri_7g": None, "kopya_koruma": None, "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None, "v4_kopya_getiri_7g": None}
+    assert r.kopya_olculeri(None, A1, RULES) == bos
+    yok = r.kopya_olculeri({"durum": "hesaplanamadi", "neden": "yürütülebilir dolum yok"}, A1, RULES)
     assert yok["kopya_getiri_7g"] is None and yok["kopya_alt20"] is None
-    sonuc = {"getiri": 0.05, "fiyatsiz_eylem": 2, "kapanan_islemler": [{"sonuc_usd": 20.0, "gecerli": True}, {"sonuc_usd": 30.0, "gecerli": True}, {"sonuc_usd": 99.0, "gecerli": False}]}
-    o = r.kopya_olculeri(sonuc, 0.10, A1, RULES)
-    assert o["kopya_getiri_7g"] == 0.05 and o["kopya_koruma"] == pytest.approx(0.5) and o["fiyatsiz_eylem"] == 2
+    sonuc = {"getiri": 0.05, "ayna": {"getiri": 0.10}, "baslangic_usd": 1000.0, "fiyatsiz_eylem": 2,
+             "kapanan_islemler": [{"sonuc_usd": 20.0, "gecerli": True}, {"sonuc_usd": 30.0, "gecerli": True}, {"sonuc_usd": 99.0, "gecerli": False}]}
+    o = r.kopya_olculeri(sonuc, A1, RULES)
+    assert o["kopya_getiri_7g"] == 0.05 and o["ayna_getiri_7g"] == 0.10 and o["kopya_koruma"] == pytest.approx(0.5) and o["fiyatsiz_eylem"] == 2
     assert o["kopya_alt20"] == r.bootstrap_alt([0.02, 0.03], 1000, 0.20, r.adres_tohumu(A1))          # geçersiz işlem (gecerli: false) bootstrap'a girmez
+    assert r.kopya_olculeri({**sonuc, "ayna": {"getiri": 0.0}}, A1, RULES)["kopya_koruma"] is None     # ayna 0 → oran yok
+    assert r.kopya_olculeri({**sonuc, "ayna": {"getiri": -0.01}}, A1, RULES)["kopya_koruma"] is None
+    k500 = r.kopya_olculeri({**sonuc, "baslangic_usd": 500.0}, A1, RULES)                              # işlem getirileri kopya kasasına göre (500 $): 0,04 / 0,06
+    assert k500["kopya_alt20"] == r.bootstrap_alt([0.04, 0.06], 1000, 0.20, r.adres_tohumu(A1))
 
 
 def test_koşu_sozlesme_alanlari_vault_payda_hesap_ve_429(tmp_path):
@@ -280,7 +306,7 @@ def test_koşu_sozlesme_alanlari_vault_payda_hesap_ve_429(tmp_path):
     yazilan = json.loads((tmp_path / "radar/2026-10-27/havuz.json").read_text(encoding="utf-8"))
     assert yazilan == sonuc
     anahtarlar = {"adres", "hesap_usd", "hafta_pnl_usd", "trader_getiri_7g", "islem_sayisi", "medyan_tutma_saat", "kisa_islem_payi", "max_kaldirac", "likit_pay",
-                  "kopya_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "gecti", "neden", "hata"}
+                  "kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "v4_kopya_getiri_7g", "kopya_gunluk", "kopya_kazanc_gun_orani", "kopya_dusus", "yayilma", "kopya_getiri_72s", "hype_payi", "gecti", "neden", "hata"}
     assert all(set(s) == anahtarlar for s in sonuc["satirlar"])
     assert all(c_[3] == KOSU for c_ in c.cagrilar) and all(c_[2] == BAS for c_ in c.cagrilar)         # pencere [kosu − 168 sa, kosu)
 
@@ -420,3 +446,63 @@ def test_mum_onbellegi_kapanisi_korur():
     m = r.MumOnbellegi(c, KOSU, KOSU - HOUR)
     satir = m.candles("BTC", KOSU - HOUR, KOSU, interval="5m")
     assert satir and all(x["o"] == 100.0 and x["c"] == 100.0 for x in satir)
+
+
+# -------------------------------------------------------------------------------------------------------------------------------- 5xx yeniden deneme, kural_ust
+class _Yanit:
+    def __init__(self, kod, veri=None):
+        self.status_code, self._veri, self.headers = kod, veri, {}
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            import requests
+            raise requests.HTTPError(f"{self.status_code} Server Error: Internal Server Error for url: https://api.hyperliquid.xyz/info")
+
+    def json(self):
+        return self._veri
+
+
+class _Oturum:
+    def __init__(self, kodlar):
+        self.kodlar, self.cagri = list(kodlar), 0
+
+    def request(self, method, url, json=None, timeout=30):
+        self.cagri += 1
+        kod = self.kodlar.pop(0)
+        return _Yanit(kod, {"ok": True} if kod == 200 else None)
+
+
+def test_radar_istemcisi_5xx_uc_kez_yeniden_dener_sonra_veri_hatasi():
+    """HL 5xx (300 koşusunda 1 kez `500 Internal Server Error`): 3 yeniden deneme (5/15/45 sn artan bekleme); 500, 500, 200 → başarı; 4 kez 500 → HTTPError (`veri_hatasi`)."""
+    uyku: list[float] = []
+    oturum = _Oturum([500, 500, 200])
+    assert r.radar_istemcisi(oturum, sleep=uyku.append).info({"type": "meta"}) == {"ok": True}
+    assert oturum.cagri == 3 and uyku == [5, 15]
+    uyku2: list[float] = []
+    oturum2 = _Oturum([500, 500, 500, 500])
+    with pytest.raises(Exception) as hata:
+        r.radar_istemcisi(oturum2, sleep=uyku2.append).info({"type": "meta"})
+    assert oturum2.cagri == 4 and uyku2 == [5, 15, 45] and "500" in str(hata.value)
+
+
+def test_5xx_koşuda_veri_hatasi_satiri_ve_hata_mesaji(tmp_path):
+    import requests
+    c = Sahte([lider(A1, 20_000, 100, 5_000)], {}, hata={A1: requests.HTTPError("500 Server Error: Internal Server Error")})
+    s = satir_al(kos(c, tmp_path), A1)
+    assert s["neden"] == "veri_hatasi" and "500" in s["hata"]
+
+
+def test_kural_ust_yalniz_radar_anahtarlari_ve_tur():
+    yeni, uygulanan = r.kural_ust_uygula(RULES, ["radar_min_islem=5"])
+    assert yeni["radar_min_islem"] == 5 and isinstance(yeni["radar_min_islem"], int) and uygulanan == {"radar_min_islem": 5} and RULES["radar_min_islem"] == 10
+    assert r.kural_ust_uygula(RULES, ["radar_kopya_koruma_min=0.4"])[0]["radar_kopya_koruma_min"] == 0.4
+    for kotu in ("maliyet_taker=0", "radar_yok=1", "radar_min_islem"):
+        with pytest.raises(ValueError):
+            r.kural_ust_uygula(RULES, [kotu])
+
+
+def test_kural_ust_havuz_json_a_yazilir(tmp_path):
+    kurallar, ust = r.kural_ust_uygula(RULES, ["radar_min_islem=5"])
+    sonuc = r.kos(Sahte([lider(A1, 20_000, 100, 5_000)], {}), KOSU, tmp_path / "radar", None, kurallar, log=lambda *_: None, kural_ust=ust)
+    assert sonuc["kural_ust"] == {"radar_min_islem": 5}
+    assert "kural_ust" not in kos(Sahte([lider(A1, 20_000, 100, 5_000)], {}), tmp_path / "b")
