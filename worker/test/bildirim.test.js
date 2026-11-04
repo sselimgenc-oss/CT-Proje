@@ -109,25 +109,6 @@ test("checkStateAlerts: veri 3 saatten eskiyse uyarı gider, aynı durumda tekra
   assert.equal(sent.length, 2);
 });
 
-test("checkStateAlerts: kalabalık uyarısı başlayınca gider, aynı durumda tekrarlanmaz", async () => {
-  const mock = d1Mock();
-  const sent = [];
-  const fetcher = async (url, init) => { sent.push(JSON.parse(init.body).text); return new Response(JSON.stringify({ ok: true })); };
-  const env = { TELEGRAM_BOT_TOKEN: "x", TELEGRAM_CHAT_ID: "1", DB: mock.DB };
-  const sakin = { uretildi: new Date().toISOString(), kalabalik: { uyari: false } };
-  const kalabalik = { uretildi: new Date().toISOString(), kalabalik: { uyari: true, uyari_metni: "ETH net long %60" } };
-  await checkStateAlerts(env, sakin, fetcher);
-  assert.equal(sent.length, 0);
-  await checkStateAlerts(env, kalabalik, fetcher);
-  assert.equal(sent.length, 1);
-  assert.match(sent[0], /Kalabalık uyarısı başladı: ETH net long %60/);
-  await checkStateAlerts(env, kalabalik, fetcher);   // hâlâ kalabalık, tekrar uyarmaz
-  assert.equal(sent.length, 1);
-  await checkStateAlerts(env, sakin, fetcher);
-  await checkStateAlerts(env, kalabalik, fetcher);   // yeniden başladı → yeniden uyarır
-  assert.equal(sent.length, 2);
-});
-
 test("checkStateAlerts: veri hattı sağlığı kırmızıya geçince uyarır, aynı kırmızıda tekrarlamaz", async () => {
   const mock = d1Mock();
   const sent = [];

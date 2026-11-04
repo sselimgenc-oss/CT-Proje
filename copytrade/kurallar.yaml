@@ -1,44 +1,19 @@
-min_history_days: 180
-min_closed_trades: 50
-# (eski günlük tarayıcı `tarama.py`/`kurallar.evaluate` için; CT-Kapı asama1_*/adim4_* anahtarlarını kullanır)
-min_profitable_month_ratio: 0.70
-max_largest_trade_share: 0.30
-min_profit_factor_without_best: 1.20
-min_sortino: 1.50
-min_calmar: 1.00
-min_median_holding_hours: 1.0
-max_median_leverage: 5.0
 max_leverage: 15.0
-min_liquid_coin_share: 0.80
-max_watchlist: 50
 # Martingale işareti (lider kararı 2026-10-26): en az 5 ekleme ve eklemelerin > %25'i zarardaki pozisyona
 martingale_max_ratio: 0.25
 martingale_min_additions: 5
 # Lider kararı 2026-10-27 (ölçüm düzeltmesi): emir düzeyinde ve ortalama girişten > %2 aleyhte ekleme; kaldıraç = gerçek
 # pozisyon değeri / hesap değeri (hesap ayarı değil)
 martingale_min_adverse: 0.02
-# Ölçüm penceresi: 180 gün geçmiş şartı için fill'ler 365 günden çekilir
-fills_lookback_days: 365
-golge_terfi_min_hafta: 3
-golge_terfi_min_kapanmis_islem: 10
-# CT-Kapı v1.1 — kullanıcı kararları (2026-10-27, Sol 6.1 görüşüyle; docs/GOREV_TRADER_SECIMI.md).
-# Tarz: medyan elde tutma süresine göre. < 1 sa scalp (adım 3 Kaldı); 1–24 sa intraday; ≥ 24 sa swing.
-tarz_scalp_alti_saat: 1.0
-tarz_swing_ustu_saat: 24.0
-# Scalp ayıklama: kısa işlem payı en çok %25 (kısa = tarza göre dakika)
-kisa_islem_payi_max: 0.25
-kisa_islem_dk:
-  intraday: 15
-  swing: 120
-# Adım 3 ve plasebo gecikmesi (giriş ve çıkış dolumlarına; taker + kayma + funding dahil)
+# Sanal kopya gecikmesi (dk; giriş ve çıkış dolumlarına; taker + kayma + funding dahil)
 kopya_gecikme_dk:
   intraday: 30
   swing: 120
-# Gölge V1 (ön kayıt v1.1): trader girişinden azami fiyat sapması.
+# Gölge V1: trader girişinden azami fiyat sapması.
 golge_fiyat_bandi:
   intraday: 0.01
   swing: 0.02
-# Gölge V2 (ONKAYIT_D v1.1; kullanıcı kararı 2026-10-28, dondu).
+# Gölge V2 (kullanıcı kararı 2026-10-28, dondu).
 golge_v2:
   intraday:
     zarar_kes: -0.50
@@ -58,281 +33,42 @@ sabit_tutar_ref_kasa_usd: 200.0
 sabit_tutar_ref_islem_usd: 5.2
 sabit_tutar_us: 0.86
 sabit_tutar_tavan_kasa_usd: 10000.0
-# Raporlanan stres gecikmesi (zorunlu değil; swing'de negatifse "gece riskli")
-stres_gecikme_dk:
-  intraday: 120
-  swing: 480
-# Kaldıraç kuralları (değişmedi; kapı adım 3)
-kapi_max_medyan_kaldirac: 3.0
-kapi_max_kaldirac: 10.0
-# Geçmiş ≥ 180 gün şartı aynı (min_history_days); ≥ 365 gün sıralamada öne, 180–365 gün genc_aday
-genc_aday_gun: 365
-# Adım 5 plasebo: 10.000 tekrar (kullanıcı + Sol 6.1, görev 10; sonuçlara göre değiştirilmez), tek yönlü p ≤ 0,05.
-# Çoklu test (adım 7) ailesi = adım 1–4'ü geçen tüm adresler; m RAPOR'a yazılır.
-plasebo_tekrar: 10000
-plasebo_p_max: 0.05
-# Adım 6 alfa kıyası: işlem hacminin ≥ bu payı kripto ise BTC; değilse işlem yapılan varlıkların eşit ağırlıklı sepeti
-alfa_kripto_payi_esigi: 0.5
 # HIP-3 coin → Binance USDⓈ-M sembolü (görev 9): `dex:` öneki atılır, ad aynı + USDT; yalnız farklı adlar burada.
 # "var" yalnız Binance sembol listesinde (TradFi perp'ler dahil) bulunuyorsa.
 binance_takma_ad:
   GOLD: XAU
   SILVER: XAG
   BRENTOIL: BZ
-# Aktiflik (adım 2'ye ek; kullanıcı kararı, görev 11): son 90 günde kapanmış düz-düz döngü (dolum değil) sayısı
-# tarza göre en az; son işlem (son perp dolumu) en çok 30 gün önce. Kâr şartı yok. Sağlanmazsa adım 2 Yetersiz.
-aktif_pencere_gun: 90
-aktif_son90_dongu:
-  intraday: 20
-  swing: 5
-aktif_son_islem_max_gun: 30
-# Yalnız rapor (görev 12; kapı ölçütü değil): gece payı = TSİ bu saat aralığında (ilk ≤ saat < ikinci) açılan işlemlerin payı
-gece_saatleri_tsi: [1, 9]
-# Kopya maliyeti (her dolumda, notional'a oranla): taker %0,045 + kayma %0,05 (kullanıcı kararı; docs/KAPI_V3, görev 19)
+# Kopya maliyeti (her dolumda, notional'a oranla): taker %0,045 + kayma %0,05 (kullanıcı kararı)
 maliyet_taker: 0.00045
 maliyet_kayma: 0.0005
-
-# ---- Karar eşikleri (kodda sayı yok; görev 14 ve 23). Kullanıcı kararları: docs/GOREV_TRADER_SECIMI.md.
-# 1. aşama (kâr eğrisi; PnL / zaman ağırlıklı getiri zinciri). Kârlı ay eşiği kullanıcı kararı 2026-10-27: %44 (önce %60).
-asama1_pencere_gun: 365
-asama1_min_aktif_ay: 6
-asama1_min_karli_ay_orani: 0.44
-asama1_max_dusus: 0.30
-# Adım 1: mum kapsamı (nominal ağırlıklı); adım 2: asgari kanıt (min_history_days, min_closed_trades yukarıda)
-mum_kapsami_min: 0.90
-min_active_months: 6
-# Adım 4: kârlı ay eşiği kullanıcı kararı %49 (önce %60); en büyük işlem payı (max_largest_trade_share) ve en iyisiz PF
-# (min_profit_factor_without_best) yukarıdaki anahtarlardır.
-adim4_min_karli_ay_orani: 0.49
-# Adım 6: alfa t ve BHY (adım 7)
-alfa_t_min: 2.0
-alfa_pencere_gun: 365
-bhy_q_max: 0.10
-# Kopya defteri / mum penceresi: 1 saatlik mum tek istekte ≤ 5000 mum → ~200 gün; yürütme mumu hedeften en çok 1 aralık uzakta
-mum_pencere_gun: 200
 mum_uzaklik_max_aralik: 1
-rapor_gecikmeleri_dk: [0, 5, 30, 120, 480]
-# Evren (lider tablosu ön süzgeci)
-# (kullanıcı kararı 2026-10-29: 25000 → 5000; Sürüm 3.2, docs/KAPI_V3.md)
-evren_min_hesap_degeri: 5000
-# 1. aşama hesap değeri tabanı (görev 27; kullanıcı kararı 2026-10-27): bugünkü hesap değeri (ana piyasa + tüm HIP-3 dex toplamı) bunun altındaysa Kaldı
-# (kullanıcı kararı 2026-10-29: 10000 → 5000)
-hesap_degeri_min_usd: 5000
-# Kapsam hedefi: işlenen / evren (tam koşu; altındaysa koşu 'eksik' sayılır, görev 24)
-kapsam_hedefi: 0.98
-# Kopya hesabında eksik dolum (görev 18a): tarzın gecikmesinde herhangi bir dolum için mum bulunamazsa satır `kopya_eksik` ve adım 3 Yetersiz.
-# Dolum geçmişi sınırı (18c): userFillsByTime ~10.000 dolumda kesilebilir; bu kadar dolum dönmüş ve ilk dolum, hesabın/pencerenin izin verdiğinden
-# bu kadar gün geç başlıyorsa satır `dolum_siniri` işaretlenir.
-dolum_siniri: 10000
-dolum_siniri_bosluk_gun: 30
-# Akıl sağlığı kapısı (18d): oran/düşüş sütunları 0–1, kaldıraç 0–saglik_max_kaldirac; sabit sütun kontrolü en az bu kadar satırda
+# Akıl sağlığı: oran/düşüş sütunları 0–1, kaldıraç 0–saglik_max_kaldirac; sabit sütun kontrolü en az bu kadar satırda
 saglik_max_kaldirac: 200
-saglik_min_satir_sabit_kontrolu: 50
-# Adres başı hata (hata sütunu dolu) oranı bunu aşarsa kapı kırmızı
-saglik_max_hata_orani: 0.05
-# VERİ BÜTÜNLÜĞÜ kuralı (kapı kuralı DEĞİL, kapı eşiklerini/kararını değiştirmez): hata sütunu dolu satır oranı (hatali_satir / tablo satırı, ORAN) bunu AŞARSA
-# koşu `durum: eksik` (neden `hatali_satir`). Sonuç yayımlanır ama İlk 11 seçiminde kullanılmaz; hatalı satırlar `--yeniden-dene-gun` ile yeniden koşulur.
-veri_butunlugu_hatali_oran_max: 0.01
-# Oran sütunlarında kayan nokta farkı için tolerans (ör. paylar toplamı 1,0000000000000002)
-saglik_oran_toleransi: 1.0e-9
-# Kopya net getirisi (kopya sermayesine oran) makul aralığı: −1 (tüm sermaye) .. +100 (yüz katı); dışı satırda `hata`, sütunda kapı kırmızı
-saglik_net_min: -1.0
-saglik_net_max: 100.0
-# Tamamen boş olmasına izin verilen (isteğe bağlı / yalnız sorun varsa dolan) sütunlar; bunların DIŞINDA tamamen boş sütun kapıyı kırar (görev: ölü sütunlar sessiz kalmasın)
-saglik_bos_olabilir: [plasebo_hata, plasebo_not, hata, not, plasebo_gercek_skor, neden, bhy_q, mum_sayisi, mum_bozuk, mum_sicrama, mum_bosluk, mum_hacimsiz, mum_gecerli, hesap_zamani]
-# Arşiv: ardışık kayıt arası > 3 × hedef aralık boşluktur; günlük boşluk > %10 ise iş kırmızıdır.
-arsiv_bosluk_carpani: 3
-arsiv_bosluk_esigi: 0.10
-# Seçim v1 (docs/GOREV_SECIM_V1.md, kullanıcı onaylı 2026-10-28): aday = tarz başına puanı > 0 olanların en iyi %15'i (yukarı yuvarla);
-# oda aday katından en çok 20, en az 10 (aday < 10 ise oda = tüm aday, RAPOR'da yazılır).
-secim_aday_orani: 0.15
-secim_oda_min: 10
-secim_oda_max: 20
-# Seçim yalnız tam koşuda çalışır: durum.json kapsamı (işlenen / evren) bunun altındaysa (ör. hızlı koşu) durur. (Kullanıcı kararı 2026-10-28: 0,95.)
-secim_min_kapsam: 0.95
-# Seçim v1.3 (docs/GOREV_SECIM_V13.md, ön kayıt D sürüm 1.3): seçim sürümü kimlik/tohum dizgesine girer; havuz adım 3 statik koşulları
-# (kisa_islem_payi_max, kapi_max_medyan_kaldirac, kapi_max_kaldirac) kapıyla aynı anahtarlardan okunur.
-secim_surumu: "v1.3"
-# Geçiş kaydı (ön kayıt D v1.4 madde 1, copytrade/gecis.py): odadan çıkış için ÜÇÜ BİRDEN gerekir: etiketten bu yana en az min_hafta haftalık değerlendirme
-# ve min_kapanmis_islem kapanmış işlem; havuz puan sırasında alt dilim (üstten değil alttan oran; histerezis: giriş ilk %15, çıkış alt %50);
-# bu durumun ardışık_hafta ardışık haftalık değerlendirmede sürmesi
-secim_cikis_min_hafta: 4
-secim_cikis_min_kapanmis_islem: 60
-secim_cikis_havuz_alt_dilim: 0.50
-secim_cikis_ardisik_hafta: 2
-# Risk işaretleri (ön kayıt D v1.4 madde 2, copytrade/risk_isaretleri.py; haftalık rapor; YALNIZ BİLGİ, otomatik çıkış yok, performans sayısı yok):
-# son hafta en yüksek kaldıraç > kat × etiket anı medyan kaldıraç; zarardaki açık pozisyonun yaşı > kat × medyan tutma süresi.
-# Martingale başlangıcı katlama oranını bayrak_kat_esik ile ölçer (bayrak_ek).
-risk_kaldirac_sicrama_kat: 2.5
-risk_tutma_anomali_kat: 3.0
-# Ön kayıt D v1.3 analiz kodu (copytrade/analiz_d.py; madde 4–7): pratik eşik δρ, tek yönlü p, haftalık blok, haftalık veri eksikliği sınırı
-onkayit_delta_rho: 0.10
-onkayit_p_max: 0.05
-onkayit_blok_gun: 7
-onkayit_veri_eksik_max: 0.05
-maliyet_duyarlilik_carpani_intraday: 2.0
-# Maliyet duyarlılık raporu (copytrade/maliyet_rapor.py; yalnız rapor, karar kodu bunları OKUMAZ): sınıf ayrımı ve A17 §8.2 sınıf maliyetleri
-# (taker + kayma, tek yön, alt uç: büyük %0,055, küçük %0,125, HIP-3 standart %0,34); senaryo (c): HIP-3 taker ücreti bu çarpanla
-maliyet_buyuk_coinler: [BTC, ETH, SOL]
-maliyet_sinif_alt_uc: {buyuk: 0.00055, kucuk: 0.00125, hip3: 0.0034}
-maliyet_hip3_ucret_carpani: 2.0
-# MDE ve ikincil aralık: güç, ikincil GA düzeyi, bootstrap tekrarı; Spearman SE çarpanı (Fieller–Hartley–Pearson: √(1,06 / (n − 3)))
-onkayit_guc: 0.80
-onkayit_ci_ikincil: 0.95
-onkayit_bootstrap_tekrar: 2000
-onkayit_spearman_varyans_carpani: 1.06
 # İşaret yaşı (E4): açık pozisyon bundan eski bir mumla işaretlenmez (mark_missing; sonuç "eksik işaretleme" notu taşır). 1 saatlik mum + tolerans.
 isaret_yas_max_dk: 120
-# Kırmızı bayrak bilgi sütunu (bayrak_ek): katlama oranı = kat (ekleme / önceki büyüklük) ≥ bu değer olan zararda eklemelerin payı. Eşik DEĞİL, kimseyi elemez.
-bayrak_kat_esik: 2.0
 # Pozisyon mutabakatı (A13, copytrade/pozisyon_mutabakat.py): defter ↔ clearinghouseState tolerans eşiği = max(mutlak, göreli × |defter|); yalnız rapor
 mutabakat_goreli_tolerans: 0.01
 mutabakat_mutlak_tolerans: 1.0e-06
 # Mum akıl sağlığı (A15, copytrade/mum_saglik.py): sıçrama = açılış, önceki geçerli mumların kapanış medyanından oranla (max(o/med, med/o)) bu kat ve üstü uzak
 mum_sicrama_kat: 2.0
 mum_medyan_pencere: 24
-# Oda yoğunlaşması ve puan yarı tutarlılığı (A14, copytrade/yogunlasma.py; seçim raporunda bilgi bölümü): ikili korelasyon için asgari ortak gün; ortalama bağlantılı kümeleme durdurma eşiği
-yogunlasma_min_ortak_gun: 10
-yogunlasma_kume_esik: 0.5
-
-# Argon A19 (mevcut kodda üç düzeltme)
-# Alfa (kapi/istatistik.py nw_alpha): regresyon artık varyansı bunun altındaysa (birebir kopya/deterministik ilişki) t anlamsızdır → durum "yetersiz", alfa ne olursa olsun
-alfa_min_artik_varyans: 1.0e-12
 # Gölge likidasyonu (copytrade/golge.py): trader'ın açık pozisyonlarının TOPLAM (çapraz teminat) ya da tek pozisyonun ayrılmış 1 birime oranlı K/Z'si bu değere ya da altına inerse tasfiye
 golge_likidasyon_esigi: -1.0
 # Dolum sayfalaması (copytrade/tarama.py PublicClient.fills): userFillsByTime sayfa boyutu (API sınırı)
 api_sayfa_boyutu_dolum: 2000
-
-
-# HIP-3 alt sınıfları (K-5; copytrade/maliyet_rapor.py, yalnız rapor): A20 §4 tablosundaki aralıkların ÜST ucu (tek yön, ücret + kayma). Ana karar maliyeti (maliyet_taker, maliyet_kayma) değişmez.
-# buyume_seans_ici: büyüme modu, ABD hisse seansı içi (A20 c2: %0,014–0,024); buyume_seans_disi ve standart: gece/hafta sonu ya da standart mod (A20 c3: %0,14–0,34)
-maliyet_hip3_alt_uc: {buyume_seans_ici: 0.00024, buyume_seans_disi: 0.0034, standart: 0.0034}
-# ABD hisse seansı (yerel saat, hafta içi; resmî tatiller dikkate alınmaz → seans içi sayılır)
-maliyet_us_seans: {zaman_dilimi: America/New_York, acilis: "09:30", kapanis: "16:00"}
-# Büyüme modunda protokol ücreti bu çarpanla küçülür (A20: growthModeScale 0,1); deployerFeeScale çarpanı: ölçek < 1 ise ölçek + 1, değilse ölçek × 2
-maliyet_buyume_ucret_olcegi: 0.1
-
-# Arşiv kesinti alarmı (copytrade/arsiv_alarm.py): arsiv.yml'in son BAŞARILI koşusundan bu kadar saat geçtiyse kırmızı uyarı (A21: API yalnız son 10.000 dolumu verir; uzun boşluk geri alınamaz)
-arsiv_kesinti_saat: 12
-# Pilot analiz kilidi (ön kayıt D; copytrade/analiz_kosu.py): bu tarihten önce gerçek veriyle 12. hafta analizi çalışmaz (yalnız --sentetik)
-onkayit_analiz_tarihi: "2027-01-21"
-
-# Pilot veri hattı (copytrade/pilot_veri.py): userFillsByTime yalnız son bu kadar dolumu verir (Argon A21); adresin etiketten bugüne dolum sayısı bu sayıya ulaştıysa (pencere tüm dolumlar üzerinden sayılır) adres 'pencere dışı' (eksik) sayılır
-api_dolum_pencere_siniri: 10000
-
 # Sağlık ışığında performans konisi (koni, düşüş, CUSUM). false = kör mod (K-6 b). Ön kayıt 1.5 (kullanıcı, 2026-10-29): körlük kalktı → true
 saglik_performans_konisi: true
-
-# Faz 3 geçmiş prova (copytrade/faz3.py; docs/GOREV_FAZ3.md). Lider kararları: ileri 60 gün, adım 14 gün, en az 6 pencere. Durdurma 1: fark ≤ 0 olan pencere oranı > faz3_durdurma_orani → öneri
-faz3_ileri_gun: 60
-faz3_adim_gun: 14
-faz3_min_pencere: 6
-faz3_durdurma_orani: 0.50
-# Hiçbir pencere bu tarihten sonraya taşmaz (pilot verisi görülmez; körlük): son T = son_tarih − ileri_gun; pencere sayısı geriye doğru
-faz3_son_tarih: "2026-10-28"
-faz3_pencere_sayisi: 12
-# Sentetik doğrulama (GOREV_FAZ3 madde 1): tohum sayısı, yanlış pozitif beklenen bant (tek yönlü %5 civarı; MBB küçük örnekte iyimser), enjekte etkinin asgari yakalanma oranı
-faz3_sentetik_tohum: 200
-faz3_yanlis_pozitif_bant: [0.0, 0.10]
-faz3_etki_yakalama_min: 0.80
-# Rejim kırılımı (bilgi; rejim.py parametreleri)
-faz3_rejim_pencere_gun: 30
-faz3_rejim_getiri_esik: 0.10
-faz3_rejim_sok_yuzdelik: 0.90
-faz3_rejim_yuzdelik_pencere_gun: 90
-
-# Ön kayıt 1.6: oda değişikliği gerekçe kodu, tavan ve çıkarılanın izlenmesi (docs/ONKAYIT_D.md)
-degisim_gerekce_kodlari: [kaldirac_ihlali, tarz_kaymasi, hareketsizlik, veri_sorunu, anti_martingale, otomatik_kural, kullanici_takdiri]
-degisim_tavan_gun: 28
-degisim_tavan_adet: 2
-degisim_tavan_disi: [kaldirac_ihlali, veri_sorunu]
-cikarilan_izleme_gun: 56
-# Sabit referans kolunun seçim etiketi (ön kayıt 1.5 madde 3): bu etiketli oda üyesi çıkarılsa da süresiz izlenir
-referans_secim: "v1.3@2026-10-28"
-# Mutabakat sağlık ışığı (ön kayıt 1.6): yalnız rapor uyarısı, kapı veya seçim kararı değildir.
+# Mutabakat sağlık ışığı : yalnız rapor uyarısı, karar değildir.
 mutabakat_saglik_sari_uyumsuz_oran: 0.01
 mutabakat_saglik_kirmizi_uyumsuz_oran: 0.10
 mutabakat_saglik_hesap_degeri_sicrama_oran: 0.25
-
-# Kalıcılık keşif testi (copytrade/kalicilik.py; docs/GOREV_KALICILIK.md): pilotu/seçimi/kapıyı değiştirmez, yalnız rapor
-# T anları: son kalicilik_gecmis_gun gün, kalicilik_adim_gun günde bir (son T = bugün − en uzun ileri pencere)
-kalicilik_gecmis_gun: 365
-kalicilik_adim_gun: 14
-# Skorlar (yalnız bu üçü): (a) getiri penceresi, (b) Calmar = getiri / maksimum düşüş (aynı pencere), (c) kârlı ay oranı penceresi; ay = kalicilik_ay_gun gün
-kalicilik_getiri_gun: 90
-kalicilik_kar_ay_gun: 180
-kalicilik_ay_gun: 30
-# Calmar paydası: maksimum düşüş bunun altındaysa bunun kullanılır (sıfıra bölme / abartılı oran önlemi)
-kalicilik_mdd_taban: 0.01
-kalicilik_dilim: 5
-kalicilik_ileri_gun: [28, 56]
-# Bir T'de dilim başına en az bu kadar hesap yoksa o T o skor için atlanır (raporda sayılır)
-kalicilik_min_dilim_hesap: 10
-# Pencere sonu için kâr geçmişinde bu kadar günden uzak veri yoksa hesap o T'de dışarıda (veri boşluğu)
-kalicilik_veri_bosluk_gun: 7
-# Blok bootstrap (T'ler arası örtüşme): blok = 56 / 14 = 4 T; tekrar, düzey, tohum
-kalicilik_blok_t: 4
-kalicilik_bootstrap_tekrar: 2000
-kalicilik_ci: 0.95
-kalicilik_tohum: 20261029
-# Kopya notu: üst dilimden örnek büyüklüğü ve gecikmeler (dk)
-kalicilik_kopya_ornek: 100
-kalicilik_kopya_gecikme_dk: [30, 120]
-
-# Oda risk bayrakları (copytrade/oda_risk.py; docs/GOREV_ODA_RISK.md, Argon A26/A27 + lider notları). YALNIZ bilgi/uyarı: seçim, kapı, oda ve eşik kararı değişmez; otomatik işlem yok.
-# Eşikler SEZGİSEL (Argon da belirtiyor; gerçek veriyle kalibre edilmedi). Yönsüz bayrak (oda + kontrol): funding geliri / toplam kâr, spot↔perp ters pozisyon örtüşmesi, maker payı
-yonsuz_pencere_gun: 90
-yonsuz_funding_payi_esik: 0.50
-yonsuz_spot_perp_esik: 0.80
-yonsuz_maker_payi_esik: 0.90
-# Toplam kâr paydası |PnL| bunun altındaysa bunun kullanılır (sıfıra bölme; A26 epsilon)
-yonsuz_pnl_taban_usd: 1.0
-# Spot token adı → perp coin (Hyperliquid'de spot sarmalanmış adlar farklıdır); listede olmayan token aynı adlı perp'e eşlenir
-yonsuz_spot_esleme: {UBTC: BTC, UETH: ETH, USOL: SOL}
-# Kalabalıklaşma (oda): coin başına net yön payı (kaldıraç ikinci kez çarpılmaz), aynı yöndeki oda üyesi sayısı. A27 eşikleri
-kalabalik_net_pay_esik: 0.35
-kalabalik_min_trader: 6
-kalabalik_cakisma_esik: 0.80
-kalabalik_ayni_yon_sayi: 10
-
-# ---- İlk 11 seçimi (docs/ILK11_SECIM_SARTNAME.md; K-12.10 / K-12.11, kullanıcı onayı 2026-11-02). Veri kalitesi parametreleri: ağırlık,
-# dönüşüm, 60/40, 11/11/28 ve terfi kapısı (copytrade/ilk11.py) değişmez. Kodda sayı yok (ilk11_alanlar.py bu anahtarları okur).
-# Kapı verisi tazeliği: Pazar as_of tarihi − kapı klasör tarihi ≤ bu gün; aşılırsa ilk seçim / kadro boşluğu doldurma yapılmaz
-ilk11_kapi_tazelik_gun: 7
-# İzleme aralığı (dk): `.github/workflows/izleme.yml` cron'u (K-18: 2 saatte bir; ölçüm 86 trader ≈ 84 dk > saatlik 55 dk bütçe; anlık dinleyici asıl akış, izleme yedek)
-izleme_aralik_dk: 120
-# Tazelik tamponu (dk): koşu süresi + gecikme payı
-izleme_tazelik_tampon_dk: 30
-# Veri/form tazeliği (dk) = 2 × izleme_aralik_dk + izleme_tazelik_tampon_dk (bir koşu kaçsa bile bayat sayılmaz; test_is_akislari ilişkiyi sınar).
-# Kullanımı: (a) haftalık form: as_of − izleme `uretildi` ≤ bu dakika, aşılırsa o hafta form geçersiz; (b) `bayat_isle`: veri_zamani yayın anından bu dakikadan eskiyse `bayat`
-ilk11_form_tazelik_dk: 270
-# Form geçerliliği: 10 alandan en az bu kadarı gerçek değerle dolu olmalı
-ilk11_form_min_dolu_alan: 8
-# Uygun evrende her alan için dolu / uygun oranı en az bu kadar (altındaysa snapshot yayımlanmaz)
-ilk11_min_doluluk: 0.90
-# Uygun aday sayısı bunun altındaysa snapshot yayımlanmaz (11 ≤ uygun < 50: uyarılı yayın)
-ilk11_min_uygun: 11
-# Pencereler (gün): form + kapı bilgi sütunları. ay_roi / dusus / tutarli / form penceresi = 30; hafta_roi = 7 (şartname §3.2 "30g", "7g")
-ilk11_form_pencere_gun: 30
-ilk11_hafta_pencere_gun: 7
-# `durum.json` (yayın) trader başına `sanal_kopya_v3.kapanan_islemler`: son `ilk11_form_pencere_gun` gün + (pencereden eski olsa da) en az son bu kadar
-# GEÇERLİ işlem (terfi kapısı son 6'ya bakar). TAM geçmiş `motor.json`'da silinmeden kalır.
-ilk11_durum_min_gecerli_islem: 6
-# Alan akıl sağlığı aralıkları [alt, üst] (şartname §3.2; aralık dışı değer kullanılmaz -> None + `akil_sagligi_ihlali:<değer>`).
-# `kaldirac` aralığı mevcut `saglik_max_kaldirac` anahtarıdır (tekrarlanmaz). golge_ilk: kapı gecikmeli net; golge_form: v3 işlem getirisi kırpma aralığı.
-ilk11_saglik:
-  golge_ilk: [-1.0, 10.0]
-  golge_form: [-1.0, 3.0]
-  ay_roi: [-1.0, 10.0]
-  hafta_roi: [-1.0, 5.0]
-  hesap: [5000.0, 1000000000.0]
-  dusus: [0.0, 1.0]
-  kazanma: [0.0, 1.0]
-  siklik: [0.0, 200.0]
-  tutma: [0.0, 525600.0]
-  tutarli: [0.0, 1.0]
-# Alt sınırı DIŞLAYAN alanlar (tutma: 0 dakika olanaksız; "(0, 525.600]")
-ilk11_saglik_alt_disla: [tutma]
+# Veri tazeliği (dk): `bayat_isle`: veri_zamani yayın anından bu dakikadan eskiyse trader `bayat` (270 = 2 × 120 dk koşu aralığı + 30 dk tampon; bir koşu kaçsa bile bayat sayılmaz).
+veri_tazelik_dk: 270
+kapanan_islem_pencere_gun: 30
+# `durum.json` (yayın) trader başına `sanal_kopya_v3.kapanan_islemler`: son `kapanan_islem_pencere_gun` gün + (pencereden eski olsa da) en az son bu kadar
+# GEÇERLİ işlem (son 6 geçerli işlem). TAM geçmiş `motor.json`'da silinmeden kalır.
+kapanan_islem_min_gecerli: 6
 # H5 (docs/GOREV_H5_RISK.md): anlık kopya risk sınırları, DRY-RUN varsayılanları (lider kararı; canlı sayıları H4'te kullanıcı onaylar).
 # Birimler: *_usd = 1.000 $ sanal kopya ölçeğinde notional ($); sinyal_tazelik_sn = saniye (dolum zamanı -> karar anı).
 risk_dry_run:

@@ -14,7 +14,6 @@ from copytrade.defter import DAY, HOUR
 from copytrade.golge import calistir
 from copytrade.kurallar import load_rules
 from copytrade.tarama import PublicClient
-from kapi.istatistik import nw_alpha
 
 RULES = load_rules()
 
@@ -26,50 +25,18 @@ def _piyasa(tohum: int, n: int = 500) -> pd.Series:
 
 
 def test_kurallar_a19_anahtarlari():
-    assert RULES["alfa_min_artik_varyans"] == 1.0e-12 and RULES["golge_likidasyon_esigi"] == -1.0 and RULES["api_sayfa_boyutu_dolum"] == 2000
-
-
-@pytest.mark.parametrize("tohum", [4, 42, 7])
-def test_nw_alpha_birebir_kopya_seri_yetersiz_doner(tohum):
-    """Birebir kopyada artık varyans ~1e-35: eski kodda t = +19,8 / +131,3 gibi yapay değerler çıkar."""
-    market = _piyasa(tohum)
-    sonuc = nw_alpha(market, market)
-    assert np.isnan(sonuc["nw_t"]) and sonuc["durum"] == "yetersiz" and abs(sonuc["alfa_yillik"]) < 1e-10
-
-
-def test_nw_alpha_alfa_ne_olursa_olsun_artik_varyans_sifirsa_yetersiz():
-    """market + 0,002: alfa gerçekten pozitif ama artık varyans sıfır; t anlamsız (eski kodda dev bir sayı). Alfa ne olursa olsun yetersiz."""
-    market = _piyasa(2)
-    sonuc = nw_alpha(market + 0.002, market)
-    assert sonuc["durum"] == "yetersiz" and np.isnan(sonuc["nw_t"])
-    assert sonuc["alfa_yillik"] == pytest.approx(0.002 * 252)         # alfa bilgi olarak korunur
-
-
-def test_nw_alpha_gurultulu_gercek_alfa_gecerli_kalir():
-    market = _piyasa(2)
-    gurultu = pd.Series(np.random.default_rng(9).normal(0, 0.002, len(market)), index=market.index)
-    sonuc = nw_alpha(market + 0.002 + gurultu, market)
-    assert sonuc["durum"] == "gecerli" and sonuc["nw_t"] > 2
-
-
-def test_nw_alpha_esik_kurallar_yamlindan_gelir():
-    """Eşik fonksiyonda sabit değil: küçük bir gürültü eşiği geçerse geçerli, eşik yükseltilince aynı seri yetersiz."""
-    market = _piyasa(2)
-    gurultu = pd.Series(np.random.default_rng(9).normal(0, 1e-5, len(market)), index=market.index)         # artık varyans ~1e-10
-    seri = market + 0.002 + gurultu
-    assert nw_alpha(seri, market, min_artik_varyans=1e-12)["durum"] == "gecerli"
-    assert nw_alpha(seri, market, min_artik_varyans=1e-8)["durum"] == "yetersiz"
+    assert RULES["golge_likidasyon_esigi"] == -1.0 and RULES["api_sayfa_boyutu_dolum"] == 2000
 
 
 
-def test_kapi_adim6_yetersiz_durum_alfa_ne_olursa_olsun_yetersiz():
-    """Eski kodda alfa_yillik <= 0 → "Kaldı", pozitif ve t büyük → "Geçti"; artık varyansı sıfır seri her iki durumda da "Yetersiz"."""
-    from copytrade.kapi import gate_status
-    metrics = {"complete_data": True, "history_days": 400, "closed_trades": 500, "active_months": 12}
-    for alfa, t_degeri in ((0.5, 131.3), (0.0, float("nan")), (-0.2, float("nan"))):
-        alpha = {"beta": 1.0, "alfa_yillik": alfa, "nw_t": t_degeri, "durum": "yetersiz"}
-        assert gate_status(metrics, 0.1, 0.01, alpha, RULES)["adim6"] == "Yetersiz"
-    assert gate_status(metrics, 0.1, 0.01, {"beta": 1.0, "alfa_yillik": 0.5, "nw_t": 3.0, "durum": "gecerli"}, RULES)["adim6"] == "Geçti"
+
+
+
+
+
+
+
+
 
 
 # ----------------------------------------------------------------------------------------------- 2. gölge likidasyonu

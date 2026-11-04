@@ -7,28 +7,22 @@ from __future__ import annotations
 
 import argparse
 import copy
-import csv
 import hashlib
 import json
 import math
-import re
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import yaml
 
 from copytrade.defter import Market, copy_ledger
-from copytrade.kapi import (SLIPPAGE, TAKER, binance_availability, delayed_copy, spot_usdc,
-                            write_binance_universe)
+from copytrade.hl_ortak import SLIPPAGE, TAKER, binance_availability, spot_usdc, write_binance_universe
 from copytrade.pozisyon_mutabakat import mutabakat, ozet
 from copytrade.olcut import _funding_amount, asset_class, calculate_metrics, closed_round_trips, perp_fills
 from copytrade.tarama import PublicClient, RateLimiter
-from copytrade import ilk11_alanlar
-from copytrade.izleme_liste import KOLLAR, STYLES, load_list, perp_dex_names  # noqa: F401 - m.load_list / m.KOLLAR / m.perp_dex_names dış API'si korunur
-from copytrade import oda_risk
+from copytrade.izleme_liste import load_list, perp_dex_names  # noqa: F401 - m.load_list / m.perp_dex_names dış API'si korunur
 from copytrade import kopya_v2
 from copytrade import kopya_v3
 from copytrade import kopya_v4
@@ -465,29 +459,9 @@ def mutabakat_raporu(fills: list[dict], states: list[dict], now: pd.Timestamp, r
             'sorunlu': [r for r in rows if r['durum'] != 'uyumlu'], 'bozuk_satir': broken, 'zaman': iso(now)}
 
 
-def gate_result(root: Path, address: str) -> dict:
-    for path in sorted((root / 'copytrade/kapi').glob('*/sonuc.csv'), reverse=True):
-        with path.open(encoding='utf-8', newline='') as handle:
-            for row in csv.DictReader(handle):
-                if row['address'].lower() == address.lower():
-                    return {'sinif': row['sinif'] if row['sinif'] in {'Geçti', 'Yetersiz', 'Kaldı'} else 'Yetersiz',
-                            'tarih': path.parent.name, 'not': row.get('neden', '')}
-    return {'sinif': 'Yetersiz', 'tarih': '', 'not': 'Kapı sonucu bulunamadı'}
-
-
-def gate_style(root: Path, address: str) -> str | None:
-    """Adresin en son kapı sonucundaki ``tarz`` (intraday | swing | scalp); sonuç veya sütun yoksa ``None``."""
-    for path in sorted((root / 'copytrade/kapi').glob('*/sonuc.csv'), reverse=True):
-        with path.open(encoding='utf-8', newline='') as handle:
-            for row in csv.DictReader(handle):
-                if row['address'].lower() == address.lower():
-                    return row.get('tarz') or None
-    return None
-
-
-def resolve_style(root: Path, row: dict) -> str:
-    """İzleme listesindeki ``tarz``; yoksa kapı sonucundan; ikisi de yoksa ``bilinmiyor`` (gecikme 30 dk)."""
-    return row.get('tarz') or gate_style(root, row['adres']) or 'bilinmiyor'
+def resolve_style(row: dict) -> str:
+    """İzleme listesindeki ``tarz``; yoksa ``bilinmiyor`` (gecikme 30 dk). (Kapı sonucundan tarz okuma T1'de kaldırıldı.)"""
+    return row.get('tarz') or 'bilinmiyor'
 
 
 def delay_for_style(style: str, rules: dict | None = None) -> int:
@@ -514,32 +488,6 @@ def with_data_error(trader: dict, error: Exception) -> dict:
     return previous
 
 
-def kasa_egrisi(traderlar: list[dict], kol: str, gun: int = 90) -> list[list[object]]:
-    """Koldaki sanal-kopya bakiyelerinin son ``gun`` günlük toplamı.
-
-    v3 hesaplanamamış bir trader
-    o günden dışarıda bırakılır (sıfır olarak sayılmaz) — her trader kendi son bilinen günlük bakiyesiyle
-    taşınır; eksik eğri uydurulmaz.
-    """
-    curves = []
-    for trader in traderlar:
-        if trader.get('kol') != kol:
-            continue
-        values = {str(day): float(value) for day, value in trader.get('sanal_kopya_v3', {}).get('egri', [])}
-        if values:
-            curves.append(values)
-    dates = sorted({day for curve in curves for day in curve})[-gun:]
-    result = []
-    for day in dates:
-        total = 0.0
-        for curve in curves:
-            known = [key for key in curve if key <= day]
-            if known:
-                total += curve[max(known)]
-        result.append([day, total])
-    return result
-
-
 def data_error_reason(error: Exception) -> str:
     return str(error).splitlines()[0][:120] or type(error).__name__
 
@@ -547,9 +495,8 @@ def data_error_reason(error: Exception) -> str:
 def unavailable_trader(root: Path, row: dict, error: Exception) -> dict:
     """Publish an explicit placeholder when a trader has never completed a read."""
     # Yer tutucu, beklenen tüm alanları taşımalıdır.
-    style = resolve_style(root, row)
+    style = resolve_style(row)
     return {**{k: v for k, v in row.items() if k != 'tarz'}, 'tarz': style, 'veri_zamani': None, 'gecerli': False,
-            'kapi': gate_result(root, row['adres']),
             'saglik': {'isik': 'sari', 'nedenler': [f'veri hatası: {data_error_reason(error)}']},
             'form': {'skor': 0.0, 'getiri_30g': 0.0, 'getiri_90g': 0.0},
             'hesap_degeri': 0.0, 'hesap_degeri_toplam': None, 'pozisyonlar': [], 'egri': [],
@@ -560,55 +507,13 @@ def unavailable_trader(root: Path, row: dict, error: Exception) -> dict:
             'sanal_kopya_v2': {'surum': 'v2', 'durum': 'hesaplanamadi', 'yer_tutucu': True, 'neden': 'hiç okunmadı'},
             'sanal_kopya_v3': {'surum': 'v3', 'durum': 'hesaplanamadi', 'yer_tutucu': True, 'neden': 'hiç okunmadı'},
             'sanal_kopya_v4': {'surum': 'v4', 'durum': 'hesaplanamadi', 'yer_tutucu': True, 'neden': 'hiç okunmadı'},
-            'ilk11_form_ham': {'hata': 'hiç okunmadı'}, 'son_perp_dolum': None,
-            'ilk11_gecerli_saat': {'baslangic': row.get('takim_hafta') or str(timestamp(row['t0']).date()), 'saat': 0, 'son_saat': None}}
-
-
-def yonsuz_guncelle(client, address: str, saved: dict, states: list[dict], fills: list[dict], now: pd.Timestamp) -> dict:
-    """Oda ve kontrol üyesi için ``yonsuz_bayrak`` (A26): funding geliri ve spot bakiyesi günde bir kez çekilip ``motor.json``'da önbelleğe alınır; maker payı ve spot↔perp örtüşmesi
-    her saat eldeki dolum ve pozisyonlardan hesaplanır. Okunamayan kaynak ``None`` olur ve ``hata`` alanına yazılır (gizlenmez, o gün önbelleğe girmez → sonraki saat yeniden dener)."""
-    rules, gun, hatalar = load_rules(), str(now.date()), []
-    onbellek = saved.get('yonsuz_onbellek')
-    if not onbellek or onbellek.get('gun') != gun:
-        onbellek = {'gun': gun, 'funding_usd': None, 'spot': None}
-        try:
-            start = millis(now) - int(rules['yonsuz_pencere_gun']) * DAY
-            onbellek['funding_usd'] = sum(_funding_amount(row) for row in funding_since(client, address, start, millis(now)))
-        except Exception as error:
-            hatalar.append(f'funding: {data_error_reason(error)}')
-        try:
-            spot = client.info({'type': 'spotClearinghouseState', 'user': address}, weight=2)
-            onbellek['spot'] = {str(b['coin']): float(b['total']) for b in spot.get('balances', []) if float(b.get('total', 0))}
-        except Exception as error:
-            hatalar.append(f'spot: {data_error_reason(error)}')
-        if not hatalar:
-            saved['yonsuz_onbellek'] = onbellek
-    perp = {item['position']['coin']: float(item['position']['szi']) for state in states for item in state['assetPositions'] if float(item['position']['szi'])}
-    return oda_risk.yonsuz_bayrak(onbellek['funding_usd'], oda_risk.toplam_kar(saved.get('portfolio') or [], millis(now), rules), onbellek['spot'], perp, fills, millis(now), rules,
-                                  '; '.join(hatalar) or None)
-
-
-def gecerli_saat_say(saved: dict, row: dict, now: pd.Timestamp, rules: dict | None = None) -> dict:
-    """`ilk11_gecerli_saat` (şartname §4.1 eşitlik 3): trader'ın kadroya SON girişinden (`takim_hafta`; yoksa `t0`) itibaren geçerli (`gecerli == true`)
-    okuma süresi (saat). Her yeni `izleme_aralik_dk` kovası (UTC'ye hizalı) `izleme_aralik_dk/60` saat ekler (2 saatlik koşu = 2 saat); aynı kovaya düşen ikinci koşu yeniden saymaz; `takim_hafta` değişince (yeni giriş) sayaç sıfırlanır. Sayım BU motorun
-    okumalarından başlar (geriye dönük doldurulmaz). `motor.json`'da kalıcı (`saved['ilk11_gecerli_saat']`), `durum.json`'a trader alanı olarak yayımlanır."""
-    baslangic = row.get('takim_hafta') or str(timestamp(row['t0']).date())
-    kayit = saved.get('ilk11_gecerli_saat')
-    if not kayit or kayit.get('baslangic') != baslangic:
-        kayit = {'baslangic': baslangic, 'saat': 0, 'son_saat': None}
-    aralik = int((rules or load_rules())['izleme_aralik_dk'])       # K-18: sayaç anlamı (saat) korunur; her yeni aralık kovası aralık/60 saat ekler
-    saat = iso(now.floor(f'{aralik}min'))
-    if kayit['son_saat'] != saat:
-        kayit['saat'] += aralik // 60
-        kayit['son_saat'] = saat
-    saved['ilk11_gecerli_saat'] = kayit
-    return dict(kayit)
+            'son_perp_dolum': None}
 
 
 def durum_icin_kirp(trader: dict, now: pd.Timestamp, rules: dict | None = None) -> dict:
     """`durum.json` (yayın) için `sanal_kopya_v3` / `sanal_kopya_v4` `.kapanan_islemler` kırpması; TAM geçmiş `motor.json`'daki `son_trader`'da silinmeden kalır.
 
-    Yayımlanan: kapanışı son `ilk11_form_pencere_gun` günde (now − N gün, now] olanlar VE (pencereden eski olsa da) en son `ilk11_durum_min_gecerli_islem`
+    Yayımlanan: kapanışı son `kapanan_islem_pencere_gun` günde (now − N gün, now] olanlar VE (pencereden eski olsa da) en son `kapanan_islem_min_gecerli`
     GEÇERLİ işlem (terfi kapısı son N geçerli işleme bakar). Sıra korunur. `kapanan_islemler_toplam` = tam geçmişteki sayı. Trader'ın kopyası döner."""
     rules = rules or load_rules()
     cikti = trader
@@ -617,9 +522,9 @@ def durum_icin_kirp(trader: dict, now: pd.Timestamp, rules: dict | None = None) 
         islemler = surum.get('kapanan_islemler') if isinstance(surum, dict) else None
         if islemler is None:
             continue
-        sinir = now - pd.Timedelta(days=int(rules['ilk11_form_pencere_gun']))
+        sinir = now - pd.Timedelta(days=int(rules['kapanan_islem_pencere_gun']))
         gecerli = [i for i, x in enumerate(islemler) if x.get('gecerli') is True]
-        son_gecerli = set(sorted(gecerli, key=lambda i: islemler[i]['kapanis'])[-int(rules['ilk11_durum_min_gecerli_islem']):])
+        son_gecerli = set(sorted(gecerli, key=lambda i: islemler[i]['kapanis'])[-int(rules['kapanan_islem_min_gecerli']):])
         kalan = [x for i, x in enumerate(islemler) if timestamp(x['kapanis']) > sinir or i in son_gecerli]
         cikti = {**cikti, anahtar: {**surum, 'kapanan_islemler': kalan, 'kapanan_islemler_toplam': len(islemler)}}
     return cikti
@@ -653,12 +558,12 @@ def veri_durumu_belirle(account: float, paper: dict, paper_v3: dict, eksik_hedef
 
 
 def bayat_isle(trader: dict, uretildi: pd.Timestamp, rules: dict | None = None) -> dict:
-    """Yayın anında: ``tamam`` görünen ama ``veri_zamani`` yayın anındaki ``uretildi``'den ``ilk11_form_tazelik_dk`` dakikadan eski trader ``bayat`` olur
+    """Yayın anında: ``tamam`` görünen ama ``veri_zamani`` yayın anındaki ``uretildi``'den ``veri_tazelik_dk`` dakikadan eski trader ``bayat`` olur
     (önceki başarılı veri taşınıyorsa). ``okuma_hatasi`` / ``perp_bos`` / ``fiyatsiz`` önceliği korunur. Kopya döner."""
     if trader.get('veri_durumu') != 'tamam' or not trader.get('veri_zamani'):
         return trader
     yas = (uretildi - timestamp(trader['veri_zamani'])) / pd.Timedelta(minutes=1)
-    sinir = int((rules or load_rules())['ilk11_form_tazelik_dk'])
+    sinir = int((rules or load_rules())['veri_tazelik_dk'])
     if yas > sinir:
         return {**trader, 'veri_durumu': 'bayat', 'veri_durumu_neden': f'veri {yas:.0f} dk eski (> {sinir} dk)'}
     return trader
@@ -707,7 +612,7 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
         all_events[event['id']] = event
     own_events = {key: event for key, event in all_events.items() if event['trader'] == ident}
     actions = copy_actions(copy_fills)
-    style = resolve_style(root, row)
+    style = resolve_style(row)
     delay = delay_for_style(style)
     eksik_mum: list[dict] = []
     # A4-3a: yürütme fiyatı v3'ün gördüğü HAM dolumlar (copy_fills) için çekilir; `actions` süzgecinde (devralınan pozisyonu kapatma) düşen dolumlar v3'te fiyatsız kalıyordu.
@@ -792,24 +697,16 @@ def update_trader(root: Path, client, dexes: list[str], state: dict, all_events:
               'hesap_degeri_toplam': hesap_toplam,
               'veri_durumu': veri_durumu, 'veri_durumu_neden': veri_durumu_neden,
               'mum_eksik': {'hedef': len(eksik_mum), 'onbellekten': sum(1 for e in eksik_mum if e.get('onbellek'))},
-              'kapi': gate_result(root, address), 'saglik': light,
+              'saglik': light,
               'form': {'skor': ret30 / volatility if volatility > 0 and math.isfinite(volatility) else 0.0,
                        'getiri_30g': ret30, 'getiri_90g': float(recent.iloc[-1] - recent.iloc[0]) if len(recent) else 0.0},
               'hesap_degeri': account, 'pozisyonlar': positions, 'son_islem': last_trade,
               'egri': [[str(day.date()), float(value)] for day, value in recent.items()], 'sanal_kopya': paper,
               'sanal_kopya_v2': paper_v2, 'sanal_kopya_v3': paper_v3, 'sanal_kopya_v4': paper_v4}
-    if row.get('kol') in oda_risk.YONSUZ_KOLLAR:
-        trader['yonsuz_bayrak'] = yonsuz_guncelle(client, address, saved, states, fills, now)
-    if row.get('kol') == 'oda':
+    if row.get('kol') == 'oda':        # NOT (T1): eski oda kavramı; radar kadrosu için T4'te yeniden tanımlanacak (docs/sonnet_durum_t1.md)
         trader['veri_kalitesi'] = {'mutabakat': mutabakat_raporu(fills, states, now, onceki_hesap_degeri=saved.get('son_hesap_degeri'), hesap_degeri=account)}
-    # İlk 11 haftalık form ham alanları (tek hesap yeri: ilk11_alanlar); hata trader'ı düşürmez, açıkça yazılır.
-    try:
-        trader['ilk11_form_ham'] = ilk11_alanlar.form_ham_30g(fills, saved['portfolio'], trader['hesap_degeri_toplam'], paper_v3, now)
-    except Exception as error:  # noqa: BLE001 - form alanı hatası izleme okumasını düşürmesin; `hata` alanı Pazar işinde geçersizlik nedenidir
-        trader['ilk11_form_ham'] = {'hata': data_error_reason(error)}
     perp_zamanlari = [int(f['time']) for f in perp_fills(fills)]
     trader['son_perp_dolum'] = at_ms(max(perp_zamanlari)) if perp_zamanlari else None    # `bu_pazar_aktif` (as_of − 7 g içinde perp dolumu) girdisi
-    trader['ilk11_gecerli_saat'] = gecerli_saat_say(saved, row, now)
     saved['son_hesap_degeri'] = account
     saved['son_trader'] = trader
     return trader
@@ -911,12 +808,8 @@ def run(root: Path, output: Path, client=None, now=None, symbols=None, liste: Pa
     tum_olaylar = sorted(all_events.values(), key=lambda e: (e['zaman'], e['id']), reverse=True)
     yayimlanan_olaylar, tasan_olaylar = olay_yayin_ayir(tum_olaylar)
     result = {'surum': 1, 'uretildi': iso(now), 'kaynak': 'hyperliquid', 'traderlar': [durum_icin_kirp(bayat_isle(t, now, rules), now, rules) for t in traders],
-              'kasa_egri': {'oda': kasa_egrisi(traders, 'oda'), 'kontrol': kasa_egrisi(traders, 'kontrol')},
               'olaylar': yayimlanan_olaylar,
               'olay_ozeti': olay_ozeti(tum_olaylar, yayimlanan_olaylar)}
-    oda_uyeleri = [t for t in traders if t.get('kol') == 'oda']
-    if oda_uyeleri:
-        result['kalabalik'] = {**oda_risk.kalabalik([t for t in oda_uyeleri if t.get('gecerli') and t.get('hesap_degeri')]), 'zaman': iso(now)}
     # ayrı; yalnız rapor). Tazelik kontrolü kasıtlı olarak burada değil (bkz. saglik_hatti modül docstring'i).
     # Boş izleme listesinde (ağ hiç kullanılmayan sözleşme testi) eklenmez — kalabalik alanıyla aynı desen.
     if traders:

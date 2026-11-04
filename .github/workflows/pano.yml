@@ -1,7 +1,7 @@
 name: Pano yayını (GitHub Pages)
 
-# izleme.yml başarıyla bitince ve elle. `pano.json` motor çıktılarından (veri dalları) `copytrade/pano_veri.py` ile üretilir; pano/ dosyalarıyla birlikte Pages'e yayımlanır.
-# Anahtar / secret YOK: yalnız herkese açık veri dalları okunur. Yayımlanan dosyalar: index.html, pano.js, pano.css, pano.json (ornek_veri.json yayımlanmaz).
+# izleme.yml başarıyla bitince ve elle. `pano.json` motor çıktısından (veri dalı copytrade-izleme) `copytrade/pano_veri.py` ile üretilir; pano/ dosyalarıyla birlikte Pages'e yayımlanır.
+# Anahtar / secret YOK: yalnız herkese açık veri dalı okunur. Yayımlanan dosyalar: index.html, pano.js, pano.css, pano.json (ornek_veri.json yayımlanmaz).
 on:
   workflow_run:
     workflows: ["Copy trade izleme (2 saatte bir)"]
@@ -37,16 +37,13 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
-      - name: Motor çıktılarını veri dallarından al
+      - name: Motor çıktısını veri dalından al
         run: |
-          mkdir -p veri/ilk11
-          git fetch --depth=1 origin copytrade-izleme copytrade-kapi
+          mkdir -p veri
+          git fetch --depth=1 origin copytrade-izleme
           git show origin/copytrade-izleme:izleme/durum.json > veri/durum.json
-          git show origin/copytrade-kapi:ilk11/izleme_listesi.yaml > veri/izleme_listesi.yaml
-          son=$(git ls-tree -r --name-only origin/copytrade-kapi | grep -E '^ilk11/[0-9]{4}-[0-9]{2}-[0-9]{2}/snapshot\.json$' | sort | tail -n 1 || true)
-          if [ -n "$son" ]; then mkdir -p "veri/$(dirname "$son")"; git show "origin/copytrade-kapi:$son" > "veri/$son"; else echo "snapshot.json yok; kadro_toplam null olur." >&2; fi
       - name: pano.json üret
-        run: python -m copytrade.pano_veri --durum veri/durum.json --liste veri/izleme_listesi.yaml --ilk11 veri/ilk11 --cikti pano.json
+        run: python -m copytrade.pano_veri --durum veri/durum.json --liste copytrade/izleme_listesi.yaml --cikti pano.json
       - name: Site dizinini hazırla
         run: |
           mkdir -p site

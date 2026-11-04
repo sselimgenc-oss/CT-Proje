@@ -8,7 +8,7 @@ on:
     inputs:
       idler:
         description: "izleme listesinden virgülle ayrılmış trader kimlikleri"
-        default: "K08,O17,B02,H001,B17"
+        default: "K08"
   push:
     paths:
       - copytrade/izleme_deneme/CALISTIR
@@ -33,10 +33,10 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Deneme listesini seç
         env:
-          IDLER: ${{ inputs.idler || 'K08,O17,B02,H001,B17' }}
+          IDLER: ${{ inputs.idler || 'K08' }}
         run: |
           mkdir -p deneme deneme_kok/copytrade deneme_izleme
-          python -m copytrade.ilk11_deneme liste --kaynak copytrade/izleme_listesi.yaml --idler "$IDLER" --cikti deneme
+          python -m copytrade.deneme_arac liste --kaynak copytrade/izleme_listesi.yaml --idler "$IDLER" --cikti deneme
       - name: İzleme - ilk okuma, sonra aynı durumla artımlı koşu
         run: |
           basla=$(date +%s)
@@ -48,7 +48,7 @@ jobs:
       - name: Özet
         if: ${{ always() && hashFiles('deneme_izleme/durum.json') != '' }}
         run: |
-          python -m copytrade.ilk11_deneme durum-ozeti --durum deneme_izleme/durum.json --sure-sn "$(cat deneme/izleme_sure_sn.txt)" --artimli-sn "$(cat deneme/izleme_artimli_sn.txt)" > deneme/OZET.md
+          python -m copytrade.deneme_arac durum-ozeti --durum deneme_izleme/durum.json --sure-sn "$(cat deneme/izleme_sure_sn.txt)" --artimli-sn "$(cat deneme/izleme_artimli_sn.txt)" > deneme/OZET.md
           cat deneme/OZET.md
           cat deneme/OZET.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4

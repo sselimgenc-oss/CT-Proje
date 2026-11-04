@@ -1,9 +1,11 @@
-"""Pano verisi (Faz 2, docs/FAZ2_PANO.md): `izleme/durum.json` + `ilk11/izleme_listesi.yaml` + `ilk11/<son>/snapshot.json` -> `pano.json`.
+"""Pano verisi (Faz 2, docs/FAZ2_PANO.md): `izleme/durum.json` + `copytrade/izleme_listesi.yaml` -> `pano.json`.
 
 Panonun JS kodu HİÇBİR ŞEY hesaplamaz; tüm hesap burada yapılır (AGENTS kural 7). Biçim `pano/ornek_veri.json` ile aynıdır (üç takım: İlk 11, Yedek 11, PAF).
 Motorda olmayan alan `null` yazılır, uydurulmaz (pano "—" gösterir). Sözleşme: docs/VERI_SOZLESMESI.md §10 (alan, birim, ölçek).
 
-    python -m copytrade.pano_veri --durum izleme/durum.json --liste ilk11/izleme_listesi.yaml --ilk11 ilk11 --cikti pano.json
+    python -m copytrade.pano_veri --durum izleme/durum.json --liste copytrade/izleme_listesi.yaml --cikti pano.json
+
+Kadro (İlk 11 / Yedek 11 / PAF) listede `takim` alanı olan satırlardan gelir; radar kadrosu T4'te yazılana dek takımlar boştur (eski İlk 11 snapshot okuması T1'de çıkarıldı).
 """
 from __future__ import annotations
 
@@ -174,7 +176,7 @@ def takim_uret(takim_ad: str, uyeler: list[dict], durum_traderlar: dict[str, dic
             "traderlar": traderlar, "acik": acik, "kapanan": kapanan_tum[:KAPANAN_LIMIT]}
 
 
-def pano_uret(durum: dict, liste: dict, snapshot: dict | None, simdi: datetime | None = None) -> dict:
+def pano_uret(durum: dict, liste: dict, simdi: datetime | None = None) -> dict:
     """Saf fonksiyon: motor çıktıları -> `pano.json` sözlüğü. `uretildi` = kaynak `durum.json`'un üretim zamanı (pano 2 saatten eskiyse uyarır)."""
     simdi = simdi or datetime.now(UTC)
     kaynak = _z(durum.get("uretildi"))
@@ -184,7 +186,7 @@ def pano_uret(durum: dict, liste: dict, snapshot: dict | None, simdi: datetime |
     for satir in liste.get("traderlar") or []:
         if satir.get("takim") in uyeler and satir.get("adres"):
             uyeler[satir["takim"]].append(satir)
-    toplam = {k: (sum(1 for s in snapshot.get("kadro") or [] if s.get("takim") == k) if snapshot else None) for k, _ in TAKIMLAR}
+    toplam = {k: None for k, _ in TAKIMLAR}                      # kadro büyüklüğü kaynağı (eski snapshot) kaldırıldı; radar kadrosu T4'te
     yas = None if kaynak is None else (simdi - kaynak).total_seconds() / 60
     return {"surum": 1, "uretildi": _iso(kaynak) if kaynak else None, "dinleyici": None,
             "tazelik": {"kaynak_uretildi": _iso(kaynak) if kaynak else None, "pano_uretildi": _iso(simdi), "yas_dk": None if yas is None else round(yas, 1),
@@ -194,19 +196,13 @@ def pano_uret(durum: dict, liste: dict, snapshot: dict | None, simdi: datetime |
             "takimlar": [takim_uret(ad, uyeler[k], tr, toplam[k], ref) for k, ad in TAKIMLAR]}
 
 
-def son_snapshot(ilk11: Path) -> dict | None:
-    adaylar = sorted(p for p in ilk11.glob("*/snapshot.json"))
-    return json.loads(adaylar[-1].read_text(encoding="utf-8")) if adaylar else None
-
-
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--durum", type=Path, required=True)
     ap.add_argument("--liste", type=Path, required=True)
-    ap.add_argument("--ilk11", type=Path, required=True, help="içinde <tarih>/snapshot.json olan klasör")
     ap.add_argument("--cikti", type=Path, default=Path("pano.json"))
     args = ap.parse_args(argv)
-    veri = pano_uret(json.loads(args.durum.read_text(encoding="utf-8")), yaml.safe_load(args.liste.read_text(encoding="utf-8")) or {}, son_snapshot(args.ilk11))
+    veri = pano_uret(json.loads(args.durum.read_text(encoding="utf-8")), yaml.safe_load(args.liste.read_text(encoding="utf-8")) or {})
     args.cikti.write_text(json.dumps(veri, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"{args.cikti}: " + ", ".join(f"{t['ad']} {t['ozet']['kadro_dolu']}/{t['ozet']['kadro_toplam']}" for t in veri["takimlar"]) + f"; bayat={veri['tazelik']['bayat']}")
 

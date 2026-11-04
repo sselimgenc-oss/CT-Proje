@@ -12,7 +12,6 @@ import yaml
 
 from copytrade import izleme_motoru as m
 from copytrade.kararlar import merge
-from copytrade.kapi import delayed_copy
 
 ROOT = Path(__file__).resolve().parents[1]
 ADDRESS = '0x' + '1' * 40
@@ -182,7 +181,7 @@ def test_empty_list_writes_contract_and_never_uses_network(tmp_path):
             raise AssertionError(name)
     result = m.run(root, root / 'out', NoNetwork(), NOW)
     assert result == {'surum': 1, 'uretildi': '2026-10-27T12:00:00Z', 'kaynak': 'hyperliquid', 'traderlar': [],
-                      'kasa_egri': {'oda': [], 'kontrol': []}, 'olaylar': [], 'olay_ozeti': {'toplam': 0, 'yayimlanan': 0, 'tasan': 0, 'trader_basina': {}}}
+                      'olaylar': [], 'olay_ozeti': {'toplam': 0, 'yayimlanan': 0, 'tasan': 0, 'trader_basina': {}}}
     assert json.loads((root / 'out/durum.json').read_text()) == result
 
 
@@ -216,15 +215,9 @@ def test_incremental_overlap_daily_portfolio_and_repeatable_ledger(tmp_path):
     drop = lambda t: {k: ({a: b for a, b in v.items() if a != 'son_isaret'} if k == 'sanal_kopya'
                           else {a: b for a, b in v.items() if a not in ('payda_yontemi', 'payda_okuma_sayisi')} if k == 'sanal_kopya_v2'
                           else v)
-                      for k, v in t.items() if k not in ('veri_zamani', 'ilk11_gecerli_saat', 'ilk11_form_ham')}
+                      for k, v in t.items() if k != 'veri_zamani'}
     assert drop(first) == drop(second)
     assert second['veri_zamani'] == '2026-10-27T14:00:00Z'
-    # Koşuyla ilerlemesi BEKLENEN yeni alanlar karşılaştırmadan düşürülmedi, değişimleri ayrıca doğrulanır: saatlik geçerlilik sayacı +1,
-    # form alanı yalnız pencere_bitis'te (okuma zamanı) farklıdır.
-    assert (first['ilk11_gecerli_saat']['saat'], second['ilk11_gecerli_saat']['saat']) == (2, 4)      # K-18: 2 saatlik koşu = 2 saat
-    assert (first['ilk11_gecerli_saat']['son_saat'], second['ilk11_gecerli_saat']['son_saat']) == ('2026-10-27T12:00:00Z', '2026-10-27T14:00:00Z')
-    assert (first['ilk11_form_ham']['pencere_bitis'], second['ilk11_form_ham']['pencere_bitis']) == ('2026-10-27T12:00:00Z', '2026-10-27T14:00:00Z')
-    assert {k: v for k, v in first['ilk11_form_ham'].items() if k != 'pencere_bitis'} == {k: v for k, v in second['ilk11_form_ham'].items() if k != 'pencere_bitis'}
     assert one['olaylar'] == two['olaylar']
     assert client.portfolio_reads == 2  # sağlık eğrisi saatlik yenilenir
     # yürütme mumu (v1) önbellekten (sabit 1); v2'nin saatlik tasfiye mumu her koşuda bir artımlı okuma ekler (+1/koşu, kendi önbelleği ayrı).
@@ -293,23 +286,6 @@ def test_fill_events_strict_size_threshold_and_flip(before, size, side, kinds):
         assert ('sanal_sonuc' in event) == (event['tur'] in {'acilis', 'buyutme'})
 
 
-def test_copy_execution_delay_cost_funding_and_event_net():
-    opening = fill()
-    closing = fill('2026-10-27T11:00:00Z', 2, 'A', 1, 1, 500)  # source price is never execution price
-    events = {e['id']: e for e in m.fill_events('T1', [opening, closing], 1000, [])}
-    funding = [{'time': m.millis('2026-10-27T10:45:00Z'), 'delta': {'coin': 'BTC', 'usdc': '-.5'}}]
-    candles = {'BTC': [{'t': m.millis('2026-10-27T10:30:00Z'), 'o': 100},
-                       {'t': m.millis('2026-10-27T11:30:00Z'), 'o': 110}]}
-    pending = m.copy_results([opening], {}, [], 1000, T0, m.timestamp('2026-10-27T10:29:00Z'), events)
-    assert pending['bakiye_usd'] == 1000
-    result = m.copy_results([opening, closing], candles, funding, 1000, T0, NOW, events)
-    expected = 1000 + 10 - 210 * .00095 - .5
-    assert result['bakiye_usd'] == pytest.approx(expected)
-    opened = next(e for e in events.values() if e['tur'] == 'acilis')
-    assert opened['sanal_sonuc'] == {'durum': 'kapandi', 'net_yuzde': pytest.approx((expected - 1000) / 100),
-                                    'kapanis': '2026-10-27T11:30:00Z'}
-    reference, _ = delayed_copy([opening, closing], candles, 1000, 30, funding)
-    assert result['getiri'] == pytest.approx(float(reference.sum()))
 
 
 def test_partial_close_keeps_open_event_until_final_exit():
@@ -463,7 +439,6 @@ def test_nonempty_status_matches_example_keys_types_and_event_variants(tmp_path)
     example = json.loads((ROOT / 'tests/fixtures/ornek_durum.json').read_text())
     check_shape(result, [example])
     assert result['traderlar'][0]['pozisyonlar'][0]['binance'] == 'var'
-    assert result['traderlar'][0]['kapi']['sinif'] == 'Yetersiz'
     assert result['traderlar'][0]['gecerli'] is True
     assert result['traderlar'][0]['veri_zamani'] == '2026-10-27T12:00:00Z'
     assert json.loads((root / 'out/durum.json').read_text()) == result
@@ -620,17 +595,12 @@ def test_style_from_list_sets_delay_and_status_label(tmp_path, style, delay):
     assert trader['tarz'] == style and trader['sanal_kopya']['gecikme_dk'] == delay
 
 
-def test_style_falls_back_to_gate_result_then_unknown_with_30_minutes(tmp_path):
+def test_style_unknown_when_missing_in_list_and_list_style_wins_with_30_minutes(tmp_path):
     root = project(tmp_path, [styled_row()])
     unknown = m.run(root, root / 'out', Client(), NOW)['traderlar'][0]
     assert unknown['tarz'] == 'bilinmiyor' and unknown['sanal_kopya']['gecikme_dk'] == 30
-    day = root / 'copytrade/kapi/2026-10-27'
-    day.mkdir(parents=True)
-    (day / 'sonuc.csv').write_text(f'address,sinif,tarz\n{ADDRESS.upper().replace("0X", "0x")},Yetersiz,swing\n')
-    (root / 'out/motor.json').unlink(); (root / 'out/durum.json').unlink()
-    from_gate = m.run(root, root / 'out', Client(), NOW)['traderlar'][0]
-    assert from_gate['tarz'] == 'swing' and from_gate['sanal_kopya']['gecikme_dk'] == 120
-    # listedeki tarz kapı sonucundan önceliklidir
+    # (T1: kapı sonucundan tarz okuma kaldırıldı; yalnız listedeki tarz geçerli)
+    # listedeki tarz kullanılır
     (root / 'out/motor.json').unlink(); (root / 'out/durum.json').unlink()
     config = root / 'copytrade/izleme_listesi.yaml'
     config.write_text(yaml.safe_dump({'traderlar': [styled_row(tarz='intraday')]}))

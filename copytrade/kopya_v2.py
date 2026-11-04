@@ -10,7 +10,7 @@ K2-K4):
 - **Funding yalnız kopyalanan pozisyondan (K4):** t0 öncesi devralınan (kopyalanmayan) pozisyonun funding'i
   kopyaya yazılmaz; `defter.copy_ledger` zaten yalnız kopya zaman çizelgesindeki pencerelerin funding'ini sayar.
 
-variant='V2')`, ön kayıtlı/dondurulmuş eşikler (`kurallar.yaml` `golge_v2`, ONKAYIT_D v1.1, DEĞİŞTİRİLMEDİ):
+variant='V2')`, ön kayıtlı/dondurulmuş eşikler (`kurallar.yaml` `golge_v2`, DEĞİŞTİRİLMEDİ):
 intraday zarar_kes −%50; swing gün 0 zarar_kes −%50, gün 7 zarar_kes −%30/kar_al %60, gün 14 zarar_kes −%20/kar_al
 %40 (ayrılmış teminata oranlı K/Z). Her zorunlu çıkışın nedeni (`likidasyon` | `zarar_kes` | `kar_al`) ve coin'i
 

@@ -401,7 +401,11 @@ function durumSeridiniGuncelle() {
 
   // 7. Düzeltme: Durum şeridine takım özeti: “İlk 11 +%4,3 · 14 açık”
   // Yalnız JSON'daki metrik.toplam_oran ve acik listesinin uzunluğu kullanılır. Alan yoksa “—” yaz.
-  if (durumTakimOzet) {
+  // Boş durum (T1): hiçbir takımda trader yoksa radar kadrosu henüz yok (docs/RADAR_V1.md, T4).
+  const kadroYok = panoVerisi.takimlar.every(t => !t.ozet || !t.ozet.kadro_dolu);
+  if (durumTakimOzet && kadroYok) {
+    durumTakimOzet.innerHTML = '<span class="status-team-summary nowrap">Radar kadrosu T4\'te</span>';
+  } else if (durumTakimOzet) {
     let aktifTakim = panoVerisi.takimlar.find(t => t.ad === aktifTakimAdi);
     if (!aktifTakim && panoVerisi.takimlar.length > 0) aktifTakim = panoVerisi.takimlar[0];
 
