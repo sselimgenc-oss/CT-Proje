@@ -20,8 +20,8 @@ Akış: **R0 evren → R1 kopyalanabilirlik (şimdi) → R2 form puanı (son 7 g
 ## 2. R0 — Evren ve tarama ritmi (K‑26: günde bir, kayan 7 gün)
 - Kaynak: Hyperliquid lider tablosu (`stats-data` leaderboard; `week` penceresi: `pnl`, `vlm`, `accountValue`). Leaderboard ROI **kullanılmaz**
   (yatırma/çekme bozuyor); getiri kendi kopya hesabımızdan gelir.
-- Ön filtre: `accountValue ≥ 10.000 trader_$`, hafta `pnl > 0`, hafta `vlm > 0`, vault/alt hesap değil.
-- **Günlük tarama (00:37 UTC):** ön filtreden geçenler hafta `pnl`'e göre sıralanır, ilk **300** için son 7 gün dolumları çekilir → R1 → R2 →
+- Ön filtre (K‑31): hafta başı sermaye `accountValue − hafta pnl ≥ 10.000 trader_$` (yatırma şişirmesini önler), hafta `pnl > 0`, hafta `vlm > 0`, vault/alt hesap değil.
+- **Günlük tarama (00:37 UTC):** ön filtreden geçenler **7 günlük getiriye** (`pnl / (accountValue − pnl)`, azalan; K‑31) göre sıralanır, ilk **300** için son 7 gün dolumları çekilir → R1 → R2 →
   kadro yeniden sıralanır (giriş ve çıkış). Kesilen kişi sayısı raporlanır.
 - **Kayan pencere:** her gün o ana kadarki son 7 gün ölçülür; her gün verinin ~1/7'si değiştiği için sıra kendiliğinden sakindir
   (bir günde yükselen yakalanır, tek kötü günde düşülmez).
@@ -35,11 +35,12 @@ Akış: **R0 evren → R1 kopyalanabilirlik (şimdi) → R2 form puanı (son 7 g
 | 3 | 5 dk'dan kısa işlemlerin payı | ≤ %25 | Aynı gerekçe |
 | 4 | En yüksek kaldıraç `son7g` | ≤ 20x | Tasfiye riski |
 | 5 | Likit coin payı (nosyonel; coin 24 sa hacmi ≥ 1 milyon $) | ≥ %80 | Kayma |
-| 6 | **Gecikmeli kopya testi:** `son7g` dolumları 1 dk gecikme + maliyet (taker %0,045 + kayma %0,05, mevcut `kurallar.yaml` değerleri) ile mevcut kopya motorunda (`defter.copy_ledger`, sabit tutar v4) yeniden oynatılır | kopya getirisi > 0 **ve** ≥ trader'ın kendi `son7g` getirisinin %50'si | Trader kazanıp biz kazanamıyorsak işe yaramaz |
+| 6 | **Gecikmeli kopya testi:** `son7g` dolumları 1 dk gecikme + maliyet (taker %0,045 + kayma %0,05, mevcut `kurallar.yaml` değerleri) ile mevcut kopya motorunda (`kopya_v4.hesapla`, sabit tutar + v4 risk) yeniden oynatılır; 1 dk mum yoksa 5 dk mumda yönümüze kötü fiyat | kopya getirisi > 0 **ve** ≥ trader'ın kendi `son7g` getirisinin %50'si | Trader kazanıp biz kazanamıyorsak işe yaramaz |
 | 7 | **Devir (piyasa yapıcı süzgeci, K‑27)** | hafta `vlm` / `accountValue` ≤ 100 (≈ aylık 400) | Hacmi hesabının çok üstündeki bot/MM kopyalanamaz |
 | 8 | **Şans süzgeci (K‑27)** | G (R2: kopya işlem getirilerinden bootstrap toplamın %20 alt yüzdeliği) > 0 | 300 kişi her gün tarandığında şansla parlayanlar çok; kârı birkaç işleme dayanan elenir |
 | 9 | Akıl sağlığı | kopya getirisi ≤ +%300, hesap > 0 | Uç değer = veri hatası şüphesi → elenir, raporlanır |
 
+Ölçüm sırası ucuzdan pahalıya (devir → vault → dolum tavanı 5.000 → dolum kuralları → kopya oynatma); zaman bütçesi 120 dk (K‑27, T2 lider kararı).
 R1'den geçenlere **"radar havuzu"** denir. Her eleme nedeniyle (`neden` kodu) raporlanır.
 
 ## 4. R2 — Form puanı (son 7 gün, havuz içinde göreli)

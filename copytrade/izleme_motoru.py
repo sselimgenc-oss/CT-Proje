@@ -216,7 +216,7 @@ def _negatif_sil(negatif: dict | None, coin: str, target: int) -> None:
 
 
 def execution_candles(client, fills: list[dict], cache: dict, now_ms: int, delay: int = 30,
-                      eksik: list[dict] | None = None, negatif: dict | None = None) -> tuple[dict[str, list[dict]], bool]:
+                      eksik: list[dict] | None = None, negatif: dict | None = None, eski_aralik: str = '1h') -> tuple[dict[str, list[dict]], bool]:
     """Use 1m opens when retained; fall back to the matching 1h opening, never a later price.
 
     Hedef için mum yok / fiyatı ≤ 0 ise hedef ATLANIR (önbelleğe girmez, sonraki saat yeniden denenir) ve ``eksik``e ``{"coin", "hedef"}`` eklenir;
@@ -224,7 +224,12 @@ def execution_candles(client, fills: list[dict], cache: dict, now_ms: int, delay
 
     Negatif önbellek (K-18): ``negatif`` = ``{coin: {hedef: son_deneme_ms}}``. Eksik çıkan hedef kaydedilir; ``NEGATIF_MUM_YENIDEN_MS`` (6 saat) dolmadan
     API'ye YENİDEN SORULMAZ (saatlik koşu süresini şişirmesin) ama ``eksik``e ``onbellek: True`` ile yine yazılır (sayılır, fiyatsız kalır).
-    Süre dolunca bir kez yeniden denenir: mum gelmişse kayıt silinir ve fiyat önbelleğe girer; gelmemişse kayıt tazelenir (kalıcı atlama yok)."""
+    Süre dolunca bir kez yeniden denenir: mum gelmişse kayıt silinir ve fiyat önbelleğe girer; gelmemişse kayıt tazelenir (kalıcı atlama yok).
+
+    ``eski_aralik`` (T2, radar): 1 dk mumun bulunmadığı eski hedefler için yedek mum aralığı. Varsayılan ``'1h'`` = mevcut davranış (saatin açılışı; izleme değişmez, kural 6).
+    ``'5m'`` = hedefi içeren 5 dk mumun açılışı ve kapanışından bizim yönümüze KÖTÜ olanı (alışta büyük, satışta küçük; aynı hedefte karışık yön varsa açılış); temkinli,
+    ``yaklasik: True``."""
+    yonler: dict[tuple[str, int], set[str]] = {}
     needed = {}
     approximate = any(cached_candle(value)[1] for rows in cache.values() for value in rows.values())
     for fill in fills:
@@ -235,6 +240,7 @@ def execution_candles(client, fills: list[dict], cache: dict, now_ms: int, delay
                 if eksik is not None and not any(e['coin'] == fill['coin'] and e['hedef'] == target for e in eksik):
                     eksik.append({'coin': fill['coin'], 'hedef': target, 'onbellek': True})
                 continue
+            yonler.setdefault((fill['coin'], target), set()).add('al' if fill.get('side') in ('B', 'Buy', 'buy') else 'sat')
             if target not in needed.setdefault(fill['coin'], []):
                 needed[fill['coin']].append(target)
     for coin, targets in needed.items():
@@ -249,7 +255,20 @@ def execution_candles(client, fills: list[dict], cache: dict, now_ms: int, delay
                     continue
                 cache.setdefault(coin, {})[str(target)] = {'fiyat': prices[target], 'yaklasik': False}
                 _negatif_sil(negatif, coin, target)
-        if older:
+        if older and eski_aralik == '5m':
+            adim = 5 * MINUTE
+            bes = {int(c['t']): (float(c['o']), float(c['c'])) for c in client.candles(coin, min(target // adim * adim for target in older), now_ms, interval='5m')}
+            for target in older:
+                mum = bes.get(target // adim * adim)
+                if mum is None or min(mum) <= 0:
+                    _mum_eksik(eksik, negatif, coin, target, now_ms)
+                    continue
+                yon = yonler.get((coin, target), set())
+                fiyat = mum[0] if len(yon) != 1 else (max(mum) if 'al' in yon else min(mum))
+                cache.setdefault(coin, {})[str(target)] = {'fiyat': fiyat, 'yaklasik': True}
+                _negatif_sil(negatif, coin, target)
+                approximate = True
+        elif older:
             hourly = client.candles(coin, min(target // (60 * MINUTE) * (60 * MINUTE) for target in older),
                                     now_ms, interval='1h')
             prices = {int(c['t']): float(c['o']) for c in hourly}
