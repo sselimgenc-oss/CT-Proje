@@ -130,14 +130,18 @@
   - Telegram `from.id` ve offset denetimi yok;
   - vardiyalar tek eşzamanlılık grubunda.
   Artırma bulgusu K‑36 ile zaten çözüldü.
-- **Karar:** `GOREV_T4B_SAGLAMLASTIRMA.md`; T4b bitmeden gerçek kip (T5) açılmaz. Gecikmiş açılış: yaş > 120 sn → açılış/artırma yok; kapanış her zaman.
+- **Karar:** `GOREV_T4B_SAGLAMLASTIRMA.md`. Gecikmiş açılış: yaş > 120 sn → açılış/artırma yok; kapanış her zaman.
 - **Strateji kanıtı:** geçmiş lider tablosu olmadığı için geriye dönük walk‑forward kurulamaz. Örneklem dışı isabet, günlük `kadro.json` anlık kayıtlarından
-  ileri dönük ölçülür (T6 ilk madde, RADAR §7b). Gerçek kip önerisi için ek kapı (son karar kullanıcının):
-  - ≥ 28 gün temiz sanal çalışma (strateji kilidiyle aynı süre, AGENTS kural 5);
-  - `kapanis_eksik` = 0, çift emir = 0;
-  - ilk isabet okuması: İlk 11'in sonraki 7 gün kopya getirisi > 0 ve elenenlerden iyi.
-- **Ek (denetçi önerileri, 2026-11-05):**
-  - T6 raporu temel maliyetin yanında kötü senaryoyu da verir: kayma 2×, gecikme 3 dk.
-  - Denenen tüm varyantlar ve eşikler tek tabloda tutulur (`radar_deneme` koşuları + K‑kararları); seçilen varyant bu listeyle birlikte okunur (çoklu deneme şişmesi).
-  - Trader'ın pencere içi para yatırma/çekme hareketleri (`userNonFundingLedgerUpdates`) T6'da ölçülür. Getiriyi şişiren yatırma varsa raporlanır.
-  - Gerçek kip GitHub Actions'ta çalışmaz (zaten yasak). T5'te motor kalıcı sunucu servisinde koşar: systemd yeniden başlatma, nabız, tekil kilit.
+  ileri dönük ölçülür (T6 ilk madde, RADAR §7b).
+- **Gerçek kipe geçiş kullanıcı kararıdır** (demo → cüzdan bağla). Tek teknik şart: T4b madde 1–5 ve 7 bitmiş olmalı (para güvenliği).
+  Lider önerisi ≈ 14 gün sanal; bağlayıcı değildir.
+- **Denetçi önerilerinden alınanlar:**
+  - T6 raporu kötü senaryoyu da verir: kayma 2×, gecikme 3 dk.
+  - T6'da trader'ın pencere içi para yatırma/çekme hareketleri ölçülür (getiriyi şişiren yatırma).
+  - Gerçek kip yalnız kalıcı sunucuda koşar (T5; zaten kural).
+- **Alınmayanlar:**
+  - 6–12 aylık geriye dönük test: geçmiş lider tablosu yok.
+  - PBO / Deflated Sharpe: bu ölçekte gereksiz.
+  - Varyant kayıt tablosu: K‑kararları ve `radar_deneme` koşuları zaten kayıt.
+  - 30–60 gün zorunlu paper süresi: geçiş kullanıcı kararı.
+  - T4b 6 (kuyruk önceliği) ve 9 (sanal defter derinliği) çıkarıldı: 11–90 $'lık emirlerde etkisi önemsiz.
