@@ -506,3 +506,19 @@ def test_kural_ust_havuz_json_a_yazilir(tmp_path):
     sonuc = r.kos(Sahte([lider(A1, 20_000, 100, 5_000)], {}), KOSU, tmp_path / "radar", None, kurallar, log=lambda *_: None, kural_ust=ust)
     assert sonuc["kural_ust"] == {"radar_min_islem": 5}
     assert "kural_ust" not in kos(Sahte([lider(A1, 20_000, 100, 5_000)], {}), tmp_path / "b")
+
+
+def test_h_yalniz_ana_dex_coinleri_builder_dex_mumu_istenmez():
+    """Gerçek koşu bulgusu: 557 coinin 322'si builder dex (`xyz:AAPL`, `cash:BTC` …) ve saatlik mum vermiyor; her biri hız sınırından 20 ağırlık yer (≈ 13 dk boşa). H yalnız ana dex coinlerini okur."""
+    istenen: list[str] = []
+
+    class Istemci(Sahte):
+        def candles(self, coin, bas, son, interval="1m"):
+            istenen.append(coin)
+            return super().candles(coin, bas, son, interval)
+
+    c = Istemci([], {}, hacim={"BTC": 5e8, "ETH": 3e8, "xyz:AAPL": 1e7, "cash:BTC": 1e7})
+    b = r.Baglam(c, KOSU, BAS, RULES)
+    b.piyasa_oku()
+    b.hareket(log=lambda *_: None)
+    assert sorted(set(istenen)) == ["BTC", "ETH"]

@@ -266,8 +266,9 @@ class Baglam:
 
     def hareket(self, log=print) -> dict[str, dict]:
         if self._hareket is None:
-            log(f"H: {len(self.hacim)} coin saatlik mum okunuyor (trend coin için)")
-            self._hareket = radar_form.coin_hareketleri(self.client, sorted(self.hacim), self.kosu_ms, self.pencere_bas_ms, self.rules, log)
+            coinler = sorted(c for c in self.hacim if ":" not in c)       # builder dex coinleri (`xyz:AAPL` …) candleSnapshot'ta mum vermez ve hız sınırını boşuna harcar: H yalnız ana HL perp coinleri
+            log(f"H: {len(coinler)}/{len(self.hacim)} ana perp coini için saatlik mum okunuyor (trend coin)")
+            self._hareket = radar_form.coin_hareketleri(self.client, coinler, self.kosu_ms, self.pencere_bas_ms, self.rules, log)
         return self._hareket
 
     def form_girdileri(self, dolumlar: list[dict], sonuc: dict, trader_hesap_usd: float, log=print) -> dict:
