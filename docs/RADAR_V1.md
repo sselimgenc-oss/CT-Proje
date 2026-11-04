@@ -35,7 +35,7 @@ Akış: **R0 evren → R1 kopyalanabilirlik (şimdi) → R2 form puanı (son 7 g
 | 3 | 5 dk'dan kısa işlemlerin payı | ≤ %25 | Aynı gerekçe |
 | 4 | En yüksek kaldıraç `son7g` | ≤ 20x | Tasfiye riski |
 | 5 | Likit coin payı (nosyonel; coin 24 sa hacmi ≥ 1 milyon $) | ≥ %80 | Kayma |
-| 6 | **Gecikmeli kopya testi:** `son7g` dolumları 1 dk gecikme + maliyet (taker %0,045 + kayma %0,05, mevcut `kurallar.yaml` değerleri) ile mevcut kopya motorunda (`kopya_v4.hesapla`, sabit tutar + v4 risk) yeniden oynatılır; 1 dk mum yoksa 5 dk mumda yönümüze kötü fiyat | kopya getirisi > 0 **ve** ≥ trader'ın kendi `son7g` getirisinin %50'si | Trader kazanıp biz kazanamıyorsak işe yaramaz |
+| 6 | **Gecikmeli kopya testi (K‑32):** `son7g` dolumları `kopya_v5` (§5b oransal boyut, slot = kasa / N) ile iki kez oynatılır, ikisi de pencere başında boş: **kopya** = 1 dk gecikme + maliyet (taker %0,045 + kayma %0,05; 1 dk mum yoksa 5 dk mumda yönümüze kötü fiyat); **ayna** = gecikmesiz, maliyetsiz (trader'ın aynı işlemleri, aynı boyutla) | kopya getirisi > 0 **ve** `kopya_koruma` = kopya / ayna ≥ 0,50 (ayna ≤ 0 → elenir) | Trader kazanıp biz kazanamıyorsak işe yaramaz; oran yalnız gecikme + maliyetin etkisini ölçer |
 | 7 | **Devir (piyasa yapıcı süzgeci, K‑27)** | hafta `vlm` / `accountValue` ≤ 100 (≈ aylık 400) | Hacmi hesabının çok üstündeki bot/MM kopyalanamaz |
 | 8 | **Şans süzgeci (K‑27)** | G (R2: kopya işlem getirilerinden bootstrap toplamın %20 alt yüzdeliği) > 0 | 300 kişi her gün tarandığında şansla parlayanlar çok; kârı birkaç işleme dayanan elenir |
 | 9 | Akıl sağlığı | kopya getirisi ≤ +%300, hesap > 0 | Uç değer = veri hatası şüphesi → elenir, raporlanır |

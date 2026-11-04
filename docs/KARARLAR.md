@@ -88,3 +88,12 @@
   Form radarı yüzde getiriyi ölçmeli, dolar kârı değil.
 - **Kural (`RADAR_V1.md` §2):** evren `accountValue − hafta pnl ≥ radar_min_hesap_usd` (hafta başı sermaye ≥ 10.000 $; yatırma şişirmesini önler), hafta `pnl > 0`,
   hafta `vlm > 0`, vault değil; sıra `trader_getiri_7g` azalan; ilk `radar_aday_tavan` (300). Diğer R1 eşikleri DEĞİŞMEZ.
+
+### K‑32. Kopya koruma oranı: kopya / ayna (lider, 2026-11-04)
+- **Neden:** T2 300 koşusunda (run 41873761070) kopya testine varan 25 adayın 19'u `kopya_koruma_dusuk`; medyan oran 0,0099. Sebep ölçü hatası:
+  (1) kopya sabit küçük tutarla (v4) oynuyor, trader getirisi hesap yüzdesi — elma/armut; (2) `trader_getiri_7g` pencereden önce açılmış pozisyonların
+  kârını içerir, kopya pencere başında boş başlar.
+- **Kural (`RADAR_V1.md` §3/6):** aynı `son7g` dolumları `kopya_v5` ile iki kez: kopya (1 dk + maliyet) ve ayna (0 gecikme, 0 maliyet); ikisi de boş başlar,
+  aynı slot. `kopya_koruma = kopya_getiri / ayna_getiri`; ayna ≤ 0 → `kopya_koruma_dusuk`. Eşik 0,50 ve `kopya_zarar` (kopya > 0) değişmez.
+  `trader_getiri_7g` yalnız R0 sırası ve bilgi. Görev T3.
+
