@@ -41,3 +41,8 @@ Dal: `claude/t2-radar-tarama` (taban: `main`). Görev: `docs/GOREV_T2_RADAR_TARA
 6–8. Kabul.
 9. T1b (#494) önce birleşir; sonra `main`'i bu dala birleştir (çakışma: iş akışı listesi, ikisini de uygula).
 Kabul: görev §5 aynen (20 ve 300 adaylı koşu bağlantısı, süre, 429, neden dağılımı, sütun min/medyan/max).
+
+## Lider kararları uygulandı (2026-11-04)
+- Ucuzdan pahalıya ölçüm sırası, `radar_dolum_tavan` / `dolum_fazla`, dolum tabanlı kurallar önce (başarısızsa kopya oynatılmaz), `radar_api_agirlik_dk` (1.100), `radar_zaman_butcesi_dk` (120) / `zaman_yok`; yeni `neden` sırası.
+- `izleme_motoru.execution_candles(..., eski_aralik='1h')`: varsayılan davranış değişmedi (izleme testleri yeşil); `'5m'` = 5 dk mumun yönümüze kötü fiyatı. Satır alanı `yaklasik_fiyat_eylem`; sözleşme güncel.
+- Tohum/kaldıraç paydası/funding/tarz kabulleri sözleşmede yazılı. `dolum_fazla` için `≥ radar_dolum_tavan` (tam 5.000 dolum da elenir; `fills(max_rows=…)` sayfa sınırında 2.000'in katlarına yuvarlar).

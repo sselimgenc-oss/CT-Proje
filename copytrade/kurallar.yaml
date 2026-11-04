@@ -97,3 +97,6 @@ radar_max_devir_hafta: 100              # kat (hafta vlm / accountValue), sını
 radar_bootstrap_tekrar: 1000            # tekrar (tohum adresten türetilir: aynı girdi aynı sonuç)
 radar_bootstrap_alt_yuzdelik: 0.20      # oran (alt yüzdelik)
 radar_akil_sagligi_getiri_max: 3.0      # oran (+%300), üstü veri hatası şüphesi
+radar_dolum_tavan: 5000                 # dolum (7 günde bu kadar ya da fazlası = ≈ 2 dk'da bir dolum: kopyalanamaz; `dolum_fazla`, kopya oynatılmaz, dolum alanları null)
+radar_api_agirlik_dk: 1100              # ağırlık/dk (radar istemcisi hız sınırı; HL IP sınırı 1.200)
+radar_zaman_butcesi_dk: 120             # dakika (koşu süresi; aşılınca kalan adaylar `zaman_yok`)
