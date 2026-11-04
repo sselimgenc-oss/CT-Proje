@@ -36,7 +36,9 @@ Akış: **R0 evren → R1 kopyalanabilirlik (şimdi) → R2 form puanı (son 7 g
 | 4 | En yüksek kaldıraç `son7g` | ≤ 20x | Tasfiye riski |
 | 5 | Likit coin payı (nosyonel; coin 24 sa hacmi ≥ 1 milyon $) | ≥ %80 | Kayma |
 | 6 | **Gecikmeli kopya testi:** `son7g` dolumları 1 dk gecikme + maliyet (taker %0,045 + kayma %0,05, mevcut `kurallar.yaml` değerleri) ile mevcut kopya motorunda (`defter.copy_ledger`, sabit tutar v4) yeniden oynatılır | kopya getirisi > 0 **ve** ≥ trader'ın kendi `son7g` getirisinin %50'si | Trader kazanıp biz kazanamıyorsak işe yaramaz |
-| 7 | Akıl sağlığı | kopya getirisi ≤ +%300, hesap > 0 | Uç değer = veri hatası şüphesi → elenir, raporlanır |
+| 7 | **Devir (piyasa yapıcı süzgeci, K‑27)** | hafta `vlm` / `accountValue` ≤ 100 (≈ aylık 400) | Hacmi hesabının çok üstündeki bot/MM kopyalanamaz |
+| 8 | **Şans süzgeci (K‑27)** | G (R2: kopya işlem getirilerinden bootstrap toplamın %20 alt yüzdeliği) > 0 | 300 kişi her gün tarandığında şansla parlayanlar çok; kârı birkaç işleme dayanan elenir |
+| 9 | Akıl sağlığı | kopya getirisi ≤ +%300, hesap > 0 | Uç değer = veri hatası şüphesi → elenir, raporlanır |
 
 R1'den geçenlere **"radar havuzu"** denir. Her eleme nedeniyle (`neden` kodu) raporlanır.
 
@@ -66,12 +68,14 @@ gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez
   Slot kasası = kasa / N (gerçek USDC).
 - **İlk gün:** form sırasının ilk N'i sahaya çıkar.
 - **Sahaya giriş (sonraki günler):** saha slotu boşalınca İlk 11'in sahada olmayan en iyi sıralısı girer.
-- **Değiştirme (histerezis):** dolu sahada bir üyenin yerini aday ancak aday form sırası ≤ N **ve** üye form sırası > 11 ise alır.
+- **Değiştirme (histerezis):** dolu sahada bir üyenin yerini aday ancak aday form sırası ≤ N **ve** üye form sırası > 11 **ve** aday form puanı
+  üyeninkinden en az **10 puan** (0–100 ölçeği) yüksekse alır (K‑27; marjinal fark koltuk değiştirmez).
   Günde en fazla **2** saha değişikliği (devir maliyeti).
 - **Sahadan düşme:**
   - Anında: sahaya girişten beri slot düşüşü ≥ %10; R1/4 (kaldıraç > 20x) ihlali.
   - Günlük: form sırası 2 gün üst üste > 22, ya da 1 gün kadro dışı (> 30); 72 sa yeni işlem yok; R1'den elendi.
-  - Düşen 14 gün sahaya dönemez.
+  - **Sonuçla** düşen (slot −%10, form sırası, R1 elemesi) 14 gün sahaya dönemez. **Sonuç dışı** nedenle yerini kaybeden (daha iyisi geldi,
+    72 sa işlem yok, kasa değişikliği) bekleme cezası almaz (K‑27).
 - **Sahadan inen üyenin açık pozisyonları:** yeni açılış durur, trader'ın kapanışları izlenir, 24 sa sonra açık kalan kapatılır.
 
 ## 5b. Canlı yürütme ve boyutlandırma (sahada)
@@ -88,6 +92,7 @@ gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez
 - Slot başına pozisyon tavanı 3,0x (yukarıda), mevcut tasfiye ve aşamalı çıkış (v4) aynen.
 - **Coin yoğunlaşması:** aynı coinde tüm saha slotlarının toplam brüt nosyoneli ≤ kasanın %30'u; aşan açılış kırpılır.
 - **Benzer trader:** sahada `son7g` günlük kopya getirisi korelasyonu ≥ 0,7 olan en fazla 2 kişi; fazlası sıradaki üyeye yer verir.
+- **Patlama freni (K‑27):** bir trader 10 dk içinde ≥ 8 yeni coin açarsa ondan 30 dk yeni açılış kopyalanmaz (kapanışları izlenir).
 - Günlük kasa kaybı ≥ %5 → o gün yeni açılış yok. Kasa zirveden düşüş ≥ **%20** → tüm pozisyonlar kapatılır, motor durur, Telegram (K‑19).
 - **/dur şalteri:** Telegram komutu ya da sunucuda dosya → aynı kapanış.
 
@@ -96,12 +101,23 @@ Kasa 1.000 $'da kalır; artırım ancak hepsi sağlanırsa **önerilir**:
 1. ≥ 28 gün canlı, ≥ 100 kapanmış saha işlemi.
 2. Net getiri > 0 (ücret + kayma + funding dahil), en büyük düşüş ≤ %15.
 3. Yürütme sağlığı: kaçan dolum ≈ 0, medyan kayma ve gecikme raporlu; motor çalışma süresi ≥ %98.
-Bilgi ölçüsü (yalnız rapor, ek motor yok): günlük radar dosyalarından form puanı ↔ sonraki 7 gün form getirisi Spearman IC.
+4. Seçim isabeti olumlu (§7b).
+
+## 7b. Seçim isabet ölçümü (K‑27; rapor — deneme/gölge değil, ek motor ve emir yok)
+- Her günlük taramada, **7 gün önceki** tarama dosyasındaki R1 havuzunun herkesi için arada geçen 7 günün kopya getirisi, R1/6'daki aynı
+  oynatmayla trader'ın kendi dolumlarından **sonradan** hesaplanır (`sonraki_7g`).
+- Ölçüler (`radar/<tarih>/isabet.json`): (a) form puanı ↔ `sonraki_7g` Spearman IC; (b) o günün İlk 11'i `sonraki_7g` ortalaması − havuz ortalaması;
+  (c) sahadaki gerçek sonuç ile (b)'nin karşılaştırması.
+- **Önceden kayıtlı kural:** 14 gün (≥ 7 ölçülmüş gün) sonra ortalama IC ≤ 0 **ve** (b) ≤ 0 ise: kasaya para eklenmez, lider tasarımı gözden
+  geçirir ve kullanıcıya rapor eder (kasa küçültme önerisi dahil). 28. günde aynı ölçüm büyütme kapısının 4. şartıdır.
 
 ## 8. Kilit ve değişiklik
 - Tüm eşik ve ağırlıklar **v1'de donar**, `kurallar.yaml` `radar_*` anahtarlarında tek yerde (kodda sayı sabiti yok).
 - 28 günlük canlı değerlendirme bitmeden ayar değişmez (aşırı uydurma koruması). Değişiklik yeni sürüm olur (v1.1), eski seri silinmez.
 - Veri/kod hatası düzeltmesi serbesttir; sonuç sayılarını değiştiriyorsa PR'da eski ↔ yeni yan yana.
+- **v1.1 ağırlık öğrenme (28 günden sonra, K‑27):** R2 ağırlıkları §7b verisinden öğrenilir (hedef `sonraki_7g`; Spearman + ridge). Kapılar:
+  ileri sınama (ilk %70 öğren, son %30 ölç) ileri rho ≤ 0,05 ise ağırlık **yazılmaz**; geçerse v1 ağırlıklarıyla harmanlanır, öğrenilenin payı
+  ≤ %50. Uygulama lider + kullanıcı kararıyla.
 
 ## 9. İş sırası
 T1 eski sistemi sil · T1b Cloudflare kalıntıları · T2 R0+R1 tarama · T3 R2 form puanı · **T4 canlı motor** (kadro, saha, yürütücü, §5b

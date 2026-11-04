@@ -24,6 +24,9 @@ Dayanak: `docs/RADAR_V1.md` §1–3 (K‑19). Dal: `claude/t2-radar-tarama` (mai
 | `radar_likit_pay_min` | 0.80 | oran (nosyonel) |
 | `radar_kopya_gecikme_dk` | 1 | dakika |
 | `radar_kopya_koruma_min` | 0.50 | oran (kopya getirisi / trader getirisi) |
+| `radar_max_devir_hafta` | 100 | kat (hafta vlm / accountValue) |
+| `radar_bootstrap_tekrar` | 1000 | tekrar (sabit tohum) |
+| `radar_bootstrap_alt_yuzdelik` | 0.20 | oran |
 | `radar_akil_sagligi_getiri_max` | 3.0 | oran (+%300) |
 
 ## 2. Tanımlar (karar verildi; değiştirme)
@@ -36,16 +39,19 @@ Dayanak: `docs/RADAR_V1.md` §1–3 (K‑19). Dal: `claude/t2-radar-tarama` (mai
   oynatması pencere başında **boş** başlar (açık pozisyon kopyalanmaz; RADAR_V1 §5 ile aynı ilke).
 - **Kurallar sırayla** değerlendirilir, ilk başarısız kuralın kodu `neden` olur ama **tüm** ölçüler yine yazılır (teşhis için):
   `islem_az`, `tutma_kisa`, `kisa_islem_fazla`, `kaldirac_yuksek`, `likidite_dusuk`, `kopya_zarar` (kopya getirisi ≤ 0), `kopya_koruma_dusuk`
-  (kopya / trader < 0,50), `akil_sagligi` (kopya getirisi > 3,0 ya da hesap ≤ 0), `veri_hatasi` (istek hatası; mesaj `hata` alanında, uydurma yok).
-- Sınırlar **dahil**: tam 10 işlem geçer, tam 1,0 sa geçer, tam %25 geçer, tam 20x geçer, tam %80 geçer, tam %50 geçer.
+  (kopya / trader < 0,50), `devir_yuksek` (hafta vlm / hesap > 100), `sans_riski` (kopya işlem getirilerinden bootstrap toplamın
+  %20 alt yüzdeliği ≤ 0; sabit tohum, aynı girdi aynı sonuç), `akil_sagligi` (kopya getirisi > 3,0 ya da hesap ≤ 0), `veri_hatasi` (istek hatası; mesaj `hata` alanında, uydurma yok).
+- Sınırlar **dahil**: tam 10 işlem geçer, tam 1,0 sa geçer, tam %25 geçer, tam 20x geçer, tam %80 geçer, tam %50 geçer, tam 100 kat geçer; `sans_riski` için alt sınır tam 0 **elenir** (> 0 gerekir).
 
 ## 3. Çıktı ve sözleşme
 - `radar/<YYYY-MM-DD>/havuz.json`: `{"sema": "radar-havuz-v1", "kosu_ms", "pencere_bas_ms", "evren_toplam", "evren_kesilen", "satirlar": [...]}`;
   satır: `adres, hesap_usd (trader_$), hafta_pnl_usd (trader_$), trader_getiri_7g (oran), islem_sayisi, medyan_tutma_saat, kisa_islem_payi (oran),
-  max_kaldirac (x), likit_pay (oran), kopya_getiri_7g (oran, 1.000 kopya_$ ölçeğinde), kopya_koruma (oran), gecti (bool), neden (kod|null), hata (str|null)`.
+  max_kaldirac (x), likit_pay (oran), kopya_getiri_7g (oran, 1.000 kopya_$ ölçeğinde), kopya_koruma (oran), devir_hafta (kat), kopya_alt20 (oran), gecti (bool), neden (kod|null), hata (str|null)`.
 - `docs/VERI_SOZLESMESI.md`'ye yeni bölüm **"Radar havuzu (R0/R1)"**: her alanın birimi/ölçeği/zamanı, yukarıdaki gibi. Sözleşmeye yazılmayan alan yazılmaz.
 - İş akışı **`radar_deneme.yml`** (yalnız `workflow_dispatch`, girdi `aday_sayisi` varsayılan 20): koşar, `havuz.json`'u artifact olarak yükler,
   özet tabloyu (`gecti` sayısı, neden dağılımı, her sayısal sütunun min/medyan/max) iş özetine yazar. Zamanlama (cron) T4'te.
+
+- Bootstrap altın örneği: 3 işlem getirisi [+0,02, −0,01, +0,01] gibi küçük bir örnek için tohum sabit, beklenen alt yüzdelik testte yazılı.
 
 ## 4. Testler (altın örnek zorunlu; elle hesaplanmış sayılar)
 - Her R1 kuralı için sınırın hem tam üstü hem tam altı (ör. 10 işlem geçer / 9 elenir) — sentetik dolumlarla, beklenen sayı test içinde elle yazılı.
