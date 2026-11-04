@@ -17,12 +17,20 @@ Akış: **R0 evren → R1 kopyalanabilirlik (şimdi) → R2 form puanı (son 7 g
 - Kaldıraç **x** (nosyonel / hesap değeri). Süre: tutma **saat**, gecikme **dakika**. Zaman **UTC ms**; `t0` = adayın radara giriş anı.
 - Sıra/yüzdelik puanlar **0–100**. Pencere: `son7g` = [koşu zamanı − 7×24 sa, koşu zamanı).
 
-## 2. R0 — Evren (günlük, 00:37 UTC)
-- Kaynak: Hyperliquid lider tablosu (`stats-data` leaderboard; hafta penceresi `pnl`, `vlm`, `accountValue`). Leaderboard ROI **kullanılmaz**
-  (yatırma/çekme bozuyor); getiri kendi kopya hesabımızdan gelir.
-- Ön filtre: `accountValue ≥ 10.000 trader_$`, hafta `pnl > 0`, hafta `vlm > 0`, vault/alt hesap değil.
-- Ön filtreden geçenler hafta `pnl`'e göre sıralanır, en çok **300** aday için son 7 gün dolumları (`userFillsByTime`) ve açık pozisyonlar çekilir
-  (API bütçesi). 300 sınırı ve kaç kişinin dışarıda kaldığı raporlanır.
+## 2. R0 — Evren ve tarama ritmi (K‑25: her gün + her saat)
+- Kaynak: Hyperliquid lider tablosu (`stats-data` leaderboard; `day` ve `week` pencereleri: `pnl`, `vlm`, `accountValue`). Leaderboard ROI
+  **kullanılmaz** (yatırma/çekme bozuyor); getiri kendi kopya hesabımızdan gelir.
+- Ön filtre (iki taramada aynı): `accountValue ≥ 10.000 trader_$`, hafta `pnl > 0`, hafta `vlm > 0`, vault/alt hesap değil.
+- **Tam tarama (günde 1, 00:37 UTC):** ön filtreden geçenler hafta `pnl`'e göre sıralanır, ilk **300** için son 7 gün dolumları çekilir →
+  R1 → R2 → **kadro yeniden sıralanır** (giriş ve çıkış). Kesilen kişi sayısı raporlanır.
+- **Sıcak tarama (her saat, :07 UTC):** "şu an başarılı işlem yapanları hemen yakala".
+  - Adaylar: ön filtreyi geçen ve **gün `pnl`'ine göre ilk 50**'de olup kadroda olmayanlar; son 6 saatte değerlendirilmiş olan atlanır.
+  - Bunlar için aynı R1 + R2 (son 7 gün, aynı eşikler, puan **son tam taramanın havuzuna göre** yüzdelik — ölçek aynı kalsın).
+  - Ayrıca kadronun 30 üyesinin puanı da aynı yolla güncellenir (sıra canlı kalsın).
+  - **Hızlı giriş, sakin çıkış:** sıcak tarama yalnız **ekler/yükseltir** (Yedek'e giriş, İlk 11'e yükselme, §5 histerezisiyle sahaya çıkış);
+    **düşürme** kararları (sıra > 22 / > 30) yalnız tam taramada verilir. Anında düşme kuralları (slot −%10, kaldıraç) her an geçerli.
+  - Kadro 30'u aşarsa en düşük puanlı Yedek çıkar.
+- Her iki tarama GitHub Actions'ta (salt okunur); çıktı `kadro.json` veri dalına yazılır; canlı motor sunucuda bunu **5 dakikada bir** okur.
 
 ## 3. R1 — Kopyalanabilirlik (şimdi; sert filtreler, hepsi gerekli)
 | # | Kural | Eşik | Gerekçe |
@@ -64,7 +72,7 @@ gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez
 - **İlk gün:** form sırasının ilk N'i sahaya çıkar.
 - **Sahaya giriş (sonraki günler):** saha slotu boşalınca İlk 11'in sahada olmayan en iyi sıralısı girer.
 - **Değiştirme (histerezis):** dolu sahada bir üyenin yerini aday ancak aday form sırası ≤ N **ve** üye form sırası > 11 ise alır.
-  Günde en fazla **2** saha değişikliği (devir maliyeti).
+  Günde en fazla **2** saha değişikliği (devir maliyeti; sıcak + tam tarama toplamı).
 - **Sahadan düşme:**
   - Anında: sahaya girişten beri slot düşüşü ≥ %10; R1/4 (kaldıraç > 20x) ihlali.
   - Günlük: form sırası 2 gün üst üste > 22, ya da 1 gün kadro dışı (> 30); 72 sa yeni işlem yok; R1'den elendi.
