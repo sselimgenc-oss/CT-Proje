@@ -118,3 +118,21 @@
   büyük artış" göründü → 11 $ × oran = 261,73 $ (tavana dayandı). Oransal artırma, yuvarlanmış küçük açılışı ve kısmi dolum zincirini büyütüyor.
 - **Karar (`RADAR_V1.md` §5b):** artırma = max(0, hedef − mevcut), hedef = slot × trader nosyonel sonra / trader hesap (3 × slot ve K‑35 tavanlı); < 11 $ atlanır.
   Azaltma ve kapanış oransal kalır. `boyut.hedef_emir` tek yer → `kopya_v5` (R1/6) ve motor aynı anda değişir (K‑28). Eski/yeni R1 sayıları yan yana (kural 6).
+
+### K‑37. Bağımsız denetim sonrası sağlamlaştırma; gerçek kip kapısı (lider, 2026-11-05)
+- **Denetim (dış ajan, 2026-11-05) doğrulanan bulgular:**
+  - kapanış teyidi yok (IOC kalanı yeniden denenmiyor, DUR teyitsiz);
+  - gerçek kipte risk yerel özsermayeye dayanıyor;
+  - sanal kip funding'i dışlıyor (R1 dahil ediyor);
+  - emir öncesi kalıcı niyet / `cloid` yok;
+  - yuvarlama sonrası 10 $ kontrolü yok;
+  - gecikmiş açılış 60 dk'ya kadar kopyalanıyor;
+  - Telegram `from.id` ve offset denetimi yok;
+  - vardiyalar tek eşzamanlılık grubunda.
+  Artırma bulgusu K‑36 ile zaten çözüldü.
+- **Karar:** `GOREV_T4B_SAGLAMLASTIRMA.md`; T4b bitmeden gerçek kip (T5) açılmaz. Gecikmiş açılış: yaş > 120 sn → açılış/artırma yok; kapanış her zaman.
+- **Strateji kanıtı:** geçmiş lider tablosu olmadığı için geriye dönük walk‑forward kurulamaz. Örneklem dışı isabet, günlük `kadro.json` anlık kayıtlarından
+  ileri dönük ölçülür (T6 ilk madde, RADAR §7b). Gerçek kip önerisi için ek kapı (son karar kullanıcının):
+  - ≥ 14 gün temiz sanal çalışma;
+  - `kapanis_eksik` = 0, çift emir = 0;
+  - ilk isabet okuması: İlk 11'in sonraki 7 gün kopya getirisi > 0 ve elenenlerden iyi.
