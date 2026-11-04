@@ -14,3 +14,12 @@
 10. **Telegram:** `/dur` ve `/durum`; gönderim arka plan iş parçacığında (emir hattı beklemez). `K‑13` iş akışı taramasına tek istisna: `canli_vardiya.yml` Telegram secret'larını ortama geçirir. Secret yoksa kanal kapalı (yalnız kayıt).
 11. **Gerçek kip kodu yazıldı ve sahte exchange ile sınandı, ÇALIŞTIRILMADI.** SDK sürümü `hyperliquid-python-sdk==0.24.0` (2026-06-04, ≥ 2 hafta). `kip_belirle`: `GITHUB_ACTIONS=true` iken ret.
 12. Funding hesaba girmez (T2 ile aynı v1 kararı).
+
+## K-35 (lider denetimi) notları
+13. **v4 sınırları v5'ten kaldırıldı (lider onayına):** `kopya_v5` gerçekte `kopya_v4` risk katmanını da uyguluyordu — emir başına 100 $ ve trader başına toplam 200 $ (referans kasa 1.000 $). Bu, 272,7 $'lık slot toplam tavanından ÖNCE devreye girip toplamı 200 $'da tutuyordu; canlı motor ise 272,7 $'a kadar açardı → R1/6 canlıdan farklı sayı görürdü
+    (K‑35 "R1/6 aynı sayıyı görsün" ile çelişir). Bu yüzden `kopya_v5(k35=True)` bu iki sınırı kapatır; HL azami kaldıraç/teminat sınırı kalır. Eski davranış yalnız karşılaştırma için `k35=False` (radar `--v4-yan-yana` → `v5_onceki_kopya_getiri_7g`).
+    Etki: altın örnek (3 coin, 150k/160k/50k $, slot 90,91): eski kural 100 + 100 + 0 = 200 $ nosyonel, yeni 136,36 + 136,36 + 0 = 272,73 $.
+14. **`slot_tavani` etiketi** eski `tavan_kirpildi` (artırma yolu) yerine geçti; tek emir tavanı (3 × slot) hâlâ `tavan_kirpildi`.
+15. **Gerçek kipte kasa değişimi:** `hesap.json` kasa ayarı/etkin kasa değişince SIFIRLANMAZ (pozisyon/K‑Z kaydı korunur), yalnız `kasa_usd` güncellenir; slot ve N yeniden hesaplanır.
+16. **Marj tavanı** başlangıç marjını `nosyonel / 3` (giriş fiyatı) sayar; serbest kasa = özsermaye (mark dahil). Sayaç `marj_yok` hem kırpmayı hem sıfırlamayı sayar.
+

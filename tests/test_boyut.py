@@ -60,7 +60,7 @@ def test_artirma_oran_atlama_ve_tavan():
     assert emir == pytest.approx(20.0) and neden == 'tamam'
     assert boyut.hedef_emir('artir', 10.0, 11.0, 0.0, 40.0, SLOT, 100.0, RULES) == (0.0, 'min_emir_atlandi')  # 4 $ < 11 → atla
     emir, neden = boyut.hedef_emir('artir', 10.0, 30.0, 0.0, 200.0, SLOT, 100.0, RULES)         # istenen 400 $; toplam tavan 272,73 → 72,73 $
-    assert emir == pytest.approx(3 * SLOT - 200.0) and neden == 'tavan_kirpildi'
+    assert emir == pytest.approx(3 * SLOT - 200.0) and neden == 'slot_tavani'            # K‑35: toplam tavan etiketi
 
 
 def test_trader_tam_kapanis_bizim_tamami_ve_bilinmeyen_eylem():
@@ -118,3 +118,43 @@ def test_v5_varsayilan_v3_v4_ayni_kaldi():
     a = kopya_v3.hesapla([fill('10:00', 'B', 100, 0, 100), fill('11:00', 'A', 100, 100, 110)], saat_mumlari(), {}, {'BTC': {ms('2026-10-27T10:01:00Z'): 100.0, ms('2026-10-27T11:01:00Z'): 110.0}},
                          [], T0, NOW, 1, 'intraday', RULES)
     assert a['surum'] == 'v3' and a['baslangic_usd'] == 1000.0 and a['getiri'] == pytest.approx(0.0020340, abs=1e-6)
+
+
+# ------------------------------------------------------------------------------------------------ K‑35: slot TOPLAM tavanı (tüm coinler)
+def test_k35_slot_toplam_tavani_altin_ornek_72_73():
+    """Slot 90,91 → toplam tavan 3 × 90,91 = 272,73 $. Mevcut iki coinde 200 $ varken yeni açılış (istenen 363,6 $ → önce 272,73'e) en çok 72,73 $ olur; kalan 5 $ < 11 → 0; tam tavanda 0."""
+    emir, neden = boyut.hedef_emir('ac', 0.0, 4000.0, 100_000.0, 0.0, SLOT, 100.0, RULES, biz_slot_toplam_usd=200.0)
+    assert emir == pytest.approx(72.7273, abs=1e-4) and neden == 'slot_tavani'
+    assert boyut.hedef_emir('ac', 0.0, 4000.0, 100_000.0, 0.0, SLOT, 100.0, RULES, biz_slot_toplam_usd=267.73) == (0.0, 'slot_tavani')
+    assert boyut.hedef_emir('ac', 0.0, 4000.0, 100_000.0, 0.0, SLOT, 100.0, RULES, biz_slot_toplam_usd=3 * SLOT) == (0.0, 'slot_tavani')
+    # hedef kendiliğinden küçük (4,55 $): kalan yeterliyse 11 $'a yuvarlanır, değilse 0
+    assert boyut.hedef_emir('ac', 0.0, 50.0, 100_000.0, 0.0, SLOT, 100.0, RULES, biz_slot_toplam_usd=200.0) == (11.0, 'min_emir_yuvarlandi')
+    assert boyut.hedef_emir('ac', 0.0, 50.0, 100_000.0, 0.0, SLOT, 100.0, RULES, biz_slot_toplam_usd=265.0) == (0.0, 'slot_tavani')
+    # tavan altında kalan istek kırpılmaz
+    assert boyut.hedef_emir('ac', 0.0, 300.0, 100_000.0, 0.0, SLOT, 100.0, RULES, biz_slot_toplam_usd=100.0) == (pytest.approx(27.2727, abs=1e-4), 'tamam')
+
+
+def test_k35_artirma_toplam_tavan_diger_coinler_sayilir():
+    """Bu coinde 40 $, diğer coinlerde 220 $ (toplam 260): trader %50 artırır (istenen 20 $) → kalan 272,73 − 260 = 12,73 $ → 12,73 $ ('slot_tavani'); toplam 268 → kalan 4,73 < 11 → 0."""
+    emir, neden = boyut.hedef_emir('artir', 10.0, 15.0, 0.0, 40.0, SLOT, 100.0, RULES, biz_slot_toplam_usd=260.0)
+    assert emir == pytest.approx(12.7273, abs=1e-4) and neden == 'slot_tavani'
+    assert boyut.hedef_emir('artir', 10.0, 15.0, 0.0, 40.0, SLOT, 100.0, RULES, biz_slot_toplam_usd=268.0) == (0.0, 'slot_tavani')
+    assert boyut.hedef_emir('artir', 10.0, 15.0, 0.0, 40.0, SLOT, 100.0, RULES, biz_slot_toplam_usd=None) == (pytest.approx(20.0), 'tamam')      # None: eski coin başına davranış
+
+
+def test_k35_kopya_v5_uc_coinde_ayni_toplam_tavan_radar_ayni_sayiyi_gorur():
+    """Slot 90,909, toplam tavan 272,727 $. Trader hesap 100.000 $; sırayla BTC 150.000 $ (hedef 136,36 → tam), ETH 160.000 $ (hedef 145,45; kalan 136,36 → 136,36 'slot_tavani'), SOL 50.000 $ (hedef 45,45; kalan 0 → 0).
+    Ayna (gecikme 0, maliyet 0): üç coin da 100 → 110: kâr = 136,36 × 0,10 × 2 = 27,27 $ → getiri 0,02727. K‑35 ÖNCESİ (`k35=False`): v4'ün eski emir başına 100 $ ve trader toplamı 200 $ sınırı açıktı → BTC 100, ETH 100 (toplam 200'de durdu), SOL 0
+    → kâr 100 × 0,10 × 2 = 20 $ → 0,02000 (yani eski kural canlıdan FARKLI sayı görüyordu)."""
+    kayit: list = []
+    fills = []
+    for coin, nos in (('BTC', 150_000), ('ETH', 160_000), ('SOL', 50_000)):
+        fills += [fill('10:00', 'B', nos / 100, 0, 100, coin), fill('11:00', 'A', nos / 100, nos / 100, 110, coin)]
+    saatlik = {c: [{'t': ms(f'2026-10-27T{h:02d}:00:00Z'), 'o': 100.0} for h in range(0, 13)] for c in ('BTC', 'ETH', 'SOL')}
+    sifir = {**RULES, 'maliyet_taker': 0.0, 'maliyet_kayma': 0.0}
+    sonuc = kopya_v5.hesapla(fills, saatlik, {}, {}, [], T0, NOW, 0, 'intraday', sifir, trader_hesap_usd=100_000.0, kasa_usd=1000.0, kayit=kayit)
+    acilislar = [(e, n, round(u, 2)) for e, n, u in kayit if e == 'ac']
+    assert acilislar == [('ac', 'tamam', 136.36), ('ac', 'slot_tavani', 136.36), ('ac', 'slot_tavani', 0.0)]
+    assert sonuc['getiri'] == pytest.approx(27.2727 / 1000, abs=1e-6)
+    eski = kopya_v5.hesapla(fills, saatlik, {}, {}, [], T0, NOW, 0, 'intraday', sifir, trader_hesap_usd=100_000.0, kasa_usd=1000.0, k35=False)
+    assert eski['getiri'] == pytest.approx(20.0 / 1000, abs=1e-6)

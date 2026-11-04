@@ -98,6 +98,15 @@ class Risk:
         kirpilan = max(0.0, izin)
         return (kirpilan, "coin_tavani_kirpildi") if kirpilan >= float(self.rules["radar_min_emir_usd"]) else (0.0, "coin_tavani")
 
+    def marj_kirp(self, emir_usd: float, marj_kullanilan_usd: float, ozsermaye_usd: float, kaldirac: float | None = None) -> tuple[float, str]:
+        """K‑35 toplam marj tavanı: açık pozisyonların başlangıç marjı toplamı (nosyonel / kaldıraç) + yeni emrin marjı ≤ özsermaye (serbest kasa). Aşan kısım KIRPILIR (`marj_yok`);
+        kırpılan < `radar_min_emir_usd` ise 0. Gerçek kipte HL zaten reddeder; sanal kipte bu olmadan getiri şişerdi. Döner (uygulanan $, neden: '' | 'marj_yok')."""
+        k = float(kaldirac if kaldirac is not None else self.rules["canli_marj_kaldirac"])
+        izin = max(0.0, float(ozsermaye_usd) - float(marj_kullanilan_usd)) * k
+        if emir_usd <= izin + 1e-9:
+            return emir_usd, ""
+        return (izin, "marj_yok") if izin >= float(self.rules["radar_min_emir_usd"]) else (0.0, "marj_yok")
+
     # ------------------------------------------------------------------ kalıcılık
     def to_json(self) -> dict[str, Any]:
         return {"zirve": self.zirve, "gun": self.gun, "gun_basi": self.gun_basi, "dur": self.dur, "dur_neden": self.dur_neden, "fren_bitis": self.fren_bitis,

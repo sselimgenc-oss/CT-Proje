@@ -29,7 +29,8 @@ from copytrade.canli.kadro import Karar, Saha, kadro_taze_mi
 from copytrade.canli.mutabakat import poz_farki, sanal_tutarlilik
 from copytrade.canli.risk import Risk, gun
 from copytrade.canli.yurutucu import AnahtarYok, Dolum, SanalYurutucu, Yurutucu, gercek_yurutucu_olustur
-from copytrade.dinleyici import Ayar, Dinleyici, Izlenen, Olay, clearinghouse_ayristir, clearinghouse_pozisyonlari, coin_listesi, rest_dolumlar, rest_post_fabrikasi, ws_baglan
+from copytrade.dinleyici import Ayar, Dinleyici, Izlenen, Olay, clearinghouse_ayristir, clearinghouse_pozisyonlari, clearinghouse_yuk, coin_listesi, rest_dolumlar, rest_post_fabrikasi, ws_baglan
+from copytrade.hl_ortak import spot_usdc
 from copytrade.izleme_liste import perp_dex_names
 from copytrade.kurallar import load_rules
 from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter
@@ -58,6 +59,29 @@ def rest_post_olustur(rules: dict, istemci: PublicClient | None = None) -> Calla
     Duman testinde (gerçek HL) açılışta ardışık `clearinghouseState` okumaları HTTP 429 aldı → bu sınırlayıcı eklendi."""
     c = istemci or PublicClient(limiter=GuvenliLimiter(limit=int(rules["canli_api_agirlik_dk"])), yeniden_bekleme=KAPI_YENIDEN_BEKLEME)
     return lambda yuk: c.info(yuk, weight=AGIRLIK.get(str(yuk.get("type")), 20))
+
+
+def hesap_degeri_oku(post: Callable[[dict], Any], adres: str, dexler: list[str]) -> float:
+    """Hesap değeri ($) = TÜM perp dex'lerin `marginSummary.accountValue` toplamı + spot USDC (`hl_ortak.spot_usdc`; K‑35 tek payda). Radar lider tablosu `accountValue` ile aynı tanım. Herhangi bir okuma
+    başarısızsa istisna (kısmi toplam dönmez: oran paydası eksik olursa emirler şişer)."""
+    toplam = 0.0
+    for dex in ["", *dexler]:
+        toplam += float(post(clearinghouse_yuk(adres, dex))["marginSummary"]["accountValue"])
+    return toplam + spot_usdc(type("_Istemci", (), {"info": staticmethod(lambda yuk, weight=2: post(yuk))})(), adres)
+
+
+def etkin_kasa(rules: dict, kip: str, post: Callable[[dict], Any], ortam: dict | None = None) -> tuple[float, float | None]:
+    """Kullanılan kasa: sanal kip `canli_kasa_usd`; GERÇEK kip min(`canli_kasa_usd`, HL hesap değeri) (K‑35; hesapta daha fazla olsa da ayarın üstü kullanılmaz). Döner (etkin kasa, HL hesap değeri | None)."""
+    ortam = os.environ if ortam is None else ortam
+    kasa = float(rules["canli_kasa_usd"])
+    if kip != "gercek":
+        return kasa, None
+    try:
+        dexler = perp_dex_names(post({"type": "perpDexs"}))
+        hl = hesap_degeri_oku(post, ortam["HL_HESAP_ADRESI"], dexler)
+    except Exception as hata:                              # noqa: BLE001
+        raise KipHatasi(f"HL hesap değeri okunamadı ({type(hata).__name__}): gerçek kipte kasa belirlenemez") from hata
+    return min(kasa, hl), hl
 
 
 class KipHatasi(RuntimeError):
@@ -151,7 +175,8 @@ class Motor:
         self.dur_dosyasi = durum_dizin / "DUR"
         m = _oku(durum_dizin / "motor.json") or {}
         h = _oku(durum_dizin / "hesap.json")
-        self.hesap = Hesap.from_json(h) if h and abs(float(h.get("kasa_usd", 0)) - self.kasa) < 1e-9 else Hesap(self.kasa, float(rules["canli_marj_kaldirac"]))
+        self.hesap = Hesap.from_json(h) if h else Hesap(self.kasa, float(rules["canli_marj_kaldirac"]))
+        self.hesap.kasa_usd = self.kasa                          # kasa ayarı/etkin kasa değişmiş olabilir (gerçek kip: min(ayar, HL değeri)); pozisyon/K‑Z kaydı KORUNUR
         self.saha = Saha(rules, self.kasa, _oku(durum_dizin / "saha.json"))
         self.risk = Risk(rules, self.kasa, _oku(durum_dizin / "risk.json"))
         self.islenen: list[str] = list(m.get("islenen", []))
@@ -169,6 +194,7 @@ class Motor:
         self._son: dict[str, float] = {}
         self._ozet_gunu: str | None = m.get("ozet_gunu")
         self.kor_kirpildi: list[dict] = []
+        self.neden_say: dict[str, int] = {}          # boyut / risk nedenleri sayacı (slot_tavani, marj_yok, coin_tavani …)
         self._lock = threading.RLock()            # olay işleme (tüketici iş parçacığı) ile dakikalık bakım aynı durumu değiştirir: tek seferde biri
 
     # ------------------------------------------------------------------ kilit (vardiya devri: çift emir yok)
@@ -211,18 +237,32 @@ class Motor:
         return self.marks.get(coin) or yedek
 
     def trader_hesap_usd(self, adres: str, simdi_ms: int, zorla: bool = False) -> float | None:
-        """Trader hesap değeri (oran paydası): `clearinghouseState` ana dex `marginSummary.accountValue`; `canli_hesap_okuma_sn` önbellek. Okunamazsa önceki değer; hiç yoksa None (açılış atlanır)."""
+        """Trader hesap değeri (oran paydası, K‑35): tüm perp dex `accountValue` toplamı + spot USDC (`hesap_degeri_oku`). Önbellekteki değer kullanılır (yenileme `dakika()` içinde kilit dışında,
+        `canli_hesap_okuma_sn`); önbellek yoksa ya da `zorla` ise burada okunur. Okunamazsa önceki değer; hiç yoksa None (açılış atlanır)."""
         c = self.hesap_tr.get(adres)
-        if c and not zorla and simdi_ms - int(c["ms"]) < float(self.rules["canli_hesap_okuma_sn"]) * 1000:
+        if c and not zorla:
             return float(c["deger"])
         try:
-            y = self.post({"type": "clearinghouseState", "user": adres})
-            deger = float(y["marginSummary"]["accountValue"])
+            deger = hesap_degeri_oku(self.post, adres, self._dexler())
             self.hesap_tr[adres] = {"deger": deger, "ms": simdi_ms}
             return deger
         except Exception as hata:                          # noqa: BLE001
             self.kayit({"olay": "hesap_okuma_hata", "adres": adres, "tur": type(hata).__name__})
             return float(c["deger"]) if c else None
+
+    def hesap_oku(self) -> dict[str, float]:
+        """Saha + inen adreslerin hesap değerleri (REST; kilitsiz). Okunamayan adres atlanır (önceki önbellek kalır)."""
+        sonuc: dict[str, float] = {}
+        for adres in [*self.saha.uyeler, *self.saha.inen]:
+            try:
+                sonuc[adres] = hesap_degeri_oku(self.post, adres, self._dexler())
+            except Exception as hata:                      # noqa: BLE001
+                self.kayit({"olay": "hesap_okuma_hata", "adres": adres, "tur": type(hata).__name__})
+        return sonuc
+
+    def hesap_uygula(self, degerler: dict[str, float], simdi: int) -> None:
+        for adres, d in degerler.items():
+            self.hesap_tr[adres] = {"deger": d, "ms": simdi}
 
     def trader_pozlari_oku(self, adres: str, dexler: list[str] | None = None) -> bool:
         try:
@@ -295,7 +335,8 @@ class Motor:
         if eylem == "ac" and not hesap_usd:
             return self._atla(o, adres, eylem, "atlandi", "trader_hesap_yok")
         trader_once, trader_sonra = (0.0, sonra) if eylem == "ac" else ((once, 0.0) if eylem == "kapat" else (once, sonra))
-        emir_usd, neden = boyut.hedef_emir(eylem, trader_once, trader_sonra, hesap_usd or 0.0, biz_usd, slot, o.px, self.rules)
+        slot_toplam = sum(abs(p.sz) * (self.mark(c, p.giris) or p.giris) for c, p in self.hesap.poz.get(adres, {}).items())       # trader'ın TÜM coinlerdeki kopya nosyoneli (K‑35)
+        emir_usd, neden = boyut.hedef_emir(eylem, trader_once, trader_sonra, hesap_usd or 0.0, biz_usd, slot, o.px, self.rules, slot_toplam)
         if emir_usd <= 0:
             return self._atla(o, adres, eylem, "atlandi", neden)
         if acilis:
@@ -303,15 +344,25 @@ class Motor:
             if emir_usd <= 0:
                 return self._atla(o, adres, eylem, "engel", kn)
             neden = kn or neden
+            emir_usd, mn = self.risk.marj_kirp(emir_usd, self.hesap.marj_toplam(), self.ozsermaye())                      # K‑35 toplam marj tavanı
+            if emir_usd <= 0:
+                return self._atla(o, adres, eylem, "engel", mn)
+            neden = mn or neden
         yon = ("B" if sonra > 0 else "A") if acilis else ("A" if biz_sz > 0 else "B")
         return self._yurut(o, adres, eylem, yon, emir_usd, not acilis, abs(biz_sz) if not acilis else None, neden, gec, simdi)
 
+    def _say_neden(self, neden: str) -> None:
+        if neden and neden not in ("tamam", "tam_kapanis"):
+            self.neden_say[neden] = self.neden_say.get(neden, 0) + 1
+
     def _atla(self, o: Olay, adres: str, eylem: str, karar: str, neden: str) -> Sonuc:
         self.sayac[karar] += 1
+        self._say_neden(neden)
         self.kayit({"olay": "emir_yok", "adres": adres, "coin": o.coin, "eylem": eylem, "karar": karar, "neden": neden, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms})
         return Sonuc(adres, o.coin, eylem, karar, neden)
 
     def _yurut(self, o: Olay, adres: str, eylem: str, yon: str, usd: float, reduce_only: bool, acik_sz: float | None, neden: str, gec: bool, simdi: int) -> Sonuc:
+        self._say_neden(neden)
         emir_ms = self.saat_ms()
         d = self.yurutucu.emir(o.coin, yon, usd, reduce_only, acik_sz)
         dolum_ms = self.saat_ms()
@@ -438,14 +489,16 @@ class Motor:
         simdi = self.saat_ms()
         mids = self.mids_al()
         kadro = self._kadro_al(simdi)
-        senkron = self.senkron_oku() if self._aralik_mi("senkron", simdi, float(self.rules["canli_hesap_okuma_sn"])) else None
+        yenile = self._aralik_mi("senkron", simdi, float(self.rules["canli_hesap_okuma_sn"]))
+        senkron = self.senkron_oku() if yenile else None
+        hesaplar = self.hesap_oku() if yenile else {}
         komutlar = self.tg.komutlari_al()                      # ağ: kilitsiz
         with self._lock:
             self.mids_uygula(mids, simdi)
             adimlar: list[tuple[str, Callable[[], None]]] = [
                 ("tasfiye", lambda: self._tasfiye(simdi)), ("risk", lambda: self._risk(simdi)), ("anlik_saha", lambda: self._anlik(simdi)),
                 ("inen", lambda: self.karar_uygula(self.saha.inenleri_kapat(simdi), simdi)), ("mutabakat", lambda: self._mutabakat(simdi)),
-                ("kadro", lambda: self._kadro_uygula(kadro, simdi)), ("senkron", lambda: self.senkron_uygula(senkron) if senkron is not None else None),
+                ("kadro", lambda: self._kadro_uygula(kadro, simdi)), ("senkron", lambda: (self.senkron_uygula(senkron), self.hesap_uygula(hesaplar, simdi)) if senkron is not None else None),
                 ("telegram", lambda: self._komutlar(komutlar)), ("ozet", lambda: self._gunluk_ozet(simdi)),
             ]
             for ad, f in adimlar:
@@ -564,7 +617,8 @@ class Motor:
                 "saha": len(self.saha.uyeler), "saha_n": self.saha.n, "inen": len(self.saha.inen), "slot_usd": self.saha.slot, "emir": dict(self.sayac),
                 "ortalama_kayma_trader": ort(self.kayma_trader), "ortalama_kayma_ref": ort(self.kayma_ref), "kayma_n": len(self.kayma_trader), "acik_pozisyon": sum(len(c) for c in self.hesap.poz.values()),
                 "brut_usd": self.hesap.brut_toplam(self.marks), "tasfiye": len(self.hesap.tasfiyeler), "dur": self.risk.dur, "kayit_sayac": dict(self.kayit.sayac), "telegram_hata": self.tg.hata_sayisi,
-                "kor_kirpildi": len(self.kor_kirpildi), "uyeler": sorted(self.saha.uyeler)}
+                "kor_kirpildi": len(self.kor_kirpildi), "neden_say": dict(sorted(self.neden_say.items())), "slot_tavani": self.neden_say.get("slot_tavani", 0),
+                "marj_yok": self.neden_say.get("marj_yok", 0), "uyeler": sorted(self.saha.uyeler)}
 
     # ------------------------------------------------------------------ açılış
     def baslat(self) -> None:
@@ -717,10 +771,13 @@ def kontrol(rules: dict, kip: str, post: Callable[[dict], Any], kadro_oku: Calla
         r["hl_baglanti"] = len(post({"type": "meta"})["universe"]) > 0
     except Exception as hata:                              # noqa: BLE001
         r["hl_baglanti"], r["hl_hata"] = False, type(hata).__name__
-    r["bakiye_usd"] = None
+    r["bakiye_usd"] = r["hl_hesap_degeri"] = None
+    r["etkin_kasa_usd"] = r["kasa_usd"]
     if r["anahtar"] and ortam.get("HL_HESAP_ADRESI"):
         try:
-            r["bakiye_usd"] = float(post({"type": "clearinghouseState", "user": ortam["HL_HESAP_ADRESI"]})["marginSummary"]["accountValue"])
+            hl = hesap_degeri_oku(post, ortam["HL_HESAP_ADRESI"], perp_dex_names(post({"type": "perpDexs"})))
+            r["bakiye_usd"] = r["hl_hesap_degeri"] = hl                        # tüm perp dex + spot USDC (K‑35)
+            r["etkin_kasa_usd"] = min(r["kasa_usd"], hl) if kip == "gercek" else r["kasa_usd"]      # gerçek kip: min(ayar, HL hesap değeri)
         except Exception as hata:                          # noqa: BLE001
             r["bakiye_hata"] = type(hata).__name__
     try:
@@ -758,6 +815,13 @@ def main(argv: list[str] | None = None) -> int:
         _yaz(args.durum_dizin / "kontrol.json", rapor)
         print(json.dumps(rapor, ensure_ascii=False, indent=1))
         return 0 if rapor["tamam"] else 1
+    try:
+        kasa, hl_deger = etkin_kasa(rules, kip, post)
+        rules = {**rules, "canli_kasa_usd": kasa}
+        boyut.saha_sayisi(kasa, rules)
+    except (KipHatasi, ValueError) as hata:
+        print(f"BAŞLAMADI: {hata}", file=sys.stderr)
+        return 3
     yur: Yurutucu = gercek_yurutucu_olustur(post, rules) if kip == "gercek" else SanalYurutucu(post, rules)
     motor = Motor(rules, yur, post, tgram, args.durum_dizin, args.kayit_dizin or (args.durum_dizin / "kayit"), kadro_oku, vardiya_id=args.vardiya)
     try:

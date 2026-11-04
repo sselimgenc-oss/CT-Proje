@@ -179,11 +179,12 @@ class Saat:
 
 class SahteHL:
     """info `post`: allMids, l2Book, clearinghouseState, meta, perpDexs, userFillsByTime."""
-    def __init__(self, mids=None, asks=None, bids=None, hesap=100_000.0, pozlar=None, rest_dolumlar=None):
-        self.mids = mids or {"BTC": "100", "ETH": "2000"}
+    def __init__(self, mids=None, asks=None, bids=None, hesap=100_000.0, pozlar=None, rest_dolumlar=None, spot=0.0):
+        self.mids = mids or {"BTC": "100", "ETH": "2000", "SOL": "100"}
         self.kitaplar = {"BTC": {"levels": [bids or [{"px": "99.9", "sz": "1000"}], asks or [{"px": "100", "sz": "1000"}]]},
-                         "ETH": {"levels": [[{"px": "1999", "sz": "1000"}], [{"px": "2000", "sz": "1000"}]]}}
-        self.hesap, self.pozlar, self.rest = hesap, pozlar or {}, rest_dolumlar or {}
+                         "ETH": {"levels": [[{"px": "1999", "sz": "1000"}], [{"px": "2000", "sz": "1000"}]]},
+                         "SOL": {"levels": [[{"px": "99.9", "sz": "100000"}], [{"px": "100", "sz": "100000"}]]}}
+        self.hesap, self.pozlar, self.rest, self.spot = hesap, pozlar or {}, rest_dolumlar or {}, spot
         self.istekler = []
 
     def __call__(self, y):
@@ -195,6 +196,8 @@ class SahteHL:
             return self.kitaplar[y["coin"]]
         if t == "clearinghouseState":
             return {"marginSummary": {"accountValue": str(self.hesap)}, "assetPositions": [{"position": {"coin": c, "szi": str(sz)}} for c, sz in self.pozlar.get(y["user"], {}).items()]}
+        if t == "spotClearinghouseState":
+            return {"balances": [{"coin": "USDC", "total": str(self.spot)}, {"coin": "PURR", "total": "999"}]}
         if t == "meta":
             return {"universe": [{"name": "BTC", "szDecimals": 5}, {"name": "ETH", "szDecimals": 4}]}
         if t == "perpDexs":
@@ -442,7 +445,7 @@ def test_kontrol_emir_gondermez_rapor_yazar(tmp_path):
     gercek = mt.kontrol(RULES, "gercek", hl, lambda: None, tg.Telegram("", "", ortam={}), ortam={})
     assert gercek["tamam"] is False and gercek["kadro"]["var"] is False
     ok = mt.kontrol(RULES, "gercek", hl, lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "gizli-anahtar-xyz", "HL_HESAP_ADRESI": adr(7)})
-    assert ok["bakiye_usd"] == 100_000.0 and ok["tamam"] is True and "gizli-anahtar-xyz" not in json.dumps(ok)                  # anahtar rapora yazılmaz
+    assert ok["bakiye_usd"] == 100_000.0 and ok["hl_hesap_degeri"] == 100_000.0 and ok["etkin_kasa_usd"] == 1000.0 and ok["tamam"] is True and "gizli-anahtar-xyz" not in json.dumps(ok)                  # anahtar rapora yazılmaz
 
 
 # ================================================================================================ dayanıklılık (WS)
@@ -667,3 +670,120 @@ def test_rest_post_agirliklar_ve_ortak_hiz_siniri():
     lim.acquire(40)
     assert lim.weight_used == 100 and isinstance(lim._kilit, type(__import__("threading").Lock()))
     assert RULES["canli_api_agirlik_dk"] <= 1100                                              # radar_api_agirlik_dk (1.100) ve HL IP sınırı (1.200) altında
+
+
+# ================================================================================================ K‑35 (lider denetimi)
+def test_k35_motor_slot_toplam_tavani_uc_coin_slot_tavani_sayaci(tmp_path):
+    """Slot 90,909 → toplam tavan 272,727 $. Trader hesap 100.000 $: BTC 150.000 $ → 136,36 $ (tam); ETH 160.000 $ → hedef 145,45, kalan 136,36 → 136,36 $ (`slot_tavani`); SOL 50.000 $ → kalan 0 → emir YOK (`slot_tavani`)."""
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    m.piyasa_oku(saat())
+    s1 = m.olay_isle(olay("a:1", adr(1), "BTC", "B", 1500, 100.0, 0.0, saat))
+    s2 = m.olay_isle(olay("a:2", adr(1), "ETH", "B", 80, 2000.0, 0.0, saat))
+    s3 = m.olay_isle(olay("a:3", adr(1), "SOL", "B", 500, 100.0, 0.0, saat))
+    e = kayitlar(tmp_path, "emir")
+    assert [round(x["usd_istenen"], 2) for x in e] == [136.36, 136.36] and [x["boyut_neden"] for x in e] == ["tamam", "slot_tavani"]
+    assert s3[0].karar == "atlandi" and s3[0].neden == "slot_tavani" and s1[0].karar == s2[0].karar == "emir"
+    assert m.neden_say["slot_tavani"] == 2 and m.ozet()["slot_tavani"] == 2 and m.ozet()["marj_yok"] == 0
+    toplam = sum(abs(p.sz) * m.marks[c] for c, p in m.hesap.poz[adr(1)].items())
+    assert toplam == pytest.approx(272.7273, abs=1e-3)                                  # tüm coinlerde toplam 3 × slot
+
+
+def test_k35_marj_kirp_altin_ornek():
+    """Özsermaye 100, açık başlangıç marjı toplamı 90 (270 $ nosyonel / 3) → serbest 10 → yeni nosyonel en çok 30 $. 60 $ istenir → 30 $ (`marj_yok`); marj 99,5 → serbest 0,5 → 1,5 $ < 11 → 0."""
+    from copytrade.canli.risk import Risk
+    r = Risk(RULES, 1000.0)
+    assert r.marj_kirp(60.0, 90.0, 100.0) == (pytest.approx(30.0), "marj_yok")
+    assert r.marj_kirp(60.0, 99.5, 100.0) == (0.0, "marj_yok")
+    assert r.marj_kirp(25.0, 90.0, 100.0) == (25.0, "")                                # sınır altı: kırpma yok
+    assert r.marj_kirp(30.0, 90.0, 100.0) == (30.0, "")                                # tam sınır geçer
+    assert r.marj_kirp(10.0, 120.0, 100.0) == (0.0, "marj_yok")                       # marj özsermayeyi aşmış: serbest 0
+
+
+def test_k35_motor_marj_yok_kirpar_ve_engeller(tmp_path):
+    """Kasa 100 → N 4, slot 25 $ (coin tavanı %30 = 30 $). Üç trader 70 $'lık pozisyonda (marj 210/3 = 70); gerçekleşen −25 → özsermaye 75, serbest 5 → yeni nosyonel en çok 15 $: istenen 50 $ → coin tavanı 30 → marj 15 $ (`marj_yok`).
+    Özsermaye 40'a inerse serbest negatif → emir YOK."""
+    kd_ = kadro([satir(i, i) for i in range(1, 5)], T0)
+    m, hl, saat, _ = kur(tmp_path, kd_, kasa=100.0)
+    m.baslat()
+    m.piyasa_oku(saat())
+    for i in (2, 3, 4):
+        m.hesap.uygula(adr(i), "ETH", "B", 70 / 2000.0, 2000.0, 0.0, 1)
+    m.hesap.realize["x"] = -25.0
+    assert m.hesap.marj_toplam() == pytest.approx(70.0) and m.ozsermaye() == pytest.approx(75.0, abs=1e-6)
+    s = m.olay_isle(olay("a:1", adr(1), "BTC", "B", 2000, 100.0, 0.0, saat))                # trader 200.000 $ / hesap 100.000 → 25 × 2 = 50 $ (tavan 75)
+    e = kayitlar(tmp_path, "emir")[-1]
+    assert s[0].karar == "emir" and e["usd_istenen"] == pytest.approx(15.0) and e["boyut_neden"] == "marj_yok"
+    m.hesap.realize["x"] = -60.0
+    s2 = m.olay_isle(olay("a:2", adr(1), "SOL", "B", 2000, 100.0, 0.0, saat))
+    assert s2[0].karar == "engel" and s2[0].neden == "marj_yok" and m.neden_say["marj_yok"] == 2 and m.ozet()["marj_yok"] == 2
+
+
+class BirlesikHL(SahteHL):
+    """Trader hesabı: ana dex 60.000 + HIP‑3 dex `xyz` 30.000 + spot USDC 10.000 (PURR sayılmaz) = 100.000 $."""
+    def __call__(self, y):
+        if y["type"] == "perpDexs":
+            return [None, {"name": "xyz"}]
+        if y["type"] == "clearinghouseState":
+            self.istekler.append(y)
+            return {"marginSummary": {"accountValue": "30000" if y.get("dex") == "xyz" else "60000"}, "assetPositions": []}
+        return super().__call__(y)
+
+
+def test_k35_trader_hesap_paydasi_tum_perp_dex_ve_spot_usdc():
+    post = BirlesikHL(spot=10_000.0)
+    assert mt.hesap_degeri_oku(post, adr(1), ["xyz"]) == pytest.approx(100_000.0)
+    assert mt.hesap_degeri_oku(post, adr(1), []) == pytest.approx(70_000.0)                         # ana dex + spot (HIP-3 dex yoksa)
+    class SpotHatali(BirlesikHL):
+        def __call__(self, y):
+            if y["type"] == "spotClearinghouseState":
+                raise ConnectionError("spot")
+            return super().__call__(y)
+    with pytest.raises(ConnectionError):
+        mt.hesap_degeri_oku(SpotHatali(), adr(1), ["xyz"])                                          # kısmi toplam dönmez
+
+
+def test_k35_motor_emir_boyutu_birlesik_hesap_paydasiyla(tmp_path):
+    """Trader 300 BTC × 100 $ = 30.000 $ açar. Payda 100.000 $ (birleşik) → 27,27 $; yalnız ana dex (60.000 $) olsaydı 45,45 $ olurdu. Spot okunamazsa emir atlanır (`trader_hesap_yok`)."""
+    m, hl, saat, _ = kur(tmp_path, hl=BirlesikHL(spot=10_000.0))
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    assert kayitlar(tmp_path, "emir")[0]["usd_istenen"] == pytest.approx(27.2727, abs=1e-4) and m.hesap_tr[adr(1)]["deger"] == pytest.approx(100_000.0)
+
+    class SpotHatali(BirlesikHL):
+        def __call__(self, y):
+            if y["type"] == "spotClearinghouseState":
+                raise ConnectionError("spot")
+            return super().__call__(y)
+    m2, *_ = kur(tmp_path / "b", hl=SpotHatali(spot=10_000.0))
+    m2.baslat()
+    m2.hesap_tr.clear()
+    s = m2.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, Saat()))
+    assert s[0].karar == "atlandi" and s[0].neden == "trader_hesap_yok" and m2.sayac["emir"] == 0
+
+
+def test_k35_gercek_kipte_kasa_min_ayar_ve_hl_hesap_degeri():
+    """Ayar 1.000: HL 600 → 600; HL 5.000 → 1.000 (hesapta fazla olsa da ayarın üstü kullanılmaz); sanal kip HL'ye bakmaz; okunamazsa KipHatasi."""
+    assert mt.etkin_kasa(RULES, "gercek", BirlesikHL(spot=-89_400.0), {"HL_HESAP_ADRESI": adr(7)}) == (600.0, 600.0)           # 60.000 + 30.000 − 89.400 (test girdisi) = 600
+    assert mt.etkin_kasa(RULES, "gercek", BirlesikHL(spot=10_000.0), {"HL_HESAP_ADRESI": adr(7)}) == (1000.0, 100_000.0)
+    assert mt.etkin_kasa(RULES, "sanal", SahteHL(), {}) == (1000.0, None)
+    def bozuk(y):
+        raise ConnectionError("x")
+    with pytest.raises(mt.KipHatasi):
+        mt.etkin_kasa(RULES, "gercek", bozuk, {"HL_HESAP_ADRESI": adr(7)})
+
+
+def test_k35_kontrol_etkin_kasayi_raporlar():
+    r = mt.kontrol(RULES, "gercek", BirlesikHL(spot=-89_400.0), lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": adr(7)})
+    assert r["hl_hesap_degeri"] == pytest.approx(600.0) and r["etkin_kasa_usd"] == pytest.approx(600.0) and r["kasa_usd"] == 1000.0 and r["tamam"] is True
+    r2 = mt.kontrol(RULES, "sanal", BirlesikHL(spot=10_000.0), lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": adr(7)})
+    assert r2["etkin_kasa_usd"] == 1000.0                                                           # sanal kip: ayar
+
+
+def test_k35_etkin_kasa_degisince_hesap_kaydi_korunur(tmp_path):
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    m.durum_yaz()
+    m2, *_ = kur(tmp_path, kasa=600.0, saat=saat)                                                  # gerçek kip: etkin kasa 1.000 → 600
+    assert m2.hesap.kasa_usd == 600.0 and m2.hesap.sz(adr(1), "BTC") == pytest.approx(0.272727, abs=1e-6) and m2.saha.slot == pytest.approx(600 / 11)
