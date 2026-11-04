@@ -57,8 +57,8 @@ H = trader'ın `son7g` brüt kârının erken-trend girişlerden gelen payı (0�
 **Form sürüyor mu (sert kural):** son 72 saatte kopya getirisi ≥ −%2. Altındaysa puanlanmaz (soğuyan hype).
 
 ## 5. R3 — Kadro (K‑22/K‑23: tek motor, canlı; deneme/gölge yok)
-Kadro günlük radar koşusunun **form sırasıdır**: 1–11 **İlk 11**, 12–22 **Yedek 11**, 23–50 **PAF**. Yalnız İlk 11'in ilk **N**'i gerçek parayla
-kopyalanır (**saha**); Yedek ve PAF yalnız sıra listesidir, izlenmez, emir yok.
+Kadro günlük radar koşusunun **form sırasıdır**, toplam **30**: 1–11 **İlk 11**, 12–30 **Yedek 19** (K‑24; PAF yok). Yalnız İlk 11'in ilk **N**'i
+gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez, emir yok. Havuzda 30'dan az kişi varsa kadro o kadardır.
 - **Saha sayısı:** `N = min(11, taban(kasa / radar_canli_slot_min_usd))`, `radar_canli_slot_min_usd = 25` → 100 $ kasada **N = 4**.
   Slot kasası = kasa / N (gerçek USDC).
 - **İlk gün:** form sırasının ilk N'i sahaya çıkar.
@@ -67,7 +67,7 @@ kopyalanır (**saha**); Yedek ve PAF yalnız sıra listesidir, izlenmez, emir yo
   Günde en fazla **2** saha değişikliği (devir maliyeti).
 - **Sahadan düşme:**
   - Anında: sahaya girişten beri slot düşüşü ≥ %10; R1/4 (kaldıraç > 20x) ihlali.
-  - Günlük: form sırası 2 gün üst üste > 22; 72 sa yeni işlem yok; R1'den elendi.
+  - Günlük: form sırası 2 gün üst üste > 22, ya da 1 gün kadro dışı (> 30); 72 sa yeni işlem yok; R1'den elendi.
   - Düşen 14 gün sahaya dönemez.
 - **Sahadan inen üyenin açık pozisyonları:** yeni açılış durur, trader'ın kapanışları izlenir, 24 sa sonra açık kalan kapatılır.
 
