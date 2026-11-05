@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hyperliquid Perps Pano — Terminal</title>
+  <link rel="stylesheet" href="pano.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- 5 & 7. Durum Şeridi (En üstte, ince, en fazla 2 satır, bölünmeyen değerler ve takım özeti) -->
+    <aside class="status-bar" aria-label="Sistem Durum Şeridi">
+      <!-- Satır 1: Dinleyici Telemetrisi ve SİM Rozeti -->
+      <div class="status-row status-row-top">
+        <div class="status-row-left nowrap">
+          <span class="status-dot" id="yenileme-ikon"></span>
+          <span id="durum-dinleyici" class="listener-tag nowrap">
+            Dinleyici: gecikme medyanı <strong class="nowrap">—</strong> · kaçan <strong class="nowrap">—</strong>
+          </span>
+        </div>
+        <div class="status-row-right nowrap">
+          <span class="sim-badge">SİM</span>
+        </div>
+      </div>
+
+      <!-- Satır 2: Takım Özeti, Saat ve Tema Değiştirici -->
+      <div class="status-row status-row-bottom">
+        <div class="status-row-left nowrap" id="durum-takim-ozeti">
+          <span class="status-team-summary nowrap"><span class="team-name">—</span> — · —</span>
+        </div>
+        <div class="status-row-right nowrap">
+          <span id="durum-saat" class="mono-val nowrap">TSİ —</span>
+          <span class="listener-tag nowrap" style="font-size:11px;">
+            <strong id="sayac-metni" class="num">60s</strong>
+          </span>
+          <button id="tema-degistir-btn" class="theme-toggle-btn nowrap" aria-label="Temayı Değiştir">
+            ☀️ Açık Tema
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 2,5 saatten eskiyse gösterilen sarı uyarı çubuğu -->
+    <div id="uyari-kutusu" class="banner-warning hidden" role="alert">
+      <span>⚠️</span>
+      <span id="uyari-metni">Veri güncel değil</span>
+    </div>
+
+    <!-- Veri yüklenemezse gösterilen hata kutusu -->
+    <div id="hata-kutusu" class="banner-error hidden" role="alert">
+      <div>
+        <strong>Bağlantı Hatası:</strong>
+        <span id="hata-metni">Veri yüklenemedi.</span>
+      </div>
+      <button id="btn-tekrar-dene" class="btn-retry">Tekrar Dene</button>
+    </div>
+
+    <!-- Başlık Alanı & Takım Sekmeleri -->
+    <header class="main-header">
+      <div class="brand-section">
+        <h1 class="brand-title">KALDIRAÇ</h1>
+        <span class="brand-subtitle">Hyperliquid perps</span>
+      </div>
+
+      <nav class="team-tabs" id="takim-sekmeleri" aria-label="Takım Seçimi">
+        <!-- JS ile dinamik doldurulur -->
+      </nav>
+    </header>
+
+    <!-- 1. ÜST ŞERİT METRİK KUTULARI (9 Adet Metrik Paneli) -->
+    <section class="strip-metrics-grid" aria-label="Performans Göstergeleri">
+      <!-- 1. Bugün % -->
+      <div class="metric-strip-card">
+        <span class="panel-label">BUGÜN</span>
+        <span class="strip-val" id="strip-bugun">—</span>
+        <span class="strip-sub">günlük getiri</span>
+      </div>
+
+      <!-- 2. Bu Hafta % -->
+      <div class="metric-strip-card">
+        <span class="panel-label">BU HAFTA</span>
+        <span class="strip-val" id="strip-hafta">—</span>
+        <span class="strip-sub">haftalık getiri</span>
+      </div>
+
+      <!-- 3. Bu Ay % -->
+      <div class="metric-strip-card">
+        <span class="panel-label">BU AY</span>
+        <span class="strip-val" id="strip-ay">—</span>
+        <span class="strip-sub">aylık kümülatif</span>
+      </div>
+
+      <!-- 4. Açık Pozisyon & Maruziyet % -->
+      <div class="metric-strip-card">
+        <span class="panel-label">AÇIK POZİSYON</span>
+        <span class="strip-val" id="strip-pozisyon">—</span>
+        <span class="strip-sub" id="strip-maruziyet">%— maruziyet</span>
+      </div>
+
+      <!-- 5. Toplam Getiri % -->
+      <div class="metric-strip-card">
+        <span class="panel-label">TOPLAM GETİRİ</span>
+        <span class="strip-val" id="strip-toplam">—</span>
+        <span class="strip-sub">tüm zamanlar</span>
+      </div>
+
+      <!-- 6. Kazanma Oranı (Yarım Halka Gösterge) -->
+      <div class="metric-strip-card">
+        <span class="panel-label">KAZANMA ORANI</span>
+        <div class="gauge-wrap">
+          <span class="strip-val" id="strip-kazanma-txt">—</span>
+          <div class="gauge-svg" id="strip-kazanma-gauge"></div>
+        </div>
+        <span class="strip-sub" id="strip-toplam-islem">—</span>
+      </div>
+
+      <!-- 7. Kâr Faktörü -->
+      <div class="metric-strip-card">
+        <span class="panel-label">KÂR FAKTÖRÜ</span>
+        <span class="strip-val neutral" id="strip-kar-faktoru">—</span>
+        <span class="strip-sub">brüt kazanç / kayıp</span>
+      </div>
+
+      <!-- 8. Ortalama Kazanç / Kayıp (İki Renkli Çubuk) -->
+      <div class="metric-strip-card">
+        <span class="panel-label">ORT. KAZANÇ / KAYIP</span>
+        <div class="two-tone-bar-wrap">
+          <div class="two-tone-bar">
+            <div class="bar-win" id="bar-win-seg" style="width: 0%;"></div>
+            <div class="bar-loss" id="bar-loss-seg" style="width: 0%;"></div>
+          </div>
+          <div class="two-tone-labels" id="strip-ort-labels">
+            <span class="profit" id="strip-ort-kazanc">—</span>
+            <span class="loss" id="strip-ort-kayip">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. Beklenti % -->
+      <div class="metric-strip-card">
+        <span class="panel-label">İŞLEM BEKLENTİSİ</span>
+        <span class="strip-val" id="strip-beklenti">—</span>
+        <span class="strip-sub">işlem başına ort.</span>
+      </div>
+    </section>
+
+    <!-- 2. ANA TERMINAL IZGARASI (PC'de 3 Sütun, Mobilde Tek Sütun) -->
+    <main class="terminal-grid">
+      <!-- PANEL A: KASA KARTI & GENEL BAKIŞ (col-span-2) -->
+      <section class="terminal-panel col-span-2" aria-label="Kasa Durumu">
+        <div class="panel-header">
+          <span class="panel-title">KASA BAKİYESİ & EĞRİ</span>
+          <span class="panel-badge" id="kasa-takim-ad">İlk 11</span>
+        </div>
+        <div class="kasa-card-body">
+          <div>
+            <div class="kasa-balance-val" id="kasa-bakiye">— $</div>
+            <div class="kasa-change-line neutral" id="kasa-degisim">
+              <span>— $</span>
+              <span>·</span>
+              <span>%—</span>
+              <span style="color:var(--text-secondary);font-weight:400;">başlangıçtan</span>
+            </div>
+            <div style="margin-top:10px;font-size:11px;color:var(--text-muted);" id="kasa-detay-not">
+              Nakit: <strong id="ozet-nakit" style="color:var(--text-primary);">— $</strong> (serbest) · 
+              Teminat: <strong id="ozet-teminat" style="color:var(--text-primary);">— $</strong> (<span id="ozet-teminat-alt">—</span>)
+            </div>
+            <div style="margin-top:6px;font-size:11px;color:var(--text-muted);" id="kasa-olcek-notu"></div>
+          </div>
+          <div class="chart-box" id="kasa-grafik" style="height:100px;"></div>
+        </div>
+      </section>
+
+      <!-- PANEL B: ÖZET RİSK & GÜNLÜK AKTİVİTE (col-span-1) -->
+      <section class="terminal-panel col-span-1" aria-label="Risk ve Kadro Özeti">
+        <div class="panel-header">
+          <span class="panel-title">GÜNLÜK & KADRO ÖZETİ</span>
+          <span class="panel-badge">GÜNCEL</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:var(--text-secondary);">Açık K/Z:</span>
+            <strong id="ozet-kz" class="mono-val neutral">— $</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:var(--text-secondary);">Son 24 Saat:</span>
+            <span id="ozet-kz-alt" class="mono-val">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:var(--text-secondary);">Bugün:</span>
+            <span id="ozet-bugun" class="mono-val" style="color:var(--text-primary);">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:var(--text-secondary);">Kadro Doluluğu:</span>
+            <span id="ozet-kadro" class="mono-val" style="color:var(--color-accent);">—</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. GRAFİKLER (INLINE SVG + HTML EKSEN YAZILARI, HOVER VE DOKUNMATİK TOOLTIP) -->
+      <!-- GRAFİK 1: Kümülatif K/Z (Yeşil Alan) -->
+      <section class="terminal-panel col-span-1" aria-label="Kümülatif K/Z Grafiği">
+        <div class="panel-header">
+          <span class="panel-title">KÜMÜLATİF K/Z (USD)</span>
+          <span class="panel-badge neutral" id="badge-kumulatif-son">— $</span>
+        </div>
+        <div class="chart-box" id="grafik-kumulatif"></div>
+      </section>
+
+      <!-- GRAFİK 2: Kasa Bakiyesi (Turuncu Çizgi) -->
+      <section class="terminal-panel col-span-1" aria-label="Bakiye Eğrisi Grafiği">
+        <div class="panel-header">
+          <span class="panel-title">BAKİYE GEÇMİŞİ</span>
+          <span class="panel-badge" id="badge-bakiye-son" style="color:var(--color-accent);">— $</span>
+        </div>
+        <div class="chart-box" id="grafik-bakiye"></div>
+      </section>
+
+      <!-- GRAFİK 3: Düşüş (Drawdown, Kırmızı Alan 0'dan aşağı) -->
+      <section class="terminal-panel col-span-1" aria-label="Düşüş Grafiği">
+        <div class="panel-header">
+          <span class="panel-title">MAKSİMUM DÜŞÜŞ (DRAWDOWN)</span>
+          <span class="panel-badge neutral" id="badge-dusus-son">—</span>
+        </div>
+        <div class="chart-box" id="grafik-dusus"></div>
+      </section>
+
+      <!-- GRAFİK 4: Günlük Net K/Z (Yeşil/Kırmızı Çubuklar) (col-span-3) -->
+      <section class="terminal-panel col-span-3" aria-label="Günlük Net K/Z Dağılımı">
+        <div class="panel-header">
+          <span class="panel-title">GÜNLÜK NET K/Z DAĞILIMI</span>
+          <span class="panel-badge" id="badge-gunluk-ozet">Son 30 Gün</span>
+        </div>
+        <div class="chart-box" id="grafik-gunluk" style="height:120px;"></div>
+      </section>
+
+      <!-- 3. TRADER TABLOSU (Sıralanabilir, col-span-3) -->
+      <section class="terminal-panel col-span-3" aria-label="Trader Performans Tablosu">
+        <div class="panel-header">
+          <span class="panel-title">TRADER PERFORMANS TABLOSU</span>
+          <span class="panel-badge" id="trader-sayisi-badge">0 Trader</span>
+        </div>
+        <div class="table-responsive">
+          <table class="terminal-table" id="trader-tablosu">
+            <thead>
+              <tr>
+                <th class="left sortable" data-col="ad">Trader (Takma Ad) <span class="sort-icon">▲▼</span></th>
+                <th class="right sortable" data-col="islem">İşlem Sayısı <span class="sort-icon">▲▼</span></th>
+                <th class="right sortable" data-col="kazanma_orani">Kazanma Oranı <span class="sort-icon">▲▼</span></th>
+                <th class="right sortable" data-col="net_oran">Net K/Z % <span class="sort-icon">▲▼</span></th>
+                <th class="right sortable" data-col="son_islem">Son İşlem Zamanı <span class="sort-icon">▲▼</span></th>
+              </tr>
+            </thead>
+            <tbody id="trader-tablosu-body">
+              <!-- JS ile dinamik -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- AÇIK İŞLEMLER TABLOSU (col-span-3) -->
+      <section class="terminal-panel col-span-3" aria-label="Açık İşlemler">
+        <div class="panel-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="panel-title">AÇIK İŞLEMLER</span>
+            <span class="panel-badge" id="acik-islem-sayisi">0</span>
+          </div>
+        </div>
+        <div style="padding:6px 12px;font-size:11px;color:var(--text-muted);" id="acik-olcek-notu"></div>
+        <div class="table-responsive">
+          <table class="terminal-table">
+            <thead>
+              <tr>
+                <th class="left">Coin</th>
+                <th class="center">Yön / Kaldıraç</th>
+                <th class="center">Trader</th>
+                <th class="center">Yaş</th>
+                <th class="right">Liq. Uzaklık</th>
+                <th class="right">Teminat</th>
+                <th class="right">Büyüklük</th>
+                <th class="right">K/Z $</th>
+                <th class="right">K/Z %</th>
+              </tr>
+            </thead>
+            <tbody id="acik-islemler-body">
+              <!-- JS ile dinamik -->
+            </tbody>
+            <tbody id="acik-expand-row" style="display:none;">
+              <tr>
+                <td colspan="9" class="expand-toggle-row">
+                  <button id="acik-expand-btn" class="expand-toggle-btn">
+                    ▼ +N işlem daha (toplama dahil)
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot id="acik-islemler-foot">
+              <!-- TOPLAM dinamik toplanır (JSON'dan alınmaz!) -->
+            </tfoot>
+          </table>
+        </div>
+      </section>
+
+      <!-- SON KAPANANLAR TABLOSU (col-span-3) -->
+      <section class="terminal-panel col-span-3" aria-label="Son Kapanan İşlemler">
+        <div class="panel-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="panel-title">SON KAPANANLAR</span>
+            <span class="panel-badge" id="kapanan-islem-sayisi">0</span>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="terminal-table">
+            <thead>
+              <tr>
+                <th class="left">Coin</th>
+                <th class="center">Rozet</th>
+                <th class="center">Neden</th>
+                <th class="center">Süre</th>
+                <th class="center">Trader</th>
+                <th class="right">Ana Para</th>
+                <th class="right">K/Z $</th>
+                <th class="right">K/Z %</th>
+              </tr>
+            </thead>
+            <tbody id="kapanan-islemler-body">
+              <!-- JS ile dinamik -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- Alt Bilgi ve Güvenlik Bildirimi -->
+    <footer class="app-footer">
+      <div>Veri kaynağı: <code>VERI_URL</code> (salt okunur, işlem/emir düğmesi bulunmaz).</div>
+      <div id="son-veri-saat">Son veri üretim zamanı: —</div>
+    </footer>
+  </div>
+
+  <!-- Ortak Tooltip Elemanı -->
+  <div id="chart-tooltip" class="chart-tooltip" role="tooltip"></div>
+
+  <script src="pano.js"></script>
+</body>
+</html>
