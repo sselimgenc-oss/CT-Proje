@@ -163,3 +163,23 @@ def msg_durum(kip: str, ozsermaye: float, kasa: float, saha: int, n: int, inen: 
     return (f"📊 Anlık durum ({kip_adi(kip)})\n💰 Özsermaye {tr_sayi(ozsermaye)} $ (kasaya göre {tr_yuzde(ozsermaye / kasa - 1)})\n"
             f"👥 Takipte {saha}/{n} trader" + (f" · {inen} tanesi ayrılıyor (pozisyonları kapanıyor)" if inen else "") + f"\n"
             f"📌 Açık pozisyon: {acik_poz}\n🧾 Bu vardiyada emir: {emir}\n" + ("🛑 Motor DURDURULDU" if dur else "🛡️ Risk: normal, motor çalışıyor"))
+
+
+def msg_emir_ozeti(kip: str, emirler: list[dict], dakika: float) -> str:
+    """Biriken emirleri TEK mesajda özetler. `emirler`: {adres, coin, yon, usd, durum, eylem, px, kayma}. Tek emir varsa ayrıntılı `msg_emir` biçimi. Aynı (trader, coin, yön, eylem) satırları birleşir."""
+    if len(emirler) == 1:
+        e = emirler[0]
+        return msg_emir(e["adres"], e["coin"], e["yon"], e["usd"], e.get("px"), e.get("kayma"), e["durum"], kip, e.get("eylem", ""))
+    gruplar: dict[tuple, list[dict]] = {}
+    for e in emirler:
+        gruplar.setdefault((e["adres"], e["coin"], e["yon"], e.get("eylem", "")), []).append(e)
+    satirlar = [f"🧾 Son {dakika:.0f} dakikada {len(emirler)} emir ({kip_adi(kip)})"]
+    for (adres, coin, yon, eylem), liste in sorted(gruplar.items(), key=lambda kv: -sum(x["usd"] for x in kv[1])):
+        toplam = sum(x["usd"] for x in liste)
+        eksik = sum(1 for x in liste if x["durum"] != "dolu")
+        satirlar.append(f"{'🟢 AL' if yon == 'B' else '🔴 SAT'} {coin}: {tr_sayi(toplam, 0)} $" + (f" ({len(liste)} emir)" if len(liste) > 1 else "")
+                        + f" · {kisa(adres)} {EYLEM_TR.get(eylem, 'işlem yaptı')}" + (f" · ⚠️ {eksik} tanesi tam dolmadı" if eksik else ""))
+    kaymalar = [abs(x["kayma"]) * 1e4 for x in emirler if x.get("kayma") is not None]
+    if kaymalar:
+        satirlar.append(f"↳ Trader'a göre ortalama fark {sum(kaymalar) / len(kaymalar):.1f} bp (küçük = iyi)")
+    return "\n".join(satirlar)

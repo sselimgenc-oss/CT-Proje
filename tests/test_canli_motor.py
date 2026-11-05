@@ -273,7 +273,9 @@ def test_uctan_uca_altin_ornek_acilis_azaltma_kapanis(tmp_path):
     s3 = m.olay_isle(olay("a:3", adr(1), "BTC", "A", 150, 100.0, 150.0, saat))
     assert [(x.eylem, x.karar) for x in s3] == [("kapat", "emir")] and m.hesap.sz(adr(1), "BTC") == pytest.approx(0.0, abs=1e-9) and kayitlar(tmp_path, "emir")[2]["reduce_only"] is True
     assert m.sayac["emir"] == 3 and len(m.kayma_trader) == 3
-    assert any("(sanal · deneme parası)" in x and ("AL:" in x or "SAT:" in x) for x in tgp.gonderilen) and any("Yeni trader takibe alındı" in x for x in tgp.gonderilen)
+    assert not any("Son " in x and "emir (" in x for x in tgp.gonderilen)                                         # emirler ayrı ayrı gitmez; biriktirilir
+    m.emir_ozeti(saat(), zorla=True)
+    assert any("Son 5 dakikada 3 emir (sanal · deneme parası)" in x for x in tgp.gonderilen) and any("Yeni trader takibe alındı" in x for x in tgp.gonderilen)
 
 
 def test_kucuk_acilis_11_dolara_yuvarlanir_ve_trader_hesap_yoksa_atlanir(tmp_path):
@@ -831,3 +833,18 @@ def test_telegram_mesajlari_sade_turkce_altin_ornek():
         "📊 Anlık durum (sanal · deneme parası)\n💰 Özsermaye 1.000,71 $ (kasaya göre +%0,07)\n👥 Takipte 9/11 trader · 3 tanesi ayrılıyor (pozisyonları kapanıyor)\n📌 Açık pozisyon: 8\n🧾 Bu vardiyada emir: 0\n🛡️ Risk: normal, motor çalışıyor")
     assert tg.tr_sayi(1234567.891) == "1.234.567,89" and tg.tr_yuzde(-0.0125) == "−%1,25"
     assert "…5254" in tg.msg_baslangic("sanal", 1000, 9, 11, "42003105254") and "Takip edilen trader: 9/11" in tg.msg_baslangic("sanal", 1000, 9, 11, "42003105254")
+
+
+def test_telegram_emir_ozeti_toplar_tek_mesaj_ayni_satir_birlesir():
+    a = "0xf43a34aaaaaaaa"
+    emirler = [{"adres": a, "coin": "ETH", "yon": "B", "usd": 12.0, "px": 2393.5, "kayma": 0.0, "durum": "dolu", "eylem": "artir"},
+               {"adres": a, "coin": "ETH", "yon": "B", "usd": 13.1, "px": 2393.5, "kayma": 0.0001, "durum": "dolu", "eylem": "artir"},
+               {"adres": a, "coin": "BTC", "yon": "B", "usd": 34.6, "px": 79672.0, "kayma": 0.0, "durum": "dolu", "eylem": "ac"},
+               {"adres": a, "coin": "NEAR", "yon": "B", "usd": 11.0, "px": 3.943, "kayma": 0.00015, "durum": "kismi", "eylem": "ac"}]
+    assert tg.msg_emir_ozeti("sanal", emirler, 5) == (
+        "🧾 Son 5 dakikada 4 emir (sanal · deneme parası)\n"
+        "🟢 AL BTC: 35 $ · 0xf43a34… pozisyon açtı\n"                                                              # büyükten küçüğe sıralı
+        "🟢 AL ETH: 25 $ (2 emir) · 0xf43a34… pozisyonunu artırdı\n"
+        "🟢 AL NEAR: 11 $ · 0xf43a34… pozisyon açtı · ⚠️ 1 tanesi tam dolmadı\n"
+        "↳ Trader'a göre ortalama fark 0.6 bp (küçük = iyi)")
+    assert tg.msg_emir_ozeti("sanal", emirler[:1], 5).startswith("🟢 ETH AL: 12,0 $")                               # tek emir: ayrıntılı biçim
