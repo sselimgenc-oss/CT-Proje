@@ -236,8 +236,8 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
 *{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--y);font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;padding:12px}}
 .ust{{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}}.lg0{{background:var(--tu);color:#000;font-weight:800;padding:2px 7px;border-radius:3px}}
 .ust b{{font-size:15px;letter-spacing:.05em}}.so,.ha{{color:var(--so)}}.rozet{{border:1px solid var(--cz);border-radius:3px;padding:1px 8px;color:var(--tu);font-size:11px}}
-.sirit{{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--cz);border:1px solid var(--cz);margin-bottom:8px}}
-.h{{background:var(--k);padding:9px 11px}}.hb{{font-size:10px;letter-spacing:.09em;color:var(--so);text-transform:uppercase}}.hd{{font-size:20px;font-weight:700;margin:2px 0}}.ha{{font-size:11px}}
+.sirit{{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--cz);border:1px solid var(--cz);margin-bottom:8px}}
+.h{{background:var(--k);padding:8px 9px}}.hb{{font-size:10px;letter-spacing:.09em;color:var(--so);text-transform:uppercase}}.hd{{font-size:17px;font-weight:700;margin:2px 0}}.ha{{font-size:11px}}
 .art{{color:var(--art)}}.eks{{color:var(--eks)}}.yok{{color:var(--so)}}
 .izgara{{display:grid;grid-template-columns:1fr;gap:8px}}.p{{background:var(--k);border:1px solid var(--cz);min-width:0}}
 .pb{{font-size:10px;letter-spacing:.09em;color:var(--tu);text-transform:uppercase;padding:8px 11px;border-bottom:1px solid var(--cz);display:flex;justify-content:space-between}}.pb span{{color:var(--so)}}
@@ -247,21 +247,37 @@ table{{width:100%;border-collapse:collapse;font-size:12px}}td,th{{padding:6px 8p
 .lg{{display:inline-block;margin:6px 12px 0 0;font-size:11px;color:var(--so)}}.lg i{{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}}
 .s{{padding:4px 0;font-size:12px}}.ic div{{padding:5px 0 5px 12px;border-bottom:1px solid #1c1c21;position:relative}}.ic div:before{{content:"›";color:var(--tu);position:absolute;left:0}}
 .ol{{height:7px;background:#1c1c21;border-radius:4px;margin:4px 0 9px;overflow:hidden}}.ol i{{display:block;height:100%;background:var(--tu)}}.uy{{background:var(--eks);color:#fff;font-weight:800;padding:6px 10px;margin-bottom:8px;border-radius:3px}}
-@media(min-width:900px){{body{{padding:18px;max-width:1280px;margin:auto}}.sirit{{grid-template-columns:repeat(6,1fr)}}.izgara{{grid-template-columns:repeat(3,1fr)}}.g2{{grid-column:span 2}}.g3{{grid-column:span 3}}}}
+.tabs{{display:flex;gap:2px;margin:0 0 8px;border-bottom:1px solid var(--cz);overflow-x:auto}}.tabs label{{padding:9px 13px;font-size:11px;letter-spacing:.09em;color:var(--so);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent}}.tabs em{{font-style:normal;background:#1c1c21;border-radius:9px;padding:0 6px;margin-left:4px;color:var(--y)}}
+input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler section{{display:none}}
+#t1:checked~.tabs label[for=t1],#t2:checked~.tabs label[for=t2],#t3:checked~.tabs label[for=t3],#t4:checked~.tabs label[for=t4]{{color:var(--tu);border-bottom-color:var(--tu)}}
+#t1:checked~.sekmeler .n1,#t2:checked~.sekmeler .n2,#t3:checked~.sekmeler .n3,#t4:checked~.sekmeler .n4{{display:grid}}
+@media(min-width:900px){{body{{padding:18px;max-width:1280px;margin:auto}}.sirit{{grid-template-columns:repeat(6,1fr)}}.hd{{font-size:20px}}.izgara{{grid-template-columns:repeat(3,1fr)}}.g2{{grid-column:span 2}}.g3{{grid-column:span 3}}}}
 </style></head><body>
 <div class="ust"><div><span class="lg0">CT</span> <b>COPY TRADE PANOSU</b></div><div><span class="rozet">{esc(kip_adi(kip))}</span> <span class="so">güncelleme {_tsi(simdi_ms, "%d.%m.%Y %H:%M")} TSİ · her 4 saatte bir</span></div></div>{uyari}
 <div class="sirit">{hucre("Özsermaye", tl(oz), "", f"kasa {tr_sayi(kasa, 0)} $")}{hucre("Bugün", tyuz(gun), renk(gun), tl(oz - float(gun_basi), True) if gun_basi is not None else "")}{hucre("Bu hafta", tyuz(hafta) if hafta is not None else "—", renk(hafta), "" if hafta is not None else "7 gün dolmadı")}{hucre("Başlangıçtan beri", tyuz(ozet.get("getiri")), renk(ozet.get("getiri")), tl(oz - kasa, True))}{hucre("Zirveden düşüş", tyuz(-dusus if dusus is not None else None), renk(-dusus if dusus is not None else None), f"zirve {tl(float(zirve))}" if zirve else "")}{hucre("Açık pozisyon", str(len(acik)), "", f"brüt {tl(sum(q.get('usd') or 0 for q in acik))}")}</div>
-<div class="sirit">{hucre("Emir (24 sa)", str(len(emirler)), "", f"dolum {len(dolum)}")}{hucre("Ort. fark", f"{tr_sayi(sum(kaymalar) / len(kaymalar), 1)} bp" if kaymalar else "—", "", "trader fiyatına göre")}{hucre("Funding (24 sa)", tl(funding24, True), renk(funding24), "sanal")}{hucre("Takipte", f"{ozet.get('saha', '—')}/{ozet.get('saha_n', '—')}", "", "trader")}{hucre("WS kopma", str(din.get("kopma", "—")), "", "tur başına")}{hucre("REST 429", str(ozet.get("rest_429", "—")), "", "hız sınırı")}</div>
-<div class="izgara">
-<div class="p"><div class="pb">Özsermaye (tur sonları) <span>{esc(tl(oz))}</span></div><div class="pi">{_cizgi(deg, "#f5a524")}</div></div>
-<div class="p"><div class="pb">Zirveden düşüş (tur sonları) <span>{dd[-1]:.2f}%</span></div><div class="pi">{_cizgi(dd, "#ff5d5d", taban=0.0)}</div></div>
+<input type="radio" name="t" id="t1" checked><input type="radio" name="t" id="t2"><input type="radio" name="t" id="t3"><input type="radio" name="t" id="t4">
+<div class="tabs"><label for="t1">ÖZET</label><label for="t2">POZİSYON <em>{len(acik)}</em></label><label for="t3">İŞLEMLER <em>{len(emirler)}</em></label><label for="t4">RİSK</label></div>
+<div class="sekmeler">
+<section class="n1 izgara">
+<div class="p g2"><div class="pb">Özsermaye (tur sonları) <span>{esc(tl(oz))}</span></div><div class="pi">{_cizgi(deg, "#f5a524")}</div></div>
 <div class="p"><div class="pb">Günlük net K/Z <span>$</span></div><div class="pi">{_cubuk(cubuklar)}</div></div>
+<div class="p g2"><div class="pb">İçgörüler</div><div class="pi ic">{"".join(f"<div>{x}</div>" for x in ic)}</div></div>
+<div class="p"><div class="pb">Risk payı <span>sınıra göre</span></div><div class="pi"><div class="ha">Günlük kayıp (sınır %5)</div><div class="ol"><i style="width:{gun_kayip_pay:.0f}%"></i></div><div class="ha">Zirveden düşüş (sınır %20)</div><div class="ol"><i style="width:{dusus_pay:.0f}%"></i></div>{risk_html}</div></div>
+</section>
+<section class="n2 izgara">
 <div class="p g2"><div class="pb">Açık pozisyonlar <span>{len(acik)} adet</span></div><div class="tw"><table><tr><th>COİN</th><th>YÖN</th><th class="sg">TUTAR</th><th class="sg">K/Z</th><th>TRADER</th></tr>{poz_satir}</table></div></div>
 <div class="p"><div class="pb">Para dağılımı <span>coin başına</span></div><div class="pi"><div class="dg">{cubuk_html}</div>{efsane}</div></div>
+</section>
+<section class="n3 izgara">
+<div class="g3 sirit">{hucre("Emir (24 sa)", str(len(emirler)), "", f"dolum {len(dolum)}")}{hucre("Ort. fark", f"{tr_sayi(sum(kaymalar) / len(kaymalar), 1)} bp" if kaymalar else "—", "", "trader fiyatına göre")}{hucre("Funding (24 sa)", tl(funding24, True), renk(funding24), "sanal")}{hucre("Takipte", f"{ozet.get('saha', '—')}/{ozet.get('saha_n', '—')}", "", "trader")}</div>
 <div class="p g2"><div class="pb">Son işlemler <span>24 sa, en yeni üstte</span></div><div class="tw"><table><tr><th>SAAT</th><th>COİN</th><th>YÖN</th><th class="sg">TUTAR</th><th class="sg">FARK</th></tr>{islem_satir}</table></div></div>
-<div class="p"><div class="pb">İçgörüler</div><div class="pi ic">{"".join(f"<div>{x}</div>" for x in ic)}</div></div>
-<div class="p"><div class="pb">Risk payı <span>sınıra göre</span></div><div class="pi"><div class="ha">Günlük kayıp (sınır %5)</div><div class="ol"><i style="width:{gun_kayip_pay:.0f}%"></i></div><div class="ha">Zirveden düşüş (sınır %20)</div><div class="ol"><i style="width:{dusus_pay:.0f}%"></i></div>{risk_html}</div></div>
 <div class="p"><div class="pb">Trader değişiklikleri <span>24 sa</span></div><div class="pi">{saha_html}</div></div>
+</section>
+<section class="n4 izgara">
+<div class="g3 sirit">{hucre("WS kopma", str(din.get("kopma", "—")), "", "tur başına")}{hucre("REST 429", str(ozet.get("rest_429", "—")), "", "hız sınırı")}{hucre("Tur süresi", f"{float(ozet.get('sure_dk') or 0) / 60:.1f} sa", "", "son tur")}{hucre("Özsermaye zirvesi", tl(float(zirve)) if zirve else "—", "", "")}</div>
+<div class="p g2"><div class="pb">Zirveden düşüş (tur sonları) <span>{dd[-1]:.2f}%</span></div><div class="pi">{_cizgi(dd, "#ff5d5d", taban=0.0)}</div></div>
+<div class="p"><div class="pb">Risk olayları <span>24 sa</span></div><div class="pi">{risk_html}</div></div>
+</section>
 </div>
 <div class="so" style="margin:16px 0 4px;font-size:11px">Sanal kip: gerçek para yok. Veriler Hyperliquid halka açık verisidir. Saatler TSİ.</div>
 </body></html>
