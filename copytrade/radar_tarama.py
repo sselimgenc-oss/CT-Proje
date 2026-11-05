@@ -41,7 +41,7 @@ NEDENLER = ("veri_hatasi", "payda_yok", "devir_yuksek", "vault", "dolum_fazla", 
             "likidite_dusuk", "kopya_zarar", "kopya_koruma_dusuk", "sans_riski", "akil_sagligi", "zaman_yok")        # ucuzdan pahalıya ölçüm sırası (lider kararı 2026-11-04)
 DOLUM_KURALI = 5                  # NEDENLER içinde dolum tabanlı kurallar (islem_az … likidite_dusuk): bunlardan biri başarısızsa kopya oynatılmaz
 SAYISAL = ("hesap_usd", "hafta_pnl_usd", "trader_getiri_7g", "islem_sayisi", "medyan_tutma_saat", "kisa_islem_payi", "max_kaldirac", "likit_pay",
-           "kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "v4_kopya_getiri_7g",
+           "kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "v4_kopya_getiri_7g", "v5_onceki_kopya_getiri_7g",
            "kopya_kazanc_gun_orani", "kopya_dusus", "yayilma", "kopya_getiri_72s", "hype_payi")        # son beşi yalnız `gecti` satırlarında (R2 girdisi)
 HATALAR = (RateLimitError, requests.RequestException, ValueError, KeyError, TypeError)
 
@@ -126,12 +126,13 @@ def kopya_olculeri(sonuc: dict | None, adres: str, rules: dict | None = None) ->
     (gecikmesiz, maliyetsiz; aynı slot). `kopya_koruma` = kopya getirisi / ayna getirisi (ayna ≤ 0 ya da yok → None: `kopya_koruma_dusuk`). Sonuç yok / hesaplanamadı → kopya alanları None."""
     rules = rules or load_rules()
     bos = {"kopya_getiri_7g": None, "ayna_getiri_7g": None, "kopya_koruma": None, "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None,
-           "v4_kopya_getiri_7g": None}
+           "v4_kopya_getiri_7g": None, "v5_onceki_kopya_getiri_7g": None}
     if not sonuc:
         return bos
     v4 = _sayi((sonuc.get("v4") or {}).get("getiri"))
+    v5o = _sayi((sonuc.get("v5_onceki") or {}).get("getiri"))
     if sonuc.get("durum") == "hesaplanamadi":
-        return {**bos, "fiyatsiz_eylem": sonuc.get("fiyatsiz_eylem"), "yaklasik_fiyat_eylem": sonuc.get("yaklasik_fiyat_eylem"), "v4_kopya_getiri_7g": v4}
+        return {**bos, "fiyatsiz_eylem": sonuc.get("fiyatsiz_eylem"), "yaklasik_fiyat_eylem": sonuc.get("yaklasik_fiyat_eylem"), "v4_kopya_getiri_7g": v4, "v5_onceki_kopya_getiri_7g": v5o}
     getiri = _sayi(sonuc.get("getiri"))
     ayna = _sayi((sonuc.get("ayna") or {}).get("getiri"))
     kasa = _sayi(sonuc.get("baslangic_usd")) or float(rules["canli_kasa_usd"])
@@ -139,7 +140,7 @@ def kopya_olculeri(sonuc: dict | None, adres: str, rules: dict | None = None) ->
     return {"kopya_getiri_7g": getiri, "ayna_getiri_7g": ayna,
             "kopya_koruma": None if getiri is None or ayna is None or ayna <= 0 else getiri / ayna,
             "kopya_alt20": bootstrap_alt(islem, int(rules["radar_bootstrap_tekrar"]), float(rules["radar_bootstrap_alt_yuzdelik"]), adres_tohumu(adres)),
-            "fiyatsiz_eylem": sonuc.get("fiyatsiz_eylem"), "yaklasik_fiyat_eylem": sonuc.get("yaklasik_fiyat_eylem"), "v4_kopya_getiri_7g": v4}
+            "fiyatsiz_eylem": sonuc.get("fiyatsiz_eylem"), "yaklasik_fiyat_eylem": sonuc.get("yaklasik_fiyat_eylem"), "v4_kopya_getiri_7g": v4, "v5_onceki_kopya_getiri_7g": v5o}
 
 
 def on_eleme(aday: dict, vlm: float, rules: dict | None = None) -> str | None:
@@ -260,6 +261,8 @@ class Baglam:
         sonuc["ayna"] = kopya_v5.hesapla(dolumlar, saatlik, isaret, {}, [], t0, simdi, 0, KOPYA_TARZ, sifir, azami_kaldirac=self.azami_kaldirac, trader_hesap_usd=trader_hesap_usd)
         self.son_girdi = {"saatlik": saatlik, "isaret": isaret, "yurutme": yurutme}
         if self.v4_yan_yana:
+            sonuc["v5_onceki"] = kopya_v5.hesapla(dolumlar, saatlik, isaret, yurutme, [], t0, simdi, self.gecikme_dk, KOPYA_TARZ, self.rules, azami_kaldirac=self.azami_kaldirac,
+                                                  trader_hesap_usd=trader_hesap_usd, k35=False)          # K‑35 ÖNCESİ kural (v4 emir/trader tavanı + coin başına slot tavanı): önce/sonra karşılaştırması
             sonuc["v4"] = kopya_v4.hesapla(dolumlar, saatlik, isaret, yurutme, [], t0, simdi, self.gecikme_dk, KOPYA_TARZ, self.rules, azami_kaldirac=self.azami_kaldirac)
         return {**sonuc, "yaklasik_fiyat_eylem": yaklasik}
 
@@ -293,7 +296,7 @@ def _bos_satir(aday: dict, vlm: float, rules: dict) -> dict:
             "islem_sayisi": None, "medyan_tutma_saat": None, "kisa_islem_payi": None, "max_kaldirac": None, "likit_pay": None,
             "kopya_getiri_7g": None, "ayna_getiri_7g": None, "kopya_koruma": None,
             "devir_hafta": vlm / aday["hesap_usd"] if aday["hesap_usd"] > 0 else None,
-            "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None, "v4_kopya_getiri_7g": None, "kopya_gunluk": None, "kopya_kazanc_gun_orani": None, "kopya_dusus": None, "yayilma": None,
+            "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None, "v4_kopya_getiri_7g": None, "v5_onceki_kopya_getiri_7g": None, "kopya_gunluk": None, "kopya_kazanc_gun_orani": None, "kopya_dusus": None, "yayilma": None,
             "kopya_getiri_72s": None, "hype_payi": None, "gecti": False, "neden": None, "hata": None}
 
 

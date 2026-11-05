@@ -1,0 +1,29 @@
+# Canlı motor (T4/T5). Ubuntu 24.04. Kurulum: deploy/kurulum.md. Anahtarlar YALNIZ /etc/sg-canli.env içinde (izin 600, sahibi sgcanli); repoda ASLA.
+[Unit]
+Description=sg-arge canli motor (Form Radari v1)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=sgcanli
+Group=sgcanli
+WorkingDirectory=/opt/sg-arge
+EnvironmentFile=/etc/sg-canli.env
+StateDirectory=sg-canli
+ExecStart=/opt/sg-arge/.venv/bin/python -u -m copytrade.canli.motor --durum-dizin ${STATE_DIRECTORY}/durum --kayit-dizin ${STATE_DIRECTORY}/kayit
+Restart=on-failure
+RestartSec=10
+# DUR dosyası varken motor 3 koduyla çıkar: yeniden başlatma döngüsüne girmesin
+RestartPreventExitStatus=3
+TimeoutStopSec=90
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sg-canli
+
+[Install]
+WantedBy=multi-user.target
