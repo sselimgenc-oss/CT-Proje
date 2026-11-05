@@ -38,6 +38,7 @@ from copytrade.dinleyici import Ayar, Dinleyici, Izlenen, Olay, clearinghouse_ay
 from copytrade.hl_ortak import spot_usdc
 from copytrade.izleme_liste import perp_dex_names
 from copytrade.kurallar import load_rules
+from copytrade.olcut import asset_class
 from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter, ledger_sayfala
 
 EPS = 1e-12
@@ -126,10 +127,9 @@ def eylem_belirle(once: float, sonra: float, biz_sz: float) -> list[str]:
 
 
 def coin_sinifi(coin: str) -> str:
-    """K‑42: 'spot' (`@N` ya da `A/B` çifti), 'hip3' (`dex:COIN`), aksi 'perp'."""
-    if coin.startswith("@") or "/" in coin:
-        return "spot"
-    return "hip3" if ":" in coin else "perp"
+    """K‑42: 'spot' | 'hip3' (`dex:COIN`) | 'perp'. Tek kaynak `olcut.asset_class` (spot ve `dex:` ayrımı); burada yalnız üç sınıfa indirgenir."""
+    sinif = asset_class(coin)
+    return "spot" if sinif == "spot" else "perp" if sinif == "kripto" else "hip3"
 
 
 @dataclass
@@ -236,6 +236,7 @@ class Motor:
         self._ozet_emir = int(m.get("ozet_emir", 0))               # önceki özetten beri emir sayısı
         self._emir_tampon: list[dict] = []                 # Telegram: emirler dakikalık adımda TEK özet mesajına toplanır
         self.kor_kirpildi: list[dict] = []
+        self.atlanan_trader: dict[str, dict[str, int]] = {"spot_atlandi": {}, "hip3_atlandi": {}}      # K‑42 bilgi: neden -> {adres: adet}
         self.neden_say: dict[str, int] = {}          # boyut / risk nedenleri sayacı (slot_tavani, marj_yok, coin_tavani …)
         self.niyet = Niyet(durum_dizin / "niyet.jsonl")
         if self._oynat_gecis:
@@ -436,8 +437,10 @@ class Motor:
         if acilis:                                                  # K‑42: spot (`@N`, `A/B`) ve HIP‑3 (`dex:COIN`) açılışı/artırması kopyalanmaz; kapanış/azaltma ASLA engellenmez
             sinif = coin_sinifi(o.coin)
             if sinif == "spot":
+                self.atlanan_trader["spot_atlandi"][adres] = self.atlanan_trader["spot_atlandi"].get(adres, 0) + 1
                 return self._atla(o, adres, eylem, "atlandi", "spot_atlandi")
             if sinif == "hip3" and not bool(self.rules.get("canli_hip3_kopya", False)):
+                self.atlanan_trader["hip3_atlandi"][adres] = self.atlanan_trader["hip3_atlandi"].get(adres, 0) + 1
                 return self._atla(o, adres, eylem, "atlandi", "hip3_atlandi")
         inen = adres in self.saha.inen and adres not in self.saha.uyeler
         if acilis and inen:
@@ -1091,7 +1094,8 @@ class Motor:
                 "funding_usd": self.hesap.funding_toplam(), "funding_oran_yok": self.sayac["funding_oran_yok"], "kuyruk_gecikme_ms": self.gecikme_ozeti(), "en_buyuk_emir": dict(self.en_buyuk_emir),
                 "min_emir_say": {k: v for k, v in sorted(self.neden_say.items()) if k.startswith("min_emir")},
                 "ters_netlesme": self.neden_say.get("ters_netlesme", 0),
-                "spot_atlandi": self.neden_say.get("spot_atlandi", 0), "hip3_atlandi": self.neden_say.get("hip3_atlandi", 0)}
+                "spot_atlandi": self.neden_say.get("spot_atlandi", 0), "hip3_atlandi": self.neden_say.get("hip3_atlandi", 0),
+                "trader_atlanan": {k: dict(sorted(v.items())) for k, v in self.atlanan_trader.items()}}
 
     def gecikme_ozeti(self) -> dict[str, float | int | None]:
         g = sorted(self.kuyruk_gecikme)

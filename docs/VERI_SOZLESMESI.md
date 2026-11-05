@@ -430,3 +430,4 @@ Adresler trader'ların halka açık adresleridir; API anahtarı, hesap adresimiz
 
 
 - **K‑42 (2026-11-05):** `ozet.json` yeni `spot_atlandi`, `hip3_atlandi` (adet; `neden_say` ile aynı): coin `@N` ya da `A/B` içerirse spot, `dex:COIN` ise HIP‑3; yalnız AÇILIŞ/artırma atlanır (sanal ve gerçek kip aynı), kapanış/azaltma engellenmez. `kayit`: `emir_yok` yeni nedenler `spot_atlandi`, `hip3_atlandi`. Yeni ayar `kurallar.yaml canli_hip3_kopya` (bool, varsayılan false; true = HIP‑3 açılır). `risk.json yeni_coin` biçimi: `[[ms UTC, coin], ...]` (eski yalnız‑ms biçimi okunur); patlama freni pencerede FARKLI ve gerçekten açılan coin sayar (O1).
+- **K‑42 takip (2026-11-06):** `ozet.json` yeni `trader_atlanan` = `{"spot_atlandi": {adres: adet}, "hip3_atlandi": {adres: adet}}` (vardiya içi AÇILIŞ/artırma atlama sayısı, trader başına; yalnız bilgi, alarm yok; sayaç vardiya başında sıfırlanır). Sınıflama tek kaynak `olcut.asset_class`.

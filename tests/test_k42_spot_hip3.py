@@ -25,7 +25,7 @@ def _motor(tmp_path, **kurallar):
 
 
 def test_coin_sinifi():
-    assert [mt.coin_sinifi(c) for c in ("BTC", "@142", "PURR/USDC", "xyz:GOLD", "kPEPE")] == ["perp", "spot", "spot", "hip3", "perp"]
+    assert [mt.coin_sinifi(c) for c in ("BTC", "@142", "@0", "PURR/USDC", "xyz:GOLD", "flx:GOLD", "kPEPE")] == ["perp", "spot", "spot", "spot", "hip3", "hip3", "perp"]
 
 
 def test_spot_acilis_atlanir_sanal_ve_sayac_kayit_ozet(tmp_path):
@@ -72,3 +72,30 @@ def test_patlama_freni_ayni_coin_parcalari_tetiklemez_motor_o1(tmp_path):
     sonuc = [m.olay_isle(olay(f"a:{i}", adr(1), "BTC", "B", 30, 100.0, 30.0 * i, saat))[0] for i in range(12)]
     assert not [x for x in sonuc if x.neden == "patlama_freni"]
     assert len(m.risk.yeni_coin.get(adr(1), [])) <= 1
+
+
+def test_eski_risk_json_yeni_coin_bicimi_okunur_ve_davranis_sabit():
+    """Eski biçim `yeni_coin: {adres: [ms, ms, ms]}` -> `(ms, "")` kayıtları; pencere dışı düşer; boş-adlı kayıt tek 'farklı coin' sayılır ("" + 6 yeni + 1 istenen = 8 -> fren)."""
+    from collections import deque
+
+    from copytrade.canli.risk import Risk
+    from tests.test_canli_yurutucu import RULES, T0
+    r = Risk(RULES, 1000.0, {"yeni_coin": {"a": [T0, T0 + 1000, T0 + 2000]}})
+    assert r.yeni_coin["a"] == deque([(T0, ""), (T0 + 1000, ""), (T0 + 2000, "")])
+    yeni = Risk(RULES, 1000.0, {"yeni_coin": {"a": [[T0, "BTC"], [T0 + 5, "ETH"]]}})
+    assert list(yeni.yeni_coin["a"]) == [(T0, "BTC"), (T0 + 5, "ETH")]
+    simdi = T0 + 3000
+    for i in range(6):
+        assert r.acilis_izni("a", f"C{i}", True, simdi)[0] is True
+        r.yeni_coin_kaydet("a", f"C{i}", simdi)
+    assert r.acilis_izni("a", "C6", True, simdi) == (False, "patlama_freni")
+    r2 = Risk(RULES, 1000.0, {"yeni_coin": {"a": [T0, T0 + 1000]}})
+    assert r2.acilis_izni("a", "X", True, T0 + 11 * 60_000)[0] is True and not r2.yeni_coin["a"]       # 10 dk pencere dışı: eski kayıtlar düşer
+
+
+def test_ozet_trader_basina_spot_hip3_atlanan_sayac(tmp_path):
+    m, saat = _motor(tmp_path)
+    m.olay_isle(olay("a:1", adr(1), "xyz:GOLD", "B", 300, 100.0, 0.0, saat))
+    m.olay_isle(olay("a:2", adr(1), "xyz:GOLD", "B", 300, 100.0, 300.0, saat))
+    m.olay_isle(olay("a:3", adr(1), "@142", "B", 300, 100.0, 0.0, saat))
+    assert m.ozet()["trader_atlanan"] == {"spot_atlandi": {adr(1): 1}, "hip3_atlandi": {adr(1): 2}}
