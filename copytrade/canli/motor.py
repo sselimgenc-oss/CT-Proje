@@ -211,6 +211,8 @@ class Motor:
         self.dur_istendi = False
         self._son: dict[str, float] = {}
         self._ozet_gunu: str | None = m.get("ozet_gunu")
+        self._ozet_oz: float | None = m.get("ozet_oz")              # önceki günlük özetteki özsermaye ("dünün sonucu" bundan hesaplanır)
+        self._ozet_emir = int(m.get("ozet_emir", 0))               # önceki özetten beri emir sayısı
         self._emir_tampon: list[dict] = []                 # Telegram: emirler dakikalık adımda TEK özet mesajına toplanır
         self.kor_kirpildi: list[dict] = []
         self.neden_say: dict[str, int] = {}          # boyut / risk nedenleri sayacı (slot_tavani, marj_yok, coin_tavani …)
@@ -266,7 +268,7 @@ class Motor:
         _yaz(d / "saha.json", self.saha.to_json())
         _yaz(d / "risk.json", self.risk.to_json())
         _yaz(d / "motor.json", {"islenen": self.islenen[-int(self.rules["canli_islenen_sakla"]):], "poz_tr": self.poz_tr, "hesap_tr": self.hesap_tr, "son_olay_ms": self.son_olay_ms,
-                                "ozet_gunu": self._ozet_gunu, "kip": self.kip, "kasa_usd": self.kasa, "vardiya": self.vardiya_id, "yazildi_ms": self.saat_ms(),
+                                "ozet_gunu": self._ozet_gunu, "ozet_oz": self._ozet_oz, "ozet_emir": self._ozet_emir, "kip": self.kip, "kasa_usd": self.kasa, "vardiya": self.vardiya_id, "yazildi_ms": self.saat_ms(),
                                 "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.offset})
         self.niyet.sikistir(int(self.rules["canli_islenen_sakla"]))
 
@@ -468,6 +470,7 @@ class Motor:
                     "reduce_only": reduce_only, "durum": d.durum, "red_neden": d.neden, "boyut_neden": neden, "trader_px": o.px, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
                     "emir_ms": emir_ms, "dolum_ms": dolum_ms, "referans_px": d.referans_px, "dolum_px": d.px, "kayma_ref": d.kayma_oran, "kayma_trader": kayma_trader, "ucret": d.ucret,
                     "gec_goruldu": gec, "kaynak": o.kaynak, "bant": bant, "cloid": cloid, "funding_usd": round(self.hesap.funding.get(adres, 0.0), 6)})
+        self._ozet_emir += 1
         e = {"adres": adres, "coin": o.coin, "yon": yon, "usd": d.usd_dolan or usd, "px": d.px, "kayma": kayma_trader, "durum": d.durum, "eylem": eylem}
         if self.kip == "gercek":                            # gerçek parada her emir ANINDA ve ayrı mesaj (risk gecikmeden görülür)
             self.tg.gonder(tg.msg_emir_ozeti(self.kip, [e], 0))
@@ -917,8 +920,9 @@ class Motor:
             return
         self._ozet_gunu = d.date().isoformat()
         oz = self.ozsermaye()
-        acik = [f"{tg.kisa(a)} {c} {p.sz:+.4g}" for a, cs in self.hesap.poz.items() for c, p in cs.items()]
-        self.tg.gonder(tg.msg_gunluk(self.kip, self.kasa, oz, (oz - self.risk.gun_basi) / self.kasa, oz / self.kasa - 1, len(self.saha.uyeler), self.saha.n, acik, self.hesap.funding_toplam() if self.kip == "sanal" else None))
+        self.tg.gonder(tg.msg_gunluk(self.kip, self.kasa, oz, self._ozet_oz if self._ozet_oz is not None else self.kasa, self._ozet_emir, len(self.saha.uyeler), self.saha.n,
+                                     self.pano_ek()["acik"], self.hesap.funding_toplam() if self.kip == "sanal" else None))
+        self._ozet_oz, self._ozet_emir = oz, 0
 
     # ------------------------------------------------------------------ özet
     def ozet(self) -> dict[str, Any]:

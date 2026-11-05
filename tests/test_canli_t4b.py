@@ -534,4 +534,4 @@ def test_telegram_gece_sessiz_alarm_her_zaman_sesli():
 
 def test_telegram_vardiya_sonu_mesaji():
     assert tg.msg_vardiya_sonu("sanal", 255.4, 58, 995.34, 1000.0, 9, 11, 7) == (
-        "🔚 Vardiya bitti (sanal · deneme parası) · 4.3 saat\n🧾 Bu vardiyada 58 emir\n💰 Özsermaye 995,34 $ (kasaya göre −%0,47)\n👥 Takipte 9/11 trader · 📌 açık pozisyon 7")
+        "🔚 4 saatlik tur bitti (sanal · deneme parası) · 4.3 saat sürdü\n🧾 Bu turda 58 emir\n💰 Özsermaye 995,34 $ (kasaya göre −%0,47)\n👥 Takipte 9/11 trader · 📌 açık pozisyon 7")
