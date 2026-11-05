@@ -164,3 +164,4 @@ isabet_elenen_ust: 30                   # kişi (kopya aşamasına varıp elenen
 isabet_butce_dk: 30                     # dakika (isabet adımı süre bütçesi; aşılırsa eksik yazılır, tarama bozulmaz)
 isabet_kotu_gecikme_dk: 3               # dakika (kötü senaryo gecikmesi)
 isabet_kotu_kayma_carpan: 2             # kat (kötü senaryo: maliyet_kayma bu kadar katı)
+para_hareketi_isaret_payi: 0.2          # oran (T6 §2, bilgi: net yatırma / hafta başı sermaye bunun üstündeyse raporda işaretlenir; kapıyı DEĞİŞTİRMEZ)

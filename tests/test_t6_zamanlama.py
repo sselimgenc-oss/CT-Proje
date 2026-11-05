@@ -110,3 +110,14 @@ def test_isabet_deneme_salt_okunur_ve_kismi():
 def test_radar_yayimla_isabet_dosyalarini_da_yayimlar():
     metin = (ROOT / ".github/scripts/radar_yayimla.sh").read_text(encoding="utf-8")
     assert "isabet.json" in metin and 'git add -f "radar/$g/isabet.json"' in metin and "|| true" not in metin
+
+
+def test_canli_vardiya_pano_adimi_yayimdan_once_ve_gecmis_geri_yuklenir():
+    wf = yukle("canli_vardiya.yml")
+    adimlar = [a.get("name", a.get("uses", "")) for a in wf["jobs"]["vardiya"]["steps"]]
+    assert adimlar.index("Canlı motor (sanal kip)") < adimlar.index("Günlük rapor (pano/OZET.md)") < adimlar.index("Durumu veri dalına yaz")
+    pano = next(a for a in wf["jobs"]["vardiya"]["steps"] if a.get("name") == "Günlük rapor (pano/OZET.md)")
+    assert "copytrade.canli.pano" in pano["run"] and "always()" in pano["if"]
+    metin = (WF / "canli_vardiya.yml").read_text(encoding="utf-8")
+    assert "pano/gecmis.json" in metin and "|| true" not in metin
+    assert "pano/OZET.md" in (ROOT / ".github/scripts/canli_yayimla.sh").read_text(encoding="utf-8")

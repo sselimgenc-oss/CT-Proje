@@ -58,7 +58,11 @@ def rest_post_olustur(rules: dict, istemci: PublicClient | None = None) -> Calla
     """Motorun TÜM REST istekleri (kural 7: `tarama.PublicClient`): ortak ağırlık sınırı `canli_api_agirlik_dk`, 429 (5 yeniden deneme, `Retry-After`) ve 5xx / ağ hatasında 3 yeniden deneme.
     Duman testinde (gerçek HL) açılışta ardışık `clearinghouseState` okumaları HTTP 429 aldı → bu sınırlayıcı eklendi."""
     c = istemci or PublicClient(limiter=GuvenliLimiter(limit=int(rules["canli_api_agirlik_dk"])), yeniden_bekleme=KAPI_YENIDEN_BEKLEME)
-    return lambda yuk: c.info(yuk, weight=AGIRLIK.get(str(yuk.get("type")), 20))
+
+    def post(yuk: dict) -> Any:
+        return c.info(yuk, weight=AGIRLIK.get(str(yuk.get("type")), 20))
+    post.stats = getattr(c, "stats", None)                 # type: ignore[attr-defined] — rapor için istek / 429 sayaçları (T6 §3)
+    return post
 
 
 def hesap_degeri_oku(post: Callable[[dict], Any], adres: str, dexler: list[str]) -> float:
@@ -599,6 +603,16 @@ class Motor:
         return (f"DURUM [{self.kip}] özsermaye {oz:.2f}$ ({(oz / self.kasa - 1) * 100:+.2f}%) · saha {len(self.saha.uyeler)}/{self.saha.n} · inen {len(self.saha.inen)} · "
                 f"emir {self.sayac['emir']} · risk {'DUR' if self.risk.dur else 'ok'}")
 
+    def pano_ek(self) -> dict[str, Any]:
+        """`ozet.json`a rapor (`pano/OZET.md`, T6 §3) için eklenen alanlar: açık pozisyonlar (mark'lı; K/Z = sz × (mark − giriş)) ve REST istek / 429 sayaçları. Yeni hesap değil: defter + mark biçimi."""
+        acik = []
+        for adres, coinler in self.hesap.poz.items():
+            for coin, p in coinler.items():
+                mk = self.marks.get(coin) or p.giris
+                acik.append({"adres": adres, "coin": coin, "sz": p.sz, "giris": p.giris, "mark": mk, "usd": abs(p.sz) * mk, "kz_usd": p.sz * (mk - p.giris)})
+        stats = getattr(self.post, "stats", None) or {}
+        return {"acik": acik, "rest_istek": stats.get("istek"), "rest_429": stats.get("429")}
+
     def _gunluk_ozet(self, simdi: int) -> None:
         d = datetime.fromtimestamp(simdi / 1000, UTC)
         if d.hour < int(self.rules["canli_ozet_saat_utc"]) or self._ozet_gunu == d.date().isoformat():
@@ -738,7 +752,7 @@ async def calis(motor: Motor, sure_sn: float | None = None, ws: Callable[[], Any
     finally:
         durdur.set()
         await asyncio.gather(*gorevler, return_exceptions=True)
-        ozet = {**motor.ozet(), "dinleyici": din.ozet()["genel"]}
+        ozet = {**motor.ozet(), **motor.pano_ek(), "dinleyici": din.ozet()["genel"]}
         motor.kayit({"olay": "kapanis", "ozet": ozet})
         _yaz(motor.durum_dizin / "ozet.json", ozet)
         motor.durum_yaz()

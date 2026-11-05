@@ -186,6 +186,10 @@ class Sahte:
     def vault_details(self, adres):
         return {"name": "vault"} if adres in self.vaultlar else {}
 
+    def non_funding_ledger(self, adres, bas):
+        """T6 §2: `userNonFundingLedgerUpdates` (yalnız startTime). `defterler[adres]` ya da boş."""
+        return getattr(self, "defterler", {}).get(adres, [])
+
     def fills(self, adres, bas, max_rows=None, end_ms=None):
         self.cagrilar.append(("fills", adres, bas, end_ms))
         if adres in self.hata:
@@ -307,7 +311,7 @@ def test_koşu_sozlesme_alanlari_vault_payda_hesap_ve_429(tmp_path):
     yazilan = json.loads((tmp_path / "radar/2026-10-27/havuz.json").read_text(encoding="utf-8"))
     assert yazilan == sonuc
     anahtarlar = {"adres", "hesap_usd", "hafta_pnl_usd", "trader_getiri_7g", "islem_sayisi", "medyan_tutma_saat", "kisa_islem_payi", "max_kaldirac", "likit_pay",
-                  "kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "v4_kopya_getiri_7g", "v5_onceki_kopya_getiri_7g", "kopya_gunluk", "kopya_kazanc_gun_orani", "kopya_dusus", "yayilma", "kopya_getiri_72s", "hype_payi", "gecti", "neden", "hata"}
+                  "kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "v4_kopya_getiri_7g", "v5_onceki_kopya_getiri_7g", "kopya_gunluk", "kopya_kazanc_gun_orani", "kopya_dusus", "yayilma", "kopya_getiri_72s", "hype_payi", "net_yatirma_usd", "yatirma_payi", "gecti", "neden", "hata"}      # T6 §2: iki yeni bilgi alanı
     assert all(set(s) == anahtarlar for s in sonuc["satirlar"])
     assert all(c_[3] == KOSU for c_ in c.cagrilar) and all(c_[2] == BAS for c_ in c.cagrilar)         # pencere [kosu − 168 sa, kosu)
 
@@ -523,3 +527,52 @@ def test_h_yalniz_ana_dex_coinleri_builder_dex_mumu_istenmez():
     b.piyasa_oku()
     b.hareket(log=lambda *_: None)
     assert sorted(set(istenen)) == ["BTC", "ETH"]
+
+
+# -------------------------------------------------------------------------------------------------------------------------------- T6 §2: trader para hareketi (bilgi)
+def test_net_yatirma_altin_ornek_ve_uc_durumlar():
+    """Pencere [1000, 2000]: yatırma 5.000 + 1.000, çekme 2.000 → net 4.000. Pencere dışı (999), diğer türler (iç transfer, spot/perp), sayı olmayan tutar yok sayılır."""
+    ledger = [{"time": 1500, "delta": {"type": "deposit", "usdc": "5000.0"}}, {"time": 1600, "delta": {"type": "deposit", "usdc": "1000"}},
+              {"time": 1700, "delta": {"type": "withdraw", "usdc": "2000.0", "fee": "1"}},
+              {"time": 999, "delta": {"type": "deposit", "usdc": "9999"}}, {"time": 2001, "delta": {"type": "withdraw", "usdc": "9999"}},
+              {"time": 1800, "delta": {"type": "accountClassTransfer", "usdc": "777", "toPerp": True}}, {"time": 1900, "delta": {"type": "deposit", "usdc": "yok"}}, {"time": 1900, "delta": {}}]
+    assert r.net_yatirma(ledger, 1000, 2000) == pytest.approx(4000.0) and r.net_yatirma([], 0, 1) == 0.0
+    assert r.net_yatirma([{"time": 5, "delta": {"type": "withdraw", "usdc": "300"}}], 0, 10) == -300.0          # net çekme negatif
+
+
+def test_yatirma_payi_hafta_basi_sermayeye_oranlanir_ve_isaret_esigi():
+    """hesap 14.000, hafta pnl 4.000 → hafta başı sermaye 10.000; net 3.000 → pay 0,3 (> 0,2 işaretlenir); 2.000 → tam 0,2 işaretlenmez (> kuralı). Sermaye ≤ 0 → None."""
+    assert r.yatirma_payi(3000.0, 14_000.0, 4000.0) == pytest.approx(0.3) and r.yatirma_payi(2000.0, 14_000.0, 4000.0) == pytest.approx(0.2)
+    assert r.yatirma_payi(1.0, 4000.0, 4000.0) is None
+    satirlar = [{"adres": "a", "yatirma_payi": 0.3, "gecti": True}, {"adres": "b", "yatirma_payi": 0.2}, {"adres": "c", "yatirma_payi": None}, {"adres": "d", "yatirma_payi": -0.5}]
+    assert [x["adres"] for x in r.yatirma_isaretli(satirlar, 0.2)] == ["a"]
+
+
+def test_para_hareketi_ekle_okuma_hatasi_alani_bos_birakir_zaman_yok_atlanir_tarama_bozulmaz():
+    class C:
+        def non_funding_ledger(self, adres, bas):
+            if adres == "bozuk":
+                raise ValueError("boom")
+            return [{"time": 5, "delta": {"type": "deposit", "usdc": "3000"}}]
+    satirlar = [{"adres": "iyi", "hesap_usd": 14_000.0, "hafta_pnl_usd": 4000.0, "neden": None}, {"adres": "bozuk", "hesap_usd": 1.0, "hafta_pnl_usd": 0.0, "neden": None},
+                {"adres": "zy", "hesap_usd": 1.0, "hafta_pnl_usd": 0.0, "neden": "zaman_yok"}]
+    assert r.para_hareketi_ekle(C(), satirlar, 0, 10, RULES, log=lambda *_: None) == 1
+    assert satirlar[0]["net_yatirma_usd"] == 3000.0 and satirlar[0]["yatirma_payi"] == pytest.approx(0.3)
+    assert "net_yatirma_usd" not in satirlar[1] and "net_yatirma_usd" not in satirlar[2]
+    sayac = {"t": 0.0}
+    def saat():
+        sayac["t"] += 4000.0                                          # bütçe 120 dk = 7.200 sn: ikinci çağrıda aşılır
+        return sayac["t"]
+    satirlar2 = [{"adres": "iyi", "hesap_usd": 14_000.0, "hafta_pnl_usd": 4000.0, "neden": None} for _ in range(3)]
+    assert r.para_hareketi_ekle(C(), satirlar2, 0, 10, RULES, log=lambda *_: None, saat=saat, baslangic=0.0) == 1          # bütçe aşınca durur
+
+
+def test_para_hareketi_havuz_json_a_ve_ozete_yazilir(tmp_path):
+    liderler = [{"ethAddress": "0x" + "ab" * 20, "accountValue": "14000", "windowPerformances": [["week", {"pnl": "4000", "roi": "0.4", "vlm": "40000"}]]}]
+    istemci = Sahte(liderler, {})
+    istemci.defterler = {"0x" + "ab" * 20: [{"time": BAS + 1000, "delta": {"type": "deposit", "usdc": "3000"}}]}
+    sonuc = r.kos(istemci, KOSU, tmp_path, 5, RULES, log=lambda *_: None)
+    s = sonuc["satirlar"][0]
+    assert s["net_yatirma_usd"] == 3000.0 and s["yatirma_payi"] == pytest.approx(0.3)
+    md = r.ozet_md(sonuc)
+    assert "yatirma_payi` > 0.2 olan **1** kişi" in md and "| net_yatirma_usd | 1 |" in md

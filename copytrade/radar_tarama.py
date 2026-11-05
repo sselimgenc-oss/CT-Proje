@@ -42,7 +42,8 @@ NEDENLER = ("veri_hatasi", "payda_yok", "devir_yuksek", "vault", "dolum_fazla", 
 DOLUM_KURALI = 5                  # NEDENLER içinde dolum tabanlı kurallar (islem_az … likidite_dusuk): bunlardan biri başarısızsa kopya oynatılmaz
 SAYISAL = ("hesap_usd", "hafta_pnl_usd", "trader_getiri_7g", "islem_sayisi", "medyan_tutma_saat", "kisa_islem_payi", "max_kaldirac", "likit_pay",
            "kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "v4_kopya_getiri_7g", "v5_onceki_kopya_getiri_7g",
-           "kopya_kazanc_gun_orani", "kopya_dusus", "yayilma", "kopya_getiri_72s", "hype_payi")        # son beşi yalnız `gecti` satırlarında (R2 girdisi)
+           "kopya_kazanc_gun_orani", "kopya_dusus", "yayilma", "kopya_getiri_72s", "hype_payi",
+           "net_yatirma_usd", "yatirma_payi")        # `kopya_kazanc_gun_orani` … `hype_payi` yalnız `gecti` satırlarında (R2 girdisi); son ikisi T6 §2 (bilgi; kapıyı değiştirmez)
 HATALAR = (RateLimitError, requests.RequestException, ValueError, KeyError, TypeError)
 
 
@@ -183,6 +184,53 @@ def degerlendir(satir: dict, rules: dict | None = None, yalniz_dolum: bool = Fal
     return True, None
 
 
+# ------------------------------------------------------------------------------------------------------------------------------ para hareketi (T6 §2, K‑37; yalnız bilgi)
+def net_yatirma(ledger: list[dict], bas_ms: int, bit_ms: int) -> float:
+    """Pencere içi (`bas_ms` ≤ zaman ≤ `bit_ms`) `userNonFundingLedgerUpdates` satırlarından net dış para girişi (trader_$) = Σ `deposit.usdc` − Σ `withdraw.usdc`. Diğer türler (iç transfer, spot/perp
+    sınıf geçişi, vault, alt hesap) sayılmaz; sayı olmayan ya da pencere dışı satır yok sayılır. Yatırma `hafta_pnl_usd`'yi etkilemez ama hesap değerini şişirir; payda hafta başı sermayedir."""
+    net = 0.0
+    for satir in ledger or []:
+        delta = satir.get("delta") or {}
+        zaman, tutar = _sayi(satir.get("time")), _sayi(delta.get("usdc"))
+        if zaman is None or tutar is None or not bas_ms <= zaman <= bit_ms:
+            continue
+        if delta.get("type") == "deposit":
+            net += tutar
+        elif delta.get("type") == "withdraw":
+            net -= tutar
+    return net
+
+
+def yatirma_payi(net_usd: float, hesap_usd: float, hafta_pnl_usd: float) -> float | None:
+    """net yatırma / hafta başı sermaye (`hesap − hafta pnl`; oran, 0,2 = %20). Sermaye ≤ 0 → None."""
+    sermaye = hesap_usd - hafta_pnl_usd
+    return None if sermaye <= 0 else net_usd / sermaye
+
+
+def para_hareketi_ekle(client: Any, satirlar: list[dict], bas_ms: int, bit_ms: int, rules: dict, log=print, saat=time.monotonic, baslangic: float | None = None) -> int:
+    """Havuzdaki (`zaman_yok` hariç) herkes için `net_yatirma_usd` ve `yatirma_payi` yazar. Okuma hatası alanı None bırakır (tarama bozulmaz). Süre bütçesi aşılırsa kalanlar atlanır. Döner: okunan sayı."""
+    butce, t0 = float(rules["radar_zaman_butcesi_dk"]) * 60.0, saat() if baslangic is None else baslangic
+    okunan = 0
+    for s in satirlar:
+        if s.get("neden") == "zaman_yok":
+            continue
+        if saat() - t0 >= butce:
+            log("UYARI: para hareketi okuması zaman bütçesi nedeniyle durdu")
+            break
+        try:
+            net = net_yatirma(client.non_funding_ledger(s["adres"], bas_ms), bas_ms, bit_ms)
+        except HATALAR:
+            continue
+        s["net_yatirma_usd"], s["yatirma_payi"] = net, yatirma_payi(net, s["hesap_usd"], s["hafta_pnl_usd"])
+        okunan += 1
+    return okunan
+
+
+def yatirma_isaretli(satirlar: list[dict], esik: float) -> list[dict]:
+    """`yatirma_payi` > `esik` olan satırlar (rapor işareti; kapı değildir)."""
+    return [s for s in satirlar if s.get("yatirma_payi") is not None and s["yatirma_payi"] > esik]
+
+
 # ------------------------------------------------------------------------------------------------------------------------------ piyasa verisi + kopya oynatma
 class MumOnbellegi:
     """`PublicClient.candles` ile aynı yüzey; her coinin dakikalık (Hyperliquid yalnız son 5.000 dakikayı verir), 5 dakikalık ve saatlik serisini koşu boyunca BİR kez çeker, sonraki
@@ -297,7 +345,7 @@ def _bos_satir(aday: dict, vlm: float, rules: dict) -> dict:
             "kopya_getiri_7g": None, "ayna_getiri_7g": None, "kopya_koruma": None,
             "devir_hafta": vlm / aday["hesap_usd"] if aday["hesap_usd"] > 0 else None,
             "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None, "v4_kopya_getiri_7g": None, "v5_onceki_kopya_getiri_7g": None, "kopya_gunluk": None, "kopya_kazanc_gun_orani": None, "kopya_dusus": None, "yayilma": None,
-            "kopya_getiri_72s": None, "hype_payi": None, "gecti": False, "neden": None, "hata": None}
+            "kopya_getiri_72s": None, "hype_payi": None, "net_yatirma_usd": None, "yatirma_payi": None, "gecti": False, "neden": None, "hata": None}
 
 
 def kopyalanabilirlik(aday: dict, dolumlar: list[dict] | None, hata: str | None, baglam: Baglam) -> dict:
@@ -367,6 +415,8 @@ def kos(client: Any, kosu_ms: int, cikti: Path, aday_sayisi: int | None = None, 
         satir = kopyalanabilirlik(aday, dolumlar, hata, baglam)
         satirlar.append(satir)
         log(f"{etiket} dolum {len(dolumlar or [])}, işlem {satir['islem_sayisi']}, gecti {satir['gecti']} ({satir['neden']}{': ' + satir['hata'] if satir.get('hata') else ''}); {saat() - t_aday:.0f} sn (toplam {(saat() - baslangic) / 60:.1f} dk)")
+    okunan = para_hareketi_ekle(client, satirlar, pencere_bas, kosu_ms, rules, log, saat, baslangic)
+    log(f"para hareketi: {okunan}/{len(satirlar)} adres okundu; yatırma payı > {rules['para_hareketi_isaret_payi']}: {len(yatirma_isaretli(satirlar, float(rules['para_hareketi_isaret_payi'])))} kişi")
     zaman_yok = sum(1 for x in satirlar if x["neden"] == "zaman_yok")
     if zaman_yok:
         log(f"UYARI: zaman bütçesi ({rules['radar_zaman_butcesi_dk']} dk) aşıldı; {zaman_yok} aday `zaman_yok`")
@@ -396,6 +446,9 @@ def ozet_md(sonuc: dict) -> str:
     for sutun in SAYISAL:
         degerler = [s[sutun] for s in satirlar if s.get(sutun) is not None]
         cikti.append(f"| {sutun} | {len(degerler)} | " + (f"{min(degerler):.6g} | {statistics.median(degerler):.6g} | {max(degerler):.6g} |" if degerler else "— | — | — |"))
+    esik = float(load_rules()["para_hareketi_isaret_payi"])
+    isaretli = yatirma_isaretli(satirlar, esik)
+    cikti += ["", f"Para hareketi (bilgi): `yatirma_payi` > {esik:g} olan **{len(isaretli)}** kişi" + (": " + ", ".join(f"{x['adres'][:10]}… ({x['yatirma_payi']:+.2f}{', gecti' if x['gecti'] else ''})" for x in isaretli[:15]) if isaretli else "")]
     return "\n".join(cikti) + "\n"
 
 

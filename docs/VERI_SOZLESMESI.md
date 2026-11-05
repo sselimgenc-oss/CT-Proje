@@ -350,6 +350,8 @@ daha eskisi için (Hyperliquid `candleSnapshot` yalnız son 5.000 dakikalık mum
 | `yayilma` | oran | R2 Y (yalnız `gecti`): 1 − (en iyi tek kopya işleminin kârlı işlemler toplamındaki payı); kâr yoksa 0 |
 | `kopya_getiri_72s` | oran, kopya_$ ölçeği | "form sürüyor" (yalnız `gecti`): aynı dolumlarla kopya, penceresi son `radar_soguyor_saat` saat ve o pencerenin başında BOŞ; hesaplanamazsa 0 |
 | `hype_payi` | oran | R2 H (yalnız `gecti`): trader'ın kârlı round trip `net_pnl` toplamının erken-trend girişlerden gelen payı (trader_$ ölçeğinden bağımsız oran); kâr yoksa 0 |
+| `net_yatirma_usd` | $ (trader_$) | T6 §2 (bilgi; kapıyı DEĞİŞTİRMEZ): pencere içi `userNonFundingLedgerUpdates` `deposit.usdc` toplamı − `withdraw.usdc` toplamı (diğer türler sayılmaz); okuma hatası/`zaman_yok` → null |
+| `yatirma_payi` | oran (0,2 = %20) | T6 §2: `net_yatirma_usd` / hafta başı sermaye (`hesap_usd − hafta_pnl_usd`); sermaye ≤ 0 → null. Rapor (`OZET.md`) `> para_hareketi_isaret_payi` (0,2) olanları işaretler |
 | `gecti` | bool | R1'in tüm kuralları geçildi mi (radar havuzu) |
 | `neden` | kod \| `null` | ilk başarısız kuralın kodu; sıra: `veri_hatasi` (istek hatası), `payda_yok`, `devir_yuksek`, `vault`, `dolum_fazla`, `islem_az`, `tutma_kisa`, `kisa_islem_fazla`, `kaldirac_yuksek`, `likidite_dusuk`, `kopya_zarar`, `kopya_koruma_dusuk`, `sans_riski`, `akil_sagligi`, `zaman_yok` |
 | `hata` | metin \| `null` | `veri_hatasi` ise ilk satır hata iletisi (uydurma yok) |
@@ -370,6 +372,26 @@ erken giriş = açılışı bilinen kârlı işlem, trend coin, coinin hareketi 
 `satirlar[]`: `adres`, `sira` (1…30), `katman` (`ilk11` ≤ `radar_kadro_ilk` < `yedek`), `form`, `bilesenler` {G,K,I1,I2,Y,H}, `kopya_getiri_7g` (oran, kopya_$), `max_kaldirac` (x).
 **Saha kararları (slot −%10, bekleme, günde 2 değişiklik, benzer trader ≥ 0,7) kadroda DEĞİL:** T4 motoru okuyup §5/§6 kurallarını uygular.
 
+
+## 13b. Seçim isabeti — `radar/<havuz tarihi>/isabet.json` (v1.27, T6; `copytrade/radar_isabet.py`, strateji: `docs/RADAR_V1.md` §7b)
+Her gün `radar.yml`, **7 gün önceki** `havuz.json` + `kadro.json` için arada geçen 7 günün kopya getirisini (`sonraki_7g`) ölçer; dosya, ölçülen havuzun (D−7) klasörüne yazılır. Hesap yeni değildir: `radar_tarama.Baglam.kopya_oynat` → `kopya_v5` (1 dk gecikme + maliyet, aynı slot, pencere başında boş).
+Oranlar kesirdir (0,02 = %2), kopya_$ = 1.000 $ sanal kasa ölçeğinde net getiri; zaman UTC ms. `pencere_bas_ms` = havuz `kosu_ms`; `pencere_bit_ms` = min(şimdi, bas + 7 gün); `pencere_tam` (bool); `pencere_gun` (gün).
+| alan | birim | anlam |
+|---|---|---|
+| `gruplar.{ilk11, havuz_geri, elenen}` | — | `secilen` (grupta seçilen kişi), `n` (ölçülen), `olculemeyen`, `ortalama`, `medyan`, `kar_orani` (> 0 olanların payı, oran); aynı alanlar `_kotu` ekiyle kötü senaryo |
+| `havuz` | — | İlk 11 ∪ havuz_geri (R1 havuzunun tamamı) için aynı özet |
+| `ic`, `ic_n`, `ic_kotu` | −1…1, adet | form (kadro `form`) ↔ `sonraki_7g` Spearman sıra korelasyonu; yalnız İlk 11 ∪ havuz_geri ve kadroda formu olanlar; n < 3 → null |
+| `fark_ilk11_havuz`, `fark_ilk11_elenen` (+ `_kotu`) | oran | İlk 11 ortalaması − havuz ortalaması / − elenenler ortalaması |
+| `tohum` | tamsayı | `elenen` seçimi: YYYYMMDD (sabit; aynı gün aynı seçim); `elenen_aday_sayisi`: seçilebilecek aday (kopya aşamasına varıp elenen) |
+| `eksik`, `hata`, `sure_dk` | bool, metin, dk | bütçe (`isabet_butce_dk` 30) aşıldı / bir adres ölçülemedi / ölçüm hatası; tarama işi bozulmaz |
+| `satirlar[]` | — | `adres`, `grup`, `form`, `sonraki_7g`, `sonraki_7g_kotu`, `hata` |
+Gruplar: (i) `ilk11` = kadro `katman == ilk11`; (ii) `havuz_geri` = R1'i geçip İlk 11 dışında kalanlar (Yedek dahil); (iii) `elenen` = kopya aşamasına varıp (`kopya_getiri_7g` dolu) elenenlerden en çok 30 (sabit tohumla rastgele).
+**Kötü senaryo:** kayma `isabet_kotu_kayma_carpan` (2) kat, gecikme `isabet_kotu_gecikme_dk` (3 dk). Pencerede hiç dolumu olmayan adresin getirisi 0 (ölçüldü). `pencere_tam: false` yalnız deneme (`--kismi`).
+
+## 13c. Günlük rapor — `canli-durum` dalında `pano/OZET.md` ve `pano/gecmis.json` (v1.27, T6 §3; `copytrade/canli/pano.py`)
+Telefonda okunan Markdown; her vardiya sonunda güncellenir. Yeni hesap yok: `ozet.json`, `risk.json`, `hesap.json`, `kayit/*.jsonl` sayıları biçimlenir. Oranlar yüzde gösterilir; $ kasa ölçeği; saatler UTC; kayma = (dolum − trader fiyatı) / trader fiyatı (aleyhe +).
+`pano/gecmis.json`: günde bir nokta `[{"gun": "YYYY-MM-DD", "ozsermaye": $}]` (son 15 gün; hafta getirisi = (şimdiki özsermaye − 7 gün öncekinin) / kasa; 7 günden kısa geçmişte "—"). `ozet.json` yeni alanlar: `acik` [{adres, coin, sz (coin, işaretli), giris, mark, usd (brüt $), kz_usd}], `rest_istek`, `rest_429`.
+Bölümler: kasa (özsermaye, gün, hafta, toplam, zirveden düşüş) · açık pozisyonlar · son 24 sa (emir, dolum, kayma p50/max, funding, ücret) · saha değişiklikleri · risk olayları · vardiya sağlığı (süre, kopma, boşluk, 429) · son 7 seçim isabeti (yoksa "ilk ölçüm 2026-11-12").
 
 ## 14. Canlı motor — durum ve kayıt (v1.26, T4; `copytrade/canli/`, strateji: `docs/RADAR_V1.md` §5–§6, K‑29/K‑30/K‑33)
 Motor kipi `sanal` (varsayılan; cüzdan yok) | `gercek` (yalnız sunucuda; Actions'ta ASLA). **Birimler:** `$` kasa ölçeğinde (`canli_kasa_usd`, kullanıcı ayarı, ≤ 1.000; kopya_$), oranlar kesir, fiyat $/coin, `sz` coin miktarı (işaretli: + long / − short),

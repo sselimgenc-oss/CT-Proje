@@ -71,6 +71,7 @@ jobs:
           if git ls-remote --exit-code --heads origin "$VERI_DALI" >/dev/null; then
             git fetch origin "$VERI_DALI"
             git archive FETCH_HEAD durum kayit | tar -x
+            if git cat-file -e FETCH_HEAD:pano/gecmis.json 2>/dev/null; then mkdir -p pano; git show FETCH_HEAD:pano/gecmis.json > pano/gecmis.json; fi
           else
             status=$?
             if [ "$status" -ne 2 ]; then exit "$status"; fi
@@ -99,6 +100,9 @@ jobs:
             cat durum/ozet.json
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Günlük rapor (pano/OZET.md)
+        if: ${{ always() && hashFiles('durum/ozet.json') != '' }}
+        run: python -u -m copytrade.canli.pano --durum durum --kayit kayit --gecmis pano/gecmis.json --cikti pano/OZET.md --isabet-dali "$KADRO_DALI"
       - name: Durumu veri dalına yaz
         if: ${{ always() }}
         run: bash .github/scripts/canli_yayimla.sh
