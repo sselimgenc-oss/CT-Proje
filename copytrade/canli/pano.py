@@ -22,6 +22,7 @@ from html import escape as esc
 from pathlib import Path
 
 from copytrade.canli.telegram import kip_adi, tr_isaretli, tr_sayi, tr_yuzde
+from copytrade.saglik import durum as saglik_durum, kontrol as saglik_kontrol, ozet_metin as saglik_metin
 
 SAAT_MS = 3_600_000
 GUN_MS = 24 * SAAT_MS
@@ -246,6 +247,8 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     din = ozet.get("dinleyici") or {}
     veri_ms = int(ozet.get("yazildi_ms") or max([int(k["zaman_ms"]) for k in kayitlar if k.get("olay") == "kapanis" and (k.get("ozet") or {}).get("vardiya") == ozet.get("vardiya")] or [simdi_ms]))   # verinin YAZILDIĞI an (motor ozet.json'u yazarken); yoksa kapanış kaydı / üretim anı
     kip = str(ozet.get("kip", "—"))
+    _sg = saglik_kontrol(simdi_ms, ozet, kadro)                                                            # pano dışı ölçümler (Cloudflare) saatlik iş akışında; burada yalnız motor + radar
+    saglik_ozeti = ({"SAGLIKLI": "✅ sorun yok", "UYARI": "⚠ uyarı var", "KRITIK": "🚨 acil"}[saglik_durum(_sg)], "".join(f"<div>{esc(ozet_satiri)}</div>" for ozet_satiri in saglik_metin(_sg).split("\n")))
 
     def tl(v: float | None, isaretli: bool = False) -> str:
         return "—" if v is None else (tr_isaretli(v) if isaretli else tr_sayi(v)) + " $"
@@ -451,6 +454,7 @@ input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler sectio
 <div class="p g2"><div class="pb">Özsermaye (tur sonları) <span>{esc(tl(oz))}</span></div><div class="pi">{_cizgi(deg, "#f5a524", baz=kasa if kasa > 0 else None, x_etiket=x_et)}</div></div>
 <div class="p"><div class="pb">Günlük net K/Z <span>$</span></div><div class="pi">{_cubuk(cubuklar)}</div></div>
 <div class="p g2"><div class="pb">İçgörüler</div><div class="pi ic">{"".join(f"<div>{x}</div>" for x in ic)}</div></div>
+<div class="p g3"><div class="pb">Sağlık <span>{esc(saglik_ozeti[0])}</span></div><div class="pi ic">{saglik_ozeti[1]}</div></div>
 <div class="p"><div class="pb">Risk payı <span>sınıra göre</span></div><div class="pi"><div class="ha">Günlük kayıp (sınır %5)</div><div class="ol"><i style="width:{gun_kayip_pay:.0f}%"></i></div><div class="ha">Zirveden düşüş (sınır %20)</div><div class="ol"><i style="width:{dusus_pay:.0f}%"></i></div>{risk_html}</div></div>
 </section>
 <section class="n2 izgara">
