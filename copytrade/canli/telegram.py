@@ -12,6 +12,7 @@ from typing import Any, Callable
 
 ONEMLI_ONEKLER = ("ALARM", "DUR", "TASFİYE", "🚨", "🛑", "💥")          # her zaman sesli
 KOMUTLAR = ("/dur", "/devam", "/baslat", "/kapat", "/durum")
+KACIRILAN_PENCERE_S = 15 * 60          # vardiya başlangıcından önceki bu süre içinde gelip düşürülen komuta "işlenmedi" yanıtı (komut ÇALIŞTIRILMAZ)
 
 
 def kisa(adres: str) -> str:
@@ -38,6 +39,7 @@ class Telegram:
         self.offset = 0
         self.baslangic_s = float(time.time() if baslangic_s is None else baslangic_s)       # bundan önce tarihli mesajlar yok sayılır
         self.yetkisiz_sayisi = 0
+        self._yanitlanan: set[int] = set()             # "vardiya arasında geldi" yanıtı verilen update_id'ler (her mesaja bir kez)
         self.maske: list[str] = []                     # mesajlarda gizlenecek değerler (ör. kendi HL hesap adresimiz)
         self.hata_sayisi = 0
         self.gonderilen: list[str] = []
@@ -96,6 +98,7 @@ class Telegram:
                 self.kayit({"olay": "telegram_hata", "tur": type(hata).__name__})
             return []
         komutlar: list[str] = []
+        kacirilan: list[str] = []
         for u in (yanit or {}).get("result", []):
             self.offset = max(self.offset, int(u.get("update_id", 0)) + 1)
             m = u.get("message") or {}
@@ -110,9 +113,15 @@ class Telegram:
             if float(m.get("date", 0) or 0) < self.baslangic_s:
                 if self.kayit:
                     self.kayit({"olay": "telegram_eski_komut", "komut": metin[:20]})
+                uid = int(u.get("update_id", 0))
+                if metin in KOMUTLAR and float(m.get("date", 0) or 0) >= self.baslangic_s - KACIRILAN_PENCERE_S and uid not in self._yanitlanan:
+                    self._yanitlanan.add(uid)
+                    kacirilan.append(metin)                # yalnız yanıt verilir; eski komut ASLA yürütülmez
                 continue
             if metin in KOMUTLAR:
                 komutlar.append(metin)
+        if kacirilan:
+            self.gonder(alarm("Komut işlenmedi", f"{', '.join(dict.fromkeys(kacirilan))} komutu vardiya arasında geldi, işlenmedi.\nTekrar gönder.", "📭"))
         return komutlar
 
 
@@ -183,10 +192,17 @@ def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_s
     return "\n".join(satirlar)
 
 
-def msg_durum(kip: str, ozsermaye: float, kasa: float, saha: int, n: int, inen: int, acik_poz: int, emir: int, dur: bool, duraklat: bool = False) -> str:
+BAYRAK_TR = {"gunluk_kayip": "🔻 Günlük kayıp freni: bugün yeni işlem yok", "mutabakat": "🧮 Mutabakat farkı: yeni işlem kapalı", "elle_dur": "⏸️ Yeni işlem duraklatıldı (/devam ile açılır)",
+             "fren": "🧯 Patlama freni: bir trader'dan yeni açılış beklemede", "kasa_siniri": "🔒 Kasa sınırı aşıldı: yeni işlem kapalı"}
+
+
+def msg_durum(kip: str, ozsermaye: float, kasa: float, saha: int, n: int, inen: int, acik_poz: int, emir: int, dur: bool, duraklat: bool = False, bayraklar: list[str] | None = None) -> str:
+    """Anlık durum. `bayraklar`: etkin risk bayrakları (`gunluk_kayip`, `mutabakat`, `elle_dur`, `fren`...); yoksa 'normal'."""
+    bayrak = list(dict.fromkeys([*(bayraklar or []), *(["elle_dur"] if duraklat else [])]))
+    risk = ("🛑 Motor DURDURULDU" if dur else "\n".join(BAYRAK_TR.get(b, f"⚠️ {b}") for b in bayrak) if bayrak else "🛡️ Risk: normal, motor çalışıyor")
     return (f"📊 Anlık durum ({kip_adi(kip)})\n{AYRAC}\n💰 Özsermaye {tr_sayi(ozsermaye)} $ (kasaya göre {tr_yuzde(ozsermaye / kasa - 1)})\n"
             f"👥 Takipte {saha}/{n} trader" + (f" · {inen} tanesi ayrılıyor (pozisyonları kapanıyor)" if inen else "") + f"\n"
-            f"📌 Açık pozisyon: {acik_poz}\n🧾 Bu turda emir: {emir}\n" + ("🛑 Motor DURDURULDU" if dur else "⏸️ Yeni işlem duraklatıldı (/devam ile açılır)" if duraklat else "🛡️ Risk: normal, motor çalışıyor"))
+            f"📌 Açık pozisyon: {acik_poz}\n🧾 Bu turda emir: {emir}\n" + risk)
 
 
 def msg_emir_ozeti(kip: str, emirler: list[dict], dakika: float) -> str:

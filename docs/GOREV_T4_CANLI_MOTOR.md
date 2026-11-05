@@ -41,7 +41,9 @@ Kip geçişi = anahtar + bu ayar, motor yeniden başlatılır; sanal dönemin ka
   yeni açılış yok; zirveden −%20 → tüm pozisyonları reduce-only kapat, motor durur, `durum/DUR` yazılır (elle silinmeden yeniden açılmaz); `/kapat` aynı (2026-11-05: eski `/dur` → `/kapat`; yeni `/dur` yalnız yeni girişi durdurur, `/devam` açar).
 - `mutabakat.py` — gerçek kipte her 60 sn HL `clearinghouseState` ile bizim defter (sanal kipte defter ↔ mark fiyatı tutarlılığı); fark > %1 → alarm, motor yeni açılışı durdurur (yetim/pozisyon kaçağı).
 - `telegram.py` — Bot API doğrudan (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` ortamdan): saha giriş/çıkış, her emir (kısa), alarm, 09:00 TR günlük özet
-  (kasa, gün/toplam getiri, saha 11, açık pozisyonlar); komut `/dur`, `/durum`.
+  (kasa, gün/toplam getiri, saha 11, açık pozisyonlar); komutlar (2026-11-05 akşam, lider kararı):
+  `/kapat` (tüm pozisyonlar kapanır, `DUR` yazılır), `/dur` (yalnız yeni giriş/artırma durur), `/devam` (= `/baslat`), `/durum` (gerçek risk bayrakları: günlük kayıp freni, mutabakat, `elle_dur`, patlama freni, `dur`; yoksa "normal").
+  `baslat`'ta `durum/DUR` yoksa `risk.json` `dur` sıfırlanır (`dur_sifirlandi` kaydı; `DUR` dosyası tek yetkili). Vardiya başlangıcından önceki son 15 dk'da gelip düşürülen komuta "komut vardiya arasında geldi, işlenmedi, tekrar gönder" yanıtı gider (her mesaja bir kez; komut ASLA çalıştırılmaz; yetki `chat.id == from.id`; Telegram kapalıysa sessiz).
 - Kayıt: her olay JSONL (`kayit/<tarih>.jsonl`): trader dolum zamanı, görme zamanı, emir/dolum fiyatı, kayma, ücret, neden. Yeniden başlatmada HL'den
   açık pozisyonlar + `durum/` okunur, kaldığı yerden devam (çift emir yok: işlenen dolum kimlikleri saklanır).
 

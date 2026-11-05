@@ -635,10 +635,7 @@ class Motor:
         if self.dur_bekliyor and not self.kapanis_kuyrugu and not any(self.hesap.poz.values()):
             self.dur_bekliyor = False
             self.dur_istendi = True
-            try:
-                self.dur_dosyasi.write_text(json.dumps({"neden": self.risk.dur_neden, "ms": self.saat_ms(), "kapanis_bekliyor": False}) + "\n", encoding="utf-8")
-            except OSError:
-                pass
+            self._dur_yaz_atomik(self.risk.dur_neden or "dur", self.saat_ms(), False)
             self.kayit({"olay": "dur_tamam"})
             self.tg.gonder(tg.alarm("Motor durdu", "Tüm pozisyonlar kapandı (borsada teyitli 0).\nYeniden açmak için `durum/DUR` dosyası elle silinmeli.", "🛑"))
             self.durum_yaz()
@@ -673,19 +670,38 @@ class Motor:
             sayi += 1 if ok else 0
         return sayi
 
+    def _dur_yaz_atomik(self, neden: str, ms: int, kapanis_bekliyor: bool) -> bool:
+        """`durum/DUR`: geçici dosya + fsync + os.replace. Hata sessiz geçilmez: kayıt olayı + Telegram alarmı."""
+        try:
+            self.dur_dosyasi.parent.mkdir(parents=True, exist_ok=True)
+            gecici = self.dur_dosyasi.with_name(self.dur_dosyasi.name + ".tmp")
+            with open(gecici, "w", encoding="utf-8") as f:
+                f.write(json.dumps({"neden": neden, "ms": ms, "kapanis_bekliyor": kapanis_bekliyor}) + "\n")
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(gecici, self.dur_dosyasi)
+            return True
+        except OSError as hata:
+            self.kayit({"olay": "dur_yazim_hata", "neden": neden, "tur": type(hata).__name__})
+            self.tg.gonder(tg.alarm("DUR dosyası YAZILAMADI", f"`durum/DUR` yazılamadı ({type(hata).__name__}). Risk kaydı `dur` açık; sunucuyu kontrol et.", "🚨"))
+            return False
+
     def dur_tetikle(self, neden: str) -> None:
         """Tüm pozisyonları reduce‑only kapat (teyitli), `DUR` yaz, alarm. Motor ancak TÜM pozisyonlar teyitli 0 olunca durur; düzleşmeyen varsa `kapanis_kuyrugu` dakikalık yeniden dener
         ve yeni açılış yapılmaz (`risk.dur`). Elle silinmeden yeniden açılmaz."""
         simdi = self.saat_ms()
         self.risk.dur_ver(neden)
         self.dur_bekliyor = True
-        kapatilan = sum(self._adres_kapat(a, f"dur:{neden}", simdi) for a in list(self.hesap.poz))
+        self._dur_yaz_atomik(neden, simdi, True)                                                # DUR dosyası kapanışlardan ÖNCE (kapanış istisnası DUR'u etkilemesin)
+        kapatilan = 0
+        for a in list(self.hesap.poz):
+            try:
+                kapatilan += self._adres_kapat(a, f"dur:{neden}", simdi)
+            except Exception as hata:                                                           # noqa: BLE001 - kapanış hatası DUR'u bozmaz; kalan pozisyon dakikalık yeniden denenir
+                self.kayit({"olay": "dur_kapanis_hata", "adres": a, "tur": type(hata).__name__})
         kalan = sum(len(c) for c in self.hesap.poz.values())
-        try:
-            self.dur_dosyasi.parent.mkdir(parents=True, exist_ok=True)
-            self.dur_dosyasi.write_text(json.dumps({"neden": neden, "ms": simdi, "kapanis_bekliyor": kalan > 0}) + "\n", encoding="utf-8")
-        except OSError:
-            pass
+        if kalan == 0:
+            self._dur_yaz_atomik(neden, simdi, False)
         self.kayit({"olay": "dur", "neden": neden, "kapatilan": kapatilan, "kalan": kalan})
         if kalan == 0:
             self.tg.gonder(tg.alarm(f"DUR: {neden}", f"{kapatilan} pozisyon kapatıldı, motor durdu.\nYeniden açmak için `durum/DUR` dosyası elle silinmeli.", "🛑"))
@@ -1016,7 +1032,14 @@ class Motor:
 
     def durum_metni(self) -> str:
         oz = self.ozsermaye()
-        return tg.msg_durum(self.kip, oz, self.kasa, len(self.saha.uyeler), self.saha.n, len(self.saha.inen), sum(len(c) for c in self.hesap.poz.values()), self.sayac["emir"], bool(self.risk.dur), bool(self.risk.acilis_durdu.get("elle_dur")))
+        return tg.msg_durum(self.kip, oz, self.kasa, len(self.saha.uyeler), self.saha.n, len(self.saha.inen), sum(len(c) for c in self.hesap.poz.values()), self.sayac["emir"], bool(self.risk.dur), False, self.risk_bayraklari())
+
+    def risk_bayraklari(self) -> list[str]:
+        """`/durum` için etkin risk bayrakları: `acilis_durdu` içinde açık olanlar + süren patlama freni (`fren`)."""
+        b = sorted(k for k, v in self.risk.acilis_durdu.items() if v)
+        if any(bitis > self.saat_ms() for bitis in self.risk.fren_bitis.values()):
+            b.append("fren")
+        return b
 
     def pano_ek(self) -> dict[str, Any]:
         """`ozet.json`a rapor (`pano/OZET.md`, T6 §3) için eklenen alanlar: açık pozisyonlar (mark'lı; K/Z = sz × (mark − giriş)) ve REST istek / 429 sayaçları. Yeni hesap değil: defter + mark biçimi."""
@@ -1061,6 +1084,9 @@ class Motor:
     # ------------------------------------------------------------------ açılış
     def baslat(self) -> None:
         """Açılış: DUR varsa BAŞLAMAZ; kasa sınırı; kadro ilk okuması (saha kurulumu); saha üyelerinin pozisyon/hesap okuması; markları al."""
+        if not self.dur_dosyasi.exists() and self.risk.dur:                                      # DUR dosyası tek yetkili: dosya yoksa risk.json'daki bayat dur sıfırlanır
+            self.kayit({"olay": "dur_sifirlandi", "neden": self.risk.dur_neden, "gerekce": "DUR dosyası yok"})
+            self.risk.dur, self.risk.dur_neden = False, None
         if self.dur_dosyasi.exists():
             bekliyor = bool((_oku(self.dur_dosyasi) or {}).get("kapanis_bekliyor")) and any(self.hesap.poz.values())
             if not bekliyor:
