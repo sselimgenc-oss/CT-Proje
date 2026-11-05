@@ -211,6 +211,7 @@ class Motor:
         self.dur_istendi = False
         self._son: dict[str, float] = {}
         self._ozet_gunu: str | None = m.get("ozet_gunu")
+        self._emir_tampon: list[dict] = []                 # Telegram: emirler dakikalık adımda TEK özet mesajına toplanır
         self.kor_kirpildi: list[dict] = []
         self.neden_say: dict[str, int] = {}          # boyut / risk nedenleri sayacı (slot_tavani, marj_yok, coin_tavani …)
         self.niyet = Niyet(durum_dizin / "niyet.jsonl")
@@ -467,7 +468,7 @@ class Motor:
                     "reduce_only": reduce_only, "durum": d.durum, "red_neden": d.neden, "boyut_neden": neden, "trader_px": o.px, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
                     "emir_ms": emir_ms, "dolum_ms": dolum_ms, "referans_px": d.referans_px, "dolum_px": d.px, "kayma_ref": d.kayma_oran, "kayma_trader": kayma_trader, "ucret": d.ucret,
                     "gec_goruldu": gec, "kaynak": o.kaynak, "bant": bant, "cloid": cloid, "funding_usd": round(self.hesap.funding.get(adres, 0.0), 6)})
-        self.tg.gonder(tg.msg_emir(adres, o.coin, yon, d.usd_dolan or usd, d.px, kayma_trader, d.durum, self.kip, eylem))
+        self._emir_tampon.append({"adres": adres, "coin": o.coin, "yon": yon, "usd": d.usd_dolan or usd, "px": d.px, "kayma": kayma_trader, "durum": d.durum, "eylem": eylem})
         return Sonuc(adres, o.coin, eylem, "emir" if d.dolu_mu else "red", d.neden or neden, d)
 
     # ------------------------------------------------------------------ kapanış teyidi (K‑37 §1)
@@ -783,6 +784,7 @@ class Motor:
                 ("inen", lambda: self.karar_uygula(self.saha.inenleri_kapat(simdi), simdi)), ("mutabakat", lambda: self._mutabakat(simdi, hl)), ("kapanis_kuyrugu", lambda: self._kuyruk_isle(simdi)),
                 ("kadro", lambda: self._kadro_uygula(kadro, simdi)), ("senkron", lambda: (self.senkron_uygula(senkron), self.hesap_uygula(hesaplar, simdi)) if senkron is not None else None),
                 ("telegram", lambda: self._komutlar(komutlar)), ("ozet", lambda: self._gunluk_ozet(simdi)),
+                ("emir_ozeti", lambda: self.emir_ozeti(simdi)),
             ]
             for ad, f in adimlar:
                 try:
@@ -796,6 +798,14 @@ class Motor:
             self._son[ad] = simdi
             return True
         return False
+
+    def emir_ozeti(self, simdi: int, zorla: bool = False) -> None:
+        """Biriken emirleri tek Telegram mesajı olarak gönderir (`canli_telegram_emir_ozet_sn` aralığında; vardiya sonunda `zorla`)."""
+        sn = float(self.rules["canli_telegram_emir_ozet_sn"])
+        if not self._emir_tampon or not (zorla or self._aralik_mi("emir_ozeti", simdi, sn)):
+            return
+        emirler, self._emir_tampon = self._emir_tampon, []
+        self.tg.gonder(tg.msg_emir_ozeti(self.kip, emirler, sn / 60.0))
 
     def _tasfiye(self, simdi: int) -> None:
         if self.kip != "sanal":
@@ -1146,6 +1156,7 @@ async def calis(motor: Motor, sure_sn: float | None = None, ws: Callable[[], Any
     finally:
         durdur.set()
         await asyncio.gather(*gorevler, return_exceptions=True)
+        motor.emir_ozeti(motor.saat_ms(), zorla=True)
         ozet = {**motor.ozet(), **motor.pano_ek(), "dinleyici": din.ozet()["genel"]}
         motor.kayit({"olay": "kapanis", "ozet": ozet})
         _yaz(motor.durum_dizin / "ozet.json", ozet)
