@@ -1,346 +1,61 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hyperliquid Perps Pano — Terminal</title>
-  <link rel="stylesheet" href="pano.css">
-</head>
-<body>
-  <div class="app-container">
-    <!-- 5 & 7. Durum Şeridi (En üstte, ince, en fazla 2 satır, bölünmeyen değerler ve takım özeti) -->
-    <aside class="status-bar" aria-label="Sistem Durum Şeridi">
-      <!-- Satır 1: Dinleyici Telemetrisi ve SİM Rozeti -->
-      <div class="status-row status-row-top">
-        <div class="status-row-left nowrap">
-          <span class="status-dot" id="yenileme-ikon"></span>
-          <span id="durum-dinleyici" class="listener-tag nowrap">
-            Dinleyici: gecikme medyanı <strong class="nowrap">—</strong> · kaçan <strong class="nowrap">—</strong>
-          </span>
-        </div>
-        <div class="status-row-right nowrap">
-          <span class="sim-badge">SİM</span>
-        </div>
-      </div>
-
-      <!-- Satır 2: Takım Özeti, Saat ve Tema Değiştirici -->
-      <div class="status-row status-row-bottom">
-        <div class="status-row-left nowrap" id="durum-takim-ozeti">
-          <span class="status-team-summary nowrap"><span class="team-name">—</span> — · —</span>
-        </div>
-        <div class="status-row-right nowrap">
-          <span id="durum-saat" class="mono-val nowrap">TSİ —</span>
-          <span class="listener-tag nowrap" style="font-size:11px;">
-            <strong id="sayac-metni" class="num">60s</strong>
-          </span>
-          <button id="tema-degistir-btn" class="theme-toggle-btn nowrap" aria-label="Temayı Değiştir">
-            ☀️ Açık Tema
-          </button>
-        </div>
-      </div>
-    </aside>
-
-    <!-- 2,5 saatten eskiyse gösterilen sarı uyarı çubuğu -->
-    <div id="uyari-kutusu" class="banner-warning hidden" role="alert">
-      <span>⚠️</span>
-      <span id="uyari-metni">Veri güncel değil</span>
-    </div>
-
-    <!-- Veri yüklenemezse gösterilen hata kutusu -->
-    <div id="hata-kutusu" class="banner-error hidden" role="alert">
-      <div>
-        <strong>Bağlantı Hatası:</strong>
-        <span id="hata-metni">Veri yüklenemedi.</span>
-      </div>
-      <button id="btn-tekrar-dene" class="btn-retry">Tekrar Dene</button>
-    </div>
-
-    <!-- Başlık Alanı & Takım Sekmeleri -->
-    <header class="main-header">
-      <div class="brand-section">
-        <h1 class="brand-title">KALDIRAÇ</h1>
-        <span class="brand-subtitle">Hyperliquid perps</span>
-      </div>
-
-      <nav class="team-tabs" id="takim-sekmeleri" aria-label="Takım Seçimi">
-        <!-- JS ile dinamik doldurulur -->
-      </nav>
-    </header>
-
-    <!-- 1. ÜST ŞERİT METRİK KUTULARI (9 Adet Metrik Paneli) -->
-    <section class="strip-metrics-grid" aria-label="Performans Göstergeleri">
-      <!-- 1. Bugün % -->
-      <div class="metric-strip-card">
-        <span class="panel-label">BUGÜN</span>
-        <span class="strip-val" id="strip-bugun">—</span>
-        <span class="strip-sub">günlük getiri</span>
-      </div>
-
-      <!-- 2. Bu Hafta % -->
-      <div class="metric-strip-card">
-        <span class="panel-label">BU HAFTA</span>
-        <span class="strip-val" id="strip-hafta">—</span>
-        <span class="strip-sub">haftalık getiri</span>
-      </div>
-
-      <!-- 3. Bu Ay % -->
-      <div class="metric-strip-card">
-        <span class="panel-label">BU AY</span>
-        <span class="strip-val" id="strip-ay">—</span>
-        <span class="strip-sub">aylık kümülatif</span>
-      </div>
-
-      <!-- 4. Açık Pozisyon & Maruziyet % -->
-      <div class="metric-strip-card">
-        <span class="panel-label">AÇIK POZİSYON</span>
-        <span class="strip-val" id="strip-pozisyon">—</span>
-        <span class="strip-sub" id="strip-maruziyet">%— maruziyet</span>
-      </div>
-
-      <!-- 5. Toplam Getiri % -->
-      <div class="metric-strip-card">
-        <span class="panel-label">TOPLAM GETİRİ</span>
-        <span class="strip-val" id="strip-toplam">—</span>
-        <span class="strip-sub">tüm zamanlar</span>
-      </div>
-
-      <!-- 6. Kazanma Oranı (Yarım Halka Gösterge) -->
-      <div class="metric-strip-card">
-        <span class="panel-label">KAZANMA ORANI</span>
-        <div class="gauge-wrap">
-          <span class="strip-val" id="strip-kazanma-txt">—</span>
-          <div class="gauge-svg" id="strip-kazanma-gauge"></div>
-        </div>
-        <span class="strip-sub" id="strip-toplam-islem">—</span>
-      </div>
-
-      <!-- 7. Kâr Faktörü -->
-      <div class="metric-strip-card">
-        <span class="panel-label">KÂR FAKTÖRÜ</span>
-        <span class="strip-val neutral" id="strip-kar-faktoru">—</span>
-        <span class="strip-sub">brüt kazanç / kayıp</span>
-      </div>
-
-      <!-- 8. Ortalama Kazanç / Kayıp (İki Renkli Çubuk) -->
-      <div class="metric-strip-card">
-        <span class="panel-label">ORT. KAZANÇ / KAYIP</span>
-        <div class="two-tone-bar-wrap">
-          <div class="two-tone-bar">
-            <div class="bar-win" id="bar-win-seg" style="width: 0%;"></div>
-            <div class="bar-loss" id="bar-loss-seg" style="width: 0%;"></div>
-          </div>
-          <div class="two-tone-labels" id="strip-ort-labels">
-            <span class="profit" id="strip-ort-kazanc">—</span>
-            <span class="loss" id="strip-ort-kayip">—</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 9. Beklenti % -->
-      <div class="metric-strip-card">
-        <span class="panel-label">İŞLEM BEKLENTİSİ</span>
-        <span class="strip-val" id="strip-beklenti">—</span>
-        <span class="strip-sub">işlem başına ort.</span>
-      </div>
-    </section>
-
-    <!-- 2. ANA TERMINAL IZGARASI (PC'de 3 Sütun, Mobilde Tek Sütun) -->
-    <main class="terminal-grid">
-      <!-- PANEL A: KASA KARTI & GENEL BAKIŞ (col-span-2) -->
-      <section class="terminal-panel col-span-2" aria-label="Kasa Durumu">
-        <div class="panel-header">
-          <span class="panel-title">KASA BAKİYESİ & EĞRİ</span>
-          <span class="panel-badge" id="kasa-takim-ad">İlk 11</span>
-        </div>
-        <div class="kasa-card-body">
-          <div>
-            <div class="kasa-balance-val" id="kasa-bakiye">— $</div>
-            <div class="kasa-change-line neutral" id="kasa-degisim">
-              <span>— $</span>
-              <span>·</span>
-              <span>%—</span>
-              <span style="color:var(--text-secondary);font-weight:400;">başlangıçtan</span>
-            </div>
-            <div style="margin-top:10px;font-size:11px;color:var(--text-muted);" id="kasa-detay-not">
-              Nakit: <strong id="ozet-nakit" style="color:var(--text-primary);">— $</strong> (serbest) · 
-              Teminat: <strong id="ozet-teminat" style="color:var(--text-primary);">— $</strong> (<span id="ozet-teminat-alt">—</span>)
-            </div>
-            <div style="margin-top:6px;font-size:11px;color:var(--text-muted);" id="kasa-olcek-notu"></div>
-          </div>
-          <div class="chart-box" id="kasa-grafik" style="height:100px;"></div>
-        </div>
-      </section>
-
-      <!-- PANEL B: ÖZET RİSK & GÜNLÜK AKTİVİTE (col-span-1) -->
-      <section class="terminal-panel col-span-1" aria-label="Risk ve Kadro Özeti">
-        <div class="panel-header">
-          <span class="panel-title">GÜNLÜK & KADRO ÖZETİ</span>
-          <span class="panel-badge">GÜNCEL</span>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="color:var(--text-secondary);">Açık K/Z:</span>
-            <strong id="ozet-kz" class="mono-val neutral">— $</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="color:var(--text-secondary);">Son 24 Saat:</span>
-            <span id="ozet-kz-alt" class="mono-val">—</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="color:var(--text-secondary);">Bugün:</span>
-            <span id="ozet-bugun" class="mono-val" style="color:var(--text-primary);">—</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="color:var(--text-secondary);">Kadro Doluluğu:</span>
-            <span id="ozet-kadro" class="mono-val" style="color:var(--color-accent);">—</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- 2. GRAFİKLER (INLINE SVG + HTML EKSEN YAZILARI, HOVER VE DOKUNMATİK TOOLTIP) -->
-      <!-- GRAFİK 1: Kümülatif K/Z (Yeşil Alan) -->
-      <section class="terminal-panel col-span-1" aria-label="Kümülatif K/Z Grafiği">
-        <div class="panel-header">
-          <span class="panel-title">KÜMÜLATİF K/Z (USD)</span>
-          <span class="panel-badge neutral" id="badge-kumulatif-son">— $</span>
-        </div>
-        <div class="chart-box" id="grafik-kumulatif"></div>
-      </section>
-
-      <!-- GRAFİK 2: Kasa Bakiyesi (Turuncu Çizgi) -->
-      <section class="terminal-panel col-span-1" aria-label="Bakiye Eğrisi Grafiği">
-        <div class="panel-header">
-          <span class="panel-title">BAKİYE GEÇMİŞİ</span>
-          <span class="panel-badge" id="badge-bakiye-son" style="color:var(--color-accent);">— $</span>
-        </div>
-        <div class="chart-box" id="grafik-bakiye"></div>
-      </section>
-
-      <!-- GRAFİK 3: Düşüş (Drawdown, Kırmızı Alan 0'dan aşağı) -->
-      <section class="terminal-panel col-span-1" aria-label="Düşüş Grafiği">
-        <div class="panel-header">
-          <span class="panel-title">MAKSİMUM DÜŞÜŞ (DRAWDOWN)</span>
-          <span class="panel-badge neutral" id="badge-dusus-son">—</span>
-        </div>
-        <div class="chart-box" id="grafik-dusus"></div>
-      </section>
-
-      <!-- GRAFİK 4: Günlük Net K/Z (Yeşil/Kırmızı Çubuklar) (col-span-3) -->
-      <section class="terminal-panel col-span-3" aria-label="Günlük Net K/Z Dağılımı">
-        <div class="panel-header">
-          <span class="panel-title">GÜNLÜK NET K/Z DAĞILIMI</span>
-          <span class="panel-badge" id="badge-gunluk-ozet">Son 30 Gün</span>
-        </div>
-        <div class="chart-box" id="grafik-gunluk" style="height:120px;"></div>
-      </section>
-
-      <!-- 3. TRADER TABLOSU (Sıralanabilir, col-span-3) -->
-      <section class="terminal-panel col-span-3" aria-label="Trader Performans Tablosu">
-        <div class="panel-header">
-          <span class="panel-title">TRADER PERFORMANS TABLOSU</span>
-          <span class="panel-badge" id="trader-sayisi-badge">0 Trader</span>
-        </div>
-        <div class="table-responsive">
-          <table class="terminal-table" id="trader-tablosu">
-            <thead>
-              <tr>
-                <th class="left sortable" data-col="ad">Trader (Takma Ad) <span class="sort-icon">▲▼</span></th>
-                <th class="right sortable" data-col="islem">İşlem Sayısı <span class="sort-icon">▲▼</span></th>
-                <th class="right sortable" data-col="kazanma_orani">Kazanma Oranı <span class="sort-icon">▲▼</span></th>
-                <th class="right sortable" data-col="net_oran">Net K/Z % <span class="sort-icon">▲▼</span></th>
-                <th class="right sortable" data-col="son_islem">Son İşlem Zamanı <span class="sort-icon">▲▼</span></th>
-              </tr>
-            </thead>
-            <tbody id="trader-tablosu-body">
-              <!-- JS ile dinamik -->
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- AÇIK İŞLEMLER TABLOSU (col-span-3) -->
-      <section class="terminal-panel col-span-3" aria-label="Açık İşlemler">
-        <div class="panel-header">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span class="panel-title">AÇIK İŞLEMLER</span>
-            <span class="panel-badge" id="acik-islem-sayisi">0</span>
-          </div>
-        </div>
-        <div style="padding:6px 12px;font-size:11px;color:var(--text-muted);" id="acik-olcek-notu"></div>
-        <div class="table-responsive">
-          <table class="terminal-table">
-            <thead>
-              <tr>
-                <th class="left">Coin</th>
-                <th class="center">Yön / Kaldıraç</th>
-                <th class="center">Trader</th>
-                <th class="center">Yaş</th>
-                <th class="right">Liq. Uzaklık</th>
-                <th class="right">Teminat</th>
-                <th class="right">Büyüklük</th>
-                <th class="right">K/Z $</th>
-                <th class="right">K/Z %</th>
-              </tr>
-            </thead>
-            <tbody id="acik-islemler-body">
-              <!-- JS ile dinamik -->
-            </tbody>
-            <tbody id="acik-expand-row" style="display:none;">
-              <tr>
-                <td colspan="9" class="expand-toggle-row">
-                  <button id="acik-expand-btn" class="expand-toggle-btn">
-                    ▼ +N işlem daha (toplama dahil)
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-            <tfoot id="acik-islemler-foot">
-              <!-- TOPLAM dinamik toplanır (JSON'dan alınmaz!) -->
-            </tfoot>
-          </table>
-        </div>
-      </section>
-
-      <!-- SON KAPANANLAR TABLOSU (col-span-3) -->
-      <section class="terminal-panel col-span-3" aria-label="Son Kapanan İşlemler">
-        <div class="panel-header">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span class="panel-title">SON KAPANANLAR</span>
-            <span class="panel-badge" id="kapanan-islem-sayisi">0</span>
-          </div>
-        </div>
-        <div class="table-responsive">
-          <table class="terminal-table">
-            <thead>
-              <tr>
-                <th class="left">Coin</th>
-                <th class="center">Rozet</th>
-                <th class="center">Neden</th>
-                <th class="center">Süre</th>
-                <th class="center">Trader</th>
-                <th class="right">Ana Para</th>
-                <th class="right">K/Z $</th>
-                <th class="right">K/Z %</th>
-              </tr>
-            </thead>
-            <tbody id="kapanan-islemler-body">
-              <!-- JS ile dinamik -->
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </main>
-
-    <!-- Alt Bilgi ve Güvenlik Bildirimi -->
-    <footer class="app-footer">
-      <div>Veri kaynağı: <code>VERI_URL</code> (salt okunur, işlem/emir düğmesi bulunmaz).</div>
-      <div id="son-veri-saat">Son veri üretim zamanı: —</div>
-    </footer>
-  </div>
-
-  <!-- Ortak Tooltip Elemanı -->
-  <div id="chart-tooltip" class="chart-tooltip" role="tooltip"></div>
-
-  <script src="pano.js"></script>
-</body>
-</html>
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><meta name="color-scheme" content="dark">
+<title>Copy Trade Panosu</title>
+<style>
+:root{--bg:#0a0a0b;--k:#111113;--cz:#25252a;--y:#e9e9ee;--so:#8a8a94;--tu:#f5a524;--art:#3ddc84;--eks:#ff5d5d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--y);font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;padding:12px}
+.ust{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}.lg0{background:var(--tu);color:#000;font-weight:800;padding:2px 7px;border-radius:3px}
+.ust b{font-size:15px;letter-spacing:.05em}.so,.ha{color:var(--so)}.rozet{border:1px solid var(--cz);border-radius:3px;padding:1px 8px;color:var(--tu);font-size:11px}
+.sirit{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--cz);border:1px solid var(--cz);margin-bottom:8px}
+.h{background:var(--k);padding:8px 9px}.hb{font-size:10px;letter-spacing:.09em;color:var(--so);text-transform:uppercase}.hd{font-size:17px;font-weight:700;margin:2px 0}.ha{font-size:11px}
+.art{color:var(--art)}.eks{color:var(--eks)}.yok{color:var(--so)}
+.izgara{display:grid;grid-template-columns:1fr;gap:8px}.p{background:var(--k);border:1px solid var(--cz);min-width:0}
+.pb{font-size:10px;letter-spacing:.09em;color:var(--tu);text-transform:uppercase;padding:8px 11px;border-bottom:1px solid var(--cz);display:flex;justify-content:space-between}.pb span{color:var(--so)}
+.pi{padding:10px 11px}.gr{width:100%;height:110px;display:block}.bos{color:var(--so);padding:14px 4px;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:12px}td,th{padding:6px 8px;border-bottom:1px solid #1c1c21;text-align:left;white-space:nowrap}th{font-size:10px;color:var(--so);letter-spacing:.08em}.sg{text-align:right}tr:last-child td{border:0}
+.tw{overflow-x:auto}.dg{display:flex;height:16px;border-radius:3px;overflow:hidden;background:#1c1c21}.dg span{display:block;height:100%}
+.lg{display:inline-block;margin:6px 12px 0 0;font-size:11px;color:var(--so)}.lg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}
+.s{padding:4px 0;font-size:12px}.ic div{padding:5px 0 5px 12px;border-bottom:1px solid #1c1c21;position:relative}.ic div:before{content:"›";color:var(--tu);position:absolute;left:0}
+.ol{height:7px;background:#1c1c21;border-radius:4px;margin:4px 0 9px;overflow:hidden}.ol i{display:block;height:100%;background:var(--tu)}.uy{background:var(--eks);color:#fff;font-weight:800;padding:6px 10px;margin-bottom:8px;border-radius:3px}
+.tabs{display:flex;gap:2px;margin:0 0 8px;border-bottom:1px solid var(--cz);overflow-x:auto}.tabs label{padding:9px 13px;font-size:11px;letter-spacing:.09em;color:var(--so);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent}.tabs em{font-style:normal;background:#1c1c21;border-radius:9px;padding:0 6px;margin-left:4px;color:var(--y)}
+input[name=t]{position:absolute;opacity:0;pointer-events:none}.sekmeler section{display:none}
+#t1:checked~.tabs label[for=t1],#t2:checked~.tabs label[for=t2],#t3:checked~.tabs label[for=t3],#t4:checked~.tabs label[for=t4],#t5:checked~.tabs label[for=t5]{color:var(--tu);border-bottom-color:var(--tu)}
+#t1:checked~.sekmeler .n1,#t2:checked~.sekmeler .n2,#t3:checked~.sekmeler .n3,#t4:checked~.sekmeler .n4,#t5:checked~.sekmeler .n5{display:grid}
+.kd{border-bottom:1px solid #1c1c21}.kd summary{display:grid;grid-template-columns:22px 1fr auto 46px 24px auto;gap:8px;align-items:center;padding:9px 2px;cursor:pointer;list-style:none}.kd summary::-webkit-details-marker{display:none}
+.sr{color:var(--so)}.rz{font-size:10px;border:1px solid var(--cz);border-radius:3px;padding:0 6px;letter-spacing:.05em}.fb{height:6px;background:#1c1c21;border-radius:3px;overflow:hidden}.fb i{display:block;height:100%;background:var(--tu)}.fm{text-align:right;color:var(--so)}.nt{text-align:right;min-width:64px}
+.ms{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:4px 4px 12px 30px;font-size:12px}.mt{margin-top:12px;padding:8px;background:#0e0e10;border:1px solid var(--cz);font-size:12px;color:var(--so)}.yb{margin:12px 0 2px;font-size:10px;letter-spacing:.1em;color:var(--tu)}
+@media(min-width:900px){.ms{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:900px){body{padding:18px;max-width:1280px;margin:auto}.sirit{grid-template-columns:repeat(6,1fr)}.hd{font-size:20px}.izgara{grid-template-columns:repeat(3,1fr)}.g2{grid-column:span 2}.g3{grid-column:span 3}}
+</style></head><body>
+<div class="ust"><div><span class="lg0">CT</span> <b>COPY TRADE PANOSU</b></div><div><span class="rozet">sanal · deneme parası</span> <span class="so">veri 05.11.2026 23:40 TSİ · ~4 saatte bir yenilenir</span></div></div><div id="bayat" data-ms="1793911225801" class="uy" style="display:none">⚠ VERİ BAYAT: son güncelleme 6 saatten eski, sistem durmuş olabilir</div>
+<div class="sirit"><div class="h"><div class="hb">Özsermaye</div><div class="hd ">971,37 $</div><div class="ha">kasa 1.000 $</div></div><div class="h"><div class="hb">Bugün</div><div class="hd eks">−%2,86</div><div class="ha">−28,63 $</div></div><div class="h"><div class="hb">Bu hafta</div><div class="hd yok">—</div><div class="ha">7 gün dolmadı</div></div><div class="h"><div class="hb">Başlangıçtan beri</div><div class="hd eks">−%2,86</div><div class="ha">−28,63 $</div></div><div class="h"><div class="hb">Zirveden düşüş</div><div class="hd eks">−%2,96</div><div class="ha">zirve 1.001,05 $</div></div><div class="h"><div class="hb">Açık pozisyon</div><div class="hd ">7</div><div class="ha">brüt 575,89 $</div></div></div>
+<input type="radio" name="t" id="t1" checked><input type="radio" name="t" id="t2"><input type="radio" name="t" id="t3"><input type="radio" name="t" id="t4"><input type="radio" name="t" id="t5">
+<div class="tabs"><label for="t1">ÖZET</label><label for="t5">KADRO <em>17</em></label><label for="t2">POZİSYON <em>7</em></label><label for="t3">İŞLEMLER <em>127</em></label><label for="t4">RİSK</label></div>
+<div class="sekmeler">
+<section class="n1 izgara">
+<div class="p g2"><div class="pb">Özsermaye (tur sonları) <span>971,37 $</span></div><div class="pi"><svg viewBox="0 0 300 80" preserveAspectRatio="none" class="gr"><polygon points="0,80 0.0,12.0 150.0,24.2 300.0,78.0 300,80" fill="#f5a524" opacity=".16"/><polyline fill="none" stroke="#f5a524" stroke-width="1.8" vector-effect="non-scaling-stroke" points="0.0,12.0 150.0,24.2 300.0,78.0"/></svg></div></div>
+<div class="p"><div class="pb">Günlük net K/Z <span>$</span></div><div class="pi"><div class="bos">Günlük çubuklar ilk günün sonunda görünür</div></div></div>
+<div class="p g2"><div class="pb">İçgörüler</div><div class="pi ic"><div>En iyi pozisyon: <b>BNB</b> <span class="art">+2,03 $</span>; en zayıf: <b>xyz:DRAM</b> <span class="eks">−9,18 $</span>.</div><div>Açık pozisyonların 4/7 tanesi kârda.</div><div>Son 24 saatte en çok işlem yapan trader: <b>0x241c8d…</b> (31 emir).</div><div>Emirler trader fiyatına ortalama 3,5 bp farkla doldu (küçük = iyi).</div><div>Brüt pozisyon 575,89 $ = kasanın %58'i.</div></div></div>
+<div class="p"><div class="pb">Risk payı <span>sınıra göre</span></div><div class="pi"><div class="ha">Günlük kayıp (sınır %5)</div><div class="ol"><i style="width:57%"></i></div><div class="ha">Zirveden düşüş (sınır %20)</div><div class="ol"><i style="width:15%"></i></div><div class="s eks">⚠ 19:24 · vardiya_boslugu</div></div></div>
+</section>
+<section class="n2 izgara">
+<div class="p g2"><div class="pb">Açık pozisyonlar <span>7 adet</span></div><div class="tw"><table><tr><th>COİN</th><th>YÖN</th><th class="sg">TUTAR</th><th class="sg">K/Z</th><th>TRADER</th></tr><tr><td><b>xyz:GOLD</b></td><td>UZUN</td><td class="sg">264,54 $</td><td class="sg eks">−1,50 $</td><td class="so">0x323f5a…</td></tr><tr><td><b>xyz:DRAM</b></td><td>UZUN</td><td class="sg">78,97 $</td><td class="sg eks">−9,18 $</td><td class="so">0x62edf4…</td></tr><tr><td><b>ZEC</b></td><td>KISA</td><td class="sg">66,18 $</td><td class="sg art">+0,09 $</td><td class="so">0xd18820…</td></tr><tr><td><b>BNB</b></td><td>KISA</td><td class="sg">64,93 $</td><td class="sg art">+2,03 $</td><td class="so">0x873015…</td></tr><tr><td><b>xyz:SOXL</b></td><td>UZUN</td><td class="sg">47,44 $</td><td class="sg eks">−1,26 $</td><td class="so">0xfbd234…</td></tr><tr><td><b>ETH</b></td><td>KISA</td><td class="sg">32,31 $</td><td class="sg art">+1,99 $</td><td class="so">0x6015e6…</td></tr><tr><td><b>PUMP</b></td><td>KISA</td><td class="sg">21,53 $</td><td class="sg art">+0,86 $</td><td class="so">0x873015…</td></tr></table></div></div>
+<div class="p"><div class="pb">Para dağılımı <span>coin başına</span></div><div class="pi"><div class="dg"><span style="width:45.94%;background:#f5a524" title="xyz:GOLD"></span><span style="width:13.71%;background:#3ddc84" title="xyz:DRAM"></span><span style="width:11.49%;background:#5b9dff" title="ZEC"></span><span style="width:11.27%;background:#ff5d5d" title="BNB"></span><span style="width:8.24%;background:#b07cff" title="xyz:SOXL"></span><span style="width:5.61%;background:#2dd4bf" title="ETH"></span><span style="width:3.74%;background:#f472b6" title="PUMP"></span></div><span class="lg"><i style="background:#f5a524"></i>xyz:GOLD 46%</span><span class="lg"><i style="background:#3ddc84"></i>xyz:DRAM 14%</span><span class="lg"><i style="background:#5b9dff"></i>ZEC 11%</span><span class="lg"><i style="background:#ff5d5d"></i>BNB 11%</span><span class="lg"><i style="background:#b07cff"></i>xyz:SOXL 8%</span><span class="lg"><i style="background:#2dd4bf"></i>ETH 6%</span><span class="lg"><i style="background:#f472b6"></i>PUMP 4%</span></div></div>
+</section>
+<section class="n3 izgara">
+<div class="g3 sirit"><div class="h"><div class="hb">Emir (24 sa)</div><div class="hd ">127</div><div class="ha">dolum 127</div></div><div class="h"><div class="hb">Ort. fark</div><div class="hd ">3,5 bp</div><div class="ha">trader fiyatına göre</div></div><div class="h"><div class="hb">Funding (24 sa)</div><div class="hd eks">−0,04 $</div><div class="ha">sanal</div></div><div class="h"><div class="hb">Takipte</div><div class="hd ">7/11</div><div class="ha">trader</div></div></div>
+<div class="p g2"><div class="pb">Son işlemler <span>24 sa, en yeni üstte</span></div><div class="tw"><table><tr><th>SAAT</th><th>COİN</th><th>YÖN</th><th class="sg">TUTAR</th><th class="sg">FARK</th></tr><tr><td class="so">23:35</td><td><b>PUMP</b></td><td class="eks">SAT · ARTIR</td><td class="sg">11,38 $</td><td class="sg so">0,0 bp</td></tr><tr><td class="so">22:56</td><td><b>ZEC</b></td><td class="eks">SAT · ARTIR</td><td class="sg">13,15 $</td><td class="sg so">0,8 bp</td></tr><tr><td class="so">22:56</td><td><b>ZEC</b></td><td class="eks">SAT · ARTIR</td><td class="sg">13,44 $</td><td class="sg so">0,8 bp</td></tr><tr><td class="so">22:56</td><td><b>ZEC</b></td><td class="eks">SAT · ARTIR</td><td class="sg">17,47 $</td><td class="sg so">0,8 bp</td></tr><tr><td class="so">22:56</td><td><b>ZEC</b></td><td class="eks">SAT · ARTIR</td><td class="sg">11,21 $</td><td class="sg so">0,8 bp</td></tr><tr><td class="so">22:56</td><td><b>ZEC</b></td><td class="eks">SAT · AÇ</td><td class="sg">11,00 $</td><td class="sg so">0,8 bp</td></tr><tr><td class="so">22:46</td><td><b>ZEC</b></td><td class="eks">SAT · KAPAT</td><td class="sg">32,70 $</td><td class="sg so">29,1 bp</td></tr><tr><td class="so">22:46</td><td><b>ZEC</b></td><td class="eks">SAT · AZALT</td><td class="sg">14,31 $</td><td class="sg so">4,8 bp</td></tr><tr><td class="so">22:18</td><td><b>ZEC</b></td><td class="art">AL · AÇ</td><td class="sg">46,59 $</td><td class="sg so">0,8 bp</td></tr><tr><td class="so">22:18</td><td><b>ZEC</b></td><td class="art">AL · AZALT</td><td class="sg">12,94 $</td><td class="sg so">3,2 bp</td></tr><tr><td class="so">22:18</td><td><b>ZEC</b></td><td class="art">AL · AZALT</td><td class="sg">25,10 $</td><td class="sg so">2,4 bp</td></tr><tr><td class="so">22:17</td><td><b>ZEC</b></td><td class="eks">SAT · ARTIR</td><td class="sg">14,99 $</td><td class="sg so">0,8 bp</td></tr></table></div></div>
+<div class="p"><div class="pb">Trader değişiklikleri <span>24 sa</span></div><div class="pi"><div class="s">➕ giriş · 07:59 · 0xd2cfee… · ilk_gun</div><div class="s">➕ giriş · 07:59 · 0xf90c9e… · ilk_gun</div><div class="s">➕ giriş · 07:59 · 0x20ad98… · ilk_gun</div><div class="s">➕ giriş · 07:59 · 0x323f5a… · ilk_gun</div><div class="s">➕ giriş · 07:59 · 0x241c8d… · ilk_gun</div><div class="s">➕ giriş · 07:59 · 0xc32f19… · ilk_gun</div><div class="s">➕ giriş · 07:59 · 0xf43a34… · ilk_gun</div><div class="s">➕ giriş · 07:59 · 0x62edf4… · ilk_gun</div><div class="s">➕ giriş · 07:59 · 0xd18820… · ilk_gun</div><div class="s">➕ giriş · 07:59 · 0xfbd234… · ilk_gun</div><div class="s">➖ çıkış · 11:07 · 0xf90c9e… · kadro_disi</div><div class="s">➖ çıkış · 11:07 · 0xc32f19… · kadro_disi</div><div class="s">➖ çıkış · 11:07 · 0x62edf4… · kadro_disi</div><div class="s">➕ giriş · 11:07 · 0x873015… · bos_slot</div><div class="s">➕ giriş · 11:07 · 0x6015e6… · bos_slot</div><div class="s">➖ çıkış · 19:26 · 0x241c8d… · slot_dusus</div><div class="s">➖ çıkış · 19:26 · 0xf43a34… · slot_dusus</div></div></div>
+</section>
+<section class="n5 izgara">
+<div class="p g3"><div class="pb">Takip edilen ilk 11 ve yedekler <span>radar 05.11 10:19 TSİ · dokun → bize ne verdi</span></div><div class="pi kl"><details class="kd"><summary><span class="sr">1</span><b>0xf3a42f…</b><span class="rz yok">BEKLİYOR</span><span class="fb"><i style="width:75%"></i></span><span class="fm">75</span><span class="nt yok"></span></summary><div class="ms"><div><span class="so">Durum</span><br>Henüz sahada değil — bekleme süresi, korelasyon ya da günlük değişiklik sınırı nedeniyle olabilir</div><div><span class="so">Radar 7g kopya getirisi</span><br>+%1,36</div><div><span class="so">Form puanı</span><br>75,0 / 100</div><div><span class="so">Azami kaldıraç</span><br>5,8x</div></div></details><details class="kd"><summary><span class="sr">2</span><b>0x873015…</b><span class="rz art">SAHADA</span><span class="fb"><i style="width:66%"></i></span><span class="fm">66</span><span class="nt art">+2,85 $</span></summary><div class="ms"><div><span class="so">Takibe alındı</span><br>05.11 11:07</div><div><span class="so">Slot (ayrılan para)</span><br>90,91 $</div><div><span class="so">Bize verdiği (net)</span><br><b class="art">+2,85 $</b> <span class="art">+%3,14</span></div><div><span class="so">Gerçekleşen (ücret, funding dahil) / açık</span><br>−0,03 $ / +2,88 $</div><div><span class="so">Emir sayısı</span><br>6</div><div><span class="so">Açık pozisyon</span><br>2</div><div><span class="so">Son işlem</span><br>05.11 23:35</div><div><span class="so">Radar 7g kopya getirisi</span><br>+%1,09</div></div></details><details class="kd"><summary><span class="sr">3</span><b>0x323f5a…</b><span class="rz art">SAHADA</span><span class="fb"><i style="width:65%"></i></span><span class="fm">65</span><span class="nt eks">−1,63 $</span></summary><div class="ms"><div><span class="so">Takibe alındı</span><br>05.11 07:58</div><div><span class="so">Slot (ayrılan para)</span><br>90,91 $</div><div><span class="so">Bize verdiği (net)</span><br><b class="eks">−1,63 $</b> <span class="eks">−%1,80</span></div><div><span class="so">Gerçekleşen (ücret, funding dahil) / açık</span><br>−0,14 $ / −1,50 $</div><div><span class="so">Emir sayısı</span><br>15</div><div><span class="so">Açık pozisyon</span><br>1</div><div><span class="so">Son işlem</span><br>05.11 14:46</div><div><span class="so">Radar 7g kopya getirisi</span><br>+%1,99</div></div></details><details class="kd"><summary><span class="sr">4</span><b>0x6015e6…</b><span class="rz art">SAHADA</span><span class="fb"><i style="width:62%"></i></span><span class="fm">62</span><span class="nt art">+1,98 $</span></summary><div class="ms"><div><span class="so">Takibe alındı</span><br>05.11 11:07</div><div><span class="so">Slot (ayrılan para)</span><br>90,91 $</div><div><span class="so">Bize verdiği (net)</span><br><b class="art">+1,98 $</b> <span class="art">+%2,18</span></div><div><span class="so">Gerçekleşen (ücret, funding dahil) / açık</span><br>−0,01 $ / +1,99 $</div><div><span class="so">Emir sayısı</span><br>3</div><div><span class="so">Açık pozisyon</span><br>1</div><div><span class="so">Son işlem</span><br>05.11 15:42</div><div><span class="so">Radar 7g kopya getirisi</span><br>+%2,32</div></div></details><details class="kd"><summary><span class="sr">5</span><b>0x241c8d…</b><span class="rz eks">İNİYOR</span><span class="fb"><i style="width:62%"></i></span><span class="fm">62</span><span class="nt eks">−10,31 $</span></summary><div class="ms"><div><span class="so">Takibe alındı</span><br>—</div><div><span class="so">Slot (ayrılan para)</span><br>90,91 $</div><div><span class="so">Bize verdiği (net)</span><br><b class="eks">−10,31 $</b> <span class="eks">−%11,34</span></div><div><span class="so">Gerçekleşen (ücret, funding dahil) / açık</span><br>−10,31 $ / +0,00 $</div><div><span class="so">Emir sayısı</span><br>31</div><div><span class="so">Açık pozisyon</span><br>0</div><div><span class="so">Son işlem</span><br>05.11 19:25</div><div><span class="so">Radar 7g kopya getirisi</span><br>+%1,78</div></div></details><details class="kd"><summary><span class="sr">6</span><b>0xd2cfee…</b><span class="rz art">SAHADA</span><span class="fb"><i style="width:62%"></i></span><span class="fm">62</span><span class="nt art">+2,75 $</span></summary><div class="ms"><div><span class="so">Takibe alındı</span><br>05.11 07:58</div><div><span class="so">Slot (ayrılan para)</span><br>90,91 $</div><div><span class="so">Bize verdiği (net)</span><br><b class="art">+2,75 $</b> <span class="art">+%3,02</span></div><div><span class="so">Gerçekleşen (ücret, funding dahil) / açık</span><br>+2,75 $ / +0,00 $</div><div><span class="so">Emir sayısı</span><br>15</div><div><span class="so">Açık pozisyon</span><br>0</div><div><span class="so">Son işlem</span><br>05.11 19:36</div><div><span class="so">Radar 7g kopya getirisi</span><br>+%1,41</div></div></details><details class="kd"><summary><span class="sr">7</span><b>0x14aa64…</b><span class="rz yok">BEKLİYOR</span><span class="fb"><i style="width:55%"></i></span><span class="fm">55</span><span class="nt yok"></span></summary><div class="ms"><div><span class="so">Durum</span><br>Henüz sahada değil — bekleme süresi, korelasyon ya da günlük değişiklik sınırı nedeniyle olabilir</div><div><span class="so">Radar 7g kopya getirisi</span><br>+%1,10</div><div><span class="so">Form puanı</span><br>55,0 / 100</div><div><span class="so">Azami kaldıraç</span><br>12,2x</div></div></details><details class="kd"><summary><span class="sr">8</span><b>0x20ad98…</b><span class="rz art">SAHADA</span><span class="fb"><i style="width:47%"></i></span><span class="fm">47</span><span class="nt art">+0,00 $</span></summary><div class="ms"><div><span class="so">Takibe alındı</span><br>05.11 07:58</div><div><span class="so">Slot (ayrılan para)</span><br>90,91 $</div><div><span class="so">Bize verdiği (net)</span><br><b class="art">+0,00 $</b> <span class="art">+%0,00</span></div><div><span class="so">Gerçekleşen (ücret, funding dahil) / açık</span><br>+0,00 $ / +0,00 $</div><div><span class="so">Emir sayısı</span><br>0</div><div><span class="so">Açık pozisyon</span><br>0</div><div><span class="so">Son işlem</span><br>—</div><div><span class="so">Radar 7g kopya getirisi</span><br>+%1,47</div></div></details><details class="kd"><summary><span class="sr">9</span><b>0x72e23f…</b><span class="rz yok">BEKLİYOR</span><span class="fb"><i style="width:45%"></i></span><span class="fm">45</span><span class="nt yok"></span></summary><div class="ms"><div><span class="so">Durum</span><br>Henüz sahada değil — bekleme süresi, korelasyon ya da günlük değişiklik sınırı nedeniyle olabilir</div><div><span class="so">Radar 7g kopya getirisi</span><br>+%2,83</div><div><span class="so">Form puanı</span><br>45,0 / 100</div><div><span class="so">Azami kaldıraç</span><br>13,2x</div></div></details><details class="kd"><summary><span class="sr">10</span><b>0xd18820…</b><span class="rz art">SAHADA</span><span class="fb"><i style="width:42%"></i></span><span class="fm">42</span><span class="nt eks">−3,67 $</span></summary><div class="ms"><div><span class="so">Takibe alındı</span><br>05.11 07:58</div><div><span class="so">Slot (ayrılan para)</span><br>90,91 $</div><div><span class="so">Bize verdiği (net)</span><br><b class="eks">−3,67 $</b> <span class="eks">−%4,04</span></div><div><span class="so">Gerçekleşen (ücret, funding dahil) / açık</span><br>−3,76 $ / +0,09 $</div><div><span class="so">Emir sayısı</span><br>29</div><div><span class="so">Açık pozisyon</span><br>1</div><div><span class="so">Son işlem</span><br>05.11 22:56</div><div><span class="so">Radar 7g kopya getirisi</span><br>+%1,45</div></div></details><details class="kd"><summary><span class="sr">11</span><b>0xda9f35…</b><span class="rz yok">BEKLİYOR</span><span class="fb"><i style="width:42%"></i></span><span class="fm">42</span><span class="nt yok"></span></summary><div class="ms"><div><span class="so">Durum</span><br>Henüz sahada değil — bekleme süresi, korelasyon ya da günlük değişiklik sınırı nedeniyle olabilir</div><div><span class="so">Radar 7g kopya getirisi</span><br>+%0,68</div><div><span class="so">Form puanı</span><br>42,3 / 100</div><div><span class="so">Azami kaldıraç</span><br>7,8x</div></div></details><details class="kd"><summary><span class="sr">·</span><b>0x62edf4…</b><span class="rz eks">İNİYOR</span><span class="fb"><i style="width:0%"></i></span><span class="fm"></span><span class="nt eks">−9,25 $</span></summary><div class="ms"><div><span class=so>Radar listesinde yok</span><br>kadro dışı, pozisyonlar kapanana kadar izleniyor</div><div><span class="so">Takibe alındı</span><br>—</div><div><span class="so">Slot (ayrılan para)</span><br>90,91 $</div><div><span class="so">Bize verdiği (net)</span><br><b class="eks">−9,25 $</b> <span class="eks">−%10,17</span></div><div><span class="so">Gerçekleşen (ücret, funding dahil) / açık</span><br>−0,06 $ / −9,18 $</div><div><span class="so">Emir sayısı</span><br>2</div><div><span class="so">Açık pozisyon</span><br>1</div><div><span class="so">Son işlem</span><br>05.11 08:52</div><div><span class="so">Radar 7g kopya getirisi</span><br>—</div></div></details><details class="kd"><summary><span class="sr">·</span><b>0xc32f19…</b><span class="rz eks">İNİYOR</span><span class="fb"><i style="width:0%"></i></span><span class="fm"></span><span class="nt art">+0,00 $</span></summary><div class="ms"><div><span class=so>Radar listesinde yok</span><br>kadro dışı, pozisyonlar kapanana kadar izleniyor</div><div><span class="so">Takibe alındı</span><br>—</div><div><span class="so">Slot (ayrılan para)</span><br>90,91 $</div><div><span class="so">Bize verdiği (net)</span><br><b class="art">+0,00 $</b> <span class="art">+%0,00</span></div><div><span class="so">Gerçekleşen (ücret, funding dahil) / açık</span><br>+0,00 $ / +0,00 $</div><div><span class="so">Emir sayısı</span><br>0</div><div><span class="so">Açık pozisyon</span><br>0</div><div><span class="so">Son işlem</span><br>—</div><div><span class="so">Radar 7g kopya getirisi</span><br>—</div></div></details><details class="kd"><summary><span class="sr">·</span><b>0xf90c9e…</b><span class="rz eks">İNİYOR</span><span class="fb"><i style="width:0%"></i></span><span class="fm"></span><span class="nt art">+0,00 $</span></summary><div class="ms"><div><span class=so>Radar listesinde yok</span><br>kadro dışı, pozisyonlar kapanana kadar izleniyor</div><div><span class="so">Takibe alındı</span><br>—</div><div><span class="so">Slot (ayrılan para)</span><br>90,91 $</div><div><span class="so">Bize verdiği (net)</span><br><b class="art">+0,00 $</b> <span class="art">+%0,00</span></div><div><span class="so">Gerçekleşen (ücret, funding dahil) / açık</span><br>+0,00 $ / +0,00 $</div><div><span class="so">Emir sayısı</span><br>0</div><div><span class="so">Açık pozisyon</span><br>0</div><div><span class="so">Son işlem</span><br>—</div><div><span class="so">Radar 7g kopya getirisi</span><br>—</div></div></details><div class="yb">YEDEKLER</div><details class="kd"><summary><span class="sr">12</span><b>0xfbd234…</b><span class="rz art">SAHADA</span><span class="fb"><i style="width:33%"></i></span><span class="fm">33</span><span class="nt eks">−1,28 $</span></summary><div class="ms"><div><span class="so">Takibe alındı</span><br>05.11 07:58</div><div><span class="so">Slot (ayrılan para)</span><br>90,91 $</div><div><span class="so">Bize verdiği (net)</span><br><b class="eks">−1,28 $</b> <span class="eks">−%1,41</span></div><div><span class="so">Gerçekleşen (ücret, funding dahil) / açık</span><br>−0,02 $ / −1,26 $</div><div><span class="so">Emir sayısı</span><br>3</div><div><span class="so">Açık pozisyon</span><br>1</div><div><span class="so">Son işlem</span><br>05.11 22:08</div><div><span class="so">Radar 7g kopya getirisi</span><br>+%0,76</div></div></details><details class="kd"><summary><span class="sr">13</span><b>0xadf861…</b><span class="rz yok">YEDEK</span><span class="fb"><i style="width:25%"></i></span><span class="fm">25</span><span class="nt yok"></span></summary><div class="ms"><div><span class="so">Durum</span><br>Henüz sahada değil — yedek listede</div><div><span class="so">Radar 7g kopya getirisi</span><br>+%0,48</div><div><span class="so">Form puanı</span><br>24,6 / 100</div><div><span class="so">Azami kaldıraç</span><br>5,0x</div></div></details><details class="kd"><summary><span class="sr">14</span><b>0xf43a34…</b><span class="rz eks">İNİYOR</span><span class="fb"><i style="width:18%"></i></span><span class="fm">18</span><span class="nt eks">−10,07 $</span></summary><div class="ms"><div><span class="so">Takibe alındı</span><br>—</div><div><span class="so">Slot (ayrılan para)</span><br>90,91 $</div><div><span class="so">Bize verdiği (net)</span><br><b class="eks">−10,07 $</b> <span class="eks">−%11,08</span></div><div><span class="so">Gerçekleşen (ücret, funding dahil) / açık</span><br>−10,07 $ / +0,00 $</div><div><span class="so">Emir sayısı</span><br>23</div><div><span class="so">Açık pozisyon</span><br>0</div><div><span class="so">Son işlem</span><br>05.11 19:26</div><div><span class="so">Radar 7g kopya getirisi</span><br>+%1,00</div></div></details><div class="mt">Kartların toplamı <b class="eks">−28,63 $</b> + kapanmış slotlar <b>+0,00 $</b> = <b>−28,63 $</b> (başlangıçtan beri özsermaye farkı −28,63 $)</div></div></div>
+</section>
+<section class="n4 izgara">
+<div class="g3 sirit"><div class="h"><div class="hb">WS kopma</div><div class="hd ">1</div><div class="ha">bu vardiyada</div></div><div class="h"><div class="hb">REST 429</div><div class="hd ">0</div><div class="ha">hız sınırı</div></div><div class="h"><div class="hb">Vardiya süresi</div><div class="hd ">4,3 sa</div><div class="ha">son tur</div></div><div class="h"><div class="hb">Özsermaye zirvesi</div><div class="hd ">1.001,05 $</div><div class="ha"></div></div></div>
+<div class="p g2"><div class="pb">Zirveden düşüş (tur sonları) <span>−%2,96</span></div><div class="pi"><svg viewBox="0 0 300 80" preserveAspectRatio="none" class="gr"><polygon points="0,80 0.0,12.6 150.0,24.7 300.0,78.0 300,80" fill="#ff5d5d" opacity=".16"/><polyline fill="none" stroke="#ff5d5d" stroke-width="1.8" vector-effect="non-scaling-stroke" points="0.0,12.6 150.0,24.7 300.0,78.0"/></svg></div></div>
+<div class="p"><div class="pb">Risk olayları <span>24 sa</span></div><div class="pi"><div class="s eks">⚠ 19:24 · vardiya_boslugu</div></div></div>
+</section>
+</div>
+<div class="so" style="margin:16px 0 4px;font-size:11px">Sanal kip: gerçek para yok. Veriler Hyperliquid halka açık verisidir. Saatler TSİ; "bugün" UTC gün başından (03:00 TSİ) itibaren sayılır.</div>
+<script>(function(){var e=document.getElementById("bayat");if(e&&Date.now()-Number(e.dataset.ms)>6*3600*1000)e.style.display="block"})()</script>
+</body></html>

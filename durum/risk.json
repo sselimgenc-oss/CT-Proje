@@ -7,16 +7,16 @@
  },
  "dur": false,
  "dur_neden": null,
- "fren_bitis": {},
+ "fren_bitis": {
+  "0x323f5af42fad4f877e84488b39443f42b964b88d": 1793912849954
+ },
  "gun": "2026-11-05",
  "gun_basi": 1000.0,
  "yeni_coin": {
   "0x241c8daa9a23a6b124b438804911f2452aff8e0e": [
    1793872449979
   ],
-  "0x323f5af42fad4f877e84488b39443f42b964b88d": [
-   1793869463344
-  ],
+  "0x323f5af42fad4f877e84488b39443f42b964b88d": [],
   "0x6015e674d03cabeba664406f517d172e9fad7dec": [
    1793882551907
   ],
