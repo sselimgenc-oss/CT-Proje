@@ -105,17 +105,61 @@ class Telegram:
         return komutlar
 
 
-# ---------------------------------------------------------------------------------------------- mesaj biçimleri (kısa)
+# ---------------------------------------------------------------------------------------------- mesaj biçimleri (sade Türkçe, emojili)
+KIP_ADI = {"sanal": "sanal · deneme parası", "gercek": "GERÇEK PARA"}
+NEDEN_TR = {"ilk_gun": "ilk kadro", "bos_slot": "boş yer açıldı", "kadro_disi": "günlük kadrodan düştü", "dusme": "slot değeri düştü (kural)"}
+EYLEM_TR = {"ac": "pozisyon açtı", "artir": "pozisyonunu artırdı", "azalt": "pozisyonunu azalttı", "kapat": "pozisyonu kapattı"}
+
+
+def tr_sayi(x: float, ondalik: int = 2) -> str:
+    """1234.5 → '1.234,50' (Türkçe gösterim)."""
+    return f"{x:,.{ondalik}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def tr_yuzde(oran: float, ondalik: int = 2) -> str:
+    """0.0125 → '+%1,25'."""
+    return ("+" if oran >= 0 else "−") + "%" + tr_sayi(abs(oran) * 100, ondalik)
+
+
+def kip_adi(kip: str) -> str:
+    return KIP_ADI.get(kip, kip)
+
+
+def msg_baslangic(kip: str, kasa: float, saha: int, n: int, vardiya: str) -> str:
+    return (f"🟢 Vardiya başladı ({kip_adi(kip)})\n💰 Kasa: {tr_sayi(kasa, 0)} $\n👥 Takip edilen trader: {saha}/{n}\n"
+            f"ℹ️ Emir olunca, trader girip çıkınca ve her gün özet mesajı gelir. /durum yaz, anlık durumu göster.\n🔖 vardiya no …{vardiya[-4:]}")
+
+
 def msg_saha(tur: str, adres: str, neden: str, sira: int | None = None) -> str:
-    return f"SAHA {tur}: {kisa(adres)}" + (f" (sıra {sira})" if sira else "") + f" — {neden}"
+    kok, _, ek = neden.partition(" ")
+    aciklama = NEDEN_TR.get(kok, kok) + (f" {ek}" if ek else "")
+    if tur == "giriş":
+        return f"➕ Yeni trader takibe alındı: {kisa(adres)}\n↳ Neden: {aciklama}"
+    return f"➖ Trader takipten çıktı: {kisa(adres)}\n↳ Neden: {aciklama}"
 
 
-def msg_emir(adres: str, coin: str, yon: str, usd: float, px: float | None, kayma: float | None, durum: str, kip: str) -> str:
-    return (f"EMİR[{kip}] {kisa(adres)} {coin} {'AL' if yon == 'B' else 'SAT'} {usd:.1f}$ @{px:.6g}" if px else f"EMİR[{kip}] {kisa(adres)} {coin} {'AL' if yon == 'B' else 'SAT'} {usd:.1f}$ {durum}") \
-        + (f" kayma {kayma * 1e4:+.1f}bp" if kayma is not None else "") + f" [{durum}]"
+def msg_emir(adres: str, coin: str, yon: str, usd: float, px: float | None, kayma: float | None, durum: str, kip: str, eylem: str = "") -> str:
+    ne = "AL" if yon == "B" else "SAT"
+    ok = "🟢" if yon == "B" else "🔴"
+    ilk = f"{ok} {coin} {ne}: {tr_sayi(usd, 0 if usd >= 100 else 1)} $ ({kip_adi(kip)})"
+    nedeni = f"\n↳ Trader {kisa(adres)} {EYLEM_TR.get(eylem, 'işlem yaptı')}, biz de kopyaladık"
+    if durum != "dolu":
+        return f"⚠️ {coin} {ne}: emir tam dolmadı ({durum}) · istenen {tr_sayi(usd, 0 if usd >= 100 else 1)} $ ({kip_adi(kip)}){nedeni}"
+    return ilk + nedeni + (f"\n↳ Fiyat {px:.6g}" if px else "") + (f" · trader'a göre fark {kayma * 1e4:+.1f} bp" if kayma is not None else "")
 
 
 def msg_gunluk(kip: str, kasa: float, ozsermaye: float, gun_getiri: float, toplam_getiri: float, saha: int, n: int, acik: list[str], funding_usd: float | None = None) -> str:
-    return (f"GÜNLÜK ÖZET [{kip}] kasa {kasa:.0f}$ · özsermaye {ozsermaye:.2f}$ · gün {gun_getiri * 100:+.2f}% · toplam {toplam_getiri * 100:+.2f}% · saha {saha}/{n}"
-            + (f" · funding {funding_usd:+.4f}$" if funding_usd is not None else "") + "\n"
-            + ("açık: " + ", ".join(acik) if acik else "açık pozisyon yok"))
+    satirlar = [f"📅 Günlük özet ({kip_adi(kip)})",
+                f"💰 Kasa {tr_sayi(kasa, 0)} $ → şimdi {tr_sayi(ozsermaye)} $",
+                f"{'📈' if gun_getiri >= 0 else '📉'} Bugün {tr_yuzde(gun_getiri)} · başlangıçtan beri {tr_yuzde(toplam_getiri)}",
+                f"👥 Takipte {saha}/{n} trader"]
+    if funding_usd is not None:
+        satirlar.append(f"💸 Funding (sanal): {funding_usd:+.2f} $")
+    satirlar.append(f"📌 Açık pozisyon ({len(acik)}): " + ", ".join(acik[:8]) + (" …" if len(acik) > 8 else "") if acik else "📌 Açık pozisyon yok")
+    return "\n".join(satirlar)
+
+
+def msg_durum(kip: str, ozsermaye: float, kasa: float, saha: int, n: int, inen: int, acik_poz: int, emir: int, dur: bool) -> str:
+    return (f"📊 Anlık durum ({kip_adi(kip)})\n💰 Özsermaye {tr_sayi(ozsermaye)} $ (kasaya göre {tr_yuzde(ozsermaye / kasa - 1)})\n"
+            f"👥 Takipte {saha}/{n} trader" + (f" · {inen} tanesi ayrılıyor (pozisyonları kapanıyor)" if inen else "") + f"\n"
+            f"📌 Açık pozisyon: {acik_poz}\n🧾 Bu vardiyada emir: {emir}\n" + ("🛑 Motor DURDURULDU" if dur else "🛡️ Risk: normal, motor çalışıyor"))
