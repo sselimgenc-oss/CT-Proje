@@ -278,7 +278,7 @@ def kayitlar(tmp_path, tur=None):
 def test_uctan_uca_altin_ornek_acilis_azaltma_kapanis(tmp_path):
     """Kasa 1.000 → N 11, slot 90,909 $. Trader hesap 100.000 $, 300 BTC × 100 $ = 30.000 $ açar (oran 0,30): emir 27,27 $, IOC ask 100 → 0,27273 BTC, ücret 27,27 × 0,00045 = 0,01227 $, kayma 0.
     Trader %50 azaltır: 13,636 $ SATIŞ (bid 99,9 → kayma aleyhimize +%0,1); kalanı kapatır: tüm pozisyon reduce-only."""
-    m, hl, saat, tgp = kur(tmp_path)
+    m, hl, saat, tgp = kur(tmp_path, kurallar={"canli_telegram_sanal_ozet_dk": 0})          # 0 = eski 15 dk'lık özet davranışı (saatlik özet ayrı testlerde)
     m.baslat()
     assert list(m.saha.uyeler) == [adr(1)] and m.saha.slot == pytest.approx(1000 / 11)
     s1 = m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
