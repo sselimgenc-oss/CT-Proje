@@ -591,9 +591,9 @@ def _hip3_senaryo(tmp_path, rules):
     return satir_al(kos(c, tmp_path, rules=rules), A1)
 
 
-def test_radar_hip3_kopya_true_ikisi_de_kopyalanir_varsayilan_bugunku(tmp_path):
-    assert RULES["radar_hip3_kopya"] is True                                      # varsayılan = bugünkü davranış
-    s = _hip3_senaryo(tmp_path, RULES1)
+def test_radar_hip3_kopya_true_ikisi_de_kopyalanir_eski_v1_davranisi(tmp_path):
+    assert RULES["radar_hip3_kopya"] is False                                     # K‑43: varsayılan = HIP‑3 hariç
+    s = _hip3_senaryo(tmp_path, {**RULES1, "radar_hip3_kopya": True})
     assert s["ayna_getiri_7g"] == pytest.approx(0.003372727, abs=1e-8) and s["kopya_getiri_7g"] == pytest.approx(0.00326226, abs=1e-7)
     assert s["hip3_nosyonel_pay"] == pytest.approx(20_500 / 22_600) and s["islem_sayisi"] == 2 and s["gecti"] is True
 
@@ -603,6 +603,15 @@ def test_radar_hip3_kopya_false_yalniz_perp_kopyalanir_trader_olculeri_degismez(
     assert s["ayna_getiri_7g"] == pytest.approx(0.0011, abs=1e-9) and s["kopya_getiri_7g"] == pytest.approx(0.001078055, abs=1e-9)
     assert s["hip3_nosyonel_pay"] == pytest.approx(20_500 / 22_600) and s["islem_sayisi"] == 2
     assert s["likit_pay"] == 1.0 and s["gecti"] is True
+
+
+def test_radar_hip3_kopya_ve_canli_hip3_kopya_varsayilanlari_ayni():
+    assert RULES["radar_hip3_kopya"] is RULES["canli_hip3_kopya"] is False         # iki anahtar ayrışmasın (K‑43)
+
+
+def test_ozet_md_gecti_11den_azsa_uyari_satiri(tmp_path):
+    sonuc = kos(Sahte([lider(A1, 20_000, 100, 2_000_000)], {}), tmp_path)
+    assert "⚠ UYARI: gecti 0 < 11" in r.ozet_md(sonuc)
 
 
 def test_hip3_ayikla_spot_ve_perp_kalir_hip3_tamami_gider():
@@ -621,7 +630,7 @@ def test_hip3_nosyonel_pay_uc_durumlar():
 
 def test_kural_ust_bool_false_gercekten_false_olur():
     yeni, uygulanan = r.kural_ust_uygula(RULES, ["radar_hip3_kopya=false"])
-    assert yeni["radar_hip3_kopya"] is False and uygulanan == {"radar_hip3_kopya": False} and RULES["radar_hip3_kopya"] is True
+    assert yeni["radar_hip3_kopya"] is False and uygulanan == {"radar_hip3_kopya": False} and RULES["radar_hip3_kopya"] is False
     assert r.kural_ust_uygula(RULES, ["radar_hip3_kopya=true"])[0]["radar_hip3_kopya"] is True
     with pytest.raises(ValueError):
         r.kural_ust_uygula(RULES, ["radar_hip3_kopya=hayir"])
