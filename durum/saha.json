@@ -1,13 +1,30 @@
 {
  "alarm_gunu": null,
- "bekleme": {},
+ "bekleme": {
+  "0x62edf4fae01255c64496e2241e5da680ac959c1c": 1795075644543,
+  "0xc32f19039aee519e22bd8c6145ef03951274e558": 1795075644543,
+  "0xf90c9edfd2ee7fa07615978b348b99500bb17963": 1795075644543
+ },
  "degisiklik": {
-  "adet": 0,
+  "adet": 2,
   "gun": "2026-11-05"
  },
- "inen": {},
+ "inen": {
+  "0x62edf4fae01255c64496e2241e5da680ac959c1c": {
+   "inis_ms": 1793866044543,
+   "neden": "kadro_disi"
+  },
+  "0xc32f19039aee519e22bd8c6145ef03951274e558": {
+   "inis_ms": 1793866044543,
+   "neden": "kadro_disi"
+  },
+  "0xf90c9edfd2ee7fa07615978b348b99500bb17963": {
+   "inis_ms": 1793866044543,
+   "neden": "kadro_disi"
+  }
+ },
  "kurulu": true,
- "son_kosu_ms": 1793841373358,
+ "son_kosu_ms": 1793863142722,
  "uyeler": {
   "0x20ad988487d6a53fea7918657f45fe0bb8fd8183": {
    "giris_ms": 1793854733695,
@@ -27,17 +44,17 @@
    "sira_ust": 0,
    "son_islem_ms": 1793810391148
   },
-  "0x62edf4fae01255c64496e2241e5da680ac959c1c": {
-   "giris_ms": 1793854733695,
-   "giris_sira": 9,
+  "0x6015e674d03cabeba664406f517d172e9fad7dec": {
+   "giris_ms": 1793866044543,
+   "giris_sira": 4,
    "sira_ust": 0,
-   "son_islem_ms": 1793857966951
+   "son_islem_ms": null
   },
-  "0xc32f19039aee519e22bd8c6145ef03951274e558": {
-   "giris_ms": 1793854733695,
-   "giris_sira": 7,
+  "0x8730154f2c794a59cd6adb0d8328a9770c13b616": {
+   "giris_ms": 1793866044543,
+   "giris_sira": 2,
    "sira_ust": 0,
-   "son_islem_ms": 1793589003105
+   "son_islem_ms": null
   },
   "0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee": {
    "giris_ms": 1793854733695,
@@ -56,12 +73,6 @@
    "giris_sira": 8,
    "sira_ust": 0,
    "son_islem_ms": 1793822499150
-  },
-  "0xf90c9edfd2ee7fa07615978b348b99500bb17963": {
-   "giris_ms": 1793854733695,
-   "giris_sira": 2,
-   "sira_ust": 0,
-   "son_islem_ms": 1793851448098
   },
   "0xfbd234f73a3cfa398f36f396ba527c85006c3f9e": {
    "giris_ms": 1793854733695,
