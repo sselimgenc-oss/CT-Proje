@@ -530,8 +530,3 @@ def test_telegram_gece_sessiz_alarm_her_zaman_sesli():
     t_gece = tg.Telegram(TOKEN, CHAT, sahte, sessiz_utc=(21, 5), saat_s=lambda: gece + 9 * 3600)                 # 22:46 UTC = 01:46 TSİ
     t_gunduz.gonder("🧾 emir özeti"), t_gece.gonder("🧾 emir özeti"), t_gece.gonder("ALARM: kapanış EKSİK"), t_gece.gonder("DUR: komut")
     assert [y["disable_notification"] for y in yuklenen] == [False, True, False, False]
-
-
-def test_telegram_vardiya_sonu_mesaji():
-    assert tg.msg_vardiya_sonu("sanal", 255.4, 58, 995.34, 1000.0, 9, 11, 7) == (
-        "🔚 4 saatlik tur bitti (sanal · deneme parası) · 4.3 saat sürdü\n🧾 Bu turda 58 emir\n💰 Özsermaye 995,34 $ (kasaya göre −%0,47)\n👥 Takipte 9/11 trader · 📌 açık pozisyon 7")
