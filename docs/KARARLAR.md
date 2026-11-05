@@ -158,3 +158,20 @@
 - Kullanıcı kendi Cloudflare hesabında `sg-pano` Workers statik sayfasını kurdu; GitHub reposuna bağlı, üretim dalı `canli-durum`, çıktı klasörü `pano`.
 - **Yalnız herkese açık veri dalını okuyan salt okunur görüntü:** secret/anahtar yok, hesap/emir yok, sunucu yok. K‑20 ("Cloudflare ve DigitalOcean yok") bu istisna dışında geçerlidir; gerçek para sunucusu (T5) ayrı karardır.
 - **Ek (kullanıcı onayı 2026-11-05):** Cloudflare'in kendi build sistemi bu repoda 10'dan fazla denemede takıldığı için pano yayını `canli_yayimla.sh` içinden `wrangler deploy` ile yapılır (yalnız ana dal `canli-durum`, yalnız `pano/index.html`). `CLOUDFLARE_API_TOKEN` yalnız "Workers düzenle" yetkilidir (para/emir/hesap yetkisi yok) ve yalnız GitHub Secrets'ta durur; `CLOUDFLARE_ACCOUNT_ID` aynı yerde. Test istisnası yalnız `canli_vardiya.yml` içindir; R2/AWS/wrangler iş akışı yasakları sürer. Hata yayımı durdurmaz, uyarı olarak görünür. Lider denetiminde.
+
+### K‑41. Aynı coinde ters yönlü kopya pozisyonu açılmaz (lider, 2026-11-05 akşam)
+- **Bulgu:** başka trader'dan ters pozisyon varken açılış gelirse net pozisyon küçülür; reduce‑only kapanış net pozisyonu büyütebilir (`sonnet_durum_t4b.md` #4).
+- **Kural:** aynı coinde zıt yönde kopya pozisyonumuz varken gelen **açılış** atlanır (sayaç `ters_netlesme`); sanal ve gerçek kipte aynıdır (demo gerçeği yansıtsın). Pano atlanan sinyallerde gösterir.
+
+### Lider kararları — 2026-11-05 akşam (kullanıcının "ikinci beyni")
+- **Madde 0 (a–e):** hepsi ONAY (K‑40 işlendi).
+- **Gerçek kip öncesi (T5'ten ÖNCE; sanalda da aynı kod, testle):** t4b #2 (kısmi/iptal dolum miktarı deftere), #3 (her dolumdan sonra `hesap.json` + `motor.json` atomik yazım: geçici dosya + fsync + rename; son uygulanan niyet kimliği `hesap.json`'da; yeniden başlatmada sonrası oynatılır; çökme testi),
+  #4 (K‑41), #5 (kendi yatırma/çekme kaydı görülünce `hl_ofset` yeniden hesaplanır; HL hesabında kasa ayarı kadar para tutulursa ofset 0), #6 (kuyruk taşınca düşen olay da `poz_tr`'yi günceller), #7 (`funding_oran_yok` sayacı).
+- **Telegram:** `/kapat`, `/dur` (yalnız yeni giriş durur), `/devam` ONAY. `baslat`'ta `DUR` dosyası yoksa `risk.json dur` sıfırlanır ve kayda yazılır (`DUR` dosyası tek yetkili). Vardiya başında, başlangıçtan önceki son 15 dk'da gelip düşürülen komutlara "komut vardiya arasında geldi, işlenmedi, tekrar gönder" yanıtı (komut çalıştırılmaz). `/durum` gerçek risk bayraklarını gösterir (günlük kayıp, mutabakat, `elle_dur`, fren).
+- **Diğer:** HL < 10 $ reduce‑only: T5'te kullanıcı onayıyla küçük gerçek deneme; kısmi azaltma kalanı < 10 $ ise atlanır (t4b #2) ONAY. `yatirma_payi` −8,27 önemli olabilir: yöntem DEĞİŞMEZ, 7 gün ölç (her radar özetinde |yatirma_payi| > 0,2 olan aday sayısı ve kadroda olanlar), Pazartesi birlikte karar.
+  `kopya_koruma` −21,7: bilgi (kapı zaten eler), kapatıldı. `non_funding_ledger` sayfalama: DÜZELT. Pano bayat `ozet.json`: 15 dk döngüde vardiya kimliği kontrolü varsa yeter, kapat. `sonnet_isci.yml` kullanılmıyorsa KALDIR.
+  `copytrade-izleme` ve birleşmiş `claude/*` dallarının silinmesi ONAY ("eski sistemden hiçbir şey kalmasın"); önce liste PR'a yazılır. KORUNAN: `main`, `radar`, `radar-deneme`, `canli-durum`, `canli-durum-deneme`, `claude/stoic-carson-w3xagz`.
+- **Canlıya geçiş:** 7 gün sanal ONAY; "temiz" tanımı ONAY (vardiya boşluğu yok, `kapanis_eksik` 0, KRİTİK yok; KRİTİK olursa sayaç 0'dan). Ek şart: yukarıdaki gerçek kip öncesi ve Telegram maddeleri main'de ve testli olmalı; **sayaç bunlar birleştikten sonraki ilk vardiyadan başlar**.
+- **İlk gerçek kasa: 300 $** (kullanıcı kararı; lider önerisi: 11 trader sahada kalacak kadar. 275 $ alt sınır, 250 $ → N = 10). Önceki "100 $" kararı geçersiz: 100 $'da N = 4, slot 25 $, en küçük emir 11 $ → sinyallerin çoğu atlanır.
+- **Paralel deneme:** 300 $'lık sanal vardiya `canli-durum-deneme` dalında koşar; üretim 1.000 $ serisi değişmez. Özet/pano: atlanan sinyal oranı (`min_emir_atlandi` / toplam sinyal) 300 $ ve 1.000 $ yan yana gösterilir.
+

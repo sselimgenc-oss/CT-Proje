@@ -34,9 +34,21 @@ Güncel tutulur; lider 09.11'de bunu okuyarak devralır. Saatler UTC, aksi belir
 - Gerçek kip, cüzdan, anahtar, sunucu, kasa artırımı: lider dönünce birlikte.
 
 ## Canlıya geçiş — kullanıcı kararları (2026-11-05, lidere)
-- **Sanal doğrulama: 7 gün** kesintisiz temiz çalışma. Sayaç yeni kodlarla (#533/#534/#535) başlayan ilk vardiyadan (≈ 05–06.11 gece) başlar. "Temiz" önerisi: vardiya boşluğu yok, `kapanis_eksik` 0, sağlık kontrolünde `KRITIK` yok (UYARI açıklanmış), haftalık denetimde engelleyici bulgu yok. Sayaç bozulursa (KRİTİK) 0'dan başlar — lider kararı.
-- **İlk gerçek kasa: 100 $** (`canli_kasa_usd`; mevcut sanal kasa 1.000 $ ayarı bu karar gerçek kipe geçerken uygulanır, şimdi DEĞİŞMEZ: sanal seri bozulmaz). Artırım yalnız kullanıcı kararıyla, üst sınır 1.000 $ (K-22/K-26).
+- **Sanal doğrulama: 7 gün** kesintisiz temiz çalışma. Sayaç, lider kararındaki gerçek kip öncesi + Telegram maddeleri main'e testli birleştikten sonraki ilk vardiyadan başlar (önceki "#533/#534/#535" tarihi geçersiz). "Temiz" önerisi: vardiya boşluğu yok, `kapanis_eksik` 0, sağlık kontrolünde `KRITIK` yok (UYARI açıklanmış), haftalık denetimde engelleyici bulgu yok. Sayaç bozulursa (KRİTİK) 0'dan başlar — lider kararı.
+- **İlk gerçek kasa: 300 $** (kullanıcı kararı 05.11 akşam; önceki 100 $ geçersiz, bkz. KARARLAR "Lider kararları — 2026-11-05 akşam") (`canli_kasa_usd`; mevcut sanal kasa 1.000 $ ayarı bu karar gerçek kipe geçerken uygulanır, şimdi DEĞİŞMEZ: sanal seri bozulmaz). Artırım yalnız kullanıcı kararıyla, üst sınır 1.000 $ (K-22/K-26).
 - Gerçek kip, cüzdan (MetaMask + para çekme yetkisiz API cüzdanı), anahtar, sunucu (T5): lider onayı + Opus denetimli gerçek kip riskleri (#2–#7 `sonnet_durum_t4b.md`, `/kapat` sonrası `risk.json dur` sıfırlama) çözülmeden BAŞLAMAZ.
+
+## Lider kararları 05.11 akşam — iş listesi (KARARLAR.md'ye işli)
+| # | İş | Durum |
+|---|---|---|
+| 1 | Docs: K‑41 + kararlar + 300 $ | bu PR |
+| 2 | Dal temizliği listesi (silme onaylı; liste PR'da, sonra silinir) | sırada |
+| 3 | t4b #2, #3 (atomik yazım + çökme testi), #6, #7 | sırada |
+| 4 | K‑41 `ters_netlesme` (#4) + pano | sırada |
+| 5 | #5 `hl_ofset` yatırma/çekme + `non_funding_ledger` sayfalama | sırada |
+| 6 | Telegram: baslat DUR sıfırlama, vardiya arası komut yanıtı, `/durum` gerçek bayraklar | sırada |
+| 7 | 300 $ paralel sanal vardiya (`canli-durum-deneme`) + yan yana atlanan oran | sırada |
+| 8 | `yatirma_payi` 7 gün ölçüm satırı (radar özeti); `sonnet_isci.yml` kaldır | sırada |
 
 ## Önerilen kararlar (lider)
 - **Telegram komutları (kullanıcı kararı 2026-11-05, lider denetimine):** `/kapat` = eski `/dur` (tüm pozisyonları kapat, motor durur, `DUR` dosyası). **Yeni `/dur`** = yalnız yeni giriş/artırma durur (`risk.acilis_durdu["elle_dur"]`, kalıcı); çıkış/azaltma serbest, motor çalışır, `DUR` yazılmaz (`docs/H2_KURULUM.md`'deki özgün `/dur` anlamı). `/devam` (= `/baslat`) duraklatmayı açar; `/kapat` sonrası açmaz (motor kapalı; yeniden açmak sunucudan — T5 sürekli sunucuda `DUR` silme/yeniden başlatma). Eski `/dur` testi `/kapat` ile aynen korundu.
