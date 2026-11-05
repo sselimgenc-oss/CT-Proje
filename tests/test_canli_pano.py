@@ -106,7 +106,7 @@ def test_html_pano_turkce_biçim_ve_kacis(tmp_path):
     ozet = {"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1012.5, "getiri": 0.0125, "saha": 9, "saha_n": 11, "dinleyici": {"kopma": 1}, "rest_429": 0,
             "acik": [{"adres": "0xabc<script>12345", "coin": "BTC", "sz": 0.5, "usd": 1234.0, "kz_usd": -3.5}]}
     h = pano.html_olustur(ozet, {"gun_basi": 1000.0, "zirve": 1020.0}, {}, [], [{"gun": "2026-11-01", "ozsermaye": 1000.0}], 1_793_900_000_000)
-    assert "1.012,50 $" in h and "+%1,25" in h and "1.234,00 $" in h and "−3,50 $" in h and "<polyline" in h and "<script>" not in h and "TSİ" in h and "GERÇEK PARA" not in h
+    assert "1.012,50 $" in h and "+%1,25" in h and "1.234,00 $" in h and "−3,50 $" in h and "<polyline" in h and "0xabc<sc" not in h and "0xabc&lt;sc" in h and "TSİ" in h and "GERÇEK PARA" not in h
     assert "GERÇEK PARA" in pano.html_olustur({**ozet, "kip": "gercek"}, {}, {}, [], [], 1_793_900_000_000)
 
 
@@ -121,5 +121,28 @@ def test_html_pano_kadro_sekmesi_ilk11_yedek_ve_bize_verdigi(tmp_path):
     hesap = {"realize": {a1: 5.0}, "ucret": {a1: 1.0}, "slot_bas": {a1: 90.0}}
     saha = {"uyeler": {a1: {"giris_ms": 1_793_800_000_000}}, "inen": {}}
     h = pano.html_olustur(ozet, {}, hesap, [{"olay": "emir", "adres": a1, "zaman_ms": 1_793_850_000_000, "coin": "BTC", "yon": "B", "durum": "dolu"}], [], 1_793_900_000_000, kadro, saha)
-    assert 'SAHADA' in h and 'SIRADA' in h and 'YEDEK' in h and "YEDEKLER" in h
+    assert 'SAHADA' in h and 'BEKLİYOR' in h and 'YEDEK' in h and "YEDEKLER" in h
     assert "+2,00 $" in h and "Emir sayısı" in h                                                      # a1 net = 5 − 1 + (−2) = +2,00 $
+
+
+def test_html_pano_kadro_funding_dahil_bilinmeyen_kz_tire_kadro_disi_ve_mutabakat():
+    from copytrade.canli import pano
+    a1, a2, a3 = "0xaaaa111122223333", "0xbbbb111122223333", "0xdddd111122223333"
+    kadro = {"kosu_ms": 1_793_863_000_000, "satirlar": [{"adres": a1, "sira": 1, "katman": "ilk11", "form": 75.0, "kopya_getiri_7g": 0.014, "max_kaldirac": 5.0}]}
+    ozet = {"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "acik": [{"adres": a1, "coin": "BTC", "sz": 1.0, "usd": 100.0, "kz_usd": -2.0},
+                                                                              {"adres": a2, "coin": "ETH", "sz": 1.0, "usd": 50.0, "kz_usd": None}]}
+    hesap = {"realize": {a1: 5.0, a2: 1.0, a3: 0.0}, "ucret": {a1: 1.0, a2: 0.0, a3: 0.0}, "funding": {a1: -0.5}, "slot_bas": {a1: 90.0, a2: 90.0, a3: 90.0}, "kapanmis_net": 0.25}
+    saha = {"uyeler": {a1: {}, a2: {}}, "inen": {a3: {"inis_ms": 1}}}
+    h = pano.html_olustur(ozet, {}, hesap, [], [], 1_793_900_000_000, kadro, saha)
+    assert "+1,50 $" in h                                  # a1 net = 5 − 1 − 0,5 + (−2) = +1,50 (funding dahil)
+    assert "0xbbbb11" in h and "0xdddd11" in h and "İNİYOR" in h and "Radar listesinde yok" in h   # radar listesinde olmayan sahada/inen üyeler de görünür
+    assert "bazı K/Z bilinmiyor" in h and "kapanmış slotlar" in h                           # a2'nin açık K/Z'si bilinmiyor → 0 sayılmaz, toplam eksik işaretli
+
+
+def test_pano_bayat_ozet_yazilmaz(tmp_path, capsys):
+    import json as _j
+    from copytrade.canli import pano
+    (tmp_path / "durum").mkdir()
+    (tmp_path / "durum" / "ozet.json").write_text(_j.dumps({"vardiya": "111", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0}))
+    rc = pano.main(["--durum", str(tmp_path / "durum"), "--kayit", str(tmp_path / "kayit"), "--gecmis", str(tmp_path / "g.json"), "--cikti", str(tmp_path / "OZET.md"), "--html", str(tmp_path / "index.html"), "--vardiya", "222"])
+    assert rc == 0 and not (tmp_path / "OZET.md").exists() and not (tmp_path / "index.html").exists() and "bayat" in capsys.readouterr().err
