@@ -455,6 +455,9 @@ def ozet_md(sonuc: dict) -> str:
     for sutun in SAYISAL:
         degerler = [s[sutun] for s in satirlar if s.get(sutun) is not None]
         cikti.append(f"| {sutun} | {len(degerler)} | " + (f"{min(degerler):.6g} | {statistics.median(degerler):.6g} | {max(degerler):.6g} |" if degerler else "— | — | — |"))
+    gecen = sum(1 for s in satirlar if s["gecti"])
+    if gecen < 11:
+        cikti += ["", f"⚠ UYARI: gecti {gecen} < 11 → kadro 11'den az; saha dolmayabilir (otomatik true'ya dönülmez, lider karar verir)."]
     esik = float(load_rules()["para_hareketi_isaret_payi"])
     isaretli = yatirma_isaretli(satirlar, esik)
     cikti += ["", f"Para hareketi (bilgi): `yatirma_payi` > {esik:g} olan **{len(isaretli)}** kişi" + (": " + ", ".join(f"{x['adres'][:10]}… ({x['yatirma_payi']:+.2f}{', gecti' if x['gecti'] else ''})" for x in isaretli[:15]) if isaretli else "")]

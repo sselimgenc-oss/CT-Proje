@@ -40,7 +40,7 @@ Akış: **R0 evren → R1 kopyalanabilirlik (şimdi) → R2 form puanı (son 7 g
 | 8 | **Şans süzgeci (K‑27)** | G (R2: kopya işlem getirilerinden bootstrap toplamın %20 alt yüzdeliği) > 0 | 300 kişi her gün tarandığında şansla parlayanlar çok; kârı birkaç işleme dayanan elenir |
 | 9 | Akıl sağlığı | kopya getirisi ≤ +%300, hesap > 0 | Uç değer = veri hatası şüphesi → elenir, raporlanır |
 
-**Deneme seçeneği (K‑43 adayı), varsayılan KAPALI:** `radar_hip3_kopya: false` iken kopya oynatmada HIP‑3 (`dex:COIN`) dolumları hiç oynatılmaz (motor K‑42 ile aynı). Varsayılan `true` = yukarıdaki yöntem aynen; kapılar ve eşikler değişmez. Yan yana ölçüm (A: dahil, B: hariç) sonucu lider + kullanıcı kararına gider; karar yoksa bu satır uygulanmaz. Bilgi alanı `hip3_nosyonel_pay`.
+**K‑43 notu (06.11, Opus onayı, kullanıcı onayı bekliyor):** yöntem aynı; yalnız HIP‑3 (`dex:COIN`) dolumları oynatmadan çıkar (`radar_hip3_kopya: false` varsayılan; motor K‑42 ile aynı). `true` = yukarıdaki yöntem aynen (eski v1); kapılar ve eşikler değişmez. Bilgi alanı `hip3_nosyonel_pay`.
 
 Ölçüm sırası ucuzdan pahalıya (devir → vault → dolum tavanı 5.000 → dolum kuralları → kopya oynatma); zaman bütçesi 120 dk (K‑27, T2 lider kararı).
 R1'den geçenlere **"radar havuzu"** denir. Her eleme nedeniyle (`neden` kodu) raporlanır.
