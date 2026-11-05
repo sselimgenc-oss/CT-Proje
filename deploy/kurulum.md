@@ -40,7 +40,8 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now sg-canli
 journalctl -u sg-canli -f
 ```
-Durdurma: `sudo systemctl stop sg-canli` (açık pozisyonlar yerinde kalır) ya da Telegram `/dur` (tüm pozisyonlar reduce-only kapanır, motor durur, `DUR` yazılır).
+Durdurma: `sudo systemctl stop sg-canli` (açık pozisyonlar yerinde kalır) ya da Telegram `/kapat` (tüm pozisyonlar reduce-only kapanır, motor durur, `DUR` yazılır).
+Telegram komutları: `/kapat` = tüm pozisyonları kapat + motor durur (`DUR`); `/dur` = yalnız yeni giriş/artırma durur, çıkış serbest, motor çalışır; `/devam` = `/dur` duraklatmasını kaldırır (`/kapat` sonrası açmaz: sunucudan `DUR` silinir). `/durum` = risk bayrakları.
 `DUR` dosyası (`/var/lib/sg-canli/durum/DUR`) elle silinmeden motor yeniden **açılmaz** (çıkış kodu 3, systemd yeniden başlatmaz).
 
 ## 5. Güncelleme

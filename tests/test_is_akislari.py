@@ -232,3 +232,43 @@ def test_k40_pano_yayini_yalniz_ana_dal_ve_anahtar_varsa_ve_hata_gorunur():
     wf = (WF / "canli_vardiya.yml").read_text(encoding="utf-8")
     assert wf.count("secrets.CLOUDFLARE_API_TOKEN") == 2 and "secrets.CLOUDFLARE_ACCOUNT_ID" in wf
     assert "env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID python -u -m copytrade.canli.motor" in wf   # motor süreci anahtarı görmez
+
+
+# ---------------------------------------------------------------------------------------------------- B1: Telegram yalnız main
+def _telegram_envleri(wf: dict):
+    """(is, ad, değer) — iş ve adım düzeyindeki TELEGRAM_* ortam değişkenleri."""
+    for is_adi, is_ in wf.get("jobs", {}).items():
+        for ad, deger in (is_.get("env") or {}).items():
+            if ad.startswith("TELEGRAM"):
+                yield is_adi, ad, str(deger)
+        for a in is_.get("steps", []):
+            for ad, deger in (a.get("env") or {}).items():
+                if ad.startswith("TELEGRAM"):
+                    yield is_adi, ad, str(deger)
+
+
+def test_telegram_secretlari_yalniz_main_dalinda_verilir_b1():
+    """B1 (Opus denetimi 05.11): deneme/dal koşuları Telegram token/chat id görmez (iki getUpdates tüketicisi komut kaybettirir)."""
+    bulunan = 0
+    for dosya in sorted(WF.glob("*.yml")):
+        metin = dosya.read_text(encoding="utf-8")
+        for _, ad, deger in _telegram_envleri(yaml.safe_load(metin)):
+            bulunan += 1
+            assert f"secrets.{ad}" in deger and "github.ref == 'refs/heads/main'" in deger and deger.rstrip("} ").endswith("|| ''"), (dosya.name, ad, deger)
+        for satir in metin.splitlines():                  # hiçbir yerde çıplak Telegram secret'ı yok
+            if "secrets.TELEGRAM" in satir and not satir.lstrip().startswith("#"):
+                assert "refs/heads/main" in satir, (dosya.name, satir)
+    assert bulunan >= 4          # canli_vardiya (2) + saglik (2)
+
+
+def test_telegram_tokensiz_kanal_kapali_ve_sessiz_b1():
+    """Deneme dalında secret '' gelir: kanal kapalı, ağ çağrısı yok."""
+    from copytrade.canli import telegram as tg
+
+    def yasak(url, yuk):
+        raise AssertionError("token yokken ağ çağrısı yapılmamalı")
+
+    t = tg.Telegram(post=yasak, ortam={"TELEGRAM_BOT_TOKEN": "", "TELEGRAM_CHAT_ID": ""})
+    assert not t.token and not t.chat_id
+    assert t.gonder("deneme") is False
+    assert t.komutlari_al() == []
