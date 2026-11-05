@@ -35,6 +35,7 @@ Güncel tutulur; lider 09.11'de bunu okuyarak devralır. Saatler UTC, aksi belir
 
 ## Önerilen kararlar (lider)
 - **Telegram komutları (kullanıcı kararı 2026-11-05, lider denetimine):** `/kapat` = eski `/dur` (tüm pozisyonları kapat, motor durur, `DUR` dosyası). **Yeni `/dur`** = yalnız yeni giriş/artırma durur (`risk.acilis_durdu["elle_dur"]`, kalıcı); çıkış/azaltma serbest, motor çalışır, `DUR` yazılmaz (`docs/H2_KURULUM.md`'deki özgün `/dur` anlamı). `/devam` (= `/baslat`) duraklatmayı açar; `/kapat` sonrası açmaz (motor kapalı; yeniden açmak sunucudan — T5 sürekli sunucuda `DUR` silme/yeniden başlatma). Eski `/dur` testi `/kapat` ile aynen korundu.
+- **Opus bulguları (lidere, T5 öncesi):** (1) `/kapat` sonrası yalnız `durum/DUR` silinip motor yeniden başlatılırsa `risk.json` içindeki `dur: true` kalır ve motor açılış yapmaz — T5 yeniden açma prosedürü `risk.json dur`'u da sıfırlamalı (ya da `baslat` DUR yokken sıfırlamalı). (2) İki vardiya arasında gönderilen komutlar `telegram_eski_komut` olarak sessizce düşer (kullanıcıya yanıt yok): komutu vardiya başladıktan sonra tekrar gönder. (3) `gunluk_kayip`/`mutabakat` etkinken `/durum` hâlâ "Risk: normal" der (eski; küçük iyileştirme).
 
 ## Günlük kontrol tablosu
 | Tarih | radar çalıştı | gecti | ana vardiya sayısı/boşluk | kasa / özsermaye | olaylar |

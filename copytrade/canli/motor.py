@@ -909,15 +909,20 @@ class Motor:
                 self.tg.gonder(self.durum_metni())
 
     def _duraklat(self, ac: bool) -> None:
-        """Elle duraklatma (`risk.acilis_durdu['elle_dur']`; kalıcı: risk durumu motor.json'da). Kapanış/azaltma `acilis_izni`nden geçmediği için DURAKLATMADAN etkilenmez."""
+        """Elle duraklatma (`risk.acilis_durdu['elle_dur']`; kalıcı: `risk.json`). Kapanış/azaltma `acilis_izni`nden geçmediği için DURAKLATMADAN etkilenmez."""
         if not ac and self.risk.dur:
             self.tg.gonder(tg.alarm("Motor kapalı", "Motor `/kapat` ile durduruldu; yeniden açmak sunucudan yapılır. `/devam` bunu açmaz."))
             return
         self.risk.bayrak("elle_dur", ac)
         self.kayit({"olay": "elle_dur" if ac else "elle_devam"})
         self.tg.gonder(tg.alarm("Yeni işlemler duraklatıldı", "Yeni pozisyon açılmaz, artırılmaz. Açık pozisyonlar trader'ı izlemeye ve azaltmaya/kapatmaya devam eder.\nAçmak için /devam.", "⏸️") if ac
-                       else tg.alarm("Yeni işlemler açıldı", "Motor normal çalışıyor.", "▶️"))
+                       else tg.alarm("Duraklatma kaldırıldı", self._devam_govde(), "▶️"))
         self.durum_yaz()
+
+    def _devam_govde(self) -> str:
+        """`/devam` yanıtı: başka bir açılış engeli (günlük kayıp, mutabakat, kasa sınırı, kapanış eksik...) sürüyorsa yeni işlemlerin hâlâ KAPALI olduğunu söyler (yanıltmaz)."""
+        diger = sorted(k for k, v in self.risk.acilis_durdu.items() if v and k != "elle_dur")
+        return "Motor normal çalışıyor." if not diger else f"Duraklatma kalktı ama yeni işlemler hâlâ kapalı: {', '.join(diger)}."
 
     def durum_metni(self) -> str:
         oz = self.ozsermaye()
