@@ -15,7 +15,7 @@ import statistics
 import subprocess
 import sys
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 from html import escape as esc
 from pathlib import Path
 
@@ -113,8 +113,40 @@ def pano_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], isab
     return "\n".join(s) + "\n", gecmis_yeni
 
 
+TSI = timezone(timedelta(hours=3))
+RENKLER = ("#f5a524", "#3ddc84", "#5b9dff", "#ff5d5d", "#b07cff", "#2dd4bf", "#f472b6", "#a3a3a3")
+
+
+def _tsi(ms: int, bicim: str = "%d.%m %H:%M") -> str:
+    return datetime.fromtimestamp(ms / 1000, TSI).strftime(bicim)
+
+
+def _cizgi(deg: list[float], renk: str, dolgu: bool = True, taban: float | None = None) -> str:
+    """Alan/çizgi grafik (inline SVG). 2'den az nokta → bilgi yazısı."""
+    if len(deg) < 2:
+        return '<div class="bos">Veri birikiyor — birkaç tur sonra çizilir</div>'
+    lo = min(deg) if taban is None else min(min(deg), taban)
+    hi = max(deg) if taban is None else max(max(deg), taban)
+    ar = (hi - lo) or 1.0
+    xs = [i * 300 / (len(deg) - 1) for i in range(len(deg))]
+    ys = [78 - (v - lo) / ar * 66 for v in deg]
+    pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in zip(xs, ys))
+    alan = f'<polygon points="0,80 {pts} 300,80" fill="{renk}" opacity=".16"/>' if dolgu else ""
+    return f'<svg viewBox="0 0 300 80" preserveAspectRatio="none" class="gr">{alan}<polyline fill="none" stroke="{renk}" stroke-width="1.8" vector-effect="non-scaling-stroke" points="{pts}"/></svg>'
+
+
+def _cubuk(deg: list[float]) -> str:
+    if not deg:
+        return '<div class="bos">Günlük çubuklar ilk günün sonunda görünür</div>'
+    m = max(abs(v) for v in deg) or 1.0
+    w = 300 / len(deg)
+    r = "".join(f'<rect x="{i * w + w * .15:.1f}" y="{(40 - max(v, 0) / m * 36):.1f}" width="{w * .7:.1f}" height="{max(abs(v) / m * 36, 1.2):.1f}" fill="{"#3ddc84" if v >= 0 else "#ff5d5d"}"/>' for i, v in enumerate(deg))
+    return f'<svg viewBox="0 0 300 80" preserveAspectRatio="none" class="gr"><line x1="0" y1="40" x2="300" y2="40" stroke="#3a3a40" stroke-width=".6"/>{r}</svg>'
+
+
 def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecmis: list[dict], simdi_ms: int) -> str:
-    """Telefonda açılan tek dosyalık sade, görsel sayfa (Cloudflare Pages `pano/index.html`). Saf fonksiyon; aynı veriyi `pano_olustur` ile paylaşır (yeni hesap yok). Dış kaynak/JS yok."""
+    """Telefonda/bilgisayarda açılan tek dosyalık koyu "terminal" paneli (Cloudflare `pano/index.html`): rakam şeridi, özsermaye/düşüş/günlük K-Z grafikleri, pozisyon dağılımı, pozisyon ve işlem tabloları, içgörüler.
+    Saf fonksiyon; yeni hesap yok (özet + kayıtlardan yalnız toplama/dizme). Dış kaynak/JS yok; tüm metin HTML kaçışlı."""
     kasa, oz = float(ozet.get("kasa_usd") or 0.0), float(ozet.get("ozsermaye_usd") or 0.0)
     gun_basi, zirve = risk.get("gun_basi"), risk.get("zirve")
     gun = (oz - float(gun_basi)) / kasa if gun_basi is not None and kasa > 0 else None
@@ -122,71 +154,116 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     hafta = hafta_getirisi(gecmis, oz, simdi_ms, kasa)
     k24 = pencere24(kayitlar, simdi_ms)
     emirler = [k for k in k24 if k.get("olay") == "emir"]
-    kaymalar = [abs(k["kayma_trader"]) * 1e4 for k in emirler if k.get("durum") in ("dolu", "kismi") and k.get("kayma_trader") is not None]
+    dolum = [k for k in emirler if k.get("durum") in ("dolu", "kismi")]
+    kaymalar = [abs(k["kayma_trader"]) * 1e4 for k in dolum if k.get("kayma_trader") is not None]
     funding24 = sum(float(k.get("funding_usd") or 0.0) for k in k24 if k.get("olay") == "funding")
     din = ozet.get("dinleyici") or {}
+    kip = str(ozet.get("kip", "—"))
 
     def tl(v: float | None, isaretli: bool = False) -> str:
         return "—" if v is None else (tr_isaretli(v) if isaretli else tr_sayi(v)) + " $"
 
     def tyuz(v: float | None) -> str:
         return "—" if v is None else tr_yuzde(v)
-    kip = str(ozet.get("kip", "—"))
 
     def renk(v: float | None) -> str:
         return "yok" if v is None else ("art" if v >= 0 else "eks")
 
-    def kutu(baslik: str, deger: str, sinif: str = "") -> str:
-        return f'<div class="k"><div class="e">{esc(baslik)}</div><div class="d {sinif}">{esc(deger)}</div></div>'
+    def hucre(baslik: str, deger: str, sinif: str = "", alt: str = "") -> str:
+        return f'<div class="h"><div class="hb">{esc(baslik)}</div><div class="hd {sinif}">{esc(deger)}</div><div class="ha">{esc(alt)}</div></div>'
+
+    # özsermaye serisi: tur sonu kayıtları (kapanis) + günlük geçmiş + şimdi
+    seri = sorted({int(k["zaman_ms"]): float(k["ozet"]["ozsermaye_usd"]) for k in kayitlar if k.get("olay") == "kapanis" and (k.get("ozet") or {}).get("ozsermaye_usd") is not None}.items())
+    if len(seri) < 2:
+        seri = [(0, float(g["ozsermaye"])) for g in gecmis if g.get("ozsermaye") is not None] + seri
+    deg = [v for _, v in seri]
+    if not deg or deg[-1] != oz:
+        deg.append(oz)
+    tepe, dd = 0.0, []
+    for v in deg:
+        tepe = max(tepe, v)
+        dd.append((v / tepe - 1) * 100 if tepe > 0 else 0.0)
+    gunluk: dict[str, float] = {}
+    for ms, v in seri:
+        if ms:
+            gunluk[datetime.fromtimestamp(ms / 1000, UTC).date().isoformat()] = v
+    gv = list(gunluk.values())
+    cubuklar = [b - a for a, b in zip(gv, gv[1:])]
 
     acik = ozet.get("acik")
     if acik is None:
         acik = [{"adres": a, "coin": c, "sz": q["sz"], "usd": abs(q["sz"]) * q["giris"], "kz_usd": None} for a, cs in (hesap.get("poz") or {}).items() for c, q in cs.items()]
-    pozlar = "".join(
-        f'<div class="p"><div><b>{esc(q["coin"])}</b> <span class="y">{"uzun" if q["sz"] > 0 else "kısa"}</span><div class="e">trader {esc(kisa(q["adres"]))}</div></div>'
-        f'<div class="r"><div>{esc(tl(q.get("usd")))}</div><div class="{renk(q.get("kz_usd"))}">{esc(tl(q.get("kz_usd"), True))}</div></div></div>'
-        for q in sorted(acik, key=lambda q: -(q.get("usd") or 0))) or '<div class="e">Açık pozisyon yok</div>'
+    acik = sorted(acik, key=lambda q: -(q.get("usd") or 0))
+    toplam = sum(q.get("usd") or 0 for q in acik) or 1.0
+    coin_usd: dict[str, float] = {}
+    for q in acik:
+        coin_usd[q["coin"]] = coin_usd.get(q["coin"], 0.0) + (q.get("usd") or 0)
+    dilim = sorted(coin_usd.items(), key=lambda x: -x[1])
+    cubuk_html = "".join(f'<span style="width:{u / toplam * 100:.2f}%;background:{RENKLER[i % len(RENKLER)]}" title="{esc(c)}"></span>' for i, (c, u) in enumerate(dilim))
+    efsane = "".join(f'<span class="lg"><i style="background:{RENKLER[i % len(RENKLER)]}"></i>{esc(c)} {u / toplam * 100:.0f}%</span>' for i, (c, u) in enumerate(dilim[:8]))
+    poz_satir = "".join(f'<tr><td><b>{esc(q["coin"])}</b></td><td>{"UZUN" if q["sz"] > 0 else "KISA"}</td><td class="sg">{esc(tl(q.get("usd")))}</td><td class="sg {renk(q.get("kz_usd"))}">{esc(tl(q.get("kz_usd"), True))}</td><td class="so">{esc(kisa(q["adres"]))}</td></tr>' for q in acik) or '<tr><td colspan="5" class="bos">Açık pozisyon yok</td></tr>'
+    EYLEM = {"ac": "AÇ", "artir": "ARTIR", "azalt": "AZALT", "kapat": "KAPAT"}
+    islem_satir = "".join(f'<tr><td class="so">{_tsi(int(k["zaman_ms"]), "%H:%M")}</td><td><b>{esc(str(k.get("coin", "")))}</b></td><td class="{"art" if k.get("yon") == "B" else "eks"}">{"AL" if k.get("yon") == "B" else "SAT"} · {EYLEM.get(k.get("eylem", ""), "")}</td><td class="sg">{esc(tl(k.get("usd_dolan") or k.get("usd_istenen")))}</td><td class="sg so">{tr_sayi(abs(k["kayma_trader"]) * 1e4 if k.get("kayma_trader") is not None else 0, 1)} bp</td></tr>'
+                          for k in sorted(emirler, key=lambda k: -int(k["zaman_ms"]))[:12]) or '<tr><td colspan="5" class="bos">Son 24 saatte emir yok</td></tr>'
+    # içgörüler (yalnız dizme/sayma)
+    ic = []
+    kz = [q for q in acik if q.get("kz_usd") is not None]
+    if kz:
+        en_iyi, en_kotu = max(kz, key=lambda q: q["kz_usd"]), min(kz, key=lambda q: q["kz_usd"])
+        ic.append(f'En iyi pozisyon: <b>{esc(en_iyi["coin"])}</b> <span class="{renk(en_iyi["kz_usd"])}">{esc(tl(en_iyi["kz_usd"], True))}</span>; en zayıf: <b>{esc(en_kotu["coin"])}</b> <span class="{renk(en_kotu["kz_usd"])}">{esc(tl(en_kotu["kz_usd"], True))}</span>.')
+        ic.append(f'Açık pozisyonların {sum(1 for q in kz if q["kz_usd"] >= 0)}/{len(kz)} tanesi kârda.')
+    sayim: dict[str, int] = {}
+    for k in emirler:
+        sayim[k.get("adres", "")] = sayim.get(k.get("adres", ""), 0) + 1
+    if sayim:
+        a_, n_ = max(sayim.items(), key=lambda x: x[1])
+        ic.append(f'Son 24 saatte en çok işlem yapan trader: <b>{esc(kisa(a_))}</b> ({n_} emir).')
+    if kaymalar:
+        ic.append(f'Emirler trader fiyatına ortalama {tr_sayi(sum(kaymalar) / len(kaymalar), 1)} bp farkla doldu (küçük = iyi).')
+    ic.append(f'Brüt pozisyon {esc(tl(sum(q.get("usd") or 0 for q in acik)))} = kasanın %{(sum(q.get("usd") or 0 for q in acik) / kasa * 100 if kasa > 0 else 0):.0f}\'i.')
     saha = [k for k in k24 if k.get("olay") in ("saha_giris", "saha_dus")]
-    sahalar = "".join(f'<div class="s">{"➕" if k["olay"] == "saha_giris" else "➖"} {datetime.fromtimestamp(k["zaman_ms"] / 1000, UTC):%H:%M} · {esc(kisa(k["adres"]))} · {esc(str(k.get("neden", "")))}</div>' for k in saha) or '<div class="e">Değişiklik yok</div>'
+    saha_html = "".join(f'<div class="s">{"➕ giriş" if k["olay"] == "saha_giris" else "➖ çıkış"} · {_tsi(int(k["zaman_ms"]), "%H:%M")} · {esc(kisa(k["adres"]))} · {esc(str(k.get("neden", "")))}</div>' for k in saha) or '<div class="bos">Trader listesinde değişiklik yok</div>'
     riskler = [k for k in k24 if k.get("olay") in RISK_OLAYLARI]
-    risk_html = "".join(f'<div class="s">⚠️ {datetime.fromtimestamp(k["zaman_ms"] / 1000, UTC):%H:%M} · {esc(str(k["olay"]))}</div>' for k in riskler) or '<div class="e">✅ Risk olayı yok</div>'
-    nokta = [float(g["ozsermaye"]) for g in gecmis if g.get("ozsermaye") is not None]
-    if not nokta or nokta[-1] != oz:
-        nokta.append(oz)
-    grafik = '<div class="e">Grafik için en az 2 günlük geçmiş gerekir</div>'
-    if len(nokta) >= 2:
-        lo, hi = min(nokta), max(nokta)
-        aralik = (hi - lo) or 1.0
-        pts = " ".join(f"{i * 300 / (len(nokta) - 1):.1f},{70 - (v - lo) / aralik * 60:.1f}" for i, v in enumerate(nokta))
-        grafik = f'<svg viewBox="0 0 300 80" class="g"><polyline fill="none" stroke="currentColor" stroke-width="2.5" points="{pts}"/></svg><div class="e">en düşük {esc(tl(lo))} · en yüksek {esc(tl(hi))}</div>'
-    uyari = "" if kip != "gercek" else '<div class="u">⚠️ GERÇEK PARA</div>'
-    gun_adi = datetime.fromtimestamp(simdi_ms / 1000, UTC)
+    risk_html = "".join(f'<div class="s eks">⚠ {_tsi(int(k["zaman_ms"]), "%H:%M")} · {esc(str(k["olay"]))}</div>' for k in riskler) or '<div class="s art">✓ Son 24 saatte risk olayı yok</div>'
+    gun_kayip_pay = min(max(-(gun or 0) / 0.05, 0.0), 1.0) * 100
+    dusus_pay = min(max((dusus or 0) / 0.20, 0.0), 1.0) * 100
+    uyari = '<div class="uy">⚠ GERÇEK PARA</div>' if kip == "gercek" else ""
     return f"""<!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><meta name="color-scheme" content="dark">
 <title>Copy Trade Panosu</title>
 <style>
-:root{{--bg:#f4f6fb;--kart:#fff;--yazi:#1b2233;--soluk:#6b7488;--art:#0f9d58;--eks:#d93025;--cizgi:#e3e7f0}}
-@media(prefers-color-scheme:dark){{:root{{--bg:#0f1420;--kart:#181f30;--yazi:#e8ecf5;--soluk:#8d97ad;--art:#34d399;--eks:#f87171;--cizgi:#27304a}}}}
-*{{box-sizing:border-box}}body{{margin:0 auto;background:var(--bg);color:var(--yazi);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:16px;max-width:560px}}
-h1{{font-size:20px;margin:4px 0 2px}}h2{{font-size:15px;margin:22px 0 8px;color:var(--soluk);text-transform:uppercase;letter-spacing:.04em}}
-.c{{background:var(--kart);border:1px solid var(--cizgi);border-radius:16px;padding:14px;margin-bottom:10px}}
-.b{{font-size:34px;font-weight:700}}.e{{color:var(--soluk);font-size:13px}}.d{{font-weight:650;font-size:18px}}
-.iz{{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}}.k{{background:var(--bg);border-radius:12px;padding:10px}}
-.art{{color:var(--art)}}.eks{{color:var(--eks)}}.yok{{color:var(--soluk)}}
-.p{{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--cizgi)}}.p:last-child{{border:0}}.r{{text-align:right}}
-.y{{font-size:12px;background:var(--bg);border-radius:8px;padding:1px 7px;color:var(--soluk)}}.s{{padding:5px 0;font-size:14px}}
-.g{{width:100%;height:80px;color:var(--art)}}.u{{background:var(--eks);color:#fff;border-radius:12px;padding:8px 12px;font-weight:700;margin:8px 0}}
+:root{{--bg:#0a0a0b;--k:#111113;--cz:#25252a;--y:#e9e9ee;--so:#8a8a94;--tu:#f5a524;--art:#3ddc84;--eks:#ff5d5d}}
+*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--y);font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;padding:12px}}
+.ust{{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}}.lg0{{background:var(--tu);color:#000;font-weight:800;padding:2px 7px;border-radius:3px}}
+.ust b{{font-size:15px;letter-spacing:.05em}}.so,.ha{{color:var(--so)}}.rozet{{border:1px solid var(--cz);border-radius:3px;padding:1px 8px;color:var(--tu);font-size:11px}}
+.sirit{{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--cz);border:1px solid var(--cz);margin-bottom:8px}}
+.h{{background:var(--k);padding:9px 11px}}.hb{{font-size:10px;letter-spacing:.09em;color:var(--so);text-transform:uppercase}}.hd{{font-size:20px;font-weight:700;margin:2px 0}}.ha{{font-size:11px}}
+.art{{color:var(--art)}}.eks{{color:var(--eks)}}.yok{{color:var(--so)}}
+.izgara{{display:grid;grid-template-columns:1fr;gap:8px}}.p{{background:var(--k);border:1px solid var(--cz);min-width:0}}
+.pb{{font-size:10px;letter-spacing:.09em;color:var(--tu);text-transform:uppercase;padding:8px 11px;border-bottom:1px solid var(--cz);display:flex;justify-content:space-between}}.pb span{{color:var(--so)}}
+.pi{{padding:10px 11px}}.gr{{width:100%;height:110px;display:block}}.bos{{color:var(--so);padding:14px 4px;font-size:12px}}
+table{{width:100%;border-collapse:collapse;font-size:12px}}td,th{{padding:6px 8px;border-bottom:1px solid #1c1c21;text-align:left;white-space:nowrap}}th{{font-size:10px;color:var(--so);letter-spacing:.08em}}.sg{{text-align:right}}tr:last-child td{{border:0}}
+.tw{{overflow-x:auto}}.dg{{display:flex;height:16px;border-radius:3px;overflow:hidden;background:#1c1c21}}.dg span{{display:block;height:100%}}
+.lg{{display:inline-block;margin:6px 12px 0 0;font-size:11px;color:var(--so)}}.lg i{{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}}
+.s{{padding:4px 0;font-size:12px}}.ic div{{padding:5px 0 5px 12px;border-bottom:1px solid #1c1c21;position:relative}}.ic div:before{{content:"›";color:var(--tu);position:absolute;left:0}}
+.ol{{height:7px;background:#1c1c21;border-radius:4px;margin:4px 0 9px;overflow:hidden}}.ol i{{display:block;height:100%;background:var(--tu)}}.uy{{background:var(--eks);color:#fff;font-weight:800;padding:6px 10px;margin-bottom:8px;border-radius:3px}}
+@media(min-width:900px){{body{{padding:18px;max-width:1280px;margin:auto}}.sirit{{grid-template-columns:repeat(6,1fr)}}.izgara{{grid-template-columns:repeat(3,1fr)}}.g2{{grid-column:span 2}}.g3{{grid-column:span 3}}}}
 </style></head><body>
-<h1>📊 Copy Trade Panosu</h1><div class="e">{esc(kip_adi(kip))} · güncelleme {gun_adi:%d.%m.%Y %H:%M} UTC · her 4 saatte bir yenilenir</div>{uyari}
-<h2>Kasa</h2><div class="c"><div class="e">Özsermaye</div><div class="b">{esc(tl(oz))}</div>
-<div class="iz">{kutu("Bugün", tyuz(gun), renk(gun))}{kutu("Bu hafta", tyuz(hafta) if hafta is not None else "7 gün dolmadı", renk(hafta))}{kutu("Başlangıçtan beri", tyuz(ozet.get("getiri")), renk(ozet.get("getiri")))}{kutu("Zirveden düşüş", tyuz(-dusus if dusus is not None else None), renk(-dusus if dusus is not None else None))}</div></div>
-<h2>Özsermaye grafiği</h2><div class="c">{grafik}</div>
-<h2>Açık pozisyonlar ({len(acik)})</h2><div class="c">{pozlar}</div>
-<h2>Son 24 saat</h2><div class="c"><div class="iz">{kutu("Emir", str(len(emirler)))}{kutu("Ort. fark", f"{sum(kaymalar) / len(kaymalar):.1f} bp" if kaymalar else "—")}{kutu("Funding", tl(funding24, True), renk(funding24))}{kutu("Takipte", f"{ozet.get('saha', '—')}/{ozet.get('saha_n', '—')} trader")}</div></div>
-<h2>Trader değişiklikleri</h2><div class="c">{sahalar}</div>
-<h2>Risk</h2><div class="c">{risk_html}</div>
-<h2>Sistem sağlığı</h2><div class="c"><div class="s">Bağlantı kopması: {esc(str(din.get("kopma", "—")))} · REST 429: {esc(str(ozet.get("rest_429", "—")))}</div></div>
-<div class="e" style="margin:18px 0">Sanal kip: gerçek para yok. Veriler Hyperliquid halka açık verisidir.</div>
+<div class="ust"><div><span class="lg0">CT</span> <b>COPY TRADE PANOSU</b></div><div><span class="rozet">{esc(kip_adi(kip))}</span> <span class="so">güncelleme {_tsi(simdi_ms, "%d.%m.%Y %H:%M")} TSİ · her 4 saatte bir</span></div></div>{uyari}
+<div class="sirit">{hucre("Özsermaye", tl(oz), "", f"kasa {tr_sayi(kasa, 0)} $")}{hucre("Bugün", tyuz(gun), renk(gun), tl(oz - float(gun_basi), True) if gun_basi is not None else "")}{hucre("Bu hafta", tyuz(hafta) if hafta is not None else "—", renk(hafta), "" if hafta is not None else "7 gün dolmadı")}{hucre("Başlangıçtan beri", tyuz(ozet.get("getiri")), renk(ozet.get("getiri")), tl(oz - kasa, True))}{hucre("Zirveden düşüş", tyuz(-dusus if dusus is not None else None), renk(-dusus if dusus is not None else None), f"zirve {tl(float(zirve))}" if zirve else "")}{hucre("Açık pozisyon", str(len(acik)), "", f"brüt {tl(sum(q.get('usd') or 0 for q in acik))}")}</div>
+<div class="sirit">{hucre("Emir (24 sa)", str(len(emirler)), "", f"dolum {len(dolum)}")}{hucre("Ort. fark", f"{tr_sayi(sum(kaymalar) / len(kaymalar), 1)} bp" if kaymalar else "—", "", "trader fiyatına göre")}{hucre("Funding (24 sa)", tl(funding24, True), renk(funding24), "sanal")}{hucre("Takipte", f"{ozet.get('saha', '—')}/{ozet.get('saha_n', '—')}", "", "trader")}{hucre("WS kopma", str(din.get("kopma", "—")), "", "tur başına")}{hucre("REST 429", str(ozet.get("rest_429", "—")), "", "hız sınırı")}</div>
+<div class="izgara">
+<div class="p"><div class="pb">Özsermaye (tur sonları) <span>{esc(tl(oz))}</span></div><div class="pi">{_cizgi(deg, "#f5a524")}</div></div>
+<div class="p"><div class="pb">Zirveden düşüş (tur sonları) <span>{dd[-1]:.2f}%</span></div><div class="pi">{_cizgi(dd, "#ff5d5d", taban=0.0)}</div></div>
+<div class="p"><div class="pb">Günlük net K/Z <span>$</span></div><div class="pi">{_cubuk(cubuklar)}</div></div>
+<div class="p g2"><div class="pb">Açık pozisyonlar <span>{len(acik)} adet</span></div><div class="tw"><table><tr><th>COİN</th><th>YÖN</th><th class="sg">TUTAR</th><th class="sg">K/Z</th><th>TRADER</th></tr>{poz_satir}</table></div></div>
+<div class="p"><div class="pb">Para dağılımı <span>coin başına</span></div><div class="pi"><div class="dg">{cubuk_html}</div>{efsane}</div></div>
+<div class="p g2"><div class="pb">Son işlemler <span>24 sa, en yeni üstte</span></div><div class="tw"><table><tr><th>SAAT</th><th>COİN</th><th>YÖN</th><th class="sg">TUTAR</th><th class="sg">FARK</th></tr>{islem_satir}</table></div></div>
+<div class="p"><div class="pb">İçgörüler</div><div class="pi ic">{"".join(f"<div>{x}</div>" for x in ic)}</div></div>
+<div class="p"><div class="pb">Risk payı <span>sınıra göre</span></div><div class="pi"><div class="ha">Günlük kayıp (sınır %5)</div><div class="ol"><i style="width:{gun_kayip_pay:.0f}%"></i></div><div class="ha">Zirveden düşüş (sınır %20)</div><div class="ol"><i style="width:{dusus_pay:.0f}%"></i></div>{risk_html}</div></div>
+<div class="p"><div class="pb">Trader değişiklikleri <span>24 sa</span></div><div class="pi">{saha_html}</div></div>
+</div>
+<div class="so" style="margin:16px 0 4px;font-size:11px">Sanal kip: gerçek para yok. Veriler Hyperliquid halka açık verisidir. Saatler TSİ.</div>
 </body></html>
 """
 
