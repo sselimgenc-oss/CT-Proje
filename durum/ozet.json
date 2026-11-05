@@ -4,77 +4,77 @@
    "adres": "0x323f5af42fad4f877e84488b39443f42b964b88d",
    "coin": "xyz:GOLD",
    "giris": 4129.782351499513,
-   "kz_usd": -2.7141368839444406,
-   "mark": 4087.65,
+   "kz_usd": -2.791440052289357,
+   "mark": 4086.45,
    "sz": 0.06441930695408234,
-   "usd": 263.3235800708547
+   "usd": 263.24627690250975
   },
   {
    "adres": "0x6015e674d03cabeba664406f517d172e9fad7dec",
    "coin": "ETH",
    "giris": 2253.5,
-   "kz_usd": -0.27251412501999456,
-   "mark": 2236.85,
+   "kz_usd": -0.5392997248894127,
+   "mark": 2220.55,
    "sz": 0.0163672147159155,
-   "usd": 36.61100423729558
+   "usd": 36.34421863742617
   },
   {
    "adres": "0x6015e674d03cabeba664406f517d172e9fad7dec",
    "coin": "SOL",
    "giris": 90.29249141860929,
-   "kz_usd": -0.37655663917923815,
-   "mark": 89.5985,
+   "kz_usd": -0.45116352407545646,
+   "mark": 89.461,
    "sz": 0.5425955265179404,
-   "usd": 48.61574528271768
+   "usd": 48.54113839782146
   },
   {
    "adres": "0x62edf4fae01255c64496e2241e5da680ac959c1c",
    "coin": "xyz:DRAM",
    "giris": 42.92209202000203,
-   "kz_usd": -10.551522719976862,
-   "mark": 37.7845,
+   "kz_usd": -11.53220629297629,
+   "mark": 37.307,
    "sz": 2.0537875874333613,
-   "usd": 77.60133709737585
+   "usd": 76.62065352437642
   },
   {
    "adres": "0x8730154f2c794a59cd6adb0d8328a9770c13b616",
    "coin": "BNB",
    "giris": 714.3199999999999,
-   "kz_usd": 2.279078636961459,
-   "mark": 690.005,
+   "kz_usd": 2.4716966340396285,
+   "mark": 687.95,
    "sz": -0.0937313854395009,
-   "usd": 64.67512461018282
+   "usd": 64.48250661310465
   },
   {
    "adres": "0x8730154f2c794a59cd6adb0d8328a9770c13b616",
    "coin": "PUMP",
    "giris": 0.00415082182421391,
-   "kz_usd": 1.1369010278879457,
-   "mark": 0.00394,
+   "kz_usd": 1.2177916827426167,
+   "mark": 0.003925,
    "sz": -5392.710323644636,
-   "usd": 21.247278675159865
+   "usd": 21.166388020305195
   },
   {
    "adres": "0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee",
    "coin": "ZEC",
    "giris": 1255.8209039357062,
-   "kz_usd": 0.26551969957122257,
-   "mark": 1251.65,
+   "kz_usd": 0.7143226235494473,
+   "mark": 1244.6,
    "sz": -0.06365998921676783,
-   "usd": 79.68002550316746
+   "usd": 79.23122257918924
   },
   {
    "adres": "0xfbd234f73a3cfa398f36f396ba527c85006c3f9e",
    "coin": "xyz:SOXL",
    "giris": 45.314,
-   "kz_usd": -4.064498422630531,
-   "mark": 41.532,
+   "kz_usd": -4.706628990457534,
+   "mark": 40.9345,
    "sz": 1.074695511007543,
-   "usd": 44.63425396316527
+   "usd": 43.99212339533827
   }
  ],
  "acik_pozisyon": 8,
- "brut_usd": 636.3883494399192,
+ "brut_usd": 633.6245280700712,
  "dinleyici": {
   "abonelik_oncesi_snapshot_gibi": 4,
   "dolgu_bekleyen": 0,
@@ -87,12 +87,12 @@
   "hakem_yeniden_deneme": 0,
   "kapanis_atlanan": 0,
   "kopma": 0,
-  "ping": 71,
+  "ping": 107,
   "rest_abonelik_oncesi_atlanan": 20,
   "rest_tur_atlanan": 0,
   "subscription_response": 357,
   "tekrar": 98,
-  "trades_mesaj": 121693,
+  "trades_mesaj": 171751,
   "userfills_mesaj": 28,
   "yeniden_baglanma": 0,
   "yeniden_baslama": 0
@@ -120,7 +120,7 @@
  },
  "funding_usd": -0.063290590176481,
  "gec_acilis": 0,
- "getiri": -0.03405014040394183,
+ "getiri": -0.03536933862196767,
  "inen": 5,
  "kapanis_eksik": 0,
  "kapanis_kuyrugu": 0,
@@ -139,8 +139,8 @@
  "kor_kirpildi": 0,
  "kuyruk_gecikme_ms": {
   "max": 716,
-  "n": 454,
-  "p50": 10
+  "n": 465,
+  "p50": 9
  },
  "marj_yok": 0,
  "min_emir_say": {
@@ -156,14 +156,14 @@
  },
  "ortalama_kayma_ref": 0.0,
  "ortalama_kayma_trader": -0.00019651214984703789,
- "ozsermaye_usd": 965.9498595960582,
+ "ozsermaye_usd": 964.6306613780323,
  "rest_429": 0,
- "rest_istek": 1482,
+ "rest_istek": 2343,
  "saha": 7,
  "saha_n": 11,
  "slot_tavani": 0,
  "slot_usd": 90.9090909090909,
- "sure_dk": 30.113266666666668,
+ "sure_dk": 45.13848333333333,
  "tasfiye": 0,
  "telegram_hata": 0,
  "uyeler": [
@@ -176,5 +176,5 @@
   "0xfbd234f73a3cfa398f36f396ba527c85006c3f9e"
  ],
  "vardiya": "42101416359",
- "yazildi_ms": 1793913065940
+ "yazildi_ms": 1793913967454
 }

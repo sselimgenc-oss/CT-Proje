@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-05 21:11 UTC
+# Canlı rapor — 2026-11-05 21:26 UTC
 
 **Kip** sanal · vardiya `42101416359` · saha 7/11 (inen 5)
 
@@ -6,20 +6,20 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 965,95 $ | −%3,41 | — (geçmiş < 7 gün) | −%3,41 | −%3,51 |
+| 1.000,00 $ | 964,63 $ | −%3,54 | — (geçmiş < 7 gün) | −%3,54 | −%3,64 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x323f5a… | xyz:GOLD | L | 263,32 $ | −2,71 $ |
-| 0xd18820… | ZEC | S | 79,68 $ | +0,27 $ |
-| 0x62edf4… | xyz:DRAM | L | 77,60 $ | −10,55 $ |
-| 0x873015… | BNB | S | 64,68 $ | +2,28 $ |
-| 0x6015e6… | SOL | L | 48,62 $ | −0,38 $ |
-| 0xfbd234… | xyz:SOXL | L | 44,63 $ | −4,06 $ |
-| 0x6015e6… | ETH | L | 36,61 $ | −0,27 $ |
-| 0x873015… | PUMP | S | 21,25 $ | +1,14 $ |
+| 0x323f5a… | xyz:GOLD | L | 263,25 $ | −2,79 $ |
+| 0xd18820… | ZEC | S | 79,23 $ | +0,71 $ |
+| 0x62edf4… | xyz:DRAM | L | 76,62 $ | −11,53 $ |
+| 0x873015… | BNB | S | 64,48 $ | +2,47 $ |
+| 0x6015e6… | SOL | L | 48,54 $ | −0,45 $ |
+| 0xfbd234… | xyz:SOXL | L | 43,99 $ | −4,71 $ |
+| 0x6015e6… | ETH | L | 36,34 $ | −0,54 $ |
+| 0x873015… | PUMP | S | 21,17 $ | +1,22 $ |
 
 ## Son 24 saat
 
@@ -52,7 +52,7 @@
 
 ## Vardiya sağlığı
 
-- süre 30 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk 157.4 dk · REST 429 0
+- süre 45 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk 157.4 dk · REST 429 0
 
 ## Seçim isabeti (son 7)
 
