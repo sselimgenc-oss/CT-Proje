@@ -109,3 +109,26 @@ def test_mesaj_bicimi_altin_ornek():
         "⏭️ Atlanan sinyal: 7 (en çok: geç görülen açılış 5)\n"
         "⚠️ 1 emir tam dolmadı\n"
         "💵 Tutar toplamı: 253 $ · kayma ort. %0,020")                                    # |kayma| ort. = (0,02 + 0,04 + 0) / 3 = %0,02
+
+
+def test_kasa_satiri_altin_ornek_elle_hesap():
+    e = [{"adres": "0xf43a34aaaaaaaa", "coin": "ETH", "yon": "B", "usd": 12.0, "kayma": None, "durum": "dolu", "eylem": "ac"}]
+    son = lambda b: tg.msg_sanal_saatlik(T0, T0 + SAAT, 60, e, {}, b).splitlines()[-1]       # noqa: E731
+    # artı: özsermaye 1.012,60; gün başı 1.005,00; kasa 1.000 → bugün +7,60 (+%0,76 → +%0,8); başlangıçtan +12,60 (+%1,26 → +%1,3)
+    assert son((1012.6, 1005.0, 1000.0)) == "💰 Kasa: 1.012,60 $ · bugün 🟢 +7,60 $ (+%0,8) · başlangıçtan 🟢 +12,60 $ (+%1,3)"
+    # eksi: özsermaye 964; gün başı 976; kasa 1.000 → bugün −12 (−%1,2); başlangıçtan −36 (−%3,6)
+    assert son((964.0, 976.0, 1000.0)) == "💰 Kasa: 964,00 $ · bugün 🔴 −12,00 $ (−%1,2) · başlangıçtan 🔴 −36,00 $ (−%3,6)"
+    # sıfır: işaretsiz %0,0 (yuvarlanınca sıfır olan −0,04 da)
+    assert son((1000.0, 1000.0, 1000.0)) == "💰 Kasa: 1.000,00 $ · bugün 🟢 +0,00 $ (%0,0) · başlangıçtan 🟢 +0,00 $ (%0,0)"
+    assert "(%0,0)" in son((999.96, 1000.0, 1000.0)) and tg._yuzde1(-0.0004) == "%0,0"
+
+
+def test_motor_ozeti_kasa_satirini_en_sona_ekler(tmp_path):
+    m, hl, saat, tgp = kur(tmp_path)
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    saat.ms += SAAT
+    m.emir_ozeti(saat())
+    oz = _ozetler(tgp)[0].splitlines()
+    assert oz[-2].startswith("💵 Tutar toplamı") and oz[-1].startswith("💰 Kasa: ") and "bugün" in oz[-1] and "başlangıçtan" in oz[-1]
+    print("\n" + "\n".join(oz))
