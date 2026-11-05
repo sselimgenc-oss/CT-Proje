@@ -27,6 +27,7 @@ for f in hesap.json saha.json risk.json motor.json kilit.json ozet.json niyet.js
 done
 if [ -d "$kaynak/kayit" ]; then cp -r "$kaynak/kayit/." "$work/kayit/"; fi
 if [ -s "$kaynak/pano/OZET.md" ]; then mkdir -p "$work/pano"; cp "$kaynak/pano/OZET.md" "$work/pano/OZET.md"; fi
+if [ -s "$kaynak/pano/index.html" ]; then mkdir -p "$work/pano"; cp "$kaynak/pano/index.html" "$work/pano/index.html"; fi
 if [ -s "$kaynak/pano/gecmis.json" ]; then mkdir -p "$work/pano"; cp "$kaynak/pano/gecmis.json" "$work/pano/gecmis.json"; fi
 # GitHub 100 MB sınırı: yayımlanan her dosya 90 MB altında olmalı.
 for f in "$work"/durum/* "$work"/kayit/*; do
