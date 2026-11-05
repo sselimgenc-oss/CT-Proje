@@ -14,3 +14,13 @@ Sonnet kararları ve belgede olmayan yorumlar (lider onayına):
 10. **Dinleyici kuyruğu:** `asyncio.Queue` yerine `OncelikliKuyruk` (kapat/azalt önce; 10.000 sınır). Önceliği `Motor.kapanis_mi` (olay trader pozisyonunu azaltıyor/kapatıyor/ters çeviriyor mu) belirler.
 11. **Senkron kapanışı:** bizde pozisyon olup trader REST pozisyonu 0 ise kapatılır; okumadan sonra o coinde WS dolumu işlendiyse atlanır (yarış koruması).
 12. **Sanal derinlik penceresi** `canli_sanal_derinlik_sn: 5`; sanal yürütücü saatini motordan alır.
+
+## Bağımsız Opus denetimi (05.11, devir dönemi) — bulgular
+- **Düzeltildi (bulgu 1):** `OncelikliKuyruk` aynı (adres, coin) olaylarının sırasını bozuyordu (aç → kapat ters işlenir, hayalet pozisyon). Artık öncelik yalnız farklı anahtarlar arasında; aynı anahtar FIFO. Test: `test_oncelikli_kuyruk_ayni_adres_coin_sirasi_bozulmaz_...`.
+- **AÇIK, gerçek kipten (T5) önce çözülmeli — lider kararı gerekir** (sanal kipte para riski yok):
+  - #2 `niyetleri_coz`: yalnız `status=="filled"` deftere işlenir; IOC kısmi dolum + `canceled` durumunda kısmi dolum kaybolur (`motor.py` ~943).
+  - #3 `sonuc_yaz` fsync'li ama `hesap.json` dakikalık; çökmede sonuçlu niyetler deftere yeniden oynatılmıyor (dolum kaybı / çift azaltma) (~437-453, 556).
+  - #4 Tek HL hesabında coin netleşir; adres payı kadar reduce-only kapanış net pozisyonu büyütüyorsa HL reddeder → `kapanis_eksik` döngüsü, DUR tamamlanmaz (~474-515).
+  - #5 (düşük) `hl_ofset` bir kez sabitlenir; yatırma/çekme veya hatalı ilk okumada kayar.
+  - #6 (düşük) kuyruk taşınca düşen açılışlar `poz_tr`'yi güncellemez; 600 sn senkron düzeltir.
+  - #7 (düşük, sanal) kaçan funding saatleri o anki oran/pozisyonla yazılır; oranı okunamayan coin sessizce atlanır.

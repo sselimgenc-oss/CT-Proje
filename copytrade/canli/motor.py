@@ -1020,6 +1020,7 @@ class OncelikliKuyruk:
         self.saat_ms = saat_ms or (lambda: int(time.time() * 1000))
         self._kapat: deque = deque()
         self._ac: deque = deque()
+        self._bekleyen: dict[tuple[str, str], list] = {}      # (adres, coin) -> [bekleyen sayısı, atandığı kuyruk]: aynı anahtarın olayları TEK kuyrukta kalır (sıra bozulmaz)
         self._olay = asyncio.Event()
         self.dusen_acilis = 0
         self.son_giris_ms = 0
@@ -1037,16 +1038,30 @@ class OncelikliKuyruk:
                 self.dusen_acilis += 1
                 return
             if self._ac:
-                self._ac.popleft()
+                self._birak(self._ac.popleft()[1][0])
                 self.dusen_acilis += 1
-        (self._kapat if kapanis else self._ac).append((self.saat_ms(), oge))
+        anahtar = (oge[0].adres, oge[0].coin)
+        kayit = self._bekleyen.get(anahtar)
+        if kayit is None:                                  # öncelik yalnız FARKLI (adres, coin) arasında; aynı anahtar FIFO (ac → kapat sırası bozulursa hayalet pozisyon kalır)
+            kayit = self._bekleyen[anahtar] = [0, self._kapat if kapanis else self._ac]
+        kayit[0] += 1
+        kayit[1].append((self.saat_ms(), oge))
         self._olay.set()
+
+    def _birak(self, olay: Olay) -> None:
+        anahtar = (olay.adres, olay.coin)
+        kayit = self._bekleyen.get(anahtar)
+        if kayit is not None:
+            kayit[0] -= 1
+            if kayit[0] <= 0:
+                del self._bekleyen[anahtar]
 
     def get_nowait(self) -> tuple[Olay, bool]:
         kuyruk = self._kapat or self._ac
         if not kuyruk:
             raise asyncio.QueueEmpty
         self.son_giris_ms, oge = kuyruk.popleft()
+        self._birak(oge[0])
         return oge
 
     async def get(self) -> tuple[Olay, bool]:

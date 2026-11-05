@@ -392,6 +392,23 @@ def test_oncelikli_kuyruk_kapat_azalt_once_taserken_acilislar_duser_kapanislar_k
         kuyruk.get_nowait()
 
 
+def test_oncelikli_kuyruk_ayni_adres_coin_sirasi_bozulmaz_farkli_coinde_kapanis_once(tmp_path):
+    m, hl, saat, _ = kur(tmp_path)
+    kuyruk = mt.OncelikliKuyruk(m.kapanis_mi, 100, saat)
+    ac_btc = olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat)                              # BTC aç
+    kapat_btc = olay("c:1", adr(1), "BTC", "A", 300, 100.0, 300.0, saat)                         # hemen BTC kapat (aynı anahtar: açılışın ARKASINDA kalmalı)
+    ac_eth = olay("a:2", adr(1), "ETH", "B", 10, 2000.0, 0.0, saat)
+    kapat_sol = olay("c:2", adr(1), "SOL", "A", 5, 100.0, 5.0, saat)                              # farklı coin kapanışı: öne geçer
+    for o in (ac_btc, ac_eth, kapat_btc, kapat_sol):
+        kuyruk.put_nowait((o, True))
+    sira = [kuyruk.get_nowait()[0].kimlik for _ in range(4)]
+    assert sira == ["c:2", "a:1", "a:2", "c:1"]
+    assert not kuyruk._bekleyen
+    kuyruk.put_nowait((olay("c:3", adr(1), "BTC", "A", 1, 100.0, 1.0, saat), True))              # bekleyen kalmayınca öncelik yeniden işler
+    kuyruk.put_nowait((olay("a:4", adr(2), "BTC", "B", 1, 100.0, 0.0, saat), True))
+    assert [kuyruk.get_nowait()[0].kimlik for _ in range(2)] == ["c:3", "a:4"]
+
+
 def test_tuketici_kuyruk_gecikmesi_p50_max_ve_tasma_alarmi(tmp_path):
     m, hl, saat, tgp = kur(tmp_path)
     m.baslat()
