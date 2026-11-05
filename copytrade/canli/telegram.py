@@ -231,12 +231,18 @@ ATLA_TR = {"gec_acilis": "geç görülen açılış", "spot_atlandi": "spot coin
            "slot_tavani": "slot tavanı", "marj_yok": "marj yok", "coin_tavani": "coin tavanı", "min_nosyonel": "çok küçük emir"}
 
 
+def _yuzde1(oran: float) -> str:
+    """0.0125 → '+%1,3'; −0.012 → '−%1,2'; yuvarlanınca sıfır olan → '%0,0' (işaretsiz)."""
+    y = round(oran * 100, 1)
+    return "%0,0" if y == 0 else ("+" if y > 0 else "−") + "%" + tr_sayi(abs(y), 1)
+
+
 def _tsi_saat(ms: int) -> str:
     return datetime.fromtimestamp(ms / 1000, TSI).strftime("%H:%M")
 
 
-def msg_sanal_saatlik(bas_ms: int, bit_ms: int, sure_dk: float, emirler: list[dict], atlanan: dict[str, int]) -> str:
-    """SANAL kip saatlik özet (tek mesaj). `emirler`: {adres, coin, yon, usd ($, sanal 1.000 $ kopya ölçeği), durum, eylem, kayma (oran)}; `atlanan`: neden -> adet. Emir yoksa '' (mesaj gönderilmez)."""
+def msg_sanal_saatlik(bas_ms: int, bit_ms: int, sure_dk: float, emirler: list[dict], atlanan: dict[str, int], kasa_bilgi: tuple[float, float, float] | None = None) -> str:
+    """SANAL kip saatlik özet (tek mesaj). `emirler`: {adres, coin, yon, usd ($, sanal 1.000 $ kopya ölçeği), durum, eylem, kayma (oran)}; `atlanan`: neden -> adet. Emir yoksa '' (mesaj gönderilmez). `kasa_bilgi` = (özsermaye $, gün başı özsermaye $, başlangıç kasası $) — pano ile aynı tanım: yüzdeler kasaya göre."""
     if not emirler:
         return ""
     sure = f"{int(sure_dk // 60)} saat" if sure_dk >= 60 and sure_dk % 60 == 0 else f"{sure_dk:.0f} dk"
@@ -255,6 +261,11 @@ def msg_sanal_saatlik(bas_ms: int, bit_ms: int, sure_dk: float, emirler: list[di
     toplam = f"💵 Tutar toplamı: {tr_sayi(sum(e['usd'] for e in emirler), 0)} $"
     kaymalar = [abs(e["kayma"]) for e in emirler if e.get("kayma") is not None]
     satirlar.append(toplam + (f" · kayma ort. %{tr_sayi(sum(kaymalar) / len(kaymalar) * 100, 3)}" if kaymalar else ""))
+    if kasa_bilgi is not None and kasa_bilgi[2] > 0:
+        oz, gun_basi, kasa = kasa_bilgi
+        gun, top = oz - gun_basi, oz - kasa
+        isaret = lambda x: "🟢" if x >= 0 else "🔴"        # noqa: E731
+        satirlar.append(f"💰 Kasa: {tr_sayi(oz)} $ · bugün {isaret(gun)} {tr_isaretli(gun)} $ ({_yuzde1(gun / kasa)}) · başlangıçtan {isaret(top)} {tr_isaretli(top)} $ ({_yuzde1(top / kasa)})")
     return "\n".join(satirlar)
 
 

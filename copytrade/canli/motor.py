@@ -957,7 +957,8 @@ class Motor:
         emirler, atlanan = self._emir_tampon, self._atla_tampon
         self._emir_tampon, self._atla_tampon = [], {}
         self._ozet_pencere_bas = simdi
-        metin = tg.msg_sanal_saatlik(bas, simdi, round((simdi - bas) / DAKIKA) if zorla else dk, emirler, atlanan)
+        metin = tg.msg_sanal_saatlik(bas, simdi, round((simdi - bas) / DAKIKA) if zorla else dk, emirler, atlanan,
+                                     (self.ozsermaye(), self.risk.gun_basi, self.kasa) if emirler else None)
         if metin:
             self.tg.gonder(metin)
 
