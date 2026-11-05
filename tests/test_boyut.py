@@ -189,3 +189,32 @@ def test_k35_kopya_v5_uc_coinde_ayni_toplam_tavan_radar_ayni_sayiyi_gorur():
     assert sonuc['getiri'] == pytest.approx(27.2727 / 1000, abs=1e-6)
     eski = kopya_v5.hesapla(fills, saatlik, {}, {}, [], T0, NOW, 0, 'intraday', sifir, trader_hesap_usd=100_000.0, kasa_usd=1000.0, k35=False)
     assert eski['getiri'] == pytest.approx(20.0 / 1000, abs=1e-6)
+
+
+# ---------------------------------------------------------------------------------------------- K‑38: azaltma hedef tabanlı (K‑36'nın simetriği); elle hesaplanmış altın örnekler
+HESAP = 1_000_000.0       # trader hesap değeri; fiyat 100 $ → 5.000 coin = 500.000 $ = hesabın %50'si → hedef = slot × 0,5 = 45,4545 $
+
+
+def test_k38_azaltma_hedefe_iner_fark_yeterliyse_emir():
+    emir, neden = boyut.hedef_emir('azalt', 6000.0, 5000.0, HESAP, 60.0, SLOT, 100.0, RULES)        # hedef 45,4545; biz 60 → fark 14,5455 ≥ 11
+    assert (round(emir, 4), neden) == (14.5455, 'tamam')
+
+
+def test_k38_atlanan_azaltma_kaybolmaz_bir_sonraki_dolumda_yakalanir():
+    # trader 5.500 → 5.000: hedef 45,4545; biz 50 → fark 4,5455 < 11 → atla
+    assert boyut.hedef_emir('azalt', 5500.0, 5000.0, HESAP, 50.0, SLOT, 100.0, RULES) == (0.0, 'min_emir_atlandi')
+    # trader 5.000 → 4.000: hedef 36,3636; biz hâlâ 50 → fark 13,6364 ≥ 11 → ŞİMDİ azaltılır (eski oransal kural: 50 × 1000/5000 = 10 < 11 → bu da atlanır, fark hiç kapanmazdı)
+    emir, neden = boyut.hedef_emir('azalt', 5000.0, 4000.0, HESAP, 50.0, SLOT, 100.0, RULES)
+    assert (round(emir, 4), neden) == (13.6364, 'tamam')
+
+
+def test_k38_hedef_minimumun_altina_inerse_tamami_kapanir_biz_hedefin_altindaysa_atlanir():
+    assert boyut.hedef_emir('azalt', 1000.0, 500.0, HESAP, 30.0, SLOT, 100.0, RULES) == (30.0, 'kucuk_kalan_kapat')      # hedef 4,5455 < 11, biz 30 ≥ 11 → tamamı
+    assert boyut.hedef_emir('azalt', 6000.0, 5000.0, HESAP, 20.0, SLOT, 100.0, RULES) == (0.0, 'min_emir_atlandi')       # biz 20 < hedef 45,45 → azaltılacak bir şey yok
+
+
+def test_k38_hedef_coin_tavanina_kirpilir_ve_hesap_yoksa_eski_oransal_yedek():
+    emir, neden = boyut.hedef_emir('azalt', 45000.0, 40000.0, HESAP, 300.0, SLOT, 100.0, RULES)   # hedef 363,64 → tavan 272,727; fark 27,2727
+    assert (round(emir, 4), neden) == (27.2727, 'tamam')
+    emir, neden = boyut.hedef_emir('azalt', 100.0, 50.0, 0.0, 40.0, SLOT, 100.0, RULES)           # hesap bilinmiyor: oransal 40 × %50 = 20
+    assert (round(emir, 4), neden) == (20.0, 'tamam')

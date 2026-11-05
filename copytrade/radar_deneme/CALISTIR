@@ -11,3 +11,4 @@
 300 T4 K-35 onceki/sonra 300 aday
 300 T4 K-36 artirma hedef tabanli: onceki(K-35)/sonra yan yana
 20 T6 para hareketi (net_yatirma_usd, yatirma_payi)
+300 K-38 sonra: azaltma hedef tabanli (onceki: claude/k38-baz)

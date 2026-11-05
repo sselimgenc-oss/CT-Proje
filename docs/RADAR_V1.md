@@ -89,7 +89,7 @@ gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez
 - **Artırma (K‑36, hedef tabanlı):** hedef toplam = slot × (trader'ın dolum SONRASI nosyoneli / trader hesap), tek coin tavanı 3,0 × slot ve slot toplam
   tavanı (K‑35); emir = max(0, hedef toplam − bizim mevcut pozisyon). Emir < 11 $ → atlanır. (Eski "değişim oranı" kuralı, 11 $'a yuvarlanmış açılıştan sonra
   kısmi dolum zincirinde patlıyordu.)
-- **Azaltma:** trader'ın pozisyon azaltma oranıyla aynı oran. Emir < 11 $ çıkarsa: kalan < 11 $ olacaksa pozisyonun tamamı kapatılır, değilse atlanır. Trader tamamen kapatınca biz de tamamen kapatırız (reduce‑only).
+- **Azaltma (K‑38, hedef tabanlı):** hedef = slot × |trader_poz_sonra| × fiyat / trader_hesap (3 × slot tavanlı); fark = biz − hedef. fark ≥ 11 $ → fark kadar azalt; fark < 11 $ → atla (birikir, sonraki dolumda yakalanır); hedef < 11 $ ve biz ≥ 11 $ → tamamını kapat; trader tamamen kapatınca biz de tamamen kapatırız (reduce‑only). Trader hesabı bilinmiyorsa eski oransal kural yedek olarak kullanılır.
 - **Marj:** coin başına **izole, 3x** (bir pozisyonun tasfiyesi kasanın geri kalanını yakmaz).
 - **Emir:** IOC limit, fiyat = en iyi karşı fiyat ± **%0,5** kayma tavanı; dolmayan kısım yeniden denenmez (`dolmadi` kaydı).
 - Her emir için kayıt: trader dolum zamanı, bizim görme zamanımız, emir/dolum fiyatı, kayma, ücret, neden.

@@ -393,7 +393,7 @@ class Motor:
         slot = self.hesap.slot_bas.get(adres, self.saha.slot)
         mk = self.mark(o.coin, o.px)
         biz_usd = abs(biz_sz) * (mk or o.px)
-        hesap_usd = self.trader_hesap_usd(adres, simdi) if eylem in ("ac", "artir") else 0.0
+        hesap_usd = self.trader_hesap_usd(adres, simdi) if eylem in ("ac", "artir", "azalt") else 0.0
         if eylem in ("ac", "artir") and not hesap_usd:
             return self._atla(o, adres, eylem, "atlandi", "trader_hesap_yok")
         trader_once, trader_sonra = (0.0, sonra) if eylem == "ac" else ((once, 0.0) if eylem == "kapat" else (once, sonra))

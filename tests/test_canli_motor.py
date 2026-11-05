@@ -851,3 +851,15 @@ def test_telegram_emir_ozeti_toplar_tek_mesaj_ayni_satir_birlesir():
         "🟢 AL NEAR: 11 $ · 0xf43a34… pozisyon açtı · ⚠️ 1 tanesi tam dolmadı\n"
         "↳ Trader'a göre ortalama fark 0.6 bp (küçük = iyi)")
     assert tg.msg_emir_ozeti("sanal", emirler[:1], 5).startswith("🟢 ETH AL: 12,0 $")                               # tek emir: ayrıntılı biçim
+
+
+def test_k38_motor_azaltma_hedef_tabanli_atlanan_parca_sonra_yakalanir_hesap_yok_degil(tmp_path):
+    """K‑38 (K‑36'daki hesap_yok dersiyle): motor azaltmada da trader hesap paydasını geçirir. Hesap 100.000 $, slot 90,909: trader 300 BTC × 100 $ açar (biz 27,2727 $). 300 → 250: hedef 22,7273 → fark 4,5455 < 11 → atlanır (eski oransal 4,5455 de atlardı).
+    250 → 150: hedef 13,6364 → fark 13,6364 → **13,64 $ azaltma** (eski oransal: 27,27 × 100/250 = 10,9 < 11 → yine atlardı; fark hiç kapanmazdı)."""
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    s2 = m.olay_isle(olay("a:2", adr(1), "BTC", "A", 50, 100.0, 300.0, saat))
+    assert not any(x.karar == "emir" for x in s2)
+    s3 = m.olay_isle(olay("a:3", adr(1), "BTC", "A", 100, 100.0, 250.0, saat))
+    assert [(x.eylem, x.karar) for x in s3] == [("azalt", "emir")] and kayitlar(tmp_path, "emir")[-1]["usd_istenen"] == pytest.approx(13.6364, abs=1e-3) and not m.neden_say.get("hesap_yok")
