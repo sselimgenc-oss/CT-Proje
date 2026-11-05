@@ -1,0 +1,97 @@
+name: Canlı vardiya (sanal kip)
+
+# T4 (docs/GOREV_T4_CANLI_MOTOR.md §3, K-29): sunucu açılana kadar canlı motor SANAL kipte GitHub Actions'ta vardiyalı koşar. GERÇEK KİP ASLA BURADA ÇALIŞMAZ: iş akışı HL anahtarı geçirmez ve
+# motor `GITHUB_ACTIONS=true` iken `gercek` kipi reddeder. Cüzdan YOK; kasa `kurallar.yaml canli_kasa_usd` (kullanıcı ayarı, <= 1.000 $).
+# Vardiya: 4 saatte bir tetiklenir (cron), her vardiya 4 sa 15 dk sürer; `concurrency` (kuyruk, iptal yok) sayesinde yeni vardiya eskisi BİTTİKTEN sonra başlar (çift emir yok, boşluk yok);
+# durum veri dalı `canli-durum` (dal doğrulamasında `canli-durum-deneme`): durum/*.json + kayit/<tarih>.jsonl; her 15 dk ve vardiya sonunda yayımlanır; yeni vardiya kaldığı yerden devam eder
+# (açılışta kaçan dolumlar REST ile tamamlanır, `gec_goruldu`). Ek koruma: `durum/kilit.json` (başka vardiya 20 dk içinde nabız attıysa motor başlamaz).
+# Dal doğrulaması: `copytrade/canli/CALISTIR` dosyasına satır eklenen push (main dışı dal) AYNI iş akışını koşturur, ama `canli-durum-deneme` dalına yazar ve kadroyu `radar-deneme`'den okur.
+on:
+  schedule:
+    - cron: "7 */4 * * *"
+  workflow_dispatch:
+    inputs:
+      sure_dk:
+        description: "vardiya süresi (dakika); varsayılan 255 (4 sa 15 dk)"
+        default: "255"
+  push:
+    paths:
+      - copytrade/canli/CALISTIR
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+concurrency:
+  group: canli-vardiya
+  cancel-in-progress: false
+
+jobs:
+  vardiya:
+    runs-on: ubuntu-latest
+    timeout-minutes: 290
+    env:
+      VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'canli-durum' || 'canli-durum-deneme' }}
+      KADRO_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
+      GIRDI_SURE_DK: ${{ inputs.sure_dk }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install websockets==15.0.1 PyYAML==6.0.3 requests==2.34.2
+      - name: Durumu veri dalından geri yükle
+        run: |
+          mkdir -p durum kayit
+          if git ls-remote --exit-code --heads origin "$VERI_DALI" >/dev/null; then
+            git fetch origin "$VERI_DALI"
+            git archive FETCH_HEAD durum kayit | tar -x
+          else
+            status=$?
+            if [ "$status" -ne 2 ]; then exit "$status"; fi
+          fi
+      - name: Açılış kontrolü (anahtarsız, emir göndermez)
+        run: python -u -m copytrade.canli.motor --kontrol --kadro-dali "$KADRO_DALI" --durum-dizin kontrol
+      - name: Canlı motor (sanal kip)
+        run: |
+          sure_dk="${GIRDI_SURE_DK:-255}"
+          case "$sure_dk" in ''|*[!0-9]*) sure_dk=255 ;; esac
+          # 15 dk'da bir durumu veri dalına yayımlayan arka plan döngüsü (ayrı git worktree: motorun çalıştığı dizin değişmez)
+          ( while sleep 900; do bash .github/scripts/canli_yayimla.sh || echo "yayım denemesi başarısız (döngü sürer)"; done ) &
+          yayim=$!
+          set +e
+          python -u -m copytrade.canli.motor --kip sanal --kadro-dali "$KADRO_DALI" --durum-dizin durum --kayit-dizin kayit --sure-sn "$((sure_dk * 60))" --vardiya "${GITHUB_RUN_ID}"
+          cikis=$?
+          set -e
+          if kill -0 "$yayim" 2>/dev/null; then kill "$yayim"; fi
+          exit "$cikis"
+      - name: Vardiya özeti
+        if: ${{ always() && hashFiles('durum/ozet.json') != '' }}
+        run: |
+          {
+            echo '### Canlı vardiya (sanal)'
+            echo '```json'
+            cat durum/ozet.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Durumu veri dalına yaz
+        if: ${{ always() }}
+        run: bash .github/scripts/canli_yayimla.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: canli-vardiya
+          path: |
+            durum/ozet.json
+            durum/kontrol.json
+            kontrol/kontrol.json
+            kayit
+          if-no-files-found: ignore

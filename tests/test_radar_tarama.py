@@ -254,6 +254,7 @@ def test_v4_yan_yana_bilgi_alani_hesabi_degistirmez(tmp_path):
     fiyat = lambda coin, t: 110.0 if t >= ms("11:00:00") else 100.0               # noqa: E731
     s = satir_al(r.kos(Sahte([lider(A1, 20_000, 100, 5_000)], dolumlar, fiyat), KOSU, tmp_path / "radar", None, RULES1, log=lambda *_: None, v4_yan_yana=True), A1)
     assert s["v4_kopya_getiri_7g"] == pytest.approx(0.0020340, abs=1e-6) and s["kopya_getiri_7g"] == pytest.approx(0.001078055, abs=1e-9)
+    assert s["v5_onceki_kopya_getiri_7g"] == pytest.approx(0.001078055, abs=1e-9)          # tek 11 $ emir: K‑35 öncesi/sonrası aynı (tavanlar devreye girmez)
 
 
 def test_ayna_sifir_ya_da_negatifse_kopya_koruma_none_ve_elenir(tmp_path):
@@ -276,7 +277,7 @@ def test_eksik_mum_koşuyu_dusurmez_fiyat_uydurulmaz(tmp_path):
 
 
 def test_kopya_olculeri_hesaplanamadi_ve_bos_sonuc():
-    bos = {"kopya_getiri_7g": None, "ayna_getiri_7g": None, "kopya_koruma": None, "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None, "v4_kopya_getiri_7g": None}
+    bos = {"kopya_getiri_7g": None, "ayna_getiri_7g": None, "kopya_koruma": None, "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None, "v4_kopya_getiri_7g": None, "v5_onceki_kopya_getiri_7g": None}
     assert r.kopya_olculeri(None, A1, RULES) == bos
     yok = r.kopya_olculeri({"durum": "hesaplanamadi", "neden": "yürütülebilir dolum yok"}, A1, RULES)
     assert yok["kopya_getiri_7g"] is None and yok["kopya_alt20"] is None
@@ -306,7 +307,7 @@ def test_koşu_sozlesme_alanlari_vault_payda_hesap_ve_429(tmp_path):
     yazilan = json.loads((tmp_path / "radar/2026-10-27/havuz.json").read_text(encoding="utf-8"))
     assert yazilan == sonuc
     anahtarlar = {"adres", "hesap_usd", "hafta_pnl_usd", "trader_getiri_7g", "islem_sayisi", "medyan_tutma_saat", "kisa_islem_payi", "max_kaldirac", "likit_pay",
-                  "kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "v4_kopya_getiri_7g", "kopya_gunluk", "kopya_kazanc_gun_orani", "kopya_dusus", "yayilma", "kopya_getiri_72s", "hype_payi", "gecti", "neden", "hata"}
+                  "kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "v4_kopya_getiri_7g", "v5_onceki_kopya_getiri_7g", "kopya_gunluk", "kopya_kazanc_gun_orani", "kopya_dusus", "yayilma", "kopya_getiri_72s", "hype_payi", "gecti", "neden", "hata"}
     assert all(set(s) == anahtarlar for s in sonuc["satirlar"])
     assert all(c_[3] == KOSU for c_ in c.cagrilar) and all(c_[2] == BAS for c_ in c.cagrilar)         # pencere [kosu − 168 sa, kosu)
 

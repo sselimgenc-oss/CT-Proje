@@ -448,7 +448,7 @@ def copy_ledger(fills: list[dict], market: Market, account: Any, delay_min: int,
     pozisyonları: coin, yon, buyukluk_usd, giris, son, kz_usd, acilis_ms; `base_usd` ölçeğinde $, K/Z funding hariç).
 
     ``boyutlayici`` (v5, K‑28; yalnız sabit tutar modunda): verilirse `_sabit_tutar_signed` YERİNE çağrılır, imza
-    ``(sign, signed, before_leader, own, price, when, held, entry, market, realized, base_usd) -> signed`` (defter birimi = coin / ``base_usd``); verilmezse hesap aynıdır.
+    ``(sign, signed, before_leader, own, price, when, held, entry, market, realized, base_usd, coin=…) -> signed`` (defter birimi = coin / ``base_usd``); verilmezse hesap aynıdır.
     """
     if tutar_egrisi is None:
         scale = capital_scale(account)
@@ -522,7 +522,7 @@ def copy_ledger(fills: list[dict], market: Market, account: Any, delay_min: int,
                 signed = signed * factor
         else:
             if boyutlayici is not None:
-                signed = boyutlayici(sign, signed, before_leader, own, price, when, held, entry, market, realized, base_usd)
+                signed = boyutlayici(sign, signed, before_leader, own, price, when, held, entry, market, realized, base_usd, coin=coin)
             else:
                 signed = _sabit_tutar_signed(sign, signed, before_leader, own, price, when, held, entry, market,
                                              realized, tutar_egrisi, base_usd)

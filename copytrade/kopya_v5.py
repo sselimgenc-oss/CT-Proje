@@ -5,6 +5,8 @@ v3/v4 silinmez / değişmez (kural 6). Aynı `defter.copy_ledger`: tek fark dolu
 `trader_hesap_usd`: oranın paydası (trader hesap değeri, trader_$; radar taramasında lider tablosundaki `accountValue`)."""
 from __future__ import annotations
 
+from typing import Any
+
 import pandas as pd
 
 from copytrade import boyut, kopya_v3, kopya_v4
@@ -13,13 +15,24 @@ from copytrade.kurallar import load_rules
 EPS = 1e-12
 
 
-def boyutlayici(trader_hesap_usd: float, slot: float, rules: dict, kayit: list | None = None):
-    """`copy_ledger(boyutlayici=…)` için geri çağrı. Defter birimi = coin / kasa; dönüş: dolumun kopyaya işaretli etkisi (aynı birim). Ters dönüş = kapanış + yeni açılış.
-    `kayit` verilirse her karar `(coin_yok, eylem, neden, emir_usd)` olarak eklenir (rapor; hesabı değiştirmez)."""
+def _slot_toplam_usd(held: dict, entry: dict, market: Any, when: int, coin: str, price: float, base_usd: float) -> float:
+    """Kopyanın TÜM coinlerdeki brüt nosyoneli ($): bu coin yürütme fiyatında, diğerleri mark (yoksa giriş) fiyatında."""
+    toplam = 0.0
+    for c, q in held.items():
+        if abs(q) > EPS:
+            mk = price if c == coin else (market.mark(c, when) or entry.get(c) or price)
+            toplam += abs(q) * mk * base_usd
+    return toplam
 
-    def isle(sign, signed, before_leader, own, price, when, held, entry, market, realized, base_usd):
+
+def boyutlayici(trader_hesap_usd: float, slot: float, rules: dict, kayit: list | None = None, toplam_tavan: bool = True):
+    """`copy_ledger(boyutlayici=…)` için geri çağrı. Defter birimi = coin / kasa; dönüş: dolumun kopyaya işaretli etkisi (aynı birim). Ters dönüş = kapanış + yeni açılış.
+    `kayit` verilirse her karar `(eylem, neden, emir_usd)` olarak eklenir (rapor; hesabı değiştirmez). `toplam_tavan=False`: K‑35 öncesi coin başına tavan (YALNIZ önce/sonra karşılaştırması için; üretimde True)."""
+
+    def isle(sign, signed, before_leader, own, price, when, held, entry, market, realized, base_usd, coin=""):
         sonra = before_leader + signed                      # trader'ın dolum sonrası işaretli pozisyonu (coin)
         biz_usd = abs(own) * price * base_usd
+        toplam_usd = _slot_toplam_usd(held, entry, market, when, coin, price, base_usd) if toplam_tavan else None
         birim = lambda usd: usd / price / base_usd           # noqa: E731 — $ -> defter birimi (işaretsiz)
         sonuc = 0.0
         acilacak = None                                       # taze açılışa kalan trader pozisyonu
@@ -27,21 +40,23 @@ def boyutlayici(trader_hesap_usd: float, slot: float, rules: dict, kayit: list |
             kapanis = abs(sonra) < EPS or sonra * before_leader < 0
             if own * before_leader > 0:                      # kopyada aynı yönde pozisyon var
                 eylem = "kapat" if kapanis else "azalt"
-                emir, neden = boyut.hedef_emir(eylem, before_leader, 0.0 if kapanis else sonra, trader_hesap_usd, biz_usd, slot, price, rules)
+                emir, neden = boyut.hedef_emir(eylem, before_leader, 0.0 if kapanis else sonra, trader_hesap_usd, biz_usd, slot, price, rules, toplam_usd)
                 sonuc += sign * birim(emir)
                 if kayit is not None:
                     kayit.append((eylem, neden, emir))
             if sonra * before_leader < 0:                    # ters dönüş: kalan yeni açılış
                 acilacak = sonra
+                if toplam_usd is not None and own * before_leader > 0:
+                    toplam_usd -= biz_usd                    # eski yön tamamen kapanıyor: yeni açılışın tavan hesabında sayılmaz
         elif abs(own) < EPS or abs(before_leader) < EPS:     # taze açılış (miras pozisyona ekleme dahil: defterin v3 davranışı)
             acilacak = sonra
         else:                                                # ekleme (artış)
-            emir, neden = boyut.hedef_emir("artir", before_leader, sonra, trader_hesap_usd, biz_usd, slot, price, rules)
+            emir, neden = boyut.hedef_emir("artir", before_leader, sonra, trader_hesap_usd, biz_usd, slot, price, rules, toplam_usd)
             if kayit is not None:
                 kayit.append(("artir", neden, emir))
             return sign * birim(emir)
         if acilacak is not None:
-            emir, neden = boyut.hedef_emir("ac", 0.0, acilacak, trader_hesap_usd, 0.0, slot, price, rules)
+            emir, neden = boyut.hedef_emir("ac", 0.0, acilacak, trader_hesap_usd, 0.0, slot, price, rules, toplam_usd)
             if kayit is not None:
                 kayit.append(("ac", neden, emir))
             sonuc += sign * birim(emir)
@@ -52,14 +67,19 @@ def boyutlayici(trader_hesap_usd: float, slot: float, rules: dict, kayit: list |
 
 def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str, list[dict]], yurutme: dict[str, dict[int, float]], funding: list[dict],
             t0: pd.Timestamp, now: pd.Timestamp, delay: int, style: str, rules: dict | None = None, azami_kaldirac: dict[str, float] | None = None,
-            trader_hesap_usd: float = 0.0, kasa_usd: float | None = None, kayit: list | None = None) -> dict:
-    """v5 sanal kopya sonucu (kasa ölçeğinde): v3/v4 alanları + `surum: v5`, `kasa_usd`, `slot_usd`. `delay` 0 = ayna (trader'ın dolum fiyatı; `kopya_v3.hesapla` H1 yolu)."""
+            trader_hesap_usd: float = 0.0, kasa_usd: float | None = None, kayit: list | None = None, k35: bool = True) -> dict:
+    """v5 sanal kopya sonucu (kasa ölçeğinde): v3/v4 alanları + `surum: v5`, `kasa_usd`, `slot_usd`. `delay` 0 = ayna (trader'ın dolum fiyatı; `kopya_v3.hesapla` H1 yolu).
+    `k35=False`: K‑35 ÖNCESİ davranış (v4 emir/trader tavanı açık, slot tavanı coin başına) — yalnız önce/sonra karşılaştırması için; üretimde True."""
     rules = rules or load_rules()
     kasa = float(rules["canli_kasa_usd"] if kasa_usd is None else kasa_usd)
     slot = boyut.slot_usd(kasa, rules)
     lim = kopya_v4.limitler(rules, azami_kaldirac)
+    if k35:
+        # K‑35: v4'ün eski sabit tutar sınırları (emir başına 100 $, trader başına toplam 200 $; referans kasa 1.000 $) v5'te KALKAR: yerini `boyut` slot tavanı (3 × slot, tüm coinler) alır.
+        # Aksi halde toplam 200 $'da takılır, canlı motor 272,7 $'a kadar açar ve R1/6 canlıdan farklı sayı görürdü. HL azami kaldıraç / teminat sınırı (`azami_kaldirac`) KALIR.
+        lim = {**lim, "emir_tavan_usd": 1e12, "trader_tavan_usd": 1e12}
     sonuc = kopya_v3.hesapla(fills, saatlik, isaret, yurutme, funding, t0, now, delay, style, rules, risk_limitleri=lim, surum="v5",
-                             base_usd=kasa, boyutlayici=boyutlayici(float(trader_hesap_usd), slot, rules, kayit))
+                             base_usd=kasa, boyutlayici=boyutlayici(float(trader_hesap_usd), slot, rules, kayit, k35))
     if sonuc.get("durum") != "hesaplanamadi":
         sonuc.update({"kasa_usd": kasa, "slot_usd": slot})
     return sonuc
