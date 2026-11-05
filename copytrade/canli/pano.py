@@ -289,6 +289,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
         ilk_ms = next((ms for ms, _ in seri if ms), None)
         x_et = (_tsi(ilk_ms, "%d.%m %H:%M") if ilk_ms else "", _tsi(veri_ms, "%d.%m %H:%M"))
 
+    kz_ozeti = (f'<div class="ek ek2">son gün {esc(tl(cubuklar[-1], True))} · en iyi {esc(tl(max(cubuklar), True))} · en kötü {esc(tl(min(cubuklar), True))} · toplam {esc(tl(sum(cubuklar), True))}</div>' if cubuklar else "")
     acik = ozet.get("acik")
     if acik is None:
         acik = [{"adres": a, "coin": c, "sz": q["sz"], "usd": abs(q["sz"]) * q["giris"], "kz_usd": None} for a, cs in (hesap.get("poz") or {}).items() for c, q in cs.items()]
@@ -427,7 +428,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
 .sirit{{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--cz);border:1px solid var(--cz);margin-bottom:8px}}
 .h{{background:var(--k);padding:8px 9px}}.hb{{font-size:10px;letter-spacing:.09em;color:var(--so);text-transform:uppercase}}.hd{{font-size:17px;font-weight:700;margin:2px 0}}.ha{{font-size:11px}}
 .art{{color:var(--art)}}.eks{{color:var(--eks)}}.yok{{color:var(--so)}}
-.izgara{{display:grid;grid-template-columns:1fr;gap:8px}}.p{{background:var(--k);border:1px solid var(--cz);min-width:0}}
+.izgara{{display:grid;grid-template-columns:1fr;gap:8px}}.sag{{display:contents}}.p{{background:var(--k);border:1px solid var(--cz);min-width:0}}
 .pb{{font-size:10px;letter-spacing:.09em;color:var(--tu);text-transform:uppercase;padding:8px 11px;border-bottom:1px solid var(--cz);display:flex;justify-content:space-between}}.pb span{{color:var(--so)}}
 .pi{{padding:10px 11px}}.gr{{width:100%;height:110px;display:block}}.ek{{display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--so);margin-top:4px}}.ek2{{justify-content:center;text-align:center}}.bos{{color:var(--so);padding:14px 4px;font-size:12px}}
 table{{width:100%;border-collapse:collapse;font-size:12px}}td,th{{padding:6px 8px;border-bottom:1px solid #1c1c21;text-align:left;white-space:nowrap}}th{{font-size:10px;color:var(--so);letter-spacing:.08em}}.sg{{text-align:right}}tr:last-child td{{border:0}}
@@ -443,7 +444,7 @@ input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler sectio
 .sr{{color:var(--so)}}.rz{{font-size:10px;border:1px solid var(--cz);border-radius:3px;padding:0 6px;letter-spacing:.05em}}.fb{{height:6px;background:#1c1c21;border-radius:3px;overflow:hidden}}.fb i{{display:block;height:100%;background:var(--tu)}}.fm{{text-align:right;color:var(--so)}}.nt{{text-align:right;min-width:64px}}
 .ms{{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:4px 4px 12px 30px;font-size:12px}}.iz2{{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--cz)}}.bil{{padding:2px 4px 8px 30px}}.bl{{display:grid;grid-template-columns:130px 1fr 28px;gap:8px;align-items:center;font-size:11px;color:var(--so)}}.bl .ol{{margin:5px 0}}.ln{{color:var(--tu)}}.mt{{margin-top:12px;padding:8px;background:#0e0e10;border:1px solid var(--cz);font-size:12px;color:var(--so)}}.yb{{margin:12px 0 2px;font-size:10px;letter-spacing:.1em;color:var(--tu)}}
 @media(min-width:900px){{.ms{{grid-template-columns:repeat(4,1fr)}}}}
-@media(min-width:900px){{body{{padding:18px;max-width:1280px;margin:auto}}.sirit{{grid-template-columns:repeat(6,1fr)}}.hd{{font-size:20px}}.izgara{{grid-template-columns:repeat(3,1fr)}}.g2{{grid-column:span 2}}.g3{{grid-column:span 3}}}}
+@media(min-width:900px){{body{{padding:18px;max-width:1280px;margin:auto}}.sirit{{grid-template-columns:repeat(6,1fr)}}.hd{{font-size:20px}}.izgara{{grid-template-columns:repeat(3,1fr)}}.sag{{display:grid;gap:8px;grid-column:3;grid-row:1 / span 2;align-content:start}}.g2{{grid-column:span 2}}.g3{{grid-column:span 3}}}}
 </style></head><body>
 <div class="ust"><div><span class="lg0">CT</span> <b>COPY TRADE PANOSU</b></div><div><span class="rozet">{esc(kip_adi(kip))}</span> <span class="so">veri {_tsi(veri_ms, "%d.%m.%Y %H:%M")} TSİ · ~15 dakikada bir yenilenir</span></div></div><div id="bayat" data-ms="{veri_ms}" class="uy" style="display:none">⚠ VERİ BAYAT: son güncelleme 1 saatten eski, sistem durmuş olabilir</div>{uyari}
 <div class="sirit">{hucre("Özsermaye", tl(oz), "", f"kasa {tr_sayi(kasa, 0)} $")}{hucre("Bugün", tyuz(gun), renk(gun), tl(oz - float(gun_basi), True) if gun_basi is not None else "")}{hucre("Bu hafta", tyuz(hafta) if hafta is not None else "—", renk(hafta), "" if hafta is not None else "7 gün dolmadı")}{hucre("Başlangıçtan beri", tyuz(ozet.get("getiri")), renk(ozet.get("getiri")), tl(oz - kasa, True))}{hucre("Zirveden düşüş", tyuz(-dusus if dusus is not None else None), renk(-dusus if dusus is not None else None), f"zirve {tl(float(zirve))}" if zirve else "")}{hucre("Açık pozisyon", str(len(acik)), "", f"brüt {tl(sum(q.get('usd') or 0 for q in acik))}")}</div>
@@ -452,10 +453,12 @@ input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler sectio
 <div class="sekmeler">
 <section class="n1 izgara">
 <div class="p g2"><div class="pb">Özsermaye (tur sonları) <span>{esc(tl(oz))}</span></div><div class="pi">{_cizgi(deg, "#f5a524", baz=kasa if kasa > 0 else None, x_etiket=x_et)}</div></div>
-<div class="p"><div class="pb">Günlük net K/Z <span>$</span></div><div class="pi">{_cubuk(cubuklar)}</div></div>
-<div class="p g2"><div class="pb">İçgörüler</div><div class="pi ic">{"".join(f"<div>{x}</div>" for x in ic)}</div></div>
-<div class="p g3"><div class="pb">Sağlık <span>{esc(saglik_ozeti[0])}</span></div><div class="pi ic">{saglik_ozeti[1]}</div></div>
+<div class="sag">
+<div class="p"><div class="pb">Günlük net K/Z <span>{esc(tl(cubuklar[-1], True)) if cubuklar else "—"}</span></div><div class="pi">{_cubuk(cubuklar)}{kz_ozeti}</div></div>
+<div class="p"><div class="pb">Sağlık <span>{esc(saglik_ozeti[0])}</span></div><div class="pi ic">{saglik_ozeti[1]}</div></div>
 <div class="p"><div class="pb">Risk payı <span>sınıra göre</span></div><div class="pi"><div class="ha">Günlük kayıp (sınır %5)</div><div class="ol"><i style="width:{gun_kayip_pay:.0f}%"></i></div><div class="ha">Zirveden düşüş (sınır %20)</div><div class="ol"><i style="width:{dusus_pay:.0f}%"></i></div>{risk_html}</div></div>
+</div>
+<div class="p g2"><div class="pb">İçgörüler</div><div class="pi ic">{"".join(f"<div>{x}</div>" for x in ic)}</div></div>
 </section>
 <section class="n2 izgara">
 <div class="p g2"><div class="pb">Açık pozisyonlar <span>{len(acik)} adet</span></div><div class="tw"><table><tr><th>COİN</th><th>YÖN</th><th class="sg">TUTAR</th><th class="sg">K/Z</th><th>TRADER</th></tr>{poz_satir}</table></div></div>
