@@ -56,6 +56,11 @@ class Hesap:
         p = self.poz.get(adres, {}).get(coin)
         return p.sz if p else 0.0
 
+    def ters_yonlu_var(self, adres: str, coin: str, yon: str) -> bool:
+        """K‑41: `adres` DIŞINDAKİ bir trader'ın kopya pozisyonu bu coinde `yon` (B/A) açılışının TERSİNE mi? (Tek HL hesabında coin netleşir; ters açılış net pozisyonu küçültür.)"""
+        isaret = 1.0 if yon == "B" else -1.0
+        return any(a != adres and (c.get(coin) is not None) and c[coin].sz * isaret < -EPS for a, c in self.poz.items())
+
     def uygula(self, adres: str, coin: str, yon: str, sz: float, px: float, ucret: float, zaman_ms: int) -> float:
         """Dolumu işler (yön B alış / A satış; `sz` işaretsiz). Pozisyon sıfırı AŞMAZ (ters dönüş çağıranda kapanış + açılış olarak iki dolum). Döner: bu dolumun gerçekleşen K/Z'si (ücret hariç)."""
         if sz <= 0 or px <= 0 or not math.isfinite(px):
