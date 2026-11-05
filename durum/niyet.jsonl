@@ -270,3 +270,7 @@
 {"t":"sonuc","cloid":"0xaa647546763c1286e6cef11cca759c66","durum":"dolu","ms":1793919184246,"sz":0.4450567046086618,"px":41.215}
 {"t":"niyet","kimlik":"kapat:0xfbd234f73a3cfa398f36f396ba527c85006c3f9e:xyz:SOXL:1793919184247:0:tam_kapanis","eylem":"kapat","adres":"0xfbd234f73a3cfa398f36f396ba527c85006c3f9e","coin":"xyz:SOXL","yon":"A","usd":14.875371,"reduce_only":true,"cloid":"0x01a05ff6155775b6954870d29b0f7e2f","ms":1793919184247}
 {"t":"sonuc","cloid":"0x01a05ff6155775b6954870d29b0f7e2f","durum":"kismi","ms":1793919184390,"sz":0.3434470613199227,"px":41.215}
+{"t":"niyet","kimlik":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee:813348141083066","eylem":"ac","adres":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee","coin":"@156","yon":"B","usd":11.0,"reduce_only":false,"cloid":"0xe02142b6d2f4788996e5c35354b2db1d","ms":1793919891424}
+{"t":"sonuc","cloid":"0xe02142b6d2f4788996e5c35354b2db1d","durum":"dolu","ms":1793919891578,"sz":0.12312376176671407,"px":89.341}
+{"t":"niyet","kimlik":"kapat:0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee:@156:1793920009247:0:trader_kapal","eylem":"kapat","adres":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee","coin":"@156","yon":"A","usd":11.534163,"reduce_only":true,"cloid":"0x8afc51457c7494dafd796e1d407c4ed5","ms":1793920009247}
+{"t":"sonuc","cloid":"0x8afc51457c7494dafd796e1d407c4ed5","durum":"kismi","ms":1793920009397,"sz":0.12312376176671407,"px":89.235}
