@@ -467,7 +467,7 @@ class Motor:
                     "reduce_only": reduce_only, "durum": d.durum, "red_neden": d.neden, "boyut_neden": neden, "trader_px": o.px, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
                     "emir_ms": emir_ms, "dolum_ms": dolum_ms, "referans_px": d.referans_px, "dolum_px": d.px, "kayma_ref": d.kayma_oran, "kayma_trader": kayma_trader, "ucret": d.ucret,
                     "gec_goruldu": gec, "kaynak": o.kaynak, "bant": bant, "cloid": cloid, "funding_usd": round(self.hesap.funding.get(adres, 0.0), 6)})
-        self.tg.gonder(tg.msg_emir(adres, o.coin, yon, d.usd_dolan or usd, d.px, kayma_trader, d.durum, self.kip))
+        self.tg.gonder(tg.msg_emir(adres, o.coin, yon, d.usd_dolan or usd, d.px, kayma_trader, d.durum, self.kip, eylem))
         return Sonuc(adres, o.coin, eylem, "emir" if d.dolu_mu else "red", d.neden or neden, d)
 
     # ------------------------------------------------------------------ kapanış teyidi (K‑37 §1)
@@ -885,8 +885,7 @@ class Motor:
 
     def durum_metni(self) -> str:
         oz = self.ozsermaye()
-        return (f"DURUM [{self.kip}] özsermaye {oz:.2f}$ ({(oz / self.kasa - 1) * 100:+.2f}%) · saha {len(self.saha.uyeler)}/{self.saha.n} · inen {len(self.saha.inen)} · "
-                f"emir {self.sayac['emir']} · risk {'DUR' if self.risk.dur else 'ok'}")
+        return tg.msg_durum(self.kip, oz, self.kasa, len(self.saha.uyeler), self.saha.n, len(self.saha.inen), sum(len(c) for c in self.hesap.poz.values()), self.sayac["emir"], bool(self.risk.dur))
 
     def pano_ek(self) -> dict[str, Any]:
         """`ozet.json`a rapor (`pano/OZET.md`, T6 §3) için eklenen alanlar: açık pozisyonlar (mark'lı; K/Z = sz × (mark − giriş)) ve REST istek / 429 sayaçları. Yeni hesap değil: defter + mark biçimi."""
@@ -1238,7 +1237,7 @@ def main(argv: list[str] | None = None) -> int:
     except KipHatasi as hata:
         print(f"BAŞLAMADI: {hata}", file=sys.stderr)
         return 3
-    motor.tg.gonder(f"Motor başladı [{motor.kip}] kasa {motor.kasa:.0f}$ saha {len(motor.saha.uyeler)}/{motor.saha.n} vardiya {motor.vardiya_id}")
+    motor.tg.gonder(tg.msg_baslangic(motor.kip, motor.kasa, len(motor.saha.uyeler), motor.saha.n, str(motor.vardiya_id)))
     ozet = asyncio.run(calis(motor, args.sure_sn))
     print(json.dumps(ozet, ensure_ascii=False, indent=1, default=str))
     return 0

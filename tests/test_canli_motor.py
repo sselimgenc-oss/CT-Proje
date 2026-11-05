@@ -273,7 +273,7 @@ def test_uctan_uca_altin_ornek_acilis_azaltma_kapanis(tmp_path):
     s3 = m.olay_isle(olay("a:3", adr(1), "BTC", "A", 150, 100.0, 150.0, saat))
     assert [(x.eylem, x.karar) for x in s3] == [("kapat", "emir")] and m.hesap.sz(adr(1), "BTC") == pytest.approx(0.0, abs=1e-9) and kayitlar(tmp_path, "emir")[2]["reduce_only"] is True
     assert m.sayac["emir"] == 3 and len(m.kayma_trader) == 3
-    assert any("EMİR[sanal]" in x for x in tgp.gonderilen) and any("SAHA giriş" in x for x in tgp.gonderilen)
+    assert any("(sanal · deneme parası)" in x and ("AL:" in x or "SAT:" in x) for x in tgp.gonderilen) and any("Yeni trader takibe alındı" in x for x in tgp.gonderilen)
 
 
 def test_kucuk_acilis_11_dolara_yuvarlanir_ve_trader_hesap_yoksa_atlanir(tmp_path):
@@ -428,7 +428,7 @@ def test_telegram_token_kayda_ve_hatalara_yazilmaz_ve_hata_motoru_durdurmaz(tmp_
 def test_telegram_komutlari_yalniz_yapilandirilmis_sohbetten_ve_biçim():
     t = tg.Telegram(TOKEN, CHAT, SahteTG([tg_mesaj(1, "/durum@sg_bot"), tg_mesaj(2, "/dur", chat=7), tg_mesaj(3, "merhaba")]))
     assert t.komutlari_al() == ["/durum"] and t.offset == 4
-    assert tg.msg_gunluk("sanal", 1000, 1012.5, 0.0125, 0.0125, 3, 11, ["0x12345678… BTC +0.1"]).startswith("GÜNLÜK ÖZET [sanal] kasa 1000$")
+    assert tg.msg_gunluk("sanal", 1000, 1012.5, 0.0125, 0.0125, 3, 11, ["0x12345678… BTC +0.1"]).startswith("📅 Günlük özet (sanal · deneme parası)\n💰 Kasa 1.000 $ → şimdi 1.012,50 $\n📈 Bugün +%1,25")
     assert tg.kisa(adr(255)) == "0x000000…"
 
 
@@ -818,3 +818,16 @@ def test_k36_motor_artirma_trader_hesap_degerini_kullanir_hesap_yok_degil(tmp_pa
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     s = m.olay_isle(olay("a:2", adr(1), "BTC", "B", 300, 100.0, 300.0, saat))
     assert [(x.eylem, x.karar) for x in s] == [("artir", "emir")] and kayitlar(tmp_path, "emir")[1]["usd_istenen"] == pytest.approx(27.2727, abs=1e-3) and not m.neden_say.get("hesap_yok")
+
+
+def test_telegram_mesajlari_sade_turkce_altin_ornek():
+    a = "0x1234567890abcdef"
+    assert tg.msg_emir(a, "ETH", "B", 11.0, 2000.0, 0.00012, "dolu", "sanal", "ac") == \
+        "🟢 ETH AL: 11,0 $ (sanal · deneme parası)\n↳ Trader 0x123456… pozisyon açtı, biz de kopyaladık\n↳ Fiyat 2000 · trader'a göre fark +1.2 bp"
+    assert tg.msg_emir(a, "BTC", "A", 272.73, 100.0, None, "dolmadi", "sanal", "kapat").startswith("⚠️ BTC SAT: emir tam dolmadı (dolmadi)")
+    assert tg.msg_saha("giriş", a, "bos_slot (yerine 0xabcdef12…)") == "➕ Yeni trader takibe alındı: 0x123456…\n↳ Neden: boş yer açıldı (yerine 0xabcdef12…)"
+    assert tg.msg_saha("çıkış", a, "kadro_disi (sonuçla, 14 gün bekleme)").startswith("➖ Trader takipten çıktı: 0x123456…\n↳ Neden: günlük kadrodan düştü")
+    assert tg.msg_durum("sanal", 1000.71, 1000.0, 9, 11, 3, 8, 0, False) == (
+        "📊 Anlık durum (sanal · deneme parası)\n💰 Özsermaye 1.000,71 $ (kasaya göre +%0,07)\n👥 Takipte 9/11 trader · 3 tanesi ayrılıyor (pozisyonları kapanıyor)\n📌 Açık pozisyon: 8\n🧾 Bu vardiyada emir: 0\n🛡️ Risk: normal, motor çalışıyor")
+    assert tg.tr_sayi(1234567.891) == "1.234.567,89" and tg.tr_yuzde(-0.0125) == "−%1,25"
+    assert "…5254" in tg.msg_baslangic("sanal", 1000, 9, 11, "42003105254") and "Takip edilen trader: 9/11" in tg.msg_baslangic("sanal", 1000, 9, 11, "42003105254")
