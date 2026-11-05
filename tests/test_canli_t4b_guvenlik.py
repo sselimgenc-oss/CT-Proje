@@ -249,3 +249,74 @@ def test_funding_orani_okunamayan_coin_sayilir_ve_ozete_yazilir(tmp_path):
     toplam = m.funding_uygula({"BTC": 0.0001}, simdi)
     assert toplam == pytest.approx(-0.02) and m.sayac["funding_oran_yok"] == 1
     assert kayitlar(tmp_path, "funding_oran_yok")[-1]["coin"] == "SOL" and m.ozet()["funding_oran_yok"] == 1
+
+
+# ================================================================================================ lider denetimi düzeltmeleri
+def test_hesap_json_yoksa_dolu_niyet_dosyasi_oynatilmaz_mutabakat_bayragi(tmp_path):
+    """hesap.json silindi ama niyet.jsonl dolu (eski dolum sonuçlu): yeni defter BOŞ kalır (hayalet pozisyon yok), `mutabakat` bayrağı kalkar, `oynat_hesap_yok` kaydı; ikinci başlatmada tekrar oynatma yok."""
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    assert m.hesap.sz(adr(1), "BTC") > 0 and any(x["t"] == "sonuc" for x in m.niyet.satirlar())
+    (tmp_path / "durum" / "hesap.json").unlink()
+    m2, *_ = kur(tmp_path, saat=saat)
+    m2.baslat()
+    assert m2.hesap.sz(adr(1), "BTC") == 0.0 and m2.risk.acilis_durdu.get("mutabakat")
+    assert kayitlar(tmp_path, "oynat_hesap_yok")[-1]["niyet_say"] == 1 and not kayitlar(tmp_path, "niyet_oynatildi")
+
+
+def test_bos_durumda_ilk_baslatma_bayrak_kaldirmaz(tmp_path):
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    assert not m.risk.acilis_durdu.get("mutabakat") and not kayitlar(tmp_path, "oynat_hesap_yok")
+
+
+@pytest.mark.parametrize("hata", [False, True])
+def test_emir_yok_ya_da_durum_okunamadi_azalt_yeniden_kuyruga_girer(tmp_path, monkeypatch, hata):
+    """Azalt 40 $ (defter 0,5 BTC, giriş 100): `orderStatus` emri bulamadı (unknownOid) ya da hata verdi → dolan 0, azalt kuyruğa: hedef 0,5 − 40/100 = 0,10; hata halinde ayrıca mutabakat bayrağı.
+    Kuyruk girdisi `deneme` ile sınırlı (bantlar sonunda alarmlı `eksik`); yeniden deneme yeni kimlik/cloid ile (`_kuyruk_isle`)."""
+    sim = BorsaSim()
+    m, sim, saat, _ = kur_gercek(tmp_path, monkeypatch, sim)
+    m.baslat()
+    m.hesap.uygula(adr(1), "BTC", "B", 0.5, 100.0, 0.0, saat())
+    _niyet_kur(m, saat, "azalt", "A", 40.0)
+    c2 = ny.cloid_uret("z:2", "kapat")
+    m.durum_yaz()
+    if hata:
+        asil = sim.post
+
+        def post(y):
+            if y["type"] == "orderStatus":
+                raise RuntimeError("ag")
+            return asil(y)
+        sim.post = post
+    m2 = _yeniden(tmp_path, monkeypatch, sim, saat)
+    m2.baslat()
+    e = m2.kapanis_kuyrugu[f"{adr(1)}|BTC"]
+    assert e["tur"] == "azalt" and e["hedef_sz"] == pytest.approx(0.10) and e["deneme"] == 0
+    assert bool(m2.risk.acilis_durdu.get("mutabakat")) is hata and len(sim.siparisler) == 0
+    assert c2 not in [x.get("cloid") for x in m2.niyet.satirlar()]
+
+
+def test_dusen_isle_ayni_ms_farkli_dolum_uygulanir_ayni_kimlik_tek_sayilir(tmp_path):
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    a = olay("d:1", adr(1), "BTC", "B", 100, 100.0, 0.0, saat)
+    b = olay("d:2", adr(1), "BTC", "B", 50, 100.0, None, saat)                 # aynı ms, farklı kimlik: delta eklenir
+    m.dusen_isle(a)
+    m.dusen_isle(b)
+    m.dusen_isle(b)                                                            # aynı kimlik ikinci kez: sayılmaz
+    assert m.poz_tr[adr(1)]["BTC"] == 150.0
+
+
+def test_niyet_sikistir_atomik_fsync_ve_icerik(tmp_path, monkeypatch):
+    n = ny.Niyet(tmp_path / "niyet.jsonl")
+    for i in range(30):
+        c = ny.cloid_uret(str(i), "ac")
+        n.niyet_yaz(kimlik=str(i), eylem="ac", adres="a", coin="BTC", yon="B", usd=1.0, reduce_only=False, cloid=c, ms=i)
+        n.sonuc_yaz(c, "dolu", i)
+    cagri = []
+    gercek = os.fsync
+    monkeypatch.setattr(os, "fsync", lambda fd: (cagri.append(fd), gercek(fd))[1])
+    n.sikistir(5)
+    assert len(cagri) == 2 and len(n.kimlikler()) == 5 and n.kimlikler()[-1] == "29" and not list(tmp_path.glob("*.tmp"))

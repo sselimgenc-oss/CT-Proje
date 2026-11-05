@@ -205,6 +205,7 @@ class Motor:
         m = _oku(durum_dizin / "motor.json") or {}
         h = _oku(durum_dizin / "hesap.json")
         self.hesap = Hesap.from_json(h) if h else Hesap(self.kasa, float(rules["canli_marj_kaldirac"]))
+        self._hesap_yok = h is None                                                # hesap.json hiç yok: niyet dosyasındaki eski dolumlar yeni deftere OYNATILMAZ (hayalet pozisyon)
         self._oynat_gecis = h is not None and "son_niyet_cloid" not in h          # eski biçim hesap.json: geçiş (işaretçi = niyet dosyasının sonu, geçmiş oynatılmaz)
         self.hesap.kasa_usd = self.kasa                          # kasa ayarı/etkin kasa değişmiş olabilir (gerçek kip: min(ayar, HL değeri)); pozisyon/K‑Z kaydı KORUNUR
         self.saha = Saha(rules, self.kasa, _oku(durum_dizin / "saha.json"))
@@ -384,6 +385,8 @@ class Motor:
             if not o.adres or not o.coin or o.sz is None or o.px is None or o.yon not in ("B", "A"):
                 return
             if o.zaman_ms < self._poz_tr_ms.get((o.adres, o.coin), 0):
+                return
+            if self._gorulduysa_isaretle(o.kimlik):        # aynı ms'deki FARKLI dolum uygulanır; aynı kimlik (zaten işlenmiş / düşmüş) ikinci kez sayılmaz
                 return
             self._poz_tr_isle(o)
             self.kayit({"olay": "dusen_olay_poz_tr", "adres": o.adres, "coin": o.coin, "yon": o.yon, "sz": o.sz})
@@ -1065,9 +1068,11 @@ class Motor:
                             takip.append((n, max(dolan, 0.0), px))
                     else:
                         durum = "emir_yok_iptal"
+                        self._takip_ekle(takip, n)
                 except Exception as hata:                  # noqa: BLE001
                     durum = f"orderstatus_hata:{type(hata).__name__}"
                     self.risk.bayrak("mutabakat", True)
+                    self._takip_ekle(takip, n)
             self.niyet.sonuc_yaz(n["cloid"], f"cozuldu:{durum}", simdi, **ek)
             self.kayit({"olay": "niyet_sonucsuz", "kip": self.kip, "kimlik": n.get("kimlik"), "eylem": n.get("eylem"), "coin": n.get("coin"), "cloid": n["cloid"], "durum": durum,
                         "dolan_sz": ek.get("sz"), "dolum": ek.get("dolum")})
@@ -1079,6 +1084,13 @@ class Motor:
             self._dolum_yaz()
         return sayi
 
+    def _takip_ekle(self, takip: list, n: dict) -> None:
+        """Emir hiç görülmedi / durum okunamadı: azalt/kapat niyeti yeniden kuyruğa alınır (dolan 0). Sınır: kuyruk girdisi `deneme` ile alarmlı eksik olur; ilk deneme yeni kimlik/cloid ile (`_kuyruk_isle`)."""
+        if n.get("eylem") in ("azalt", "kapat") and n.get("adres") and n.get("coin"):
+            p = self.hesap.poz.get(n["adres"], {}).get(n["coin"])
+            px = self.mark(n["coin"], p.giris if p else None) or 0.0
+            takip.append((n, 0.0, px))
+
     def _oynat(self, simdi: int) -> int:
         """`hesap.json`daki `son_niyet_cloid`'den SONRAKİ sonuçlu niyetleri (sz > 0) deftere uygular ve işaretçiyi ilerletir (t4b #3). İşaretçi niyet dosyasında yoksa oynatılmaz, mutabakat bayrağı kalkar."""
         satirlar = self.niyet.satirlar()
@@ -1086,6 +1098,13 @@ class Motor:
         sonuc = {x["cloid"]: x for x in satirlar if x.get("t") == "sonuc"}
         sira = [x["cloid"] for x in niyetler]
         isaret = self.hesap.son_niyet_cloid
+        if isaret is None and self._hesap_yok:
+            self._hesap_yok = False
+            if niyetler:                                   # güvenli taraf: oynatma YOK, işaretçi dosya sonuna, mutabakat bayrağı (borsa ile uzlaştırılır)
+                self.hesap.son_niyet_cloid = sira[-1]
+                self.kayit({"olay": "oynat_hesap_yok", "niyet_say": len(niyetler)})
+                self.risk.bayrak("mutabakat", True)
+            return 0
         if isaret is None:
             bas = 0
         elif isaret in sira:
