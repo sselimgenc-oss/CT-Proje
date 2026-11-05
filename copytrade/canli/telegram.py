@@ -5,10 +5,12 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime, timezone
 import re
 import time
 from typing import Any, Callable
 
+ONEMLI_ONEKLER = ("ALARM", "DUR", "TASFİYE", "🚨", "🛑")          # her zaman sesli
 KOMUTLAR = ("/dur", "/durum")
 
 
@@ -25,12 +27,14 @@ def varsayilan_post(url: str, yuk: dict) -> dict:
 
 class Telegram:
     def __init__(self, token: str | None = None, chat_id: str | None = None, post: Callable[[str, dict], dict] | None = None, ortam: dict | None = None,
-                 kayit: Callable[[dict], None] | None = None, arka_plan: bool = False, baslangic_s: float | None = None) -> None:
+                 kayit: Callable[[dict], None] | None = None, arka_plan: bool = False, baslangic_s: float | None = None,
+                 sessiz_utc: tuple[int, int] | None = None, saat_s: Callable[[], float] | None = None) -> None:
         ortam = os.environ if ortam is None else ortam
         self.token = (token if token is not None else ortam.get("TELEGRAM_BOT_TOKEN", "")).strip()
         self.chat_id = str(chat_id if chat_id is not None else ortam.get("TELEGRAM_CHAT_ID", "")).strip()
         self.post = post or varsayilan_post
         self.kayit = kayit
+        self.sessiz_utc, self.saat_s = sessiz_utc, saat_s or time.time          # gece (UTC saat aralığı) önemsiz mesajlar sessiz (bildirim sesi yok); alarmlar HER ZAMAN sesli
         self.offset = 0
         self.baslangic_s = float(time.time() if baslangic_s is None else baslangic_s)       # bundan önce tarihli mesajlar yok sayılır
         self.yetkisiz_sayisi = 0
@@ -63,9 +67,16 @@ class Telegram:
             return True
         return self._gonder_sync(metin)
 
+    def sessiz_mi(self, metin: str) -> bool:
+        if self.sessiz_utc is None or metin.startswith(ONEMLI_ONEKLER):
+            return False
+        saat = datetime.fromtimestamp(self.saat_s(), timezone.utc).hour
+        bas, bit = self.sessiz_utc
+        return (bas <= saat < bit) if bas < bit else (saat >= bas or saat < bit)
+
     def _gonder_sync(self, metin: str) -> bool:
         try:
-            self.post(self._url("sendMessage"), {"chat_id": self.chat_id, "text": metin[:4000], "disable_notification": False})
+            self.post(self._url("sendMessage"), {"chat_id": self.chat_id, "text": metin[:4000], "disable_notification": self.sessiz_mi(metin)})
             return True
         except Exception as hata:                      # noqa: BLE001 - ağ/HTTP hatası; ayrıntı (URL'de token var) yazılmaz
             self.hata_sayisi += 1
@@ -183,3 +194,8 @@ def msg_emir_ozeti(kip: str, emirler: list[dict], dakika: float) -> str:
     if kaymalar:
         satirlar.append(f"↳ Trader'a göre ortalama fark {sum(kaymalar) / len(kaymalar):.1f} bp (küçük = iyi)")
     return "\n".join(satirlar)
+
+
+def msg_vardiya_sonu(kip: str, sure_dk: float, emir: int, ozsermaye: float, kasa: float, saha: int, n: int, acik_poz: int) -> str:
+    return (f"🔚 Vardiya bitti ({kip_adi(kip)}) · {sure_dk / 60:.1f} saat\n🧾 Bu vardiyada {emir} emir\n💰 Özsermaye {tr_sayi(ozsermaye)} $ (kasaya göre {tr_yuzde(ozsermaye / kasa - 1)})\n"
+            f"👥 Takipte {saha}/{n} trader · 📌 açık pozisyon {acik_poz}")
