@@ -403,6 +403,13 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     atlanan_html, kapanan_html, maliyet_html = _atlanan_html(k24), _kapanan_html(kayitlar), _maliyet_html(kayitlar, oz, kasa)
     from copytrade.kurallar import load_rules
     maruziyet_html = _maruziyet_html(acik, kasa, oz, float(hesap.get("kaldirac") or 3.0), float((kurallar or load_rules())["canli_coin_tavan_oran"]))
+    gk = (saha_durum or {}).get("gun_kadro") or {}
+    gk_ms = int(((gk.get("kadro") or {}).get("kosu_ms")) or 0)
+    if gk_ms and kadro and kadro.get("kosu_ms"):               # K‑39: motor gün başına İLK kadroyu uygular; pano EN SON kadroyu gösterir — karışmasın
+        motor_satiri = (f'Motor bugün <b>{_tsi(gk_ms, "%H:%M")} TSİ</b> kadrosunu uyguluyor' + ("." if int(kadro["kosu_ms"]) == gk_ms else
+                        f' (günün ilk kadrosu); aşağıdaki liste en son kadro ({_tsi(int(kadro["kosu_ms"]), "%H:%M")} TSİ) — ikinci kadro saha kararlarını değiştirmez.'))
+    else:
+        motor_satiri = ""
     kadro_tarih = _tsi(int(kadro["kosu_ms"]), "%d.%m %H:%M") if kadro and kadro.get("kosu_ms") else "—"
     kadro_html = "".join(kartlar) + ('<div class="yb">YEDEKLER</div>' + "".join(yedek_kartlar) if yedek_kartlar else "") if (kartlar or yedek_kartlar) else '<div class="bos">Kadro verisi okunamadı</div>'
     uyari = '<div class="uy">⚠ GERÇEK PARA</div>' if kip == "gercek" else ""
@@ -460,7 +467,7 @@ input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler sectio
 <div class="p g3"><div class="pb">Maliyet dökümü <span>ücret · kayma · funding</span></div>{maliyet_html}</div>
 </section>
 <section class="n5 izgara">
-<div class="p g3"><div class="pb">Takip edilen ilk 11 ve yedekler <span>radar {kadro_tarih} TSİ · dokun → bize ne verdi</span></div><div class="pi kl">{kadro_html}{mut}</div></div>
+<div class="p g3"><div class="pb">Takip edilen ilk 11 ve yedekler <span>radar {kadro_tarih} TSİ · dokun → bize ne verdi</span></div><div class="pi kl">{f'<div class="mt" style="margin:0 0 10px">{motor_satiri}</div>' if motor_satiri else ""}{kadro_html}{mut}</div></div>
 </section>
 <section class="n4 izgara">
 <div class="g3 sirit">{hucre("WS kopma", str(din.get("kopma", "—")), "", "bu vardiyada")}{hucre("REST 429", str(ozet.get("rest_429", "—")), "", "hız sınırı")}{hucre("Vardiya süresi", f"{tr_sayi(float(ozet.get('sure_dk') or 0) / 60, 1)} sa", "", "son tur")}{hucre("Özsermaye zirvesi", tl(float(zirve)) if zirve else "—", "", "")}</div>

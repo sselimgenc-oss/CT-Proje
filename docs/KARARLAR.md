@@ -153,3 +153,7 @@
 ### K‑39. Kadro dışı düşme iki farklı UTC günü ister, bekleme yok (lider, 2026-11-05)
 - **Bulgu:** aynı gün ikinci radar koşusu 3 üyeyi girişlerinden 3 saat sonra düşürdü ve 14 gün yasakladı.
 - **Kural:** `docs/DENETIM_PANO_2026-11-05.md` §A. Motor gün başına ilk kadroyu uygular. Sonuçla düşme ve bekleme kuralları değişmez.
+
+### K‑40. Pano Cloudflare Workers `sg-pano` ile gösterilir — K‑20 istisnası (lider onayı, 2026-11-05)
+- Kullanıcı kendi Cloudflare hesabında `sg-pano` Workers statik sayfasını kurdu; GitHub reposuna bağlı, üretim dalı `canli-durum`, çıktı klasörü `pano`.
+- **Yalnız herkese açık veri dalını okuyan salt okunur görüntü:** secret/anahtar yok, hesap/emir yok, sunucu yok. K‑20 ("Cloudflare ve DigitalOcean yok") bu istisna dışında geçerlidir; gerçek para sunucusu (T5) ayrı karardır.

@@ -220,3 +220,16 @@ def test_pano_c2_c3_c4_c5_atlanan_kapanan_maliyet_maruziyet():
     assert "−0,80 $" in h and "−0,08 $" in h and "−0,10 $" in h and "+4,98 $" in h and "Toplam maliyet 0,98 $" in h
     # C5: uzun 200, kısa 100 ⇒ net +100; brüt 300 = %30 kasa; teminat 300 / 3 = 100 = %10 özsermaye (1004); BTC 200 / (0,30 × 1000 = 300) = %67 doluluk
     assert "+100,00 $" in h and "%30" in h and "~100,00 $ (3x)" in h and "width:67%" in h
+
+
+def test_pano_kadro_motorun_uyguladigi_ilk_kadro_satiri():
+    from copytrade.canli import pano
+    a1, a2, kadro, ozet, hesap, saha, kayit = _c_veri()
+    ilk = 1_793_863_000_000                                                       # kadro["kosu_ms"] = en son kadro
+    saha_ayni = {**saha, "gun_kadro": {"gun": "2026-11-05", "kadro": {"kosu_ms": ilk}}}
+    h1 = pano.html_olustur(ozet, {}, hesap, kayit, [], 1_793_900_000_000, kadro, saha_ayni)
+    assert "Motor bugün" in h1 and "kadrosunu uyguluyor." in h1 and "ikinci kadro" not in h1
+    saha_ilk = {**saha, "gun_kadro": {"gun": "2026-11-05", "kadro": {"kosu_ms": ilk - 6 * 3_600_000}}}              # motor 6 saat önceki (ilk) kadroyu uyguluyor
+    h2 = pano.html_olustur(ozet, {}, hesap, kayit, [], 1_793_900_000_000, kadro, saha_ilk)
+    assert "günün ilk kadrosu" in h2 and "en son kadro" in h2 and "saha kararlarını değiştirmez" in h2
+    assert "Motor bugün" not in pano.html_olustur(ozet, {}, hesap, kayit, [], 1_793_900_000_000, kadro, saha)       # gun_kadro yoksa satır yok
