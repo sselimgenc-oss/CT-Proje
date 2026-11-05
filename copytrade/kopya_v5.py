@@ -11,6 +11,7 @@ import pandas as pd
 
 from copytrade import boyut, kopya_v3, kopya_v4
 from copytrade.kurallar import load_rules
+from copytrade.olcut import is_hip3
 
 EPS = 1e-12
 
@@ -65,12 +66,20 @@ def boyutlayici(trader_hesap_usd: float, slot: float, rules: dict, kayit: list |
     return isle
 
 
+def hip3_ayikla(fills: list[dict], hip3_kopya: bool) -> list[dict]:
+    """K‑43 adayı (deneme seçeneği): `hip3_kopya=False` ise HIP‑3 (`olcut.is_hip3`: `dex:COIN`) dolumları atılır. HIP‑3 pozisyonu kopyada hiç açılmadığı için
+    kapanış/azaltma dolumları da (motor K‑42'deki gibi) oynatmada karşılıksızdır: HIP‑3 dolumlarının TAMAMI atlanır. `True` = bugünkü davranış (liste aynen)."""
+    return list(fills) if hip3_kopya else [f for f in fills if not is_hip3(str(f.get("coin", "")))]
+
+
 def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str, list[dict]], yurutme: dict[str, dict[int, float]], funding: list[dict],
             t0: pd.Timestamp, now: pd.Timestamp, delay: int, style: str, rules: dict | None = None, azami_kaldirac: dict[str, float] | None = None,
-            trader_hesap_usd: float = 0.0, kasa_usd: float | None = None, kayit: list | None = None, k35: bool = True) -> dict:
+            trader_hesap_usd: float = 0.0, kasa_usd: float | None = None, kayit: list | None = None, k35: bool = True, hip3_kopya: bool | None = None) -> dict:
     """v5 sanal kopya sonucu (kasa ölçeğinde): v3/v4 alanları + `surum: v5`, `kasa_usd`, `slot_usd`. `delay` 0 = ayna (trader'ın dolum fiyatı; `kopya_v3.hesapla` H1 yolu).
-    `k35=False`: K‑35 ÖNCESİ davranış (v4 emir/trader tavanı açık, slot tavanı coin başına) — yalnız önce/sonra karşılaştırması için; üretimde True."""
+    `k35=False`: K‑35 ÖNCESİ davranış (v4 emir/trader tavanı açık, slot tavanı coin başına) — yalnız önce/sonra karşılaştırması için; üretimde True.
+    `hip3_kopya` (K‑43 adayı, yalnız deneme): None = `rules["radar_hip3_kopya"]` (varsayılan true = HIP‑3 dolumları da kopyalanır, bugünkü davranış); False = HIP‑3 dolumları oynatmadan çıkar (`hip3_ayikla`)."""
     rules = rules or load_rules()
+    fills = hip3_ayikla(fills, bool(rules.get("radar_hip3_kopya", True)) if hip3_kopya is None else hip3_kopya)
     kasa = float(rules["canli_kasa_usd"] if kasa_usd is None else kasa_usd)
     slot = boyut.slot_usd(kasa, rules)
     lim = kopya_v4.limitler(rules, azami_kaldirac)

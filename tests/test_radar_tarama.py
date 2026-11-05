@@ -311,7 +311,7 @@ def test_koşu_sozlesme_alanlari_vault_payda_hesap_ve_429(tmp_path):
     yazilan = json.loads((tmp_path / "radar/2026-10-27/havuz.json").read_text(encoding="utf-8"))
     assert yazilan == sonuc
     anahtarlar = {"adres", "hesap_usd", "hafta_pnl_usd", "trader_getiri_7g", "islem_sayisi", "medyan_tutma_saat", "kisa_islem_payi", "max_kaldirac", "likit_pay",
-                  "kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "v4_kopya_getiri_7g", "v5_onceki_kopya_getiri_7g", "kopya_gunluk", "kopya_kazanc_gun_orani", "kopya_dusus", "yayilma", "kopya_getiri_72s", "hype_payi", "net_yatirma_usd", "yatirma_payi", "gecti", "neden", "hata"}      # T6 §2: iki yeni bilgi alanı
+                  "kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "v4_kopya_getiri_7g", "v5_onceki_kopya_getiri_7g", "kopya_gunluk", "kopya_kazanc_gun_orani", "kopya_dusus", "yayilma", "kopya_getiri_72s", "hype_payi", "hip3_nosyonel_pay", "net_yatirma_usd", "yatirma_payi", "gecti", "neden", "hata"}      # T6 §2: iki yeni bilgi alanı; K‑43 adayı: hip3_nosyonel_pay
     assert all(set(s) == anahtarlar for s in sonuc["satirlar"])
     assert all(c_[3] == KOSU for c_ in c.cagrilar) and all(c_[2] == BAS for c_ in c.cagrilar)         # pencere [kosu − 168 sa, kosu)
 
@@ -576,3 +576,44 @@ def test_para_hareketi_havuz_json_a_ve_ozete_yazilir(tmp_path):
     assert s["net_yatirma_usd"] == 3000.0 and s["yatirma_payi"] == pytest.approx(0.3)
     md = r.ozet_md(sonuc)
     assert "yatirma_payi` > 0.2 olan **1** kişi" in md and "| net_yatirma_usd | 1 |" in md
+
+
+# -------------------------------------------------------------------------------------------------------------------------------- K‑43 adayı: radar_hip3_kopya
+def _hip3_senaryo(tmp_path, rules):
+    """Trader hesabı 20.000 $. BTC: 10 adet 10:00'da 100'den açılır, 11:00'de 110'dan kapanır (kopya 0,001078055, ayna 0,0011; bkz. yukarıdaki altın örnek). `xyz:GOLD`: 5 adet 10:00'da 2.000'den açılır,
+    11:00'de 2.100'den kapanır. Slot 90,909 $ → GOLD hedefi 90,909 × 10.000 / 20.000 = 45,4545 $ (≥ 11, tavan 272,7 altında) = 0,0227273 adet.
+    Ayna GOLD kârı 0,0227273 × 100 = 2,272727 $ → toplam ayna (1,10 + 2,272727) / 1.000 = 0,003372727. Kopya maliyeti GOLD: (45,4545 + 47,7273) × 0,00095 = 0,0885227 $ → net 2,184205 $;
+    toplam kopya (1,078055 + 2,184205) / 1.000 = 0,00326226. `false`: GOLD'un iki dolumu (açılış + kapanış) oynatmadan çıkar → yalnız BTC sayıları; trader ölçüleri (işlem sayısı 2) ve `hip3_nosyonel_pay` = (10.000 + 10.500) / (1.000 + 1.100 + 10.000 + 10.500) = 20.500 / 22.600 = 0,90708 (açılış + kapanış dolumları) değişmez."""
+    dolumlar = {A1: [dolum(ms("10:00:00"), "BTC", "B", 10, 0, 100), dolum(ms("10:00:00"), "xyz:GOLD", "B", 5, 0, 2000),
+                     dolum(ms("11:00:00"), "BTC", "A", 10, 10, 110, kapanan=100.0), dolum(ms("11:00:00"), "xyz:GOLD", "A", 5, 5, 2100, kapanan=500.0)]}
+    fiyat = lambda coin, t: (2100.0 if coin == "xyz:GOLD" else 110.0) if t >= ms("11:00:00") else (2000.0 if coin == "xyz:GOLD" else 100.0)   # noqa: E731
+    c = Sahte([lider(A1, 20_000, 100, 5_000)], dolumlar, fiyat, hacim={"BTC": 5e8, "xyz:GOLD": 5e8})
+    return satir_al(kos(c, tmp_path, rules=rules), A1)
+
+
+def test_radar_hip3_kopya_true_ikisi_de_kopyalanir_varsayilan_bugunku(tmp_path):
+    assert RULES["radar_hip3_kopya"] is True                                      # varsayılan = bugünkü davranış
+    s = _hip3_senaryo(tmp_path, RULES1)
+    assert s["ayna_getiri_7g"] == pytest.approx(0.003372727, abs=1e-8) and s["kopya_getiri_7g"] == pytest.approx(0.00326226, abs=1e-7)
+    assert s["hip3_nosyonel_pay"] == pytest.approx(20_500 / 22_600) and s["islem_sayisi"] == 2 and s["gecti"] is True
+
+
+def test_radar_hip3_kopya_false_yalniz_perp_kopyalanir_trader_olculeri_degismez(tmp_path):
+    s = _hip3_senaryo(tmp_path, {**RULES1, "radar_hip3_kopya": False})
+    assert s["ayna_getiri_7g"] == pytest.approx(0.0011, abs=1e-9) and s["kopya_getiri_7g"] == pytest.approx(0.001078055, abs=1e-9)
+    assert s["hip3_nosyonel_pay"] == pytest.approx(20_500 / 22_600) and s["islem_sayisi"] == 2
+    assert s["likit_pay"] == 1.0 and s["gecti"] is True
+
+
+def test_hip3_ayikla_spot_ve_perp_kalir_hip3_tamami_gider():
+    from copytrade import kopya_v5
+    f = [{"coin": "BTC"}, {"coin": "xyz:GOLD"}, {"coin": "@107"}, {"coin": "PURR/USDC"}, {"coin": "flx:TSLA"}]
+    assert [x["coin"] for x in kopya_v5.hip3_ayikla(f, False)] == ["BTC", "@107", "PURR/USDC"]
+    assert kopya_v5.hip3_ayikla(f, True) == f
+
+
+def test_hip3_nosyonel_pay_uc_durumlar():
+    assert r.hip3_nosyonel_pay([]) is None                                          # nosyonel 0
+    assert r.hip3_nosyonel_pay([dolum(1, "@5", "B", 1, 0, 10)]) is None             # yalnız spot: perp nosyoneli yok
+    assert r.hip3_nosyonel_pay([dolum(1, "BTC", "B", 1, 0, 100)]) == 0.0
+    assert r.hip3_nosyonel_pay([dolum(1, "BTC", "B", 1, 0, 100), dolum(2, "xyz:GOLD", "B", 3, 0, 100)]) == pytest.approx(0.75)   # 300 / 400
