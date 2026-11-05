@@ -64,3 +64,25 @@ Güncel tutulur; lider 09.11'de bunu okuyarak devralır. Saatler UTC, aksi belir
 | Tarih | radar çalıştı | gecti | ana vardiya sayısı/boşluk | kasa / özsermaye | olaylar |
 |---|---|---|---|---|---|
 | 05.11 | 07:18Z'de (birincil 6,7 sa geç; kadro var) | — | 04:58Z + 09:31Z; boşluk yok | 1.000 / ~1.000,7 | #510 #512 #514 birleşti; Telegram çalışıyor |
+
+## Sayaç — temiz tanımı (genişletilmiş, lider kararı 05.11 gece)
+Sayaç günü "temiz" sayılır ancak hepsi doğruysa:
+- vardiya işi başarısız / iptal / zaman aşımı yok;
+- `BAŞLAMADI` ve vardiya boşluğu yok;
+- mutabakat alarmı yok; `adim_hata`, `olay_hata`, `defter_hata` 0;
+- `kapanis_eksik` 0;
+- kadro her gün geldi;
+- sağlık işi günde ≥ 20 kez koştu;
+- komut kaybı yok;
+- KRİTİK yok.
+
+## T5 öncesi zorunlular (Opus uçtan uca denetim, 05.11 gece)
+1. Telegram tek tüketici (B1): deneme dalında token yok — ✔ bu PR (`canli_vardiya.yml`, `saglik.yml`: secret yalnız `refs/heads/main`).
+2. Kip/kasa yalnız sunucuda okunsun (B2; radar ve sanal seri etkilenmesin).
+3. API cüzdanı doğrulaması (Y3: ana anahtar değil agent; HL değeri ≤ 1.000 $ uyarısı).
+4. HIP-3 + spot kararı (B3 + Y1).
+5. Gerçek funding/ücret deftere (B4).
+6. Gerçek motor nabız/özet yayını + sağlık kontrolünün okuması (Y2).
+7. Kip/kasa uyuşmazlığında başlama yok (O11); kurulum belgesinde `/dur` ↔ `/kapat` (O10) — ✔ bu PR.
+8. HL 10 $ altı reduce-only tam kapanış: kullanıcı onaylı küçük gerçek deneme.
+9. Patlama freni (O1); K-38 kararı (O2: birleş ya da belge notu).

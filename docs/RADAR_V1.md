@@ -91,7 +91,7 @@ gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez
   kısmi dolum zincirinde patlıyordu.)
 - **Azaltma:** trader'ın pozisyon azaltma oranıyla aynı oran. Emir < 11 $ çıkarsa: kalan < 11 $ olacaksa pozisyonun tamamı kapatılır, değilse atlanır. Trader tamamen kapatınca biz de tamamen kapatırız (reduce‑only).
 - **Marj:** coin başına **izole, 3x** (bir pozisyonun tasfiyesi kasanın geri kalanını yakmaz).
-- **Emir:** IOC limit, fiyat = en iyi karşı fiyat ± **%0,5** kayma tavanı; dolmayan kısım yeniden denenmez (`dolmadi` kaydı).
+- **Emir:** IOC limit, fiyat = en iyi karşı fiyat ± **%0,5** kayma tavanı; dolmayan kısım aynı emirde yeniden denenmez (`dolmadi` kaydı); kalan fark sonraki olayda hedef tabanlı (K‑36/K‑38) kapanır.
 - Her emir için kayıt: trader dolum zamanı, bizim görme zamanımız, emir/dolum fiyatı, kayma, ücret, neden.
 - **Güvenlik:** HL **API cüzdanı** (işlem yetkili, para çekme yetkisiz); ana cüzdan anahtarı hiçbir yere konmaz. API anahtarı yalnız sunucuda.
 
@@ -101,7 +101,7 @@ gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez
 - **Benzer trader:** sahada `son7g` günlük kopya getirisi korelasyonu ≥ 0,7 olan en fazla 2 kişi; fazlası sıradaki üyeye yer verir.
 - **Patlama freni (K‑27):** bir trader 10 dk içinde ≥ 8 yeni coin açarsa ondan 30 dk yeni açılış kopyalanmaz (kapanışları izlenir).
 - Günlük kasa kaybı ≥ %5 → o gün yeni açılış yok. Kasa zirveden düşüş ≥ **%20** → tüm pozisyonlar kapatılır, motor durur, Telegram (K‑19).
-- **/dur şalteri:** Telegram komutu ya da sunucuda dosya → aynı kapanış.
+- **Şalterler (komut tutarlılığı, 2026-11-05):** `/kapat` (Telegram) ya da sunucuda `DUR` dosyası → tüm pozisyonlar kapatılır, motor durur. `/dur` yalnız yeni giriş/artırmayı durdurur (çıkış serbest, motor çalışır); `/devam` ikisini de kaldırır (`/kapat` sonrası sunucudan).
 
 ## 7. R5 — Büyütme kapısı (kasaya para eklemek; son karar kullanıcının)
 Kasa 1.000 $'da kalır; artırım ancak hepsi sağlanırsa **önerilir**:

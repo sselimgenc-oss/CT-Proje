@@ -55,8 +55,9 @@ jobs:
       VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'canli-durum' || 'canli-durum-deneme' }}
       KADRO_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
       GIRDI_SURE_DK: ${{ inputs.sure_dk }}
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      # B1 (Opus denetimi 05.11): Telegram yalnız main'de; deneme dalı token görmez (aynı bota iki getUpdates tüketicisi komut kaybettirir).
+      TELEGRAM_BOT_TOKEN: ${{ github.ref == 'refs/heads/main' && secrets.TELEGRAM_BOT_TOKEN || '' }}
+      TELEGRAM_CHAT_ID: ${{ github.ref == 'refs/heads/main' && secrets.TELEGRAM_CHAT_ID || '' }}
     steps:
       - uses: actions/checkout@v4
         with:
