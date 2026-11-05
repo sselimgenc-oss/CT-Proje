@@ -29,3 +29,4 @@ Cloudflare ve DigitalOcean yok (K‑20): her şey GitHub Actions + veri dalı.
 - Eski sistem (kapı, İlk 11 puanı, oda/kontrol, ön kayıt, araştırma, ilgili iş akışı/test/belge) silindi; kalan kod `hl_ortak.py`/`deneme_arac.py`'ye taşınanlarla çalışıyor. Python testleri 872 → 470 (+32 anahtar testi), Worker 28 → 26.
 - Açık sorular lider için: `ilk11` adı kalan altyapıda (dinleyici/risk/faz3) duruyor, Worker `kol=oda` bildirimi duruyor, `son_yaz.py` silinmedi — ayrıntı `docs/sonnet_durum_t1.md`.
 - `izleme.yml` zamanlaması kapalı (T4'te radar kadrosu için geri gelir); veri dalı `copytrade-kapi` ve eski dallar PR birleşince lider tarafından silinir.
+- 2026-11-05: T4 birleşti (#504; K‑35, K‑36). T4b (#510) sanal vardiya bekliyor. T6 görevi: `docs/GOREV_T6_RAPOR_ISABET.md`. `radar` veri dalı ilk kadro: 12 geçti.
