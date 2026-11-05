@@ -89,8 +89,8 @@ def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trad
                 return 0.0, "min_emir_atlandi"
             emir = biz * (once - sonra) / once
             if emir >= minimum - EPS:
-                return emir, "tamam"
-            return (biz, "kucuk_kalan_kapat") if biz - emir < minimum - EPS else (0.0, "min_emir_atlandi")
+                return emir, "azalt_oransal_yedek"                       # lider onayı (05.11): yedek yol SAYILIR (neden_say / kayıt `boyut_neden`)
+            return (biz, "azalt_oransal_yedek") if biz - emir < minimum - EPS else (0.0, "min_emir_atlandi")
         hedef = min(float(slot) * sonra * float(fiyat) / float(trader_hesap_usd), tavan)
         if hedef < minimum - EPS and biz >= minimum - EPS:
             return biz, "kucuk_kalan_kapat"

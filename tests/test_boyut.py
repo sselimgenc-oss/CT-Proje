@@ -49,9 +49,9 @@ def test_min_emir_atlandi_kucuk_slot():
 
 def test_azaltma_oran_kucuk_kalan_ve_atlama():
     emir, neden = boyut.hedef_emir('azalt', 10.0, 5.0, 0.0, 27.27, SLOT, 100.0, RULES)          # trader %50 azaltır → 13,635 $
-    assert emir == pytest.approx(13.635) and neden == 'tamam'
+    assert emir == pytest.approx(13.635) and neden == 'azalt_oransal_yedek'            # trader hesabı yok (0.0) ⇒ eski oransal yedek yol (K‑38 onayı)
     emir, neden = boyut.hedef_emir('azalt', 10.0, 6.0, 0.0, 15.0, SLOT, 100.0, RULES)           # %40 → 6 $ < 11, kalan 9 < 11 → 15 $ tam
-    assert emir == 15.0 and neden == 'kucuk_kalan_kapat'
+    assert emir == 15.0 and neden == 'azalt_oransal_yedek'
     assert boyut.hedef_emir('azalt', 10.0, 9.0, 0.0, 60.0, SLOT, 100.0, RULES) == (0.0, 'min_emir_atlandi')   # %10 → 6 $ < 11, kalan 54 ≥ 11 → atla
 
 
@@ -216,5 +216,5 @@ def test_k38_hedef_minimumun_altina_inerse_tamami_kapanir_biz_hedefin_altindaysa
 def test_k38_hedef_coin_tavanina_kirpilir_ve_hesap_yoksa_eski_oransal_yedek():
     emir, neden = boyut.hedef_emir('azalt', 45000.0, 40000.0, HESAP, 300.0, SLOT, 100.0, RULES)   # hedef 363,64 → tavan 272,727; fark 27,2727
     assert (round(emir, 4), neden) == (27.2727, 'tamam')
-    emir, neden = boyut.hedef_emir('azalt', 100.0, 50.0, 0.0, 40.0, SLOT, 100.0, RULES)           # hesap bilinmiyor: oransal 40 × %50 = 20
-    assert (round(emir, 4), neden) == (20.0, 'tamam')
+    emir, neden = boyut.hedef_emir('azalt', 100.0, 50.0, 0.0, 40.0, SLOT, 100.0, RULES)           # hesap bilinmiyor: oransal 40 × %50 = 20 (neden sayılır: azalt_oransal_yedek)
+    assert (round(emir, 4), neden) == (20.0, 'azalt_oransal_yedek')

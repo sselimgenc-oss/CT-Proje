@@ -863,3 +863,13 @@ def test_k38_motor_azaltma_hedef_tabanli_atlanan_parca_sonra_yakalanir_hesap_yok
     assert not any(x.karar == "emir" for x in s2)
     s3 = m.olay_isle(olay("a:3", adr(1), "BTC", "A", 100, 100.0, 250.0, saat))
     assert [(x.eylem, x.karar) for x in s3] == [("azalt", "emir")] and kayitlar(tmp_path, "emir")[-1]["usd_istenen"] == pytest.approx(13.6364, abs=1e-3) and not m.neden_say.get("hesap_yok")
+
+
+def test_k38_oransal_yedek_sayaci_neden_say_ve_kayitta(tmp_path):
+    """Lider onayı (05.11): trader hesabı bilinmiyorsa azaltma oransal yedeğe düşer ve `azalt_oransal_yedek` olarak SAYILIR (özet neden_say + emir kaydı boyut_neden)."""
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    m.hesap_tr[adr(1)] = {"deger": 0.0, "ms": saat()}                                   # hesap değeri 0 ⇒ bilinmiyor gibi (oransal yedek)
+    s = m.olay_isle(olay("a:2", adr(1), "BTC", "A", 150, 100.0, 300.0, saat))
+    assert [(x.eylem, x.karar) for x in s] == [("azalt", "emir")] and m.neden_say.get("azalt_oransal_yedek") == 1 and kayitlar(tmp_path, "emir")[-1]["boyut_neden"] == "azalt_oransal_yedek"
