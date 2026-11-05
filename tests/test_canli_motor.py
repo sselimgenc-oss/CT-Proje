@@ -884,3 +884,21 @@ def test_k39_motor_gecis_beklemesi_silinir_ve_kayda_yazilir(tmp_path):
     m, hl, saat, _ = kur(tmp_path)
     m.baslat()
     assert adres not in m.saha.bekleme and any(x["olay"] == "bekleme_silindi" and x["adres"] == adres and x["neden"] == "K-39" for x in kayitlar(tmp_path))
+
+
+def test_b7_periyodik_vardiya_boyunca_taze_ozet_json_yazar_pano_icin(tmp_path):
+    """Pano 15 dakikada bir yenilensin (B7): motor `durum/ozet.json`'u yalnız vardiya sonunda değil her periyodik döngüde yazar (vardiya kimliği, acik, dinleyici alanlarıyla)."""
+    import types
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    din = types.SimpleNamespace(izle_ekle=lambda a: None, durdur=lambda: None, ozet=lambda: {"genel": {"kopma": 3}})
+
+    async def kos():
+        durdur = asyncio.Event()
+        gorev = asyncio.create_task(mt._periyodik(m, durdur, din, aralik_sn=60))
+        await asyncio.sleep(0.5)
+        durdur.set()
+        await gorev
+    asyncio.run(kos())
+    ozet = json.loads((tmp_path / "durum" / "ozet.json").read_text())
+    assert ozet["vardiya"] == m.vardiya_id and "acik" in ozet and ozet["dinleyici"] == {"kopma": 3} and ozet["kasa_usd"] == 1000.0 and ozet["yazildi_ms"] == saat()
