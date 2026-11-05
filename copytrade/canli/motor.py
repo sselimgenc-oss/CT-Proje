@@ -1129,6 +1129,10 @@ async def _tuketici(motor: Motor, kuyruk: asyncio.Queue | OncelikliKuyruk, durdu
 async def _periyodik(motor: Motor, durdur: asyncio.Event, dinleyici: CanliDinleyici, aralik_sn: float = 30.0) -> None:
     while not durdur.is_set():
         await asyncio.to_thread(motor.dakika)
+        try:                                                # pano (15 dk'lık yayım) taze `durum/ozet.json` ister: vardiya boyunca her döngüde yazılır (B7); hata motoru durdurmaz
+            _yaz(motor.durum_dizin / "ozet.json", {**motor.ozet(), **motor.pano_ek(), "dinleyici": dinleyici.ozet()["genel"], "yazildi_ms": motor.saat_ms()})
+        except Exception as hata:                           # noqa: BLE001
+            motor.kayit({"olay": "ozet_yazma_hata", "tur": type(hata).__name__, "mesaj": str(hata)[:120]})
         for adres in motor.saha.uyeler:
             dinleyici.izle_ekle(adres)
         if motor.dur_istendi:
@@ -1168,7 +1172,7 @@ async def calis(motor: Motor, sure_sn: float | None = None, ws: Callable[[], Any
         durdur.set()
         await asyncio.gather(*gorevler, return_exceptions=True)
         motor.emir_ozeti(motor.saat_ms(), zorla=True)
-        ozet = {**motor.ozet(), **motor.pano_ek(), "dinleyici": din.ozet()["genel"]}
+        ozet = {**motor.ozet(), **motor.pano_ek(), "dinleyici": din.ozet()["genel"], "yazildi_ms": motor.saat_ms()}
         motor.kayit({"olay": "kapanis", "ozet": ozet})
         _yaz(motor.durum_dizin / "ozet.json", ozet)
         motor.durum_yaz()
