@@ -1,0 +1,26 @@
+# T4b durum notları (K‑37 motor sağlamlaştırma)
+
+Sonnet kararları ve belgede olmayan yorumlar (lider onayına):
+
+1. **Kapanış bant merdiveni:** `canli_kapanis_bantlari: [0.005, 0.01, 0.02, 0.02, 0.02]` (en çok 5 deneme). Belge "%2'ye yalnız DUR ve kapanışta çıkılır" diyor; bunu **tam kapanışlar** (DUR, trader tam kapanışı, inen 24 sa, senkron kapanışı) için merdivenin tamamı, **kısmi azaltma** için tek deneme (%0,5) + dakikalık kuyruk (her dakika yeniden %0,5, hedefe ulaşana kadar) diye uyguladım. Açılış bandı %0,5 sabit. Yanlışsa tek yer: `copytrade/canli/motor.py::_kapat_coin` / `_kuyruk_isle`.
+2. **Kısmi azaltmanın kalanı < 10 $:** HL kısmi reduce‑only emri 10 $ altında reddeder (`min_nosyonel`); kalan kuyruktan atılır ve `min_nosyonel` sayılır (pozisyon biraz büyük kalır; sonraki trader dolumu/kapanışı düzeltir). Alternatif: kalanı tam kapat — lider kararı.
+3. **`min_nosyonel` ve reduce‑only TAM kapanış istisnası — DOĞRULANAMADI:** HL resmî hata sayfası yalnız "Order must have minimum value of $10." (`MinTradeNtl`) der; reduce‑only muafiyetini ne belge ne SDK metni söylüyor (internet taraması: kaynak yok). Kod belgedeki kurala göre yazıldı (tam kapanış → minimum aranmaz). **Gerçekte HL küçük reduce‑only kapanışı reddederse** pozisyon `kapanis_eksik` olarak kalır ve her dakika alarm verir (sessiz kalmaz). T5'ten önce küçük bir testnet/gerçek 10 $ altı kapanış denemesi gerekir (kullanıcı onayıyla).
+4. **Gerçek özsermaye ofseti:** kasa < HL hesabı olabilir (`min(ayar, HL)`); risk temeli = `HL accountValue − ofset` (ofset = ilk okumada HL değeri − yerel özsermaye, `motor.json`'da kalıcı). Böylece günlük −%5 / zirve −%20 kasa ölçeğinde kalır. HL değeri `3 × canli_mutabakat_sn`den eskiyse yerel değer kullanılır. Mevduat/çekim ofseti kaydırır (T5'te ofset sıfırlama komutu gerekebilir).
+5. **Sanal funding oranı kaynağı:** `metaAndAssetCtxs.funding` (güncel saatlik oran; saat başı ödemesinin tahmini). Saat başından sonraki ilk dakikalık bakımda o anki pozisyon ve mark ile uygulanır. Yeniden başlatmada kaçan saat için en çok 24 kez güncel oranla. `kopya_v5` (R1) funding'i trader'ın `userFunding` satırlarından alır; canlıda trader yok, kopyanın kendi pozisyonu var — işaret/birim aynı (`defter.py`: `−adet × fiyat × oran`).
+6. **Niyet/cloid çözümü (gerçek):** `orderStatus(cloid)` "filled" ise dolan miktar `origSz − sz`, fiyat **limit fiyat** (yaklaşık); kesin değer mutabakat/`userFills`. Aynı dolumun iki eylemi (ters dönüşte kapat + ac) farklı cloid alır; kapat'tan sonra çökme olursa "ac" tekrarlanmaz (kimlik niyetle işlenmiş sayılır) — güvenli taraf.
+7. **DUR yarım kalırsa:** `DUR` dosyası `kapanis_bekliyor` taşır. Pozisyon açıkta ve bu bayrak varken motor yeniden başlatılırsa YALNIZ kapanış modunda başlar (yeni açılış yok); aksi halde eskisi gibi başlamaz.
+8. **Telegram:** `from.id` zorunlu; mesajın `date`'i motor başlangıcından önceyse yok sayılır (offset yine ilerler); yetkisiz komut `telegram_yetkisiz` olarak kayda geçer (sohbet kimliğinin yalnız ilk 3 hanesi).
+9. **Herkese açık veri:** `HL_HESAP_ADRESI` değeri `kayit` satırlarında, durum dosyalarında ve Telegram mesajlarında `[hesap]` ile maskelenir (büyük/küçük harf duyarsız). Trader adresleri kalır.
+10. **Dinleyici kuyruğu:** `asyncio.Queue` yerine `OncelikliKuyruk` (kapat/azalt önce; 10.000 sınır). Önceliği `Motor.kapanis_mi` (olay trader pozisyonunu azaltıyor/kapatıyor/ters çeviriyor mu) belirler.
+11. **Senkron kapanışı:** bizde pozisyon olup trader REST pozisyonu 0 ise kapatılır; okumadan sonra o coinde WS dolumu işlendiyse atlanır (yarış koruması).
+12. **Sanal derinlik penceresi** `canli_sanal_derinlik_sn: 5`; sanal yürütücü saatini motordan alır.
+
+## Bağımsız Opus denetimi (05.11, devir dönemi) — bulgular
+- **Düzeltildi (bulgu 1):** `OncelikliKuyruk` aynı (adres, coin) olaylarının sırasını bozuyordu (aç → kapat ters işlenir, hayalet pozisyon). Artık öncelik yalnız farklı anahtarlar arasında; aynı anahtar FIFO. Test: `test_oncelikli_kuyruk_ayni_adres_coin_sirasi_bozulmaz_...`.
+- **AÇIK, gerçek kipten (T5) önce çözülmeli — lider kararı gerekir** (sanal kipte para riski yok):
+  - #2 `niyetleri_coz`: yalnız `status=="filled"` deftere işlenir; IOC kısmi dolum + `canceled` durumunda kısmi dolum kaybolur (`motor.py` ~943).
+  - #3 `sonuc_yaz` fsync'li ama `hesap.json` dakikalık; çökmede sonuçlu niyetler deftere yeniden oynatılmıyor (dolum kaybı / çift azaltma) (~437-453, 556).
+  - #4 Tek HL hesabında coin netleşir; adres payı kadar reduce-only kapanış net pozisyonu büyütüyorsa HL reddeder → `kapanis_eksik` döngüsü, DUR tamamlanmaz (~474-515).
+  - #5 (düşük) `hl_ofset` bir kez sabitlenir; yatırma/çekme veya hatalı ilk okumada kayar.
+  - #6 (düşük) kuyruk taşınca düşen açılışlar `poz_tr`'yi güncellemez; 600 sn senkron düzeltir.
+  - #7 (düşük, sanal) kaçan funding saatleri o anki oran/pozisyonla yazılır; oranı okunamayan coin sessizce atlanır.

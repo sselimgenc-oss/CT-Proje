@@ -2,13 +2,14 @@ name: Canlı vardiya (sanal kip)
 
 # T4 (docs/GOREV_T4_CANLI_MOTOR.md §3, K-29): sunucu açılana kadar canlı motor SANAL kipte GitHub Actions'ta vardiyalı koşar. GERÇEK KİP ASLA BURADA ÇALIŞMAZ: iş akışı HL anahtarı geçirmez ve
 # motor `GITHUB_ACTIONS=true` iken `gercek` kipi reddeder. Cüzdan YOK; kasa `kurallar.yaml canli_kasa_usd` (kullanıcı ayarı, <= 1.000 $).
-# Vardiya: 4 saatte bir tetiklenir (cron), her vardiya 4 sa 15 dk sürer; `concurrency` (kuyruk, iptal yok) sayesinde yeni vardiya eskisi BİTTİKTEN sonra başlar (çift emir yok, boşluk yok);
+# Vardiya: 4 saatte bir tetiklenir (cron), her vardiya 4 sa 15 dk sürer; `concurrency` (kuyruk, iptal yok; üretim ve dal denemeleri ayrı grup) sayesinde yeni vardiya eskisi BİTTİKTEN sonra başlar (çift emir yok, boşluk yok);
 # durum veri dalı `canli-durum` (dal doğrulamasında `canli-durum-deneme`): durum/*.json + kayit/<tarih>.jsonl; her 15 dk ve vardiya sonunda yayımlanır; yeni vardiya kaldığı yerden devam eder
 # (açılışta kaçan dolumlar REST ile tamamlanır, `gec_goruldu`). Ek koruma: `durum/kilit.json` (başka vardiya 20 dk içinde nabız attıysa motor başlamaz).
 # Dal doğrulaması: `copytrade/canli/CALISTIR` dosyasına satır eklenen push (main dışı dal) AYNI iş akışını koşturur, ama `canli-durum-deneme` dalına yazar ve kadroyu `radar-deneme`'den okur.
 on:
   schedule:
     - cron: "7 */4 * * *"
+    - cron: "37 */4 * * *"          # YEDEK (T6 §4): birincil tetiklenmezse; kilit taze ise (başka vardiya aktif) başlamaz — beklenen durum, "BAŞLAMADI" alarmı DEĞİL
   workflow_dispatch:
     inputs:
       sure_dk:
@@ -26,11 +27,28 @@ defaults:
     shell: bash -euo pipefail {0}
 
 concurrency:
-  group: canli-vardiya
+  # K-37 §8: üretim (main) ve dal denemeleri AYRI kuyruk; deneme vardiyası üretimi bekletmez (dal başına kendi kuyruğu).
+  group: ${{ github.ref == 'refs/heads/main' && 'canli-vardiya-uretim' || format('canli-vardiya-deneme-{0}', github.ref_name) }}
   cancel-in-progress: false
 
 jobs:
+  kontrol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      atla: ${{ steps.k.outputs.atla }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: k
+        name: Zamanlama kontrolü (yedek cron)
+        env:
+          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'canli-durum' || 'canli-durum-deneme' }}
+          ZAMANLAMA: ${{ github.event.schedule }}
+          YEDEK_CRON: "37 */4 * * *"
+        run: bash .github/scripts/zamanlama_kontrol.sh canli
   vardiya:
+    needs: kontrol
+    if: ${{ needs.kontrol.outputs.atla != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 290
     env:
@@ -54,6 +72,7 @@ jobs:
           if git ls-remote --exit-code --heads origin "$VERI_DALI" >/dev/null; then
             git fetch origin "$VERI_DALI"
             git archive FETCH_HEAD durum kayit | tar -x
+            if git cat-file -e FETCH_HEAD:pano/gecmis.json 2>/dev/null; then mkdir -p pano; git show FETCH_HEAD:pano/gecmis.json > pano/gecmis.json; fi
           else
             status=$?
             if [ "$status" -ne 2 ]; then exit "$status"; fi
@@ -82,6 +101,9 @@ jobs:
             cat durum/ozet.json
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Günlük rapor (pano/OZET.md)
+        if: ${{ always() && hashFiles('durum/ozet.json') != '' }}
+        run: python -u -m copytrade.canli.pano --durum durum --kayit kayit --gecmis pano/gecmis.json --cikti pano/OZET.md --html pano/index.html --vardiya "${GITHUB_RUN_ID}" --isabet-dali "$KADRO_DALI"
       - name: Durumu veri dalına yaz
         if: ${{ always() }}
         run: bash .github/scripts/canli_yayimla.sh

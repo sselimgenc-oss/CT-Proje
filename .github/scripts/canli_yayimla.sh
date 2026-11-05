@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Yalnız Actions'ın geçici checkout'unda çalışır. Canlı motor durumunu veri dalına (VERI_DALI: canli-durum | canli-durum-deneme) yazar: durum/*.json, durum/DUR (varsa), kayit/<tarih>.jsonl.
+# Yalnız Actions'ın geçici checkout'unda çalışır. Canlı motor durumunu veri dalına (VERI_DALI: canli-durum | canli-durum-deneme) yazar: durum/*.json, durum/niyet.jsonl (çift emir koruması, vardiyalar arası kalıcı), durum/DUR (varsa), pano/OZET.md + pano/gecmis.json (T6 günlük rapor, varsa), kayit/<tarih>.jsonl.
 # AYRI git worktree'de çalışır: motorun çalıştığı çalışma dizini DEĞİŞMEZ (arka planda 15 dk'da bir çağrılır). Kayıt 14 günden eskisi silinir. Kök commit yalnız dal ilk kez oluşurken (orphan).
 set -euo pipefail
 [ "${GITHUB_ACTIONS:-}" = true ] || { echo 'Yalnız GitHub Actions için.' >&2; exit 1; }
@@ -22,10 +22,13 @@ else
   git -C "$work" rm -rfq --ignore-unmatch .
 fi
 mkdir -p "$work/durum" "$work/kayit"
-for f in hesap.json saha.json risk.json motor.json kilit.json ozet.json DUR; do
+for f in hesap.json saha.json risk.json motor.json kilit.json ozet.json niyet.jsonl DUR; do
   if [ -f "$kaynak/durum/$f" ]; then cp "$kaynak/durum/$f" "$work/durum/$f"; fi
 done
 if [ -d "$kaynak/kayit" ]; then cp -r "$kaynak/kayit/." "$work/kayit/"; fi
+if [ -s "$kaynak/pano/OZET.md" ]; then mkdir -p "$work/pano"; cp "$kaynak/pano/OZET.md" "$work/pano/OZET.md"; fi
+if [ -s "$kaynak/pano/index.html" ]; then mkdir -p "$work/pano"; cp "$kaynak/pano/index.html" "$work/pano/index.html"; fi
+if [ -s "$kaynak/pano/gecmis.json" ]; then mkdir -p "$work/pano"; cp "$kaynak/pano/gecmis.json" "$work/pano/gecmis.json"; fi
 # GitHub 100 MB sınırı: yayımlanan her dosya 90 MB altında olmalı.
 for f in "$work"/durum/* "$work"/kayit/*; do
   [ -f "$f" ] || continue
@@ -37,6 +40,7 @@ for f in "$work"/kayit/*.jsonl; do
   if [[ "$(basename "$f" .jsonl)" < "$sinir" ]]; then git -C "$work" rm -q --ignore-unmatch -f "kayit/$(basename "$f")"; rm -f "$f"; fi
 done
 git -C "$work" add -f durum kayit
+if [ -d "$work/pano" ]; then git -C "$work" add -f pano; fi
 if git -C "$work" diff --cached --quiet; then exit 0; fi
 git -C "$work" commit -q -m "canli: durum $(date -u +%FT%TZ)"
 for attempt in 1 2 3; do
