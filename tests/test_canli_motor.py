@@ -430,7 +430,10 @@ def test_telegram_token_kayda_ve_hatalara_yazilmaz_ve_hata_motoru_durdurmaz(tmp_
 def test_telegram_komutlari_yalniz_yapilandirilmis_sohbetten_ve_biçim():
     t = tg.Telegram(TOKEN, CHAT, SahteTG([tg_mesaj(1, "/durum@sg_bot"), tg_mesaj(2, "/dur", chat=7), tg_mesaj(3, "merhaba")]))
     assert t.komutlari_al() == ["/durum"] and t.offset == 4
-    assert tg.msg_gunluk("sanal", 1000, 1012.5, 0.0125, 0.0125, 3, 11, ["0x12345678… BTC +0.1"]).startswith("📅 Günlük özet (sanal · deneme parası)\n💰 Kasa 1.000 $ → şimdi 1.012,50 $\n📈 Bugün +%1,25")
+    acik = [{"coin": "BTC", "sz": 0.5, "usd": 1234.0, "kz_usd": 12.34}, {"coin": "ETH", "sz": -2.0, "usd": 80.0, "kz_usd": -1.5}]
+    assert tg.msg_gunluk("sanal", 1000, 1012.5, 1000.0, 58, 9, 11, acik, -0.12) == (
+        "☀️ Günaydın! Dünün sonucu (sanal · deneme parası)\n━━━━━━━━━━━━━━\n📈 Son 24 saat: +12,50 $ (+%1,25)\n💰 Kasa şimdi: 1.012,50 $ (başlangıç 1.000 $)\n🏁 Başlangıçtan beri: +%1,25\n━━━━━━━━━━━━━━\n"
+        "🧾 Dün 58 emir verildi · 👥 takipte 9/11 trader\n💸 Funding (sanal): −0,12 $\n📌 Açık pozisyonlar (2):\n🟩 BTC · 1.234 $ · uzun · +12,34 $\n🟥 ETH · 80 $ · kısa · −1,50 $")
     assert tg.kisa(adr(255)) == "0x000000…"
 
 
@@ -830,7 +833,7 @@ def test_telegram_mesajlari_sade_turkce_altin_ornek():
     assert tg.msg_saha("giriş", a, "bos_slot (yerine 0xabcdef12…)") == "➕ Yeni trader takibe alındı: 0x123456…\n↳ Neden: boş yer açıldı (yerine 0xabcdef12…)"
     assert tg.msg_saha("çıkış", a, "kadro_disi (sonuçla, 14 gün bekleme)").startswith("➖ Trader takipten çıktı: 0x123456…\n↳ Neden: günlük kadrodan düştü")
     assert tg.msg_durum("sanal", 1000.71, 1000.0, 9, 11, 3, 8, 0, False) == (
-        "📊 Anlık durum (sanal · deneme parası)\n💰 Özsermaye 1.000,71 $ (kasaya göre +%0,07)\n👥 Takipte 9/11 trader · 3 tanesi ayrılıyor (pozisyonları kapanıyor)\n📌 Açık pozisyon: 8\n🧾 Bu vardiyada emir: 0\n🛡️ Risk: normal, motor çalışıyor")
+        "📊 Anlık durum (sanal · deneme parası)\n💰 Özsermaye 1.000,71 $ (kasaya göre +%0,07)\n👥 Takipte 9/11 trader · 3 tanesi ayrılıyor (pozisyonları kapanıyor)\n📌 Açık pozisyon: 8\n🧾 Bu turda emir: 0\n🛡️ Risk: normal, motor çalışıyor")
     assert tg.tr_sayi(1234567.891) == "1.234.567,89" and tg.tr_yuzde(-0.0125) == "−%1,25"
     assert "…5254" in tg.msg_baslangic("sanal", 1000, 9, 11, "42003105254") and "Takip edilen trader: 9/11" in tg.msg_baslangic("sanal", 1000, 9, 11, "42003105254")
 
