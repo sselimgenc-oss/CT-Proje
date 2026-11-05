@@ -617,3 +617,11 @@ def test_hip3_nosyonel_pay_uc_durumlar():
     assert r.hip3_nosyonel_pay([dolum(1, "@5", "B", 1, 0, 10)]) is None             # yalnız spot: perp nosyoneli yok
     assert r.hip3_nosyonel_pay([dolum(1, "BTC", "B", 1, 0, 100)]) == 0.0
     assert r.hip3_nosyonel_pay([dolum(1, "BTC", "B", 1, 0, 100), dolum(2, "xyz:GOLD", "B", 3, 0, 100)]) == pytest.approx(0.75)   # 300 / 400
+
+
+def test_kural_ust_bool_false_gercekten_false_olur():
+    yeni, uygulanan = r.kural_ust_uygula(RULES, ["radar_hip3_kopya=false"])
+    assert yeni["radar_hip3_kopya"] is False and uygulanan == {"radar_hip3_kopya": False} and RULES["radar_hip3_kopya"] is True
+    assert r.kural_ust_uygula(RULES, ["radar_hip3_kopya=true"])[0]["radar_hip3_kopya"] is True
+    with pytest.raises(ValueError):
+        r.kural_ust_uygula(RULES, ["radar_hip3_kopya=hayir"])

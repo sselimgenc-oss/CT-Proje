@@ -478,7 +478,12 @@ def kural_ust_uygula(rules: dict, atamalar: list[str]) -> tuple[dict, dict]:
         if not ayrac or not anahtar.startswith("radar_") or anahtar not in rules:
             raise ValueError(f"kural_ust 'radar_<anahtar>=<değer>' olmalı ve anahtar kurallar.yaml'da bulunmalı: {atama!r}")
         eski = rules[anahtar]
-        yeni[anahtar] = uygulanan[anahtar] = type(eski)(float(deger)) if isinstance(eski, int) and not isinstance(eski, bool) else type(eski)(deger)
+        if isinstance(eski, bool):                                    # bool("false") True olurdu
+            if deger.strip().lower() not in ("true", "false"):
+                raise ValueError(f"kural_ust bool değeri true|false olmalı: {atama!r}")
+            yeni[anahtar] = uygulanan[anahtar] = deger.strip().lower() == "true"
+            continue
+        yeni[anahtar] = uygulanan[anahtar] = type(eski)(float(deger)) if isinstance(eski, int) else type(eski)(deger)
     return yeni, uygulanan
 
 
