@@ -74,16 +74,37 @@ def test_histerezis_form_farki_en_az_10_puan_sinirda_girer():
 
 
 def test_gunde_en_fazla_2_degisiklik_ve_sonuc_ile_dusene_14_gun_bekleme():
+    """K‑39: kadro dışı İKİ FARKLI UTC gününde ister, sonuç dışıdır (bekleme yok). 14 gün bekleme sonuçla düşenlere (burada slot düşüşü) aynen kalır."""
     s = hazir_11()
-    rows = [satir(i, i, 90 - i) for i in range(1, 9)] + [satir(12, 9), satir(13, 10), satir(14, 11)]          # 9, 10, 11 kadro dışı → sonuçla düşer; 3 aday
+    rows = [satir(i, i, 90 - i) for i in range(1, 9)] + [satir(12, 9), satir(13, 10), satir(14, 11)]          # 9, 10, 11 kadro dışı; 3 aday
     karar, _ = s.degerlendir(kadro(rows, T0 + GUN), T0 + GUN + SAAT)
-    assert [k.adres for k in karar if k.tur == "dus"] == [adr(9), adr(10), adr(11)] and all(k.sonuc for k in karar if k.tur == "dus")
-    assert [k.adres for k in karar if k.tur == "giris"] == [adr(12), adr(13)] and adr(14) not in s.uyeler           # günde 2 giriş
-    assert s.bekleme[adr(9)] == T0 + GUN + SAAT + 14 * GUN
-    karar2, _ = s.degerlendir(kadro(rows, T0 + 2 * GUN), T0 + 2 * GUN + SAAT)                                       # ertesi gün üçüncü girer
-    assert [k.adres for k in karar2 if k.tur == "giris"] == [adr(14)]
+    assert [k for k in karar if k.tur == "dus"] == [] and [k for k in karar if k.tur == "giris"] == []        # 1. gün: yalnız işaretlenir, düşme yok
+    karar2, _ = s.degerlendir(kadro(rows, T0 + 2 * GUN), T0 + 2 * GUN + SAAT)                                  # 2. gün: üçü düşer (SONUÇ DIŞI)
+    assert [k.adres for k in karar2 if k.tur == "dus"] == [adr(9), adr(10), adr(11)] and not any(k.sonuc for k in karar2 if k.tur == "dus")
+    assert [k.adres for k in karar2 if k.tur == "giris"] == [adr(12), adr(13)] and adr(14) not in s.uyeler        # günde 2 giriş
+    assert not s.bekleme                                                                                       # kadro dışı: bekleme YOK
+    karar3, _ = s.degerlendir(kadro(rows, T0 + 3 * GUN), T0 + 3 * GUN + SAAT)                                  # ertesi gün üçüncü girer
+    assert [k.adres for k in karar3 if k.tur == "giris"] == [adr(14)]
+    sd = hazir_11()                                                                                            # sonuçla düşen (slot düşüşü) 14 gün bekler
+    kd_ = sd.anlik(T0 + GUN + SAAT, lambda a: 10.0 if a == adr(1) else None)
+    assert [(k.adres, k.neden, k.sonuc) for k in kd_] == [(adr(1), "slot_dusus", True)] and sd.bekleme[adr(1)] == T0 + GUN + SAAT + 14 * GUN
     bitis = T0 + GUN + SAAT + 14 * GUN
-    assert s._bekliyor(adr(9), bitis - 1) is True and s._bekliyor(adr(9), bitis) is False                              # 14 gün: bitiş anında serbest
+    assert sd._bekliyor(adr(1), bitis - 1) is True and sd._bekliyor(adr(1), bitis) is False                      # 14 gün: bitiş anında serbest
+
+
+def test_k39_ayni_utc_gununde_ikinci_kadro_saha_kararini_tetiklemez_ilk_kadro_saklanir_ve_gecis_beklemesi_silinir():
+    s = hazir_11()
+    ilk = [satir(i, i, 90 - i) for i in range(1, 12)]                                                         # 11 üye de kadroda
+    s.degerlendir(kadro(ilk, T0 + GUN + SAAT), T0 + GUN + 2 * SAAT)                                            # günün İLK kadrosu 01:00
+    ikinci = [satir(i, i, 90 - i) for i in range(1, 9)] + [satir(12, 9), satir(13, 10), satir(14, 11)]          # aynı UTC gününde 07:00'de geç/elle ikinci kadro: 9, 10, 11 yok
+    karar, _ = s.degerlendir(kadro(ikinci, T0 + GUN + 7 * SAAT), T0 + GUN + 8 * SAAT)
+    assert karar == [] and all(adr(i) in s.uyeler for i in (9, 10, 11)) and all(not u.get("disi_gunler") for u in s.uyeler.values())      # ikinci kadro yok sayıldı
+    yeni = kd.Saha(RULES, 1000.0, s.to_json())                                                                  # yeniden başlatma: ilk kadro saklı, ikinci yine yok sayılır
+    karar2, _ = yeni.degerlendir(kadro(ikinci, T0 + GUN + 7 * SAAT), T0 + GUN + 9 * SAAT)
+    assert karar2 == [] and yeni.gun_kadro["kadro"]["kosu_ms"] == T0 + GUN + SAAT
+    eski = kd.Saha(RULES, 1000.0, {"bekleme": {"0xf90c9e" + "0" * 34: T0 + 14 * GUN, "0xdddddd" + "0" * 34: T0 + 14 * GUN}, "kurulu": True})
+    assert eski.gecis_silinen == ["0xf90c9e" + "0" * 34] and list(eski.bekleme) == ["0xdddddd" + "0" * 34] and eski.to_json()["k39_gecis"] is True      # tek seferlik; diğer bekleme kalır
+    assert kd.Saha(RULES, 1000.0, eski.to_json()).gecis_silinen == []                                         # ikinci yüklemede tekrar silinmez
 
 
 def test_bekleme_suresince_sahaya_donemez_bitince_girer():
@@ -125,8 +146,10 @@ def test_sira_iki_gun_ust_uste_22_den_kotu_ve_kadro_disi_ve_kaldirac():
     karar, _ = s.degerlendir(rows(25), T0 + 4 * GUN + SAAT)
     assert [(k.adres, k.neden, k.sonuc) for k in karar if k.tur == "dus"] == [(adr(11), "sira", True)]
     s2 = hazir_11()
-    karar2, _ = s2.degerlendir(kadro([satir(i, i) for i in range(1, 11)] + [satir(11, 31)], T0 + GUN), T0 + GUN + SAAT)       # sıra 31 > 30: bir gün yeter
-    assert [(k.neden, k.sonuc) for k in karar2 if k.tur == "dus"] == [("kadro_disi", True)]
+    k1 = [satir(i, i) for i in range(1, 11)] + [satir(11, 31)]
+    assert [k for k in s2.degerlendir(kadro(k1, T0 + GUN), T0 + GUN + SAAT)[0] if k.tur == "dus"] == []                          # sıra 31 > 30: K‑39 bir gün yetmez
+    karar2, _ = s2.degerlendir(kadro(k1, T0 + 2 * GUN), T0 + 2 * GUN + SAAT)                                                     # ikinci FARKLI UTC günü: sonuç dışı düşme
+    assert [(k.neden, k.sonuc) for k in karar2 if k.tur == "dus"] == [("kadro_disi", False)] and not s2.bekleme
     s3 = hazir_11()
     kar3 = s3.anlik(T0 + SAAT, lambda a: None, kadro([satir(i, i, kald=25.0 if i == 4 else 3.0) for i in range(1, 12)]))
     assert [(k.adres, k.neden, k.sonuc) for k in kar3] == [(adr(4), "kaldirac_ihlali", True)]
@@ -851,3 +874,13 @@ def test_telegram_emir_ozeti_toplar_tek_mesaj_ayni_satir_birlesir():
         "🟢 AL NEAR: 11 $ · 0xf43a34… pozisyon açtı · ⚠️ 1 tanesi tam dolmadı\n"
         "↳ Trader'a göre ortalama fark 0.6 bp (küçük = iyi)")
     assert tg.msg_emir_ozeti("sanal", emirler[:1], 5).startswith("🟢 ETH AL: 12,0 $")                               # tek emir: ayrıntılı biçim
+
+
+def test_k39_motor_gecis_beklemesi_silinir_ve_kayda_yazilir(tmp_path):
+    import json as _j
+    (tmp_path / "durum").mkdir()
+    adres = "0x62edf4" + "1" * 34
+    (tmp_path / "durum" / "saha.json").write_text(_j.dumps({"bekleme": {adres: 9_999_999_999_999}, "kurulu": True}))
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    assert adres not in m.saha.bekleme and any(x["olay"] == "bekleme_silindi" and x["adres"] == adres and x["neden"] == "K-39" for x in kayitlar(tmp_path))
