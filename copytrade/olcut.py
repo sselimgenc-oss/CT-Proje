@@ -43,6 +43,11 @@ def asset_class(coin: str) -> str:
     return "emtia" if name in COMMODITIES else "endeks" if name in INDICES else "hisse"
 
 
+def is_hip3(coin: str) -> bool:
+    """HIP‑3 (builder dex, `dex:COIN`): `asset_class` kripto ya da spot değilse (motor `coin_sinifi` ile aynı ayrım)."""
+    return asset_class(coin) not in ("kripto", "spot")
+
+
 def perp_fills(fills: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Spot fills have no position/closedPnl semantics; metrics use perpetual fills only."""
     return [f for f in fills if asset_class(f.get("coin", "")) != "spot"]
