@@ -5,8 +5,9 @@ Kararlar `Karar` olarak döner (giriş / düş / değiştir / inen_kapat) — uy
 - İlk gün (saha hiç kurulmadıysa): sıra 1…N sahaya (korelasyon kuralı uygulanır); günlük değişiklik sınırına SAYILMAZ.
 - Giriş: slot boşsa İlk 11'in (katman `ilk11`) sahada olmayan, beklemede olmayan en iyi sıralısı; günde ≤ `canli_gunde_degisiklik` saha girişi/değişikliği.
 - Değiştirme (histerezis): aday sıra ≤ N **ve** üye sıra > İlk 11 sınırı **ve** aday formu ≥ üye formu + `canli_histerezis_puan` → üye "daha_iyisi_geldi" (sonuç dışı) ile iner.
-- Düşme — anında: slot düşüşü ≥ `canli_slot_dusus_oran`, kaldıraç > `radar_max_kaldirac` (R1/4); günlük (yeni `kosu_ms`): sıra 2 gün üst üste > `canli_sira_dus`, kadroda yok / sıra > `canli_kadro_disi_sira`
-  (1 gün), `canli_islem_yok_saat` saat işlem yok (sonuç dışı). SONUÇLA düşen (slot, sıra, kadro dışı, kaldıraç/R1) `canli_bekleme_gun` gün sahaya dönemez; sonuç dışı düşenin bekleme cezası yok.
+- Düşme — anında: slot düşüşü ≥ `canli_slot_dusus_oran`, kaldıraç > `radar_max_kaldirac` (R1/4); günlük (yeni `kosu_ms`): sıra 2 gün üst üste > `canli_sira_dus`, `canli_islem_yok_saat` saat işlem yok (sonuç dışı);
+  **kadro dışı (K‑39):** kadroda yok / sıra > `canli_kadro_disi_sira` durumu İKİ FARKLI UTC GÜNÜNÜN kadrosunda üst üste görülürse düşer (`kadro_disi`); düşme SONUÇ DIŞIDIR, bekleme yok. **Gün başına yalnız İLK kadro uygulanır (K‑39):** aynı `kosu_ms` UTC gününde gelen ikinci kadro
+  saha kararlarını tetiklemez (ilk kadro `gun_kadro`da saklanır; yeniden başlatmada da ilki kullanılır). SONUÇLA düşen (slot, sıra, kadro dışı, kaldıraç/R1) `canli_bekleme_gun` gün sahaya dönemez; sonuç dışı düşenin bekleme cezası yok.
 - Korelasyon: sahada birbirine ≥ `canli_kor_esik` benzeyen (bağlı bileşen) en çok `canli_kor_max` kişi; ihlal eden aday atlanır (`kor_kirpildi`).
 - Kadro bayat / yok (`kosu_ms` > `canli_kadro_eski_saat` saat): yeni giriş yok, düşme kuralları çalışır (günlük sıra kuralları kadro verisi gerektirdiğinden yeni kosu_ms olmadan işlemez).
 - Sahadan inen: yeni açılış durur, trader'ın kapanışları izlenir, `canli_inen_saat` sonra kalan pozisyon kapatılır (`inen_kapat`).
@@ -21,6 +22,7 @@ from copytrade.kurallar import load_rules
 
 SAAT = 3_600_000
 GUN = 24 * SAAT
+K39_BEKLEME_SIL = ("0xf90c9e", "0xc32f19", "0x62edf4")        # K‑39 geçişi: 2026-11-05'te aynı UTC günündeki ikinci kadro yüzünden bekleme alan üyeler (adres önekleri); tek seferlik silinir
 
 
 @dataclass
@@ -82,6 +84,15 @@ class Saha:
         self.son_kosu_ms: int = int(d.get("son_kosu_ms", 0))
         self.kurulu: bool = bool(d.get("kurulu", False))
         self.alarm_gunu: str | None = d.get("alarm_gunu")
+        self.gun_kadro: dict | None = d.get("gun_kadro")           # K‑39: {"gun": UTC günü, "kadro": o günün İLK kadrosu}
+        self.k39_gecis: bool = bool(d.get("k39_gecis", False))
+        self.gecis_silinen: list[str] = []                         # bu yüklemede silinen bekleme kayıtları (motor kayda yazar)
+        if not self.k39_gecis:                                     # tek seferlik: 05.11'de aynı gün ikinci kadroyla verilen 3 bekleme silinir (K‑39)
+            for a in list(self.bekleme):
+                if a.lower().startswith(K39_BEKLEME_SIL):
+                    del self.bekleme[a]
+                    self.gecis_silinen.append(a)
+            self.k39_gecis = True
 
     # ------------------------------------------------------------------ yardımcılar
     def _gun(self, ms: int) -> str:
@@ -146,6 +157,7 @@ class Saha:
         kararlar: list[Karar] = []
         if not taze:
             return kararlar, neden
+        kadro = self._gun_kadrosu(kadro)
         satirlar = {s["adres"]: s for s in kadro["satirlar"]}
         yeni_gun = int(kadro["kosu_ms"]) != self.son_kosu_ms
         if yeni_gun:
@@ -158,12 +170,27 @@ class Saha:
             self.kurulu = True
         return kararlar, "ok"
 
+    def _gun_kadrosu(self, kadro: dict) -> dict:
+        """K‑39: kadronun UTC günü (`kosu_ms`) için İLK görülen kadro saklanır ve o gün yalnız o uygulanır; aynı günün sonraki (geç / elle) kadrosu yok sayılır."""
+        g = self._gun(int(kadro["kosu_ms"]))
+        if self.gun_kadro and self.gun_kadro.get("gun") == g:
+            return self.gun_kadro["kadro"]
+        self.gun_kadro = {"gun": g, "kadro": kadro}
+        return kadro
+
     def _gunluk_dusme(self, satirlar: dict[str, dict], simdi_ms: int, kararlar: list[Karar]) -> None:
         for adres in list(self.uyeler):
             u, s = self.uyeler[adres], satirlar.get(adres)
+            gun_k = self._gun(int(self.gun_kadro["kadro"]["kosu_ms"])) if self.gun_kadro else self._gun(simdi_ms)
             if s is None or int(s["sira"]) > int(self.rules["canli_kadro_disi_sira"]):
-                self._dus(adres, "kadro_disi", True, simdi_ms, kararlar)
-                continue
+                gunler = list(u.get("disi_gunler") or [])
+                if gun_k not in gunler:
+                    gunler.append(gun_k)
+                u["disi_gunler"] = gunler
+                if len(gunler) >= 2:                               # K‑39: iki farklı UTC gününün kadrosunda yok → sonuç dışı düşme, bekleme yok
+                    self._dus(adres, "kadro_disi", False, simdi_ms, kararlar)
+                continue                                           # kadro dışındayken sıra/işlem kuralları sayılmaz (ilk gün: yalnız işaretlenir)
+            u["disi_gunler"] = []
             if int(s["sira"]) > int(self.rules["canli_sira_dus"]):
                 u["sira_ust"] = int(u.get("sira_ust", 0)) + 1
                 if u["sira_ust"] >= int(self.rules["canli_sira_dus_gun"]):
@@ -223,4 +250,4 @@ class Saha:
 
     # ------------------------------------------------------------------ kalıcılık
     def to_json(self) -> dict[str, Any]:
-        return {"uyeler": self.uyeler, "inen": self.inen, "bekleme": self.bekleme, "degisiklik": self.degisiklik, "son_kosu_ms": self.son_kosu_ms, "kurulu": self.kurulu, "alarm_gunu": self.alarm_gunu}
+        return {"uyeler": self.uyeler, "inen": self.inen, "bekleme": self.bekleme, "degisiklik": self.degisiklik, "son_kosu_ms": self.son_kosu_ms, "kurulu": self.kurulu, "alarm_gunu": self.alarm_gunu, "gun_kadro": self.gun_kadro, "k39_gecis": self.k39_gecis}

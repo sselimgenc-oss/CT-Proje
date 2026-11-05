@@ -80,6 +80,9 @@ jobs:
       - name: Açılış kontrolü (anahtarsız, emir göndermez)
         run: python -u -m copytrade.canli.motor --kontrol --kadro-dali "$KADRO_DALI" --durum-dizin kontrol
       - name: Canlı motor (sanal kip)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           sure_dk="${GIRDI_SURE_DK:-255}"
           case "$sure_dk" in ''|*[!0-9]*) sure_dk=255 ;; esac
@@ -87,7 +90,7 @@ jobs:
           ( while sleep 900; do bash .github/scripts/canli_yayimla.sh || echo "yayım denemesi başarısız (döngü sürer)"; done ) &
           yayim=$!
           set +e
-          python -u -m copytrade.canli.motor --kip sanal --kadro-dali "$KADRO_DALI" --durum-dizin durum --kayit-dizin kayit --sure-sn "$((sure_dk * 60))" --vardiya "${GITHUB_RUN_ID}"
+          env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID python -u -m copytrade.canli.motor --kip sanal --kadro-dali "$KADRO_DALI" --durum-dizin durum --kayit-dizin kayit --sure-sn "$((sure_dk * 60))" --vardiya "${GITHUB_RUN_ID}"
           cikis=$?
           set -e
           if kill -0 "$yayim" 2>/dev/null; then kill "$yayim"; fi
@@ -106,6 +109,9 @@ jobs:
         run: python -u -m copytrade.canli.pano --durum durum --kayit kayit --gecmis pano/gecmis.json --cikti pano/OZET.md --html pano/index.html --vardiya "${GITHUB_RUN_ID}" --isabet-dali "$KADRO_DALI"
       - name: Durumu veri dalına yaz
         if: ${{ always() }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: bash .github/scripts/canli_yayimla.sh
       - uses: actions/upload-artifact@v4
         if: always()

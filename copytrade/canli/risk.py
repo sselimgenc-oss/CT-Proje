@@ -3,7 +3,7 @@
 - Coin yoğunlaşması: aynı coinde TÜM slotların brüt nosyoneli ≤ kasa × `canli_coin_tavan_oran`; aşan açılış KIRPILIR (kırpılan < `radar_min_emir_usd` ise 0).
 - Patlama freni: bir trader `canli_patlama_pencere_dk` dk içinde ≥ `canli_patlama_coin` YENİ coin açarsa (o sekizinci açılış dahil) `canli_patlama_ara_dk` dk ondan yeni açılış kopyalanmaz (kapanışlar izlenir).
 - Günlük kayıp: UTC gün başı özsermayeden kayıp ≥ `canli_gunluk_kayip_oran` → o gün yeni açılış yok.
-- Zirveden düşüş ≥ `canli_zirve_dusus_oran` → `DUR`: tüm pozisyonlar reduce‑only kapatılır, motor durur, `durum/DUR` yazılır (elle silinmeden yeniden açılmaz). `/dur` aynı.
+- Zirveden düşüş ≥ `canli_zirve_dusus_oran` → `DUR`: tüm pozisyonlar reduce‑only kapatılır, motor durur, `durum/DUR` yazılır (elle silinmeden yeniden açılmaz). `/kapat` aynı (yeni `/dur` yalnız yeni girişi durdurur).
 - Kasa > `canli_kasa_ust_usd` (AGENTS.md sınırı): yeni açılış yok + alarm.
 """
 from __future__ import annotations

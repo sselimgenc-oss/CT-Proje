@@ -36,6 +36,7 @@ class Hesap:
         self.slot_bas: dict[str, float] = {}         # adres -> slot başlangıç $ (giriş anı)
         self.tasfiyeler: list[dict] = []
         self.funding: dict[str, float] = {}          # adres -> girişten beri funding ($, işaretli: + alınan / − ödenen; sanal kip)
+        self.son_niyet_cloid: str | None = None      # son UYGULANAN niyetin cloid'i (t4b #3: yeniden başlatmada bundan sonraki sonuçlu niyetler oynatılır)
         self.kapanmis_net = 0.0                      # sahadan çıkıp kaydı silinen üyelerin net K/Z'si (özsermaye sürekliliği)
 
     # ------------------------------------------------------------------ slot
@@ -55,6 +56,17 @@ class Hesap:
     def sz(self, adres: str, coin: str) -> float:
         p = self.poz.get(adres, {}).get(coin)
         return p.sz if p else 0.0
+
+    def ters_yonlu_var(self, adres: str, coin: str, yon: str, marks: dict[str, float] | None = None, toz_usd: float = 0.0) -> bool:
+        """K‑41: `adres` DIŞINDAKİ bir trader'ın kopya pozisyonu bu coinde `yon` (B/A) açılışının TERSİNE mi? (Tek HL hesabında coin netleşir; ters açılış net pozisyonu küçültür.)
+        Nosyoneli (mark, yoksa giriş) `toz_usd` ve altındaki kalıntı (toz; `canli_kapanis_toz_usd`) sayılmaz. Coin dizgesi birebir eşleşir (HIP‑3 `dex:COIN` ayrı coindir)."""
+        isaret = 1.0 if yon == "B" else -1.0
+        marks = marks or {}
+        for a, c in self.poz.items():
+            p = c.get(coin)
+            if a != adres and p is not None and p.sz * isaret < -EPS and abs(p.sz) * (marks.get(coin) or p.giris) > toz_usd:
+                return True
+        return False
 
     def uygula(self, adres: str, coin: str, yon: str, sz: float, px: float, ucret: float, zaman_ms: int) -> float:
         """Dolumu işler (yön B alış / A satış; `sz` işaretsiz). Pozisyon sıfırı AŞMAZ (ters dönüş çağıranda kapanış + açılış olarak iki dolum). Döner: bu dolumun gerçekleşen K/Z'si (ücret hariç)."""
@@ -134,7 +146,7 @@ class Hesap:
     # ------------------------------------------------------------------ kalıcılık
     def to_json(self) -> dict[str, Any]:
         return {"kasa_usd": self.kasa_usd, "kaldirac": self.kaldirac, "maks_kaldirac": self.maks_kaldirac, "realize": self.realize, "ucret": self.ucret, "slot_bas": self.slot_bas,
-                "poz": {a: {c: asdict(p) for c, p in coinler.items()} for a, coinler in self.poz.items()}, "tasfiyeler": self.tasfiyeler[-200:], "kapanmis_net": self.kapanmis_net, "funding": self.funding}
+                "poz": {a: {c: asdict(p) for c, p in coinler.items()} for a, coinler in self.poz.items()}, "tasfiyeler": self.tasfiyeler[-200:], "kapanmis_net": self.kapanmis_net, "funding": self.funding, "son_niyet_cloid": self.son_niyet_cloid}
 
     @classmethod
     def from_json(cls, d: dict[str, Any]) -> "Hesap":
@@ -144,4 +156,5 @@ class Hesap:
         h.tasfiyeler = list(d.get("tasfiyeler", []))
         h.kapanmis_net = float(d.get("kapanmis_net", 0.0))
         h.funding = dict(d.get("funding", {}))
+        h.son_niyet_cloid = d.get("son_niyet_cloid")
         return h

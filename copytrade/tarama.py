@@ -46,6 +46,32 @@ RETRY_AFTER_MAX = 300                            # 429'da `Retry-After` başlı�
 _AG_HATALARI = (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.ChunkedEncodingError)
 
 
+LEDGER_SAYFA = 500        # `userNonFundingLedgerUpdates` en çok 500 satır döner (eskiden yeniye; startTime/endTime ms UTC)
+LEDGER_MAKS_SAYFA = 40    # sonsuz döngü / aşırı yük sigortası (40 × 500 = 20.000 satır)
+
+
+def ledger_sayfala(post: Any, address: str, start_ms: int, end_ms: int | None = None, sayfa: int = LEDGER_SAYFA, maks_sayfa: int = LEDGER_MAKS_SAYFA) -> list[dict]:
+    """`userNonFundingLedgerUpdates` sayfalama: `post(yük)` bir info isteği yapar (PublicClient.info ya da motor REST). Sayfa `sayfa` satırsa imleç son satırın zamanına ilerler (aynı ms'deki
+    satırlar kaybolmasın diye +1 DEĞİL; `time`+`hash` ile tekilleştirilir); sayfa tamamen aynı ms'deyse ya da yeni satır yoksa 1 ms ilerler. `maks_sayfa`ya ulaşılırsa o ana kadarki satırlar döner."""
+    sonuc, imlec, gorulen = [], int(start_ms), set()
+    for _ in range(maks_sayfa):
+        yuk = {"type": "userNonFundingLedgerUpdates", "user": address, "startTime": imlec}
+        if end_ms is not None:
+            yuk["endTime"] = int(end_ms)
+        sf = post(yuk) or []
+        taze = 0
+        for satir in sf:
+            anahtar = (satir.get("time"), satir.get("hash"), repr(satir.get("delta")) if satir.get("hash") is None else None)
+            if anahtar not in gorulen:
+                gorulen.add(anahtar); sonuc.append(satir); taze += 1
+        if len(sf) < sayfa:
+            break
+        zamanlar = [int(x.get("time", 0)) for x in sf]
+        en_yeni, en_eski = max(zamanlar), min(zamanlar)
+        imlec = en_yeni + 1 if (en_eski == en_yeni or not taze) else en_yeni
+    return sonuc
+
+
 class PublicClient:
     def __init__(self, session: requests.Session | None = None, limiter: RateLimiter | None = None, sleep=time.sleep,
                  yeniden_bekleme: tuple[float, ...] | None = None):
@@ -145,8 +171,9 @@ class PublicClient:
     def portfolio(self, address: str) -> list[dict]:
         return self.info({"type": "portfolio", "user": address}, weight=20) or []
 
-    def non_funding_ledger(self, address: str, start_ms: int) -> list[dict]:
-        return self.info({"type": "userNonFundingLedgerUpdates", "user": address, "startTime": start_ms}, weight=20) or []
+    def non_funding_ledger(self, address: str, start_ms: int, end_ms: int | None = None) -> list[dict]:
+        """Sayfalı (500 satır sınırı aşılınca imleç ilerler; `ledger_sayfala`)."""
+        return ledger_sayfala(lambda yuk: self.info(yuk, weight=20), address, start_ms, end_ms)
 
     def sub_accounts(self, address: str) -> list[dict]:
         return self.info({"type": "subAccounts", "user": address}, weight=20) or []

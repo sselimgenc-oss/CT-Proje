@@ -122,3 +122,36 @@ def test_canli_vardiya_pano_adimi_yayimdan_once_ve_gecmis_geri_yuklenir():
     metin = (WF / "canli_vardiya.yml").read_text(encoding="utf-8")
     assert "pano/gecmis.json" in metin and "|| true" not in metin
     assert "pano/OZET.md" in (ROOT / ".github/scripts/canli_yayimla.sh").read_text(encoding="utf-8")
+
+
+def test_b7_canli_yayimla_her_yayimda_pano_uretir_bayat_ozet_ile_uretmez(tmp_path):
+    """B7: `canli_yayimla.sh` (15 dk'lık döngü) pano/index.html + OZET.md üretip veri dalına yazar; ozet.json başka vardiyadansa pano YAZILMAZ ama durum yayımı sürer. Gerçek git, gerçek pano.py."""
+    bare, calisma = tmp_path / "origin.git", tmp_path / "calisma"
+    subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
+    calisma.mkdir()
+    git(calisma, "init", "-q", "-b", "main")
+    git(calisma, "remote", "add", "origin", str(bare))
+    (calisma / "OKU.md").write_text("x")
+    git(calisma, "add", "OKU.md")
+    git(calisma, "commit", "-q", "-m", "x")                                                                    # Actions checkout'unda HEAD vardır (orphan veri dalı oluşturma için)
+    os.symlink(ROOT / "copytrade", calisma / "copytrade")
+    (calisma / "durum").mkdir()
+    (calisma / "kayit").mkdir()
+    for ad, v in {"hesap.json": {"poz": {}, "realize": {}, "ucret": {}, "slot_bas": {}}, "risk.json": {"gun_basi": 1000.0, "zirve": 1000.0}, "saha.json": {"uyeler": {}, "inen": {}}}.items():
+        (calisma / "durum" / ad).write_text(json.dumps(v))
+    (calisma / "durum" / "ozet.json").write_text(json.dumps({"kip": "sanal", "vardiya": "77", "kasa_usd": 1000.0, "ozsermaye_usd": 1001.5, "getiri": 0.0015, "saha": 9, "saha_n": 11, "acik": []}))
+    (calisma / "kayit" / "2026-11-05.jsonl").write_text("")
+    env = {**os.environ, "GITHUB_ACTIONS": "true", "VERI_DALI": "canli-durum-deneme", "GITHUB_RUN_ID": "77"}
+    r = subprocess.run(["bash", str(ROOT / ".github/scripts/canli_yayimla.sh")], cwd=calisma, env=env, capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    dosyalar = subprocess.run(["git", "ls-tree", "-r", "--name-only", "canli-durum-deneme"], cwd=bare, capture_output=True, text=True).stdout.split()
+    assert "pano/index.html" in dosyalar and "pano/OZET.md" in dosyalar and "durum/ozet.json" in dosyalar and "pano/gecmis.json" in dosyalar
+    html = subprocess.run(["git", "show", "canli-durum-deneme:pano/index.html"], cwd=bare, capture_output=True, text=True).stdout
+    assert "1.001,50 $" in html and "COPY TRADE PANOSU" in html
+    # bayat: yeni vardiya kimliği (88) ≠ ozet.json'daki (77) → pano dosyaları güncellenmez (eski içerik kalır), durum yayımı sürer
+    (calisma / "durum" / "ozet.json").write_text(json.dumps({"kip": "sanal", "vardiya": "77", "kasa_usd": 1000.0, "ozsermaye_usd": 1234.0, "getiri": 0.234, "saha": 9, "saha_n": 11}))
+    env2 = {**env, "GITHUB_RUN_ID": "88"}
+    r2 = subprocess.run(["bash", str(ROOT / ".github/scripts/canli_yayimla.sh")], cwd=calisma, env=env2, capture_output=True, text=True)
+    assert r2.returncode == 0, r2.stderr
+    html2 = subprocess.run(["git", "show", "canli-durum-deneme:pano/index.html"], cwd=bare, capture_output=True, text=True).stdout
+    assert "1.001,50 $" in html2 and "1.234,00 $" not in html2

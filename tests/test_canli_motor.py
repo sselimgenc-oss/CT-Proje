@@ -74,16 +74,37 @@ def test_histerezis_form_farki_en_az_10_puan_sinirda_girer():
 
 
 def test_gunde_en_fazla_2_degisiklik_ve_sonuc_ile_dusene_14_gun_bekleme():
+    """K‑39: kadro dışı İKİ FARKLI UTC gününde ister, sonuç dışıdır (bekleme yok). 14 gün bekleme sonuçla düşenlere (burada slot düşüşü) aynen kalır."""
     s = hazir_11()
-    rows = [satir(i, i, 90 - i) for i in range(1, 9)] + [satir(12, 9), satir(13, 10), satir(14, 11)]          # 9, 10, 11 kadro dışı → sonuçla düşer; 3 aday
+    rows = [satir(i, i, 90 - i) for i in range(1, 9)] + [satir(12, 9), satir(13, 10), satir(14, 11)]          # 9, 10, 11 kadro dışı; 3 aday
     karar, _ = s.degerlendir(kadro(rows, T0 + GUN), T0 + GUN + SAAT)
-    assert [k.adres for k in karar if k.tur == "dus"] == [adr(9), adr(10), adr(11)] and all(k.sonuc for k in karar if k.tur == "dus")
-    assert [k.adres for k in karar if k.tur == "giris"] == [adr(12), adr(13)] and adr(14) not in s.uyeler           # günde 2 giriş
-    assert s.bekleme[adr(9)] == T0 + GUN + SAAT + 14 * GUN
-    karar2, _ = s.degerlendir(kadro(rows, T0 + 2 * GUN), T0 + 2 * GUN + SAAT)                                       # ertesi gün üçüncü girer
-    assert [k.adres for k in karar2 if k.tur == "giris"] == [adr(14)]
+    assert [k for k in karar if k.tur == "dus"] == [] and [k for k in karar if k.tur == "giris"] == []        # 1. gün: yalnız işaretlenir, düşme yok
+    karar2, _ = s.degerlendir(kadro(rows, T0 + 2 * GUN), T0 + 2 * GUN + SAAT)                                  # 2. gün: üçü düşer (SONUÇ DIŞI)
+    assert [k.adres for k in karar2 if k.tur == "dus"] == [adr(9), adr(10), adr(11)] and not any(k.sonuc for k in karar2 if k.tur == "dus")
+    assert [k.adres for k in karar2 if k.tur == "giris"] == [adr(12), adr(13)] and adr(14) not in s.uyeler        # günde 2 giriş
+    assert not s.bekleme                                                                                       # kadro dışı: bekleme YOK
+    karar3, _ = s.degerlendir(kadro(rows, T0 + 3 * GUN), T0 + 3 * GUN + SAAT)                                  # ertesi gün üçüncü girer
+    assert [k.adres for k in karar3 if k.tur == "giris"] == [adr(14)]
+    sd = hazir_11()                                                                                            # sonuçla düşen (slot düşüşü) 14 gün bekler
+    kd_ = sd.anlik(T0 + GUN + SAAT, lambda a: 10.0 if a == adr(1) else None)
+    assert [(k.adres, k.neden, k.sonuc) for k in kd_] == [(adr(1), "slot_dusus", True)] and sd.bekleme[adr(1)] == T0 + GUN + SAAT + 14 * GUN
     bitis = T0 + GUN + SAAT + 14 * GUN
-    assert s._bekliyor(adr(9), bitis - 1) is True and s._bekliyor(adr(9), bitis) is False                              # 14 gün: bitiş anında serbest
+    assert sd._bekliyor(adr(1), bitis - 1) is True and sd._bekliyor(adr(1), bitis) is False                      # 14 gün: bitiş anında serbest
+
+
+def test_k39_ayni_utc_gununde_ikinci_kadro_saha_kararini_tetiklemez_ilk_kadro_saklanir_ve_gecis_beklemesi_silinir():
+    s = hazir_11()
+    ilk = [satir(i, i, 90 - i) for i in range(1, 12)]                                                         # 11 üye de kadroda
+    s.degerlendir(kadro(ilk, T0 + GUN + SAAT), T0 + GUN + 2 * SAAT)                                            # günün İLK kadrosu 01:00
+    ikinci = [satir(i, i, 90 - i) for i in range(1, 9)] + [satir(12, 9), satir(13, 10), satir(14, 11)]          # aynı UTC gününde 07:00'de geç/elle ikinci kadro: 9, 10, 11 yok
+    karar, _ = s.degerlendir(kadro(ikinci, T0 + GUN + 7 * SAAT), T0 + GUN + 8 * SAAT)
+    assert karar == [] and all(adr(i) in s.uyeler for i in (9, 10, 11)) and all(not u.get("disi_gunler") for u in s.uyeler.values())      # ikinci kadro yok sayıldı
+    yeni = kd.Saha(RULES, 1000.0, s.to_json())                                                                  # yeniden başlatma: ilk kadro saklı, ikinci yine yok sayılır
+    karar2, _ = yeni.degerlendir(kadro(ikinci, T0 + GUN + 7 * SAAT), T0 + GUN + 9 * SAAT)
+    assert karar2 == [] and yeni.gun_kadro["kadro"]["kosu_ms"] == T0 + GUN + SAAT
+    eski = kd.Saha(RULES, 1000.0, {"bekleme": {"0xf90c9e" + "0" * 34: T0 + 14 * GUN, "0xdddddd" + "0" * 34: T0 + 14 * GUN}, "kurulu": True})
+    assert eski.gecis_silinen == ["0xf90c9e" + "0" * 34] and list(eski.bekleme) == ["0xdddddd" + "0" * 34] and eski.to_json()["k39_gecis"] is True      # tek seferlik; diğer bekleme kalır
+    assert kd.Saha(RULES, 1000.0, eski.to_json()).gecis_silinen == []                                         # ikinci yüklemede tekrar silinmez
 
 
 def test_bekleme_suresince_sahaya_donemez_bitince_girer():
@@ -125,8 +146,10 @@ def test_sira_iki_gun_ust_uste_22_den_kotu_ve_kadro_disi_ve_kaldirac():
     karar, _ = s.degerlendir(rows(25), T0 + 4 * GUN + SAAT)
     assert [(k.adres, k.neden, k.sonuc) for k in karar if k.tur == "dus"] == [(adr(11), "sira", True)]
     s2 = hazir_11()
-    karar2, _ = s2.degerlendir(kadro([satir(i, i) for i in range(1, 11)] + [satir(11, 31)], T0 + GUN), T0 + GUN + SAAT)       # sıra 31 > 30: bir gün yeter
-    assert [(k.neden, k.sonuc) for k in karar2 if k.tur == "dus"] == [("kadro_disi", True)]
+    k1 = [satir(i, i) for i in range(1, 11)] + [satir(11, 31)]
+    assert [k for k in s2.degerlendir(kadro(k1, T0 + GUN), T0 + GUN + SAAT)[0] if k.tur == "dus"] == []                          # sıra 31 > 30: K‑39 bir gün yetmez
+    karar2, _ = s2.degerlendir(kadro(k1, T0 + 2 * GUN), T0 + 2 * GUN + SAAT)                                                     # ikinci FARKLI UTC günü: sonuç dışı düşme
+    assert [(k.neden, k.sonuc) for k in karar2 if k.tur == "dus"] == [("kadro_disi", False)] and not s2.bekleme
     s3 = hazir_11()
     kar3 = s3.anlik(T0 + SAAT, lambda a: None, kadro([satir(i, i, kald=25.0 if i == 4 else 3.0) for i in range(1, 12)]))
     assert [(k.adres, k.neden, k.sonuc) for k in kar3] == [(adr(4), "kaldirac_ihlali", True)]
@@ -328,14 +351,15 @@ def test_risk_coin_tavani_engel_gunluk_kayip_acilis_engel_kapanis_serbest(tmp_pa
     assert any("coin_tavani" in x.get("neden", "") for x in kayitlar(tmp_path, "emir_yok"))
 
 
-def test_dur_komutu_hepsini_kapatir_dur_dosyasi_yeniden_baslatma_engeli(tmp_path):
-    guncelleme = tg_mesaj(5, "/dur")
-    yabanci = tg_mesaj(4, "/dur", chat=999)
+def test_kapat_komutu_hepsini_kapatir_dur_dosyasi_yeniden_baslatma_engeli(tmp_path):
+    """Eski `/dur` davranışı `/kapat` oldu (kullanıcı kararı 2026-11-05): test aynı şeyi `/kapat` ile doğrular, zayıflatılmadı."""
+    guncelleme = tg_mesaj(5, "/kapat")
+    yabanci = tg_mesaj(4, "/kapat", chat=999)
     m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([yabanci]))
     m.baslat()
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     m.dakika()
-    assert not m.dur_istendi and not (tmp_path / "durum" / "DUR").exists()                    # yabancı sohbetten /dur kabul edilmedi
+    assert not m.dur_istendi and not (tmp_path / "durum" / "DUR").exists()                    # yabancı sohbetten /kapat kabul edilmedi
     tgp.guncellemeler.append(guncelleme)
     m.dakika()
     assert m.dur_istendi and (tmp_path / "durum" / "DUR").exists() and m.hesap.sz(adr(1), "BTC") == pytest.approx(0.0, abs=1e-9)
@@ -343,6 +367,73 @@ def test_dur_komutu_hepsini_kapatir_dur_dosyasi_yeniden_baslatma_engeli(tmp_path
     m2, *_ = kur(tmp_path)
     with pytest.raises(mt.KipHatasi):
         m2.baslat()                                                                           # DUR varken başlamaz
+
+
+def test_elle_dur_artirma_engeller_azaltma_serbest_yeniden_kurulunca_korunur_baska_bayrak_silmez(tmp_path):
+    """Opus denetimi: mevcut coinde `artir` engellenir, kısmi `azalt` serbest, risk.json'dan yeni Motor kurulunca duraklatma korunur, başka bayrağın açılıp kapanması `elle_dur`'u silmez; `/devam` yanıtı başka engeli söyler."""
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    m._komutlar(["/dur"])
+    s = m.olay_isle(olay("a:2", adr(1), "BTC", "B", 100, 100.0, 300.0, saat))                      # mevcut coinde artırma
+    assert s[0].karar == "engel" and s[0].neden == "elle_dur"
+    onceki = m.hesap.sz(adr(1), "BTC")
+    s2 = m.olay_isle(olay("a:3", adr(1), "BTC", "A", 150, 100.0, 300.0, saat))                     # kısmi azaltma (trader 300 → 150)
+    assert s2[0].karar == "emir" and m.hesap.sz(adr(1), "BTC") < onceki
+    m.risk.bayrak("mutabakat", True)
+    m.risk.bayrak("mutabakat", False)
+    assert m.risk.acilis_durdu["elle_dur"]                                                         # başka bayrak elle_dur'u silmedi
+    m.durum_yaz()
+    m2, *_ = kur(tmp_path)
+    assert m2.risk.acilis_durdu.get("elle_dur") is True                                           # yeni Motor risk.json'dan yükledi
+    m.risk.bayrak("gunluk_kayip", True)
+    m._komutlar(["/devam"])
+    assert any("hâlâ kapalı: gunluk_kayip" in x for x in tgp.gonderilen)                           # yanıltmaz
+
+
+def test_dur_komutu_yalniz_yeni_giris_ve_artirmayi_durdurur_cikis_serbest_devam_acar(tmp_path):
+    """Yeni `/dur`: açılış/artırma engellenir (`elle_dur`), kapanış serbest, motor çalışır, DUR dosyası YAZILMAZ; `/devam` (= `/baslat`) açar; kalıcıdır. (Komutlar `_komutlar` ile verilir:
+    dakikalık trader pozisyon senkronu sahte HL'de trader pozisyonu görmediği için açık kopyayı kendisi kapatırdı.)"""
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))                          # açık pozisyon var
+    assert m.hesap.sz(adr(1), "BTC") > 0
+    m._komutlar(["/dur"])
+    assert m.risk.acilis_durdu["elle_dur"] and not m.dur_istendi and not m.risk.dur and not (tmp_path / "durum" / "DUR").exists()
+    assert any("duraklatıldı" in x for x in tgp.gonderilen) and kayitlar(tmp_path, "elle_dur")
+    s = m.olay_isle(olay("a:2", adr(1), "ETH", "B", 10, 2000.0, 0.0, saat))
+    assert s[0].karar == "engel" and s[0].neden == "elle_dur"                                  # yeni açılış engelli
+    assert "Yeni işlem duraklatıldı" in m.durum_metni()
+    assert json.loads((tmp_path / "durum" / "risk.json").read_text(encoding="utf-8"))["acilis_durdu"]["elle_dur"] is True       # kalıcı
+    s2 = m.olay_isle(olay("a:3", adr(1), "BTC", "A", 300, 100.0, 300.0, saat))
+    assert s2[0].karar == "emir" and m.hesap.sz(adr(1), "BTC") == pytest.approx(0.0, abs=1e-9)  # kapanış serbest
+    m._komutlar(["/devam"])
+    assert not m.risk.acilis_durdu["elle_dur"] and kayitlar(tmp_path, "elle_devam")
+    assert m.olay_isle(olay("a:4", adr(1), "ETH", "B", 10, 2000.0, 0.0, saat))[0].karar == "emir"
+    m._komutlar(["/dur"])
+    m._komutlar(["/baslat"])
+    assert not m.risk.acilis_durdu["elle_dur"]                                                  # /baslat = /devam
+
+
+def test_dur_ve_devam_telegramdan_gelir(tmp_path):
+    tgp = SahteTG([])
+    m, hl, saat, tgp = kur(tmp_path, tgp=tgp)
+    m.baslat()
+    tgp.guncellemeler.append(tg_mesaj(10, "/dur"))
+    m.dakika()
+    assert m.risk.acilis_durdu["elle_dur"]
+    tgp.guncellemeler.append(tg_mesaj(11, "/devam"))
+    m.dakika()
+    assert not m.risk.acilis_durdu["elle_dur"]
+
+
+def test_devam_kapat_sonrasi_motoru_acmaz(tmp_path):
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    m.dur_tetikle("komut")
+    tgp.guncellemeler.append(tg_mesaj(20, "/devam"))
+    m.dakika()
+    assert m.risk.dur and any("Motor kapalı" in x for x in tgp.gonderilen)
 
 
 def test_zirveden_20_dusus_dur_ve_gunluk_kayip_alarmi(tmp_path):
@@ -873,3 +964,137 @@ def test_k38_oransal_yedek_sayaci_neden_say_ve_kayitta(tmp_path):
     m.hesap_tr[adr(1)] = {"deger": 0.0, "ms": saat()}                                   # hesap değeri 0 ⇒ bilinmiyor gibi (oransal yedek)
     s = m.olay_isle(olay("a:2", adr(1), "BTC", "A", 150, 100.0, 300.0, saat))
     assert [(x.eylem, x.karar) for x in s] == [("azalt", "emir")] and m.neden_say.get("azalt_oransal_yedek") == 1 and kayitlar(tmp_path, "emir")[-1]["boyut_neden"] == "azalt_oransal_yedek"
+def test_k39_motor_gecis_beklemesi_silinir_ve_kayda_yazilir(tmp_path):
+    import json as _j
+    (tmp_path / "durum").mkdir()
+    adres = "0x62edf4" + "1" * 34
+    (tmp_path / "durum" / "saha.json").write_text(_j.dumps({"bekleme": {adres: 9_999_999_999_999}, "kurulu": True}))
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    assert adres not in m.saha.bekleme and any(x["olay"] == "bekleme_silindi" and x["adres"] == adres and x["neden"] == "K-39" for x in kayitlar(tmp_path))
+
+
+def test_b7_periyodik_vardiya_boyunca_taze_ozet_json_yazar_pano_icin(tmp_path):
+    """Pano 15 dakikada bir yenilensin (B7): motor `durum/ozet.json`'u yalnız vardiya sonunda değil her periyodik döngüde yazar (vardiya kimliği, acik, dinleyici alanlarıyla)."""
+    import types
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    din = types.SimpleNamespace(izle_ekle=lambda a: None, durdur=lambda: None, ozet=lambda: {"genel": {"kopma": 3}})
+
+    async def kos():
+        durdur = asyncio.Event()
+        gorev = asyncio.create_task(mt._periyodik(m, durdur, din, aralik_sn=60))
+        await asyncio.sleep(0.5)
+        durdur.set()
+        await gorev
+    asyncio.run(kos())
+    ozet = json.loads((tmp_path / "durum" / "ozet.json").read_text())
+    assert ozet["vardiya"] == m.vardiya_id and "acik" in ozet and ozet["dinleyici"] == {"kopma": 3} and ozet["kasa_usd"] == 1000.0 and ozet["yazildi_ms"] == saat()
+
+
+# ================================================================================================ Telegram lider kararları (2026-11-05 akşam)
+def test_baslat_dur_dosyasi_yoksa_risk_json_dur_sifirlanir_dosya_varsa_dokunulmaz(tmp_path):
+    """/kapat → yalnız DUR silinip yeniden başlatılırsa risk.json `dur: true` kalırdı; DUR dosyası tek yetkili."""
+    m, hl, saat, tgp = kur(tmp_path)
+    m.baslat()
+    m.dur_tetikle("komut")
+    assert m.risk.dur and (tmp_path / "durum" / "DUR").exists()
+    (tmp_path / "durum" / "DUR").unlink()                                                     # kullanıcı DUR'u elle sildi
+    assert json.loads((tmp_path / "durum" / "risk.json").read_text(encoding="utf-8"))["dur"] is True
+    m2, *_ = kur(tmp_path)
+    assert m2.risk.dur is True
+    m2.baslat()
+    assert m2.risk.dur is False and m2.risk.dur_neden is None
+    assert json.loads((tmp_path / "durum" / "risk.json").read_text(encoding="utf-8"))["dur"] is False        # kayda yazıldı
+    ev = kayitlar(tmp_path, "dur_sifirlandi")
+    assert len(ev) == 1 and ev[0]["neden"] == "komut"
+    m3, *_ = kur(tmp_path)
+    m3.baslat()
+    assert len(kayitlar(tmp_path, "dur_sifirlandi")) == 1                                     # dur zaten yoktu: olay tekrarlanmaz
+
+
+def test_baslat_dur_dosyasi_varsa_motor_baslamaz_risk_dur_sifirlanmaz(tmp_path):
+    m, hl, saat, tgp = kur(tmp_path)
+    m.baslat()
+    m.dur_tetikle("komut")
+    m2, *_ = kur(tmp_path)
+    with pytest.raises(mt.KipHatasi):
+        m2.baslat()
+    assert m2.risk.dur is True and not kayitlar(tmp_path, "dur_sifirlandi")
+
+
+def test_vardiya_arasinda_gelen_komut_yanitlanir_calistirilmaz_bir_kez_yetki_ve_pencere(tmp_path):
+    simdi = time.time()
+    tgp = SahteTG([tg_mesaj(1, "/kapat", tarih=simdi - 300),                      # 5 dk önce: yanıt, ÇALIŞTIRILMAZ
+                   tg_mesaj(2, "/dur", tarih=simdi - 14 * 60),                    # pencere içinde
+                   tg_mesaj(3, "/devam", tarih=simdi - 16 * 60),                  # 15 dk dışında: sessiz
+                   tg_mesaj(4, "/kapat", tarih=simdi - 60, kimden=999),           # yetkisiz: yanıt yok
+                   tg_mesaj(5, "merhaba", tarih=simdi - 60)])                     # komut değil
+    m, hl, saat, _ = kur(tmp_path, tgp=tgp)
+    m.baslat()
+    m.dakika()
+    yanit = [x for x in tgp.gonderilen if "vardiya arasında geldi" in x]
+    assert len(yanit) == 1 and "/kapat" in yanit[0] and "/dur" in yanit[0] and "/devam" not in yanit[0] and "işlenmedi" in yanit[0] and "Tekrar gönder" in yanit[0]
+    assert not m.dur_istendi and not m.risk.dur and not m.risk.acilis_durdu.get("elle_dur") and not (tmp_path / "durum" / "DUR").exists()      # komut yürütülmedi
+    m.dakika()
+    assert len([x for x in tgp.gonderilen if "vardiya arasında geldi" in x]) == 1          # spam yok
+    assert m.tg.yetkisiz_sayisi == 1
+    t = tg.Telegram(TOKEN, CHAT, SahteTG([tg_mesaj(7, "/durum", tarih=simdi - 100)]), baslangic_s=simdi)
+    assert t.komutlari_al() == [] and len(t.gonderilen) == 1
+    t.post.guncellemeler.append(tg_mesaj(7, "/durum", tarih=simdi - 100))                  # aynı update_id yeniden gelse bile ikinci yanıt yok
+    t.komutlari_al()
+    assert len(t.gonderilen) == 1
+
+
+def test_vardiya_arasi_yanit_telegram_kapaliysa_sessiz_gecer():
+    t = tg.Telegram("", "", SahteTG([tg_mesaj(1, "/kapat", tarih=time.time() - 60)]), baslangic_s=time.time())
+    assert t.komutlari_al() == [] and t.gonderilen == []
+
+
+def test_durum_gercek_risk_bayraklarini_gosterir_bayrak_yoksa_normal(tmp_path):
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    assert "Risk: normal" in m.durum_metni()
+    m.risk.bayrak("gunluk_kayip", True)
+    m.risk.bayrak("mutabakat", True)
+    m._komutlar(["/dur"])
+    m.risk.fren_bitis[adr(1)] = saat() + 60_000
+    metin = m.durum_metni()
+    for parca in ("Günlük kayıp freni", "Mutabakat", "duraklatıldı", "Patlama freni"):
+        assert parca in metin
+    assert "Risk: normal" not in metin
+    m.risk.fren_bitis[adr(1)] = saat() - 1
+    m.risk.bayrak("gunluk_kayip", False)
+    assert "Patlama freni" not in m.durum_metni() and "Günlük kayıp" not in m.durum_metni()
+    m.risk.dur = True
+    assert "DURDURULDU" in m.durum_metni()
+    m._komutlar(["/durum"])
+    assert tgp.gonderilen[-1] == m.durum_metni()
+
+
+def test_dur_dosyasi_kapanislardan_once_yazilir_kapanis_istisnasi_dur_u_bozmaz_yeniden_baslatinca_acilis_yok(tmp_path, monkeypatch):
+    """Lider denetimi: kapanış sırasında istisna (ör. HL okuması) olsa da `DUR` yazılı kalır; yeniden başlatma yalnız kapanış modunda başlar, açılış yapılmaz."""
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+
+    def patla(*a, **k):
+        assert (tmp_path / "durum" / "DUR").exists()                                           # istisna anında DUR zaten yazılı
+        raise ConnectionError("HL okuması patladı")
+    monkeypatch.setattr(m, "_adres_kapat", patla)
+    m.dur_tetikle("zirve_dusus")
+    dur = json.loads((tmp_path / "durum" / "DUR").read_text(encoding="utf-8"))
+    assert dur["neden"] == "zirve_dusus" and dur["kapanis_bekliyor"] is True and not (tmp_path / "durum" / "DUR.tmp").exists()
+    assert m.risk.dur and m.dur_bekliyor and kayitlar(tmp_path, "dur_kapanis_hata") and any(x.startswith("🛑 DUR:") for x in tgp.gonderilen)
+    m2, hl2, saat2, _ = kur(tmp_path, saat=saat)
+    m2.baslat()                                                                                # kapanış modu: açık pozisyon var
+    assert m2.risk.dur and m2.dur_bekliyor
+    assert m2.olay_isle(olay("a:2", adr(1), "ETH", "B", 10, 2000.0, 0.0, saat))[0].karar == "engel"
+
+
+def test_dur_dosyasi_yazilamazsa_alarm_ve_kayit_sessiz_gecilmez(tmp_path):
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    (tmp_path / "durum" / "DUR.tmp").mkdir()                                                   # geçici dosya yazılamaz (dizin engeli) → OSError
+    m.dur_tetikle("komut")
+    assert kayitlar(tmp_path, "dur_yazim_hata") and any("DUR dosyası YAZILAMADI" in x for x in tgp.gonderilen) and m.risk.dur

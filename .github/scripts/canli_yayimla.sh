@@ -6,6 +6,20 @@ set -euo pipefail
 veri_dali="${VERI_DALI:-canli-durum}"
 case "$veri_dali" in canli-durum|canli-durum-deneme) ;; *) echo "Geçersiz VERI_DALI: $veri_dali" >&2; exit 1 ;; esac
 kaynak="$(pwd)"
+# Cloudflare Workers `sg-pano` yayını (K-40 ek; yalnız ana dal `canli-durum`, yalnız pano/index.html; yalnız iki secret de varsa). Cloudflare'in kendi build sistemi takıldığı için yayın buradan yapılır.
+# Durum push'undan SONRA çağrılır (yayım gecikse bile çift emir koruması `niyet.jsonl` zamanında yazılır). Anahtar yalnız "Workers düzenle" yetkili; log'da GitHub gizler. Hata yayımı durdurmaz ama GÖRÜNÜR.
+cf_yayin() {
+  if [ "$veri_dali" = canli-durum ] && [ -s "$kaynak/pano/index.html" ] && [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+    local cf_dizin
+    cf_dizin="$(mktemp -d)"
+    mkdir "$cf_dizin/site"                                                      # --assets=site: wrangler'ın .wrangler/ geçici dosyaları yayımlanmaz
+    cp "$kaynak/pano/index.html" "$cf_dizin/site/index.html"
+    if ! ( cd "$cf_dizin" && WRANGLER_SEND_METRICS=false timeout -k 10 120 npx --yes wrangler@4.158.0 deploy --assets=site --name sg-pano --compatibility-date=2026-11-01 >/dev/null ); then
+      echo "UYARI: Cloudflare pano yayını başarısız (durum yayımı sürer)" >&2
+    fi
+    rm -rf "$cf_dizin"
+  fi
+}
 [ -d "$kaynak/durum" ] || { echo 'durum/ yok: yayımlanacak bir şey yok'; exit 0; }
 work="$(mktemp -d)"
 trap 'git -C "$kaynak" worktree remove --force "$work" 2>/dev/null || rm -rf "$work"' EXIT
@@ -20,6 +34,12 @@ else
   git worktree add -f --detach "$work" HEAD
   git -C "$work" checkout --orphan "$veri_dali"
   git -C "$work" rm -rfq --ignore-unmatch .
+fi
+# Pano (B7): her yayımda (15 dk) güncel `pano/OZET.md` + `pano/index.html`. `--vardiya`: ozet.json başka vardiyadansa (bayat) pano YAZILMAZ. Hata yayımı durdurmaz ama GÖRÜNÜR (stderr uyarısı; sessizce yutulmaz).
+if [ -s "$kaynak/durum/ozet.json" ]; then
+  if ! python -u -m copytrade.canli.pano --durum durum --kayit kayit --gecmis pano/gecmis.json --cikti pano/OZET.md --html pano/index.html --vardiya "${GITHUB_RUN_ID:-}" ${KADRO_DALI:+--isabet-dali "$KADRO_DALI"} >/dev/null; then
+    echo "UYARI: pano üretilemedi (durum yayımı sürer)" >&2
+  fi
 fi
 mkdir -p "$work/durum" "$work/kayit"
 for f in hesap.json saha.json risk.json motor.json kilit.json ozet.json niyet.jsonl DUR; do
@@ -41,7 +61,7 @@ for f in "$work"/kayit/*.jsonl; do
 done
 git -C "$work" add -f durum kayit
 if [ -d "$work/pano" ]; then git -C "$work" add -f pano; fi
-if git -C "$work" diff --cached --quiet; then exit 0; fi
+if git -C "$work" diff --cached --quiet; then cf_yayin; exit 0; fi
 git -C "$work" commit -q -m "canli: durum $(date -u +%FT%TZ)"
 for attempt in 1 2 3; do
   if git ls-remote --exit-code --heads origin "$veri_dali" >/dev/null; then
@@ -50,7 +70,7 @@ for attempt in 1 2 3; do
     status=$?
     if [ "$status" -ne 2 ]; then exit "$status"; fi
   fi
-  if git -C "$work" push -q origin "HEAD:$veri_dali"; then exit 0; fi
+  if git -C "$work" push -q origin "HEAD:$veri_dali"; then cf_yayin; exit 0; fi
   if [ "$attempt" -lt 3 ]; then sleep 5; fi
 done
 exit 1

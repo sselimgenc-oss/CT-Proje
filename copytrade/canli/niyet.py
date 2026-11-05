@@ -60,5 +60,16 @@ class Niyet:
         tut = {x["cloid"] for x in niyetler[-son_n:]} | {x["cloid"] for x in self.sonucsuz()}
         yeni = [x for x in s if x.get("cloid") in tut]
         gecici = self.yol.with_suffix(".tmp")
-        gecici.write_text("".join(json.dumps(x, ensure_ascii=False, separators=(",", ":")) + "\n" for x in yeni), encoding="utf-8")
-        gecici.replace(self.yol)
+        with gecici.open("w", encoding="utf-8") as f:                  # atomik: tmp + fsync + replace + dizin fsync
+            f.write("".join(json.dumps(x, ensure_ascii=False, separators=(",", ":")) + "\n" for x in yeni))
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(gecici, self.yol)
+        try:
+            dfd = os.open(self.yol.parent, os.O_RDONLY)
+            try:
+                os.fsync(dfd)
+            finally:
+                os.close(dfd)
+        except OSError:
+            pass

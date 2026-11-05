@@ -76,7 +76,7 @@ gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez
   Günde en fazla **2** saha değişikliği (devir maliyeti).
 - **Sahadan düşme:**
   - Anında: sahaya girişten beri slot düşüşü ≥ %10; R1/4 (kaldıraç > 20x) ihlali.
-  - Günlük: form sırası 2 gün üst üste > 22, ya da 1 gün kadro dışı (> 30); 72 sa yeni işlem yok; R1'den elendi.
+  - Günlük: form sırası 2 gün üst üste > 22, ya da **iki farklı UTC gününün kadrosunda kadro dışı (> 30) (K‑39; sonuç dışı, bekleme yok; gün başına yalnız ilk kadro uygulanır)**; 72 sa yeni işlem yok; R1'den elendi.
   - **Sonuçla** düşen (slot −%10, form sırası, R1 elemesi) 14 gün sahaya dönemez. **Sonuç dışı** nedenle yerini kaybeden (daha iyisi geldi,
     72 sa işlem yok, kasa değişikliği) bekleme cezası almaz (K‑27).
 - **Sahadan inen üyenin açık pozisyonları:** yeni açılış durur, trader'ın kapanışları izlenir, 24 sa sonra açık kalan kapatılır.
