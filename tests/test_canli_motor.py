@@ -808,3 +808,13 @@ def test_k35_etkin_kasa_degisince_hesap_kaydi_korunur(tmp_path):
     m.durum_yaz()
     m2, *_ = kur(tmp_path, kasa=600.0, saat=saat)                                                  # gerçek kip: etkin kasa 1.000 → 600
     assert m2.hesap.kasa_usd == 600.0 and m2.hesap.sz(adr(1), "BTC") == pytest.approx(0.272727, abs=1e-6) and m2.saha.slot == pytest.approx(600 / 11)
+
+
+def test_k36_motor_artirma_trader_hesap_degerini_kullanir_hesap_yok_degil(tmp_path):
+    """K‑36 gerçek vardiya bulgusu (194 × `hesap_yok`): motor artırmada hesap paydasını geçirmiyordu → her artırma atlandı. Slot 90,909, hesap 100.000 $: trader 300 BTC × 100 $ açar (hedef 27,27 $, açılış 27,27),
+    sonra 600'e çıkarır (hedef 54,545 $) → artırma emri 54,545 − 27,273 = **27,27 $** (`tamam`)."""
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    s = m.olay_isle(olay("a:2", adr(1), "BTC", "B", 300, 100.0, 300.0, saat))
+    assert [(x.eylem, x.karar) for x in s] == [("artir", "emir")] and kayitlar(tmp_path, "emir")[1]["usd_istenen"] == pytest.approx(27.2727, abs=1e-3) and not m.neden_say.get("hesap_yok")
