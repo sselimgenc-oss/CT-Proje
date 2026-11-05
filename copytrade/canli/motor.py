@@ -38,7 +38,7 @@ from copytrade.dinleyici import Ayar, Dinleyici, Izlenen, Olay, clearinghouse_ay
 from copytrade.hl_ortak import spot_usdc
 from copytrade.izleme_liste import perp_dex_names
 from copytrade.kurallar import load_rules
-from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter
+from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter, ledger_sayfala
 
 EPS = 1e-12
 DAKIKA = 60_000
@@ -241,6 +241,7 @@ class Motor:
         self.kapanis_kuyrugu: dict[str, dict] = {k: dict(v) for k, v in (m.get("kapanis_kuyrugu") or {}).items()}      # "adres|coin" -> {tur, hedef_sz, neden, deneme, ms}
         self.dur_bekliyor: bool = bool(m.get("dur_bekliyor", False))
         self.hl_ofset: float | None = m.get("hl_ofset")          # gerçek kip: HL hesap değeri − yerel özsermaye (ilk okuma); risk temeli = HL değeri − ofset
+        self.ledger_son_ms: int | None = m.get("ledger_son_ms")   # gerçek kip: kendi hesabımızın yatırma/çekme kaydında en son işlenen satırın zamanı (ms, UTC)
         self.hl_oz: float | None = None
         self.hl_oz_ms: int = 0
         self.son_funding_saat: int | None = m.get("son_funding_saat")
@@ -290,7 +291,7 @@ class Motor:
     def _motor_json(self) -> dict:
         return {"islenen": self.islenen[-int(self.rules["canli_islenen_sakla"]):], "poz_tr": self.poz_tr, "hesap_tr": self.hesap_tr, "son_olay_ms": self.son_olay_ms,
                 "ozet_gunu": self._ozet_gunu, "ozet_oz": self._ozet_oz, "ozet_emir": self._ozet_emir, "kip": self.kip, "kasa_usd": self.kasa, "vardiya": self.vardiya_id, "yazildi_ms": self.saat_ms(),
-                "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.offset}
+                "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.offset}
 
     def _dolum_yaz(self) -> None:
         """Her emir sonucundan SONRA (t4b #3): `motor.json` önce, `hesap.json` (son uygulanan niyet işaretçisiyle) SON; ikisi de atomik. Aralarında çökme olursa açılışta işaretçiden sonraki sonuçlu niyetler oynatılır."""
@@ -428,6 +429,8 @@ class Motor:
         inen = adres in self.saha.inen and adres not in self.saha.uyeler
         if acilis and inen:
             return self._atla(o, adres, eylem, "engel", "inen_trader")
+        if acilis and self.hesap.ters_yonlu_var(adres, o.coin, "B" if sonra > 0 else "A", self.marks, float(self.rules["canli_kapanis_toz_usd"])):          # K‑41: başka trader'dan ters yönlü kopya pozisyonu var → net küçülmesin, açılış yok
+            return self._atla(o, adres, eylem, "atlandi", "ters_netlesme")
         yeni_coin = eylem == "ac" and abs(biz_sz) < EPS            # bizim için taze pozisyon (patlama freni sayacı)
         if acilis:
             izin, neden = self.risk.acilis_izni(adres, o.coin, yeni_coin, simdi)
@@ -774,6 +777,45 @@ class Motor:
         if self.hl_ofset is None:
             self.hl_ofset = float(deger) - self.yerel_ozsermaye()
 
+    def ledger_oku(self, simdi: int) -> list[dict] | None:
+        """Gerçek kip (ağ; kilitsiz): kendi hesabımızın `userNonFundingLedgerUpdates` satırları (sayfalı), `ledger_son_ms`ten sonrası. İlk çağrıda yalnız başlangıç anı sabitlenir (ilk ofset zaten ilk HL okumasından)."""
+        if self.ledger_son_ms is None:
+            self.ledger_son_ms = simdi
+            return None
+        try:
+            return ledger_sayfala(self.post, os.environ.get("HL_HESAP_ADRESI", ""), self.ledger_son_ms + 1)
+        except Exception as hata:                          # noqa: BLE001
+            self.kayit({"olay": "ledger_okuma_hata", "tur": type(hata).__name__})
+            return None
+
+    def ofset_yenile(self, satirlar: list[dict] | None, simdi: int) -> bool:
+        """#5: yeni yatırma/çekme (`deposit`/`withdraw`) satırı görülünce `hl_ofset += net` (net = yatırma − çekme, HL hesabı $). HL − yerel FARKI KORUNUR (birikmiş gerçek funding/kayma/ücret farkı silinmez;
+        günlük/zirve freni ve mutabakat bayrağı çalışmaya devam eder). Yalnız HL değeri okunmadan ÖNCE gerçekleşmiş satırlar (`zaman ≤ hl_oz_ms`) işlenir; sonrakiler bir sonraki okumaya kalır.
+        `internalTransfer`/`send`/`subAccountTransfer` vb. SAYILMAZ (kasa dışına/içine dış para değil; sayılırsa ofset yanlış kayar), yalnız `ofset_atlanan_tur` olarak kaydedilir (bilgi).
+        HL hesabında kasa ayarı kadar para tutulursa ofset 0 olur."""
+        if self.kip != "gercek" or not satirlar or self.hl_oz is None or self.ledger_son_ms is None or self.hl_ofset is None:
+            return False
+        yeni, atlanan = [], {}
+        for s in satirlar:
+            z, tur = s.get("time"), (s.get("delta") or {}).get("type")
+            if not isinstance(z, (int, float)) or not self.ledger_son_ms < z <= self.hl_oz_ms:
+                continue
+            if tur in ("deposit", "withdraw"):
+                yeni.append(s)
+            else:
+                atlanan[str(tur)] = atlanan.get(str(tur), 0) + 1
+        if atlanan:
+            self.kayit({"olay": "ofset_atlanan_tur", "turler": atlanan})
+        if not yeni:
+            self.ledger_son_ms = int(max([self.ledger_son_ms] + [s["time"] for s in satirlar if isinstance(s.get("time"), (int, float)) and s["time"] <= self.hl_oz_ms]))
+            return False
+        net = sum(float(s["delta"].get("usdc") or 0.0) * (1 if s["delta"]["type"] == "deposit" else -1) for s in yeni)
+        eski = self.hl_ofset
+        self.hl_ofset = eski + net
+        self.ledger_son_ms = int(max(s["time"] for s in satirlar if isinstance(s.get("time"), (int, float)) and s["time"] <= self.hl_oz_ms))
+        self.kayit({"olay": "ofset_yenilendi", "eski": eski, "yeni": self.hl_ofset, "net_usd": net, "satir": len(yeni)})
+        return True
+
     def funding_bekliyor(self, simdi: int) -> bool:
         return self.kip == "sanal" and self.son_funding_saat is not None and simdi // 3_600_000 > self.son_funding_saat and any(self.hesap.poz.values())
 
@@ -832,13 +874,14 @@ class Motor:
         komutlar = self.tg.komutlari_al()                      # ağ: kilitsiz
         hl = self.hl_oku() if (self.kip == "gercek" and simdi - self._son.get("mutabakat", 0) >= float(self.rules["canli_mutabakat_sn"]) * 1000) else None
         oranlar = self.funding_oku() if self.funding_bekliyor(simdi) else None
+        ledger = self.ledger_oku(simdi) if hl else None                          # gerçek kip: yatırma/çekme kaydı (#5)
         with self._lock:
             self.mids_uygula(mids, simdi)
             if self.son_funding_saat is None:
                 self.son_funding_saat = simdi // 3_600_000
             adimlar: list[tuple[str, Callable[[], None]]] = [
                 ("tasfiye", lambda: self._tasfiye(simdi)), ("funding", lambda: self.funding_uygula(oranlar, simdi)),
-                ("hl_ozsermaye", lambda: self.hl_uygula(hl[1], simdi) if hl else None), ("risk", lambda: self._risk(simdi)), ("anlik_saha", lambda: self._anlik(simdi)),
+                ("hl_ozsermaye", lambda: self.hl_uygula(hl[1], simdi) if hl else None), ("ofset", lambda: self.ofset_yenile(ledger, simdi)), ("risk", lambda: self._risk(simdi)), ("anlik_saha", lambda: self._anlik(simdi)),
                 ("inen", lambda: self.karar_uygula(self.saha.inenleri_kapat(simdi), simdi)), ("mutabakat", lambda: self._mutabakat(simdi, hl)), ("kapanis_kuyrugu", lambda: self._kuyruk_isle(simdi)),
                 ("kadro", lambda: self._kadro_uygula(kadro, simdi)), ("senkron", lambda: (self.senkron_uygula(senkron), self.hesap_uygula(hesaplar, simdi)) if senkron is not None else None),
                 ("telegram", lambda: self._komutlar(komutlar)), ("ozet", lambda: self._gunluk_ozet(simdi)),
@@ -1008,7 +1051,8 @@ class Motor:
                 "marj_yok": self.neden_say.get("marj_yok", 0), "uyeler": sorted(self.saha.uyeler),
                 "gec_acilis": self.sayac["gec_acilis"], "kapanis_eksik": self.sayac["kapanis_eksik"], "kapanis_kuyrugu": len(self.kapanis_kuyrugu), "min_nosyonel": self.sayac["min_nosyonel"],
                 "funding_usd": self.hesap.funding_toplam(), "funding_oran_yok": self.sayac["funding_oran_yok"], "kuyruk_gecikme_ms": self.gecikme_ozeti(), "en_buyuk_emir": dict(self.en_buyuk_emir),
-                "min_emir_say": {k: v for k, v in sorted(self.neden_say.items()) if k.startswith("min_emir")}}
+                "min_emir_say": {k: v for k, v in sorted(self.neden_say.items()) if k.startswith("min_emir")},
+                "ters_netlesme": self.neden_say.get("ters_netlesme", 0)}
 
     def gecikme_ozeti(self) -> dict[str, float | int | None]:
         g = sorted(self.kuyruk_gecikme)

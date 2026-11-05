@@ -57,6 +57,17 @@ class Hesap:
         p = self.poz.get(adres, {}).get(coin)
         return p.sz if p else 0.0
 
+    def ters_yonlu_var(self, adres: str, coin: str, yon: str, marks: dict[str, float] | None = None, toz_usd: float = 0.0) -> bool:
+        """K‑41: `adres` DIŞINDAKİ bir trader'ın kopya pozisyonu bu coinde `yon` (B/A) açılışının TERSİNE mi? (Tek HL hesabında coin netleşir; ters açılış net pozisyonu küçültür.)
+        Nosyoneli (mark, yoksa giriş) `toz_usd` ve altındaki kalıntı (toz; `canli_kapanis_toz_usd`) sayılmaz. Coin dizgesi birebir eşleşir (HIP‑3 `dex:COIN` ayrı coindir)."""
+        isaret = 1.0 if yon == "B" else -1.0
+        marks = marks or {}
+        for a, c in self.poz.items():
+            p = c.get(coin)
+            if a != adres and p is not None and p.sz * isaret < -EPS and abs(p.sz) * (marks.get(coin) or p.giris) > toz_usd:
+                return True
+        return False
+
     def uygula(self, adres: str, coin: str, yon: str, sz: float, px: float, ucret: float, zaman_ms: int) -> float:
         """Dolumu işler (yön B alış / A satış; `sz` işaretsiz). Pozisyon sıfırı AŞMAZ (ters dönüş çağıranda kapanış + açılış olarak iki dolum). Döner: bu dolumun gerçekleşen K/Z'si (ücret hariç)."""
         if sz <= 0 or px <= 0 or not math.isfinite(px):
