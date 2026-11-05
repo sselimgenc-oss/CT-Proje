@@ -9,6 +9,7 @@ name: Canlı vardiya (sanal kip)
 on:
   schedule:
     - cron: "7 */4 * * *"
+    - cron: "37 */4 * * *"          # YEDEK (T6 §4): birincil tetiklenmezse; kilit taze ise (başka vardiya aktif) başlamaz — beklenen durum, "BAŞLAMADI" alarmı DEĞİL
   workflow_dispatch:
     inputs:
       sure_dk:
@@ -30,7 +31,23 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  kontrol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      atla: ${{ steps.k.outputs.atla }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: k
+        name: Zamanlama kontrolü (yedek cron)
+        env:
+          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'canli-durum' || 'canli-durum-deneme' }}
+          ZAMANLAMA: ${{ github.event.schedule }}
+          YEDEK_CRON: "37 */4 * * *"
+        run: bash .github/scripts/zamanlama_kontrol.sh canli
   vardiya:
+    needs: kontrol
+    if: ${{ needs.kontrol.outputs.atla != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 290
     env:

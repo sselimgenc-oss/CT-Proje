@@ -11,8 +11,14 @@ gun="$(basename "$tarih_klasoru")"
 archive=$(mktemp -d)
 trap 'rm -rf "$archive"' EXIT
 cp "$tarih_klasoru/havuz.json" "$tarih_klasoru/kadro.json" "$archive/"
+# T6: önceki günlerin `isabet.json` dosyaları (7 gün önceki havuz için bugün ölçülür) da yayımlanır
+mkdir -p "$archive/isabet"
+for d in radar/????-??-??; do
+  if [ -s "$d/isabet.json" ]; then mkdir -p "$archive/isabet/$(basename "$d")"; cp "$d/isabet.json" "$archive/isabet/$(basename "$d")/"; fi
+done
 # GitHub 100 MB sınırı için yayımlanan her dosya 90 MB altında olmalı.
-for f in "$archive"/*; do
+for f in "$archive"/*.json "$archive"/isabet/*/isabet.json; do
+  [ -f "$f" ] || continue
   if [ "$(stat -c %s "$f")" -gt 94371840 ]; then echo "Çok büyük: $(basename "$f") ($(stat -c %s "$f") bayt)" >&2; exit 1; fi
 done
 git config user.name 'github-actions[bot]'
@@ -29,6 +35,13 @@ fi
 mkdir -p "radar/$gun" radar/son
 cp "$archive/havuz.json" "$archive/kadro.json" "radar/$gun/"
 cp "$archive/kadro.json" radar/son/kadro.json
+for f in "$archive"/isabet/*/isabet.json; do
+  [ -f "$f" ] || continue
+  g="$(basename "$(dirname "$f")")"
+  mkdir -p "radar/$g"
+  cp "$f" "radar/$g/isabet.json"
+  git add -f "radar/$g/isabet.json"
+done
 # 90 gün tutma: tarihli klasörlerden eski olanları sil (YYYY-MM-DD sözlük sırası = tarih sırası).
 sinir="$(date -u -d '90 days ago' +%F)"
 for d in radar/????-??-??; do

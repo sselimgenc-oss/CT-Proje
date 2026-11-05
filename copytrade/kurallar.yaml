@@ -157,3 +157,10 @@ canli_islenen_sakla: 5000               # adet (işlenen dolum kimliklerinden sa
 canli_kilit_dk: 20                      # dakika (başka vardiyanın kilit nabzı bu süreden tazeyse motor başlamaz)
 canli_api_agirlik_dk: 800               # ağırlık/dk (motorun TÜM REST istekleri için ortak hız sınırı; HL IP sınırı 1.200, geri kalan WS/dinleyici payı)
 
+
+# T6 (K-37): seçim isabeti ölçümü (docs/RADAR_V1.md §7b; yalnız ölçer, radar_* eşiklerine dokunmaz)
+isabet_pencere_gun: 7                   # gün (havuz tarihinden bu kadar sonra ölçülür; sonraki_7g penceresi)
+isabet_elenen_ust: 30                   # kişi (kopya aşamasına varıp elenenlerden sabit tohumla en çok bu kadar seçilir)
+isabet_butce_dk: 30                     # dakika (isabet adımı süre bütçesi; aşılırsa eksik yazılır, tarama bozulmaz)
+isabet_kotu_gecikme_dk: 3               # dakika (kötü senaryo gecikmesi)
+isabet_kotu_kayma_carpan: 2             # kat (kötü senaryo: maliyet_kayma bu kadar katı)

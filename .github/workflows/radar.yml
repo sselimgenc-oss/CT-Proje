@@ -9,6 +9,7 @@ name: Radar (günlük tarama + kadro)
 on:
   schedule:
     - cron: "37 0 * * *"
+    - cron: "17 2 * * *"            # YEDEK (T6 §4): 2026-11-05'te birincil cron hiç tetiklenmedi; o günün radar/<tarih>/ klasörü varsa iş hiçbir şey yapmadan biter
   workflow_dispatch:
   push:
     paths:
@@ -26,9 +27,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  radar:
+  kontrol:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 5
+    outputs:
+      atla: ${{ steps.k.outputs.atla }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: k
+        name: Zamanlama kontrolü (yedek cron)
+        env:
+          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
+          ZAMANLAMA: ${{ github.event.schedule }}
+          YEDEK_CRON: "17 2 * * *"
+        run: bash .github/scripts/zamanlama_kontrol.sh radar
+  radar:
+    needs: kontrol
+    if: ${{ needs.kontrol.outputs.atla != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,9 +63,17 @@ jobs:
         run: |
           havuz="$(ls radar/*/havuz.json | tail -n 1)"
           python -u -m copytrade.radar_kadro --havuz "$havuz"
+      - name: Seçim isabeti (§7b)
+        env:
+          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
+        run: |
+          # 7 gün önceki havuz+kadro (veri dalından) için arada geçen 7 günün kopya getirisi; en çok 30 dk, hata tarama işini bozmaz (eksik yazılır). İlk ölçüm 2026-11-12.
+          python -u -m copytrade.radar_isabet --cikti radar --veri-dali "$VERI_DALI" --ozet-md radar/ISABET_OZET.md
       - name: Özet
         if: ${{ always() && hashFiles('radar/OZET.md') != '' }}
-        run: cat radar/OZET.md >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          cat radar/OZET.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -s radar/ISABET_OZET.md ]; then cat radar/ISABET_OZET.md >> "$GITHUB_STEP_SUMMARY"; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -16,7 +16,7 @@ from test_izleme import ADDRESS, NOW, Client, project
 ROOT = Path(__file__).resolve().parents[1]
 WF = ROOT / ".github/workflows"
 SCRIPTS = ROOT / ".github/scripts"
-ISLER = ("izleme.yml", "dinleyici_deneme.yml", "izleme_deneme.yml", "radar_deneme.yml", "radar.yml", "canli_vardiya.yml")
+ISLER = ("izleme.yml", "dinleyici_deneme.yml", "izleme_deneme.yml", "radar_deneme.yml", "radar.yml", "canli_vardiya.yml", "isabet_deneme.yml")
 
 
 def yukle(ad: str) -> dict:
@@ -155,7 +155,7 @@ def test_izleme_listesi_main_den_okunur_ve_veri_dalina_yazilir():
 
 # ---------------------------------------------------------------------------------------------------- artık dosya temizliği
 def test_eski_sistem_is_akislari_ve_betikleri_yok():
-    kalanlar = {"canli_vardiya.yml", "ci.yml", "dinleyici_deneme.yml", "dolgu_deneme.yml", "gecikme_kar_deneme.yml", "izleme.yml", "izleme_deneme.yml", "pano.yml", "radar.yml", "radar_deneme.yml", "sonnet_isci.yml"}
+    kalanlar = {"canli_vardiya.yml", "ci.yml", "dinleyici_deneme.yml", "dolgu_deneme.yml", "gecikme_kar_deneme.yml", "isabet_deneme.yml", "izleme.yml", "izleme_deneme.yml", "pano.yml", "radar.yml", "radar_deneme.yml", "sonnet_isci.yml"}
     assert {p.name for p in WF.glob("*.yml")} == kalanlar          # eski sistem iş akışları (kapı, Pazar kadrosu, İlk 11 denemesi, v3 yan yana) geri gelmedi
     assert not (SCRIPTS / "kapi_yayimla.sh").exists()
     assert (SCRIPTS / "izleme_yayimla.sh").exists() and ".github/scripts/izleme_yayimla.sh" in (WF / "izleme.yml").read_text(encoding="utf-8")
@@ -164,7 +164,7 @@ def test_eski_sistem_is_akislari_ve_betikleri_yok():
 # ---------------------------------------------------------------------------------------------------- radar (T3)
 def test_radar_yml_gunluk_00_37_utc_kadro_ve_yayim_sirasi():
     wf = yukle("radar.yml")
-    assert wf["on"]["schedule"] == [{"cron": "37 0 * * *"}] and "workflow_dispatch" in wf["on"] and wf["on"]["push"] == {"paths": ["copytrade/radar/CALISTIR"]}
+    assert wf["on"]["schedule"] == [{"cron": "37 0 * * *"}, {"cron": "17 2 * * *"}] and "workflow_dispatch" in wf["on"] and wf["on"]["push"] == {"paths": ["copytrade/radar/CALISTIR"]}
     assert adim(wf, "radar", "Veri dalına yaz")["env"]["VERI_DALI"] == "${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}"        # dal koşusu gerçek radar dalına yazmaz
     assert "inputs" not in (wf["on"]["workflow_dispatch"] or {})                              # donmuş kurallar: aday sayısı / kural_ust girdisi YOK
     assert wf["permissions"] == {"contents": "write"} and wf["concurrency"]["cancel-in-progress"] is False
@@ -198,7 +198,7 @@ def test_radar_deneme_kural_ust_girdisi_var_yazamaz():
 def test_canli_vardiya_yalniz_sanal_anahtarsiz_kuyruklu_ve_dal_ayrimi():
     metin = (WF / "canli_vardiya.yml").read_text(encoding="utf-8")
     wf = yukle("canli_vardiya.yml")
-    assert wf["on"]["schedule"] == [{"cron": "7 */4 * * *"}] and wf["on"]["push"] == {"paths": ["copytrade/canli/CALISTIR"]}
+    assert wf["on"]["schedule"] == [{"cron": "7 */4 * * *"}, {"cron": "37 */4 * * *"}] and wf["on"]["push"] == {"paths": ["copytrade/canli/CALISTIR"]}
     assert wf["concurrency"] == {"group": "canli-vardiya", "cancel-in-progress": False} and wf["permissions"] == {"contents": "write"}
     assert "HL_API_CUZDAN_ANAHTARI" not in metin and "HL_HESAP_ADRESI" not in metin and "--kip gercek" not in metin and "--kip sanal" in metin             # gerçek kip Actions'ta ASLA
     env = wf["jobs"]["vardiya"]["env"]
