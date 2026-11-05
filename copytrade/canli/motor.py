@@ -468,7 +468,11 @@ class Motor:
                     "reduce_only": reduce_only, "durum": d.durum, "red_neden": d.neden, "boyut_neden": neden, "trader_px": o.px, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
                     "emir_ms": emir_ms, "dolum_ms": dolum_ms, "referans_px": d.referans_px, "dolum_px": d.px, "kayma_ref": d.kayma_oran, "kayma_trader": kayma_trader, "ucret": d.ucret,
                     "gec_goruldu": gec, "kaynak": o.kaynak, "bant": bant, "cloid": cloid, "funding_usd": round(self.hesap.funding.get(adres, 0.0), 6)})
-        self._emir_tampon.append({"adres": adres, "coin": o.coin, "yon": yon, "usd": d.usd_dolan or usd, "px": d.px, "kayma": kayma_trader, "durum": d.durum, "eylem": eylem})
+        e = {"adres": adres, "coin": o.coin, "yon": yon, "usd": d.usd_dolan or usd, "px": d.px, "kayma": kayma_trader, "durum": d.durum, "eylem": eylem}
+        if self.kip == "gercek":                            # gerçek parada her emir ANINDA ve ayrı mesaj (risk gecikmeden görülür)
+            self.tg.gonder(tg.msg_emir_ozeti(self.kip, [e], 0))
+        else:
+            self._emir_tampon.append(e)
         return Sonuc(adres, o.coin, eylem, "emir" if d.dolu_mu else "red", d.neden or neden, d)
 
     # ------------------------------------------------------------------ kapanış teyidi (K‑37 §1)
@@ -1158,6 +1162,10 @@ async def calis(motor: Motor, sure_sn: float | None = None, ws: Callable[[], Any
         await asyncio.gather(*gorevler, return_exceptions=True)
         motor.emir_ozeti(motor.saat_ms(), zorla=True)
         ozet = {**motor.ozet(), **motor.pano_ek(), "dinleyici": din.ozet()["genel"]}
+        try:
+            motor.tg.gonder(tg.msg_vardiya_sonu(motor.kip, float(ozet.get("sure_dk") or 0), int(motor.sayac["emir"]), motor.ozsermaye(), motor.kasa, len(motor.saha.uyeler), motor.saha.n, len(ozet.get("acik") or [])))
+        except Exception:                                  # noqa: BLE001 - bildirim hatası kapanışı bozmaz
+            pass
         motor.kayit({"olay": "kapanis", "ozet": ozet})
         _yaz(motor.durum_dizin / "ozet.json", ozet)
         motor.durum_yaz()
@@ -1227,7 +1235,7 @@ def main(argv: list[str] | None = None) -> int:
     kip = kip_belirle(rules, args.kip)
     post = rest_post_olustur(rules)
     kadro_oku = lambda: http_kadro_oku(rules, args.kadro_dali)          # noqa: E731
-    tgram = tg.Telegram(arka_plan=not args.kontrol)
+    tgram = tg.Telegram(arka_plan=not args.kontrol, sessiz_utc=(int(rules["canli_telegram_sessiz_bas_utc"]), int(rules["canli_telegram_sessiz_bit_utc"])))
     if args.kontrol:
         rapor = kontrol(rules, kip, post, kadro_oku, tgram)
         args.durum_dizin.mkdir(parents=True, exist_ok=True)

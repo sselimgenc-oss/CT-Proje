@@ -511,3 +511,27 @@ def test_baska_vardiya_aktifse_baslamama_telegram_alarmi_ve_kayit(tmp_path):
     with pytest.raises(mt.KipHatasi):
         m2.baslat()
     assert any("BAŞLAMADI" in x and "41904629030" in x for x in tgp.gonderilen) and kayitlar(tmp_path, "vardiya_baslamadi")
+
+
+# ================================================================================================ Telegram politikası (kullanıcı kararı 05.11)
+def test_telegram_gercek_kipte_emir_aninda_gider_ozet_beklemez(tmp_path, monkeypatch):
+    sim = BorsaSim()
+    m, sim, saat, tgp = kur_gercek(tmp_path, monkeypatch, sim)
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    assert any("GERÇEK PARA" in x and "BTC AL" in x for x in tgp.gonderilen) and not m._emir_tampon
+
+
+def test_telegram_gece_sessiz_alarm_her_zaman_sesli():
+    yuklenen = []
+    sahte = lambda url, yuk: yuklenen.append(yuk) or {}                                                         # noqa: E731
+    gece = 1_793_800_000                                                                                         # 2026-11-05 ~13:46 UTC → gündüz
+    t_gunduz = tg.Telegram(TOKEN, CHAT, sahte, sessiz_utc=(21, 5), saat_s=lambda: gece)
+    t_gece = tg.Telegram(TOKEN, CHAT, sahte, sessiz_utc=(21, 5), saat_s=lambda: gece + 9 * 3600)                 # 22:46 UTC = 01:46 TSİ
+    t_gunduz.gonder("🧾 emir özeti"), t_gece.gonder("🧾 emir özeti"), t_gece.gonder("ALARM: kapanış EKSİK"), t_gece.gonder("DUR: komut")
+    assert [y["disable_notification"] for y in yuklenen] == [False, True, False, False]
+
+
+def test_telegram_vardiya_sonu_mesaji():
+    assert tg.msg_vardiya_sonu("sanal", 255.4, 58, 995.34, 1000.0, 9, 11, 7) == (
+        "🔚 Vardiya bitti (sanal · deneme parası) · 4.3 saat\n🧾 Bu vardiyada 58 emir\n💰 Özsermaye 995,34 $ (kasaya göre −%0,47)\n👥 Takipte 9/11 trader · 📌 açık pozisyon 7")

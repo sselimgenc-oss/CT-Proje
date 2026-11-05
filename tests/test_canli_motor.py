@@ -275,7 +275,7 @@ def test_uctan_uca_altin_ornek_acilis_azaltma_kapanis(tmp_path):
     assert m.sayac["emir"] == 3 and len(m.kayma_trader) == 3
     assert not any("Son " in x and "emir (" in x for x in tgp.gonderilen)                                         # emirler ayrı ayrı gitmez; biriktirilir
     m.emir_ozeti(saat(), zorla=True)
-    assert any("Son 5 dakikada 3 emir (sanal · deneme parası)" in x for x in tgp.gonderilen) and any("Yeni trader takibe alındı" in x for x in tgp.gonderilen)
+    assert any("Son 15 dakikada 3 emir (sanal · deneme parası)" in x for x in tgp.gonderilen) and any("Yeni trader takibe alındı" in x for x in tgp.gonderilen)
 
 
 def test_kucuk_acilis_11_dolara_yuvarlanir_ve_trader_hesap_yoksa_atlanir(tmp_path):
