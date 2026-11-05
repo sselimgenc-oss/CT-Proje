@@ -125,6 +125,13 @@ def eylem_belirle(once: float, sonra: float, biz_sz: float) -> list[str]:
     return ["azalt"] if abs(biz_sz) > EPS else []
 
 
+def coin_sinifi(coin: str) -> str:
+    """K‑42: 'spot' (`@N` ya da `A/B` çifti), 'hip3' (`dex:COIN`), aksi 'perp'."""
+    if coin.startswith("@") or "/" in coin:
+        return "spot"
+    return "hip3" if ":" in coin else "perp"
+
+
 @dataclass
 class Sonuc:
     adres: str
@@ -426,6 +433,12 @@ class Motor:
         if acilis and simdi - o.zaman_ms > float(self.rules["canli_olay_stale_sn"]) * 1000:
             self.sayac["gec_acilis"] += 1
             return self._atla(o, adres, eylem, "atlandi", "gec_acilis")
+        if acilis:                                                  # K‑42: spot (`@N`, `A/B`) ve HIP‑3 (`dex:COIN`) açılışı/artırması kopyalanmaz; kapanış/azaltma ASLA engellenmez
+            sinif = coin_sinifi(o.coin)
+            if sinif == "spot":
+                return self._atla(o, adres, eylem, "atlandi", "spot_atlandi")
+            if sinif == "hip3" and not bool(self.rules.get("canli_hip3_kopya", False)):
+                return self._atla(o, adres, eylem, "atlandi", "hip3_atlandi")
         inen = adres in self.saha.inen and adres not in self.saha.uyeler
         if acilis and inen:
             return self._atla(o, adres, eylem, "engel", "inen_trader")
@@ -461,6 +474,8 @@ class Motor:
             sonuc = self._kapat_coin(adres, o.coin, neden, simdi, o)
             return sonuc[1] or Sonuc(adres, o.coin, eylem, "atlandi", "kapanis_yok")
         s = self._yurut(o, adres, eylem, yon, emir_usd, not acilis, abs(biz_sz) if not acilis else None, neden, gec, simdi)
+        if yeni_coin and s.karar == "emir":                        # O1: patlama freni yalnız GERÇEKTEN açılan farklı coinleri sayar (emir sonrası)
+            self.risk.yeni_coin_kaydet(adres, o.coin, simdi)
         if eylem == "azalt":                                       # kısmi dolum kalırsa bir sonraki dakikada yeniden dene
             hedef = biz_sz - (1 if biz_sz > 0 else -1) * min(emir_usd / (mk or o.px), abs(biz_sz))
             self._azalt_kuyruga(adres, o.coin, hedef, neden, simdi, mk or o.px)
@@ -1075,7 +1090,8 @@ class Motor:
                 "gec_acilis": self.sayac["gec_acilis"], "kapanis_eksik": self.sayac["kapanis_eksik"], "kapanis_kuyrugu": len(self.kapanis_kuyrugu), "min_nosyonel": self.sayac["min_nosyonel"],
                 "funding_usd": self.hesap.funding_toplam(), "funding_oran_yok": self.sayac["funding_oran_yok"], "kuyruk_gecikme_ms": self.gecikme_ozeti(), "en_buyuk_emir": dict(self.en_buyuk_emir),
                 "min_emir_say": {k: v for k, v in sorted(self.neden_say.items()) if k.startswith("min_emir")},
-                "ters_netlesme": self.neden_say.get("ters_netlesme", 0)}
+                "ters_netlesme": self.neden_say.get("ters_netlesme", 0),
+                "spot_atlandi": self.neden_say.get("spot_atlandi", 0), "hip3_atlandi": self.neden_say.get("hip3_atlandi", 0)}
 
     def gecikme_ozeti(self) -> dict[str, float | int | None]:
         g = sorted(self.kuyruk_gecikme)
