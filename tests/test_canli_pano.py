@@ -121,7 +121,7 @@ def test_html_pano_kadro_sekmesi_ilk11_yedek_ve_bize_verdigi(tmp_path):
     hesap = {"realize": {a1: 5.0}, "ucret": {a1: 1.0}, "slot_bas": {a1: 90.0}}
     saha = {"uyeler": {a1: {"giris_ms": 1_793_800_000_000}}, "inen": {}}
     h = pano.html_olustur(ozet, {}, hesap, [{"olay": "emir", "adres": a1, "zaman_ms": 1_793_850_000_000, "coin": "BTC", "yon": "B", "durum": "dolu"}], [], 1_793_900_000_000, kadro, saha)
-    assert 'SAHADA' in h and 'BEKLİYOR' in h and 'YEDEK' in h and "YEDEKLER" in h
+    assert 'SAHADA' in h and 'BEKLİYOR' in h and 'YEDEK' in h and "YEDEK (1)" in h
     assert "+2,00 $" in h and "Emir sayısı" in h                                                      # a1 net = 5 − 1 + (−2) = +2,00 $
 
 
@@ -233,3 +233,28 @@ def test_pano_kadro_motorun_uyguladigi_ilk_kadro_satiri():
     h2 = pano.html_olustur(ozet, {}, hesap, kayit, [], 1_793_900_000_000, kadro, saha_ilk)
     assert "günün ilk kadrosu" in h2 and "en son kadro" in h2 and "saha kararlarını değiştirmez" in h2
     assert "Motor bugün" not in pano.html_olustur(ozet, {}, hesap, kayit, [], 1_793_900_000_000, kadro, saha)       # gun_kadro yoksa satır yok
+
+
+def test_html_pano_kadro_bolumleri_sahada_bekliyor_iniyor_yedek_sirasi():
+    from copytrade.canli import pano
+    a1, a2, a3, a4 = "0xaaaa111122223333", "0xbbbb111122223333", "0xcccc111122223333", "0xdddd111122223333"
+    kadro = {"kosu_ms": 1_793_863_000_000, "satirlar": [
+        {"adres": a1, "sira": 1, "katman": "ilk11", "form": 75.0}, {"adres": a2, "sira": 2, "katman": "ilk11", "form": 60.0},
+        {"adres": a3, "sira": 12, "katman": "yedek", "form": 30.0}]}
+    ozet = {"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "acik": []}
+    saha = {"uyeler": {a1: {}}, "inen": {a4: {"inis_ms": 1}}}
+    h = pano.html_olustur(ozet, {}, {}, [], [], 1_793_900_000_000, kadro, saha)
+    assert "SAHADA (1/11)" in h and "BEKLİYOR (1)" in h and "İNİYOR (1)" in h and "YEDEK (1)" in h
+    assert h.index("SAHADA (1/11)") < h.index("BEKLİYOR (1)") < h.index("İNİYOR (1)") < h.index("YEDEK (1)")
+    assert "iniyor — yedeğe düşecek" in h and "11'e çıkmayı bekliyor" in h
+    assert "rz bk" in h and "kd kb" in h and "--bk:#f5d90a" in h                                       # BEKLİYOR sarı
+    assert "KADRO <em>1/11</em>" in h
+
+
+def test_html_pano_kadro_sahada_bos_bolum_gizlenmez():
+    from copytrade.canli import pano
+    kadro = {"kosu_ms": 1_793_863_000_000, "satirlar": [{"adres": "0xaaaa111122223333", "sira": 1, "katman": "ilk11", "form": 75.0}]}
+    ozet = {"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "acik": []}
+    for k, s in ((kadro, {}), (None, None)):
+        h = pano.html_olustur(ozet, {}, {}, [], [], 1_793_900_000_000, k, s)
+        assert "SAHADA (0/11)" in h and "henüz sahaya çıkan yok" in h and "KADRO <em>0/11</em>" in h
