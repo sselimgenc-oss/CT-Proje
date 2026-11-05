@@ -2,7 +2,7 @@ name: Canlı vardiya (sanal kip)
 
 # T4 (docs/GOREV_T4_CANLI_MOTOR.md §3, K-29): sunucu açılana kadar canlı motor SANAL kipte GitHub Actions'ta vardiyalı koşar. GERÇEK KİP ASLA BURADA ÇALIŞMAZ: iş akışı HL anahtarı geçirmez ve
 # motor `GITHUB_ACTIONS=true` iken `gercek` kipi reddeder. Cüzdan YOK; kasa `kurallar.yaml canli_kasa_usd` (kullanıcı ayarı, <= 1.000 $).
-# Vardiya: 4 saatte bir tetiklenir (cron), her vardiya 4 sa 15 dk sürer; `concurrency` (kuyruk, iptal yok) sayesinde yeni vardiya eskisi BİTTİKTEN sonra başlar (çift emir yok, boşluk yok);
+# Vardiya: 4 saatte bir tetiklenir (cron), her vardiya 4 sa 15 dk sürer; `concurrency` (kuyruk, iptal yok; üretim ve dal denemeleri ayrı grup) sayesinde yeni vardiya eskisi BİTTİKTEN sonra başlar (çift emir yok, boşluk yok);
 # durum veri dalı `canli-durum` (dal doğrulamasında `canli-durum-deneme`): durum/*.json + kayit/<tarih>.jsonl; her 15 dk ve vardiya sonunda yayımlanır; yeni vardiya kaldığı yerden devam eder
 # (açılışta kaçan dolumlar REST ile tamamlanır, `gec_goruldu`). Ek koruma: `durum/kilit.json` (başka vardiya 20 dk içinde nabız attıysa motor başlamaz).
 # Dal doğrulaması: `copytrade/canli/CALISTIR` dosyasına satır eklenen push (main dışı dal) AYNI iş akışını koşturur, ama `canli-durum-deneme` dalına yazar ve kadroyu `radar-deneme`'den okur.
@@ -26,7 +26,8 @@ defaults:
     shell: bash -euo pipefail {0}
 
 concurrency:
-  group: canli-vardiya
+  # K-37 §8: üretim (main) ve dal denemeleri AYRI kuyruk; deneme vardiyası üretimi bekletmez (dal başına kendi kuyruğu).
+  group: ${{ github.ref == 'refs/heads/main' && 'canli-vardiya-uretim' || format('canli-vardiya-deneme-{0}', github.ref_name) }}
   cancel-in-progress: false
 
 jobs:

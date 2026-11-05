@@ -70,10 +70,11 @@ class SahteExchange:
         self.kaldiraclar.append((lev, coin, is_cross))
         return self.kaldirac_yanit
 
-    def order(self, coin, is_buy, sz, px, tif, reduce_only):
+    def order(self, coin, is_buy, sz, px, tif, reduce_only, cloid=None):
         if self.hata:
             raise self.hata
         self.cagrilar.append({"coin": coin, "is_buy": is_buy, "sz": sz, "px": px, "tif": tif, "reduce_only": reduce_only})
+        self.cloidler = getattr(self, "cloidler", []) + [cloid]
         return self.yanit
 
 
@@ -83,20 +84,20 @@ def meta_post(y):
     return {"levels": [BIDS, ASKS]}
 
 
-def dolu(sz="0.09", px="100.1"):
+def dolu(sz="0.11", px="100.1"):
     return {"status": "ok", "response": {"type": "order", "data": {"statuses": [{"filled": {"totalSz": sz, "avgPx": px, "oid": 1}}]}}}
 
 
 def test_gercek_yurutucu_ioc_izole_3x_ve_fiyat_bandi():
-    """Alış 9 $: en iyi ask 100 → limit 100 × 1,005 = 100,5 (5 anlamlı basamak: 100,5), sz = 9 / 100 = 0,09; IOC; reduce_only False; kaldıraç: 3x İZOLE (is_cross False), coin başına bir kez."""
+    """Alış 11 $: en iyi ask 100 → limit 100 × 1,005 = 100,5 (alışta aşağı yuvarlanır; zaten tick üzerinde), sz = 11 / 100 = 0,11 (≥ 10 $ minimum); IOC; reduce_only False; kaldıraç: 3x İZOLE (is_cross False), coin başına bir kez."""
     ex = SahteExchange(dolu())
     g = yu.GercekYurutucu(ex, meta_post, RULES)
-    d = g.emir("BTC", "B", 9.0)
+    d = g.emir("BTC", "B", 11.0)
     c = ex.cagrilar[0]
-    assert c == {"coin": "BTC", "is_buy": True, "sz": 0.09, "px": 100.5, "tif": {"limit": {"tif": "Ioc"}}, "reduce_only": False}
+    assert c == {"coin": "BTC", "is_buy": True, "sz": 0.11, "px": 100.5, "tif": {"limit": {"tif": "Ioc"}}, "reduce_only": False}
     assert ex.kaldiraclar == [(3, "BTC", False)]
-    assert d.durum == "dolu" and d.px == 100.1 and d.sz == 0.09 and d.kayma_oran == pytest.approx(0.001)
-    g.emir("BTC", "B", 9.0)
+    assert d.durum == "dolu" and d.px == 100.1 and d.sz == 0.11 and d.kayma_oran == pytest.approx(0.001)
+    g.emir("BTC", "B", 11.0)
     assert len(ex.kaldiraclar) == 1                                              # bir kez
 
 
@@ -104,22 +105,22 @@ def test_gercek_yurutucu_satis_reduce_only_ve_limit_asagi():
     ex = SahteExchange(dolu("0.1", "99.9"))
     d = yu.GercekYurutucu(ex, meta_post, RULES).emir("BTC", "A", 50.0, reduce_only=True, acik_sz=0.1)
     c = ex.cagrilar[0]
-    assert c["is_buy"] is False and c["reduce_only"] is True and c["px"] == 99.4 and c["sz"] == 0.1          # 99,9 × 0,995 = 99,40; açık pozisyon tavanı 0,1
+    assert c["is_buy"] is False and c["reduce_only"] is True and c["px"] == 99.5 and c["sz"] == 0.1          # 99,9 × 0,995 = 99,4005 → tick 0,1 (6 − szDecimals 5 = 1 ondalık); satışta YUKARI → 99,5 (eski yuvarlama 99,4 verirdi: bant aşılırdı); açık pozisyon tavanı 0,1; 9,99 $ < 10 $ ama TAM kapanış (reduce-only) → minimum aranmaz
     assert d.durum == "kismi"                                                    # istenen 50 $ > açık pozisyon (9,99 $): reduce-only tavanı → kısmi (motor kapamada tutarı pozisyon kadar ister)
 
 
 def test_gercek_yurutucu_red_hata_ve_dolmayan_yanitlar_motoru_dusurmez():
     red = {"status": "ok", "response": {"type": "order", "data": {"statuses": [{"error": "Order could not immediately match"}]}}}
-    d = yu.GercekYurutucu(SahteExchange(red), meta_post, RULES).emir("BTC", "B", 9.0)
+    d = yu.GercekYurutucu(SahteExchange(red), meta_post, RULES).emir("BTC", "B", 11.0)
     assert d.durum == "red" and "match" in d.neden and d.sz == 0
-    d2 = yu.GercekYurutucu(SahteExchange(hata=ConnectionError("x")), meta_post, RULES).emir("BTC", "B", 9.0)
+    d2 = yu.GercekYurutucu(SahteExchange(hata=ConnectionError("x")), meta_post, RULES).emir("BTC", "B", 11.0)
     assert d2.durum == "red" and "sdk_hatasi" in d2.neden
-    d3 = yu.GercekYurutucu(SahteExchange({"beklenmedik": 1}), meta_post, RULES).emir("BTC", "B", 9.0)
+    d3 = yu.GercekYurutucu(SahteExchange({"beklenmedik": 1}), meta_post, RULES).emir("BTC", "B", 11.0)
     assert d3.durum == "red" and d3.neden == "yanit_bicimi"
     resting = {"status": "ok", "response": {"type": "order", "data": {"statuses": [{"resting": {"oid": 5}}]}}}
-    d4 = yu.GercekYurutucu(SahteExchange(resting), meta_post, RULES).emir("BTC", "B", 9.0)
+    d4 = yu.GercekYurutucu(SahteExchange(resting), meta_post, RULES).emir("BTC", "B", 11.0)
     assert d4.durum == "dolmadi" and d4.sz == 0                                  # IOC: resting yeniden denenmez
-    d5 = yu.GercekYurutucu(SahteExchange(dolu(), kaldirac_yanit={"status": "err"}), meta_post, RULES).emir("BTC", "B", 9.0)
+    d5 = yu.GercekYurutucu(SahteExchange(dolu(), kaldirac_yanit={"status": "err"}), meta_post, RULES).emir("BTC", "B", 11.0)
     assert d5.durum == "red"                                                     # kaldıraç ayarı reddedilirse emir YOK
 
 
@@ -243,3 +244,35 @@ def test_kasa_siniri_ve_bayrak():
     r.kasa_siniri_asildi(1000.0)
     r.bayrak("mutabakat", True)
     assert r.acilis_izni("a", "BTC", True, T0) == (False, "mutabakat")
+
+
+# ------------------------------------------------------------------------------------------------ T4b (K‑37 §4): minimum nosyonel + tick içe yuvarlama
+def test_limit_yuvarla_ice_dogru_alista_asagi_satista_yukari_altin_ornekler():
+    """BTC szDecimals 5 → tick 0,1 (6 − 5 ondalık; 5 anlamlı basamak 100,xx için 0,01 → ikisinin kabası 0,1). Alış 100,4999 → 100,4; satış 100,4001 → 100,5; tam tick'te değişmez.
+    Düşük fiyatlı coin (szDecimals 0): 0,123456 → 6 ondalık ve 5 anlamlı basamak (adım 1e‑5): alış 0,12345, satış 0,12346."""
+    assert yu.limit_yuvarla(100.4999, 5, "B") == 100.4 and yu.limit_yuvarla(100.4001, 5, "A") == 100.5
+    assert yu.limit_yuvarla(100.5, 5, "B") == 100.5 and yu.limit_yuvarla(100.5, 5, "A") == 100.5
+    assert yu.limit_yuvarla(0.123456, 0, "B") == 0.12345 and yu.limit_yuvarla(0.123456, 0, "A") == 0.12346
+    assert yu.limit_yuvarla(100 * 1.005, 5, "B") == 100.5                                         # kayan nokta artığı (100,49999999999999) tick kaydırmaz
+
+
+def test_gercek_min_nosyonel_10_dolar_alti_emir_yok_ama_reduce_only_tam_kapanis_serbest():
+    """sz = round(8 / 100, 5) = 0,08 → 8 $ < 10 $: emir YOK (`min_nosyonel`); 10 $ → 0,1 BTC verilir. Reduce‑only KISMİ 8 $ (açık 0,2) reddedilir; reduce‑only TAM kapanış (açık 0,05 = 5 $) verilir."""
+    ex = SahteExchange(dolu("0.1", "100"))
+    g = yu.GercekYurutucu(ex, meta_post, RULES)
+    d = g.emir("BTC", "B", 8.0)
+    assert d.durum == "red" and d.neden == "min_nosyonel" and ex.cagrilar == []
+    assert g.emir("BTC", "B", 10.0).durum == "dolu" and len(ex.cagrilar) == 1
+    assert g.emir("BTC", "A", 8.0, reduce_only=True, acik_sz=0.2).neden == "min_nosyonel" and len(ex.cagrilar) == 1
+    ex.yanit = dolu("0.05", "99.9")
+    d2 = g.emir("BTC", "A", 50.0, reduce_only=True, acik_sz=0.05)
+    assert d2.dolu_mu and len(ex.cagrilar) == 2 and ex.cagrilar[1]["sz"] == 0.05 and ex.cagrilar[1]["reduce_only"] is True
+
+
+def test_sanal_min_nosyonel_ayni_kural_ve_cloid_bant_gercek_emre_gecer():
+    s = yu.SanalYurutucu(lambda y: {"levels": [BIDS, ASKS]}, RULES)
+    assert s.emir("BTC", "B", 8.0).neden == "min_nosyonel" and s.emir("BTC", "B", 12.0).durum == "dolu"
+    assert s.emir("BTC", "A", 5.0, reduce_only=True, acik_sz=0.05).dolu_mu                # tam kapanış serbest
+    ex = SahteExchange(dolu("0.11", "100.1"))
+    yu.GercekYurutucu(ex, meta_post, RULES).emir("BTC", "B", 11.0, bant=0.01, cloid="0x" + "ab" * 16)
+    assert ex.cagrilar[0]["px"] == 101.0 and str(ex.cloidler[0]) == "0x" + "ab" * 16               # bant %1 (kapanış merdiveni): 100 × 1,01
