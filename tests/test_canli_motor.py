@@ -970,3 +970,83 @@ def test_b7_periyodik_vardiya_boyunca_taze_ozet_json_yazar_pano_icin(tmp_path):
     asyncio.run(kos())
     ozet = json.loads((tmp_path / "durum" / "ozet.json").read_text())
     assert ozet["vardiya"] == m.vardiya_id and "acik" in ozet and ozet["dinleyici"] == {"kopma": 3} and ozet["kasa_usd"] == 1000.0 and ozet["yazildi_ms"] == saat()
+
+
+# ================================================================================================ Telegram lider kararları (2026-11-05 akşam)
+def test_baslat_dur_dosyasi_yoksa_risk_json_dur_sifirlanir_dosya_varsa_dokunulmaz(tmp_path):
+    """/kapat → yalnız DUR silinip yeniden başlatılırsa risk.json `dur: true` kalırdı; DUR dosyası tek yetkili."""
+    m, hl, saat, tgp = kur(tmp_path)
+    m.baslat()
+    m.dur_tetikle("komut")
+    assert m.risk.dur and (tmp_path / "durum" / "DUR").exists()
+    (tmp_path / "durum" / "DUR").unlink()                                                     # kullanıcı DUR'u elle sildi
+    assert json.loads((tmp_path / "durum" / "risk.json").read_text(encoding="utf-8"))["dur"] is True
+    m2, *_ = kur(tmp_path)
+    assert m2.risk.dur is True
+    m2.baslat()
+    assert m2.risk.dur is False and m2.risk.dur_neden is None
+    assert json.loads((tmp_path / "durum" / "risk.json").read_text(encoding="utf-8"))["dur"] is False        # kayda yazıldı
+    ev = kayitlar(tmp_path, "dur_sifirlandi")
+    assert len(ev) == 1 and ev[0]["neden"] == "komut"
+    m3, *_ = kur(tmp_path)
+    m3.baslat()
+    assert len(kayitlar(tmp_path, "dur_sifirlandi")) == 1                                     # dur zaten yoktu: olay tekrarlanmaz
+
+
+def test_baslat_dur_dosyasi_varsa_motor_baslamaz_risk_dur_sifirlanmaz(tmp_path):
+    m, hl, saat, tgp = kur(tmp_path)
+    m.baslat()
+    m.dur_tetikle("komut")
+    m2, *_ = kur(tmp_path)
+    with pytest.raises(mt.KipHatasi):
+        m2.baslat()
+    assert m2.risk.dur is True and not kayitlar(tmp_path, "dur_sifirlandi")
+
+
+def test_vardiya_arasinda_gelen_komut_yanitlanir_calistirilmaz_bir_kez_yetki_ve_pencere(tmp_path):
+    simdi = time.time()
+    tgp = SahteTG([tg_mesaj(1, "/kapat", tarih=simdi - 300),                      # 5 dk önce: yanıt, ÇALIŞTIRILMAZ
+                   tg_mesaj(2, "/dur", tarih=simdi - 14 * 60),                    # pencere içinde
+                   tg_mesaj(3, "/devam", tarih=simdi - 16 * 60),                  # 15 dk dışında: sessiz
+                   tg_mesaj(4, "/kapat", tarih=simdi - 60, kimden=999),           # yetkisiz: yanıt yok
+                   tg_mesaj(5, "merhaba", tarih=simdi - 60)])                     # komut değil
+    m, hl, saat, _ = kur(tmp_path, tgp=tgp)
+    m.baslat()
+    m.dakika()
+    yanit = [x for x in tgp.gonderilen if "vardiya arasında geldi" in x]
+    assert len(yanit) == 1 and "/kapat" in yanit[0] and "/dur" in yanit[0] and "/devam" not in yanit[0] and "işlenmedi" in yanit[0] and "Tekrar gönder" in yanit[0]
+    assert not m.dur_istendi and not m.risk.dur and not m.risk.acilis_durdu.get("elle_dur") and not (tmp_path / "durum" / "DUR").exists()      # komut yürütülmedi
+    m.dakika()
+    assert len([x for x in tgp.gonderilen if "vardiya arasında geldi" in x]) == 1          # spam yok
+    assert m.tg.yetkisiz_sayisi == 1
+    t = tg.Telegram(TOKEN, CHAT, SahteTG([tg_mesaj(7, "/durum", tarih=simdi - 100)]), baslangic_s=simdi)
+    assert t.komutlari_al() == [] and len(t.gonderilen) == 1
+    t.post.guncellemeler.append(tg_mesaj(7, "/durum", tarih=simdi - 100))                  # aynı update_id yeniden gelse bile ikinci yanıt yok
+    t.komutlari_al()
+    assert len(t.gonderilen) == 1
+
+
+def test_vardiya_arasi_yanit_telegram_kapaliysa_sessiz_gecer():
+    t = tg.Telegram("", "", SahteTG([tg_mesaj(1, "/kapat", tarih=time.time() - 60)]), baslangic_s=time.time())
+    assert t.komutlari_al() == [] and t.gonderilen == []
+
+
+def test_durum_gercek_risk_bayraklarini_gosterir_bayrak_yoksa_normal(tmp_path):
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    assert "Risk: normal" in m.durum_metni()
+    m.risk.bayrak("gunluk_kayip", True)
+    m.risk.bayrak("mutabakat", True)
+    m._komutlar(["/dur"])
+    m.risk.fren_bitis[adr(1)] = saat() + 60_000
+    metin = m.durum_metni()
+    for parca in ("Günlük kayıp freni", "Mutabakat", "duraklatıldı", "Patlama freni"):
+        assert parca in metin
+    assert "Risk: normal" not in metin
+    m.risk.fren_bitis[adr(1)] = saat() - 1
+    m.risk.bayrak("gunluk_kayip", False)
+    assert "Patlama freni" not in m.durum_metni() and "Günlük kayıp" not in m.durum_metni()
+    m.risk.dur = True
+    assert "DURDURULDU" in m.durum_metni()
+    m._komutlar(["/durum"])
+    assert tgp.gonderilen[-1] == m.durum_metni()

@@ -926,7 +926,14 @@ class Motor:
 
     def durum_metni(self) -> str:
         oz = self.ozsermaye()
-        return tg.msg_durum(self.kip, oz, self.kasa, len(self.saha.uyeler), self.saha.n, len(self.saha.inen), sum(len(c) for c in self.hesap.poz.values()), self.sayac["emir"], bool(self.risk.dur), bool(self.risk.acilis_durdu.get("elle_dur")))
+        return tg.msg_durum(self.kip, oz, self.kasa, len(self.saha.uyeler), self.saha.n, len(self.saha.inen), sum(len(c) for c in self.hesap.poz.values()), self.sayac["emir"], bool(self.risk.dur), False, self.risk_bayraklari())
+
+    def risk_bayraklari(self) -> list[str]:
+        """`/durum` için etkin risk bayrakları: `acilis_durdu` içinde açık olanlar + süren patlama freni (`fren`)."""
+        b = sorted(k for k, v in self.risk.acilis_durdu.items() if v)
+        if any(bitis > self.saat_ms() for bitis in self.risk.fren_bitis.values()):
+            b.append("fren")
+        return b
 
     def pano_ek(self) -> dict[str, Any]:
         """`ozet.json`a rapor (`pano/OZET.md`, T6 §3) için eklenen alanlar: açık pozisyonlar (mark'lı; K/Z = sz × (mark − giriş)) ve REST istek / 429 sayaçları. Yeni hesap değil: defter + mark biçimi."""
@@ -970,6 +977,9 @@ class Motor:
     # ------------------------------------------------------------------ açılış
     def baslat(self) -> None:
         """Açılış: DUR varsa BAŞLAMAZ; kasa sınırı; kadro ilk okuması (saha kurulumu); saha üyelerinin pozisyon/hesap okuması; markları al."""
+        if not self.dur_dosyasi.exists() and self.risk.dur:                                      # DUR dosyası tek yetkili: dosya yoksa risk.json'daki bayat dur sıfırlanır
+            self.kayit({"olay": "dur_sifirlandi", "neden": self.risk.dur_neden, "gerekce": "DUR dosyası yok"})
+            self.risk.dur, self.risk.dur_neden = False, None
         if self.dur_dosyasi.exists():
             bekliyor = bool((_oku(self.dur_dosyasi) or {}).get("kapanis_bekliyor")) and any(self.hesap.poz.values())
             if not bekliyor:
