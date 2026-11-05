@@ -10,7 +10,7 @@ import re
 import time
 from typing import Any, Callable
 
-ONEMLI_ONEKLER = ("ALARM", "DUR", "TASFİYE", "🚨", "🛑")          # her zaman sesli
+ONEMLI_ONEKLER = ("ALARM", "DUR", "TASFİYE", "🚨", "🛑", "💥")          # her zaman sesli
 KOMUTLAR = ("/dur", "/durum")
 
 
@@ -144,12 +144,6 @@ def kip_adi(kip: str) -> str:
 AYRAC = "━━━━━━━━━━━━━━"
 
 
-def msg_baslangic(kip: str, kasa: float, saha: int, n: int, vardiya: str) -> str:
-    return (f"🟢 Yeni 4 saatlik tur başladı ({kip_adi(kip)})\n{AYRAC}\n💰 Kasa: {tr_sayi(kasa, 0)} $\n👥 Takip edilen trader: {saha}/{n}\n{AYRAC}\n"
-            f"ℹ️ Sistem 4 saatlik turlar halinde çalışır; bir tur bitince bir sonraki hemen devralır, ara vermez.\n"
-            f"Emirler 15 dk'da bir özet gelir, günlük sonuç her sabah 09:00'da. /durum yazarsan anlık durumu söylerim. (tur …{vardiya[-4:]})")
-
-
 def msg_saha(tur: str, adres: str, neden: str, sira: int | None = None) -> str:
     kok, _, ek = neden.partition(" ")
     aciklama = NEDEN_TR.get(kok, kok) + (f" {ek}" if ek else "")
@@ -190,7 +184,7 @@ def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_s
 
 
 def msg_durum(kip: str, ozsermaye: float, kasa: float, saha: int, n: int, inen: int, acik_poz: int, emir: int, dur: bool) -> str:
-    return (f"📊 Anlık durum ({kip_adi(kip)})\n💰 Özsermaye {tr_sayi(ozsermaye)} $ (kasaya göre {tr_yuzde(ozsermaye / kasa - 1)})\n"
+    return (f"📊 Anlık durum ({kip_adi(kip)})\n{AYRAC}\n💰 Özsermaye {tr_sayi(ozsermaye)} $ (kasaya göre {tr_yuzde(ozsermaye / kasa - 1)})\n"
             f"👥 Takipte {saha}/{n} trader" + (f" · {inen} tanesi ayrılıyor (pozisyonları kapanıyor)" if inen else "") + f"\n"
             f"📌 Açık pozisyon: {acik_poz}\n🧾 Bu turda emir: {emir}\n" + ("🛑 Motor DURDURULDU" if dur else "🛡️ Risk: normal, motor çalışıyor"))
 
@@ -215,6 +209,6 @@ def msg_emir_ozeti(kip: str, emirler: list[dict], dakika: float) -> str:
     return "\n".join(satirlar)
 
 
-def msg_vardiya_sonu(kip: str, sure_dk: float, emir: int, ozsermaye: float, kasa: float, saha: int, n: int, acik_poz: int) -> str:
-    return (f"🔚 4 saatlik tur bitti ({kip_adi(kip)}) · {sure_dk / 60:.1f} saat sürdü\n🧾 Bu turda {emir} emir\n💰 Özsermaye {tr_sayi(ozsermaye)} $ (kasaya göre {tr_yuzde(ozsermaye / kasa - 1)})\n"
-            f"👥 Takipte {saha}/{n} trader · 📌 açık pozisyon {acik_poz}")
+def alarm(baslik: str, govde: str, ikon: str = "🚨") -> str:
+    """Sorun mesajı: ikon + başlık, ayraç, sade açıklama. Her zaman sesli (`ONEMLI_ONEKLER`)."""
+    return f"{ikon} {baslik}\n{AYRAC}\n{govde}"

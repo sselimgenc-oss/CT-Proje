@@ -339,7 +339,7 @@ def test_dur_komutu_hepsini_kapatir_dur_dosyasi_yeniden_baslatma_engeli(tmp_path
     tgp.guncellemeler.append(guncelleme)
     m.dakika()
     assert m.dur_istendi and (tmp_path / "durum" / "DUR").exists() and m.hesap.sz(adr(1), "BTC") == pytest.approx(0.0, abs=1e-9)
-    assert any(x["olay"] == "dur" and x["neden"] == "komut" for x in kayitlar(tmp_path)) and any(x.startswith("DUR:") for x in tgp.gonderilen)
+    assert any(x["olay"] == "dur" and x["neden"] == "komut" for x in kayitlar(tmp_path)) and any(x.startswith("🛑 DUR:") for x in tgp.gonderilen)
     m2, *_ = kur(tmp_path)
     with pytest.raises(mt.KipHatasi):
         m2.baslat()                                                                           # DUR varken başlamaz
@@ -833,9 +833,9 @@ def test_telegram_mesajlari_sade_turkce_altin_ornek():
     assert tg.msg_saha("giriş", a, "bos_slot (yerine 0xabcdef12…)") == "➕ Yeni trader takibe alındı: 0x123456…\n↳ Neden: boş yer açıldı (yerine 0xabcdef12…)"
     assert tg.msg_saha("çıkış", a, "kadro_disi (sonuçla, 14 gün bekleme)").startswith("➖ Trader takipten çıktı: 0x123456…\n↳ Neden: günlük kadrodan düştü")
     assert tg.msg_durum("sanal", 1000.71, 1000.0, 9, 11, 3, 8, 0, False) == (
-        "📊 Anlık durum (sanal · deneme parası)\n💰 Özsermaye 1.000,71 $ (kasaya göre +%0,07)\n👥 Takipte 9/11 trader · 3 tanesi ayrılıyor (pozisyonları kapanıyor)\n📌 Açık pozisyon: 8\n🧾 Bu turda emir: 0\n🛡️ Risk: normal, motor çalışıyor")
+        "📊 Anlık durum (sanal · deneme parası)\n━━━━━━━━━━━━━━\n💰 Özsermaye 1.000,71 $ (kasaya göre +%0,07)\n👥 Takipte 9/11 trader · 3 tanesi ayrılıyor (pozisyonları kapanıyor)\n📌 Açık pozisyon: 8\n🧾 Bu turda emir: 0\n🛡️ Risk: normal, motor çalışıyor")
     assert tg.tr_sayi(1234567.891) == "1.234.567,89" and tg.tr_yuzde(-0.0125) == "−%1,25"
-    assert "…5254" in tg.msg_baslangic("sanal", 1000, 9, 11, "42003105254") and "Takip edilen trader: 9/11" in tg.msg_baslangic("sanal", 1000, 9, 11, "42003105254")
+    assert tg.alarm("ALARM: kasa sınırı aşıldı", "Kasa 1.200 $ > sınır 1.000 $.") == "🚨 ALARM: kasa sınırı aşıldı\n━━━━━━━━━━━━━━\nKasa 1.200 $ > sınır 1.000 $."
 
 
 def test_telegram_emir_ozeti_toplar_tek_mesaj_ayni_satir_birlesir():
