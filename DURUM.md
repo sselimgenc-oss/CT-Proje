@@ -30,3 +30,4 @@ Cloudflare ve DigitalOcean yok (K‑20): her şey GitHub Actions + veri dalı.
 - Açık sorular lider için: `ilk11` adı kalan altyapıda (dinleyici/risk/faz3) duruyor, Worker `kol=oda` bildirimi duruyor, `son_yaz.py` silinmedi — ayrıntı `docs/sonnet_durum_t1.md`.
 - `izleme.yml` zamanlaması kapalı (T4'te radar kadrosu için geri gelir); veri dalı `copytrade-kapi` ve eski dallar PR birleşince lider tarafından silinir.
 - 2026-11-05: T4 birleşti (#504; K‑35, K‑36). T4b (#510) sanal vardiya bekliyor. T6 görevi: `docs/GOREV_T6_RAPOR_ISABET.md`. `radar` veri dalı ilk kadro: 12 geçti.
+- **2026-11-05 → 2026-11-09 14:00 TSİ: liderlik Sonnet'te** (kullanıcı kararı). Kurallar: `docs/DEVIR_LIDER.md`.
