@@ -1,0 +1,33 @@
+{"zaman_ms":1793854740078,"olay":"saha_giris","adres":"0xd2cfeee986ae1e83fb2e6385f6d54cfedb2ea029","neden":"ilk_gun","yerine":null,"slot_usd":90.9090909090909}
+{"zaman_ms":1793854740078,"olay":"telegram","metin":"SAHA giriş: 0xd2cfee… — ilk_gun","acik":false}
+{"zaman_ms":1793854744094,"olay":"saha_giris","adres":"0xf90c9edfd2ee7fa07615978b348b99500bb17963","neden":"ilk_gun","yerine":null,"slot_usd":90.9090909090909}
+{"zaman_ms":1793854744095,"olay":"telegram","metin":"SAHA giriş: 0xf90c9e… — ilk_gun","acik":false}
+{"zaman_ms":1793854748123,"olay":"saha_giris","adres":"0x20ad988487d6a53fea7918657f45fe0bb8fd8183","neden":"ilk_gun","yerine":null,"slot_usd":90.9090909090909}
+{"zaman_ms":1793854748123,"olay":"telegram","metin":"SAHA giriş: 0x20ad98… — ilk_gun","acik":false}
+{"zaman_ms":1793854752515,"olay":"saha_giris","adres":"0x323f5af42fad4f877e84488b39443f42b964b88d","neden":"ilk_gun","yerine":null,"slot_usd":90.9090909090909}
+{"zaman_ms":1793854752515,"olay":"telegram","metin":"SAHA giriş: 0x323f5a… — ilk_gun","acik":false}
+{"zaman_ms":1793854756583,"olay":"saha_giris","adres":"0x241c8daa9a23a6b124b438804911f2452aff8e0e","neden":"ilk_gun","yerine":null,"slot_usd":90.9090909090909}
+{"zaman_ms":1793854756583,"olay":"telegram","metin":"SAHA giriş: 0x241c8d… — ilk_gun","acik":false}
+{"zaman_ms":1793854756583,"olay":"kor_kirpildi","adres":"0x8730154f2c794a59cd6adb0d8328a9770c13b616","uyeler":["0xd2cfeee986ae1e83fb2e6385f6d54cfedb2ea029","0xf90c9edfd2ee7fa07615978b348b99500bb17963","0x20ad988487d6a53fea7918657f45fe0bb8fd8183","0x323f5af42fad4f877e84488b39443f42b964b88d","0x241c8daa9a23a6b124b438804911f2452aff8e0e"]}
+{"zaman_ms":1793854760436,"olay":"saha_giris","adres":"0xc32f19039aee519e22bd8c6145ef03951274e558","neden":"ilk_gun","yerine":null,"slot_usd":90.9090909090909}
+{"zaman_ms":1793854760436,"olay":"telegram","metin":"SAHA giriş: 0xc32f19… — ilk_gun","acik":false}
+{"zaman_ms":1793854764548,"olay":"saha_giris","adres":"0xf43a34220cc930b573554d5e1454d5c8d7ca8872","neden":"ilk_gun","yerine":null,"slot_usd":90.9090909090909}
+{"zaman_ms":1793854764548,"olay":"telegram","metin":"SAHA giriş: 0xf43a34… — ilk_gun","acik":false}
+{"zaman_ms":1793854768523,"olay":"saha_giris","adres":"0x62edf4fae01255c64496e2241e5da680ac959c1c","neden":"ilk_gun","yerine":null,"slot_usd":90.9090909090909}
+{"zaman_ms":1793854768524,"olay":"telegram","metin":"SAHA giriş: 0x62edf4… — ilk_gun","acik":false}
+{"zaman_ms":1793854772824,"olay":"saha_giris","adres":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee","neden":"ilk_gun","yerine":null,"slot_usd":90.9090909090909}
+{"zaman_ms":1793854772824,"olay":"telegram","metin":"SAHA giriş: 0xd18820… — ilk_gun","acik":false}
+{"zaman_ms":1793854776912,"olay":"saha_giris","adres":"0xfbd234f73a3cfa398f36f396ba527c85006c3f9e","neden":"ilk_gun","yerine":null,"slot_usd":90.9090909090909}
+{"zaman_ms":1793854776912,"olay":"telegram","metin":"SAHA giriş: 0xfbd234… — ilk_gun","acik":false}
+{"zaman_ms":1793854776913,"olay":"telegram","metin":"Motor başladı [sanal] kasa 1000$ saha 10/11 vardiya 41971075707","acik":false}
+{"zaman_ms":1793854812984,"olay":"kacan_tamamlandi","adet":0,"bas_ms":1793854799884}
+{"zaman_ms":1793855056170,"olay":"kor_kirpildi","adres":"0x8730154f2c794a59cd6adb0d8328a9770c13b616","uyeler":["0xd2cfeee986ae1e83fb2e6385f6d54cfedb2ea029","0xf90c9edfd2ee7fa07615978b348b99500bb17963","0x20ad988487d6a53fea7918657f45fe0bb8fd8183","0x323f5af42fad4f877e84488b39443f42b964b88d","0x241c8daa9a23a6b124b438804911f2452aff8e0e","0xc32f19039aee519e22bd8c6145ef03951274e558","0xf43a34220cc930b573554d5e1454d5c8d7ca8872","0x62edf4fae01255c64496e2241e5da680ac959c1c","0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee","0xfbd234f73a3cfa398f36f396ba527c85006c3f9e"]}
+{"zaman_ms":1793855357968,"olay":"emir","kip":"sanal","adres":"0x62edf4fae01255c64496e2241e5da680ac959c1c","coin":"xyz:DRAM","eylem":"ac","yon":"B","usd_istenen":64.87102373955081,"usd_dolan":64.87102373955081,"sz":1.5085582935572952,"reduce_only":false,"durum":"dolu","red_neden":"","boyut_neden":"tamam","trader_px":43.0,"trader_dolum_ms":1793855357524,"gorme_ms":1793855357820,"emir_ms":1793855357820,"dolum_ms":1793855357968,"referans_px":43.002,"dolum_px":43.002,"kayma_ref":0.0,"kayma_trader":4.651162790703359e-05,"ucret":0.029191960682797863,"gec_goruldu":false,"kaynak":"userFills"}
+{"zaman_ms":1793855357968,"olay":"telegram","metin":"EMİR[sanal] 0x62edf4… xyz:DRAM AL 64.9$ @43.002 kayma +0.5bp [dolu]","acik":false}
+{"zaman_ms":1793855357968,"olay":"emir_yok","adres":"0x62edf4fae01255c64496e2241e5da680ac959c1c","coin":"xyz:DRAM","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1793855357524,"gorme_ms":1793855357820}
+{"zaman_ms":1793855358011,"olay":"emir_yok","adres":"0x62edf4fae01255c64496e2241e5da680ac959c1c","coin":"xyz:DRAM","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1793855357657,"gorme_ms":1793855358010}
+{"zaman_ms":1793855358011,"olay":"emir_yok","adres":"0x62edf4fae01255c64496e2241e5da680ac959c1c","coin":"xyz:DRAM","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1793855357657,"gorme_ms":1793855358010}
+{"zaman_ms":1793855359223,"olay":"emir_yok","adres":"0x62edf4fae01255c64496e2241e5da680ac959c1c","coin":"xyz:DRAM","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1793855358658,"gorme_ms":1793855359223}
+{"zaman_ms":1793855360227,"olay":"emir_yok","adres":"0x62edf4fae01255c64496e2241e5da680ac959c1c","coin":"xyz:DRAM","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1793855359933,"gorme_ms":1793855360227}
+{"zaman_ms":1793855360871,"olay":"emir_yok","adres":"0x62edf4fae01255c64496e2241e5da680ac959c1c","coin":"xyz:DRAM","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1793855360601,"gorme_ms":1793855360871}
+{"zaman_ms":1793855374839,"olay":"kor_kirpildi","adres":"0x8730154f2c794a59cd6adb0d8328a9770c13b616","uyeler":["0xd2cfeee986ae1e83fb2e6385f6d54cfedb2ea029","0xf90c9edfd2ee7fa07615978b348b99500bb17963","0x20ad988487d6a53fea7918657f45fe0bb8fd8183","0x323f5af42fad4f877e84488b39443f42b964b88d","0x241c8daa9a23a6b124b438804911f2452aff8e0e","0xc32f19039aee519e22bd8c6145ef03951274e558","0xf43a34220cc930b573554d5e1454d5c8d7ca8872","0x62edf4fae01255c64496e2241e5da680ac959c1c","0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee","0xfbd234f73a3cfa398f36f396ba527c85006c3f9e"]}
