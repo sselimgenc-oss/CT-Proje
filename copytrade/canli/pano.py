@@ -144,7 +144,7 @@ def _cubuk(deg: list[float]) -> str:
     return f'<svg viewBox="0 0 300 80" preserveAspectRatio="none" class="gr"><line x1="0" y1="40" x2="300" y2="40" stroke="#3a3a40" stroke-width=".6"/>{r}</svg>'
 
 
-def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecmis: list[dict], simdi_ms: int) -> str:
+def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecmis: list[dict], simdi_ms: int, kadro: dict | None = None, saha_durum: dict | None = None) -> str:
     """Telefonda/bilgisayarda açılan tek dosyalık koyu "terminal" paneli (Cloudflare `pano/index.html`): rakam şeridi, özsermaye/düşüş/günlük K-Z grafikleri, pozisyon dağılımı, pozisyon ve işlem tabloları, içgörüler.
     Saf fonksiyon; yeni hesap yok (özet + kayıtlardan yalnız toplama/dizme). Dış kaynak/JS yok; tüm metin HTML kaçışlı."""
     kasa, oz = float(ozet.get("kasa_usd") or 0.0), float(ozet.get("ozsermaye_usd") or 0.0)
@@ -227,6 +227,47 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     risk_html = "".join(f'<div class="s eks">⚠ {_tsi(int(k["zaman_ms"]), "%H:%M")} · {esc(str(k["olay"]))}</div>' for k in riskler) or '<div class="s art">✓ Son 24 saatte risk olayı yok</div>'
     gun_kayip_pay = min(max(-(gun or 0) / 0.05, 0.0), 1.0) * 100
     dusus_pay = min(max((dusus or 0) / 0.20, 0.0), 1.0) * 100
+    # KADRO sekmesi: ilk 11 + yedekler; tıklayınca "bize ne verdi" mini özeti (yalnız defter/kayıt toplamı; yeni hesap yok)
+    uyeler, inenler = ((saha_durum or {}).get("uyeler") or {}), ((saha_durum or {}).get("inen") or {})
+    emir_say: dict[str, int] = {}
+    son_emir: dict[str, int] = {}
+    for k in kayitlar:
+        if k.get("olay") == "emir" and k.get("adres"):
+            emir_say[k["adres"]] = emir_say.get(k["adres"], 0) + 1
+            son_emir[k["adres"]] = max(son_emir.get(k["adres"], 0), int(k.get("zaman_ms", 0)))
+    kz_adres: dict[str, float] = {}
+    poz_adres: dict[str, int] = {}
+    for q in acik:
+        kz_adres[q["adres"]] = kz_adres.get(q["adres"], 0.0) + float(q.get("kz_usd") or 0.0)
+        poz_adres[q["adres"]] = poz_adres.get(q["adres"], 0) + 1
+    gerc, ucr, slot_bas = hesap.get("realize") or {}, hesap.get("ucret") or {}, hesap.get("slot_bas") or {}
+    kartlar, yedek_kartlar = [], []
+    for r in (kadro or {}).get("satirlar") or []:
+        ad = r["adres"]
+        durum = "SAHADA" if ad in uyeler else ("İNİYOR" if ad in inenler else ("SIRADA" if r.get("katman") == "ilk11" else "YEDEK"))
+        net = (float(gerc.get(ad, 0.0)) - float(ucr.get(ad, 0.0)) + kz_adres.get(ad, 0.0)) if ad in slot_bas else None
+        yuzde_s = (net / float(slot_bas[ad])) if net is not None and float(slot_bas.get(ad) or 0) > 0 else None
+        giris = (uyeler.get(ad) or {}).get("giris_ms")
+        if ad in slot_bas:
+            ayrinti = (f'<div class="ms"><div><span class="so">Takibe alındı</span><br>{_tsi(int(giris), "%d.%m %H:%M") if giris else "—"}</div>'
+                       f'<div><span class="so">Slot (ayrılan para)</span><br>{esc(tl(float(slot_bas[ad])))}</div>'
+                       f'<div><span class="so">Bize verdiği (net)</span><br><b class="{renk(net)}">{esc(tl(net, True))}</b> <span class="{renk(yuzde_s)}">{esc(tyuz(yuzde_s))}</span></div>'
+                       f'<div><span class="so">Gerçekleşen / açık</span><br>{esc(tl(float(gerc.get(ad, 0.0)) - float(ucr.get(ad, 0.0)), True))} / {esc(tl(kz_adres.get(ad, 0.0), True))}</div>'
+                       f'<div><span class="so">Emir sayısı</span><br>{emir_say.get(ad, 0)}</div>'
+                       f'<div><span class="so">Açık pozisyon</span><br>{poz_adres.get(ad, 0)}</div>'
+                       f'<div><span class="so">Son işlem</span><br>{_tsi(son_emir[ad]) if ad in son_emir else "—"}</div>'
+                       f'<div><span class="so">Radar 7g kopya getirisi</span><br>{esc(tyuz(r.get("kopya_getiri_7g")))}</div></div>')
+        else:
+            ayrinti = (f'<div class="ms"><div><span class="so">Durum</span><br>Henüz kopyalanmıyor — {"boş yer açılınca girer" if durum == "SIRADA" else "yedek listede"}</div>'
+                       f'<div><span class="so">Radar 7g kopya getirisi</span><br>{esc(tyuz(r.get("kopya_getiri_7g")))}</div>'
+                       f'<div><span class="so">Form puanı</span><br>{float(r.get("form") or 0):.1f} / 100</div>'
+                       f'<div><span class="so">Azami kaldıraç</span><br>{float(r.get("max_kaldirac") or 0):.1f}x</div></div>')
+        rozet = {"SAHADA": "art", "İNİYOR": "eks", "SIRADA": "yok", "YEDEK": "yok"}[durum]
+        (kartlar if r.get("katman") != "yedek" else yedek_kartlar).append(f'<details class="kd"><summary><span class="sr">{int(r.get("sira", 0))}</span><b>{esc(kisa(ad))}</b><span class="rz {rozet}">{durum}</span>'
+                       f'<span class="fb"><i style="width:{min(max(float(r.get("form") or 0), 0), 100):.0f}%"></i></span><span class="fm">{float(r.get("form") or 0):.0f}</span>'
+                       f'<span class="nt {renk(net)}">{esc(tl(net, True)) if net is not None else ""}</span></summary>{ayrinti}</details>')
+    kadro_tarih = _tsi(int(kadro["kosu_ms"]), "%d.%m %H:%M") if kadro and kadro.get("kosu_ms") else "—"
+    kadro_html = "".join(kartlar) + ('<div class="yb">YEDEKLER</div>' + "".join(yedek_kartlar) if yedek_kartlar else "") if (kartlar or yedek_kartlar) else '<div class="bos">Kadro verisi okunamadı</div>'
     uyari = '<div class="uy">⚠ GERÇEK PARA</div>' if kip == "gercek" else ""
     return f"""<!doctype html>
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><meta name="color-scheme" content="dark">
@@ -249,14 +290,18 @@ table{{width:100%;border-collapse:collapse;font-size:12px}}td,th{{padding:6px 8p
 .ol{{height:7px;background:#1c1c21;border-radius:4px;margin:4px 0 9px;overflow:hidden}}.ol i{{display:block;height:100%;background:var(--tu)}}.uy{{background:var(--eks);color:#fff;font-weight:800;padding:6px 10px;margin-bottom:8px;border-radius:3px}}
 .tabs{{display:flex;gap:2px;margin:0 0 8px;border-bottom:1px solid var(--cz);overflow-x:auto}}.tabs label{{padding:9px 13px;font-size:11px;letter-spacing:.09em;color:var(--so);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent}}.tabs em{{font-style:normal;background:#1c1c21;border-radius:9px;padding:0 6px;margin-left:4px;color:var(--y)}}
 input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler section{{display:none}}
-#t1:checked~.tabs label[for=t1],#t2:checked~.tabs label[for=t2],#t3:checked~.tabs label[for=t3],#t4:checked~.tabs label[for=t4]{{color:var(--tu);border-bottom-color:var(--tu)}}
-#t1:checked~.sekmeler .n1,#t2:checked~.sekmeler .n2,#t3:checked~.sekmeler .n3,#t4:checked~.sekmeler .n4{{display:grid}}
+#t1:checked~.tabs label[for=t1],#t2:checked~.tabs label[for=t2],#t3:checked~.tabs label[for=t3],#t4:checked~.tabs label[for=t4],#t5:checked~.tabs label[for=t5]{{color:var(--tu);border-bottom-color:var(--tu)}}
+#t1:checked~.sekmeler .n1,#t2:checked~.sekmeler .n2,#t3:checked~.sekmeler .n3,#t4:checked~.sekmeler .n4,#t5:checked~.sekmeler .n5{{display:grid}}
+.kd{{border-bottom:1px solid #1c1c21}}.kd summary{{display:grid;grid-template-columns:22px 1fr auto 46px 24px auto;gap:8px;align-items:center;padding:9px 2px;cursor:pointer;list-style:none}}.kd summary::-webkit-details-marker{{display:none}}
+.sr{{color:var(--so)}}.rz{{font-size:10px;border:1px solid var(--cz);border-radius:3px;padding:0 6px;letter-spacing:.05em}}.fb{{height:6px;background:#1c1c21;border-radius:3px;overflow:hidden}}.fb i{{display:block;height:100%;background:var(--tu)}}.fm{{text-align:right;color:var(--so)}}.nt{{text-align:right;min-width:64px}}
+.ms{{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:4px 4px 12px 30px;font-size:12px}}.yb{{margin:12px 0 2px;font-size:10px;letter-spacing:.1em;color:var(--tu)}}
+@media(min-width:900px){{.ms{{grid-template-columns:repeat(4,1fr)}}}}
 @media(min-width:900px){{body{{padding:18px;max-width:1280px;margin:auto}}.sirit{{grid-template-columns:repeat(6,1fr)}}.hd{{font-size:20px}}.izgara{{grid-template-columns:repeat(3,1fr)}}.g2{{grid-column:span 2}}.g3{{grid-column:span 3}}}}
 </style></head><body>
 <div class="ust"><div><span class="lg0">CT</span> <b>COPY TRADE PANOSU</b></div><div><span class="rozet">{esc(kip_adi(kip))}</span> <span class="so">güncelleme {_tsi(simdi_ms, "%d.%m.%Y %H:%M")} TSİ · her 4 saatte bir</span></div></div>{uyari}
 <div class="sirit">{hucre("Özsermaye", tl(oz), "", f"kasa {tr_sayi(kasa, 0)} $")}{hucre("Bugün", tyuz(gun), renk(gun), tl(oz - float(gun_basi), True) if gun_basi is not None else "")}{hucre("Bu hafta", tyuz(hafta) if hafta is not None else "—", renk(hafta), "" if hafta is not None else "7 gün dolmadı")}{hucre("Başlangıçtan beri", tyuz(ozet.get("getiri")), renk(ozet.get("getiri")), tl(oz - kasa, True))}{hucre("Zirveden düşüş", tyuz(-dusus if dusus is not None else None), renk(-dusus if dusus is not None else None), f"zirve {tl(float(zirve))}" if zirve else "")}{hucre("Açık pozisyon", str(len(acik)), "", f"brüt {tl(sum(q.get('usd') or 0 for q in acik))}")}</div>
-<input type="radio" name="t" id="t1" checked><input type="radio" name="t" id="t2"><input type="radio" name="t" id="t3"><input type="radio" name="t" id="t4">
-<div class="tabs"><label for="t1">ÖZET</label><label for="t2">POZİSYON <em>{len(acik)}</em></label><label for="t3">İŞLEMLER <em>{len(emirler)}</em></label><label for="t4">RİSK</label></div>
+<input type="radio" name="t" id="t1" checked><input type="radio" name="t" id="t2"><input type="radio" name="t" id="t3"><input type="radio" name="t" id="t4"><input type="radio" name="t" id="t5">
+<div class="tabs"><label for="t1">ÖZET</label><label for="t5">KADRO <em>{len(kartlar) + len(yedek_kartlar)}</em></label><label for="t2">POZİSYON <em>{len(acik)}</em></label><label for="t3">İŞLEMLER <em>{len(emirler)}</em></label><label for="t4">RİSK</label></div>
 <div class="sekmeler">
 <section class="n1 izgara">
 <div class="p g2"><div class="pb">Özsermaye (tur sonları) <span>{esc(tl(oz))}</span></div><div class="pi">{_cizgi(deg, "#f5a524")}</div></div>
@@ -272,6 +317,9 @@ input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler sectio
 <div class="g3 sirit">{hucre("Emir (24 sa)", str(len(emirler)), "", f"dolum {len(dolum)}")}{hucre("Ort. fark", f"{tr_sayi(sum(kaymalar) / len(kaymalar), 1)} bp" if kaymalar else "—", "", "trader fiyatına göre")}{hucre("Funding (24 sa)", tl(funding24, True), renk(funding24), "sanal")}{hucre("Takipte", f"{ozet.get('saha', '—')}/{ozet.get('saha_n', '—')}", "", "trader")}</div>
 <div class="p g2"><div class="pb">Son işlemler <span>24 sa, en yeni üstte</span></div><div class="tw"><table><tr><th>SAAT</th><th>COİN</th><th>YÖN</th><th class="sg">TUTAR</th><th class="sg">FARK</th></tr>{islem_satir}</table></div></div>
 <div class="p"><div class="pb">Trader değişiklikleri <span>24 sa</span></div><div class="pi">{saha_html}</div></div>
+</section>
+<section class="n5 izgara">
+<div class="p g3"><div class="pb">Takip edilen ilk 11 ve yedekler <span>radar {kadro_tarih} TSİ · dokun → bize ne verdi</span></div><div class="pi kl">{kadro_html}</div></div>
 </section>
 <section class="n4 izgara">
 <div class="g3 sirit">{hucre("WS kopma", str(din.get("kopma", "—")), "", "tur başına")}{hucre("REST 429", str(ozet.get("rest_429", "—")), "", "hız sınırı")}{hucre("Tur süresi", f"{float(ozet.get('sure_dk') or 0) / 60:.1f} sa", "", "son tur")}{hucre("Özsermaye zirvesi", tl(float(zirve)) if zirve else "—", "", "")}</div>
@@ -315,6 +363,14 @@ def isabetleri_oku(dal: str | None, son: int = 7) -> list[dict]:
     return cikti
 
 
+def kadro_oku(dal: str | None) -> dict | None:
+    """Veri dalından (`origin/<dal>`) güncel `radar/son/kadro.json`; yoksa None."""
+    if not dal:
+        return None
+    s = subprocess.run(["git", "show", f"origin/{dal}:radar/son/kadro.json"], capture_output=True, text=True)
+    return json.loads(s.stdout) if s.returncode == 0 and s.stdout.strip() else None
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--durum", type=Path, default=Path("durum"))
@@ -334,7 +390,7 @@ def main(argv: list[str] | None = None) -> int:
     args.cikti.write_text(md, encoding="utf-8")
     args.gecmis.write_text(json.dumps(yeni, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     if args.html:
-        args.html.write_text(html_olustur(ozet, _json(args.durum / "risk.json"), _json(args.durum / "hesap.json"), kayitlari_oku(args.kayit), yeni, int(time.time() * 1000)), encoding="utf-8")
+        args.html.write_text(html_olustur(ozet, _json(args.durum / "risk.json"), _json(args.durum / "hesap.json"), kayitlari_oku(args.kayit), yeni, int(time.time() * 1000), kadro_oku(args.isabet_dali), _json(args.durum / "saha.json")), encoding="utf-8")
     print(md)
     return 0
 
