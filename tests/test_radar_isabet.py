@@ -154,3 +154,19 @@ def test_main_hata_olursa_tarama_bozulmaz_eksik_dosyaya_yazilir(monkeypatch, tmp
     assert ri.main(["--cikti", str(tmp_path), "--tarih", "2026-11-04"]) == 0
     d = json.loads((tmp_path / "2026-11-04" / "isabet.json").read_text(encoding="utf-8"))
     assert d["eksik"] is True and d["hata"] == "RuntimeError"
+
+
+def test_varsayilan_tarih_gec_baslayan_havuzu_ertesi_gun_yakalar(monkeypatch):
+    from copytrade import radar_isabet as ri
+    gun = ri.GUN_MS
+    t0 = 1_793_000_000_000                                           # sabit an
+    d = {"2026-11-05": {"kosu_ms": 1793860000000}}                   # havuz 11-05 07:19 UTC'de koşmuş (geç başlayan koşu)
+    monkeypatch.setattr(ri, "git_oku", lambda dal, yol: d.get(yol.split("/")[1]) if yol.endswith("havuz.json") else None)
+    kural = {"isabet_pencere_gun": 7}
+    sabah = int(1793860000000 + 7 * gun - 6 * 3600 * 1000)           # 11-12 01:19 UTC: pencere dolmadı → bugün−7 (11-05) denenir, calistir None döner
+    assert ri.varsayilan_tarih(sabah, kural, "radar") == "2026-11-05"
+    ertesi = 1793860000000 + 8 * gun - 6 * 3600 * 1000               # 11-13 01:19 UTC: 11-05 hâlâ ölçülmemiş ve dolmuş → 11-05
+    assert ri.varsayilan_tarih(ertesi, kural, "radar") == "2026-11-05"
+    d_olcu = lambda dal, yol: d.get(yol.split("/")[1]) if yol.endswith("havuz.json") else ({"x": 1} if yol.endswith("isabet.json") else None)
+    monkeypatch.setattr(ri, "git_oku", d_olcu)                       # ölçüm yazılmışsa tekrar seçilmez → bugün−7
+    assert ri.varsayilan_tarih(ertesi, kural, "radar") == "2026-11-06"

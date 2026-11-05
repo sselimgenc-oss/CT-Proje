@@ -222,6 +222,19 @@ def calistir(client: Any, havuz: dict, kadro: dict, tarih: str, simdi_ms: int, r
     return isabet_olustur(tarih, havuz, kadro, secim, olcum, bas, bit, pencere_tam, eksik, (saat() - t0) / 60.0, hata)
 
 
+def varsayilan_tarih(simdi_ms: int, rules: dict, dal: str, geri_gun: int = 3) -> str:
+    """Ölçülecek havuz tarihi: penceresi (`kosu_ms` + 7 gün) DOLMUŞ ve `isabet.json` henüz yazılmamış en eski havuz (son `geri_gun` gün içinde); yoksa bugün − 7.
+    Koşu geç başladıysa (kosu_ms 07:19) tam 7. gündeki sabah koşusunda pencere dolmamış olabilir; ölçüm ertesi gün yakalanır (Opus denetimi, 05.11)."""
+    bugun = datetime.fromtimestamp(simdi_ms / 1000, UTC).date()
+    pencere = int(rules["isabet_pencere_gun"])
+    for k in range(geri_gun, -1, -1):
+        t = (bugun - timedelta(days=pencere + k)).isoformat()
+        havuz = git_oku(dal, f"radar/{t}/havuz.json")
+        if havuz and not git_oku(dal, f"radar/{t}/isabet.json") and simdi_ms >= int(havuz["kosu_ms"]) + pencere * GUN_MS:
+            return t
+    return (bugun - timedelta(days=pencere)).isoformat()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--cikti", type=Path, default=Path("radar"))
@@ -232,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     rules = load_rules()
     simdi = int(time.time() * 1000)
-    tarih = args.tarih or (datetime.fromtimestamp(simdi / 1000, UTC).date() - timedelta(days=int(rules["isabet_pencere_gun"]))).isoformat()
+    tarih = args.tarih or varsayilan_tarih(simdi, rules, args.veri_dali)
     havuz, kadro = git_oku(args.veri_dali, f"radar/{tarih}/havuz.json"), git_oku(args.veri_dali, f"radar/{tarih}/kadro.json")
     if not havuz or not kadro:
         print(f"isabet: origin/{args.veri_dali} dalında radar/{tarih}/ havuz+kadro yok (ilk ölçüm 2026-11-12); atlandı")

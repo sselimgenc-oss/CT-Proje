@@ -60,10 +60,11 @@ def test_radar_yedek_cron_bugunun_klasoru_varsa_atlar_yoksa_calisir_birincil_ve_
     bugun = datetime.now(UTC).date().isoformat()
     c = kur(tmp_path / "a", "radar", {f"radar/{bugun}/havuz.json": "{}"})
     assert calistir(c, "radar", "radar")[0] == "atla=true"                                                    # klasör var → yedek hiçbir şey yapmaz
-    assert calistir(c, "radar", "radar", zamanlama="37 0 * * *")[0] == "atla=false"                            # birincil cron: HER ZAMAN çalışır
+    assert calistir(c, "radar", "radar", zamanlama="37 0 * * *")[0] == "atla=true"                             # geç gelen birincil koşu da bugünün klasörü varsa atlar (kadro gün içinde ikinci kez yazılmaz)
     assert calistir(c, "radar", "radar", olay="workflow_dispatch")[0] == "atla=false"                          # elle: çalışır
     c2 = kur(tmp_path / "b", "radar", {"radar/2020-01-01/havuz.json": "{}"})
     assert calistir(c2, "radar", "radar")[0] == "atla=false"                                                  # bugünün klasörü yok → yedek çalışır
+    assert calistir(c2, "radar", "radar", zamanlama="37 0 * * *")[0] == "atla=false"                           # birincil de klasör yoksa çalışır
     c3 = tmp_path / "c"
     c3.mkdir()
     git(c3, "init", "-q")
