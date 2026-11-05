@@ -1050,3 +1050,31 @@ def test_durum_gercek_risk_bayraklarini_gosterir_bayrak_yoksa_normal(tmp_path):
     assert "DURDURULDU" in m.durum_metni()
     m._komutlar(["/durum"])
     assert tgp.gonderilen[-1] == m.durum_metni()
+
+
+def test_dur_dosyasi_kapanislardan_once_yazilir_kapanis_istisnasi_dur_u_bozmaz_yeniden_baslatinca_acilis_yok(tmp_path, monkeypatch):
+    """Lider denetimi: kapanış sırasında istisna (ör. HL okuması) olsa da `DUR` yazılı kalır; yeniden başlatma yalnız kapanış modunda başlar, açılış yapılmaz."""
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+
+    def patla(*a, **k):
+        assert (tmp_path / "durum" / "DUR").exists()                                           # istisna anında DUR zaten yazılı
+        raise ConnectionError("HL okuması patladı")
+    monkeypatch.setattr(m, "_adres_kapat", patla)
+    m.dur_tetikle("zirve_dusus")
+    dur = json.loads((tmp_path / "durum" / "DUR").read_text(encoding="utf-8"))
+    assert dur["neden"] == "zirve_dusus" and dur["kapanis_bekliyor"] is True and not (tmp_path / "durum" / "DUR.tmp").exists()
+    assert m.risk.dur and m.dur_bekliyor and kayitlar(tmp_path, "dur_kapanis_hata") and any(x.startswith("🛑 DUR:") for x in tgp.gonderilen)
+    m2, hl2, saat2, _ = kur(tmp_path, saat=saat)
+    m2.baslat()                                                                                # kapanış modu: açık pozisyon var
+    assert m2.risk.dur and m2.dur_bekliyor
+    assert m2.olay_isle(olay("a:2", adr(1), "ETH", "B", 10, 2000.0, 0.0, saat))[0].karar == "engel"
+
+
+def test_dur_dosyasi_yazilamazsa_alarm_ve_kayit_sessiz_gecilmez(tmp_path):
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    (tmp_path / "durum" / "DUR.tmp").mkdir()                                                   # geçici dosya yazılamaz (dizin engeli) → OSError
+    m.dur_tetikle("komut")
+    assert kayitlar(tmp_path, "dur_yazim_hata") and any("DUR dosyası YAZILAMADI" in x for x in tgp.gonderilen) and m.risk.dur
