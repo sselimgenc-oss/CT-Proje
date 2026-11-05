@@ -455,9 +455,10 @@ class Motor:
         if d.px and o.px:
             ham = (d.px - o.px) / o.px
             kayma_trader = ham if yon == "B" else -ham
+        pnl = None                                          # pano §C3: bu dolumun gerçekleşen K/Z'si (ücret hariç; yalnız azaltma/kapanışta anlamlı)
         if d.dolu_mu:
             try:
-                self.hesap.uygula(adres, o.coin, yon, d.sz, d.px, d.ucret, dolum_ms)
+                pnl = self.hesap.uygula(adres, o.coin, yon, d.sz, d.px, d.ucret, dolum_ms)
             except ValueError as hata:                      # defter reddi: kayda geçer, motor çökmez
                 self.kayit({"olay": "defter_hata", "adres": adres, "coin": o.coin, "hata": str(hata)[:120]})
             if kayma_trader is not None:
@@ -467,7 +468,7 @@ class Motor:
             if d.usd_dolan > self.en_buyuk_emir.get("usd", 0.0):
                 self.en_buyuk_emir = {"usd": d.usd_dolan, "coin": o.coin, "eylem": eylem, "boyut_neden": neden, "adres": adres}
         self.kayit({"olay": "emir", "kip": self.kip, "adres": adres, "coin": o.coin, "eylem": eylem, "yon": yon, "usd_istenen": usd, "usd_dolan": d.usd_dolan, "sz": d.sz,
-                    "reduce_only": reduce_only, "durum": d.durum, "red_neden": d.neden, "boyut_neden": neden, "trader_px": o.px, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
+                    "reduce_only": reduce_only, "pnl_usd": (round(pnl, 6) if pnl is not None else None), "durum": d.durum, "red_neden": d.neden, "boyut_neden": neden, "trader_px": o.px, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
                     "emir_ms": emir_ms, "dolum_ms": dolum_ms, "referans_px": d.referans_px, "dolum_px": d.px, "kayma_ref": d.kayma_oran, "kayma_trader": kayma_trader, "ucret": d.ucret,
                     "gec_goruldu": gec, "kaynak": o.kaynak, "bant": bant, "cloid": cloid, "funding_usd": round(self.hesap.funding.get(adres, 0.0), 6)})
         self._ozet_emir += 1
@@ -601,6 +602,9 @@ class Motor:
                 self.hesap.slot_ac(k.adres, self.saha.slot)
                 self.trader_pozlari_oku(k.adres)
                 self.trader_hesap_usd(k.adres, simdi, zorla=True)
+                giris_hesap = (self.hesap_tr.get(k.adres) or {}).get("deger")
+                if giris_hesap is not None and k.adres in self.saha.uyeler:        # pano §C1: trader hesap değeri GİRİŞTE bir kez saklanır (canlı kopya koruması = bizim slot getirimiz ↔ trader'ın hesap getirisi)
+                    self.saha.uyeler[k.adres]["hesap_giris_usd"] = float(giris_hesap)
                 self.kayit({"olay": "saha_giris", "adres": k.adres, "neden": k.neden, "yerine": k.yerine, "slot_usd": self.saha.slot})
                 self.tg.gonder(tg.msg_saha("giriş", k.adres, k.neden + (f" (yerine {tg.kisa(k.yerine)})" if k.yerine else "")))
             elif k.tur == "dus":
