@@ -952,6 +952,9 @@ class Motor:
                 raise KipHatasi("DUR dosyası var: elle silinmeden yeniden açılmaz")
             self.risk.dur_ver((_oku(self.dur_dosyasi) or {}).get("neden", "dur"))               # DUR yarım kaldı (pozisyon açıkta): yalnız kapanış modunda başla
             self.dur_bekliyor = True
+        for adres in self.saha.gecis_silinen:                                                    # K‑39 tek seferlik geçiş: 05.11'de aynı gün ikinci kadro yüzünden verilen bekleme silindi
+            self.kayit({"olay": "bekleme_silindi", "adres": adres, "neden": "K-39"})
+        self.saha.gecis_silinen = []
         if self.kasa > float(self.rules["canli_kasa_ust_usd"]) + 1e-9:
             raise KipHatasi(f"kasa {self.kasa} $ > sınır {self.rules['canli_kasa_ust_usd']} $ (AGENTS.md)")
         self.kilit_al()
