@@ -225,7 +225,10 @@ def test_k40_pano_yayini_yalniz_ana_dal_ve_anahtar_varsa_ve_hata_gorunur():
     """K-40 ek: Cloudflare yayını yalnız `canli-durum` dalında, yalnız iki secret de varsa, yalnız index.html; hata uyarı olarak görünür (|| true yok)."""
     metin = (SCRIPTS / "canli_yayimla.sh").read_text(encoding="utf-8")
     assert '[ "$veri_dali" = canli-durum ]' in metin and "CLOUDFLARE_API_TOKEN" in metin and "CLOUDFLARE_ACCOUNT_ID" in metin
-    assert 'cp "$kaynak/pano/index.html" "$cf_dizin/index.html"' in metin and "--name sg-pano" in metin
+    assert 'cp "$kaynak/pano/index.html" "$cf_dizin/site/index.html"' in metin and "--assets=site" in metin and "--name sg-pano" in metin
+    assert "wrangler@4.158.0" in metin                                                              # sürüm sabit (tedarik zinciri)
+    assert metin.index("git -C \"$work\" push -q") < metin.index("then cf_yayin; exit 0; fi", metin.index("git -C \"$work\" push -q"))  # yayın durum push'undan sonra
     assert 'echo "UYARI: Cloudflare pano yayını başarısız' in metin
     wf = (WF / "canli_vardiya.yml").read_text(encoding="utf-8")
     assert wf.count("secrets.CLOUDFLARE_API_TOKEN") == 2 and "secrets.CLOUDFLARE_ACCOUNT_ID" in wf
+    assert "env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID python -u -m copytrade.canli.motor" in wf   # motor süreci anahtarı görmez

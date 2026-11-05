@@ -90,7 +90,7 @@ jobs:
           ( while sleep 900; do bash .github/scripts/canli_yayimla.sh || echo "yayım denemesi başarısız (döngü sürer)"; done ) &
           yayim=$!
           set +e
-          python -u -m copytrade.canli.motor --kip sanal --kadro-dali "$KADRO_DALI" --durum-dizin durum --kayit-dizin kayit --sure-sn "$((sure_dk * 60))" --vardiya "${GITHUB_RUN_ID}"
+          env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID python -u -m copytrade.canli.motor --kip sanal --kadro-dali "$KADRO_DALI" --durum-dizin durum --kayit-dizin kayit --sure-sn "$((sure_dk * 60))" --vardiya "${GITHUB_RUN_ID}"
           cikis=$?
           set -e
           if kill -0 "$yayim" 2>/dev/null; then kill "$yayim"; fi
