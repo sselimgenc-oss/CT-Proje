@@ -34,7 +34,7 @@ Güncel tutulur; lider 09.11'de bunu okuyarak devralır. Saatler UTC, aksi belir
 - Gerçek kip, cüzdan, anahtar, sunucu, kasa artırımı: lider dönünce birlikte.
 
 ## Önerilen kararlar (lider)
-- (boş; yeni öneriler buraya)
+- **Telegram komutları (kullanıcı kararı 2026-11-05, lider denetimine):** `/kapat` = eski `/dur` (tüm pozisyonları kapat, motor durur, `DUR` dosyası). **Yeni `/dur`** = yalnız yeni giriş/artırma durur (`risk.acilis_durdu["elle_dur"]`, kalıcı); çıkış/azaltma serbest, motor çalışır, `DUR` yazılmaz (`docs/H2_KURULUM.md`'deki özgün `/dur` anlamı). `/devam` (= `/baslat`) duraklatmayı açar; `/kapat` sonrası açmaz (motor kapalı; yeniden açmak sunucudan — T5 sürekli sunucuda `DUR` silme/yeniden başlatma). Eski `/dur` testi `/kapat` ile aynen korundu.
 
 ## Günlük kontrol tablosu
 | Tarih | radar çalıştı | gecti | ana vardiya sayısı/boşluk | kasa / özsermaye | olaylar |
