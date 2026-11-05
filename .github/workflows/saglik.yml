@@ -1,0 +1,37 @@
+name: Sağlık kontrolü (motor, radar, pano)
+
+# Kullanıcı kararı 2026-11-05 ("Bilgi İşlem + Denetim ekibi"): saatte bir motorun/radarın/panonun çalışıp çalışmadığını SALT OKUR kontrol eder (copytrade/saglik.py) ve sorun varsa Telegram'a alarm yollar.
+# Veri dallarını (canli-durum, radar) YALNIZ okur; hiçbir dala yazmaz, emir/anahtar yok (yalnız Telegram secret'ları). KRITIK bulguda iş kırmızı biter (görünür). Strateji/eşik değişmez.
+# Not: GitHub cron'u bazen geç/hiç tetiklenir (2026-11-05 gözlemi); bu iş akışı çalışmazsa pano üstündeki "VERİ BAYAT" uyarısı (tarayıcıda) ikinci güvenlik ağıdır.
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+concurrency:
+  group: saglik
+  cancel-in-progress: false
+
+jobs:
+  saglik:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Veri dallarını al
+        run: git fetch origin canli-durum radar
+      - name: Sağlık kontrolü
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python -u -m copytrade.saglik --veri-dali canli-durum --kadro-dali radar --canli-url "https://sg-pano.sselimgenc-c18.workers.dev/" --telegram | tee -a "$GITHUB_STEP_SUMMARY"
