@@ -3,6 +3,7 @@ import asyncio
 import json
 import re
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -224,6 +225,11 @@ class SahteTG:
 TOKEN, CHAT = "123456789:AAH-gizli-token-DEGERI_xxxxxxxxxxxxxxxxxxx", "4242"
 
 
+def tg_mesaj(uid, metin, chat=CHAT, kimden=None, tarih=None):
+    """Telegram güncellemesi: gerçek biçim (chat.id, from.id, date). `tarih` varsayılan: motor başlangıcından SONRA."""
+    return {"update_id": uid, "message": {"chat": {"id": int(chat)}, "from": {"id": int(kimden if kimden is not None else chat)}, "date": time.time() + 60 if tarih is None else tarih, "text": metin}}
+
+
 def kur(tmp_path, kadro_=None, kasa=1000.0, hl=None, tgp=None, saat=None, kurallar=None):
     rules = {**RULES, "canli_kasa_usd": kasa, **(kurallar or {})}
     hl = hl or SahteHL()
@@ -321,8 +327,8 @@ def test_risk_coin_tavani_engel_gunluk_kayip_acilis_engel_kapanis_serbest(tmp_pa
 
 
 def test_dur_komutu_hepsini_kapatir_dur_dosyasi_yeniden_baslatma_engeli(tmp_path):
-    guncelleme = {"update_id": 5, "message": {"chat": {"id": int(CHAT)}, "text": "/dur"}}
-    yabanci = {"update_id": 4, "message": {"chat": {"id": 999}, "text": "/dur"}}
+    guncelleme = tg_mesaj(5, "/dur")
+    yabanci = tg_mesaj(4, "/dur", chat=999)
     m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([yabanci]))
     m.baslat()
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
@@ -362,17 +368,33 @@ def test_yeniden_baslatma_cift_emir_yok_durum_kaldigi_yerden(tmp_path):
     assert m2.sayac["emir"] == 0 and len(kayitlar(tmp_path, "emir")) == 1
 
 
-def test_kacan_dolum_rest_ile_tamamlanir_gec_goruldu_eski_dolum_emir_uretmez(tmp_path):
+def test_kacan_dolum_rest_ile_tamamlanir_gec_acilis_emir_uretmez(tmp_path):
+    """K‑37 §5: AÇILIŞ olay yaşı > 120 sn ise emir YOK (`gec_acilis`): 30 sn eski BTC açılışı işlenir (REST kaynaklı → `gec_goruldu`); 5 dk eski SOL ve 90 dk eski ETH açılışı emir ÜRETMEZ
+    (yalnız trader pozisyon izleyicisi güncellenir)."""
     saat = Saat()
-    taze = {"tid": 11, "time": saat() - 5 * 60_000, "coin": "BTC", "px": "100", "sz": "300", "side": "B", "startPosition": "0"}
+    taze = {"tid": 11, "time": saat() - 30_000, "coin": "BTC", "px": "100", "sz": "300", "side": "B", "startPosition": "0"}
+    bes_dk = {"tid": 12, "time": saat() - 5 * 60_000, "coin": "SOL", "px": "100", "sz": "300", "side": "B", "startPosition": "0"}
     eski = {"tid": 10, "time": saat() - 90 * 60_000, "coin": "ETH", "px": "2000", "sz": "10", "side": "B", "startPosition": "0"}
-    hl = SahteHL(rest_dolumlar={adr(1): [eski, taze]})
+    hl = SahteHL(rest_dolumlar={adr(1): [eski, bes_dk, taze]})
     m, _, _, _ = kur(tmp_path, hl=hl, saat=saat)
     m.baslat()
-    assert m.kacanlari_tamamla(saat() - 3 * SAAT) == 1                                         # pencere 60 dk: 90 dk'lık yalnız izleyiciyi günceller
+    assert m.kacanlari_tamamla(saat() - 3 * SAAT) == 3                                         # üçü de bir Sonuç döner: 1 emir + 2 atlandı
     e = kayitlar(tmp_path, "emir")
-    assert len(e) == 1 and e[0]["coin"] == "BTC" and e[0]["gec_goruldu"] is True and e[0]["kaynak"] == "rest" and m.sayac["gec_goruldu"] == 1
-    assert m.poz_tr[adr(1)]["ETH"] == 10 and kayitlar(tmp_path, "eski_dolum_atlandi")
+    assert len(e) == 1 and e[0]["coin"] == "BTC" and e[0]["gec_goruldu"] is True and e[0]["kaynak"] == "rest" and m.sayac["gec_goruldu"] == 3
+    assert m.sayac["gec_acilis"] == 2 and m.neden_say["gec_acilis"] == 2 and m.hesap.sz(adr(1), "SOL") == 0.0 and m.hesap.sz(adr(1), "ETH") == 0.0
+    assert m.poz_tr[adr(1)]["ETH"] == 10 and m.poz_tr[adr(1)]["SOL"] == 300                    # izleyici güncel
+
+
+def test_gec_gelen_kapanis_yasa_bakmadan_islenir_ve_kuyruk_beklemesi_yasa_dahil(tmp_path):
+    """K‑37 §5/§6: kapanış 100 dk eski olsa da kapatılır; açılış kuyrukta bekleyip 121 sn'ye ulaşırsa (işleme anı − trader zamanı) emir yok."""
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    assert m.hesap.sz(adr(1), "BTC") > 0
+    s = m.olay_isle(olay("a:2", adr(1), "BTC", "A", 300, 100.0, 300.0, saat, yas_ms=100 * 60_000))
+    assert [(x.eylem, x.karar) for x in s] == [("kapat", "emir")] and m.hesap.sz(adr(1), "BTC") == pytest.approx(0.0, abs=1e-9)
+    assert m.olay_isle(olay("a:3", adr(1), "ETH", "B", 10, 2000.0, 0.0, saat, yas_ms=121_000))[0].neden == "gec_acilis"
+    assert m.olay_isle(olay("a:4", adr(1), "ETH", "B", 10, 2000.0, 0.0, saat, yas_ms=119_000))[0].karar == "emir"
 
 
 def test_mutabakat_sanal_mark_eskiyse_alarm_ve_yeni_acilis_durur_sonra_duzelir(tmp_path):
@@ -404,8 +426,7 @@ def test_telegram_token_kayda_ve_hatalara_yazilmaz_ve_hata_motoru_durdurmaz(tmp_
 
 
 def test_telegram_komutlari_yalniz_yapilandirilmis_sohbetten_ve_biçim():
-    t = tg.Telegram(TOKEN, CHAT, SahteTG([{"update_id": 1, "message": {"chat": {"id": int(CHAT)}, "text": "/durum@sg_bot"}}, {"update_id": 2, "message": {"chat": {"id": 7}, "text": "/dur"}},
-                                           {"update_id": 3, "message": {"chat": {"id": int(CHAT)}, "text": "merhaba"}}]))
+    t = tg.Telegram(TOKEN, CHAT, SahteTG([tg_mesaj(1, "/durum@sg_bot"), tg_mesaj(2, "/dur", chat=7), tg_mesaj(3, "merhaba")]))
     assert t.komutlari_al() == ["/durum"] and t.offset == 4
     assert tg.msg_gunluk("sanal", 1000, 1012.5, 0.0125, 0.0125, 3, 11, ["0x12345678… BTC +0.1"]).startswith("GÜNLÜK ÖZET [sanal] kasa 1000$")
     assert tg.kisa(adr(255)) == "0x000000…"
@@ -530,7 +551,7 @@ def test_sdk_hatasi_ve_red_motoru_cokertmez_kayit_alir(tmp_path):
         def hazirla(self, coin):
             return None
 
-        def emir(self, coin, yon, usd, reduce_only=False, acik_sz=None):
+        def emir(self, coin, yon, usd, reduce_only=False, acik_sz=None, bant=None, cloid=None):
             return yu.Dolum(coin, yon, usd, reduce_only=reduce_only, durum="red", neden="sdk_hatasi: ConnectionError")
     hl = SahteHL()
     m = mt.Motor(RULES, Bozuk(), hl, tg.Telegram("", "", ortam={}), tmp_path / "durum", tmp_path / "kayit", lambda: kadro([satir(1, 1)], T0), Saat())

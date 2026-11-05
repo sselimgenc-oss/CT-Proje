@@ -199,7 +199,7 @@ def test_canli_vardiya_yalniz_sanal_anahtarsiz_kuyruklu_ve_dal_ayrimi():
     metin = (WF / "canli_vardiya.yml").read_text(encoding="utf-8")
     wf = yukle("canli_vardiya.yml")
     assert wf["on"]["schedule"] == [{"cron": "7 */4 * * *"}, {"cron": "37 */4 * * *"}] and wf["on"]["push"] == {"paths": ["copytrade/canli/CALISTIR"]}
-    assert wf["concurrency"] == {"group": "canli-vardiya", "cancel-in-progress": False} and wf["permissions"] == {"contents": "write"}
+    assert wf["concurrency"] == {"group": "${{ github.ref == 'refs/heads/main' && 'canli-vardiya-uretim' || format('canli-vardiya-deneme-{0}', github.ref_name) }}", "cancel-in-progress": False} and wf["permissions"] == {"contents": "write"}      # K-37 §8: üretim ≠ deneme kuyruğu
     assert "HL_API_CUZDAN_ANAHTARI" not in metin and "HL_HESAP_ADRESI" not in metin and "--kip gercek" not in metin and "--kip sanal" in metin             # gerçek kip Actions'ta ASLA
     env = wf["jobs"]["vardiya"]["env"]
     assert env["VERI_DALI"] == "${{ github.ref == 'refs/heads/main' && 'canli-durum' || 'canli-durum-deneme' }}"

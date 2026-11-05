@@ -157,6 +157,12 @@ canli_islenen_sakla: 5000               # adet (işlenen dolum kimliklerinden sa
 canli_kilit_dk: 20                      # dakika (başka vardiyanın kilit nabzı bu süreden tazeyse motor başlamaz)
 canli_api_agirlik_dk: 800               # ağırlık/dk (motorun TÜM REST istekleri için ortak hız sınırı; HL IP sınırı 1.200, geri kalan WS/dinleyici payı)
 
+canli_min_nosyonel_usd: 10              # $ (HL minimum emir değeri; sz yuvarlandıktan sonra sz × en iyi fiyat bunun altındaysa emir yok; reduce-only TAM kapanış hariç; K-37)
+canli_sanal_derinlik_sn: 5              # sn (sanal kip: aynı coin/yönde bu süre içindeki emirler öncekilerin tükettiği defter seviyelerini düşer; K-37)
+canli_kapanis_bantlari: [0.005, 0.01, 0.02, 0.02, 0.02]   # oran (kapanış yeniden deneme bantları, en çok 5 deneme; %2'ye yalnız DUR ve trader tam kapanışında çıkılır; K-37)
+canli_kapanis_toz_usd: 1.0              # $ (borsa pozisyonu bu nosyonelin altındaysa "0" sayılır; toz)
+canli_bosluk_dk: 30                     # dakika (açılışta önceki kilit nabzı bundan eskiyse "vardiya boşluğu" alarmı)
+canli_kuyruk_max: 10000                 # olay (motor olay kuyruğu sınırı; taşarsa açılışlar düşer, kapanışlar kalır)
 
 # T6 (K-37): seçim isabeti ölçümü (docs/RADAR_V1.md §7b; yalnız ölçer, radar_* eşiklerine dokunmaz)
 isabet_pencere_gun: 7                   # gün (havuz tarihinden bu kadar sonra ölçülür; sonraki_7g penceresi)

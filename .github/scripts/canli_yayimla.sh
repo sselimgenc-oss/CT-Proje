@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Yalnız Actions'ın geçici checkout'unda çalışır. Canlı motor durumunu veri dalına (VERI_DALI: canli-durum | canli-durum-deneme) yazar: durum/*.json, durum/DUR (varsa), pano/OZET.md + pano/gecmis.json (T6 günlük rapor, varsa), kayit/<tarih>.jsonl.
+# Yalnız Actions'ın geçici checkout'unda çalışır. Canlı motor durumunu veri dalına (VERI_DALI: canli-durum | canli-durum-deneme) yazar: durum/*.json, durum/niyet.jsonl (çift emir koruması, vardiyalar arası kalıcı), durum/DUR (varsa), pano/OZET.md + pano/gecmis.json (T6 günlük rapor, varsa), kayit/<tarih>.jsonl.
 # AYRI git worktree'de çalışır: motorun çalıştığı çalışma dizini DEĞİŞMEZ (arka planda 15 dk'da bir çağrılır). Kayıt 14 günden eskisi silinir. Kök commit yalnız dal ilk kez oluşurken (orphan).
 set -euo pipefail
 [ "${GITHUB_ACTIONS:-}" = true ] || { echo 'Yalnız GitHub Actions için.' >&2; exit 1; }
@@ -22,7 +22,7 @@ else
   git -C "$work" rm -rfq --ignore-unmatch .
 fi
 mkdir -p "$work/durum" "$work/kayit"
-for f in hesap.json saha.json risk.json motor.json kilit.json ozet.json DUR; do
+for f in hesap.json saha.json risk.json motor.json kilit.json ozet.json niyet.jsonl DUR; do
   if [ -f "$kaynak/durum/$f" ]; then cp "$kaynak/durum/$f" "$work/durum/$f"; fi
 done
 if [ -d "$kaynak/kayit" ]; then cp -r "$kaynak/kayit/." "$work/kayit/"; fi

@@ -1,6 +1,6 @@
 """Kopya hesabı (defter): trader başına coin pozisyonları, gerçekleşen K/Z, ücretler; izole 3x marj ve tasfiye fiyatı yerelde. SAF (ağ yok); JSON'a serileşir (yeniden başlatma, `durum/hesap.json`).
 
-Birim: `$` = kasa ölçeği (kopya_$; `kasa_usd` = `canli_kasa_usd`), `sz` coin miktarı (işaretli: + long / − short), fiyat $/coin. Funding hesaba GİRMEZ (T2 oynatmasıyla aynı v1 kararı; rapor satırında not).
+Birim: `$` = kasa ölçeği (kopya_$; `kasa_usd` = `canli_kasa_usd`), `sz` coin miktarı (işaretli: + long / − short), fiyat $/coin. Funding (K‑37, yalnız SANAL kip): saatlik `−sz × mark × oran` (long pozitif oranda öder; `defter.py` ile aynı işaret/birim) `funding[adres]`e eklenir ve özsermayeye girer; gerçek kipte HL kendi funding'ini hesaplar.
 Özsermaye = kasa + gerçekleşen − ücret + gerçekleşmemiş (mark). Slot özsermayesi = slot başlangıcı + o trader'ın girişten beri net K/Z'si (slot −%10 düşme kuralı).
 Tasfiye (izole): long `giris × (1 − 1/k) / (1 − mmr)`, short `giris × (1 + 1/k) / (1 + mmr)`; `mmr = 1 / (2 × coin azami kaldıracı)` (HL bakım marjı = azami kaldıracın başlangıç marjının yarısı); azami kaldıraç bilinmiyorsa 20.
 """
@@ -35,19 +35,20 @@ class Hesap:
         self.ucret: dict[str, float] = {}            # adres -> girişten beri ücret
         self.slot_bas: dict[str, float] = {}         # adres -> slot başlangıç $ (giriş anı)
         self.tasfiyeler: list[dict] = []
+        self.funding: dict[str, float] = {}          # adres -> girişten beri funding ($, işaretli: + alınan / − ödenen; sanal kip)
         self.kapanmis_net = 0.0                      # sahadan çıkıp kaydı silinen üyelerin net K/Z'si (özsermaye sürekliliği)
 
     # ------------------------------------------------------------------ slot
     def slot_ac(self, adres: str, slot_usd: float) -> None:
         self.slot_bas[adres] = float(slot_usd)
-        self.realize[adres] = self.ucret[adres] = 0.0
+        self.realize[adres] = self.ucret[adres] = self.funding[adres] = 0.0
         self.poz.setdefault(adres, {})
 
     def slot_kapat(self, adres: str) -> None:
         """Pozisyonsuz üyenin kaydını siler (açık pozisyonu varsa çağrılmaz)."""
         if not self.poz.get(adres):
-            self.kapanmis_net += self.realize.get(adres, 0.0) - self.ucret.get(adres, 0.0)
-            for d in (self.poz, self.realize, self.ucret, self.slot_bas):
+            self.kapanmis_net += self.realize.get(adres, 0.0) - self.ucret.get(adres, 0.0) + self.funding.get(adres, 0.0)
+            for d in (self.poz, self.realize, self.ucret, self.slot_bas, self.funding):
                 d.pop(adres, None)
 
     # ------------------------------------------------------------------ dolum
@@ -95,13 +96,19 @@ class Hesap:
         kume = self.poz.values() if adres is None else [self.poz.get(adres, {})]
         return sum(p.sz * ((marks.get(k) or p.giris) - p.giris) for c in kume for k, p in c.items())
 
+    def funding_isle(self, adres: str, tutar: float) -> None:
+        self.funding[adres] = self.funding.get(adres, 0.0) + float(tutar)
+
+    def funding_toplam(self) -> float:
+        return sum(self.funding.values())
+
     def ozsermaye(self, marks: dict[str, float]) -> float:
-        return self.kasa_usd + sum(self.realize.values()) - sum(self.ucret.values()) + self.gerceklesmemis(None, marks) + self.kapanmis_net
+        return self.kasa_usd + sum(self.realize.values()) - sum(self.ucret.values()) + self.funding_toplam() + self.gerceklesmemis(None, marks) + self.kapanmis_net
 
     def slot_ozsermaye(self, adres: str, marks: dict[str, float]) -> float | None:
         if adres not in self.slot_bas:
             return None
-        return self.slot_bas[adres] + self.realize.get(adres, 0.0) - self.ucret.get(adres, 0.0) + self.gerceklesmemis(adres, marks)
+        return self.slot_bas[adres] + self.realize.get(adres, 0.0) - self.ucret.get(adres, 0.0) + self.funding.get(adres, 0.0) + self.gerceklesmemis(adres, marks)
 
     def marj_toplam(self) -> float:
         return sum(abs(p.sz) * p.giris / p.kaldirac for c in self.poz.values() for p in c.values())
@@ -127,7 +134,7 @@ class Hesap:
     # ------------------------------------------------------------------ kalıcılık
     def to_json(self) -> dict[str, Any]:
         return {"kasa_usd": self.kasa_usd, "kaldirac": self.kaldirac, "maks_kaldirac": self.maks_kaldirac, "realize": self.realize, "ucret": self.ucret, "slot_bas": self.slot_bas,
-                "poz": {a: {c: asdict(p) for c, p in coinler.items()} for a, coinler in self.poz.items()}, "tasfiyeler": self.tasfiyeler[-200:], "kapanmis_net": self.kapanmis_net}
+                "poz": {a: {c: asdict(p) for c, p in coinler.items()} for a, coinler in self.poz.items()}, "tasfiyeler": self.tasfiyeler[-200:], "kapanmis_net": self.kapanmis_net, "funding": self.funding}
 
     @classmethod
     def from_json(cls, d: dict[str, Any]) -> "Hesap":
@@ -136,4 +143,5 @@ class Hesap:
         h.poz = {a: {c: Poz(**p) for c, p in coinler.items()} for a, coinler in d.get("poz", {}).items()}
         h.tasfiyeler = list(d.get("tasfiyeler", []))
         h.kapanmis_net = float(d.get("kapanmis_net", 0.0))
+        h.funding = dict(d.get("funding", {}))
         return h
