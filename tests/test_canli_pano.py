@@ -106,5 +106,5 @@ def test_html_pano_turkce_biçim_ve_kacis(tmp_path):
     ozet = {"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1012.5, "getiri": 0.0125, "saha": 9, "saha_n": 11, "dinleyici": {"kopma": 1}, "rest_429": 0,
             "acik": [{"adres": "0xabc<script>12345", "coin": "BTC", "sz": 0.5, "usd": 1234.0, "kz_usd": -3.5}]}
     h = pano.html_olustur(ozet, {"gun_basi": 1000.0, "zirve": 1020.0}, {}, [], [{"gun": "2026-11-01", "ozsermaye": 1000.0}], 1_793_900_000_000)
-    assert "1.012,50 $" in h and "+%1,25" in h and "1.234,00 $" in h and "−3,50 $" in h and "<polyline" in h and "<script>" not in h and "GERÇEK PARA" not in h
+    assert "1.012,50 $" in h and "+%1,25" in h and "1.234,00 $" in h and "−3,50 $" in h and "<polyline" in h and "<script>" not in h and "TSİ" in h and "GERÇEK PARA" not in h
     assert "GERÇEK PARA" in pano.html_olustur({**ozet, "kip": "gercek"}, {}, {}, [], [], 1_793_900_000_000)
