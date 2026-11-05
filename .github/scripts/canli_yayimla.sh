@@ -27,6 +27,16 @@ if [ -s "$kaynak/durum/ozet.json" ]; then
     echo "UYARI: pano üretilemedi (durum yayımı sürer)" >&2
   fi
 fi
+# Cloudflare Workers `sg-pano` yayını (K-40; yalnız ana dal `canli-durum`, yalnız pano/index.html; yalnız anahtar varsa). Cloudflare'in kendi build sistemi takıldığı için (2026-11-05) yayın buradan yapılır.
+# Anahtar yalnız "Workers düzenle" yetkili (para/emir yetkisi YOK); log'da görünmez (GitHub gizler). Hata yayımı durdurmaz ama GÖRÜNÜR.
+if [ "$veri_dali" = canli-durum ] && [ -s "$kaynak/pano/index.html" ] && [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+  cf_dizin="$(mktemp -d)"
+  cp "$kaynak/pano/index.html" "$cf_dizin/index.html"
+  if ! ( cd "$cf_dizin" && WRANGLER_SEND_METRICS=false timeout 240 npx --yes wrangler@4 deploy --assets=. --name sg-pano --compatibility-date=2026-11-01 >/dev/null ); then
+    echo "UYARI: Cloudflare pano yayını başarısız (durum yayımı sürer)" >&2
+  fi
+  rm -rf "$cf_dizin"
+fi
 mkdir -p "$work/durum" "$work/kayit"
 for f in hesap.json saha.json risk.json motor.json kilit.json ozet.json niyet.jsonl DUR; do
   if [ -f "$kaynak/durum/$f" ]; then cp "$kaynak/durum/$f" "$work/durum/$f"; fi
