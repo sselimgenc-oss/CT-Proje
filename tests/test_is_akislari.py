@@ -81,10 +81,10 @@ YASAK_DEPO = "|".join(["R" + "2_", "aws s" + "3", "cloud" + "flare", "wrang" + "
 
 def test_worker_telegram_adimlari_geri_gelmedi_k13():
     """Eski Worker/Telegram adımları (K‑13) geri gelmedi. İSTİSNA (T4, K‑19 canlı motor): yalnız `canli_vardiya.yml` motorun Telegram secret'larını ortam değişkeni olarak geçirir (bildirim/komut `copytrade/canli/telegram.py`);
-    diğer yasaklı ifadeler orada da yasak."""
+    K-40 ek istisnası (kullanıcı onayı 2026-11-05): yine yalnız `canli_vardiya.yml` panoyu Cloudflare Workers `sg-pano`'ya yayımlamak için Cloudflare secret'larını geçirir; diğer yasaklı ifadeler orada da yasak."""
     for ad in ISLER:
         metin = (WF / ad).read_text(encoding="utf-8")
-        yasak = YASAK.replace("TELE" + "GRAM|", "") if ad == "canli_vardiya.yml" else YASAK
+        yasak = YASAK.replace("TELE" + "GRAM|", "").replace("CLOUD" + "FLARE|", "") if ad == "canli_vardiya.yml" else YASAK       # K-40 ek istisnası (kullanıcı onayı 2026-11-05)
         assert not re.search(yasak, metin), ad
 
 
@@ -115,7 +115,8 @@ def test_izleme_motor_durumu_yoksa_ilk_kosu_ama_bozuk_dosya_isi_kirmizi_yapar(tm
 def test_is_akislari_harici_depo_ve_sunucusuz_servis_kullanmaz():
     for ad in ISLER:
         metin = (WF / ad).read_text(encoding="utf-8")
-        assert not re.search(YASAK_DEPO, metin, re.I), ad
+        depo = YASAK_DEPO.replace("cloud" + "flare|", "") if ad == "canli_vardiya.yml" else YASAK_DEPO       # K-40 ek istisnası: yalnız canli_vardiya.yml; R2/AWS/wrangler yine yasak
+        assert not re.search(depo, metin, re.I), ad
 
 
 class Bozuk(Client):
@@ -218,3 +219,13 @@ def test_canli_yayimla_ayri_worktree_yalniz_canli_dallarina_14_gun():
             assert 'HEAD:$veri_dali' in satir, satir
     assert 'case "$veri_dali" in canli-durum|canli-durum-deneme)' in metin and "git worktree add" in metin and "14 days ago" in metin and "|| true" not in metin
     assert "git checkout -f" not in metin                                                                                  # motorun çalıştığı dizini değiştirmez
+
+
+def test_k40_pano_yayini_yalniz_ana_dal_ve_anahtar_varsa_ve_hata_gorunur():
+    """K-40 ek: Cloudflare yayını yalnız `canli-durum` dalında, yalnız iki secret de varsa, yalnız index.html; hata uyarı olarak görünür (|| true yok)."""
+    metin = (SCRIPTS / "canli_yayimla.sh").read_text(encoding="utf-8")
+    assert '[ "$veri_dali" = canli-durum ]' in metin and "CLOUDFLARE_API_TOKEN" in metin and "CLOUDFLARE_ACCOUNT_ID" in metin
+    assert 'cp "$kaynak/pano/index.html" "$cf_dizin/index.html"' in metin and "--name sg-pano" in metin
+    assert 'echo "UYARI: Cloudflare pano yayını başarısız' in metin
+    wf = (WF / "canli_vardiya.yml").read_text(encoding="utf-8")
+    assert wf.count("secrets.CLOUDFLARE_API_TOKEN") == 2 and "secrets.CLOUDFLARE_ACCOUNT_ID" in wf
