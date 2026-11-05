@@ -899,14 +899,34 @@ class Motor:
 
     def _komutlar(self, komutlar: list[str]) -> None:
         for k in komutlar:
-            if k == "/dur":
+            if k == "/kapat":                                                  # eski /dur: tüm pozisyonları kapat, motor durur (DUR dosyası)
                 self.dur_tetikle("komut")
+            elif k == "/dur":                                                  # yeni /dur: yalnız yeni giriş/artırma durur; çıkış/azaltma serbest, pozisyonlar trader'ı izlemeye devam eder
+                self._duraklat(True)
+            elif k in ("/devam", "/baslat"):
+                self._duraklat(False)
             elif k == "/durum":
                 self.tg.gonder(self.durum_metni())
 
+    def _duraklat(self, ac: bool) -> None:
+        """Elle duraklatma (`risk.acilis_durdu['elle_dur']`; kalıcı: `risk.json`). Kapanış/azaltma `acilis_izni`nden geçmediği için DURAKLATMADAN etkilenmez."""
+        if not ac and self.risk.dur:
+            self.tg.gonder(tg.alarm("Motor kapalı", "Motor `/kapat` ile durduruldu; yeniden açmak sunucudan yapılır. `/devam` bunu açmaz."))
+            return
+        self.risk.bayrak("elle_dur", ac)
+        self.kayit({"olay": "elle_dur" if ac else "elle_devam"})
+        self.tg.gonder(tg.alarm("Yeni işlemler duraklatıldı", "Yeni pozisyon açılmaz, artırılmaz. Açık pozisyonlar trader'ı izlemeye ve azaltmaya/kapatmaya devam eder.\nAçmak için /devam.", "⏸️") if ac
+                       else tg.alarm("Duraklatma kaldırıldı", self._devam_govde(), "▶️"))
+        self.durum_yaz()
+
+    def _devam_govde(self) -> str:
+        """`/devam` yanıtı: başka bir açılış engeli (günlük kayıp, mutabakat, kasa sınırı, kapanış eksik...) sürüyorsa yeni işlemlerin hâlâ KAPALI olduğunu söyler (yanıltmaz)."""
+        diger = sorted(k for k, v in self.risk.acilis_durdu.items() if v and k != "elle_dur")
+        return "Motor normal çalışıyor." if not diger else f"Duraklatma kalktı ama yeni işlemler hâlâ kapalı: {', '.join(diger)}."
+
     def durum_metni(self) -> str:
         oz = self.ozsermaye()
-        return tg.msg_durum(self.kip, oz, self.kasa, len(self.saha.uyeler), self.saha.n, len(self.saha.inen), sum(len(c) for c in self.hesap.poz.values()), self.sayac["emir"], bool(self.risk.dur))
+        return tg.msg_durum(self.kip, oz, self.kasa, len(self.saha.uyeler), self.saha.n, len(self.saha.inen), sum(len(c) for c in self.hesap.poz.values()), self.sayac["emir"], bool(self.risk.dur), bool(self.risk.acilis_durdu.get("elle_dur")))
 
     def pano_ek(self) -> dict[str, Any]:
         """`ozet.json`a rapor (`pano/OZET.md`, T6 §3) için eklenen alanlar: açık pozisyonlar (mark'lı; K/Z = sz × (mark − giriş)) ve REST istek / 429 sayaçları. Yeni hesap değil: defter + mark biçimi."""

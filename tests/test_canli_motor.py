@@ -351,14 +351,15 @@ def test_risk_coin_tavani_engel_gunluk_kayip_acilis_engel_kapanis_serbest(tmp_pa
     assert any("coin_tavani" in x.get("neden", "") for x in kayitlar(tmp_path, "emir_yok"))
 
 
-def test_dur_komutu_hepsini_kapatir_dur_dosyasi_yeniden_baslatma_engeli(tmp_path):
-    guncelleme = tg_mesaj(5, "/dur")
-    yabanci = tg_mesaj(4, "/dur", chat=999)
+def test_kapat_komutu_hepsini_kapatir_dur_dosyasi_yeniden_baslatma_engeli(tmp_path):
+    """Eski `/dur` davranışı `/kapat` oldu (kullanıcı kararı 2026-11-05): test aynı şeyi `/kapat` ile doğrular, zayıflatılmadı."""
+    guncelleme = tg_mesaj(5, "/kapat")
+    yabanci = tg_mesaj(4, "/kapat", chat=999)
     m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([yabanci]))
     m.baslat()
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     m.dakika()
-    assert not m.dur_istendi and not (tmp_path / "durum" / "DUR").exists()                    # yabancı sohbetten /dur kabul edilmedi
+    assert not m.dur_istendi and not (tmp_path / "durum" / "DUR").exists()                    # yabancı sohbetten /kapat kabul edilmedi
     tgp.guncellemeler.append(guncelleme)
     m.dakika()
     assert m.dur_istendi and (tmp_path / "durum" / "DUR").exists() and m.hesap.sz(adr(1), "BTC") == pytest.approx(0.0, abs=1e-9)
@@ -366,6 +367,73 @@ def test_dur_komutu_hepsini_kapatir_dur_dosyasi_yeniden_baslatma_engeli(tmp_path
     m2, *_ = kur(tmp_path)
     with pytest.raises(mt.KipHatasi):
         m2.baslat()                                                                           # DUR varken başlamaz
+
+
+def test_elle_dur_artirma_engeller_azaltma_serbest_yeniden_kurulunca_korunur_baska_bayrak_silmez(tmp_path):
+    """Opus denetimi: mevcut coinde `artir` engellenir, kısmi `azalt` serbest, risk.json'dan yeni Motor kurulunca duraklatma korunur, başka bayrağın açılıp kapanması `elle_dur`'u silmez; `/devam` yanıtı başka engeli söyler."""
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    m._komutlar(["/dur"])
+    s = m.olay_isle(olay("a:2", adr(1), "BTC", "B", 100, 100.0, 300.0, saat))                      # mevcut coinde artırma
+    assert s[0].karar == "engel" and s[0].neden == "elle_dur"
+    onceki = m.hesap.sz(adr(1), "BTC")
+    s2 = m.olay_isle(olay("a:3", adr(1), "BTC", "A", 150, 100.0, 300.0, saat))                     # kısmi azaltma (trader 300 → 150)
+    assert s2[0].karar == "emir" and m.hesap.sz(adr(1), "BTC") < onceki
+    m.risk.bayrak("mutabakat", True)
+    m.risk.bayrak("mutabakat", False)
+    assert m.risk.acilis_durdu["elle_dur"]                                                         # başka bayrak elle_dur'u silmedi
+    m.durum_yaz()
+    m2, *_ = kur(tmp_path)
+    assert m2.risk.acilis_durdu.get("elle_dur") is True                                           # yeni Motor risk.json'dan yükledi
+    m.risk.bayrak("gunluk_kayip", True)
+    m._komutlar(["/devam"])
+    assert any("hâlâ kapalı: gunluk_kayip" in x for x in tgp.gonderilen)                           # yanıltmaz
+
+
+def test_dur_komutu_yalniz_yeni_giris_ve_artirmayi_durdurur_cikis_serbest_devam_acar(tmp_path):
+    """Yeni `/dur`: açılış/artırma engellenir (`elle_dur`), kapanış serbest, motor çalışır, DUR dosyası YAZILMAZ; `/devam` (= `/baslat`) açar; kalıcıdır. (Komutlar `_komutlar` ile verilir:
+    dakikalık trader pozisyon senkronu sahte HL'de trader pozisyonu görmediği için açık kopyayı kendisi kapatırdı.)"""
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))                          # açık pozisyon var
+    assert m.hesap.sz(adr(1), "BTC") > 0
+    m._komutlar(["/dur"])
+    assert m.risk.acilis_durdu["elle_dur"] and not m.dur_istendi and not m.risk.dur and not (tmp_path / "durum" / "DUR").exists()
+    assert any("duraklatıldı" in x for x in tgp.gonderilen) and kayitlar(tmp_path, "elle_dur")
+    s = m.olay_isle(olay("a:2", adr(1), "ETH", "B", 10, 2000.0, 0.0, saat))
+    assert s[0].karar == "engel" and s[0].neden == "elle_dur"                                  # yeni açılış engelli
+    assert "Yeni işlem duraklatıldı" in m.durum_metni()
+    assert json.loads((tmp_path / "durum" / "risk.json").read_text(encoding="utf-8"))["acilis_durdu"]["elle_dur"] is True       # kalıcı
+    s2 = m.olay_isle(olay("a:3", adr(1), "BTC", "A", 300, 100.0, 300.0, saat))
+    assert s2[0].karar == "emir" and m.hesap.sz(adr(1), "BTC") == pytest.approx(0.0, abs=1e-9)  # kapanış serbest
+    m._komutlar(["/devam"])
+    assert not m.risk.acilis_durdu["elle_dur"] and kayitlar(tmp_path, "elle_devam")
+    assert m.olay_isle(olay("a:4", adr(1), "ETH", "B", 10, 2000.0, 0.0, saat))[0].karar == "emir"
+    m._komutlar(["/dur"])
+    m._komutlar(["/baslat"])
+    assert not m.risk.acilis_durdu["elle_dur"]                                                  # /baslat = /devam
+
+
+def test_dur_ve_devam_telegramdan_gelir(tmp_path):
+    tgp = SahteTG([])
+    m, hl, saat, tgp = kur(tmp_path, tgp=tgp)
+    m.baslat()
+    tgp.guncellemeler.append(tg_mesaj(10, "/dur"))
+    m.dakika()
+    assert m.risk.acilis_durdu["elle_dur"]
+    tgp.guncellemeler.append(tg_mesaj(11, "/devam"))
+    m.dakika()
+    assert not m.risk.acilis_durdu["elle_dur"]
+
+
+def test_devam_kapat_sonrasi_motoru_acmaz(tmp_path):
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    m.dur_tetikle("komut")
+    tgp.guncellemeler.append(tg_mesaj(20, "/devam"))
+    m.dakika()
+    assert m.risk.dur and any("Motor kapalı" in x for x in tgp.gonderilen)
 
 
 def test_zirveden_20_dusus_dur_ve_gunluk_kayip_alarmi(tmp_path):

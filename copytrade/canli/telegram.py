@@ -1,6 +1,6 @@
 """Telegram bildirimi + komutlar (Bot API doğrudan; görev T4 §1). Token/chat YALNIZ ortamdan (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`); yoksa kanal KAPALI (mesajlar yalnız kayda yazılır, motor çökmez).
 
-`post(url, json) -> dict` enjekte edilir (testte sahte). K‑37: komut yalnız `chat.id == chat_id` VE `from.id == chat_id` (özel sohbet) ise kabul edilir; yetkisiz komut kayda alınır; motor başlangıcından ÖNCE tarihli mesajlar yok sayılır (eski /dur yeniden tetiklenmez); `offset` motor.json'da kalıcıdır. Komutlar: `/dur` (motoru durdur: pozisyonları kapat) ve `/durum`. Mesajlar kısa, adres kısaltılır (ilk 8 karakter).
+`post(url, json) -> dict` enjekte edilir (testte sahte). K‑37: komut yalnız `chat.id == chat_id` VE `from.id == chat_id` (özel sohbet) ise kabul edilir; yetkisiz komut kayda alınır; motor başlangıcından ÖNCE tarihli mesajlar yok sayılır (eski /dur yeniden tetiklenmez); `offset` motor.json'da kalıcıdır. Komutlar: `/dur` (yeni giriş/artırma durur; çıkış serbest), `/devam` (= `/baslat`; duraklatmayı kaldırır), `/kapat` (tüm pozisyonları kapat, motoru durdur) ve `/durum`. Mesajlar kısa, adres kısaltılır (ilk 8 karakter).
 """
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import time
 from typing import Any, Callable
 
 ONEMLI_ONEKLER = ("ALARM", "DUR", "TASFİYE", "🚨", "🛑", "💥")          # her zaman sesli
-KOMUTLAR = ("/dur", "/durum")
+KOMUTLAR = ("/dur", "/devam", "/baslat", "/kapat", "/durum")
 
 
 def kisa(adres: str) -> str:
@@ -85,7 +85,7 @@ class Telegram:
             return False
 
     def komutlari_al(self) -> list[str]:
-        """Yeni komutları (`/dur`, `/durum`) döner; yalnız `chat_id`'den gelenler; offset ilerler."""
+        """Yeni komutları (`KOMUTLAR`) döner; yalnız `chat_id`'den gelenler; offset ilerler."""
         if not self.acik:
             return []
         try:
@@ -183,10 +183,10 @@ def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_s
     return "\n".join(satirlar)
 
 
-def msg_durum(kip: str, ozsermaye: float, kasa: float, saha: int, n: int, inen: int, acik_poz: int, emir: int, dur: bool) -> str:
+def msg_durum(kip: str, ozsermaye: float, kasa: float, saha: int, n: int, inen: int, acik_poz: int, emir: int, dur: bool, duraklat: bool = False) -> str:
     return (f"📊 Anlık durum ({kip_adi(kip)})\n{AYRAC}\n💰 Özsermaye {tr_sayi(ozsermaye)} $ (kasaya göre {tr_yuzde(ozsermaye / kasa - 1)})\n"
             f"👥 Takipte {saha}/{n} trader" + (f" · {inen} tanesi ayrılıyor (pozisyonları kapanıyor)" if inen else "") + f"\n"
-            f"📌 Açık pozisyon: {acik_poz}\n🧾 Bu turda emir: {emir}\n" + ("🛑 Motor DURDURULDU" if dur else "🛡️ Risk: normal, motor çalışıyor"))
+            f"📌 Açık pozisyon: {acik_poz}\n🧾 Bu turda emir: {emir}\n" + ("🛑 Motor DURDURULDU" if dur else "⏸️ Yeni işlem duraklatıldı (/devam ile açılır)" if duraklat else "🛡️ Risk: normal, motor çalışıyor"))
 
 
 def msg_emir_ozeti(kip: str, emirler: list[dict], dakika: float) -> str:
