@@ -108,3 +108,18 @@ def test_html_pano_turkce_biçim_ve_kacis(tmp_path):
     h = pano.html_olustur(ozet, {"gun_basi": 1000.0, "zirve": 1020.0}, {}, [], [{"gun": "2026-11-01", "ozsermaye": 1000.0}], 1_793_900_000_000)
     assert "1.012,50 $" in h and "+%1,25" in h and "1.234,00 $" in h and "−3,50 $" in h and "<polyline" in h and "<script>" not in h and "TSİ" in h and "GERÇEK PARA" not in h
     assert "GERÇEK PARA" in pano.html_olustur({**ozet, "kip": "gercek"}, {}, {}, [], [], 1_793_900_000_000)
+
+
+def test_html_pano_kadro_sekmesi_ilk11_yedek_ve_bize_verdigi(tmp_path):
+    from copytrade.canli import pano
+    a1, a2, a3 = "0xaaaa111122223333", "0xbbbb111122223333", "0xcccc111122223333"
+    kadro = {"kosu_ms": 1_793_863_000_000, "satirlar": [
+        {"adres": a1, "sira": 1, "katman": "ilk11", "form": 75.0, "kopya_getiri_7g": 0.014, "max_kaldirac": 5.0},
+        {"adres": a2, "sira": 2, "katman": "ilk11", "form": 60.0, "kopya_getiri_7g": 0.01, "max_kaldirac": 7.0},
+        {"adres": a3, "sira": 12, "katman": "yedek", "form": 30.0, "kopya_getiri_7g": 0.005, "max_kaldirac": 9.0}]}
+    ozet = {"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "acik": [{"adres": a1, "coin": "BTC", "sz": 1.0, "usd": 100.0, "kz_usd": -2.0}]}
+    hesap = {"realize": {a1: 5.0}, "ucret": {a1: 1.0}, "slot_bas": {a1: 90.0}}
+    saha = {"uyeler": {a1: {"giris_ms": 1_793_800_000_000}}, "inen": {}}
+    h = pano.html_olustur(ozet, {}, hesap, [{"olay": "emir", "adres": a1, "zaman_ms": 1_793_850_000_000, "coin": "BTC", "yon": "B", "durum": "dolu"}], [], 1_793_900_000_000, kadro, saha)
+    assert 'SAHADA' in h and 'SIRADA' in h and 'YEDEK' in h and "YEDEKLER" in h
+    assert "+2,00 $" in h and "Emir sayısı" in h                                                      # a1 net = 5 − 1 + (−2) = +2,00 $
