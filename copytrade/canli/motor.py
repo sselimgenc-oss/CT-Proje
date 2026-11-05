@@ -386,7 +386,7 @@ class Motor:
         inen = adres in self.saha.inen and adres not in self.saha.uyeler
         if acilis and inen:
             return self._atla(o, adres, eylem, "engel", "inen_trader")
-        if acilis and self.hesap.ters_yonlu_var(adres, o.coin, "B" if sonra > 0 else "A"):          # K‑41: başka trader'dan ters yönlü kopya pozisyonu var → net küçülmesin, açılış yok
+        if acilis and self.hesap.ters_yonlu_var(adres, o.coin, "B" if sonra > 0 else "A", self.marks, float(self.rules["canli_kapanis_toz_usd"])):          # K‑41: başka trader'dan ters yönlü kopya pozisyonu var → net küçülmesin, açılış yok
             return self._atla(o, adres, eylem, "atlandi", "ters_netlesme")
         yeni_coin = eylem == "ac" and abs(biz_sz) < EPS            # bizim için taze pozisyon (patlama freni sayacı)
         if acilis:
@@ -744,16 +744,30 @@ class Motor:
             return None
 
     def ofset_yenile(self, satirlar: list[dict] | None, simdi: int) -> bool:
-        """#5: yeni yatırma/çekme (`deposit`/`withdraw`) satırı görülünce `hl_ofset = HL değeri − yerel özsermaye` yeniden hesaplanır ve kayda yazılır. Yalnız HL değeri okunmadan ÖNCE gerçekleşmiş
-        satırlar (`zaman ≤ hl_oz_ms`) işlenir; sonrakiler bir sonraki okumaya kalır (değer henüz yatırmayı içermeyebilir). HL hesabında kasa ayarı kadar para tutulursa ofset 0 çıkar."""
-        if self.kip != "gercek" or not satirlar or self.hl_oz is None:
+        """#5: yeni yatırma/çekme (`deposit`/`withdraw`) satırı görülünce `hl_ofset += net` (net = yatırma − çekme, HL hesabı $). HL − yerel FARKI KORUNUR (birikmiş gerçek funding/kayma/ücret farkı silinmez;
+        günlük/zirve freni ve mutabakat bayrağı çalışmaya devam eder). Yalnız HL değeri okunmadan ÖNCE gerçekleşmiş satırlar (`zaman ≤ hl_oz_ms`) işlenir; sonrakiler bir sonraki okumaya kalır.
+        `internalTransfer`/`send`/`subAccountTransfer` vb. SAYILMAZ (kasa dışına/içine dış para değil; sayılırsa ofset yanlış kayar), yalnız `ofset_atlanan_tur` olarak kaydedilir (bilgi).
+        HL hesabında kasa ayarı kadar para tutulursa ofset 0 olur."""
+        if self.kip != "gercek" or not satirlar or self.hl_oz is None or self.ledger_son_ms is None or self.hl_ofset is None:
             return False
-        yeni = [s for s in satirlar if (s.get("delta") or {}).get("type") in ("deposit", "withdraw") and isinstance(s.get("time"), (int, float)) and self.ledger_son_ms < s["time"] <= self.hl_oz_ms]
+        yeni, atlanan = [], {}
+        for s in satirlar:
+            z, tur = s.get("time"), (s.get("delta") or {}).get("type")
+            if not isinstance(z, (int, float)) or not self.ledger_son_ms < z <= self.hl_oz_ms:
+                continue
+            if tur in ("deposit", "withdraw"):
+                yeni.append(s)
+            else:
+                atlanan[str(tur)] = atlanan.get(str(tur), 0) + 1
+        if atlanan:
+            self.kayit({"olay": "ofset_atlanan_tur", "turler": atlanan})
         if not yeni:
+            self.ledger_son_ms = int(max([self.ledger_son_ms] + [s["time"] for s in satirlar if isinstance(s.get("time"), (int, float)) and s["time"] <= self.hl_oz_ms]))
             return False
-        net = sum((float(s["delta"].get("usdc") or 0.0)) * (1 if s["delta"]["type"] == "deposit" else -1) for s in yeni)
-        eski, self.hl_ofset = self.hl_ofset, self.hl_oz - self.yerel_ozsermaye()
-        self.ledger_son_ms = int(max(s["time"] for s in yeni))
+        net = sum(float(s["delta"].get("usdc") or 0.0) * (1 if s["delta"]["type"] == "deposit" else -1) for s in yeni)
+        eski = self.hl_ofset
+        self.hl_ofset = eski + net
+        self.ledger_son_ms = int(max(s["time"] for s in satirlar if isinstance(s.get("time"), (int, float)) and s["time"] <= self.hl_oz_ms))
         self.kayit({"olay": "ofset_yenilendi", "eski": eski, "yeni": self.hl_ofset, "net_usd": net, "satir": len(yeni)})
         return True
 

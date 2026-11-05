@@ -66,6 +66,40 @@ def test_ters_netlesme_sonrasi_atlanan_traderin_kapanisi_net_pozisyonu_buyutmez(
     assert m.hesap.sz(adr(1), "BTC") == pytest.approx(onceki) and m.hesap.sz(adr(2), "BTC") == 0.0
 
 
+def test_karsi_yonde_pozisyon_tutan_traderin_azalt_ve_kapat_islemi_engellenmez(tmp_path):
+    """T1 BTC long (kopya var). T2 short açamadı (ters_netlesme). Ayrıca T2 başka coinde (ETH) short tutuyken T1'in ETH long AÇILIŞI atlanır; ama T2'nin kendi ETH azaltma/kapatması çalışır."""
+    m, hl, saat = _iki_trader(tmp_path)
+    m.olay_isle(olay("b:1", adr(2), "ETH", "A", 15, 2000.0, 0.0, saat))                    # T2 ETH short açtı
+    assert m.hesap.sz(adr(2), "ETH") < 0
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))                    # T1 long BTC
+    s = m.olay_isle(olay("b:2", adr(2), "ETH", "B", 10, 2000.0, -15.0, saat))              # T2 azaltır (2/3 → ~18 $)
+    assert s[0].eylem == "azalt" and s[0].karar == "emir"
+    s = m.olay_isle(olay("b:3", adr(2), "ETH", "B", 5, 2000.0, -5.0, saat))                 # T2 kapatır
+    assert s[0].eylem == "kapat" and m.hesap.sz(adr(2), "ETH") == 0.0
+    assert not [x for x in kayitlar(tmp_path, "emir_yok") if x["neden"] == "ters_netlesme"]
+
+
+def test_toz_kalintisi_ters_acilisi_bloklamaz(tmp_path):
+    """Kopya pozisyon nosyoneli ≤ `canli_kapanis_toz_usd` (1 $) ise toz sayılır; 1,5 $ ise ters_netlesme."""
+    h = hs.Hesap(1000.0)
+    h.uygula(adr(1), "BTC", "B", 0.009, 100.0, 0.0, 1)                       # 0,9 $
+    assert h.ters_yonlu_var(adr(2), "BTC", "A", {"BTC": 100.0}, 1.0) is False
+    assert h.ters_yonlu_var(adr(2), "BTC", "A", {"BTC": 100.0}, 0.0) is True
+    h.uygula(adr(1), "BTC", "B", 0.006, 100.0, 0.0, 2)                       # 1,5 $
+    assert h.ters_yonlu_var(adr(2), "BTC", "A", {"BTC": 100.0}, 1.0) is True
+    m, hl, saat = _iki_trader(tmp_path)
+    m.hesap.uygula(adr(1), "BTC", "B", 0.009, 100.0, 0.0, 1)
+    s = m.olay_isle(olay("b:1", adr(2), "BTC", "A", 300, 100.0, 0.0, saat))
+    assert s[0].karar == "emir"                                              # motor, toz eşiğini kurallardan alır
+
+
+def test_hip3_dex_coin_dizgesi_ayri_coin(tmp_path):
+    h = hs.Hesap(1000.0)
+    h.uygula(adr(1), "xyz:TSLA", "B", 1.0, 100.0, 0.0, 1)
+    assert h.ters_yonlu_var(adr(2), "xyz:TSLA", "A") is True
+    assert h.ters_yonlu_var(adr(2), "TSLA", "A") is False and h.ters_yonlu_var(adr(2), "abc:TSLA", "A") is False
+
+
 def test_pano_atlanan_sinyaller_ters_netlesme_nedenini_gosterir():
     from copytrade.canli import pano
     html = pano._atlanan_html([{"olay": "emir_yok", "neden": "ters_netlesme"}] * 2 + [{"olay": "emir_yok", "neden": "marj_yok"}])
@@ -137,45 +171,63 @@ class LedgerSim(BorsaSim):
         return super().post(y)
 
 
-def test_yatirma_gorulunce_ofset_yeniden_hesaplanir_ve_kayda_yazilir(tmp_path, monkeypatch):
-    """Kasa 1.000, HL 1.000 → ofset 0. 500 $ yatırılır (HL 1.500, ledger satırı): ofset = 1.500 − 1.000 (yerel) = 500; risk temeli 1.000 kalır. Aynı satır ikinci kez ofseti oynatmaz.
-    Boş ledger ofseti değiştirmez. 200 $ çekim: ofset 300."""
+def test_yatirma_cekme_ofseti_net_kadar_kaydirir_hl_yerel_farki_korunur_altin_ornek(tmp_path, monkeypatch):
+    """Yerel 1.000, HL 1.000 → ofset 0. HL 1.012 (birikmiş +12 gerçek fark). 300 $ yatırma → HL 1.312: ofset 300 (= 0 + 300), risk temeli 1.012 (fark 12 KORUNUR, silinmez).
+    Aynı satır tekrar işlenmez. 100 $ çekme → HL 1.212: ofset 200, risk temeli yine 1.012."""
     sim = LedgerSim(deger=1000.0)
     m, sim, saat, _ = kur_gercek(tmp_path, monkeypatch, sim)
     m.baslat()
     m.dakika()
     assert m.hl_ofset == pytest.approx(0.0) and m.ledger_son_ms is not None
+    sim.deger = 1012.0
     saat.ms += 60_000
-    m.dakika()                                                            # boş ledger
-    assert m.hl_ofset == pytest.approx(0.0) and not kayitlar(tmp_path, "ofset_yenilendi")
-    sim.deger = 1500.0
-    sim.ledger.append(_satir(saat.ms + 59_000, 500.0, "deposit"))
+    m.dakika()                                                            # boş ledger: ofset aynı
+    assert m.hl_ofset == pytest.approx(0.0) and not kayitlar(tmp_path, "ofset_yenilendi") and m.ozsermaye() == pytest.approx(1012.0)
+    sim.deger = 1312.0
+    sim.ledger.append(_satir(saat.ms + 59_000, 300.0, "deposit"))
     saat.ms += 60_000
     m.dakika()
-    assert m.hl_ofset == pytest.approx(500.0) and m.ozsermaye() == pytest.approx(1000.0) and not m.risk.acilis_durdu.get("mutabakat")
+    assert m.hl_ofset == pytest.approx(300.0) and m.ozsermaye() == pytest.approx(1012.0) and m.yerel_ozsermaye() == pytest.approx(1000.0)
     ev = kayitlar(tmp_path, "ofset_yenilendi")
-    assert len(ev) == 1 and ev[0]["eski"] == pytest.approx(0.0) and ev[0]["yeni"] == pytest.approx(500.0) and ev[0]["net_usd"] == pytest.approx(500.0)
+    assert len(ev) == 1 and ev[0]["eski"] == pytest.approx(0.0) and ev[0]["yeni"] == pytest.approx(300.0) and ev[0]["net_usd"] == pytest.approx(300.0)
     saat.ms += 60_000
     m.dakika()
-    assert len(kayitlar(tmp_path, "ofset_yenilendi")) == 1                # aynı satır tekrar işlenmez
-    sim.deger = 1300.0
-    sim.ledger.append(_satir(saat.ms + 59_000, 200.0, "withdraw"))
+    assert len(kayitlar(tmp_path, "ofset_yenilendi")) == 1 and m.hl_ofset == pytest.approx(300.0)       # aynı satır tekrar işlenmez
+    sim.deger = 1212.0
+    sim.ledger.append(_satir(saat.ms + 59_000, 100.0, "withdraw"))
     saat.ms += 60_000
     m.dakika()
-    assert m.hl_ofset == pytest.approx(300.0) and m.ozsermaye() == pytest.approx(1000.0)
-    motor = json.loads((tmp_path / "durum" / "motor.json").read_text(encoding="utf-8"))
-    assert motor["hl_ofset"] == pytest.approx(300.0) and motor["ledger_son_ms"] == m.ledger_son_ms
+    assert m.hl_ofset == pytest.approx(200.0) and m.ozsermaye() == pytest.approx(1012.0)
 
 
-def test_ofset_yalniz_hl_degerinden_once_gerceklesen_satirlari_isler_ve_diger_turleri_yoksayar(tmp_path, monkeypatch):
+def test_ledger_son_ms_ve_ofset_motor_jsonda_kalici_yeniden_baslatmada_yuklenir(tmp_path, monkeypatch):
     sim = LedgerSim(deger=1000.0)
     m, sim, saat, _ = kur_gercek(tmp_path, monkeypatch, sim)
     m.baslat()
     m.dakika()
+    sim.deger = 1500.0
+    sim.ledger.append(_satir(saat.ms + 59_000, 500.0, "deposit"))
+    saat.ms += 60_000
+    m.dakika()
+    motor = json.loads((tmp_path / "durum" / "motor.json").read_text(encoding="utf-8"))
+    assert motor["hl_ofset"] == pytest.approx(500.0) and motor["ledger_son_ms"] == m.ledger_son_ms and m.ledger_son_ms is not None
+    m2, *_ = kur_gercek(tmp_path, monkeypatch, sim, saat=saat)
+    assert m2.hl_ofset == pytest.approx(500.0) and m2.ledger_son_ms == m.ledger_son_ms
+
+
+def test_ofset_yalniz_hl_degerinden_once_gerceklesen_satirlari_isler_diger_turler_sayilmaz_ama_kaydedilir(tmp_path, monkeypatch):
+    sim = LedgerSim(deger=1000.0)
+    m, sim, saat, _ = kur_gercek(tmp_path, monkeypatch, sim)
+    m.baslat()
+    m.dakika()
+    saat.ms += 60_000
+    m.dakika()
     son = m.ledger_son_ms
-    assert m.ofset_yenile([_satir(son + 5, 10.0, "accountClassTransfer")], saat()) is False         # iç transfer: ofset kayması yok
+    diger = [_satir(son + 5, 10.0, "internalTransfer"), _satir(son + 6, 10.0, "send"), _satir(son + 7, 10.0, "subAccountTransfer")]
+    assert m.ofset_yenile(diger, saat()) is False and m.hl_ofset == pytest.approx(0.0)
+    assert kayitlar(tmp_path, "ofset_atlanan_tur")[-1]["turler"] == {"internalTransfer": 1, "send": 1, "subAccountTransfer": 1}
     assert m.ofset_yenile([_satir(m.hl_oz_ms + 1000, 50.0, "deposit")], saat()) is False            # HL değeri okunduktan SONRA: sonraki okumaya kalır
-    assert m.ledger_son_ms == son and m.hl_ofset == pytest.approx(0.0)
+    assert m.hl_ofset == pytest.approx(0.0)
 
 
 def test_sanal_kipte_ofset_ve_ledger_yok(tmp_path):
