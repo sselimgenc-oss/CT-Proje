@@ -24,3 +24,9 @@ Sonnet kararları ve belgede olmayan yorumlar (lider onayına):
   - #5 (düşük) `hl_ofset` bir kez sabitlenir; yatırma/çekme veya hatalı ilk okumada kayar.
   - #6 (düşük) kuyruk taşınca düşen açılışlar `poz_tr`'yi güncellemez; 600 sn senkron düzeltir.
   - #7 (düşük, sanal) kaçan funding saatleri o anki oran/pozisyonla yazılır; oranı okunamayan coin sessizce atlanır.
+
+## Lider kararı 05.11 akşam — güvenlik dalı `claude/t4b-guvenlik-1` (#2, #3, #6, #7)
+- **#2:** `niyetleri_coz` dolanı `origSz − sz` ile durumdan bağımsız alır (`canceled` dahil); `sz` kalmış ya da iptalse "kismi" sayılır. Kalan KISMİ AZALTMA < `canli_min_nosyonel_usd` (10 $) ise atlanır (`min_nosyonel`, `kismi_azaltma_atlandi`), değilse kapanış kuyruğuna girer; kısmi/dolmayan KAPAT kuyruğa girer (yorum: belge yalnız azaltmayı söylüyor, kapanışı açıkta bırakmamak için ekledim).
+- **#3:** `_yaz` atomik (tmp + fsync + os.replace + dizin fsync). Her `_yurut` sonucundan sonra `motor.json` ARDINDAN `hesap.json` yazılır (hesap SON: işaretçi). `hesap.json.son_niyet_cloid` = son uygulanan niyet; açılışta (`niyetleri_coz` → `_oynat`) niyet dosyasında bundan sonraki sonuçlu satırlar (`sz`,`px`,`ucret`) deftere uygulanır. Eski biçim hesap.json (alan yok) → işaretçi dosya sonuna çekilir (geçmiş oynatılmaz). İşaretçi niyet dosyasında yoksa oynatılmaz + `mutabakat` bayrağı (fail-safe). `hesap.json` hiç yoksa tüm niyetler oynatılır. Not: `durum_yaz` (dakikalık) `saha.json`/`risk.json` yazmaya devam eder; dolum anında yalnız hesap+motor yazılır.
+- **#6:** Kuyruk taşınca düşen olaylar `OncelikliKuyruk.dusenler`e eklenir; tüketici `Motor.dusen_isle` ile `poz_tr`'yi günceller (emir yok; kilit içinde, olay döngüsünü bloklamamak için tüketici iş parçacığında). Daha yeni trader dolumu işlenmişse (zaman damgası) eski düşen olay yeniyi ezmez.
+- **#7:** `funding_oran_yok` sayacı (`sayac` + `ozet.json` üst düzey alan) ve `kayit` satırı; pano bilgi satırı eklenmedi (gerekirse lider).
