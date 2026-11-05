@@ -235,6 +235,8 @@ class Motor:
         self._ozet_oz: float | None = m.get("ozet_oz")              # önceki günlük özetteki özsermaye ("dünün sonucu" bundan hesaplanır)
         self._ozet_emir = int(m.get("ozet_emir", 0))               # önceki özetten beri emir sayısı
         self._emir_tampon: list[dict] = []                 # Telegram: emirler dakikalık adımda TEK özet mesajına toplanır
+        self._atla_tampon: dict[str, int] = {}             # Telegram sanal saatlik özet: pencerede atlanan sinyaller (neden -> adet)
+        self._ozet_pencere_bas: int = self.baslama_ms      # saatlik özet penceresinin başı (motor saati); kalıcı DEĞİL (çökmede tampon kaybolabilir)
         self.kor_kirpildi: list[dict] = []
         self.atlanan_trader: dict[str, dict[str, int]] = {"spot_atlandi": {}, "hip3_atlandi": {}}      # K‑42 bilgi: neden -> {adres: adet}
         self.neden_say: dict[str, int] = {}          # boyut / risk nedenleri sayacı (slot_tavani, marj_yok, coin_tavani …)
@@ -491,6 +493,8 @@ class Motor:
     def _atla(self, o: Olay, adres: str, eylem: str, karar: str, neden: str) -> Sonuc:
         self.sayac[karar] += 1
         self._say_neden(neden)
+        if self.kip == "sanal":
+            self._atla_tampon[neden] = self._atla_tampon.get(neden, 0) + 1
         self.kayit({"olay": "emir_yok", "adres": adres, "coin": o.coin, "eylem": eylem, "karar": karar, "neden": neden, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
                     "yas_ms": self.saat_ms() - o.zaman_ms})
         return Sonuc(adres, o.coin, eylem, karar, neden)
@@ -936,11 +940,26 @@ class Motor:
 
     def emir_ozeti(self, simdi: int, zorla: bool = False) -> None:
         """Biriken emirleri tek Telegram mesajı olarak gönderir (`canli_telegram_emir_ozet_sn` aralığında; vardiya sonunda `zorla`)."""
+        dk = float(self.rules.get("canli_telegram_sanal_ozet_dk", 0) or 0)
+        if self.kip == "sanal" and dk > 0:
+            return self._saatlik_ozet(simdi, dk, zorla)
         sn = float(self.rules["canli_telegram_emir_ozet_sn"])
         if not self._emir_tampon or not (zorla or self._aralik_mi("emir_ozeti", simdi, sn)):
             return
         emirler, self._emir_tampon = self._emir_tampon, []
         self.tg.gonder(tg.msg_emir_ozeti(self.kip, emirler, sn / 60.0))
+
+    def _saatlik_ozet(self, simdi: int, dk: float, zorla: bool) -> None:
+        """SANAL kip: emirler `canli_telegram_sanal_ozet_dk` dakikalık pencerede TEK mesajda (pencere motor saatinden). Emir yoksa mesaj yok. `zorla` (vardiya sonu): kalan pencere hemen gider."""
+        bas = self._ozet_pencere_bas
+        if not zorla and simdi - bas < dk * DAKIKA:
+            return
+        emirler, atlanan = self._emir_tampon, self._atla_tampon
+        self._emir_tampon, self._atla_tampon = [], {}
+        self._ozet_pencere_bas = simdi
+        metin = tg.msg_sanal_saatlik(bas, simdi, round((simdi - bas) / DAKIKA) if zorla else dk, emirler, atlanan)
+        if metin:
+            self.tg.gonder(metin)
 
     def _tasfiye(self, simdi: int) -> None:
         if self.kip != "sanal":

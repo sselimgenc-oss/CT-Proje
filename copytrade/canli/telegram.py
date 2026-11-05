@@ -8,6 +8,7 @@ import os
 from datetime import datetime, timezone
 import re
 import time
+from datetime import timedelta
 from typing import Any, Callable
 
 ONEMLI_ONEKLER = ("ALARM", "DUR", "TASFİYE", "🚨", "🛑", "💥")          # her zaman sesli
@@ -222,6 +223,38 @@ def msg_emir_ozeti(kip: str, emirler: list[dict], dakika: float) -> str:
     kaymalar = [abs(x["kayma"]) * 1e4 for x in emirler if x.get("kayma") is not None]
     if kaymalar:
         satirlar.append(f"↳ Trader'a göre ortalama fark {sum(kaymalar) / len(kaymalar):.1f} bp (küçük = iyi)")
+    return "\n".join(satirlar)
+
+
+TSI = timezone(timedelta(hours=3))
+ATLA_TR = {"gec_acilis": "geç görülen açılış", "spot_atlandi": "spot coin", "hip3_atlandi": "HIP-3 coin", "ters_netlesme": "ters netleşme", "trader_hesap_yok": "trader hesabı okunamadı",
+           "slot_tavani": "slot tavanı", "marj_yok": "marj yok", "coin_tavani": "coin tavanı", "min_nosyonel": "çok küçük emir"}
+
+
+def _tsi_saat(ms: int) -> str:
+    return datetime.fromtimestamp(ms / 1000, TSI).strftime("%H:%M")
+
+
+def msg_sanal_saatlik(bas_ms: int, bit_ms: int, sure_dk: float, emirler: list[dict], atlanan: dict[str, int]) -> str:
+    """SANAL kip saatlik özet (tek mesaj). `emirler`: {adres, coin, yon, usd ($, sanal 1.000 $ kopya ölçeği), durum, eylem, kayma (oran)}; `atlanan`: neden -> adet. Emir yoksa '' (mesaj gönderilmez)."""
+    if not emirler:
+        return ""
+    sure = f"{int(sure_dk // 60)} saat" if sure_dk >= 60 and sure_dk % 60 == 0 else f"{sure_dk:.0f} dk"
+    say = {k: sum(1 for e in emirler if e.get("eylem") == k) for k in ("ac", "artir", "azalt", "kapat")}
+    en = max(emirler, key=lambda e: e["usd"])
+    satirlar = [f"🧾 Son {sure} ({_tsi_saat(bas_ms)}–{_tsi_saat(bit_ms)} TSİ): {len(emirler)} emir · sanal",
+                f"➕ açılış {say['ac']} · ⬆️ artırma {say['artir']} · ⬇️ azaltma {say['azalt']} · ✖️ kapanış {say['kapat']}",
+                f"🏆 En büyük: {tr_sayi(en['usd'], 0 if en['usd'] >= 100 else 1)} $ ({en['coin']}, {'AL' if en['yon'] == 'B' else 'SAT'}) · {kisa(en['adres'])}"]
+    if atlanan:
+        top = sum(atlanan.values())
+        neden, adet = max(atlanan.items(), key=lambda kv: (kv[1], kv[0]))
+        satirlar.append(f"⏭️ Atlanan sinyal: {top} (en çok: {ATLA_TR.get(neden, neden)} {adet})")
+    eksik = sum(1 for e in emirler if e["durum"] != "dolu")
+    if eksik:
+        satirlar.append(f"⚠️ {eksik} emir tam dolmadı")
+    toplam = f"💵 Tutar toplamı: {tr_sayi(sum(e['usd'] for e in emirler), 0)} $"
+    kaymalar = [abs(e["kayma"]) for e in emirler if e.get("kayma") is not None]
+    satirlar.append(toplam + (f" · kayma ort. %{tr_sayi(sum(kaymalar) / len(kaymalar) * 100, 3)}" if kaymalar else ""))
     return "\n".join(satirlar)
 
 
