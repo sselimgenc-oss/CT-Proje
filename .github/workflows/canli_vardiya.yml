@@ -9,6 +9,7 @@ name: Canlı vardiya (sanal kip)
 on:
   schedule:
     - cron: "7 */4 * * *"
+    - cron: "37 */4 * * *"          # YEDEK (T6 §4): birincil tetiklenmezse; kilit taze ise (başka vardiya aktif) başlamaz — beklenen durum, "BAŞLAMADI" alarmı DEĞİL
   workflow_dispatch:
     inputs:
       sure_dk:
@@ -31,7 +32,23 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  kontrol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      atla: ${{ steps.k.outputs.atla }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: k
+        name: Zamanlama kontrolü (yedek cron)
+        env:
+          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'canli-durum' || 'canli-durum-deneme' }}
+          ZAMANLAMA: ${{ github.event.schedule }}
+          YEDEK_CRON: "37 */4 * * *"
+        run: bash .github/scripts/zamanlama_kontrol.sh canli
   vardiya:
+    needs: kontrol
+    if: ${{ needs.kontrol.outputs.atla != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 290
     env:
@@ -55,6 +72,7 @@ jobs:
           if git ls-remote --exit-code --heads origin "$VERI_DALI" >/dev/null; then
             git fetch origin "$VERI_DALI"
             git archive FETCH_HEAD durum kayit | tar -x
+            if git cat-file -e FETCH_HEAD:pano/gecmis.json 2>/dev/null; then mkdir -p pano; git show FETCH_HEAD:pano/gecmis.json > pano/gecmis.json; fi
           else
             status=$?
             if [ "$status" -ne 2 ]; then exit "$status"; fi
@@ -83,6 +101,9 @@ jobs:
             cat durum/ozet.json
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Günlük rapor (pano/OZET.md)
+        if: ${{ always() && hashFiles('durum/ozet.json') != '' }}
+        run: python -u -m copytrade.canli.pano --durum durum --kayit kayit --gecmis pano/gecmis.json --cikti pano/OZET.md --isabet-dali "$KADRO_DALI"
       - name: Durumu veri dalına yaz
         if: ${{ always() }}
         run: bash .github/scripts/canli_yayimla.sh

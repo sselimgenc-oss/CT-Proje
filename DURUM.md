@@ -16,7 +16,7 @@ Form Radarı v1 (`docs/RADAR_V1.md`, K‑22…K‑26): her gün son 7 günde for
 | T4 canlı motor (`docs/GOREV_T4_CANLI_MOTOR.md`, K‑29/K‑30/K‑33) | **Birleşti** (#504); sanal kip Actions vardiyasında (`canli_vardiya.yml`); küçük kararlar `docs/sonnet_durum_t4.md` |
 | T4b motor sağlamlaştırma (`docs/GOREV_T4B_SAGLAMLASTIRMA.md`, K‑37) | Sonnet'te: PR açık (`claude/t4b-saglamlastirma`); kararlar `docs/sonnet_durum_t4b.md` |
 | T5 sunucu + canlıya alma (kullanıcı: sunucu, API cüzdanı, 1.000 $) | bekliyor |
-| T6 rapor + pano | bekliyor |
+| T6 isabet + rapor + pano + yedek cron + para hareketi (`docs/GOREV_T6_RAPOR_ISABET.md`) | Sonnet'te: PR açık (`claude/t6-rapor-isabet`); kararlar `docs/sonnet_durum_t6.md`; ilk gerçek isabet ölçümü 2026-11-12 |
 
 ## Kalan altyapı (yeni sistem kullanır)
 Kopya motoru (`defter.py`, `kopya_v2…v4`, `golge.py` çıkış kuralları), HL istemcisi (`tarama.py`, `hl_public_adapter.py`), anlık dinleyici

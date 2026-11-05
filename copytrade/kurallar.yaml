@@ -163,3 +163,11 @@ canli_kapanis_bantlari: [0.005, 0.01, 0.02, 0.02, 0.02]   # oran (kapanış yeni
 canli_kapanis_toz_usd: 1.0              # $ (borsa pozisyonu bu nosyonelin altındaysa "0" sayılır; toz)
 canli_bosluk_dk: 30                     # dakika (açılışta önceki kilit nabzı bundan eskiyse "vardiya boşluğu" alarmı)
 canli_kuyruk_max: 10000                 # olay (motor olay kuyruğu sınırı; taşarsa açılışlar düşer, kapanışlar kalır)
+
+# T6 (K-37): seçim isabeti ölçümü (docs/RADAR_V1.md §7b; yalnız ölçer, radar_* eşiklerine dokunmaz)
+isabet_pencere_gun: 7                   # gün (havuz tarihinden bu kadar sonra ölçülür; sonraki_7g penceresi)
+isabet_elenen_ust: 30                   # kişi (kopya aşamasına varıp elenenlerden sabit tohumla en çok bu kadar seçilir)
+isabet_butce_dk: 30                     # dakika (isabet adımı süre bütçesi; aşılırsa eksik yazılır, tarama bozulmaz)
+isabet_kotu_gecikme_dk: 3               # dakika (kötü senaryo gecikmesi)
+isabet_kotu_kayma_carpan: 2             # kat (kötü senaryo: maliyet_kayma bu kadar katı)
+para_hareketi_isaret_payi: 0.2          # oran (T6 §2, bilgi: net yatırma / hafta başı sermaye bunun üstündeyse raporda işaretlenir; kapıyı DEĞİŞTİRMEZ)
