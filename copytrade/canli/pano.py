@@ -157,6 +157,7 @@ ATLA_ETIKET = {
     "min_emir_atlandi": "Emir 11 $ alt sınırının altında kaldı", "patlama_freni": "Patlama freni (coin kısa süre durduruldu)", "inen_trader": "Trader sahadan iniyor (yeni açılış yok)",
     "slot_tavani": "Slot tavanı doldu (3 × slot)", "marj_yok": "Teminat sınırı", "gec_acilis": "Sinyal geç görüldü (> 120 sn)", "coin_tavani": "Coin tavanı (kasanın %30'u)",
     "trader_hesap_yok": "Trader hesap değeri okunamadı", "hesap_yok": "Trader hesap değeri kullanılamadı (hata)",
+    "spot_atlandi": "Spot dolum kopyalanmaz (yalnız perp, K‑42)", "hip3_atlandi": "HIP‑3 (dex önekli) coin kopyalanmaz (K‑42)",
     "ters_netlesme": "Aynı coinde ters yönlü kopya pozisyonu var (netleşme, K‑41)"}
 BILESEN_AD = (("G", "Güven ayarlı getiri"), ("K", "Kopya getirisi"), ("I1", "Kârlı gün oranı"), ("I2", "Düşüş (az = iyi)"), ("Y", "Yayılma"), ("H", "Hype yakalama"))
 ADRES_RE = re.compile(r"0x[0-9a-fA-F]{40}")
