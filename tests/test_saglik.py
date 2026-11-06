@@ -4,9 +4,12 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
 import yaml
 
 from copytrade import saglik as s
+
+_GERCEK_OKU = s.vardiya_kosulari_oku
 
 ROOT = Path(__file__).resolve().parents[1]
 SIMDI = 1_800_000_000_000
@@ -132,3 +135,100 @@ def test_telegram_alarm_kurali_kritik_her_kosuda_uyari_3_saatte_bir(monkeypatch,
         monkeypatch.setattr(_t, "time", lambda saat=saat: float(saat * 3600 + 86400 * 20000))
         s.main(["--telegram"])
         assert len(gonderilen) == beklenen
+
+
+# ---------------------------------------------------------------------------------------------- G2: kalıcı durum, kayıt olayları, vardiya koşusu, veri dalı yaşı
+def kos(sonuc, durum="completed", no=1):
+    return {"status": durum, "conclusion": sonuc, "run_number": no, "html_url": f"https://x/{no}"}
+
+
+def test_kalici_kuyrukta_eksik_girdi_kritik_vardiya_sayaci_0_iken_bile():
+    motor = {"kapanis_kuyrugu": {"0xab|BTC": {"eksik": True, "ms": SIMDI - 3 * SA}, "0xcd|ETH": {"eksik": False}}}
+    b = s.kontrol(SIMDI, ozet(kapanis_eksik=0), kadro(), motor=motor)
+    assert kodlar(b) == {"kapanis_kuyrugu_eksik"} and s.durum(b) == "KRITIK"
+    assert "1 EKSİK" in b[0].mesaj and "3.0 saat" in b[0].mesaj and "BTC" in b[0].mesaj
+    assert s.kontrol(SIMDI, ozet(), kadro(), motor={"kapanis_kuyrugu": {"0xcd|ETH": {"eksik": False}}}) == []
+    assert kodlar(s.kontrol(SIMDI, ozet(kapanis_eksik=1), kadro(), motor=motor)) == {"kapanis_eksik", "kapanis_kuyrugu_eksik"}      # eski bulgu korunur
+
+
+def test_risk_bayraklari_mutabakat_dur_gunluk_kayip_elle_dur():
+    risk = {"dur": False, "acilis_durdu": {"mutabakat": True, "gunluk_kayip": True, "elle_dur": True, "kasa_siniri": False, "kapanis_eksik": False}}
+    b = s.kontrol(SIMDI, ozet(), kadro(), risk=risk)
+    assert {x.kod: x.seviye for x in b} == {"mutabakat_bayragi": "KRITIK", "gunluk_kayip": "UYARI", "elle_dur": "UYARI"}
+    assert kodlar(s.kontrol(SIMDI, ozet(), kadro(), risk={"dur": True, "dur_neden": "zirve", "acilis_durdu": {}})) == {"risk_dur"}
+    d = s.kontrol(SIMDI, ozet(), kadro(), risk={"dur": False, "acilis_durdu": {}}, dur_dosyasi=True)
+    assert kodlar(d) == {"risk_dur"} and d[0].seviye == "KRITIK"
+    assert s.kontrol(SIMDI, ozet(), kadro(), risk={"dur": False, "acilis_durdu": {"mutabakat": False}}, motor={"kapanis_kuyrugu": {}}) == []
+
+
+def test_kayit_olaylari_son_2_saat_pencere():
+    ol = [{"zaman_ms": SIMDI - 30 * DK, "olay": "vardiya_boslugu", "dk": 157.4}, {"zaman_ms": SIMDI - 10 * DK, "olay": "vardiya_baslamadi"},
+          {"zaman_ms": SIMDI - 5 * DK, "olay": "kuyruk_tasti"}, {"zaman_ms": SIMDI - 3 * SA, "olay": "vardiya_boslugu", "dk": 99}, {"zaman_ms": SIMDI - 1 * DK, "olay": "emir"}]
+    b = s.kontrol(SIMDI, ozet(), kadro(), olaylar=ol)
+    assert {x.kod: x.seviye for x in b} == {"vardiya_boslugu": "KRITIK", "vardiya_baslamadi": "KRITIK", "kuyruk_tasti": "UYARI"}
+    m = next(x.mesaj for x in b if x.kod == "vardiya_boslugu")
+    assert "157.4 dk" in m and "1 kez" in m
+    assert s.kontrol(SIMDI, ozet(), kadro(), olaylar=[ol[3]]) == [] and s.kontrol(SIMDI, ozet(), kadro(), olaylar=None) == []
+
+
+def test_hata_sayaclari_kritik_vardiya_basina():
+    b = s.kontrol(SIMDI, ozet(kayit_sayac={"adim_hata": 2, "olay_hata": 0, "defter_hata": 1, "emir": 50}), kadro())
+    assert kodlar(b) == {"adim_hata", "defter_hata"} and s.durum(b) == "KRITIK"
+    assert s.kontrol(SIMDI, ozet(kayit_sayac={"adim_hata": 0}), kadro()) == []
+
+
+def test_vardiya_kosusu_failure_timed_out_kritik_cancelled_bilgi():
+    assert kodlar(s.kontrol(SIMDI, ozet(), kadro(), vardiya_kosulari=[kos("failure")])) == {"vardiya_kosusu_basarisiz"}
+    assert kodlar(s.kontrol(SIMDI, ozet(), kadro(), vardiya_kosulari=[kos("timed_out")])) == {"vardiya_kosusu_basarisiz"}
+    c = s.kontrol(SIMDI, ozet(), kadro(), vardiya_kosulari=[kos("cancelled")])
+    assert [(x.kod, x.seviye) for x in c] == [("vardiya_kosusu_iptal", "BILGI")] and s.durum(c) == "SAGLIKLI"          # adımsız/concurrency iptali sahte KRİTİK değil
+    assert s.kontrol(SIMDI, ozet(), kadro(), vardiya_kosulari=[kos("success")]) == []
+    assert s.kontrol(SIMDI, ozet(), kadro(), vardiya_kosulari=[kos(None, "in_progress"), kos("success", no=2)]) == []        # son TAMAMLANAN bakılır
+    assert s.kontrol(SIMDI, ozet(), kadro(), vardiya_kosulari=[]) == [] and s.kontrol(SIMDI, ozet(), kadro(), vardiya_kosulari=None) == []   # ağ hatası: bulgu yok
+
+
+def test_vardiya_kosulari_oku_ag_hatasinda_none():
+    assert _GERCEK_OKU("http://127.0.0.1:1/yok", timeout=1) is None
+
+
+def test_veri_dali_commit_yasi_esikleri_45_uyari_90_kritik():
+    assert s.kontrol(SIMDI, ozet(), kadro(), veri_dali_commit_ms=SIMDI - 40 * DK) == []
+    u = s.kontrol(SIMDI, ozet(), kadro(), veri_dali_commit_ms=SIMDI - 50 * DK)
+    assert [(x.kod, x.seviye) for x in u] == [("veri_dali_bayat", "UYARI")]
+    k = s.kontrol(SIMDI, ozet(), kadro(), veri_dali_commit_ms=SIMDI - 100 * DK)
+    assert [(x.kod, x.seviye) for x in k] == [("veri_dali_durdu", "KRITIK")]
+    assert s.kontrol(SIMDI, ozet(), kadro(), veri_dali_commit_ms=None) == []
+
+
+def test_ozet_yokken_kalici_bulgular_yine_gorunur():
+    assert {"ozet_yok", "mutabakat_bayragi"} <= kodlar(s.kontrol(SIMDI, None, kadro(), risk={"acilis_durdu": {"mutabakat": True}}))
+
+
+@pytest.fixture(autouse=True)
+def _hermetik_cli(monkeypatch):
+    """G2: `main` artık git fetch / GitHub REST çağırır; testler ağa ve gerçek git'e dokunmaz (kendi monkeypatch'leri bunun üstüne yazar)."""
+    for ad, deger in (("_git_fetch", True), ("_git_var", False), ("_git_son_commit_ms", None), ("kayit_olaylari", None), ("vardiya_kosulari_oku", None)):
+        monkeypatch.setattr(s, ad, lambda *a, _d=deger, **k: _d)
+
+
+def test_vardiya_kosusu_failure_sonrasi_calisan_kosu_bilgi_yoksa_kritik():
+    # (a) failure + ardından in_progress / queued -> yalnız BİLGİ (veri bayat olsa bile)
+    for durum in ("in_progress", "queued"):
+        b = s.kontrol(SIMDI, ozet(), kadro(), vardiya_kosulari=[kos(None, durum, 18), kos("failure", no=17)], veri_dali_commit_ms=SIMDI - 100 * DK)
+        assert [(x.kod, x.seviye) for x in b if x.kod.startswith("vardiya_kosusu")] == [("vardiya_kosusu_duzeldi", "BILGI")]
+    # (b) failure + sonrası yok + veri bayat -> KRİTİK
+    b = s.kontrol(SIMDI, ozet(), kadro(), vardiya_kosulari=[kos("failure", no=17)], veri_dali_commit_ms=SIMDI - 60 * DK)
+    assert "vardiya_kosusu_basarisiz" in kodlar(b) and s.durum(b) == "KRITIK"
+    # (c) failure sonra success -> bulgu yok
+    assert s.kontrol(SIMDI, ozet(), kadro(), vardiya_kosulari=[kos("success", no=18), kos("failure", no=17)]) == []
+    # failure + sonrası yok ama veri dalı taze -> BİLGİ
+    b = s.kontrol(SIMDI, ozet(), kadro(), vardiya_kosulari=[kos("failure", no=17)], veri_dali_commit_ms=SIMDI - 5 * DK)
+    assert s.durum(b) == "SAGLIKLI" and kodlar(b) == {"vardiya_kosusu_duzeldi"}
+
+
+def test_vardiya_boslugu_sonrasi_vardiya_surerken_uyari_yoksa_kritik():
+    ol = [{"zaman_ms": SIMDI - 40 * DK, "olay": "vardiya_boslugu", "dk": 157.4}]
+    b = s.kontrol(SIMDI, ozet(yazildi_ms=SIMDI - 5 * DK), kadro(), olaylar=ol, veri_dali_commit_ms=SIMDI - 5 * DK)
+    assert [(x.kod, x.seviye) for x in b] == [("vardiya_boslugu", "UYARI")]
+    assert s.durum(s.kontrol(SIMDI, ozet(yazildi_ms=SIMDI - 50 * DK), kadro(), olaylar=ol, veri_dali_commit_ms=SIMDI - 5 * DK)) == "KRITIK"      # olaydan sonra yazım yok
+    assert s.durum(s.kontrol(SIMDI, ozet(yazildi_ms=SIMDI - 5 * DK), kadro(), olaylar=ol, veri_dali_commit_ms=SIMDI - 60 * DK)) == "KRITIK"      # veri bayat
