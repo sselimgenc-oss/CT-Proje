@@ -3,7 +3,7 @@
 # Birincil cron tetiklenmediyse (2026-11-05'te radar.yml hiç tetiklenmedi) YEDEK cron aynı işi başlatır; iş zaten yapılmışsa HİÇBİR ŞEY yapmadan biter:
 #   radar : veri dalında bugünün `radar/<tarih>/havuz.json` dosyası varsa atla.
 #   canli : veri dalındaki `durum/kilit.json` taze ise (birakildi=false ve nabız < canli_kilit_dk) atla. Bu "BAŞLAMADI" alarmı DEĞİLDİR (beklenen durum): yalnız iş özetine bilgi satırı.
-# Yalnız `schedule` olayında atlayabilir (radar: her schedule; canli: zamanlama dizgisi YEDEK_CRON'a eşitse); elle / push tetiklemeleri her zaman çalışır. Çıktı: `atla=true|false` (GITHUB_OUTPUT).
+# Atlayabildiği olaylar: `schedule` (radar: her schedule; canli: zamanlama dizgisi YEDEK_CRON'a eşitse) ve canli için `workflow_dispatch` (G3: vardiya zinciri sonrakini dispatch ile tetikler; kilit taze/bırakılmamışsa atlar, çift vardiya olmasın). Push ve radar'ın elle tetiklemesi her zaman çalışır. Çıktı: `atla=true|false` (GITHUB_OUTPUT).
 set -euo pipefail
 mod="${1:?radar|canli}"
 veri_dali="${VERI_DALI:?}"

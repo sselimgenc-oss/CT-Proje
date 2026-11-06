@@ -21,6 +21,7 @@ Eksik bulunmuştu: arka planda çalışan sistemde bir şey ters giderse kimse f
 - Sınır: GitHub cron'u bazen geç/hiç tetiklenir; panodaki tarayıcı "VERİ BAYAT" uyarısı ikinci güvenlik ağıdır.
 
 ## Vardiya zinciri (G3, 2026-11-06)
-- GitHub cron geç kalıyor/kaçırıyor (05.11: 157 dk boşluk). Çare: canlı vardiya, motor NORMAL bitince bir sonrakini `gh workflow run canli_vardiya.yml --ref main` ile kendisi tetikler (yalnız main; dal denemeleri zincirlemez). Cron (7 ve 37. dk) yedek olarak durur.
-- Çift vardiya olmaz: dispatch koşusu `zamanlama_kontrol.sh` içinde taze kilitte (20 dk nabız) atlar; `concurrency` yeni koşuyu eskisi bitene kadar bekletir (fazla bekleyen iptal = `cancelled`, G2 sağlık bunu bilgi sayar).
-- Dispatch başarısızsa `::warning` + Telegram uyarısı; yedek cron ve vardiya hata alarmı sürer. `actions: write` yalnız vardiya işinde. Saatte bir (4. yayın turunda) `saglik.yml` de tetiklenir; saglik.yml kendi cron'unu korur.
+- GitHub cron geç kalıyor/kaçırıyor (05.11: 157 dk boşluk). Çare: `canli_vardiya.yml` içinde AYRI `zincir` işi (`needs: vardiya`, yalnız main ve yalnız vardiya başarılıysa, checkout yok) bir sonrakini `gh workflow run canli_vardiya.yml --ref main` ile tetikler; aynı işte vardiya sonu bir kez `saglik.yml` de tetiklenir (saglik.yml kendi saatlik cron'unu korur). Dal denemeleri zincirlemez. Cron (7 ve 37. dk) yedek olarak durur.
+- Actions yazma izni yalnız `zincir` işindedir; vardiya/kontrol işleri (pip, wrangler, motor) bu yetkiyi görmez.
+- Çift vardiya olmaz: dispatch koşusu `zamanlama_kontrol.sh` içinde taze kilitte (20 dk nabız) atlar; `concurrency` yeni koşuyu eski koşu (zincir işi dahil) TAMAMEN bitene kadar bekletir; fazla bekleyen koşu iptal olur (`cancelled`; G2 (#559) birleşince sağlık bunu bilgi sayar).
+- Dispatch başarısızsa `::warning` + Telegram uyarısı; yedek cron ve vardiya hata alarmı sürer.
