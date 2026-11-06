@@ -28,7 +28,7 @@ Kapsam: `main` 239d16f1 + veri dalları (`canli-durum` 21:00Z, `radar` 06.11). �
 | G-8 | `main`, `radar`, `canli-durum` dalları korumasız | Sunucu `main`'den çekiyor, kadroyu `radar` dalından okuyor; yazma izinli herhangi bir iş akışı/bağımlılık gerçek parayı yönlendirebilir. Kullanıcı: GitHub → Settings → Branches/Rulesets | GitHub ayarı |
 | G-9 | `deploy/kurulum.md` hataları | Kontrol komutu özel anahtarı `sudo` kaydına/`ps`'e düşürüyor ve yorum satırlarında çalışmıyor; satır içi yorum systemd'de değere karışıyor (`CANLI_KASA_USD=300  # …` → motor açılmaz) | `kurulum.md:27–40` |
 | G-10 | Dış "ölü adam" alarmı yok | Sunucu çökerse/ağ giderse açık pozisyonla sessizlik | K2/K3 |
-| G-11 | `sonnet_isci.yml` hâlâ açık | `@sonnet` yorumu yazma yetkili ajan başlatır. Kapatılmalı; `CLAUDE_CODE_OAUTH_TOKEN` sırrı kullanıcı tarafından iptal | iş akışı + GitHub Secrets |
+| G-11 | ~~`sonnet_isci.yml` hâlâ açık~~ **kaldırıldı 06.11** (kullanıcı: `CLAUDE_CODE_OAUTH_TOKEN` sırrı repoda yok) | `@sonnet` yorumu yazma yetkili ajan başlatır. Kapatılmalı; `CLAUDE_CODE_OAUTH_TOKEN` sırrı kullanıcı tarafından iptal | iş akışı + GitHub Secrets |
 
 ## 12.11 isabet ölçümünden ÖNCE
 - **R-1:** Aynı gün yeniden radar koşusu `radar/<gün>/kadro.json`'u üzerine yazıyor; motor günün İLK kadrosunu uyguluyor (K-39) → isabet farklı İlk 11'i ölçer (05.11 kanıtlı). Günün ilk kadrosu ayrı saklanmalı ya da isabet `canli-durum` `gun_kadro`'dan okumalı.
