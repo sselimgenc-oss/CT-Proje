@@ -58,6 +58,21 @@ Güncel tutulur; lider 09.11'de bunu okuyarak devralır. Saatler UTC, aksi belir
 
 **T5 öncesi kalanlar (Opus notları):** HL < 10 $ reduce-only (toz kalıntı, kullanıcı onaylı küçük gerçek deneme); kısmi azaltma kalıntısı 1–10 $ trader tam kapatınca `kapanis_eksik` (t4b); `kucuk_kalan_kapat` için hesap okuması yaşı/sapması koruması; `canli-durum-deneme` tek veri dalı iki dal çakışması (kilit); `azalt_oransal_yedek` tam/kısmi ayrımı kayda alanı; `orderStatus canceled` kalan `sz` varsayımı T5 denemesinde doğrulanacak.
 
+## Gece 05→06.11 — birleşenler ve kullanıcıya kalan kararlar (lider özeti)
+**Birleşenler (hepsi testli, Opus denetimli):** #536–#555 (kararlar, T4b güvenlik, K-41/K-42/K-43, Telegram komutları + saatlik özet + kasa satırı, pano düzeni/KADRO 11, K-38, devir belgeleri); #556 vardiya hata alarmı (G1); #557 gerçek funding/ücret deftere (G7); #558 vardiya zinciri + saatlik sağlık tetiği (G3, ayrı `zincir` işi, `actions: write` yalnız orada); #559 sağlık kalıcı durum (G2); #560 kip/kasa yalnız sunucu ortamı (G4); #561 kip uyuşmazlığında başlama yok (G5); #562 sunucu OnFailure alarmı + 15 dk maskeli nabız + gerçek kip sağlık (G8); #563 API cüzdan doğrulaması (G6). Her motor.py değişikliğinden sonra gerçek üretim durum dosyalarıyla YEREL sanal vardiya başlangıcı denendi (motor başladı, kip sanal, kayıt yazıldı).
+**Olay:** 06.11 00:57Z üretim vardiyası numpy yokluğundan başlamadı (#547 kaynaklı; düzeltme #552, ders: numpy'siz import testi). 7 günlük sayaç 01:07Z'den (K-42 22:04:55Z sonrası).
+**K-43 (radar HIP-3 hariç):** Opus onayıyla uygulandı (#548, #551); kullanıcı sabah onaylar, reddederse `radar_hip3_kopya: true` tek satır. İlk false kadronun yayın zamanı bugünkü radar koşusundan sonra KARARLAR K-43'e yazılacak. 400 aday (radar_aday_tavan): ölçüldü (25 geçen, 6'sı 301–400, 73,5 dk, 429=0) — 7 gün sonra, gerçek kip öncesi kadro etkisiyle yeniden ölçülecek.
+**Kullanıcıya kalan kararlar (T5 öncesi; hiçbirini lider tek başına vermez):**
+- K1: sunucu motoru devreye girince Actions vardiyası `vars.TELEGRAM_KOMUT=kapali` ile (ya da ayrı bot) çalışsın (Telegram tek tüketici).
+- K2: gerçek motor durumu nereye yayımlanacak (repo herkese açık; maskeli `canli-gercek` dalı mı?).
+- K3: bağımsız nabız/dead-man servisi (ör. Cloudflare Worker cron) gerekli mi.
+- K4: MetaMask + agent cüzdan (para çekme yetkisiz), ilk kasa 300 $; para hareketi yalnız `withdraw`/yatırma (`send` ofseti bozar: belge kuralı).
+- K5: sunucu ve `/etc/sg-canli.env`.
+- K6: HL < 10 $ reduce-only küçük gerçek deneme (toz kalıntı kapatma).
+- K7: hesap değeri 1.000 $'ı aşarsa (kâr) yeniden başlatmada motor açılmaz — kasıtlı ret mi (G6 notu).
+- K8: strateji kararları (O5/O6/O7; ilk 28 gün kilitli).
+**Kalan teknik (lider, T5 sonrası/öncesi):** `orderStatus canceled` kalan `sz` varsayımı gerçek denemede doğrulanacak; `userRole` yanıt biçimi kullanıcının kendi agent adresiyle `--kontrol` ile yeniden doğrulanacak; sağlık/zincir ilk gerçek çalışması izlenecek (09:30Z).
+
 ## Önerilen kararlar (lider)
 - **Telegram komutları (kullanıcı kararı 2026-11-05, lider denetimine):** `/kapat` = eski `/dur` (tüm pozisyonları kapat, motor durur, `DUR` dosyası). **Yeni `/dur`** = yalnız yeni giriş/artırma durur (`risk.acilis_durdu["elle_dur"]`, kalıcı); çıkış/azaltma serbest, motor çalışır, `DUR` yazılmaz (`docs/H2_KURULUM.md`'deki özgün `/dur` anlamı). `/devam` (= `/baslat`) duraklatmayı açar; `/kapat` sonrası açmaz (motor kapalı; yeniden açmak sunucudan — T5 sürekli sunucuda `DUR` silme/yeniden başlatma). Eski `/dur` testi `/kapat` ile aynen korundu.
 - **Opus bulguları (lidere, T5 öncesi):** (1) `/kapat` sonrası yalnız `durum/DUR` silinip motor yeniden başlatılırsa `risk.json` içindeki `dur: true` kalır ve motor açılış yapmaz — T5 yeniden açma prosedürü `risk.json dur`'u da sıfırlamalı (ya da `baslat` DUR yokken sıfırlamalı). (2) İki vardiya arasında gönderilen komutlar `telegram_eski_komut` olarak sessizce düşer (kullanıcıya yanıt yok): komutu vardiya başladıktan sonra tekrar gönder. (3) `gunluk_kayip`/`mutabakat` etkinken `/durum` hâlâ "Risk: normal" der (eski; küçük iyileştirme).
