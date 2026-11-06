@@ -118,6 +118,58 @@ def etkin_kasa(rules: dict, kip: str, post: Callable[[dict], Any], ortam: dict |
     return min(kasa, hl), hl
 
 
+def anahtardan_adres(anahtar: str) -> str:
+    """API cüzdan anahtarından adres türetir (`eth_account`; tembel içe aktarma). Yoksa ImportError. Anahtar/adres hiçbir yere yazılmaz."""
+    from eth_account import Account
+    return str(Account.from_key(anahtar).address)
+
+
+def _kucuk(x: Any) -> str:
+    return str(x or "").strip().lower()
+
+
+def api_cuzdan_dogrula(post: Callable[[dict], Any], ortam: dict, turet: Callable[[str], str] | None = None) -> dict:
+    """G6 (Y3): gerçek kipte API cüzdanı doğrulaması — EMİR GÖNDERMEZ. Döner yalnız bool/sabit metin: {"ana_anahtar", "agent_dogrulandi", "tamam", "neden"}; anahtar ve adresler ASLA döndürülmez.
+    (1) anahtardan türetilen adres == `HL_HESAP_ADRESI` → ana cüzdan anahtarı (para çekme yetkisi riski) → ret. Türetme yapılamazsa (eth_account yok/anahtar bozuk) → ret.
+    (2) HL `userRole` (gerçek biçim: `{"role":"agent","data":{"user":<ana hesap>}}`) agent ve bağlı hesap == `HL_HESAP_ADRESI`; bulunamazsa ikinci yöntem `extraAgents` listesi (`[{"name","address","validUntil"}]`).
+    Hiçbiri doğrulamazsa "agent doğrulanamadı" → ret."""
+    r: dict[str, Any] = {"ana_anahtar": False, "agent_dogrulandi": False, "tamam": False, "neden": None}
+    anahtar, hesap = str(ortam.get("HL_API_CUZDAN_ANAHTARI") or "").strip(), _kucuk(ortam.get("HL_HESAP_ADRESI"))
+    if not anahtar or not hesap:
+        r["neden"] = "anahtar veya hesap adresi yok"
+        return r
+    try:
+        agent = _kucuk((turet or anahtardan_adres)(anahtar))
+        if not agent:
+            raise ValueError("boş adres")
+    except Exception as hata:                              # noqa: BLE001 - ImportError dahil; hata metni anahtar içerebilir: yalnız tür adı
+        r["neden"] = f"anahtardan adres türetilemedi ({type(hata).__name__})"
+        return r
+    if agent == hesap:
+        r["ana_anahtar"] = True
+        r["neden"] = "ana cüzdan anahtarı kullanılıyor (para çekme yetkisiz API cüzdanı gerekli)"
+        return r
+    try:
+        rol = post({"type": "userRole", "user": agent})
+        veri = rol.get("data") if isinstance(rol, dict) else None
+        if isinstance(rol, dict) and rol.get("role") == "agent" and isinstance(veri, dict) and _kucuk(veri.get("user")) == hesap:
+            r["agent_dogrulandi"] = True
+    except Exception:                                      # noqa: BLE001 - ikinci yönteme düş
+        pass
+    if not r["agent_dogrulandi"]:
+        try:
+            liste = post({"type": "extraAgents", "user": str(ortam.get("HL_HESAP_ADRESI") or "").strip()})
+            if isinstance(liste, list) and any(isinstance(a, dict) and _kucuk(a.get("address")) == agent for a in liste):
+                r["agent_dogrulandi"] = True
+        except Exception:                                  # noqa: BLE001
+            pass
+    if not r["agent_dogrulandi"]:
+        r["neden"] = "agent doğrulanamadı"
+        return r
+    r["tamam"] = True
+    return r
+
+
 def kip_belirle(rules: dict, istenen: str | None = None, ortam: dict | None = None) -> str:
     """`sanal` (varsayılan) | `gercek`. `gercek` YALNIZ `CANLI_KIP=gercek` ortamıyla + anahtarlar + GitHub Actions DEĞİL; `kurallar.yaml canli_kip` yalnız `sanal` olabilir.
     Aksi halde KipHatasi (sessizce sanala DÜŞMEZ: yanlış beklenti)."""
@@ -1600,7 +1652,7 @@ def http_kadro_oku(rules: dict, dal: str | None = None, deneme: int = 3, bekle_s
     return None
 
 
-def kontrol(rules: dict, kip: str, post: Callable[[dict], Any], kadro_oku: Callable[[], dict | None], tgram: tg.Telegram, ortam: dict | None = None) -> dict:
+def kontrol(rules: dict, kip: str, post: Callable[[dict], Any], kadro_oku: Callable[[], dict | None], tgram: tg.Telegram, ortam: dict | None = None, turet: Callable[[str], str] | None = None) -> dict:
     """`--kontrol` (T5 açılış kontrolü): anahtar, bakiye, HL bağlantısı, kadro okuma, Telegram — EMİR GÖNDERMEZ. Döner rapor; `tamam` hepsi geçtiyse True."""
     ortam = os.environ if ortam is None else ortam
     try:
@@ -1635,7 +1687,10 @@ def kontrol(rules: dict, kip: str, post: Callable[[dict], Any], kadro_oku: Calla
     r["emir_gonderildi"] = False
     zorunlu = [r["kasa_siniri_ok"], r["hl_baglanti"], r["kadro"].get("var")]
     if kip == "gercek":
-        zorunlu += [r["anahtar"], r["bakiye_usd"] is not None, tgram.acik]
+        ap = api_cuzdan_dogrula(post, ortam, turet) if r["anahtar"] else {"ana_anahtar": False, "agent_dogrulandi": False, "tamam": False, "neden": "anahtar yok"}
+        r["ana_anahtar"], r["agent_dogrulandi"], r["api_cuzdan_tamam"], r["api_cuzdan_neden"] = ap["ana_anahtar"], ap["agent_dogrulandi"], ap["tamam"], ap["neden"]       # yalnız bool/sabit metin
+        r["hl_deger_siniri_ok"] = r["hl_hesap_degeri"] is not None and r["hl_hesap_degeri"] <= float(rules["canli_kasa_ust_usd"]) + 1e-9          # K‑22: hesap değeri ≤ 1.000 $
+        zorunlu += [r["anahtar"], r["bakiye_usd"] is not None, tgram.acik, r["api_cuzdan_tamam"], r["hl_deger_siniri_ok"]]
     r["tamam"] = all(bool(x) for x in zorunlu)
     return r
 
@@ -1678,7 +1733,13 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(rapor, ensure_ascii=False, indent=1))
         return 0 if rapor["tamam"] else 1
     try:
+        if kip == "gercek":                                # G6: emirden önce API cüzdanı doğrulaması (ana anahtar / agent değil → başlamaz)
+            ap = api_cuzdan_dogrula(post, os.environ)
+            if not ap["tamam"]:
+                raise KipHatasi(f"API cüzdanı doğrulanamadı: {ap['neden']}")
         kasa, hl_deger = etkin_kasa(rules, kip, post)
+        if kip == "gercek" and hl_deger is not None and hl_deger > float(rules["canli_kasa_ust_usd"]) + 1e-9:
+            raise KipHatasi(f"HL hesap değeri {hl_deger:.0f} $ > sınır {float(rules['canli_kasa_ust_usd']):g} $ (K‑22)")
         rules = {**rules, "canli_kasa_ayar_usd": kasa_belirle(rules, kip)[0], "canli_kasa_usd": kasa}
         boyut.saha_sayisi(kasa, rules)
     except (KipHatasi, ValueError) as hata:

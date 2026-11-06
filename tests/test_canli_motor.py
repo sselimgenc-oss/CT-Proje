@@ -210,6 +210,7 @@ class SahteHL:
                          "SOL": {"levels": [[{"px": "99.9", "sz": "100000"}], [{"px": "100", "sz": "100000"}]]}}
         self.hesap, self.pozlar, self.rest, self.spot = hesap, pozlar or {}, rest_dolumlar or {}, spot
         self.istekler = []
+        self.agent_sahibi = adr(7)
 
     def __call__(self, y):
         self.istekler.append(y)
@@ -228,6 +229,8 @@ class SahteHL:
             return [None]
         if t == "userFillsByTime":
             return self.rest.get(y["user"], [])
+        if t == "userRole":                                # G6: gerçek biçim {"role":"agent","data":{"user":<ana hesap>}}
+            return {"role": "agent", "data": {"user": self.agent_sahibi}} if self.agent_sahibi else {"role": "user"}
         raise AssertionError(y)
 
 
@@ -573,8 +576,9 @@ def test_kontrol_emir_gondermez_rapor_yazar(tmp_path):
     gercek = mt.kontrol(RULES, "gercek", hl, lambda: None, tg.Telegram("", "", ortam={}), ortam={})
     assert gercek["tamam"] is False and gercek["kadro"]["var"] is False
     assert rapor["kasa_kaynagi"] == "yaml" and gercek["kasa_kaynagi"] == "yaml" and gercek["kasa_siniri_ok"] is False and "CANLI_KASA_USD" in gercek["kasa_hata"]      # G4: gerçek kip + ortam kasası yok
-    ok = mt.kontrol(RULES, "gercek", hl, lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "gizli-anahtar-xyz", "HL_HESAP_ADRESI": adr(7), "CANLI_KASA_USD": "1000"})
-    assert ok["kasa_kaynagi"] == "ortam" and ok["bakiye_usd"] == 100_000.0 and ok["hl_hesap_degeri"] == 100_000.0 and ok["etkin_kasa_usd"] == 1000.0 and ok["tamam"] is True and "gizli-anahtar-xyz" not in json.dumps(ok)                  # anahtar rapora yazılmaz
+    ok = mt.kontrol(RULES, "gercek", hl, lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "gizli-anahtar-xyz", "HL_HESAP_ADRESI": adr(7), "CANLI_KASA_USD": "1000"}, turet=lambda k: adr(9))
+    assert ok["kasa_kaynagi"] == "ortam" and ok["bakiye_usd"] == 100_000.0 and ok["hl_hesap_degeri"] == 100_000.0 and ok["etkin_kasa_usd"] == 1000.0 and "gizli-anahtar-xyz" not in json.dumps(ok)                  # anahtar rapora yazılmaz
+    assert ok["agent_dogrulandi"] is True and ok["hl_deger_siniri_ok"] is False and ok["tamam"] is False          # G6: HL değeri 100.000 $ > 1.000 $ (K‑22) → ret
 
 
 # ================================================================================================ dayanıklılık (WS)
@@ -903,7 +907,7 @@ def test_k35_gercek_kipte_kasa_min_ayar_ve_hl_hesap_degeri():
 
 
 def test_k35_kontrol_etkin_kasayi_raporlar():
-    r = mt.kontrol(RULES, "gercek", BirlesikHL(spot=-89_400.0), lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": adr(7), "CANLI_KASA_USD": "1000"})
+    r = mt.kontrol(RULES, "gercek", BirlesikHL(spot=-89_400.0), lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": adr(7), "CANLI_KASA_USD": "1000"}, turet=lambda k: adr(9))
     assert r["kasa_kaynagi"] == "ortam" and r["hl_hesap_degeri"] == pytest.approx(600.0) and r["etkin_kasa_usd"] == pytest.approx(600.0) and r["kasa_usd"] == 1000.0 and r["tamam"] is True
     r2 = mt.kontrol(RULES, "sanal", BirlesikHL(spot=10_000.0), lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": adr(7)})
     assert r2["etkin_kasa_usd"] == 1000.0                                                           # sanal kip: ayar
@@ -1208,10 +1212,13 @@ def test_g5_main_uyusmazlikta_cikis_3_ve_telegram(monkeypatch, tmp_path):
     m.baslat()
     m.durum_yaz()
     monkeypatch.setattr(mt.tg, "Telegram", SahteTg)
-    monkeypatch.setattr(mt, "rest_post_olustur", lambda rules: None)
+    monkeypatch.setattr(mt, "rest_post_olustur", lambda rules: SahteHL())
     monkeypatch.setattr(mt, "kip_belirle", lambda rules, istenen=None, ortam=None: "gercek")
     monkeypatch.setattr(mt, "etkin_kasa", lambda rules, kip, post, ortam=None: (300.0, 300.0))
     monkeypatch.setattr(mt, "kasa_belirle", lambda rules, kip, ortam=None: (300.0, "ortam"))
+    monkeypatch.setenv("HL_API_CUZDAN_ANAHTARI", "test-anahtar")                                   # G6 doğrulaması geçsin (agent adr(9) → hesap adr(7))
+    monkeypatch.setenv("HL_HESAP_ADRESI", adr(7))
+    monkeypatch.setattr(mt, "anahtardan_adres", lambda anahtar: adr(9))
     hl = SahteHL()
     yur = yu.SanalYurutucu(hl, {**RULES, "canli_kasa_usd": 300.0})
     yur.kip = "gercek"
