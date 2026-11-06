@@ -1128,6 +1128,8 @@ class Motor:
         self._ozet_pencere_bas = simdi
         metin = tg.msg_sanal_saatlik(bas, simdi, round((simdi - bas) / DAKIKA) if zorla else dk, emirler, atlanan,
                                      (self.ozsermaye(), self.risk.gun_basi, self.kasa) if emirler else None)
+        if not metin and not zorla and self.rules.get("canli_telegram_sanal_bos_mesaj", False):
+            metin = tg.msg_sanal_saatlik_bos(bas, simdi, dk, atlanan, (self.ozsermaye(), self.risk.gun_basi, self.kasa))
         if metin:
             self.tg.gonder(metin)
 

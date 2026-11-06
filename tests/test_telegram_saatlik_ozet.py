@@ -22,6 +22,7 @@ def test_saatlik_toplama_tek_mesaj_pencere_motor_saatinden(tmp_path):
     m, hl, saat, tgp = kur(tmp_path)
     assert float(RULES["canli_telegram_sanal_ozet_dk"]) == 60
     m.baslat()
+    m.rules = {**m.rules, "canli_telegram_sanal_bos_mesaj": False}                # bu test: boş pencere sessiz (bayrak kapalı)
     bas = saat()
     _uc_emir_iki_atlama(m, saat)
     saat.ms += 30 * 60_000
@@ -45,6 +46,7 @@ def test_saatlik_toplama_tek_mesaj_pencere_motor_saatinden(tmp_path):
 def test_hic_emir_yok_mesaj_yok_atlanan_tek_basina_mesaj_uretmez(tmp_path):
     m, hl, saat, tgp = kur(tmp_path)
     m.baslat()
+    m.rules = {**m.rules, "canli_telegram_sanal_bos_mesaj": False}                # bayrak kapalı: emir yoksa sessiz
     m.olay_isle(olay("a:4", adr(1), "@142", "B", 300, 100.0, 0.0, saat))
     saat.ms += 2 * SAAT
     m.emir_ozeti(saat(), zorla=False)
@@ -132,3 +134,22 @@ def test_motor_ozeti_kasa_satirini_en_sona_ekler(tmp_path):
     oz = _ozetler(tgp)[0].splitlines()
     assert oz[-2].startswith("💵 Tutar toplamı") and oz[-1].startswith("💰 Kasa: ") and "bugün" in oz[-1] and "başlangıçtan" in oz[-1]
     print("\n" + "\n".join(oz))
+
+
+def test_bos_pencere_mesaji_acikken_emir_yok_kisa_satir_kapaliyken_sessiz(tmp_path):
+    m, hl, saat, tgp = kur(tmp_path)
+    m.baslat()
+    m.rules = {**m.rules, "canli_telegram_sanal_bos_mesaj": True}
+    saat.ms += SAAT
+    m.emir_ozeti(saat())
+    oz = _ozetler(tgp)
+    assert len(oz) == 1 and "emir yok · sistem çalışıyor" in oz[0] and "💰 Kasa:" in oz[0]
+    saat.ms += 10 * 60_000
+    m.emir_ozeti(saat(), zorla=True)                                                # vardiya sonu: boş mesaj gitmez
+    assert len(_ozetler(tgp)) == 1
+    m2, _, saat2, tgp2 = kur(tmp_path / "k")
+    m2.baslat()
+    m2.rules = {**m2.rules, "canli_telegram_sanal_bos_mesaj": False}
+    saat2.ms += SAAT
+    m2.emir_ozeti(saat2())
+    assert _ozetler(tgp2) == []
