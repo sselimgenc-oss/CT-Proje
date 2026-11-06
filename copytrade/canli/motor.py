@@ -236,12 +236,16 @@ class Motor:
         self.kip = yurutucu.kip
         self.vardiya_id = vardiya_id
         self.kasa = float(rules["canli_kasa_usd"])
+        self.kasa_ayar = float(rules.get("canli_kasa_ayar_usd", self.kasa))        # G5: ayarlı kasa ($; gerçek kip CANLI_KASA_USD). `kasa` etkin (min(ayar, HL değeri)) ve oynak; uyuşmazlık denetimi ayara bakar
         self.dur_dosyasi = durum_dizin / "DUR"
         m = _oku(durum_dizin / "motor.json") or {}
         h = _oku(durum_dizin / "hesap.json")
         self.hesap = Hesap.from_json(h) if h else Hesap(self.kasa, float(rules["canli_marj_kaldirac"]))
         self._hesap_yok = h is None                                                # hesap.json hiç yok: niyet dosyasındaki eski dolumlar yeni deftere OYNATILMAZ (hayalet pozisyon)
         self._oynat_gecis = h is not None and "son_niyet_cloid" not in h          # eski biçim hesap.json: geçiş (işaretçi = niyet dosyasının sonu, geçmiş oynatılmaz)
+        self._kayitli_kip = str(m.get("kip") or "sanal")                           # G5: motor.json yoksa/eski biçimse (kip alanı yok) sanal sayılır
+        self._kayitli_kasa_ayar = m.get("kasa_ayar_usd")                           # G5: gerçek kipte son kabul edilen ayarlı kasa; yoksa karşılaştırma yok
+        self._durum_var = bool(m) or h is not None
         self.hesap.kasa_usd = self.kasa                          # kasa ayarı/etkin kasa değişmiş olabilir (gerçek kip: min(ayar, HL değeri)); pozisyon/K‑Z kaydı KORUNUR
         self.saha = Saha(rules, self.kasa, _oku(durum_dizin / "saha.json"))
         self.risk = Risk(rules, self.kasa, _oku(durum_dizin / "risk.json"))
@@ -333,7 +337,7 @@ class Motor:
 
     def _motor_json(self) -> dict:
         return {"islenen": self.islenen[-int(self.rules["canli_islenen_sakla"]):], "poz_tr": self.poz_tr, "hesap_tr": self.hesap_tr, "son_olay_ms": self.son_olay_ms,
-                "ozet_gunu": self._ozet_gunu, "ozet_oz": self._ozet_oz, "ozet_emir": self._ozet_emir, "kip": self.kip, "kasa_usd": self.kasa, "vardiya": self.vardiya_id, "yazildi_ms": self.saat_ms(),
+                "ozet_gunu": self._ozet_gunu, "ozet_oz": self._ozet_oz, "ozet_emir": self._ozet_emir, "kip": self.kip, "kasa_usd": self.kasa, "kasa_ayar_usd": self.kasa_ayar, "vardiya": self.vardiya_id, "yazildi_ms": self.saat_ms(),
                 "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.offset,
                 "son_funding_ms": self.son_funding_ms, "funding_kimlik": self.funding_kimlik[-500:], "funding_gercek_usd": self.funding_gercek_usd, "ucret_gercek_usd": self.ucret_gercek_usd, "ucret_tahmin_say": self.ucret_tahmin_say}
 
@@ -1221,8 +1225,25 @@ class Motor:
         return {"n": len(g), "p50": g[len(g) // 2] if g else None, "max": g[-1] if g else None}
 
     # ------------------------------------------------------------------ açılış
+    def kip_uyumu_denetle(self) -> None:
+        """G5: durum dizinindeki kayıtlı kip ile geçerli kip farklıysa BAŞLAMAZ. Gerçek kipte ayarlı kasa değiştiyse yalnız açık pozisyon yokken kabul (`kasa_degisti` kaydı)."""
+        if not self._durum_var:
+            return                                                                              # boş dizin: serbest
+        neden = None
+        if self._kayitli_kip != self.kip:
+            neden = ("sanal durum dizininde gerçek kip açılmaz" if self.kip == "gercek" else "gerçek durum dizininde sanal kip açılmaz")
+        elif self.kip == "gercek" and self._kayitli_kasa_ayar is not None and abs(float(self._kayitli_kasa_ayar) - self.kasa_ayar) > 1e-9:
+            if any(self.hesap.poz.values()):
+                neden = f"kasa ayarı değişti ({float(self._kayitli_kasa_ayar):g} → {self.kasa_ayar:g} $) ama açık pozisyon var: önce pozisyonlar kapatılmalı"
+            else:
+                self.kayit({"olay": "kasa_degisti", "eski_usd": float(self._kayitli_kasa_ayar), "yeni_usd": self.kasa_ayar, "vardiya": self.vardiya_id})
+        if neden:
+            self.kayit({"olay": "vardiya_baslamadi", "neden": neden, "vardiya": self.vardiya_id})
+            raise KipHatasi(neden)
+
     def baslat(self) -> None:
-        """Açılış: DUR varsa BAŞLAMAZ; kasa sınırı; kadro ilk okuması (saha kurulumu); saha üyelerinin pozisyon/hesap okuması; markları al."""
+        """Açılış: kip/kasa uyumu (G5); DUR varsa BAŞLAMAZ; kasa sınırı; kadro ilk okuması (saha kurulumu); saha üyelerinin pozisyon/hesap okuması; markları al."""
+        self.kip_uyumu_denetle()
         if not self.dur_dosyasi.exists() and self.risk.dur:                                      # DUR dosyası tek yetkili: dosya yoksa risk.json'daki bayat dur sıfırlanır
             self.kayit({"olay": "dur_sifirlandi", "neden": self.risk.dur_neden, "gerekce": "DUR dosyası yok"})
             self.risk.dur, self.risk.dur_neden = False, None
@@ -1658,7 +1679,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if rapor["tamam"] else 1
     try:
         kasa, hl_deger = etkin_kasa(rules, kip, post)
-        rules = {**rules, "canli_kasa_usd": kasa}
+        rules = {**rules, "canli_kasa_ayar_usd": kasa_belirle(rules, kip)[0], "canli_kasa_usd": kasa}
         boyut.saha_sayisi(kasa, rules)
     except (KipHatasi, ValueError) as hata:
         print(f"BAŞLAMADI: {hata}", file=sys.stderr)
