@@ -191,3 +191,10 @@
 - **Geri alma:** tek satır `radar_hip3_kopya: true` (eski v1 davranışı). Kullanıcı onayı BEKLİYOR (sabah sunulacak; reddederse true'ya dönülür).
 - **Sayaç / ilk false kadro (06.11):** radar.yml (main, elle tetik #565) kadroyu **06:34:44Z (= 1793946884000 ms UTC)** yayımladı: `gecti_sayisi` **15** (≥ 11 ✔; İlk 11 + 4 yedek); İlk 11'in `hip3_nosyonel_pay` değerleri 0–0,73 (çoğu < 0,5). K-43 kadrosu motora bu andan sonraki ilk 5 dk okumasında geçti; 7 günlük sanal doğrulama ölçümü bu kadroyu da içerir (üretim vardiyası 05:22Z'de yeni kodla başlamıştı).
 - **Uyarı:** `gecti` < 11 ise radar özeti ve sağlık kontrolü UYARI verir (`kadro_11den_az`); otomatik true'ya dönülmez, lider karar verir.
+
+## Kullanıcı onayları 06.11 (öğle)
+Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
+- **K-43** onaylandı (radar HIP-3 hariç; geri alma: `radar_hip3_kopya: true`).
+- **K1** Actions vardiyası `TELEGRAM_KOMUT=kapali` (sunucu motoru devreye girince). **K2** gerçek durum maskeli `canli-gercek` dalına. **K3** bağımsız nabız servisi yapılacak. **K4** MetaMask + agent cüzdan (çekme yetkisiz), ilk kasa 300 $. **K5** sunucu + `/etc/sg-canli.env` (T5'te). **K6** <10 $ reduce-only küçük gerçek deneme yapılacak. **K7** hesap değeri >1.000 $ ise yeniden başlatmada ret: kasıtlı. **K8** strateji ilk 28 gün kilitli.
+- **Gerçek mod yine başlamadı:** 7 temiz sanal gün (en erken 13.11), cüzdan/anahtar/sunucu adımları kullanıcıyla ve ayrı onayla.
+- **Dal silme:** `copytrade-izleme` (tip 83f276cf) ve `claude/gecici-dal-sil` silinmesi onaylandı; otomatik izin denetimi silme komutunu engelledi, kullanıcı izin kuralı verene dek bekliyor.
