@@ -253,6 +253,9 @@ def test_telegram_secretlari_yalniz_main_dalinda_verilir_b1():
     for dosya in sorted(WF.glob("*.yml")):
         metin = dosya.read_text(encoding="utf-8")
         for _, ad, deger in _telegram_envleri(yaml.safe_load(metin)):
+            if ad == "TELEGRAM_KOMUT":                                     # O-1: secret DEĞİL, repo değişkeni; yalnız bu birebir ifade serbest (komut kapatma anahtarı)
+                assert deger == "${{ vars.TELEGRAM_KOMUT }}", (dosya.name, deger)
+                continue
             bulunan += 1
             assert f"secrets.{ad}" in deger and "github.ref == 'refs/heads/main'" in deger and deger.rstrip("} ").endswith("|| ''"), (dosya.name, ad, deger)
         for satir in metin.splitlines():                  # hiçbir yerde çıplak Telegram secret'ı yok
@@ -276,16 +279,20 @@ def test_telegram_tokensiz_kanal_kapali_ve_sessiz_b1():
 
 
 # ---------------------------------------------------------------------------------------------------- G3: vardiya zinciri (ayrı `zincir` işi)
-def _zincir_calistir(tmp_path: Path, gh_cikis: int, curl_cikis: int = 0, telegram: bool = False):
-    """`zincir` işinin run: bloğunu sahte gh/curl ile gerçekten çalıştırır; (çıktı, gh çağrıları, curl çağrıları)."""
+def _zincir_calistir(tmp_path: Path, gh_cikis: int, curl_cikis: int = 0, telegram: bool = False, yas_dk: int | None = 60):
+    """`zincir` işinin run: bloğunu sahte gh/curl ile gerçekten çalıştırır; (çıktı, gh çağrıları, curl çağrıları).
+    `gh api …run_started_at` sahte yanıtı: yas_dk dakika önce (None = okunamaz, gh api başarısız). `gh api` çağrıları gh listesine yazılmaz (yalnız `workflow run`)."""
     run = adim(yukle("canli_vardiya.yml"), "zincir", "tetikle")["run"]
     bin_ = tmp_path / "bin"
     bin_.mkdir()
     for ad, cikis in (("gh", gh_cikis), ("curl", curl_cikis)):
         kayit = tmp_path / f"{ad}.txt"
-        (bin_ / ad).write_text(f'#!/usr/bin/env bash\necho "$@" >> "{kayit}"\nexit {cikis}\n', encoding="utf-8")
+        api = ""
+        if ad == "gh":
+            api = 'if [ "$1" = api ]; then ' + ('exit 1; ' if yas_dk is None else f'date -u -d "{yas_dk} minutes ago" +%Y-%m-%dT%H:%M:%SZ; exit 0; ') + 'fi\n'
+        (bin_ / ad).write_text(f'#!/usr/bin/env bash\n{api}echo "$@" >> "{kayit}"\nexit {cikis}\n', encoding="utf-8")
         (bin_ / ad).chmod(0o755)
-    env = {**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}", "RUN_URL": "http://x/run", "TELEGRAM_BOT_TOKEN": "TOK" if telegram else "", "TELEGRAM_CHAT_ID": "CH" if telegram else ""}
+    env = {**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}", "RUN_URL": "http://x/run", "GITHUB_REPOSITORY": "o/r", "GITHUB_RUN_ID": "1", "TELEGRAM_BOT_TOKEN": "TOK" if telegram else "", "TELEGRAM_CHAT_ID": "CH" if telegram else ""}
     r = subprocess.run(["bash", "-euo", "pipefail", "-c", run], env=env, capture_output=True, text=True)
     oku = lambda ad: (tmp_path / f"{ad}.txt").read_text(encoding="utf-8").splitlines() if (tmp_path / f"{ad}.txt").exists() else []
     return r, oku("gh"), oku("curl")
@@ -312,11 +319,14 @@ def test_g3_zincir_hatasi_telegram_yoksa_sessiz_gecer_ama_uyari_kalir(tmp_path):
 def test_g3_actions_write_yalniz_zincir_isinde_main_ve_basari_kosullu_checkoutsuz():
     wf = yukle("canli_vardiya.yml")
     metin = (WF / "canli_vardiya.yml").read_text(encoding="utf-8")
-    assert wf["permissions"] == {"contents": "write"} and "permissions" not in wf["jobs"]["kontrol"] and "permissions" not in wf["jobs"]["vardiya"]      # vardiya/kontrol: actions yazma yok
+    assert wf["permissions"] == {"contents": "write"} and wf["jobs"]["kontrol"]["permissions"] == {"contents": "read"} and "permissions" not in wf["jobs"]["vardiya"]      # vardiya/kontrol: actions yazma yok (kontrol: O-2 yalnız okuma)
     z = wf["jobs"]["zincir"]
     assert z["permissions"] == {"actions": "write", "contents": "read"} and metin.count("actions: write") == 1
-    assert z["needs"] == "vardiya" and z["if"] == "${{ github.ref == 'refs/heads/main' && needs.vardiya.result == 'success' }}"
-    assert "always()" not in z["if"] and "failure()" not in z["if"]
+    # Y-1 (denetim #3): zincir vardiya başarısız olsa da sürer (always()), yalnız iptal/atlanmış vardiyada çalışmaz; always() yasağı YALNIZ diğer işlerde kalır (zincir bilinçli istisna)
+    assert z["needs"] == "vardiya" and z["if"] == "${{ always() && github.ref == 'refs/heads/main' && needs.vardiya.result != 'cancelled' && needs.vardiya.result != 'skipped' }}"
+    assert "failure()" not in z["if"] and "always()" not in str(wf["jobs"]["kontrol"].get("if", "")) and "always()" not in str(wf["jobs"]["vardiya"].get("if", ""))
+    assert wf["jobs"]["vardiya"]["env"]["TELEGRAM_KOMUT"] == "${{ vars.TELEGRAM_KOMUT }}"             # O-1: boş = komut alma açık
+    assert "--canli-url" in adim(wf, "vardiya", "Canlı motor")["run"] and "copytrade.saglik" in adim(wf, "vardiya", "Canlı motor")["run"]
     assert all("uses" not in a for a in z["steps"])                                                    # checkout yok (kimlik bilgisi diske bırakılmaz)
     assert "GH_TOKEN" not in str(wf["jobs"]["vardiya"]) and "github.token" not in str(wf["jobs"]["vardiya"]) and "github.token" not in str(wf["jobs"]["kontrol"])
     run = z["steps"][0]["run"]
@@ -325,3 +335,20 @@ def test_g3_actions_write_yalniz_zincir_isinde_main_ve_basari_kosullu_checkoutsu
     assert "workflow_dispatch" in wf["on"] and "workflow_dispatch" in yukle("saglik.yml")["on"]
     assert "zincir_tetikle" not in metin
     assert "pkill -P \"$yayim\"" in adim(wf, "vardiya", "Canlı motor")["run"]                          # çalışan yayım betiği sahipsiz kalmaz
+
+
+def test_y1_zincir_genc_kosuda_tetiklemez_yalniz_alarm(tmp_path):
+    """Koşu yaşı < 20 dk (motor hemen düştü): sonraki vardiya/sağlık TETİKLENMEZ, Telegram alarmı + ::warning, çıkış 0."""
+    r, gh, curl = _zincir_calistir(tmp_path, 0, telegram=True, yas_dk=3)
+    assert r.returncode == 0 and gh == [] and "::warning::vardiya 20 dk" in r.stdout
+    assert len(curl) == 1 and "sendMessage" in curl[0] and "TOK" not in r.stdout + r.stderr
+
+
+def test_y1_zincir_yas_okunamazsa_guvenli_yon_tetiklemez(tmp_path):
+    r, gh, curl = _zincir_calistir(tmp_path, 0, telegram=True, yas_dk=None)
+    assert r.returncode == 0 and gh == [] and len(curl) == 1
+
+
+def test_y1_zincir_20_dk_ve_uzeri_iki_tetik(tmp_path):
+    r, gh, curl = _zincir_calistir(tmp_path, 0, telegram=True, yas_dk=21)
+    assert r.returncode == 0 and gh == ["workflow run canli_vardiya.yml --ref main", "workflow run saglik.yml --ref main"] and curl == []

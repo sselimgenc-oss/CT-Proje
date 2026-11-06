@@ -32,8 +32,8 @@ TELEGRAM_CHAT_ID=<sohbet kimliği>
 Kontrol: `stat -c '%a %U' /etc/sg-canli.env` → `600 sgcanli`.
 
 **Telegram tek tüketici (G4):** aynı bot için `getUpdates` çağıran yalnız BİR süreç olmalı (iki tüketici komut kaybettirir). Gerçek sunucu devreye girdiğinde GitHub Actions vardiyası
-`vars.TELEGRAM_KOMUT=kapali` ile çalıştırılır (repo değişkeni; GitHub → Settings → Variables): `TELEGRAM_KOMUT=kapali` iken motor yalnız mesaj gönderir, komut (`getUpdates`) almaz. Bu not hazırlıktır;
-iş akışına ayar eklenmesi o geçişte yapılır. `--kontrol` raporunda `kasa_kaynagi` gerçek kipte `"ortam"` olmalıdır.
+`vars.TELEGRAM_KOMUT=kapali` ile çalıştırılır (repo değişkeni; GitHub → Settings → Variables): `TELEGRAM_KOMUT=kapali` iken motor yalnız mesaj gönderir, komut (`getUpdates`) almaz. İş akışı bağlıdır (`canli_vardiya.yml` vardiya işi env'i `TELEGRAM_KOMUT: ${{ vars.TELEGRAM_KOMUT }}`);
+repo değişkeni tanımsızsa boştur = Actions'ta komut alma AÇIK (mevcut davranış). **T5/sunucu geçişinde değişken `kapali` yapılmazsa iki `getUpdates` tüketicisi olur ve komutlar (ör. `/kapat`) kaybolur: geçiş kontrol listesine yazılıdır.** `--kontrol` raporunda `kasa_kaynagi` gerçek kipte `"ortam"` olmalıdır.
 
 ## 3. Açılış kontrolü (emir göndermez)
 ```bash
