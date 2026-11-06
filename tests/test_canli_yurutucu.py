@@ -208,14 +208,36 @@ def test_patlama_freni_zamanlamasi_8_yeni_coin_10_dk_30_dk_ara():
     """10 dk içinde 8. yeni coin → fren (o açılış dahil); 30 dk boyunca yeni açılış yok; 30 dk sonra serbest. 9 dk aralıklı açılışlar fren tetiklemez."""
     r = rk.Risk(RULES, 1000.0)
     t = T0
-    sonuc = [r.acilis_izni("a", f"C{i}", True, t + i * 60_000)[0] for i in range(8)]          # dakikada bir yeni coin
+    sonuc = []
+    for i in range(8):                                                                         # dakikada bir yeni coin; motor emir dolunca kaydeder (O1)
+        sonuc.append(r.acilis_izni("a", f"C{i}", True, t + i * 60_000)[0])
+        if sonuc[-1]:
+            r.yeni_coin_kaydet("a", f"C{i}", t + i * 60_000)
     assert sonuc == [True] * 7 + [False]
     assert r.acilis_izni("a", "X", True, t + 7 * 60_000 + 29 * 60_000) == (False, "patlama_freni")
     assert r.acilis_izni("a", "X", False, t + 7 * 60_000 + 29 * 60_000)[0] is False                # artırma da (fren aktif)
     assert r.acilis_izni("a", "X", True, t + 7 * 60_000 + 30 * 60_000 + 1)[0] is True
     assert r.acilis_izni("b", "X", True, t + 8 * 60_000)[0] is True                                  # başka trader etkilenmez
     r2 = rk.Risk(RULES, 1000.0)
-    assert all(r2.acilis_izni("a", f"C{i}", True, T0 + i * 9 * 60_000)[0] for i in range(12))          # 9 dk arayla: pencerede hep 2 coin
+    ok = []
+    for i in range(12):                                                                        # 9 dk arayla: pencerede hep 2 coin
+        ok.append(r2.acilis_izni("a", f"C{i}", True, T0 + i * 9 * 60_000)[0])
+        r2.yeni_coin_kaydet("a", f"C{i}", T0 + i * 9 * 60_000)
+    assert all(ok)
+
+
+def test_patlama_freni_ayni_coin_tekrari_ve_kaydedilmeyen_acilis_saymaz_o1():
+    """Aynı coinde 20 parça açılış (BTC) tek coin sayılır; emir verilmeyen (kaydedilmeyen) farklı coin sayılmaz; 8 FARKLI coin kaydedilince 8. engellenir."""
+    r = rk.Risk(RULES, 1000.0)
+    for i in range(20):
+        assert r.acilis_izni("a", "BTC", True, T0 + i * 1000)[0] is True
+        r.yeni_coin_kaydet("a", "BTC", T0 + i * 1000)
+    assert len(r.yeni_coin["a"]) == 1
+    for i in range(10):                                                                        # slot_tavani vb. ile atlanan coinler: kaydedilmez
+        assert r.acilis_izni("a", f"S{i}", True, T0 + 30_000 + i)[0] is True
+    for i in range(6):
+        r.yeni_coin_kaydet("a", f"D{i}", T0 + 40_000 + i)                                      # BTC + 6 = 7 farklı coin
+    assert r.acilis_izni("a", "D6", True, T0 + 50_000) == (False, "patlama_freni")             # 8. farklı coin
 
 
 def test_gunluk_kayip_tam_sinirda_tetiklenir_ve_utc_gunu_sifirlar():

@@ -1,8 +1,10 @@
-# Canlı motor (T4/T5). Ubuntu 24.04. Kurulum: deploy/kurulum.md. Anahtarlar YALNIZ /etc/sg-canli.env içinde (izin 600, sahibi sgcanli); repoda ASLA.
+# Canlı motor (T4/T5). Ubuntu 24.04. Kurulum: deploy/kurulum.md. Anahtarlar, CANLI_KIP=gercek ve CANLI_KASA_USD YALNIZ /etc/sg-canli.env içinde (izin 600, sahibi sgcanli); repoda ASLA (kurallar.yaml canli_kip yalnız sanal; gerçek kip depodan açılamaz).
 [Unit]
 Description=sg-arge canli motor (Form Radari v1)
 After=network-online.target
 Wants=network-online.target
+# Servis kalıcı düştüyse (5 yeniden başlatma/10 dk sonrası ya da çıkış 3) sessiz kalmasın: alarm birimi çalışır (token yoksa yalnız günlüğe 'atlandı')
+OnFailure=sg-canli-alarm.service
 StartLimitIntervalSec=600
 StartLimitBurst=5
 

@@ -74,16 +74,47 @@ def test_histerezis_form_farki_en_az_10_puan_sinirda_girer():
 
 
 def test_gunde_en_fazla_2_degisiklik_ve_sonuc_ile_dusene_14_gun_bekleme():
+    """K‑39: kadro dışı İKİ FARKLI UTC gününde ister, sonuç dışıdır (bekleme yok). 14 gün bekleme sonuçla düşenlere (burada slot düşüşü) aynen kalır."""
     s = hazir_11()
-    rows = [satir(i, i, 90 - i) for i in range(1, 9)] + [satir(12, 9), satir(13, 10), satir(14, 11)]          # 9, 10, 11 kadro dışı → sonuçla düşer; 3 aday
+    rows = [satir(i, i, 90 - i) for i in range(1, 9)] + [satir(12, 9), satir(13, 10), satir(14, 11)]          # 9, 10, 11 kadro dışı; 3 aday
     karar, _ = s.degerlendir(kadro(rows, T0 + GUN), T0 + GUN + SAAT)
-    assert [k.adres for k in karar if k.tur == "dus"] == [adr(9), adr(10), adr(11)] and all(k.sonuc for k in karar if k.tur == "dus")
-    assert [k.adres for k in karar if k.tur == "giris"] == [adr(12), adr(13)] and adr(14) not in s.uyeler           # günde 2 giriş
-    assert s.bekleme[adr(9)] == T0 + GUN + SAAT + 14 * GUN
-    karar2, _ = s.degerlendir(kadro(rows, T0 + 2 * GUN), T0 + 2 * GUN + SAAT)                                       # ertesi gün üçüncü girer
-    assert [k.adres for k in karar2 if k.tur == "giris"] == [adr(14)]
+    assert [k for k in karar if k.tur == "dus"] == [] and [k for k in karar if k.tur == "giris"] == []        # 1. gün: yalnız işaretlenir, düşme yok
+    karar2, _ = s.degerlendir(kadro(rows, T0 + 2 * GUN), T0 + 2 * GUN + SAAT)                                  # 2. gün: üçü düşer (SONUÇ DIŞI)
+    assert [k.adres for k in karar2 if k.tur == "dus"] == [adr(9), adr(10), adr(11)] and not any(k.sonuc for k in karar2 if k.tur == "dus")
+    assert [k.adres for k in karar2 if k.tur == "giris"] == [adr(12), adr(13), adr(14)] and len(s.uyeler) == 11   # K‑44: boş slot doldurma günlük değişiklik sınırına SAYILMAZ → 3 boş slot aynı gün dolar
+    assert s.degisiklik["adet"] == 0 and not s.bekleme                                                         # sınır sayacı artmadı; kadro dışı: bekleme YOK
+    karar3, _ = s.degerlendir(kadro(rows, T0 + 3 * GUN), T0 + 3 * GUN + SAAT)
+    assert [k.adres for k in karar3 if k.tur == "giris"] == []                                                 # zaten dolu
+    sd = hazir_11()                                                                                            # sonuçla düşen (slot düşüşü) 14 gün bekler
+    kd_ = sd.anlik(T0 + GUN + SAAT, lambda a: 10.0 if a == adr(1) else None)
+    assert [(k.adres, k.neden, k.sonuc) for k in kd_] == [(adr(1), "slot_dusus", True)] and sd.bekleme[adr(1)] == T0 + GUN + SAAT + 14 * GUN
     bitis = T0 + GUN + SAAT + 14 * GUN
-    assert s._bekliyor(adr(9), bitis - 1) is True and s._bekliyor(adr(9), bitis) is False                              # 14 gün: bitiş anında serbest
+    assert sd._bekliyor(adr(1), bitis - 1) is True and sd._bekliyor(adr(1), bitis) is False                      # 14 gün: bitiş anında serbest
+
+
+def test_k44_gunluk_sinir_yalniz_uye_degistirmek_icin_gunde_2_degistirme():
+    """K‑44: sahadaki üyeyi değiştirme (histerezis) günde ≤ 2; ertesi gün üçüncü. Boş slot doldurma sınıra girmez (üstteki test)."""
+    s = hazir_11()
+    rows = [satir(i, i, 90 - i) for i in range(1, 9)] + [satir(9, 12, 40.0), satir(10, 13, 40.0), satir(11, 14, 40.0)] + [satir(12, 9, 80.0), satir(13, 10, 80.0), satir(14, 11, 80.0)]
+    k1, _ = s.degerlendir(kadro(rows, T0 + GUN), T0 + GUN + SAAT)
+    assert [(k.adres, k.neden) for k in k1 if k.tur == "giris"] == [(adr(12), "degistirme"), (adr(13), "degistirme")] and s.degisiklik["adet"] == 2 and adr(14) not in s.uyeler
+    k2, _ = s.degerlendir(kadro(rows, T0 + 2 * GUN), T0 + 2 * GUN + SAAT)
+    assert [(k.adres, k.neden) for k in k2 if k.tur == "giris"] == [(adr(14), "degistirme")] and s.degisiklik["adet"] == 1
+
+
+def test_k39_ayni_utc_gununde_ikinci_kadro_saha_kararini_tetiklemez_ilk_kadro_saklanir_ve_gecis_beklemesi_silinir():
+    s = hazir_11()
+    ilk = [satir(i, i, 90 - i) for i in range(1, 12)]                                                         # 11 üye de kadroda
+    s.degerlendir(kadro(ilk, T0 + GUN + SAAT), T0 + GUN + 2 * SAAT)                                            # günün İLK kadrosu 01:00
+    ikinci = [satir(i, i, 90 - i) for i in range(1, 9)] + [satir(12, 9), satir(13, 10), satir(14, 11)]          # aynı UTC gününde 07:00'de geç/elle ikinci kadro: 9, 10, 11 yok
+    karar, _ = s.degerlendir(kadro(ikinci, T0 + GUN + 7 * SAAT), T0 + GUN + 8 * SAAT)
+    assert karar == [] and all(adr(i) in s.uyeler for i in (9, 10, 11)) and all(not u.get("disi_gunler") for u in s.uyeler.values())      # ikinci kadro yok sayıldı
+    yeni = kd.Saha(RULES, 1000.0, s.to_json())                                                                  # yeniden başlatma: ilk kadro saklı, ikinci yine yok sayılır
+    karar2, _ = yeni.degerlendir(kadro(ikinci, T0 + GUN + 7 * SAAT), T0 + GUN + 9 * SAAT)
+    assert karar2 == [] and yeni.gun_kadro["kadro"]["kosu_ms"] == T0 + GUN + SAAT
+    eski = kd.Saha(RULES, 1000.0, {"bekleme": {"0xf90c9e" + "0" * 34: T0 + 14 * GUN, "0xdddddd" + "0" * 34: T0 + 14 * GUN}, "kurulu": True})
+    assert eski.gecis_silinen == ["0xf90c9e" + "0" * 34] and list(eski.bekleme) == ["0xdddddd" + "0" * 34] and eski.to_json()["k39_gecis"] is True      # tek seferlik; diğer bekleme kalır
+    assert kd.Saha(RULES, 1000.0, eski.to_json()).gecis_silinen == []                                         # ikinci yüklemede tekrar silinmez
 
 
 def test_bekleme_suresince_sahaya_donemez_bitince_girer():
@@ -125,8 +156,10 @@ def test_sira_iki_gun_ust_uste_22_den_kotu_ve_kadro_disi_ve_kaldirac():
     karar, _ = s.degerlendir(rows(25), T0 + 4 * GUN + SAAT)
     assert [(k.adres, k.neden, k.sonuc) for k in karar if k.tur == "dus"] == [(adr(11), "sira", True)]
     s2 = hazir_11()
-    karar2, _ = s2.degerlendir(kadro([satir(i, i) for i in range(1, 11)] + [satir(11, 31)], T0 + GUN), T0 + GUN + SAAT)       # sıra 31 > 30: bir gün yeter
-    assert [(k.neden, k.sonuc) for k in karar2 if k.tur == "dus"] == [("kadro_disi", True)]
+    k1 = [satir(i, i) for i in range(1, 11)] + [satir(11, 31)]
+    assert [k for k in s2.degerlendir(kadro(k1, T0 + GUN), T0 + GUN + SAAT)[0] if k.tur == "dus"] == []                          # sıra 31 > 30: K‑39 bir gün yetmez
+    karar2, _ = s2.degerlendir(kadro(k1, T0 + 2 * GUN), T0 + 2 * GUN + SAAT)                                                     # ikinci FARKLI UTC günü: sonuç dışı düşme
+    assert [(k.neden, k.sonuc) for k in karar2 if k.tur == "dus"] == [("kadro_disi", False)] and not s2.bekleme
     s3 = hazir_11()
     kar3 = s3.anlik(T0 + SAAT, lambda a: None, kadro([satir(i, i, kald=25.0 if i == 4 else 3.0) for i in range(1, 12)]))
     assert [(k.adres, k.neden, k.sonuc) for k in kar3] == [(adr(4), "kaldirac_ihlali", True)]
@@ -187,6 +220,7 @@ class SahteHL:
                          "SOL": {"levels": [[{"px": "99.9", "sz": "100000"}], [{"px": "100", "sz": "100000"}]]}}
         self.hesap, self.pozlar, self.rest, self.spot = hesap, pozlar or {}, rest_dolumlar or {}, spot
         self.istekler = []
+        self.agent_sahibi = adr(7)
 
     def __call__(self, y):
         self.istekler.append(y)
@@ -205,6 +239,8 @@ class SahteHL:
             return [None]
         if t == "userFillsByTime":
             return self.rest.get(y["user"], [])
+        if t == "userRole":                                # G6: gerçek biçim {"role":"agent","data":{"user":<ana hesap>}}
+            return {"role": "agent", "data": {"user": self.agent_sahibi}} if self.agent_sahibi else {"role": "user"}
         raise AssertionError(y)
 
 
@@ -255,7 +291,7 @@ def kayitlar(tmp_path, tur=None):
 def test_uctan_uca_altin_ornek_acilis_azaltma_kapanis(tmp_path):
     """Kasa 1.000 → N 11, slot 90,909 $. Trader hesap 100.000 $, 300 BTC × 100 $ = 30.000 $ açar (oran 0,30): emir 27,27 $, IOC ask 100 → 0,27273 BTC, ücret 27,27 × 0,00045 = 0,01227 $, kayma 0.
     Trader %50 azaltır: 13,636 $ SATIŞ (bid 99,9 → kayma aleyhimize +%0,1); kalanı kapatır: tüm pozisyon reduce-only."""
-    m, hl, saat, tgp = kur(tmp_path)
+    m, hl, saat, tgp = kur(tmp_path, kurallar={"canli_telegram_sanal_ozet_dk": 0})          # 0 = eski 15 dk'lık özet davranışı (saatlik özet ayrı testlerde)
     m.baslat()
     assert list(m.saha.uyeler) == [adr(1)] and m.saha.slot == pytest.approx(1000 / 11)
     s1 = m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
@@ -328,14 +364,15 @@ def test_risk_coin_tavani_engel_gunluk_kayip_acilis_engel_kapanis_serbest(tmp_pa
     assert any("coin_tavani" in x.get("neden", "") for x in kayitlar(tmp_path, "emir_yok"))
 
 
-def test_dur_komutu_hepsini_kapatir_dur_dosyasi_yeniden_baslatma_engeli(tmp_path):
-    guncelleme = tg_mesaj(5, "/dur")
-    yabanci = tg_mesaj(4, "/dur", chat=999)
+def test_kapat_komutu_hepsini_kapatir_dur_dosyasi_yeniden_baslatma_engeli(tmp_path):
+    """Eski `/dur` davranışı `/kapat` oldu (kullanıcı kararı 2026-11-05): test aynı şeyi `/kapat` ile doğrular, zayıflatılmadı."""
+    guncelleme = tg_mesaj(5, "/kapat")
+    yabanci = tg_mesaj(4, "/kapat", chat=999)
     m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([yabanci]))
     m.baslat()
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     m.dakika()
-    assert not m.dur_istendi and not (tmp_path / "durum" / "DUR").exists()                    # yabancı sohbetten /dur kabul edilmedi
+    assert not m.dur_istendi and not (tmp_path / "durum" / "DUR").exists()                    # yabancı sohbetten /kapat kabul edilmedi
     tgp.guncellemeler.append(guncelleme)
     m.dakika()
     assert m.dur_istendi and (tmp_path / "durum" / "DUR").exists() and m.hesap.sz(adr(1), "BTC") == pytest.approx(0.0, abs=1e-9)
@@ -343,6 +380,73 @@ def test_dur_komutu_hepsini_kapatir_dur_dosyasi_yeniden_baslatma_engeli(tmp_path
     m2, *_ = kur(tmp_path)
     with pytest.raises(mt.KipHatasi):
         m2.baslat()                                                                           # DUR varken başlamaz
+
+
+def test_elle_dur_artirma_engeller_azaltma_serbest_yeniden_kurulunca_korunur_baska_bayrak_silmez(tmp_path):
+    """Opus denetimi: mevcut coinde `artir` engellenir, kısmi `azalt` serbest, risk.json'dan yeni Motor kurulunca duraklatma korunur, başka bayrağın açılıp kapanması `elle_dur`'u silmez; `/devam` yanıtı başka engeli söyler."""
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    m._komutlar(["/dur"])
+    s = m.olay_isle(olay("a:2", adr(1), "BTC", "B", 100, 100.0, 300.0, saat))                      # mevcut coinde artırma
+    assert s[0].karar == "engel" and s[0].neden == "elle_dur"
+    onceki = m.hesap.sz(adr(1), "BTC")
+    s2 = m.olay_isle(olay("a:3", adr(1), "BTC", "A", 150, 100.0, 300.0, saat))                     # kısmi azaltma (trader 300 → 150)
+    assert s2[0].karar == "emir" and m.hesap.sz(adr(1), "BTC") < onceki
+    m.risk.bayrak("mutabakat", True)
+    m.risk.bayrak("mutabakat", False)
+    assert m.risk.acilis_durdu["elle_dur"]                                                         # başka bayrak elle_dur'u silmedi
+    m.durum_yaz()
+    m2, *_ = kur(tmp_path)
+    assert m2.risk.acilis_durdu.get("elle_dur") is True                                           # yeni Motor risk.json'dan yükledi
+    m.risk.bayrak("gunluk_kayip", True)
+    m._komutlar(["/devam"])
+    assert any("hâlâ kapalı: gunluk_kayip" in x for x in tgp.gonderilen)                           # yanıltmaz
+
+
+def test_dur_komutu_yalniz_yeni_giris_ve_artirmayi_durdurur_cikis_serbest_devam_acar(tmp_path):
+    """Yeni `/dur`: açılış/artırma engellenir (`elle_dur`), kapanış serbest, motor çalışır, DUR dosyası YAZILMAZ; `/devam` (= `/baslat`) açar; kalıcıdır. (Komutlar `_komutlar` ile verilir:
+    dakikalık trader pozisyon senkronu sahte HL'de trader pozisyonu görmediği için açık kopyayı kendisi kapatırdı.)"""
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))                          # açık pozisyon var
+    assert m.hesap.sz(adr(1), "BTC") > 0
+    m._komutlar(["/dur"])
+    assert m.risk.acilis_durdu["elle_dur"] and not m.dur_istendi and not m.risk.dur and not (tmp_path / "durum" / "DUR").exists()
+    assert any("duraklatıldı" in x for x in tgp.gonderilen) and kayitlar(tmp_path, "elle_dur")
+    s = m.olay_isle(olay("a:2", adr(1), "ETH", "B", 10, 2000.0, 0.0, saat))
+    assert s[0].karar == "engel" and s[0].neden == "elle_dur"                                  # yeni açılış engelli
+    assert "Yeni işlem duraklatıldı" in m.durum_metni()
+    assert json.loads((tmp_path / "durum" / "risk.json").read_text(encoding="utf-8"))["acilis_durdu"]["elle_dur"] is True       # kalıcı
+    s2 = m.olay_isle(olay("a:3", adr(1), "BTC", "A", 300, 100.0, 300.0, saat))
+    assert s2[0].karar == "emir" and m.hesap.sz(adr(1), "BTC") == pytest.approx(0.0, abs=1e-9)  # kapanış serbest
+    m._komutlar(["/devam"])
+    assert not m.risk.acilis_durdu["elle_dur"] and kayitlar(tmp_path, "elle_devam")
+    assert m.olay_isle(olay("a:4", adr(1), "ETH", "B", 10, 2000.0, 0.0, saat))[0].karar == "emir"
+    m._komutlar(["/dur"])
+    m._komutlar(["/baslat"])
+    assert not m.risk.acilis_durdu["elle_dur"]                                                  # /baslat = /devam
+
+
+def test_dur_ve_devam_telegramdan_gelir(tmp_path):
+    tgp = SahteTG([])
+    m, hl, saat, tgp = kur(tmp_path, tgp=tgp)
+    m.baslat()
+    tgp.guncellemeler.append(tg_mesaj(10, "/dur"))
+    m.dakika()
+    assert m.risk.acilis_durdu["elle_dur"]
+    tgp.guncellemeler.append(tg_mesaj(11, "/devam"))
+    m.dakika()
+    assert not m.risk.acilis_durdu["elle_dur"]
+
+
+def test_devam_kapat_sonrasi_motoru_acmaz(tmp_path):
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    m.dur_tetikle("komut")
+    tgp.guncellemeler.append(tg_mesaj(20, "/devam"))
+    m.dakika()
+    assert m.risk.dur and any("Motor kapalı" in x for x in tgp.gonderilen)
 
 
 def test_zirveden_20_dusus_dur_ve_gunluk_kayip_alarmi(tmp_path):
@@ -438,18 +542,29 @@ def test_telegram_komutlari_yalniz_yapilandirilmis_sohbetten_ve_biçim():
 
 
 # ================================================================================================ kip güvencesi
-def test_kip_varsayilan_sanal_gercek_yalniz_ayar_anahtar_ve_actions_degil():
+ANAHTAR = {"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": "0x1"}
+
+
+def test_kip_varsayilan_sanal_gercek_yalniz_ortam_anahtar_ve_actions_degil():
+    """G4: gerçek kip YALNIZ `CANLI_KIP=gercek` ortamıyla (eski `kurallar.yaml canli_kip: gercek` senaryosu ortama taşındı; yaml artık yalnız sanal)."""
     assert mt.kip_belirle(RULES, None, {}) == "sanal" and str(RULES["canli_kip"]) == "sanal"
     with pytest.raises(mt.KipHatasi):
-        mt.kip_belirle(RULES, "gercek", {"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": "0x1"})                    # kurallar.yaml sanal: gercek istenemez
-    gercek_kurallar = {**RULES, "canli_kip": "gercek"}
+        mt.kip_belirle(RULES, "gercek", dict(ANAHTAR))                                                          # ortamda CANLI_KIP yok: gercek istenemez
     with pytest.raises(yu.AnahtarYok):
-        mt.kip_belirle(gercek_kurallar, None, {})
-    assert mt.kip_belirle(gercek_kurallar, None, {"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": "0x1"}) == "gercek"
+        mt.kip_belirle(RULES, None, {"CANLI_KIP": "gercek"})
+    assert mt.kip_belirle(RULES, None, {**ANAHTAR, "CANLI_KIP": "gercek"}) == "gercek"
+    assert mt.kip_belirle(RULES, "sanal", {**ANAHTAR, "CANLI_KIP": "gercek"}) == "sanal"                      # açık --kip sanal kazanır
     with pytest.raises(mt.KipHatasi):
-        mt.kip_belirle(gercek_kurallar, None, {"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": "0x1", "GITHUB_ACTIONS": "true"})        # Actions'ta ASLA
+        mt.kip_belirle(RULES, None, {**ANAHTAR, "CANLI_KIP": "gercek", "GITHUB_ACTIONS": "true"})              # Actions'ta ASLA
+    with pytest.raises(mt.KipHatasi):
+        mt.kip_belirle(RULES, None, {"CANLI_KIP": "sanal", "GITHUB_ACTIONS": "true"})                           # Actions + herhangi CANLI_* → ret
+    with pytest.raises(mt.KipHatasi):
+        mt.kip_belirle(RULES, None, {"CANLI_KASA_USD": "300", "GITHUB_ACTIONS": "true"})
+    assert mt.kip_belirle(RULES, None, {"GITHUB_ACTIONS": "true"}) == "sanal"                                   # CANLI_* yoksa sanal vardiya aynen
     with pytest.raises(mt.KipHatasi):
         mt.kip_belirle(RULES, "x", {})
+    with pytest.raises(mt.KipHatasi):
+        mt.kip_belirle(RULES, None, {"CANLI_KIP": "x"})
 
 
 def test_kasa_siniri_asan_kasada_motor_baslamaz(tmp_path):
@@ -470,8 +585,10 @@ def test_kontrol_emir_gondermez_rapor_yazar(tmp_path):
     assert all(i["type"] in ("meta",) for i in hl.istekler) and not cagri                    # yalnız meta okundu (anahtarsız): l2Book / emir yok
     gercek = mt.kontrol(RULES, "gercek", hl, lambda: None, tg.Telegram("", "", ortam={}), ortam={})
     assert gercek["tamam"] is False and gercek["kadro"]["var"] is False
-    ok = mt.kontrol(RULES, "gercek", hl, lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "gizli-anahtar-xyz", "HL_HESAP_ADRESI": adr(7)})
-    assert ok["bakiye_usd"] == 100_000.0 and ok["hl_hesap_degeri"] == 100_000.0 and ok["etkin_kasa_usd"] == 1000.0 and ok["tamam"] is True and "gizli-anahtar-xyz" not in json.dumps(ok)                  # anahtar rapora yazılmaz
+    assert rapor["kasa_kaynagi"] == "yaml" and gercek["kasa_kaynagi"] == "yaml" and gercek["kasa_siniri_ok"] is False and "CANLI_KASA_USD" in gercek["kasa_hata"]      # G4: gerçek kip + ortam kasası yok
+    ok = mt.kontrol(RULES, "gercek", hl, lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "gizli-anahtar-xyz", "HL_HESAP_ADRESI": adr(7), "CANLI_KASA_USD": "1000"}, turet=lambda k: adr(9))
+    assert ok["kasa_kaynagi"] == "ortam" and ok["bakiye_usd"] == 100_000.0 and ok["hl_hesap_degeri"] == 100_000.0 and ok["etkin_kasa_usd"] == 1000.0 and "gizli-anahtar-xyz" not in json.dumps(ok)                  # anahtar rapora yazılmaz
+    assert ok["agent_dogrulandi"] is True and ok["hl_deger_siniri_ok"] is False and ok["tamam"] is False          # G6: HL değeri 100.000 $ > 1.000 $ (K‑22) → ret
 
 
 # ================================================================================================ dayanıklılık (WS)
@@ -790,18 +907,18 @@ def test_k35_motor_emir_boyutu_birlesik_hesap_paydasiyla(tmp_path):
 
 def test_k35_gercek_kipte_kasa_min_ayar_ve_hl_hesap_degeri():
     """Ayar 1.000: HL 600 → 600; HL 5.000 → 1.000 (hesapta fazla olsa da ayarın üstü kullanılmaz); sanal kip HL'ye bakmaz; okunamazsa KipHatasi."""
-    assert mt.etkin_kasa(RULES, "gercek", BirlesikHL(spot=-89_400.0), {"HL_HESAP_ADRESI": adr(7)}) == (600.0, 600.0)           # 60.000 + 30.000 − 89.400 (test girdisi) = 600
-    assert mt.etkin_kasa(RULES, "gercek", BirlesikHL(spot=10_000.0), {"HL_HESAP_ADRESI": adr(7)}) == (1000.0, 100_000.0)
+    assert mt.etkin_kasa(RULES, "gercek", BirlesikHL(spot=-89_400.0), {"CANLI_KASA_USD": "1000", "HL_HESAP_ADRESI": adr(7)}) == (600.0, 600.0)           # 60.000 + 30.000 − 89.400 (test girdisi) = 600
+    assert mt.etkin_kasa(RULES, "gercek", BirlesikHL(spot=10_000.0), {"CANLI_KASA_USD": "1000", "HL_HESAP_ADRESI": adr(7)}) == (1000.0, 100_000.0)
     assert mt.etkin_kasa(RULES, "sanal", SahteHL(), {}) == (1000.0, None)
     def bozuk(y):
         raise ConnectionError("x")
     with pytest.raises(mt.KipHatasi):
-        mt.etkin_kasa(RULES, "gercek", bozuk, {"HL_HESAP_ADRESI": adr(7)})
+        mt.etkin_kasa(RULES, "gercek", bozuk, {"CANLI_KASA_USD": "1000", "HL_HESAP_ADRESI": adr(7)})
 
 
 def test_k35_kontrol_etkin_kasayi_raporlar():
-    r = mt.kontrol(RULES, "gercek", BirlesikHL(spot=-89_400.0), lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": adr(7)})
-    assert r["hl_hesap_degeri"] == pytest.approx(600.0) and r["etkin_kasa_usd"] == pytest.approx(600.0) and r["kasa_usd"] == 1000.0 and r["tamam"] is True
+    r = mt.kontrol(RULES, "gercek", BirlesikHL(spot=-89_400.0), lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": adr(7), "CANLI_KASA_USD": "1000"}, turet=lambda k: adr(9))
+    assert r["kasa_kaynagi"] == "ortam" and r["hl_hesap_degeri"] == pytest.approx(600.0) and r["etkin_kasa_usd"] == pytest.approx(600.0) and r["kasa_usd"] == 1000.0 and r["tamam"] is True
     r2 = mt.kontrol(RULES, "sanal", BirlesikHL(spot=10_000.0), lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": adr(7)})
     assert r2["etkin_kasa_usd"] == 1000.0                                                           # sanal kip: ayar
 
@@ -851,3 +968,306 @@ def test_telegram_emir_ozeti_toplar_tek_mesaj_ayni_satir_birlesir():
         "🟢 AL NEAR: 11 $ · 0xf43a34… pozisyon açtı · ⚠️ 1 tanesi tam dolmadı\n"
         "↳ Trader'a göre ortalama fark 0.6 bp (küçük = iyi)")
     assert tg.msg_emir_ozeti("sanal", emirler[:1], 5).startswith("🟢 ETH AL: 12,0 $")                               # tek emir: ayrıntılı biçim
+
+
+def test_k38_motor_azaltma_hedef_tabanli_atlanan_parca_sonra_yakalanir_hesap_yok_degil(tmp_path):
+    """K‑38 (K‑36'daki hesap_yok dersiyle): motor azaltmada da trader hesap paydasını geçirir. Hesap 100.000 $, slot 90,909: trader 300 BTC × 100 $ açar (biz 27,2727 $). 300 → 250: hedef 22,7273 → fark 4,5455 < 11 → atlanır (eski oransal 4,5455 de atlardı).
+    250 → 150: hedef 13,6364 → fark 13,6364 → **13,64 $ azaltma** (eski oransal: 27,27 × 100/250 = 10,9 < 11 → yine atlardı; fark hiç kapanmazdı)."""
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    s2 = m.olay_isle(olay("a:2", adr(1), "BTC", "A", 50, 100.0, 300.0, saat))
+    assert not any(x.karar == "emir" for x in s2)
+    s3 = m.olay_isle(olay("a:3", adr(1), "BTC", "A", 100, 100.0, 250.0, saat))
+    assert [(x.eylem, x.karar) for x in s3] == [("azalt", "emir")] and kayitlar(tmp_path, "emir")[-1]["usd_istenen"] == pytest.approx(13.6364, abs=1e-3) and not m.neden_say.get("hesap_yok")
+
+
+def test_k38_oransal_yedek_sayaci_neden_say_ve_kayitta(tmp_path):
+    """Lider onayı (05.11): trader hesabı bilinmiyorsa azaltma oransal yedeğe düşer ve `azalt_oransal_yedek` olarak SAYILIR (özet neden_say + emir kaydı boyut_neden)."""
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    m.hesap_tr[adr(1)] = {"deger": 0.0, "ms": saat()}                                   # hesap değeri 0 ⇒ bilinmiyor gibi (oransal yedek)
+    s = m.olay_isle(olay("a:2", adr(1), "BTC", "A", 150, 100.0, 300.0, saat))
+    assert [(x.eylem, x.karar) for x in s] == [("azalt", "emir")] and m.neden_say.get("azalt_oransal_yedek") == 1 and kayitlar(tmp_path, "emir")[-1]["boyut_neden"] == "azalt_oransal_yedek"
+def test_k39_motor_gecis_beklemesi_silinir_ve_kayda_yazilir(tmp_path):
+    import json as _j
+    (tmp_path / "durum").mkdir()
+    adres = "0x62edf4" + "1" * 34
+    (tmp_path / "durum" / "saha.json").write_text(_j.dumps({"bekleme": {adres: 9_999_999_999_999}, "kurulu": True}))
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    assert adres not in m.saha.bekleme and any(x["olay"] == "bekleme_silindi" and x["adres"] == adres and x["neden"] == "K-39" for x in kayitlar(tmp_path))
+
+
+def test_b7_periyodik_vardiya_boyunca_taze_ozet_json_yazar_pano_icin(tmp_path):
+    """Pano 15 dakikada bir yenilensin (B7): motor `durum/ozet.json`'u yalnız vardiya sonunda değil her periyodik döngüde yazar (vardiya kimliği, acik, dinleyici alanlarıyla)."""
+    import types
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    din = types.SimpleNamespace(izle_ekle=lambda a: None, durdur=lambda: None, ozet=lambda: {"genel": {"kopma": 3}})
+
+    async def kos():
+        durdur = asyncio.Event()
+        gorev = asyncio.create_task(mt._periyodik(m, durdur, din, aralik_sn=60))
+        await asyncio.sleep(0.5)
+        durdur.set()
+        await gorev
+    asyncio.run(kos())
+    ozet = json.loads((tmp_path / "durum" / "ozet.json").read_text())
+    assert ozet["vardiya"] == m.vardiya_id and "acik" in ozet and ozet["dinleyici"] == {"kopma": 3} and ozet["kasa_usd"] == 1000.0 and ozet["yazildi_ms"] == saat()
+
+
+# ================================================================================================ Telegram lider kararları (2026-11-05 akşam)
+def test_baslat_dur_dosyasi_yoksa_risk_json_dur_sifirlanir_dosya_varsa_dokunulmaz(tmp_path):
+    """/kapat → yalnız DUR silinip yeniden başlatılırsa risk.json `dur: true` kalırdı; DUR dosyası tek yetkili."""
+    m, hl, saat, tgp = kur(tmp_path)
+    m.baslat()
+    m.dur_tetikle("komut")
+    assert m.risk.dur and (tmp_path / "durum" / "DUR").exists()
+    (tmp_path / "durum" / "DUR").unlink()                                                     # kullanıcı DUR'u elle sildi
+    assert json.loads((tmp_path / "durum" / "risk.json").read_text(encoding="utf-8"))["dur"] is True
+    m2, *_ = kur(tmp_path)
+    assert m2.risk.dur is True
+    m2.baslat()
+    assert m2.risk.dur is False and m2.risk.dur_neden is None
+    assert json.loads((tmp_path / "durum" / "risk.json").read_text(encoding="utf-8"))["dur"] is False        # kayda yazıldı
+    ev = kayitlar(tmp_path, "dur_sifirlandi")
+    assert len(ev) == 1 and ev[0]["neden"] == "komut"
+    m3, *_ = kur(tmp_path)
+    m3.baslat()
+    assert len(kayitlar(tmp_path, "dur_sifirlandi")) == 1                                     # dur zaten yoktu: olay tekrarlanmaz
+
+
+def test_baslat_dur_dosyasi_varsa_motor_baslamaz_risk_dur_sifirlanmaz(tmp_path):
+    m, hl, saat, tgp = kur(tmp_path)
+    m.baslat()
+    m.dur_tetikle("komut")
+    m2, *_ = kur(tmp_path)
+    with pytest.raises(mt.KipHatasi):
+        m2.baslat()
+    assert m2.risk.dur is True and not kayitlar(tmp_path, "dur_sifirlandi")
+
+
+def test_vardiya_arasinda_gelen_komut_yanitlanir_calistirilmaz_bir_kez_yetki_ve_pencere(tmp_path):
+    simdi = time.time()
+    tgp = SahteTG([tg_mesaj(1, "/kapat", tarih=simdi - 300),                      # 5 dk önce: yanıt, ÇALIŞTIRILMAZ
+                   tg_mesaj(2, "/dur", tarih=simdi - 14 * 60),                    # pencere içinde
+                   tg_mesaj(3, "/devam", tarih=simdi - 16 * 60),                  # 15 dk dışında: sessiz
+                   tg_mesaj(4, "/kapat", tarih=simdi - 60, kimden=999),           # yetkisiz: yanıt yok
+                   tg_mesaj(5, "merhaba", tarih=simdi - 60)])                     # komut değil
+    m, hl, saat, _ = kur(tmp_path, tgp=tgp)
+    m.baslat()
+    m.dakika()
+    yanit = [x for x in tgp.gonderilen if "vardiya arasında geldi" in x]
+    assert len(yanit) == 1 and "/kapat" in yanit[0] and "/dur" in yanit[0] and "/devam" not in yanit[0] and "işlenmedi" in yanit[0] and "Tekrar gönder" in yanit[0]
+    assert not m.dur_istendi and not m.risk.dur and not m.risk.acilis_durdu.get("elle_dur") and not (tmp_path / "durum" / "DUR").exists()      # komut yürütülmedi
+    m.dakika()
+    assert len([x for x in tgp.gonderilen if "vardiya arasında geldi" in x]) == 1          # spam yok
+    assert m.tg.yetkisiz_sayisi == 1
+    t = tg.Telegram(TOKEN, CHAT, SahteTG([tg_mesaj(7, "/durum", tarih=simdi - 100)]), baslangic_s=simdi)
+    assert t.komutlari_al() == [] and len(t.gonderilen) == 1
+    t.post.guncellemeler.append(tg_mesaj(7, "/durum", tarih=simdi - 100))                  # aynı update_id yeniden gelse bile ikinci yanıt yok
+    t.komutlari_al()
+    assert len(t.gonderilen) == 1
+
+
+def test_vardiya_arasi_yanit_telegram_kapaliysa_sessiz_gecer():
+    t = tg.Telegram("", "", SahteTG([tg_mesaj(1, "/kapat", tarih=time.time() - 60)]), baslangic_s=time.time())
+    assert t.komutlari_al() == [] and t.gonderilen == []
+
+
+def test_durum_gercek_risk_bayraklarini_gosterir_bayrak_yoksa_normal(tmp_path):
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    assert "Risk: normal" in m.durum_metni()
+    m.risk.bayrak("gunluk_kayip", True)
+    m.risk.bayrak("mutabakat", True)
+    m._komutlar(["/dur"])
+    m.risk.fren_bitis[adr(1)] = saat() + 60_000
+    metin = m.durum_metni()
+    for parca in ("Günlük kayıp freni", "Mutabakat", "duraklatıldı", "Patlama freni"):
+        assert parca in metin
+    assert "Risk: normal" not in metin
+    m.risk.fren_bitis[adr(1)] = saat() - 1
+    m.risk.bayrak("gunluk_kayip", False)
+    assert "Patlama freni" not in m.durum_metni() and "Günlük kayıp" not in m.durum_metni()
+    m.risk.dur = True
+    assert "DURDURULDU" in m.durum_metni()
+    m._komutlar(["/durum"])
+    assert tgp.gonderilen[-1] == m.durum_metni()
+
+
+def test_dur_dosyasi_kapanislardan_once_yazilir_kapanis_istisnasi_dur_u_bozmaz_yeniden_baslatinca_acilis_yok(tmp_path, monkeypatch):
+    """Lider denetimi: kapanış sırasında istisna (ör. HL okuması) olsa da `DUR` yazılı kalır; yeniden başlatma yalnız kapanış modunda başlar, açılış yapılmaz."""
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+
+    def patla(*a, **k):
+        assert (tmp_path / "durum" / "DUR").exists()                                           # istisna anında DUR zaten yazılı
+        raise ConnectionError("HL okuması patladı")
+    monkeypatch.setattr(m, "_adres_kapat", patla)
+    m.dur_tetikle("zirve_dusus")
+    dur = json.loads((tmp_path / "durum" / "DUR").read_text(encoding="utf-8"))
+    assert dur["neden"] == "zirve_dusus" and dur["kapanis_bekliyor"] is True and not (tmp_path / "durum" / "DUR.tmp").exists()
+    assert m.risk.dur and m.dur_bekliyor and kayitlar(tmp_path, "dur_kapanis_hata") and any(x.startswith("🛑 DUR:") for x in tgp.gonderilen)
+    m2, hl2, saat2, _ = kur(tmp_path, saat=saat)
+    m2.baslat()                                                                                # kapanış modu: açık pozisyon var
+    assert m2.risk.dur and m2.dur_bekliyor
+    assert m2.olay_isle(olay("a:2", adr(1), "ETH", "B", 10, 2000.0, 0.0, saat))[0].karar == "engel"
+
+
+def test_dur_dosyasi_yazilamazsa_alarm_ve_kayit_sessiz_gecilmez(tmp_path):
+    m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
+    m.baslat()
+    (tmp_path / "durum" / "DUR.tmp").mkdir()                                                   # geçici dosya yazılamaz (dizin engeli) → OSError
+    m.dur_tetikle("komut")
+    assert kayitlar(tmp_path, "dur_yazim_hata") and any("DUR dosyası YAZILAMADI" in x for x in tgp.gonderilen) and m.risk.dur
+
+
+
+# ---------------------------------------------------------------- G5: kip/kasa uyuşmazlığında başlama yok
+def kur_kip(tmp_path, kip, ayar=300.0, saat=None):
+    """Aynı durum dizinine `kip` kipinde Motor kurar (gerçek kip: ayarlı kasa `ayar`, etkin kasa = ayar)."""
+    rules = {**RULES, "canli_kasa_usd": ayar, "canli_kasa_ayar_usd": ayar}
+    hl, saat = SahteHL(), saat or Saat()
+    yur = yu.SanalYurutucu(hl, rules)
+    yur.kip = kip
+    k = kadro([satir(1, 1)], saat() - SAAT)
+    return mt.Motor(rules, yur, hl, tg.Telegram(TOKEN, CHAT, SahteTG()), tmp_path / "durum", tmp_path / "kayit", lambda: k, saat), saat
+
+
+def test_g5_sanal_durum_dizininde_gercek_kip_acilmaz(tmp_path):
+    m, saat = kur_kip(tmp_path, "sanal", 1000.0)
+    m.baslat()
+    m.durum_yaz()
+    assert json.loads((tmp_path / "durum" / "motor.json").read_text())["kip"] == "sanal"
+    g, _ = kur_kip(tmp_path, "gercek", 300.0, saat)
+    with pytest.raises(mt.KipHatasi, match="sanal durum dizininde gerçek kip açılmaz"):
+        g.baslat()
+    assert kayitlar(tmp_path, "vardiya_baslamadi")[-1]["neden"] == "sanal durum dizininde gerçek kip açılmaz"
+
+
+def test_g5_gercek_durum_dizininde_sanal_kip_acilmaz(tmp_path):
+    g, saat = kur_kip(tmp_path, "gercek", 300.0)
+    g.baslat()
+    g.durum_yaz()
+    s, _ = kur_kip(tmp_path, "sanal", 1000.0, saat)
+    with pytest.raises(mt.KipHatasi, match="gerçek durum dizininde sanal kip açılmaz"):
+        s.baslat()
+    assert kayitlar(tmp_path, "vardiya_baslamadi")
+
+
+def test_g5_gercek_farkli_kasa_acik_pozisyon_varsa_ret(tmp_path):
+    g, saat = kur_kip(tmp_path, "gercek", 300.0)
+    g.baslat()
+    g.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    assert any(g.hesap.poz.values())
+    g.durum_yaz()
+    g2, _ = kur_kip(tmp_path, "gercek", 500.0, saat)
+    with pytest.raises(mt.KipHatasi, match="açık pozisyon var"):
+        g2.baslat()
+    assert not kayitlar(tmp_path, "kasa_degisti") and kayitlar(tmp_path, "vardiya_baslamadi")
+
+
+def test_g5_gercek_farkli_kasa_pozisyon_yoksa_kabul_ve_kasa_degisti(tmp_path):
+    g, saat = kur_kip(tmp_path, "gercek", 300.0)
+    g.baslat()
+    g.durum_yaz()
+    g2, _ = kur_kip(tmp_path, "gercek", 500.0, saat)
+    g2.baslat()
+    g2.durum_yaz()
+    k = kayitlar(tmp_path, "kasa_degisti")
+    assert len(k) == 1 and k[0]["eski_usd"] == 300.0 and k[0]["yeni_usd"] == 500.0
+    assert json.loads((tmp_path / "durum" / "motor.json").read_text())["kasa_ayar_usd"] == 500.0
+    g3, _ = kur_kip(tmp_path, "gercek", 500.0, saat)                                              # aynı ayar: kayıt yok
+    g3.baslat()
+    assert len(kayitlar(tmp_path, "kasa_degisti")) == 1
+
+
+def test_g5_bos_dizin_serbest_gercek_de_sanal_da(tmp_path):
+    g, _ = kur_kip(tmp_path / "a", "gercek", 300.0)
+    g.baslat()
+    s, _ = kur_kip(tmp_path / "b", "sanal", 1000.0)
+    s.baslat()
+
+
+def test_g5_eski_bicim_kip_alani_yok_sanal_sayilir(tmp_path):
+    m, saat = kur_kip(tmp_path, "sanal", 1000.0)
+    m.baslat()
+    m.durum_yaz()
+    yol = tmp_path / "durum" / "motor.json"
+    j = json.loads(yol.read_text())
+    j.pop("kip")
+    j.pop("kasa_ayar_usd")
+    yol.write_text(json.dumps(j))
+    s, _ = kur_kip(tmp_path, "sanal", 1000.0, saat)
+    s.baslat()                                                                                    # sanal + eski biçim: aynen devam
+    yol.write_text(json.dumps(j))
+    g, _ = kur_kip(tmp_path, "gercek", 300.0, saat)
+    with pytest.raises(mt.KipHatasi, match="sanal durum dizininde"):
+        g.baslat()
+
+
+def test_g5_main_uyusmazlikta_cikis_3_ve_telegram(monkeypatch, tmp_path):
+    from tests.test_g1_alarm import SahteTg as TabanTg
+
+    class SahteTg(TabanTg):
+        ornekler: list = []
+        offset, kayit, maske = 0, None, []
+
+    SahteTg.ornekler = []
+    m, saat = kur_kip(tmp_path, "sanal", 1000.0)
+    m.baslat()
+    m.durum_yaz()
+    monkeypatch.setattr(mt.tg, "Telegram", SahteTg)
+    monkeypatch.setattr(mt, "rest_post_olustur", lambda rules: SahteHL())
+    monkeypatch.setattr(mt, "kip_belirle", lambda rules, istenen=None, ortam=None: "gercek")
+    monkeypatch.setattr(mt, "etkin_kasa", lambda rules, kip, post, ortam=None: (300.0, 300.0))
+    monkeypatch.setattr(mt, "kasa_belirle", lambda rules, kip, ortam=None: (300.0, "ortam"))
+    monkeypatch.setenv("HL_API_CUZDAN_ANAHTARI", "test-anahtar")                                   # G6 doğrulaması geçsin (agent adr(9) → hesap adr(7))
+    monkeypatch.setenv("HL_HESAP_ADRESI", adr(7))
+    monkeypatch.setattr(mt, "anahtardan_adres", lambda anahtar: adr(9))
+    hl = SahteHL()
+    yur = yu.SanalYurutucu(hl, {**RULES, "canli_kasa_usd": 300.0})
+    yur.kip = "gercek"
+    monkeypatch.setattr(mt, "gercek_yurutucu_olustur", lambda post, rules: yur)
+    assert mt.main(["--kip", "gercek", "--durum-dizin", str(tmp_path / "durum")]) == 3
+    assert "sanal durum dizininde gerçek kip açılmaz" in TabanTg.ornekler[0].gonderilen[0]
+
+
+def test_emir_kaydinda_boyut_girdileri_elle_denetim(tmp_path):
+    """06.11 lider: emir kaydı boyut girdilerini taşır. Altın örnek (üstteki test): slot 90,909 $, trader hesap 100.000 $, BTC 300 × 100 $ açılış → hedef 90,909 × 300 × 100 / 100.000 = 27,2727 $."""
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    m.piyasa_oku(saat())
+    m.olay_isle(olay("a:2", adr(1), "BTC", "A", 150, 100.0, 300.0, saat))
+    e1, e2 = kayitlar(tmp_path, "emir")[:2]
+    assert (e1["trader_poz_once"], e1["trader_poz_sonra"], e1["trader_hesap_usd"]) == (0.0, 300.0, 100000.0)
+    assert e1["slot_usd"] == pytest.approx(1000 / 11) and e1["biz_poz_usd"] == 0.0 and e1["biz_slot_toplam_usd"] == 0.0 and e1["hedef_usd"] == pytest.approx(27.2727, abs=1e-4)
+    assert (e2["trader_poz_once"], e2["trader_poz_sonra"]) == (300.0, 150.0) and e2["biz_poz_usd"] == pytest.approx(27.2727, abs=1e-3) and e2["hedef_usd"] == pytest.approx(13.6364, abs=1e-4)
+    assert e2["biz_slot_toplam_usd"] == pytest.approx(27.2727, abs=1e-3)
+
+
+def test_kor_kirpildi_kaydi_yalniz_durum_degisince(tmp_path):
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    a, b = adr(7), adr(8)
+    m.karar_uygula([kd.Karar("giris_atlandi", a, "kor_kirpildi", kor_kirpildi=[adr(1), adr(2)])], saat())
+    m.karar_uygula([kd.Karar("giris_atlandi", a, "kor_kirpildi", kor_kirpildi=[adr(2), adr(1)])], saat())          # aynı durum (sıra farkı): yeni kayıt YOK
+    assert len(kayitlar(tmp_path, "kor_kirpildi")) == 1
+    m.karar_uygula([kd.Karar("giris_atlandi", a, "kor_kirpildi", kor_kirpildi=[adr(1), adr(3)])], saat())          # engelleyen küme değişti: yazılır
+    m.karar_uygula([kd.Karar("giris_atlandi", b, "kor_kirpildi", kor_kirpildi=[adr(1), adr(3)])], saat())          # başka aday: yazılır
+    assert len(kayitlar(tmp_path, "kor_kirpildi")) == 3
+
+
+def test_tur_kaydi_14_dakikada_bir(tmp_path):
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    m._tur_kaydi(saat())
+    m._tur_kaydi(saat() + 5 * 60_000)                                       # çok erken: yazılmaz
+    m._tur_kaydi(saat() + 15 * 60_000)
+    t = kayitlar(tmp_path, "tur")
+    assert len(t) == 2 and t[0]["ozsermaye_usd"] == pytest.approx(1000.0, abs=1e-6)

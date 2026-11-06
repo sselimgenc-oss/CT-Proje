@@ -3,7 +3,7 @@
 - Coin yoğunlaşması: aynı coinde TÜM slotların brüt nosyoneli ≤ kasa × `canli_coin_tavan_oran`; aşan açılış KIRPILIR (kırpılan < `radar_min_emir_usd` ise 0).
 - Patlama freni: bir trader `canli_patlama_pencere_dk` dk içinde ≥ `canli_patlama_coin` YENİ coin açarsa (o sekizinci açılış dahil) `canli_patlama_ara_dk` dk ondan yeni açılış kopyalanmaz (kapanışlar izlenir).
 - Günlük kayıp: UTC gün başı özsermayeden kayıp ≥ `canli_gunluk_kayip_oran` → o gün yeni açılış yok.
-- Zirveden düşüş ≥ `canli_zirve_dusus_oran` → `DUR`: tüm pozisyonlar reduce‑only kapatılır, motor durur, `durum/DUR` yazılır (elle silinmeden yeniden açılmaz). `/dur` aynı.
+- Zirveden düşüş ≥ `canli_zirve_dusus_oran` → `DUR`: tüm pozisyonlar reduce‑only kapatılır, motor durur, `durum/DUR` yazılır (elle silinmeden yeniden açılmaz). `/kapat` aynı (yeni `/dur` yalnız yeni girişi durdurur).
 - Kasa > `canli_kasa_ust_usd` (AGENTS.md sınırı): yeni açılış yok + alarm.
 """
 from __future__ import annotations
@@ -29,7 +29,7 @@ class Risk:
         self.dur: bool = bool(d.get("dur", False))
         self.dur_neden: str | None = d.get("dur_neden")
         self.fren_bitis: dict[str, int] = {k: int(v) for k, v in (d.get("fren_bitis") or {}).items()}
-        self.yeni_coin: dict[str, deque[int]] = {a: deque(v) for a, v in (d.get("yeni_coin") or {}).items()}
+        self.yeni_coin: dict[str, deque[tuple[int, str]]] = {a: deque((int(x[0]), str(x[1])) if isinstance(x, (list, tuple)) else (int(x), "") for x in v) for a, v in (d.get("yeni_coin") or {}).items()}      # (ms, coin); eski biçim (yalnız ms) okunur
         self.acilis_durdu: dict[str, bool] = dict(d.get("acilis_durdu") or {})        # neden -> aktif mi (gunluk_kayip, mutabakat, kasa_siniri, kadro)
 
     # ------------------------------------------------------------------ özsermaye izleme
@@ -75,20 +75,33 @@ class Risk:
         return True, ""
 
     def patlama_freni(self, adres: str, coin: str, yeni_coin_mu: bool, simdi_ms: int) -> bool:
+        """O1 (RADAR §6: '≥ 8 yeni coin'): pencere içindeki FARKLI coin sayısı (açılmak istenen coin dahil) eşiğe varırsa fren. Burada sayılmaz; açılış gerçekleşince `yeni_coin_kaydet`."""
         if simdi_ms < self.fren_bitis.get(adres, 0):
             return True
         if not yeni_coin_mu:
             return False
-        pencere = int(self.rules["canli_patlama_pencere_dk"]) * DAKIKA
-        kuyruk = self.yeni_coin.setdefault(adres, deque())
-        kuyruk.append(simdi_ms)
-        while kuyruk and kuyruk[0] < simdi_ms - pencere:
-            kuyruk.popleft()
-        if len(kuyruk) >= int(self.rules["canli_patlama_coin"]):
+        farkli = self._pencere_coinleri(adres, simdi_ms) | {coin}
+        if len(farkli) >= int(self.rules["canli_patlama_coin"]):
             self.fren_bitis[adres] = simdi_ms + int(self.rules["canli_patlama_ara_dk"]) * DAKIKA
-            kuyruk.clear()
+            self.yeni_coin.pop(adres, None)
             return True
         return False
+
+    def _pencere_coinleri(self, adres: str, simdi_ms: int) -> set[str]:
+        pencere = int(self.rules["canli_patlama_pencere_dk"]) * DAKIKA
+        kuyruk = self.yeni_coin.get(adres)
+        if kuyruk is None:
+            return set()
+        while kuyruk and kuyruk[0][0] < simdi_ms - pencere:
+            kuyruk.popleft()
+        return {c for _, c in kuyruk}
+
+    def yeni_coin_kaydet(self, adres: str, coin: str, simdi_ms: int) -> None:
+        """Gerçekten AÇILAN yeni coini patlama frenine yazar (aynı coin pencerede bir kez sayılır)."""
+        self._pencere_coinleri(adres, simdi_ms)
+        kuyruk = self.yeni_coin.setdefault(adres, deque())
+        if coin not in {c for _, c in kuyruk}:
+            kuyruk.append((simdi_ms, coin))
 
     def coin_tavani(self, emir_usd: float, coin_brut_usd: float) -> tuple[float, str]:
         """Aynı coindeki toplam brüt ≤ kasa × oran. Döner (uygulanan $, neden): kırpılmadıysa neden ''; kırpılan < min emir ise 0 ('coin_tavani')."""

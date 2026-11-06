@@ -121,8 +121,10 @@ radar_soguyor_saat: 72                  # saat (form sürüyor mu penceresi)
 radar_soguyor_min_getiri: -0.02         # oran (son 72 sa kopya getirisi bunun ALTINDAYSA puanlanmaz; sınır dahil geçer)
 radar_kadro_toplam: 30                  # kişi (İlk 11 + Yedek 19)
 radar_kadro_ilk: 11                     # kişi (İlk katman)
+radar_hip3_kopya: false                 # bool, K‑43: motorla aynı davranış (K‑28 tutarlılık düzeltmesi); true = eski v1 davranışı; kullanıcı onayına sunuldu. false = R1 kopya oynatmasında HIP‑3 (dex:COIN) dolumlarının TAMAMI atlanır (motor K‑42 gibi); eşik/ağırlık/yöntem DEĞİL
 # ---- Canlı motor (T4; RADAR_V1.md §5, §5b, §6; K-29, K-30, K-33). Oranlar kesir; süre adıyla; $ = kasa ölçeği (kopya_$) ----
-canli_kip: sanal                        # sanal | gercek (gercek YALNIZ sunucuda + anahtar varsa; Actions'ta ASLA)
+canli_kip: sanal                        # yalnız sanal (G4: gercek yazılırsa motor KipHatasi; gerçek kip YALNIZ sunucuda CANLI_KIP=gercek + CANLI_KASA_USD ortamıyla, Actions'ta ASLA)
+canli_hip3_kopya: false                # K‑42: false = HIP‑3 (dex:COIN) yeni açılış/artırma iki kipte de atlanır (hip3_atlandi); kapanış/azaltma hep serbest. Gerçek kipte SDK perp_dexs gelmeden true YAPMA
 canli_kadro_dali: radar                 # kadro.json'un okunduğu veri dalı (radar/son/kadro.json); dal doğrulamasında radar-deneme
 canli_kadro_aralik_sn: 300              # sn (kadro.json okuma sıklığı)
 canli_kadro_eski_saat: 36               # saat (kosu_ms bundan eskiyse kadro bayat: yeni giriş yok, düşme kuralları çalışır, alarm günde 1)
@@ -150,6 +152,8 @@ canli_mutabakat_oran: 0.01              # oran (fark_usd > kasa x bu => alarm + 
 canli_hesap_okuma_sn: 600               # sn (trader hesap değeri / pozisyon senkron okuma sıklığı)
 canli_ozet_saat_utc: 6                  # UTC saati (09:00 TR günlük özet)
 canli_telegram_emir_ozet_sn: 900     # sn (Telegram, SANAL kip: emirler bu aralıkta TEK özet mesajında toplanır; gerçek kipte her emir anında gider)
+canli_telegram_sanal_bos_mesaj: true    # SANAL kip: pencerede emir yoksa da tek kısa "emir yok · sistem çalışıyor" + kasa satırı (kullanıcı kararı 06.11); false = emir yoksa sessiz
+canli_telegram_sanal_ozet_dk: 60      # dakika (SANAL kip: emir bildirimleri bu pencerede TEK mesajda toplanır; emir yoksa mesaj yok; 0 = eski davranış = yukarıdaki 15 dk'lık özet. Gerçek kip ve alarmlar HER ZAMAN anında)
 canli_telegram_sessiz_bas_utc: 21    # UTC saati (00:00 TSİ; bu saatten sonra alarm dışı mesajlar sessiz gelir)
 canli_telegram_sessiz_bit_utc: 5     # UTC saati (08:00 TSİ)
 canli_olay_stale_sn: 120                # sn (trader dolumu bundan eskiyse "geç görüldü" işareti; emir yine mevcut defterle)

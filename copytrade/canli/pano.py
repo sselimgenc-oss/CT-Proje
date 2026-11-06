@@ -10,6 +10,8 @@ Birimler: oranlar yüzde olarak gösterilir (0,012 → %1,20); $ kasa ölçeğin
 from __future__ import annotations
 
 import argparse
+import re
+from collections import Counter
 import json
 import statistics
 import subprocess
@@ -20,6 +22,7 @@ from html import escape as esc
 from pathlib import Path
 
 from copytrade.canli.telegram import kip_adi, tr_isaretli, tr_sayi, tr_yuzde
+from copytrade.saglik import durum as saglik_durum, kontrol as saglik_kontrol, ozet_metin as saglik_metin
 
 SAAT_MS = 3_600_000
 GUN_MS = 24 * SAAT_MS
@@ -31,11 +34,12 @@ def kisa(adres: str) -> str:
 
 
 def yuzde(v: float | None, isaretli: bool = True) -> str:
-    return "—" if v is None else f"{v * 100:{'+' if isaretli else ''}.2f}%"
+    """Oran → Türkçe yüzde (B5: OZET.md ve HTML aynı biçim): 0,0125 → '+%1,25'."""
+    return "—" if v is None else (tr_yuzde(v) if isaretli else "%" + tr_sayi(v * 100))
 
 
 def usd(v: float | None, isaretli: bool = False) -> str:
-    return "—" if v is None else f"{v:{'+' if isaretli else ''},.2f} $"
+    return "—" if v is None else (tr_isaretli(v) if isaretli else tr_sayi(v)) + " $"
 
 
 def gun_str(ms: int) -> str:
@@ -121,31 +125,117 @@ def _tsi(ms: int, bicim: str = "%d.%m %H:%M") -> str:
     return datetime.fromtimestamp(ms / 1000, TSI).strftime(bicim)
 
 
-def _cizgi(deg: list[float], renk: str, dolgu: bool = True, taban: float | None = None) -> str:
-    """Alan/çizgi grafik (inline SVG). 2'den az nokta → bilgi yazısı."""
+def _cizgi(deg: list[float], renk: str, dolgu: bool = True, taban: float | None = None, baz: float | None = None, x_etiket: tuple[str, str] | None = None, birim: str = "$") -> str:
+    """Alan/çizgi grafik (inline SVG) + ölçek: en düşük/en yüksek, `baz` kesikli çizgi (ör. 1.000 $ kasa), x ekseni ilk/son zaman etiketi. 2'den az nokta → bilgi yazısı."""
     if len(deg) < 2:
         return '<div class="bos">Veri birikiyor — birkaç tur sonra çizilir</div>'
-    lo = min(deg) if taban is None else min(min(deg), taban)
-    hi = max(deg) if taban is None else max(max(deg), taban)
+    ek = [v for v in (taban, baz) if v is not None]
+    lo, hi = min([*deg, *ek]), max([*deg, *ek])
     ar = (hi - lo) or 1.0
+    y = lambda v: 78 - (v - lo) / ar * 66                       # noqa: E731
     xs = [i * 300 / (len(deg) - 1) for i in range(len(deg))]
-    ys = [78 - (v - lo) / ar * 66 for v in deg]
-    pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in zip(xs, ys))
+    pts = " ".join(f"{x:.1f},{y(v):.1f}" for x, v in zip(xs, deg))
     alan = f'<polygon points="0,80 {pts} 300,80" fill="{renk}" opacity=".16"/>' if dolgu else ""
-    return f'<svg viewBox="0 0 300 80" preserveAspectRatio="none" class="gr">{alan}<polyline fill="none" stroke="{renk}" stroke-width="1.8" vector-effect="non-scaling-stroke" points="{pts}"/></svg>'
+    baz_cizgi = f'<line x1="0" y1="{y(baz):.1f}" x2="300" y2="{y(baz):.1f}" stroke="#8a8a94" stroke-width="1" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>' if baz is not None else ""
+    f = (lambda v: tr_sayi(v) + " " + birim) if birim == "$" else (lambda v: tr_sayi(v) + birim)
+    x0, x1 = x_etiket or ("", "")
+    return (f'<svg viewBox="0 0 300 80" preserveAspectRatio="none" class="gr">{alan}{baz_cizgi}<polyline fill="none" stroke="{renk}" stroke-width="1.8" vector-effect="non-scaling-stroke" points="{pts}"/></svg>'
+            f'<div class="ek"><span>{esc(x0)}</span><span>{esc(x1)}</span></div>'
+            f'<div class="ek ek2">en düşük {esc(f(lo))} · en yüksek {esc(f(hi))}{" · kesikli çizgi: başlangıç " + esc(f(baz)) if baz is not None else ""}</div>')
 
 
 def _cubuk(deg: list[float]) -> str:
     if not deg:
         return '<div class="bos">Günlük çubuklar ilk günün sonunda görünür</div>'
     m = max(abs(v) for v in deg) or 1.0
-    w = 300 / len(deg)
+    w = 300 / max(len(deg), 6)                              # tek çubuk ekranı kaplamasın
     r = "".join(f'<rect x="{i * w + w * .15:.1f}" y="{(40 - max(v, 0) / m * 36):.1f}" width="{w * .7:.1f}" height="{max(abs(v) / m * 36, 1.2):.1f}" fill="{"#3ddc84" if v >= 0 else "#ff5d5d"}"/>' for i, v in enumerate(deg))
     return f'<svg viewBox="0 0 300 80" preserveAspectRatio="none" class="gr"><line x1="0" y1="40" x2="300" y2="40" stroke="#3a3a40" stroke-width=".6"/>{r}</svg>'
 
 
-def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecmis: list[dict], simdi_ms: int, kadro: dict | None = None, saha_durum: dict | None = None) -> str:
-    """Telefonda/bilgisayarda açılan tek dosyalık koyu "terminal" paneli (Cloudflare `pano/index.html`): rakam şeridi, özsermaye/düşüş/günlük K-Z grafikleri, pozisyon dağılımı, pozisyon ve işlem tabloları, içgörüler.
+ATLA_ETIKET = {
+    "min_emir_atlandi": "Emir 11 $ alt sınırının altında kaldı", "patlama_freni": "Patlama freni (coin kısa süre durduruldu)", "inen_trader": "Trader sahadan iniyor (yeni açılış yok)",
+    "slot_tavani": "Slot tavanı doldu (3 × slot)", "marj_yok": "Teminat sınırı", "gec_acilis": "Sinyal geç görüldü (> 120 sn)", "coin_tavani": "Coin tavanı (kasanın %30'u)",
+    "trader_hesap_yok": "Trader hesap değeri okunamadı", "hesap_yok": "Trader hesap değeri kullanılamadı (hata)",
+    "spot_atlandi": "Spot dolum kopyalanmaz (yalnız perp, K‑42)", "hip3_atlandi": "HIP‑3 (dex önekli) coin kopyalanmaz (K‑42)",
+    "ters_netlesme": "Aynı coinde ters yönlü kopya pozisyonu var (netleşme, K‑41)"}
+BILESEN_AD = (("G", "Güven ayarlı getiri"), ("K", "Kopya getirisi"), ("I1", "Kârlı gün oranı"), ("I2", "Düşüş (az = iyi)"), ("Y", "Yayılma"), ("H", "Hype yakalama"))
+ADRES_RE = re.compile(r"0x[0-9a-fA-F]{40}")
+
+
+def _atlanan_html(k24: list[dict]) -> str:
+    """C2: atlanan sinyaller (24 sa) — neden başına sayı. Yalnız `emir_yok` kayıtları (yeni hesap yok)."""
+    sayim = Counter(str(k.get("neden") or "?") for k in k24 if k.get("olay") == "emir_yok")
+    if not sayim:
+        return '<div class="bos">Son 24 saatte atlanan sinyal yok</div>'
+    toplam = sum(sayim.values())
+    return "".join(f'<div class="s"><b>{n}</b> × {esc(ATLA_ETIKET.get(neden, neden))} <span class="so">(%{n / toplam * 100:.0f})</span></div>' for neden, n in sayim.most_common())
+
+
+def _kapanan_html(kayitlar: list[dict]) -> str:
+    """C3: kapanış dolumları (azaltma/kapanış; net = gerçekleşen − ücret): sayı, kazanma oranı, ort. kâr/zarar, kâr faktörü — toplam ve trader başına. `pnl_usd` kaydı olmayan eski emirler sayılmaz."""
+    kap = [k for k in kayitlar if k.get("olay") == "emir" and k.get("reduce_only") and k.get("pnl_usd") is not None and k.get("durum") in ("dolu", "kismi")]
+    if not kap:
+        return '<div class="bos">Kapanış kaydı henüz yok (bu bilgi yeni kayıtlardan birikir)</div>'
+
+    def ozet(satirlar: list[dict]) -> tuple[int, float | None, float | None, float | None, float | None, float]:
+        net = [float(k["pnl_usd"]) - float(k.get("ucret") or 0.0) for k in satirlar]
+        kaz, kay = [x for x in net if x > 0], [x for x in net if x < 0]
+        pf = (sum(kaz) / -sum(kay)) if kay else None
+        return len(net), (len(kaz) / len(net)), (sum(kaz) / len(kaz) if kaz else None), (sum(kay) / len(kay) if kay else None), pf, sum(net)
+    def satir(ad: str, o: tuple) -> str:
+        n, oran, ok, oz_, pf, toplam = o
+        return (f'<tr><td>{esc(ad)}</td><td class="sg">{n}</td><td class="sg">{"—" if oran is None else "%" + tr_sayi(oran * 100, 0)}</td><td class="sg art">{esc(tl2(ok))}</td><td class="sg eks">{esc(tl2(oz_))}</td>'
+                f'<td class="sg {"art" if toplam >= 0 else "eks"}">{esc(tl2(toplam, True))}</td></tr>'
+                f'<tr class="alt"><td colspan="6">kâr faktörü {"—" if pf is None else tr_sayi(pf)}</td></tr>')
+    gruplar: dict[str, list[dict]] = {}
+    for k in kap:
+        gruplar.setdefault(k.get("adres", ""), []).append(k)
+    govde = satir("TOPLAM", ozet(kap)) + "".join(satir(kisa(a), ozet(v)) for a, v in sorted(gruplar.items(), key=lambda kv: -sum(float(x["pnl_usd"]) for x in kv[1])))
+    return (f'<div class="tw"><table><tr><th>TRADER</th><th class="sg">ADET</th><th class="sg">KAZANMA</th><th class="sg">ORT. KÂR</th><th class="sg">ORT. ZARAR</th><th class="sg">NET</th></tr>{govde}</table></div>'
+            '<div class="ha" style="padding:6px 11px">Her kapanış dolumu bir işlem sayılır (kısmi azaltmalar dahil); net = gerçekleşen − ücret. Kâr faktörü = toplam kâr / toplam zarar.</div>')
+
+
+def tl2(v: float | None, isaretli: bool = False) -> str:
+    return "—" if v is None else (tr_isaretli(v) if (isaretli or v < 0) else tr_sayi(v)) + " $"
+
+
+def _maliyet_html(kayitlar: list[dict], oz: float, kasa: float) -> str:
+    """C4: maliyet dökümü (kayıtlı dönem): ücret, kayma (trader fiyatına göre; + maliyet), funding; brüt K/Z = net + maliyet. Kayma zaten dolum fiyatlarında gömülü olduğundan net'e AYRICA eklenmez, brüt tahmininde geri eklenir."""
+    emirler = [k for k in kayitlar if k.get("olay") == "emir" and k.get("durum") in ("dolu", "kismi")]
+    ucret = sum(float(k.get("ucret") or 0.0) for k in emirler)
+    kayma = sum(float(k["kayma_trader"]) * float(k.get("usd_dolan") or 0.0) for k in emirler if k.get("kayma_trader") is not None)
+    funding = sum(float(k.get("funding_usd") or 0.0) for k in kayitlar if k.get("olay") == "funding")
+    net = oz - kasa
+    maliyet = ucret + kayma - funding
+    brut = net + maliyet
+    oran_txt = f"brüt K/Z'nin %{tr_sayi(maliyet / brut * 100, 0)}'i" if brut > 0 else "brüt K/Z ≤ 0 olduğundan oran hesaplanamadı"
+    satir = lambda ad, v, ipucu="": f'<tr><td>{esc(ad)}{f"<br><span class=so>{esc(ipucu)}</span>" if ipucu else ""}</td><td class="sg">{esc(tl2(v, True))}</td></tr>'   # noqa: E731
+    return ('<div class="tw"><table><tr><th>KALEM</th><th class="sg">TUTAR</th></tr>'
+            + satir("Brüt K/Z (maliyet öncesi, tahmini)", brut, "net + toplam maliyet") + satir("− Ücret", -ucret) + satir("− Kayma (trader fiyatına göre)", -kayma, "+ = aleyhe; dolum fiyatında gömülü")
+            + satir("± Funding (sanal)", funding, "+ alınan / − ödenen") + satir("Net K/Z (başlangıçtan beri)", net, "özsermaye − kasa")
+            + f'</table></div><div class="ha" style="padding:6px 11px">Toplam maliyet {esc(tl2(maliyet))} · {oran_txt}. Kayıtlı dönem (≤ 14 gün).</div>')
+
+
+def _maruziyet_html(acik: list[dict], kasa: float, oz: float, kaldirac: float, coin_tavan_oran: float) -> str:
+    """C5: maruziyet — net uzun/kısa, brüt/kasa, teminat/özsermaye (izole kaldıraç), coin başına doluluk (kasanın %30'u tavan)."""
+    uzun = sum(q.get("usd") or 0 for q in acik if q["sz"] > 0)
+    kisa_ = sum(q.get("usd") or 0 for q in acik if q["sz"] < 0)
+    brut = uzun + kisa_
+    teminat = brut / kaldirac if kaldirac > 0 else 0.0
+    coin: dict[str, float] = {}
+    for q in acik:
+        coin[q["coin"]] = coin.get(q["coin"], 0.0) + (q.get("usd") or 0)
+    tavan = coin_tavan_oran * kasa
+    cubuk = "".join(f'<div class="s"><span>{esc(c)} · {esc(tl2(u))} / {esc(tl2(tavan))}</span><div class="ol"><i style="width:{min(u / tavan * 100, 100):.0f}%;background:{"#ff5d5d" if u > tavan else "var(--tu)"}"></i></div></div>' for c, u in sorted(coin.items(), key=lambda x: -x[1]) if tavan > 0)
+    return (f'<div class="iz2"><div class="h"><div class="hb">Net uzun / kısa</div><div class="hd">{esc(tl2(uzun - kisa_, True))}</div><div class="ha">uzun {esc(tl2(uzun))} · kısa {esc(tl2(kisa_))}</div></div>'
+            f'<div class="h"><div class="hb">Brüt / kasa</div><div class="hd">%{tr_sayi(brut / kasa * 100, 0) if kasa > 0 else "—"}</div><div class="ha">brüt {esc(tl2(brut))}</div></div>'
+            f'<div class="h"><div class="hb">Teminat / özsermaye</div><div class="hd">%{tr_sayi(teminat / oz * 100, 0) if oz > 0 else "—"}</div><div class="ha">teminat ~{esc(tl2(teminat))} ({tr_sayi(kaldirac, 0)}x)</div></div></div>'
+            f'<div class="pi"><div class="ha">Coin başına doluluk (tavan: kasanın %{tr_sayi(coin_tavan_oran * 100, 0)}\'u)</div>{cubuk}</div>')
+
+
+def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecmis: list[dict], simdi_ms: int, kadro: dict | None = None, saha_durum: dict | None = None, hesap_tr: dict | None = None, havuz: dict | None = None, kurallar: dict | None = None) -> str:
+    """Telefonda/bilgisayarda açılan tek dosyalık koyu "terminal" paneli (`pano/index.html`; kullanıcının Cloudflare Workers statik sayfası `sg-pano` `canli-durum` dalının `pano/` klasörünü gösterir, salt okunur): rakam şeridi, özsermaye/düşüş/günlük K-Z grafikleri, pozisyon dağılımı, pozisyon ve işlem tabloları, içgörüler.
     Saf fonksiyon; yeni hesap yok (özet + kayıtlardan yalnız toplama/dizme). Dış kaynak/JS yok; tüm metin HTML kaçışlı."""
     kasa, oz = float(ozet.get("kasa_usd") or 0.0), float(ozet.get("ozsermaye_usd") or 0.0)
     gun_basi, zirve = risk.get("gun_basi"), risk.get("zirve")
@@ -155,11 +245,15 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     k24 = pencere24(kayitlar, simdi_ms)
     emirler = [k for k in k24 if k.get("olay") == "emir"]
     dolum = [k for k in emirler if k.get("durum") in ("dolu", "kismi")]
-    kaymalar = [abs(k["kayma_trader"]) * 1e4 for k in dolum if k.get("kayma_trader") is not None]
+    kaymalar = [abs(k["kayma_trader"]) * 1e4 for k in dolum if k.get("kayma_trader") is not None]            # mutlak fark (bp)
+    kayma_isaretli = sorted(k["kayma_trader"] * 1e4 for k in dolum if k.get("kayma_trader") is not None)      # işaretli fark (bp; + = trader fiyatından kötü)
+    kayma_ortanca = (kayma_isaretli[len(kayma_isaretli) // 2] if len(kayma_isaretli) % 2 else (kayma_isaretli[len(kayma_isaretli) // 2 - 1] + kayma_isaretli[len(kayma_isaretli) // 2]) / 2) if kayma_isaretli else None
     funding24 = sum(float(k.get("funding_usd") or 0.0) for k in k24 if k.get("olay") == "funding")
     din = ozet.get("dinleyici") or {}
-    veri_ms = max([int(k["zaman_ms"]) for k in kayitlar if k.get("olay") == "kapanis" and (k.get("ozet") or {}).get("vardiya") == ozet.get("vardiya")] or [simdi_ms])
+    veri_ms = int(ozet.get("yazildi_ms") or max([int(k["zaman_ms"]) for k in kayitlar if k.get("olay") == "kapanis" and (k.get("ozet") or {}).get("vardiya") == ozet.get("vardiya")] or [simdi_ms]))   # verinin YAZILDIĞI an (motor ozet.json'u yazarken); yoksa kapanış kaydı / üretim anı
     kip = str(ozet.get("kip", "—"))
+    _sg = saglik_kontrol(simdi_ms, ozet, kadro)                                                            # pano dışı ölçümler (Cloudflare) saatlik iş akışında; burada yalnız motor + radar
+    saglik_ozeti = ({"SAGLIKLI": "✅ sorun yok", "UYARI": "⚠ uyarı var", "KRITIK": "🚨 acil"}[saglik_durum(_sg)], "".join(f"<div>{esc(ozet_satiri)}</div>" for ozet_satiri in saglik_metin(_sg).split("\n")))
 
     def tl(v: float | None, isaretli: bool = False) -> str:
         return "—" if v is None else (tr_isaretli(v) if isaretli else tr_sayi(v)) + " $"
@@ -175,6 +269,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
 
     # özsermaye serisi: tur sonu kayıtları (kapanis) + günlük geçmiş + şimdi
     seri = sorted({int(k["zaman_ms"]): float(k["ozet"]["ozsermaye_usd"]) for k in kayitlar if k.get("olay") == "kapanis" and (k.get("ozet") or {}).get("ozsermaye_usd") is not None}.items())
+    tur_nokta = sorted({int(k["zaman_ms"]): float(k["ozsermaye_usd"]) for k in kayitlar if k.get("olay") == "tur" and k.get("ozsermaye_usd") is not None}.items())       # ~15 dk'lık tur noktaları (motor `tur` kaydı)
     if len(seri) < 2:
         seri = [(0, float(g["ozsermaye"])) for g in gecmis if g.get("ozsermaye") is not None] + seri
     deg = [v for _, v in seri]
@@ -184,7 +279,14 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     if len(gseri) >= 2:                                    # günlük geçmiş (15 güne kadar) varsa grafikler onunla; yoksa tur sonu kayıtlarıyla
         bugun_gun = datetime.fromtimestamp(simdi_ms / 1000, UTC).date().isoformat()
         deg = (gseri[:-1] if gecmis[-1].get("gun") == bugun_gun else gseri) + [oz]
-    tepe, dd = (float(zirve) if zirve else 0.0), []
+    deg_gun = deg                                          # günlük çubuklar için
+    x_tur = None
+    if len(tur_nokta) >= 3:                               # grafikler 15 dk'lık tur noktalarıyla (başlık "tur sonları"); yoksa günlük/tur-sonu yedeği
+        deg = [v for _, v in tur_nokta]
+        if deg[-1] != oz:
+            deg.append(oz)
+        x_tur = (_tsi(tur_nokta[0][0], "%d.%m %H:%M"), _tsi(veri_ms, "%d.%m %H:%M"))
+    tepe, dd = (kasa if kasa > 0 else (deg[0] if deg else 0.0)), []                  # B1: koşan azami (başlangıç = kasa); gelecekteki zirve geçmişe uygulanmaz
     for v in deg:
         tepe = max(tepe, v)
         dd.append((v / tepe - 1) * 100 if tepe > 0 else 0.0)
@@ -192,9 +294,17 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     for ms, v in seri:
         if ms:
             gunluk[datetime.fromtimestamp(ms / 1000, UTC).date().isoformat()] = v
-    gv = list(gunluk.values()) if len(gseri) < 2 else deg
+    gv = [kasa] + (list(gunluk.values()) if len(gseri) < 2 else deg_gun)                 # B2: ilk gün de çubuk (taban = kasa)
     cubuklar = [b - a for a, b in zip(gv, gv[1:])]
+    if len(gseri) >= 2:
+        x_et = (".".join(reversed(str(gecmis[0].get("gun", ""))[5:].split("-"))) if gecmis else "", _tsi(veri_ms, "%d.%m"))
+    else:
+        ilk_ms = next((ms for ms, _ in seri if ms), None)
+        x_et = (_tsi(ilk_ms, "%d.%m %H:%M") if ilk_ms else "", _tsi(veri_ms, "%d.%m %H:%M"))
 
+    if x_tur:
+        x_et = x_tur
+    kz_ozeti = (f'<div class="ek ek2">son gün {esc(tl(cubuklar[-1], True))} · en iyi {esc(tl(max(cubuklar), True))} · en kötü {esc(tl(min(cubuklar), True))} · toplam {esc(tl(sum(cubuklar), True))}</div>' if cubuklar else "")
     acik = ozet.get("acik")
     if acik is None:
         acik = [{"adres": a, "coin": c, "sz": q["sz"], "usd": abs(q["sz"]) * q["giris"], "kz_usd": None} for a, cs in (hesap.get("poz") or {}).items() for c, q in cs.items()]
@@ -208,7 +318,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     efsane = "".join(f'<span class="lg"><i style="background:{RENKLER[i % len(RENKLER)]}"></i>{esc(c)} {u / toplam * 100:.0f}%</span>' for i, (c, u) in enumerate(dilim[:8]))
     poz_satir = "".join(f'<tr><td><b>{esc(q["coin"])}</b></td><td>{"UZUN" if q["sz"] > 0 else "KISA"}</td><td class="sg">{esc(tl(q.get("usd")))}</td><td class="sg {renk(q.get("kz_usd"))}">{esc(tl(q.get("kz_usd"), True))}</td><td class="so">{esc(kisa(q["adres"]))}</td></tr>' for q in acik) or '<tr><td colspan="5" class="bos">Açık pozisyon yok</td></tr>'
     EYLEM = {"ac": "AÇ", "artir": "ARTIR", "azalt": "AZALT", "kapat": "KAPAT"}
-    islem_satir = "".join(f'<tr><td class="so">{_tsi(int(k["zaman_ms"]), "%H:%M")}</td><td><b>{esc(str(k.get("coin", "")))}</b></td><td class="{"art" if k.get("yon") == "B" else "eks"}">{"AL" if k.get("yon") == "B" else "SAT"} · {EYLEM.get(k.get("eylem", ""), "")}</td><td class="sg">{esc(tl(k.get("usd_dolan") or k.get("usd_istenen")))}</td><td class="sg so">{(tr_sayi(abs(k["kayma_trader"]) * 1e4, 1) + " bp") if k.get("kayma_trader") is not None else "—"}</td></tr>'
+    islem_satir = "".join(f'<tr><td class="so">{_tsi(int(k["zaman_ms"]), "%H:%M")}</td><td><b>{esc(str(k.get("coin", "")))}</b></td><td class="{"art" if k.get("yon") == "B" else "eks"}">{"AL" if k.get("yon") == "B" else "SAT"} · {EYLEM.get(k.get("eylem", ""), "")}</td><td class="sg">{esc(tl(k.get("usd_dolan") or k.get("usd_istenen")))}</td><td class="sg {"eks" if (k.get("kayma_trader") or 0) > 1e-9 else ("art" if (k.get("kayma_trader") or 0) < -1e-9 else "so")}">{(tr_isaretli(k["kayma_trader"] * 1e4, 1) + " bp") if k.get("kayma_trader") is not None else "—"}</td></tr>'
                           for k in sorted(emirler, key=lambda k: -int(k["zaman_ms"]))[:12]) or '<tr><td colspan="5" class="bos">Son 24 saatte emir yok</td></tr>'
     # içgörüler (yalnız dizme/sayma)
     ic = []
@@ -224,7 +334,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
         a_, n_ = max(sayim.items(), key=lambda x: x[1])
         ic.append(f'Son 24 saatte en çok işlem yapan trader: <b>{esc(kisa(a_))}</b> ({n_} emir).')
     if kaymalar:
-        ic.append(f'Emirler trader fiyatına ortalama {tr_sayi(sum(kaymalar) / len(kaymalar), 1)} bp farkla doldu (küçük = iyi).')
+        ic.append(f'Emirler trader fiyatından ortanca {tr_sayi(kayma_ortanca, 1)} bp, ortalama mutlak {tr_sayi(sum(kaymalar) / len(kaymalar), 1)} bp farkla doldu (küçük = iyi).')
     ic.append(f'Brüt pozisyon {esc(tl(sum(q.get("usd") or 0 for q in acik)))} = kasanın %{(sum(q.get("usd") or 0 for q in acik) / kasa * 100 if kasa > 0 else 0):.0f}\'i.')
     saha = [k for k in k24 if k.get("olay") in ("saha_giris", "saha_dus")]
     saha_html = "".join(f'<div class="s">{"➕ giriş" if k["olay"] == "saha_giris" else "➖ çıkış"} · {_tsi(int(k["zaman_ms"]), "%H:%M")} · {esc(kisa(k["adres"]))} · {esc(str(k.get("neden", "")))}</div>' for k in saha) or '<div class="bos">Trader listesinde değişiklik yok</div>'
@@ -257,7 +367,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
             gorulen.add(ad)
             satirlar.append({"adres": ad, "sira": 0, "katman": "disi", "form": None, "kopya_getiri_7g": None, "max_kaldirac": None})
     toplam_net, net_eksik = 0.0, False
-    kartlar, yedek_kartlar = [], []
+    gruplar: dict[str, list[str]] = {"SAHADA": [], "BEKLİYOR": [], "İNİYOR": [], "YEDEK": [], "KADRO DIŞI": []}
     for r in satirlar:
         ad = r["adres"]
         durum = "SAHADA" if ad in uyeler else ("İNİYOR" if ad in inenler else ("BEKLİYOR" if r.get("katman") == "ilk11" else ("KADRO DIŞI" if r.get("katman") == "disi" else "YEDEK")))
@@ -283,30 +393,70 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
                        f'<div><span class="so">Radar 7g kopya getirisi</span><br>{esc(tyuz(r.get("kopya_getiri_7g")))}</div>'
                        f'<div><span class="so">Form puanı</span><br>{tr_sayi(float(r.get("form") or 0), 1)} / 100</div>'
                        f'<div><span class="so">Azami kaldıraç</span><br>{tr_sayi(float(r.get("max_kaldirac") or 0), 1)}x</div></div>')
-        rozet = {"SAHADA": "art", "İNİYOR": "eks", "BEKLİYOR": "yok", "YEDEK": "yok", "KADRO DIŞI": "yok"}[durum]
-        (kartlar if r.get("katman") not in ("yedek",) else yedek_kartlar).append(f'<details class="kd"><summary><span class="sr">{int(r.get("sira", 0)) or "·"}</span><b>{esc(kisa(ad))}</b><span class="rz {rozet}">{durum}</span>'
+        ek = ""
+        hv = (havuz or {}).get(ad) or {}
+        if ad in slot_bas:                                                                      # C1: canlı kopya koruması — bizim slot getirimiz ↔ aynı sürede trader'ın hesap getirisi
+            hg, hs = (uyeler.get(ad) or {}).get("hesap_giris_usd"), ((hesap_tr or {}).get(ad) or {}).get("deger")
+            tr_get = ((float(hs) - float(hg)) / float(hg)) if hg and hs is not None else None
+            bizim = (net / float(slot_bas[ad])) if net is not None and float(slot_bas.get(ad) or 0) > 0 else None
+            koruma = (bizim / tr_get) if bizim is not None and tr_get is not None and abs(tr_get) >= 0.001 else None
+            ek += (f'<div class="ms"><div><span class="so">Bizim slot getirimiz</span><br><b class="{renk(bizim)}">{esc(tyuz(bizim))}</b></div>'
+                   f'<div><span class="so">Trader hesap getirisi (aynı sürede)</span><br><b class="{renk(tr_get)}">{esc(tyuz(tr_get)) if tr_get is not None else "— (girişte kaydedilmemiş)"}</b></div>'
+                   f'<div><span class="so">Koruma oranı (bizim ÷ trader)</span><br><b>{tr_sayi(koruma) if koruma is not None else "—"}</b></div>'
+                   f'<div><span class="so">Radar koruma (R1, 7g)</span><br>{tr_sayi(float(hv["kopya_koruma"])) if hv.get("kopya_koruma") is not None else "—"}</div></div>'
+                   '<div class="ha" style="padding:0 4px 8px 30px">Trader getirisi hesap değerinden hesaplanır; para yatırma/çekmeyi de içerir (yaklaşık).</div>')
+        yp = hv.get("yatirma_payi")
+        if yp is not None:
+            ek += f'<div class="ms"><div><span class="so">Net para yatırma payı (7g)</span><br><b class="{"eks" if float(yp) > 0.2 else ""}">{"⚠ " if float(yp) > 0.2 else ""}{esc(tyuz(float(yp)))}</b></div></div>'
+        if r.get("bilesenler"):
+            ek += '<div class="bil">' + "".join(f'<div class="bl"><span>{esc(ad_)}</span><div class="ol"><i style="width:{min(max(float(r["bilesenler"].get(k_) or 0), 0), 100):.0f}%"></i></div><span>{float(r["bilesenler"].get(k_) or 0):.0f}</span></div>' for k_, ad_ in BILESEN_AD) + '</div>'
+        if ADRES_RE.fullmatch(ad):
+            ek += f'<div class="ms"><div><a class="ln" href="https://app.hyperliquid.xyz/explorer/address/{ad}" target="_blank" rel="noopener noreferrer">Trader sayfasını aç (Hyperliquid) ↗</a></div></div>'
+        ayrinti += ek
+        rozet = {"SAHADA": "art", "İNİYOR": "eks", "BEKLİYOR": "bk", "YEDEK": "yok", "KADRO DIŞI": "yok"}[durum]
+        gruplar[durum].append(f'<details class="kd{" kb" if durum == "BEKLİYOR" else ""}"><summary><span class="sr">{int(r.get("sira", 0)) or "·"}</span><b>{esc(kisa(ad))}</b><span class="rz {rozet}">{durum}</span>'
                        f'<span class="fb"><i style="width:{min(max(float(r.get("form") or 0), 0), 100):.0f}%"></i></span><span class="fm">{f"{float(r['form']):.0f}" if r.get("form") is not None else ""}</span>'
                        f'<span class="nt {renk(net)}">{esc(tl(net, True)) if net is not None else ""}</span></summary>{ayrinti}</details>')
     mut = (f'<div class="mt">Kartların toplamı <b class="{renk(toplam_net)}">{esc(tl(toplam_net, True))}</b> + kapanmış slotlar <b>{esc(tl(float(hesap.get("kapanmis_net") or 0.0), True))}</b> = '
            f'<b>{esc(tl(toplam_net + float(hesap.get("kapanmis_net") or 0.0), True))}</b> (başlangıçtan beri özsermaye farkı {esc(tl(oz - kasa, True))}){" · bazı K/Z bilinmiyor, toplam eksik" if net_eksik else ""}</div>') if slot_bas else ""
+    atlanan_html, kapanan_html, maliyet_html = _atlanan_html(k24), _kapanan_html(kayitlar), _maliyet_html(kayitlar, oz, kasa)
+    from copytrade.kurallar import load_rules
+    maruziyet_html = _maruziyet_html(acik, kasa, oz, float(hesap.get("kaldirac") or 3.0), float((kurallar or load_rules())["canli_coin_tavan_oran"]))
+    gk = (saha_durum or {}).get("gun_kadro") or {}
+    gk_ms = int(((gk.get("kadro") or {}).get("kosu_ms")) or 0)
+    if gk_ms and kadro and kadro.get("kosu_ms"):               # K‑39: motor gün başına İLK kadroyu uygular; pano EN SON kadroyu gösterir — karışmasın
+        motor_satiri = (f'Motor bugün <b>{_tsi(gk_ms, "%H:%M")} TSİ</b> kadrosunu uyguluyor' + ("." if int(kadro["kosu_ms"]) == gk_ms else
+                        f' (günün ilk kadrosu); aşağıdaki liste en son kadro ({_tsi(int(kadro["kosu_ms"]), "%H:%M")} TSİ) — ikinci kadro saha kararlarını değiştirmez.'))
+    else:
+        motor_satiri = ""
     kadro_tarih = _tsi(int(kadro["kosu_ms"]), "%d.%m %H:%M") if kadro and kadro.get("kosu_ms") else "—"
-    kadro_html = "".join(kartlar) + ('<div class="yb">YEDEKLER</div>' + "".join(yedek_kartlar) if yedek_kartlar else "") if (kartlar or yedek_kartlar) else '<div class="bos">Kadro verisi okunamadı</div>'
+    sahada_n = len(gruplar["SAHADA"])
+    _bas = {"SAHADA": f"SAHADA ({sahada_n}/11)", "BEKLİYOR": f"BEKLİYOR ({len(gruplar['BEKLİYOR'])})", "İNİYOR": f"İNİYOR ({len(gruplar['İNİYOR'])})",
+            "YEDEK": f"YEDEK ({len(gruplar['YEDEK'])})", "KADRO DIŞI": f"KADRO DIŞI ({len(gruplar['KADRO DIŞI'])})"}
+    _alt = {"SAHADA": "şu an kopyalanan traderlar", "BEKLİYOR": "kadroda (İlk 11), henüz sahaya çıkmadı — 11'e çıkmayı bekliyor",
+            "İNİYOR": "iniyor — yedeğe düşecek", "YEDEK": "", "KADRO DIŞI": "radar listesinde yok"}
+    _bos = {"SAHADA": "henüz sahaya çıkan yok"}
+    kadro_html = "".join(f'<div class="yb{" yb-bk" if d == "BEKLİYOR" else ""}" data-bolum="{d}">{_bas[d]}' + (f' <span class="so">· {_alt[d]}</span>' if _alt[d] else "") + "</div>"
+                         + ("".join(gruplar[d]) or f'<div class="bos">{_bos[d]}</div>') for d in ("SAHADA", "BEKLİYOR", "İNİYOR", "YEDEK", "KADRO DIŞI") if d == "SAHADA" or gruplar[d])
+    if not any(gruplar.values()):
+        kadro_html += '<div class="bos">Kadro verisi okunamadı</div>'
+    kadro_etiket = f"{sahada_n}/11"
     uyari = '<div class="uy">⚠ GERÇEK PARA</div>' if kip == "gercek" else ""
     return f"""<!doctype html>
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><meta name="color-scheme" content="dark">
 <title>Copy Trade Panosu</title>
 <style>
-:root{{--bg:#0a0a0b;--k:#111113;--cz:#25252a;--y:#e9e9ee;--so:#8a8a94;--tu:#f5a524;--art:#3ddc84;--eks:#ff5d5d}}
+:root{{--bg:#0a0a0b;--k:#111113;--cz:#25252a;--y:#e9e9ee;--so:#8a8a94;--tu:#f5a524;--art:#3ddc84;--eks:#ff5d5d;--bk:#f5d90a}}
 *{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--y);font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;padding:12px}}
 .ust{{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}}.lg0{{background:var(--tu);color:#000;font-weight:800;padding:2px 7px;border-radius:3px}}
 .ust b{{font-size:15px;letter-spacing:.05em}}.so,.ha{{color:var(--so)}}.rozet{{border:1px solid var(--cz);border-radius:3px;padding:1px 8px;color:var(--tu);font-size:11px}}
 .sirit{{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--cz);border:1px solid var(--cz);margin-bottom:8px}}
 .h{{background:var(--k);padding:8px 9px}}.hb{{font-size:10px;letter-spacing:.09em;color:var(--so);text-transform:uppercase}}.hd{{font-size:17px;font-weight:700;margin:2px 0}}.ha{{font-size:11px}}
-.art{{color:var(--art)}}.eks{{color:var(--eks)}}.yok{{color:var(--so)}}
-.izgara{{display:grid;grid-template-columns:1fr;gap:8px}}.p{{background:var(--k);border:1px solid var(--cz);min-width:0}}
+.rz.bk{{color:var(--bk);border-color:var(--bk)}}.kd.kb{{box-shadow:inset 3px 0 0 var(--bk)}}.kd.kb summary{{padding-left:9px}}.yb.yb-bk{{color:var(--bk)}}.art{{color:var(--art)}}.eks{{color:var(--eks)}}.yok{{color:var(--so)}}
+.izgara{{display:grid;grid-template-columns:1fr;gap:8px}}.sag{{display:contents}}.p{{background:var(--k);border:1px solid var(--cz);min-width:0}}
 .pb{{font-size:10px;letter-spacing:.09em;color:var(--tu);text-transform:uppercase;padding:8px 11px;border-bottom:1px solid var(--cz);display:flex;justify-content:space-between}}.pb span{{color:var(--so)}}
-.pi{{padding:10px 11px}}.gr{{width:100%;height:110px;display:block}}.bos{{color:var(--so);padding:14px 4px;font-size:12px}}
-table{{width:100%;border-collapse:collapse;font-size:12px}}td,th{{padding:6px 8px;border-bottom:1px solid #1c1c21;text-align:left;white-space:nowrap}}th{{font-size:10px;color:var(--so);letter-spacing:.08em}}.sg{{text-align:right}}tr:last-child td{{border:0}}
+.pi{{padding:10px 11px}}.gr{{width:100%;height:110px;display:block}}.ek{{display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--so);margin-top:4px}}.ek2{{justify-content:center;text-align:center}}.bos{{color:var(--so);padding:14px 4px;font-size:12px}}
+table{{width:100%;border-collapse:collapse;font-size:12px}}td,th{{padding:6px 8px;border-bottom:1px solid #1c1c21;text-align:left;white-space:nowrap}}th{{font-size:10px;color:var(--so);letter-spacing:.08em}}.sg{{text-align:right}}tr:last-child td{{border:0}}tr.alt td{{font-size:10px;color:var(--so);padding:0 8px 5px;white-space:normal}}
 .tw{{overflow-x:auto}}.dg{{display:flex;height:16px;border-radius:3px;overflow:hidden;background:#1c1c21}}.dg span{{display:block;height:100%}}
 .lg{{display:inline-block;margin:6px 12px 0 0;font-size:11px;color:var(--so)}}.lg i{{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}}
 .s{{padding:4px 0;font-size:12px}}.ic div{{padding:5px 0 5px 12px;border-bottom:1px solid #1c1c21;position:relative}}.ic div:before{{content:"›";color:var(--tu);position:absolute;left:0}}
@@ -317,41 +467,48 @@ input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler sectio
 #t1:checked~.sekmeler .n1,#t2:checked~.sekmeler .n2,#t3:checked~.sekmeler .n3,#t4:checked~.sekmeler .n4,#t5:checked~.sekmeler .n5{{display:grid}}
 .kd{{border-bottom:1px solid #1c1c21}}.kd summary{{display:grid;grid-template-columns:22px 1fr auto 46px 24px auto;gap:8px;align-items:center;padding:9px 2px;cursor:pointer;list-style:none}}.kd summary::-webkit-details-marker{{display:none}}
 .sr{{color:var(--so)}}.rz{{font-size:10px;border:1px solid var(--cz);border-radius:3px;padding:0 6px;letter-spacing:.05em}}.fb{{height:6px;background:#1c1c21;border-radius:3px;overflow:hidden}}.fb i{{display:block;height:100%;background:var(--tu)}}.fm{{text-align:right;color:var(--so)}}.nt{{text-align:right;min-width:64px}}
-.ms{{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:4px 4px 12px 30px;font-size:12px}}.mt{{margin-top:12px;padding:8px;background:#0e0e10;border:1px solid var(--cz);font-size:12px;color:var(--so)}}.yb{{margin:12px 0 2px;font-size:10px;letter-spacing:.1em;color:var(--tu)}}
+.ms{{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:4px 4px 12px 30px;font-size:12px}}.iz2{{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--cz)}}.bil{{padding:2px 4px 8px 30px}}.bl{{display:grid;grid-template-columns:130px 1fr 28px;gap:8px;align-items:center;font-size:11px;color:var(--so)}}.bl .ol{{margin:5px 0}}.ln{{color:var(--tu)}}.mt{{margin-top:12px;padding:8px;background:#0e0e10;border:1px solid var(--cz);font-size:12px;color:var(--so)}}.yb{{margin:12px 0 2px;font-size:10px;letter-spacing:.1em;color:var(--tu)}}
 @media(min-width:900px){{.ms{{grid-template-columns:repeat(4,1fr)}}}}
-@media(min-width:900px){{body{{padding:18px;max-width:1280px;margin:auto}}.sirit{{grid-template-columns:repeat(6,1fr)}}.hd{{font-size:20px}}.izgara{{grid-template-columns:repeat(3,1fr)}}.g2{{grid-column:span 2}}.g3{{grid-column:span 3}}}}
+@media(min-width:900px){{body{{padding:18px;max-width:1280px;margin:auto}}.sirit{{grid-template-columns:repeat(6,1fr)}}.hd{{font-size:20px}}.izgara{{grid-template-columns:repeat(3,1fr)}}.sag{{display:grid;gap:8px;grid-column:3;grid-row:1 / span 2;align-content:start}}.g2{{grid-column:span 2}}.g3{{grid-column:span 3}}}}
 </style></head><body>
-<div class="ust"><div><span class="lg0">CT</span> <b>COPY TRADE PANOSU</b></div><div><span class="rozet">{esc(kip_adi(kip))}</span> <span class="so">veri {_tsi(veri_ms, "%d.%m.%Y %H:%M")} TSİ · ~4 saatte bir yenilenir</span></div></div><div id="bayat" data-ms="{veri_ms}" class="uy" style="display:none">⚠ VERİ BAYAT: son güncelleme 6 saatten eski, sistem durmuş olabilir</div>{uyari}
+<div class="ust"><div><span class="lg0">CT</span> <b>COPY TRADE PANOSU</b></div><div><span class="rozet">{esc(kip_adi(kip))}</span> <span class="so">veri {_tsi(veri_ms, "%d.%m.%Y %H:%M")} TSİ · ~15 dakikada bir yenilenir</span></div></div><div id="bayat" data-ms="{veri_ms}" class="uy" style="display:none">⚠ VERİ BAYAT: son güncelleme 1 saatten eski, sistem durmuş olabilir</div>{uyari}
 <div class="sirit">{hucre("Özsermaye", tl(oz), "", f"kasa {tr_sayi(kasa, 0)} $")}{hucre("Bugün", tyuz(gun), renk(gun), tl(oz - float(gun_basi), True) if gun_basi is not None else "")}{hucre("Bu hafta", tyuz(hafta) if hafta is not None else "—", renk(hafta), "" if hafta is not None else "7 gün dolmadı")}{hucre("Başlangıçtan beri", tyuz(ozet.get("getiri")), renk(ozet.get("getiri")), tl(oz - kasa, True))}{hucre("Zirveden düşüş", tyuz(-dusus if dusus is not None else None), renk(-dusus if dusus is not None else None), f"zirve {tl(float(zirve))}" if zirve else "")}{hucre("Açık pozisyon", str(len(acik)), "", f"brüt {tl(sum(q.get('usd') or 0 for q in acik))}")}</div>
 <input type="radio" name="t" id="t1" checked><input type="radio" name="t" id="t2"><input type="radio" name="t" id="t3"><input type="radio" name="t" id="t4"><input type="radio" name="t" id="t5">
-<div class="tabs"><label for="t1">ÖZET</label><label for="t5">KADRO <em>{len(kartlar) + len(yedek_kartlar)}</em></label><label for="t2">POZİSYON <em>{len(acik)}</em></label><label for="t3">İŞLEMLER <em>{len(emirler)}</em></label><label for="t4">RİSK</label></div>
+<div class="tabs"><label for="t1">ÖZET</label><label for="t5">KADRO <em>{kadro_etiket}</em></label><label for="t2">POZİSYON <em>{len(acik)}</em></label><label for="t3">İŞLEMLER <em>{len(emirler)}</em></label><label for="t4">RİSK</label></div>
 <div class="sekmeler">
 <section class="n1 izgara">
-<div class="p g2"><div class="pb">Özsermaye (tur sonları) <span>{esc(tl(oz))}</span></div><div class="pi">{_cizgi(deg, "#f5a524")}</div></div>
-<div class="p"><div class="pb">Günlük net K/Z <span>$</span></div><div class="pi">{_cubuk(cubuklar)}</div></div>
-<div class="p g2"><div class="pb">İçgörüler</div><div class="pi ic">{"".join(f"<div>{x}</div>" for x in ic)}</div></div>
+<div class="p g2"><div class="pb">Özsermaye (tur sonları) <span>{esc(tl(oz))}</span></div><div class="pi">{_cizgi(deg, "#f5a524", baz=kasa if kasa > 0 else None, x_etiket=x_et)}</div></div>
+<div class="sag">
+<div class="p"><div class="pb">Günlük net K/Z <span>{esc(tl(cubuklar[-1], True)) if cubuklar else "—"}</span></div><div class="pi">{_cubuk(cubuklar)}{kz_ozeti}</div></div>
+<div class="p"><div class="pb">Sağlık <span>{esc(saglik_ozeti[0])}</span></div><div class="pi ic">{saglik_ozeti[1]}</div></div>
 <div class="p"><div class="pb">Risk payı <span>sınıra göre</span></div><div class="pi"><div class="ha">Günlük kayıp (sınır %5)</div><div class="ol"><i style="width:{gun_kayip_pay:.0f}%"></i></div><div class="ha">Zirveden düşüş (sınır %20)</div><div class="ol"><i style="width:{dusus_pay:.0f}%"></i></div>{risk_html}</div></div>
+</div>
+<div class="p g2"><div class="pb">İçgörüler</div><div class="pi ic">{"".join(f"<div>{x}</div>" for x in ic)}</div></div>
 </section>
 <section class="n2 izgara">
 <div class="p g2"><div class="pb">Açık pozisyonlar <span>{len(acik)} adet</span></div><div class="tw"><table><tr><th>COİN</th><th>YÖN</th><th class="sg">TUTAR</th><th class="sg">K/Z</th><th>TRADER</th></tr>{poz_satir}</table></div></div>
 <div class="p"><div class="pb">Para dağılımı <span>coin başına</span></div><div class="pi"><div class="dg">{cubuk_html}</div>{efsane}</div></div>
+<div class="p g3"><div class="pb">Maruziyet <span>net / brüt / teminat / coin tavanı</span></div>{maruziyet_html}</div>
 </section>
 <section class="n3 izgara">
-<div class="g3 sirit">{hucre("Emir (24 sa)", str(len(emirler)), "", f"dolum {len(dolum)}")}{hucre("Ort. fark", f"{tr_sayi(sum(kaymalar) / len(kaymalar), 1)} bp" if kaymalar else "—", "", "trader fiyatına göre")}{hucre("Funding (24 sa)", tl(funding24, True), renk(funding24), "sanal")}{hucre("Takipte", f"{ozet.get('saha', '—')}/{ozet.get('saha_n', '—')}", "", "trader")}</div>
-<div class="p g2"><div class="pb">Son işlemler <span>24 sa, en yeni üstte</span></div><div class="tw"><table><tr><th>SAAT</th><th>COİN</th><th>YÖN</th><th class="sg">TUTAR</th><th class="sg">FARK</th></tr>{islem_satir}</table></div></div>
+<div class="g3 sirit">{hucre("Emir (24 sa)", str(len(emirler)), "", f"dolum {len(dolum)}")}{hucre("Ortanca fark (bp)", f"{tr_sayi(kayma_ortanca, 1)} bp" if kayma_ortanca is not None else "—", "", f"ort. mutlak {tr_sayi(sum(kaymalar) / len(kaymalar), 1)} bp · trader fiyatına göre" if kaymalar else "trader fiyatına göre")}{hucre("Funding (24 sa)", tl(funding24, True), renk(funding24), "sanal")}{hucre("Takipte", f"{ozet.get('saha', '—')}/{ozet.get('saha_n', '—')}", "", "trader")}</div>
+<div class="p g2"><div class="pb">Son işlemler <span>fark: + aleyhe, − lehe</span></div><div class="tw"><table><tr><th>SAAT</th><th>COİN</th><th>YÖN</th><th class="sg">TUTAR</th><th class="sg">FARK</th></tr>{islem_satir}</table></div></div>
 <div class="p"><div class="pb">Trader değişiklikleri <span>24 sa</span></div><div class="pi">{saha_html}</div></div>
+<div class="p"><div class="pb">Atlanan sinyaller <span>24 sa · neden başına</span></div><div class="pi">{atlanan_html}</div></div>
+<div class="p g2"><div class="pb">Kapanan işlemler <span>kayıtlı dönem</span></div>{kapanan_html}</div>
+<div class="p g3"><div class="pb">Maliyet dökümü <span>ücret · kayma · funding</span></div>{maliyet_html}</div>
 </section>
 <section class="n5 izgara">
-<div class="p g3"><div class="pb">Takip edilen ilk 11 ve yedekler <span>radar {kadro_tarih} TSİ · dokun → bize ne verdi</span></div><div class="pi kl">{kadro_html}{mut}</div></div>
+<div class="p g3"><div class="pb">Takip edilen ilk 11 ve yedekler <span>radar {kadro_tarih} TSİ · dokun → bize ne verdi</span></div><div class="pi kl">{f'<div class="mt" style="margin:0 0 10px">{motor_satiri}</div>' if motor_satiri else ""}{kadro_html}{mut}</div></div>
 </section>
 <section class="n4 izgara">
 <div class="g3 sirit">{hucre("WS kopma", str(din.get("kopma", "—")), "", "bu vardiyada")}{hucre("REST 429", str(ozet.get("rest_429", "—")), "", "hız sınırı")}{hucre("Vardiya süresi", f"{tr_sayi(float(ozet.get('sure_dk') or 0) / 60, 1)} sa", "", "son tur")}{hucre("Özsermaye zirvesi", tl(float(zirve)) if zirve else "—", "", "")}</div>
-<div class="p g2"><div class="pb">Zirveden düşüş (tur sonları) <span>{tr_yuzde(dd[-1] / 100)}</span></div><div class="pi">{_cizgi(dd, "#ff5d5d", taban=0.0)}</div></div>
+<div class="p g2"><div class="pb">Zirveden düşüş (tur sonları) <span>{tr_yuzde(dd[-1] / 100)}</span></div><div class="pi">{_cizgi(dd, "#ff5d5d", taban=0.0, x_etiket=x_et, birim="%")}</div></div>
 <div class="p"><div class="pb">Risk olayları <span>24 sa</span></div><div class="pi">{risk_html}</div></div>
 </section>
 </div>
 <div class="so" style="margin:16px 0 4px;font-size:11px">Sanal kip: gerçek para yok. Veriler Hyperliquid halka açık verisidir. Saatler TSİ; "bugün" UTC gün başından (03:00 TSİ) itibaren sayılır.</div>
-<script>(function(){{var e=document.getElementById("bayat");if(e&&Date.now()-Number(e.dataset.ms)>6*3600*1000)e.style.display="block"}})()</script>
+<script>(function(){{var e=document.getElementById("bayat");if(e&&Date.now()-Number(e.dataset.ms)>3600*1000)e.style.display="block"}})()</script>
 </body></html>
 """
 
@@ -395,6 +552,17 @@ def kadro_oku(dal: str | None) -> dict | None:
     return json.loads(s.stdout) if s.returncode == 0 and s.stdout.strip() else None
 
 
+def havuz_oku(dal: str | None, kadro: dict | None) -> dict[str, dict]:
+    """Kadronun koşu gününün `radar/<tarih>/havuz.json`'u (adres → satır; yalnız pano alanları: yatirma_payi, kopya_koruma). Yoksa {}."""
+    if not dal or not kadro or not kadro.get("kosu_ms"):
+        return {}
+    gun_ = datetime.fromtimestamp(int(kadro["kosu_ms"]) / 1000, UTC).date().isoformat()
+    s = subprocess.run(["git", "show", f"origin/{dal}:radar/{gun_}/havuz.json"], capture_output=True, text=True)
+    if s.returncode != 0 or not s.stdout.strip():
+        return {}
+    return {r["adres"]: {k: r.get(k) for k in ("yatirma_payi", "kopya_koruma")} for r in json.loads(s.stdout).get("satirlar", []) if r.get("adres")}
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--durum", type=Path, default=Path("durum"))
@@ -402,7 +570,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--gecmis", type=Path, default=Path("pano/gecmis.json"))
     ap.add_argument("--cikti", type=Path, default=Path("pano/OZET.md"))
     ap.add_argument("--vardiya", default=None, help="bu vardiyanın kimliği; `durum/ozet.json` başka vardiyadansa (bayat) pano YAZILMAZ")
-    ap.add_argument("--html", type=Path, default=None, help="telefon sayfası (pano/index.html; Cloudflare Pages) da yazılır")
+    ap.add_argument("--html", type=Path, default=None, help="telefon sayfası (pano/index.html) da yazılır; kullanıcı Cloudflare Workers statik sayfasıyla (`sg-pano`) gösterir")
     ap.add_argument("--isabet-dali", default=None, help="isabet.json okunan veri dalı (radar | radar-deneme); yoksa isabet bölümü 'ilk ölçüm' yazar")
     args = ap.parse_args(argv)
     ozet = _json(args.durum / "ozet.json")
@@ -418,7 +586,7 @@ def main(argv: list[str] | None = None) -> int:
     args.cikti.write_text(md, encoding="utf-8")
     args.gecmis.write_text(json.dumps(yeni, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     if args.html:
-        args.html.write_text(html_olustur(ozet, _json(args.durum / "risk.json"), _json(args.durum / "hesap.json"), kayitlari_oku(args.kayit), yeni, int(time.time() * 1000), kadro_oku(args.isabet_dali), _json(args.durum / "saha.json")), encoding="utf-8")
+        args.html.write_text(html_olustur(ozet, _json(args.durum / "risk.json"), _json(args.durum / "hesap.json"), kayitlari_oku(args.kayit), yeni, int(time.time() * 1000), kadro_oku(args.isabet_dali), _json(args.durum / "saha.json"), _json(args.durum / "motor.json").get("hesap_tr"), havuz_oku(args.isabet_dali, kadro_oku(args.isabet_dali))), encoding="utf-8")
     print(md)
     return 0
 

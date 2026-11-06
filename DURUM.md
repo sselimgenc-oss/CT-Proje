@@ -21,7 +21,7 @@ Form Radarı v1 (`docs/RADAR_V1.md`, K‑22…K‑26): her gün son 7 günde for
 ## Kalan altyapı (yeni sistem kullanır)
 Kopya motoru (`defter.py`, `kopya_v2…v4`, `golge.py` çıkış kuralları), HL istemcisi (`tarama.py`, `hl_public_adapter.py`), anlık dinleyici
 (`dinleyici.py`, `risk_defter.py`; canlıda sunucu gerekir, K‑20), gecikme ölçümü (`gecikme_kar.py`), izleme motoru çekirdeği, pano iskeleti, Faz 3 hazırlık modülleri.
-Cloudflare ve DigitalOcean yok (K‑20): her şey GitHub Actions + veri dalı.
+Cloudflare ve DigitalOcean yok (K‑20): her şey GitHub Actions + veri dalı. (İstisna, K‑40 — lider onaylı, 05.11: kullanıcı panoyu kendi Cloudflare `sg-pano` statik sayfasında gösteriyor; yalnız `canli-durum:pano/` salt okunur görüntüsü, hesap/emir/secret yok.)
 
 ## Belgeler
 `AGENTS.md` (kurallar) · `docs/KARARLAR.md` · `docs/RADAR_V1.md` (strateji) · `docs/VERI_SOZLESMESI.md` · `docs/GOREV_T*.md`
@@ -32,3 +32,4 @@ Cloudflare ve DigitalOcean yok (K‑20): her şey GitHub Actions + veri dalı.
 - `izleme.yml` zamanlaması kapalı (T4'te radar kadrosu için geri gelir); veri dalı `copytrade-kapi` ve eski dallar PR birleşince lider tarafından silinir.
 - 2026-11-05: T4 birleşti (#504; K‑35, K‑36). T4b (#510) sanal vardiya bekliyor. T6 görevi: `docs/GOREV_T6_RAPOR_ISABET.md`. `radar` veri dalı ilk kadro: 12 geçti.
 - **2026-11-05 → 2026-11-09 14:00 TSİ: liderlik Sonnet'te** (kullanıcı kararı). Kurallar: `docs/DEVIR_LIDER.md`.
+- **2026-11-06 18:05Z: devir bitti, liderlik yeniden Claude (Opus)'da** (kullanıcı kararı). Sonnet yazıcı; birleştirme ve kararlar lider. Devir dönemi kaydı: `docs/sonnet_durum_devir.md`.

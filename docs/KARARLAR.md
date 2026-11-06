@@ -147,9 +147,68 @@
   - T4b 6 (kuyruk önceliği) ve 9 (sanal defter derinliği) çıkarıldı: 11–90 $'lık emirlerde etkisi önemsiz.
 
 ### K‑38. Azaltma hedef tabanlı (lider, 2026-11-05)
+<<<<<<< HEAD
+=======
+- durum: **main'e girdi (PR #554, 06.11 ≈ 01:59Z)**; üretimde bir sonraki vardiyadan itibaren (≈ 05:22Z) geçerli. Temiz deneme vardiyası (run 42113249911): azaltmada toz emri 0 (eski kural 9), `min_emir_atlandi` azaltma 350 → 79, `hesap_yok` 0, `kapanis_eksik` 0. 7 günlük sayaç 01:07Z'de başladı; K-38 ilk üretim vardiyasından önceki kısa dilim eski azaltma kuralıyla koştu (sayaç açısından kayıt notu).
+>>>>>>> origin/main
 - **Bulgu:** küçük parçalı azaltmalar < 11 $ olduğu için atlanıyor ve kayboluyor. Bizim pozisyon trader'a göre büyük kalıyor (vardiya 42003105254: 1.535 `min_emir_atlandi`).
 - **Kural:** `docs/DENETIM_PANO_2026-11-05.md` §A. `boyut.hedef_emir` `azalt`; `kopya_v5` ve motor aynı fonksiyonu kullanır; eski/yeni R1 sayıları yan yana verilir.
 
 ### K‑39. Kadro dışı düşme iki farklı UTC günü ister, bekleme yok (lider, 2026-11-05)
 - **Bulgu:** aynı gün ikinci radar koşusu 3 üyeyi girişlerinden 3 saat sonra düşürdü ve 14 gün yasakladı.
 - **Kural:** `docs/DENETIM_PANO_2026-11-05.md` §A. Motor gün başına ilk kadroyu uygular. Sonuçla düşme ve bekleme kuralları değişmez.
+<<<<<<< HEAD
+=======
+
+### K‑40. Pano Cloudflare Workers `sg-pano` ile gösterilir — K‑20 istisnası (lider onayı, 2026-11-05)
+- Kullanıcı kendi Cloudflare hesabında `sg-pano` Workers statik sayfasını kurdu; GitHub reposuna bağlı, üretim dalı `canli-durum`, çıktı klasörü `pano`.
+- **Yalnız herkese açık veri dalını okuyan salt okunur görüntü:** secret/anahtar yok, hesap/emir yok, sunucu yok. K‑20 ("Cloudflare ve DigitalOcean yok") bu istisna dışında geçerlidir; gerçek para sunucusu (T5) ayrı karardır.
+- **Ek (kullanıcı onayı 2026-11-05):** Cloudflare'in kendi build sistemi bu repoda 10'dan fazla denemede takıldığı için pano yayını `canli_yayimla.sh` içinden `wrangler deploy` ile yapılır (yalnız ana dal `canli-durum`, yalnız `pano/index.html`). `CLOUDFLARE_API_TOKEN` yalnız "Workers düzenle" yetkilidir (para/emir/hesap yetkisi yok) ve yalnız GitHub Secrets'ta durur; `CLOUDFLARE_ACCOUNT_ID` aynı yerde. Test istisnası yalnız `canli_vardiya.yml` içindir; R2/AWS/wrangler iş akışı yasakları sürer. Hata yayımı durdurmaz, uyarı olarak görünür. Lider denetiminde.
+
+### K‑41. Aynı coinde ters yönlü kopya pozisyonu açılmaz (lider, 2026-11-05 akşam)
+- **Bulgu:** başka trader'dan ters pozisyon varken açılış gelirse net pozisyon küçülür; reduce‑only kapanış net pozisyonu büyütebilir (`sonnet_durum_t4b.md` #4).
+- **Kural:** aynı coinde zıt yönde kopya pozisyonumuz varken gelen **açılış** atlanır (sayaç `ters_netlesme`); sanal ve gerçek kipte aynıdır (demo gerçeği yansıtsın). Pano atlanan sinyallerde gösterir.
+
+### Lider kararları — 2026-11-05 akşam (kullanıcının "ikinci beyni")
+- **Madde 0 (a–e):** hepsi ONAY (K‑40 işlendi).
+- **Gerçek kip öncesi (T5'ten ÖNCE; sanalda da aynı kod, testle):** t4b #2 (kısmi/iptal dolum miktarı deftere), #3 (her dolumdan sonra `hesap.json` + `motor.json` atomik yazım: geçici dosya + fsync + rename; son uygulanan niyet kimliği `hesap.json`'da; yeniden başlatmada sonrası oynatılır; çökme testi),
+  #4 (K‑41), #5 (kendi yatırma/çekme kaydı görülünce `hl_ofset` yeniden hesaplanır; HL hesabında kasa ayarı kadar para tutulursa ofset 0), #6 (kuyruk taşınca düşen olay da `poz_tr`'yi günceller), #7 (`funding_oran_yok` sayacı).
+- **Telegram:** `/kapat`, `/dur` (yalnız yeni giriş durur), `/devam` ONAY. `baslat`'ta `DUR` dosyası yoksa `risk.json dur` sıfırlanır ve kayda yazılır (`DUR` dosyası tek yetkili). Vardiya başında, başlangıçtan önceki son 15 dk'da gelip düşürülen komutlara "komut vardiya arasında geldi, işlenmedi, tekrar gönder" yanıtı (komut çalıştırılmaz). `/durum` gerçek risk bayraklarını gösterir (günlük kayıp, mutabakat, `elle_dur`, fren).
+- **Diğer:** HL < 10 $ reduce‑only: T5'te kullanıcı onayıyla küçük gerçek deneme; kısmi azaltma kalanı < 10 $ ise atlanır (t4b #2) ONAY. `yatirma_payi` −8,27 önemli olabilir: yöntem DEĞİŞMEZ, 7 gün ölç (her radar özetinde |yatirma_payi| > 0,2 olan aday sayısı ve kadroda olanlar), Pazartesi birlikte karar.
+  `kopya_koruma` −21,7: bilgi (kapı zaten eler), kapatıldı. `non_funding_ledger` sayfalama: DÜZELT. Pano bayat `ozet.json`: 15 dk döngüde vardiya kimliği kontrolü varsa yeter, kapat. `sonnet_isci.yml` kullanılmıyorsa KALDIR.
+  `copytrade-izleme` ve birleşmiş `claude/*` dallarının silinmesi ONAY ("eski sistemden hiçbir şey kalmasın"); önce liste PR'a yazılır. KORUNAN: `main`, `radar`, `radar-deneme`, `canli-durum`, `canli-durum-deneme`, `claude/stoic-carson-w3xagz`.
+- **Canlıya geçiş:** 7 gün sanal ONAY; "temiz" tanımı ONAY (vardiya boşluğu yok, `kapanis_eksik` 0, KRİTİK yok; KRİTİK olursa sayaç 0'dan). Ek şart: yukarıdaki gerçek kip öncesi ve Telegram maddeleri main'de ve testli olmalı; **sayaç bunlar birleştikten sonraki ilk vardiyadan başlar**.
+- **İlk gerçek kasa: 300 $** (kullanıcı kararı; lider önerisi: 11 trader sahada kalacak kadar. 275 $ alt sınır, 250 $ → N = 10). Önceki "100 $" kararı geçersiz: 100 $'da N = 4, slot 25 $, en küçük emir 11 $ → sinyallerin çoğu atlanır.
+- **Paralel deneme:** 300 $'lık sanal vardiya `canli-durum-deneme` dalında koşar; üretim 1.000 $ serisi değişmez. Özet/pano: atlanan sinyal oranı (`min_emir_atlandi` / toplam sinyal) 300 $ ve 1.000 $ yan yana gösterilir.
+
+
+### K‑42. Spot ve HIP‑3 dolumları kopyalanmaz; patlama freni farklı coin sayar (lider, 2026-11-05 gece)
+- **Bulgu:** `docs/DENETIM_UCTAN_UCA_2026-11-05.md` Y1/B3/O1. Spot (`@N`, `A/B`) perp gibi kopyalanıyordu (05.11 kaydı: 14 emir, 276 $); HIP‑3 (`dex:COIN`) gerçek kipte emir verilemez (SDK `perp_dexs`) ama sanalda açılıyordu (37 emir, 626 $) → demo ≠ gerçek.
+- **Kural:** spot ve HIP‑3 **açılış/artırma** iki kipte de atlanır (`spot_atlandi`, `hip3_atlandi`; `emir_yok`, `neden_say`, pano "Atlanan sinyaller"). Kapanış/azaltma ASLA engellenmez. HIP‑3 için tek anahtar: `kurallar.yaml canli_hip3_kopya: false` (true yalnız gerçek kipte `perp_dexs` desteği + test sonrası). `radar_*` DEĞİŞMEDİ.
+- **O1:** RADAR §6 "≥ 8 yeni coin" → patlama freni FARKLI coin sayar ve yalnız gerçekten dolan açılışları (emir sonrası `Risk.yeni_coin_kaydet`); aynı coinin parçaları ve emir verilmeyen açılışlar sayılmaz. Eşik/pencere/ara değişmedi.
+- **K‑42 canlıya girişi:** PR #546 birleşme zamanı = 2026-11-05T22:04:55Z (UTC ms `1793916295000`; `git log` commit 3decb05). Bu zamandan sonra üretim vardiyası yeni kodla koşar.
+- **Sayaç:** 7 günlük sanal sayaç K‑42'den SONRA başlar (önceki seri HIP‑3/spot içeriyordu). Açık 3 HIP‑3 pozisyon kapanana dek seride kalır (kapanışları engellenmez).
+- **Bilgi:** `ozet.json trader_atlanan` (trader başına `spot_atlandi`/`hip3_atlandi`): sahada olup yalnız HIP‑3 yapan trader görünür; alarm yok.
+
+### K‑43. Radar R1'de HIP‑3 hariç (Opus onayı, kullanıcı adına; 06.11 gece)
+- **Karar:** `radar_hip3_kopya: false` varsayılan: R1 kopya oynatmasında HIP‑3 (`dex:COIN`) dolumları oynatmadan çıkar. K‑28 TUTARLILIK DÜZELTMESİ: motor K‑42 ile zaten HIP‑3 açmıyor; eşik/ağırlık/yöntem değişmez.
+- **Gerekçe (A↔B yan yana; A: HIP‑3 dahil, B: hariç):** `gecti` A 20, B 15. İlk 11'de ortak 6 / yeni 5 / düşen 5. HIP‑3 payı ≥ 0,7 olan 7 kişiden A'nın İlk 11'indeki 5'i B'de `kopya_zarar` ile düştü; A'da tam HIP‑3 olanların 0,024–0,045 getirisi motorun açamadığı pozisyonlardandı.
+- **Geri alma:** tek satır `radar_hip3_kopya: true` (eski v1 davranışı). Kullanıcı onayı BEKLİYOR (sabah sunulacak; reddederse true'ya dönülür).
+- **Sayaç / ilk false kadro (06.11):** radar.yml (main, elle tetik #565) kadroyu **06:34:44Z (= 1793946884000 ms UTC)** yayımladı: `gecti_sayisi` **15** (≥ 11 ✔; İlk 11 + 4 yedek); İlk 11'in `hip3_nosyonel_pay` değerleri 0–0,73 (çoğu < 0,5). K-43 kadrosu motora bu andan sonraki ilk 5 dk okumasında geçti; 7 günlük sanal doğrulama ölçümü bu kadroyu da içerir (üretim vardiyası 05:22Z'de yeni kodla başlamıştı).
+- **Uyarı:** `gecti` < 11 ise radar özeti ve sağlık kontrolü UYARI verir (`kadro_11den_az`); otomatik true'ya dönülmez, lider karar verir.
+
+## Kullanıcı onayları 06.11 (öğle)
+Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
+- **K-43** onaylandı (radar HIP-3 hariç; geri alma: `radar_hip3_kopya: true`).
+- **K1** Actions vardiyası `TELEGRAM_KOMUT=kapali` (sunucu motoru devreye girince). **K2** gerçek durum maskeli `canli-gercek` dalına. **K3** bağımsız nabız servisi yapılacak. **K4** MetaMask + agent cüzdan (çekme yetkisiz), ilk kasa 300 $. **K5** sunucu + `/etc/sg-canli.env` (T5'te). **K6** <10 $ reduce-only küçük gerçek deneme yapılacak. **K7** hesap değeri >1.000 $ ise yeniden başlatmada ret: kasıtlı. **K8** strateji ilk 28 gün kilitli.
+- **Gerçek mod yine başlamadı:** 7 temiz sanal gün (en erken 13.11), cüzdan/anahtar/sunucu adımları kullanıcıyla ve ayrı onayla.
+- **Dal silme:** `copytrade-izleme` (tip 83f276cf) ve `claude/gecici-dal-sil` silinmesi onaylandı; otomatik izin denetimi silme komutunu engelledi, kullanıcı izin kuralı verene dek bekliyor.
+
+## K-44 — Boş slot doldurma günlük değişiklik sınırına sayılmaz (lider, 06.11)
+- **Karar:** `canli_gunde_degisiklik` (günde 2) YALNIZ sahadaki üyeyi değiştirmek (histerezis, `daha_iyisi_geldi`) için geçerli. Boş slot doldurma (`bos_slot`) sınıra sayılmaz ve ona takılmaz. Kor. sınırı (`canli_kor_max`), 14 gün bekleme, K-39 (iki UTC günü kadro dışı) AYNEN.
+- **Gerekçe:** Lider denetimi (canli-durum, vardiya 42229578322): sahadaki 8 üyenin 7'si bugünkü kadroda yok; bugünkü İlk 11'den 10'u BEKLİYOR, 3 slot boş. Sınır doluyken boş slotlar dolmuyor, 12.11 isabet ölçümü anlamsızlaşırdı.
+- **Doğrulama (birleşmeden, gerçek veriyle yerel):** bugünkü `radar/son/kadro.json` + canli-durum `saha.json` → `Saha.degerlendir`: saha 8 → **11/11**; 3 giriş, üçü `bos_slot` (sıra 2, 3, 4); sayaç `adet` değişmez. Sahadaki sıra dağılımı sonra: 1, 2, 3, 4 + 7 üye bugünkü kadroda YOK (K-39: kadro dışı, ikinci UTC günü kadroda yoksa sonuç dışı düşer; sonra İlk 11 adayları boş yerleri doldurur). Yani 11/11 olur; "İlk 11 ağırlıklı" olması K-39 gereği 1–2 gün sürer (şu an İlk 11'den 4/11).
+- **Testler:** `test_gunde_en_fazla_2_degisiklik…` (3 boş slot aynı gün dolar, sayaç 0), `test_k44_gunluk_sinir_yalniz_uye_degistirmek_icin…` (değiştirme hâlâ günde ≤ 2).
+- **Aynı PR (lider denetimi 06.11 maddeleri 2–4):** emir kaydına boyut girdileri (VERI_SOZLESMESI), `kor_kirpildi` yalnız durum değişince, pano: özsermaye/düşüş grafiği 15 dk `tur` noktalarıyla, kapanan işlemler kâr faktörü alt satırda, "ortanca fark (bp)" + ortalama mutlak fark.
+- **Yöntem DEĞİŞMEZ:** zarar seçimden geliyor (brüt −39,07 $, maliyet −2,83 $; 38 kapanan işlem, %34 kazanma); 12.11 isabet ölçümü beklenir.
+>>>>>>> origin/main

@@ -31,7 +31,7 @@ from copytrade import kopya_v2, kopya_v3, kopya_v4, kopya_v5, radar_form
 from copytrade.defter import HOUR
 from copytrade.izleme_liste import perp_dex_names
 from copytrade.kurallar import load_rules
-from copytrade.olcut import closed_round_trips, effective_leverage_detail, perp_fills
+from copytrade.olcut import closed_round_trips, effective_leverage_detail, is_hip3, perp_fills
 from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter, RateLimitError, _address, _window
 
 MINUTE = 60_000
@@ -120,6 +120,13 @@ def islem_olculeri(fills: list[dict], hesap_usd: float, likit: set[str], rules: 
             "kisa_islem_payi": sum(1 for s in sureler if s < kisa_saat) / len(sureler) if sureler else None,
             "max_kaldirac": azami,
             "likit_pay": sum(v for c, v in nosyonel.items() if c in likit) / toplam if toplam > 0 else None}
+
+
+def hip3_nosyonel_pay(fills: list[dict]) -> float | None:
+    """Bilgi alanı (K‑43 adayı): perp dolumlarının nosyonelinde (px × sz) HIP‑3 (`dex:COIN`) payı, 0–1 oran; nosyonel 0 ise None. Kadro/kapılara girmez."""
+    perp = perp_fills(fills)
+    toplam = sum(abs(float(f["px"]) * float(f["sz"])) for f in perp)
+    return sum(abs(float(f["px"]) * float(f["sz"])) for f in perp if is_hip3(str(f["coin"]))) / toplam if toplam > 0 else None
 
 
 def kopya_olculeri(sonuc: dict | None, adres: str, rules: dict | None = None) -> dict:
@@ -296,6 +303,7 @@ class Baglam:
         daha eskisi 5 dk mumun yönümüze KÖTÜ fiyatı (`yaklasik_fiyat_eylem`); eksik hedef `fiyatsiz_eylem`, fiyat uydurulmaz. **ayna** = gecikmesiz (trader'ın dolum fiyatı), maliyetsiz.
         `v4_yan_yana` açıksa `v4` = aynı kopya, `kopya_v4` (sabit tutar) ile (yalnız rapor)."""
         t0, simdi = pd.Timestamp(self.pencere_bas_ms, unit="ms", tz="UTC"), pd.Timestamp(self.kosu_ms, unit="ms", tz="UTC")
+        dolumlar = kopya_v5.hip3_ayikla(dolumlar, bool(self.rules.get("radar_hip3_kopya", True)))     # K‑43 adayı: false ise HIP‑3 için mum da çekilmez; varsayılan true = aynen
         yerel: dict = {}
         mum, _ = im.execution_candles(self.mum, dolumlar, yerel, self.kosu_ms, self.gecikme_dk, [], {}, eski_aralik="5m")
         yaklasik = sum(1 for f in dolumlar if (yerel.get(str(f["coin"]), {}).get(str(kopya_v3.hedef_ms(int(f["time"]), self.gecikme_dk))) or {}).get("yaklasik"))
@@ -345,7 +353,7 @@ def _bos_satir(aday: dict, vlm: float, rules: dict) -> dict:
             "kopya_getiri_7g": None, "ayna_getiri_7g": None, "kopya_koruma": None,
             "devir_hafta": vlm / aday["hesap_usd"] if aday["hesap_usd"] > 0 else None,
             "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None, "v4_kopya_getiri_7g": None, "v5_onceki_kopya_getiri_7g": None, "kopya_gunluk": None, "kopya_kazanc_gun_orani": None, "kopya_dusus": None, "yayilma": None,
-            "kopya_getiri_72s": None, "hype_payi": None, "net_yatirma_usd": None, "yatirma_payi": None, "gecti": False, "neden": None, "hata": None}
+            "kopya_getiri_72s": None, "hype_payi": None, "hip3_nosyonel_pay": None, "net_yatirma_usd": None, "yatirma_payi": None, "gecti": False, "neden": None, "hata": None}
 
 
 def kopyalanabilirlik(aday: dict, dolumlar: list[dict] | None, hata: str | None, baglam: Baglam) -> dict:
@@ -362,6 +370,7 @@ def kopyalanabilirlik(aday: dict, dolumlar: list[dict] | None, hata: str | None,
         return {**satir, "neden": "dolum_fazla"}
     dolumlar = [f for f in perp_fills(dolumlar or []) if baglam.pencere_bas_ms <= int(f["time"]) < baglam.kosu_ms]
     satir.update(islem_olculeri(dolumlar, aday["hesap_usd"], baglam.likit_coinler(), rules))
+    satir["hip3_nosyonel_pay"] = hip3_nosyonel_pay(dolumlar)
     satir["gecti"], satir["neden"] = degerlendir(satir, rules, yalniz_dolum=True)
     if satir["neden"]:
         return satir                                                       # dolum tabanlı kural başarısız: kopya oynatılmaz (kopya alanları null)
@@ -446,6 +455,9 @@ def ozet_md(sonuc: dict) -> str:
     for sutun in SAYISAL:
         degerler = [s[sutun] for s in satirlar if s.get(sutun) is not None]
         cikti.append(f"| {sutun} | {len(degerler)} | " + (f"{min(degerler):.6g} | {statistics.median(degerler):.6g} | {max(degerler):.6g} |" if degerler else "— | — | — |"))
+    gecen = sum(1 for s in satirlar if s["gecti"])
+    if gecen < 11:
+        cikti += ["", f"⚠ UYARI: gecti {gecen} < 11 → kadro 11'den az; saha dolmayabilir (otomatik true'ya dönülmez, lider karar verir)."]
     esik = float(load_rules()["para_hareketi_isaret_payi"])
     isaretli = yatirma_isaretli(satirlar, esik)
     cikti += ["", f"Para hareketi (bilgi): `yatirma_payi` > {esik:g} olan **{len(isaretli)}** kişi" + (": " + ", ".join(f"{x['adres'][:10]}… ({x['yatirma_payi']:+.2f}{', gecti' if x['gecti'] else ''})" for x in isaretli[:15]) if isaretli else "")]
@@ -469,7 +481,12 @@ def kural_ust_uygula(rules: dict, atamalar: list[str]) -> tuple[dict, dict]:
         if not ayrac or not anahtar.startswith("radar_") or anahtar not in rules:
             raise ValueError(f"kural_ust 'radar_<anahtar>=<değer>' olmalı ve anahtar kurallar.yaml'da bulunmalı: {atama!r}")
         eski = rules[anahtar]
-        yeni[anahtar] = uygulanan[anahtar] = type(eski)(float(deger)) if isinstance(eski, int) and not isinstance(eski, bool) else type(eski)(deger)
+        if isinstance(eski, bool):                                    # bool("false") True olurdu
+            if deger.strip().lower() not in ("true", "false"):
+                raise ValueError(f"kural_ust bool değeri true|false olmalı: {atama!r}")
+            yeni[anahtar] = uygulanan[anahtar] = deger.strip().lower() == "true"
+            continue
+        yeni[anahtar] = uygulanan[anahtar] = type(eski)(float(deger)) if isinstance(eski, int) else type(eski)(deger)
     return yeni, uygulanan
 
 

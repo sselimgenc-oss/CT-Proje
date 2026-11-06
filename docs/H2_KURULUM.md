@@ -84,6 +84,7 @@ Kaldırmak için:
 rm /var/lib/sg-dinleyici/DUR
 ```
 Dosya her dolumda kontrol edilir; yeniden başlatma gerekmez.
+(Canlı motor Telegram komutları, 2026-11-05 kararı: `/kapat` = tüm pozisyonları kapat + motor durur (`DUR` dosyası); `/dur` = yalnız yeni giriş durur, çıkış serbest; `/devam` = `/dur` duraklatmasını kaldırır; `/kapat` sonrası açmaz. Ayrıntı: `deploy/kurulum.md`.)
 **Başlangıç pozisyonu (H5b):** servis her başlangıçta/yeniden bağlanmada `takim: ilk11` adreslerinin açık pozisyonlarını REST `clearinghouseState` ile okur (adres başına 1 + HIP-3 dex sayısı istek, ~2 ağırlık). Okuma arka planda yapılır, istekler arası 0,5 sn; hata/429'da 3 yeniden deneme (2/5/15 sn), sonra o adres her 5 dk'da yeniden denenir. `ozet.json` → `genel.baslangic_poz_bekleyen` > 0 uzun süre sürüyorsa (429/ağ) o adres için risk eski varsayımda kalmıştır (`risk.lider_pozisyon_varsayimi`); dinleme ve ölçüm etkilenmez.
 
 **REST hataları (429 koruması):** her REST hatası journal'a tek satır uyarıdır; türlere göre dağılım için:
@@ -97,6 +98,9 @@ journalctl -u sg-dinleyici --since "4 hours ago" | grep "UYARI REST" | sed 's/.*
 systemctl stop sg-dinleyici
 ```
 Kaldırmak için ek olarak `systemctl disable sg-dinleyici` ve sunucuyu silin. Servis çökerse `Restart=on-failure` yeniden başlatır; sayısı `yeniden_baslama` alanındadır.
+
+## Not: vardiya zinciri (G3)
+Bu rehber sunucu dinleyicisi içindir. GitHub Actions canlı vardiyasının zinciri (sonraki vardiyayı kendisi tetikler, saatlik sağlık tetiği) için `docs/EKIPLER.md` "Vardiya zinciri" bölümüne bak.
 
 ## Bilinen sınırlar
 - `trades` coin evreni = izleme motorunun kopyaladığı evren (kural 7): ana perp piyasası + HER HIP-3 dex'inin coinleri (`dex:coin`; `perpDexs` + `meta` `dex`). Spot kopyalanmaz (`olcut.perp_fills`): abone olunmaz, REST hakemde görülürse yalnız `kacan_sinif.spot` olarak sayılır. Abonelik reddi `genel.error` ve `error` çerçeveleriyle görünür.
