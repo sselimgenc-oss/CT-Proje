@@ -209,3 +209,26 @@ def _hermetik_cli(monkeypatch):
     """G2: `main` artık git fetch / GitHub REST çağırır; testler ağa ve gerçek git'e dokunmaz (kendi monkeypatch'leri bunun üstüne yazar)."""
     for ad, deger in (("_git_fetch", True), ("_git_var", False), ("_git_son_commit_ms", None), ("kayit_olaylari", None), ("vardiya_kosulari_oku", None)):
         monkeypatch.setattr(s, ad, lambda *a, _d=deger, **k: _d)
+
+
+def test_vardiya_kosusu_failure_sonrasi_calisan_kosu_bilgi_yoksa_kritik():
+    # (a) failure + ardından in_progress / queued -> yalnız BİLGİ (veri bayat olsa bile)
+    for durum in ("in_progress", "queued"):
+        b = s.kontrol(SIMDI, ozet(), kadro(), vardiya_kosulari=[kos(None, durum, 18), kos("failure", no=17)], veri_dali_commit_ms=SIMDI - 100 * DK)
+        assert [(x.kod, x.seviye) for x in b if x.kod.startswith("vardiya_kosusu")] == [("vardiya_kosusu_duzeldi", "BILGI")]
+    # (b) failure + sonrası yok + veri bayat -> KRİTİK
+    b = s.kontrol(SIMDI, ozet(), kadro(), vardiya_kosulari=[kos("failure", no=17)], veri_dali_commit_ms=SIMDI - 60 * DK)
+    assert "vardiya_kosusu_basarisiz" in kodlar(b) and s.durum(b) == "KRITIK"
+    # (c) failure sonra success -> bulgu yok
+    assert s.kontrol(SIMDI, ozet(), kadro(), vardiya_kosulari=[kos("success", no=18), kos("failure", no=17)]) == []
+    # failure + sonrası yok ama veri dalı taze -> BİLGİ
+    b = s.kontrol(SIMDI, ozet(), kadro(), vardiya_kosulari=[kos("failure", no=17)], veri_dali_commit_ms=SIMDI - 5 * DK)
+    assert s.durum(b) == "SAGLIKLI" and kodlar(b) == {"vardiya_kosusu_duzeldi"}
+
+
+def test_vardiya_boslugu_sonrasi_vardiya_surerken_uyari_yoksa_kritik():
+    ol = [{"zaman_ms": SIMDI - 40 * DK, "olay": "vardiya_boslugu", "dk": 157.4}]
+    b = s.kontrol(SIMDI, ozet(yazildi_ms=SIMDI - 5 * DK), kadro(), olaylar=ol, veri_dali_commit_ms=SIMDI - 5 * DK)
+    assert [(x.kod, x.seviye) for x in b] == [("vardiya_boslugu", "UYARI")]
+    assert s.durum(s.kontrol(SIMDI, ozet(yazildi_ms=SIMDI - 50 * DK), kadro(), olaylar=ol, veri_dali_commit_ms=SIMDI - 5 * DK)) == "KRITIK"      # olaydan sonra yazım yok
+    assert s.durum(s.kontrol(SIMDI, ozet(yazildi_ms=SIMDI - 5 * DK), kadro(), olaylar=ol, veri_dali_commit_ms=SIMDI - 60 * DK)) == "KRITIK"      # veri bayat

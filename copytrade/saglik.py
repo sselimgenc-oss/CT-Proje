@@ -51,11 +51,13 @@ def _sa(dk: float) -> str:
 
 
 def kalici_kontrol(simdi_ms: int, motor: dict[str, Any] | None, risk: dict[str, Any] | None, dur_dosyasi: bool, olaylar: list[dict[str, Any]] | None, kayit_sayac: dict[str, Any] | None,
-                   vardiya_kosulari: list[dict[str, Any]] | None, veri_dali_commit_ms: int | None) -> list[Bulgu]:
+                   vardiya_kosulari: list[dict[str, Any]] | None, veri_dali_commit_ms: int | None, ozet_yazildi_ms: int | float | None = None) -> list[Bulgu]:
     """G2: kalıcı durum (`motor.json` kapanış kuyruğu, `risk.json` bayrakları, `DUR` dosyası), kayıt olayları, hata sayaçları, son vardiya koşusu, veri dalı commit yaşı.
     Okunamayan girdi (None) bulgu ÜRETMEZ (ağ/okuma hatası yanlış alarm olmasın; yokluk zaten `ozet_yok` vb. ile görünür)."""
     b: list[Bulgu] = []
     risk = risk or {}
+    yas_c = _yas_dk(simdi_ms, veri_dali_commit_ms)
+    veri_taze = None if yas_c is None else yas_c * DAKIKA < VERI_DALI_COMMIT_UYARI        # veri dalı taze mi (None: ölçülemedi)
     kuyruk = (motor or {}).get("kapanis_kuyrugu") or {}
     eksikler = [(k, v) for k, v in kuyruk.items() if isinstance(v, dict) and v.get("eksik")]
     if eksikler:
@@ -87,7 +89,10 @@ def kalici_kontrol(simdi_ms: int, motor: dict[str, Any] | None, risk: dict[str, 
         if kod in sayim:
             son = sayim[kod][-1]
             ek = f" ({son['dk']} dk)" if son.get("dk") is not None else ""
-            b.append(Bulgu("KRITIK", kod, f"{aciklama}{ek}: son 2 saatte {len(sayim[kod])} kez."))
+            if veri_taze and ozet_yazildi_ms is not None and float(ozet_yazildi_ms) > float(son["zaman_ms"]):     # olaydan SONRA vardiya yeniden başladı ve veri taze: kurtarılmış
+                b.append(Bulgu("UYARI", kod, f"{aciklama}{ek}: son 2 saatte {len(sayim[kod])} kez; sonrasında vardiya sürüyor, veri taze (kurtarıldı)."))
+            else:
+                b.append(Bulgu("KRITIK", kod, f"{aciklama}{ek}: son 2 saatte {len(sayim[kod])} kez."))
     for kod, aciklama in UYARI_KAYIT_OLAYLARI.items():
         if kod in sayim:
             b.append(Bulgu("UYARI", kod, f"{aciklama}: son 2 saatte {len(sayim[kod])} kez."))
@@ -95,7 +100,7 @@ def kalici_kontrol(simdi_ms: int, motor: dict[str, Any] | None, risk: dict[str, 
         n = int((kayit_sayac or {}).get(sayac) or 0)
         if n > 0:
             b.append(Bulgu("KRITIK", sayac, f"Motor kaydında {sayac} = {n} (bu vardiyada; hata ayıklanmalı)."))
-    k = vardiya_kosu_bulgusu(vardiya_kosulari)
+    k = vardiya_kosu_bulgusu(vardiya_kosulari, veri_taze)
     if k:
         b.append(k)
     if veri_dali_commit_ms is not None:
@@ -107,15 +112,20 @@ def kalici_kontrol(simdi_ms: int, motor: dict[str, Any] | None, risk: dict[str, 
     return b
 
 
-def vardiya_kosu_bulgusu(kosular: list[dict[str, Any]] | None) -> Bulgu | None:
-    """GitHub REST `workflow runs` listesinden (en yeni önce) son TAMAMLANMIŞ üretim vardiya koşusunun sonucu. Yalnız `failure`/`timed_out` bulgudur (KRITIK);
-    `cancelled` (concurrency iptali / bekleyen koşu / süre sınırı) yalnız BILGI (sahte KRİTİK üretmesin). Liste yok/boş/okunamadı: bulgu yok."""
+def vardiya_kosu_bulgusu(kosular: list[dict[str, Any]] | None, veri_taze: bool | None = None) -> Bulgu | None:
+    """GitHub REST `workflow runs` listesinden (en yeni önce) üretim vardiya koşusu sonucu. Bakılan: en yeni TAMAMLANMIŞ koşu.
+    `failure`/`timed_out`: KRITIK, ANCAK ardından başlamış çalışan/bekleyen koşu varsa ya da veri dalı taze ise (`veri_taze`) yalnız BILGI ("önceki koşu düştü, sonrakisi çalışıyor");
+    ardından daha yeni tamamlanmış `success` zaten en yeni tamamlanmış koşu olur (bulgu yok). `cancelled` (concurrency/süre sınırı) yalnız BILGI. Liste yok/boş/okunamadı: bulgu yok."""
+    sonra_calisan = False
     for r in kosular or []:
         if r.get("status") != "completed":
+            sonra_calisan = True
             continue
         sonuc, no = r.get("conclusion"), r.get("run_number") or r.get("id")
         if sonuc in ("failure", "timed_out"):
-            return Bulgu("KRITIK", "vardiya_kosusu_basarisiz", f"Son üretim vardiya koşusu (#{no}) {sonuc} bitti: {r.get('html_url') or VARDIYA_IS_AKISI}")
+            if sonra_calisan or veri_taze:
+                return Bulgu("BILGI", "vardiya_kosusu_duzeldi", f"Önceki vardiya koşusu (#{no}) {sonuc} bitti, sonrakisi çalışıyor/veri taze (alarm yok).")
+            return Bulgu("KRITIK", "vardiya_kosusu_basarisiz", f"Son üretim vardiya koşusu (#{no}) {sonuc} bitti, yenisi çalışmıyor: {r.get('html_url') or VARDIYA_IS_AKISI}")
         if sonuc == "cancelled":
             return Bulgu("BILGI", "vardiya_kosusu_iptal", f"Son vardiya koşusu (#{no}) iptal edildi (concurrency/süre sınırı olabilir; adımsız iptal normaldir).")
         return None
@@ -149,7 +159,7 @@ def kontrol(simdi_ms: int, ozet: dict[str, Any] | None, kadro: dict[str, Any] | 
         hata = int(ozet.get("telegram_hata") or 0)
         if hata >= TELEGRAM_HATA_UYARI:
             b.append(Bulgu("UYARI", "telegram_hata", f"Telegram mesajı {hata} kez gönderilemedi."))
-        b.extend(kalici_kontrol(simdi_ms, motor, risk, dur_dosyasi, olaylar, ozet.get("kayit_sayac"), vardiya_kosulari, veri_dali_commit_ms))
+        b.extend(kalici_kontrol(simdi_ms, motor, risk, dur_dosyasi, olaylar, ozet.get("kayit_sayac"), vardiya_kosulari, veri_dali_commit_ms, ozet.get("yazildi_ms")))
         din = ozet.get("dinleyici") or {}
         kopma = int(din.get("kopma") or 0)
         if kopma >= KOPMA_UYARI:
