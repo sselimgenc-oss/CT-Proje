@@ -59,8 +59,10 @@ def test_radar_yasi_gecti_araligi_kadro_eksik():
     assert kodlar(s.kontrol(SIMDI, ozet(), kadro(kosu_ms=SIMDI - 31 * SA))) == {"radar_gecikti"}
     assert kodlar(s.kontrol(SIMDI, ozet(), kadro(kosu_ms=SIMDI - 55 * SA))) == {"radar_durdu"}
     assert kodlar(s.kontrol(SIMDI, ozet(), kadro(gecti_sayisi=7))) == {"gecti_aralik_disi"} and kodlar(s.kontrol(SIMDI, ozet(), kadro(gecti_sayisi=21))) == {"gecti_aralik_disi"}
-    assert s.kontrol(SIMDI, ozet(), kadro(gecti_sayisi=8)) == [] and s.kontrol(SIMDI, ozet(), kadro(gecti_sayisi=20)) == []                         # sınırlar dahil
+    assert s.kontrol(SIMDI, ozet(), kadro(gecti_sayisi=11)) == [] and s.kontrol(SIMDI, ozet(), kadro(gecti_sayisi=20)) == []                         # sınırlar dahil
     assert kodlar(s.kontrol(SIMDI, ozet(), kadro(satirlar=[{"katman": "ilk11"}] * 9))) == {"kadro_eksik"}
+    b = s.kontrol(SIMDI, ozet(), kadro(gecti_sayisi=8))                                                                                      # K‑43: 11'den az = UYARI (KRİTİK değil)
+    assert kodlar(b) == {"kadro_11den_az"} and s.durum(b) == "UYARI"
 
 
 def test_pano_ve_cloudflare():

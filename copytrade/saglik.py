@@ -88,6 +88,8 @@ def kontrol(simdi_ms: int, ozet: dict[str, Any] | None, kadro: dict[str, Any] | 
         gecti = kadro.get("gecti_sayisi")
         if gecti is not None and not (GECTI_ALT <= int(gecti) <= GECTI_UST):
             b.append(Bulgu("UYARI", "gecti_aralik_disi", f"Radarı geçen trader sayısı {int(gecti)} (beklenen {GECTI_ALT}–{GECTI_UST}); strateji/veri kontrol edilmeli."))
+        elif gecti is not None and int(gecti) < 11:
+            b.append(Bulgu("UYARI", "kadro_11den_az", f"Radarı geçen {int(gecti)} kişi: kadro 11'den az; saha dolmayabilir (otomatik true'ya dönülmez, lider karar verir)."))
         n, satir = int(kadro.get("saha_n") or 0), kadro.get("satirlar") or []
         ilk11 = [s for s in satir if s.get("katman") == "ilk11"]
         if n and len(ilk11) < n:

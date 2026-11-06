@@ -147,6 +147,7 @@
   - T4b 6 (kuyruk önceliği) ve 9 (sanal defter derinliği) çıkarıldı: 11–90 $'lık emirlerde etkisi önemsiz.
 
 ### K‑38. Azaltma hedef tabanlı (lider, 2026-11-05)
+- durum: PR #530 taslak, main'e henüz GİRMEDİ (deneme vardiyası doğrulaması bekleniyor).
 - **Bulgu:** küçük parçalı azaltmalar < 11 $ olduğu için atlanıyor ve kayboluyor. Bizim pozisyon trader'a göre büyük kalıyor (vardiya 42003105254: 1.535 `min_emir_atlandi`).
 - **Kural:** `docs/DENETIM_PANO_2026-11-05.md` §A. `boyut.hedef_emir` `azalt`; `kopya_v5` ve motor aynı fonksiyonu kullanır; eski/yeni R1 sayıları yan yana verilir.
 
@@ -175,3 +176,18 @@
 - **İlk gerçek kasa: 300 $** (kullanıcı kararı; lider önerisi: 11 trader sahada kalacak kadar. 275 $ alt sınır, 250 $ → N = 10). Önceki "100 $" kararı geçersiz: 100 $'da N = 4, slot 25 $, en küçük emir 11 $ → sinyallerin çoğu atlanır.
 - **Paralel deneme:** 300 $'lık sanal vardiya `canli-durum-deneme` dalında koşar; üretim 1.000 $ serisi değişmez. Özet/pano: atlanan sinyal oranı (`min_emir_atlandi` / toplam sinyal) 300 $ ve 1.000 $ yan yana gösterilir.
 
+
+### K‑42. Spot ve HIP‑3 dolumları kopyalanmaz; patlama freni farklı coin sayar (lider, 2026-11-05 gece)
+- **Bulgu:** `docs/DENETIM_UCTAN_UCA_2026-11-05.md` Y1/B3/O1. Spot (`@N`, `A/B`) perp gibi kopyalanıyordu (05.11 kaydı: 14 emir, 276 $); HIP‑3 (`dex:COIN`) gerçek kipte emir verilemez (SDK `perp_dexs`) ama sanalda açılıyordu (37 emir, 626 $) → demo ≠ gerçek.
+- **Kural:** spot ve HIP‑3 **açılış/artırma** iki kipte de atlanır (`spot_atlandi`, `hip3_atlandi`; `emir_yok`, `neden_say`, pano "Atlanan sinyaller"). Kapanış/azaltma ASLA engellenmez. HIP‑3 için tek anahtar: `kurallar.yaml canli_hip3_kopya: false` (true yalnız gerçek kipte `perp_dexs` desteği + test sonrası). `radar_*` DEĞİŞMEDİ.
+- **O1:** RADAR §6 "≥ 8 yeni coin" → patlama freni FARKLI coin sayar ve yalnız gerçekten dolan açılışları (emir sonrası `Risk.yeni_coin_kaydet`); aynı coinin parçaları ve emir verilmeyen açılışlar sayılmaz. Eşik/pencere/ara değişmedi.
+- **K‑42 canlıya girişi:** PR #546 birleşme zamanı = 2026-11-05T22:04:55Z (UTC ms `1793916295000`; `git log` commit 3decb05). Bu zamandan sonra üretim vardiyası yeni kodla koşar.
+- **Sayaç:** 7 günlük sanal sayaç K‑42'den SONRA başlar (önceki seri HIP‑3/spot içeriyordu). Açık 3 HIP‑3 pozisyon kapanana dek seride kalır (kapanışları engellenmez).
+- **Bilgi:** `ozet.json trader_atlanan` (trader başına `spot_atlandi`/`hip3_atlandi`): sahada olup yalnız HIP‑3 yapan trader görünür; alarm yok.
+
+### K‑43. Radar R1'de HIP‑3 hariç (Opus onayı, kullanıcı adına; 06.11 gece)
+- **Karar:** `radar_hip3_kopya: false` varsayılan: R1 kopya oynatmasında HIP‑3 (`dex:COIN`) dolumları oynatmadan çıkar. K‑28 TUTARLILIK DÜZELTMESİ: motor K‑42 ile zaten HIP‑3 açmıyor; eşik/ağırlık/yöntem değişmez.
+- **Gerekçe (A↔B yan yana; A: HIP‑3 dahil, B: hariç):** `gecti` A 20, B 15. İlk 11'de ortak 6 / yeni 5 / düşen 5. HIP‑3 payı ≥ 0,7 olan 7 kişiden A'nın İlk 11'indeki 5'i B'de `kopya_zarar` ile düştü; A'da tam HIP‑3 olanların 0,024–0,045 getirisi motorun açamadığı pozisyonlardandı.
+- **Geri alma:** tek satır `radar_hip3_kopya: true` (eski v1 davranışı). Kullanıcı onayı BEKLİYOR (sabah sunulacak; reddederse true'ya dönülür).
+- **Sayaç:** kadro yayın zamanı (UTC ms) sonraki `radar.yml` koşusundan sonra yazılacak: bekliyor.
+- **Uyarı:** `gecti` < 11 ise radar özeti ve sağlık kontrolü UYARI verir (`kadro_11den_az`); otomatik true'ya dönülmez, lider karar verir.

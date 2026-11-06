@@ -41,14 +41,22 @@ Güncel tutulur; lider 09.11'de bunu okuyarak devralır. Saatler UTC, aksi belir
 ## Lider kararları 05.11 akşam — iş listesi (KARARLAR.md'ye işli)
 | # | İş | Durum |
 |---|---|---|
-| 1 | Docs: K‑41 + kararlar + 300 $ | bu PR |
-| 2 | Dal temizliği listesi (silme onaylı; liste PR'da, sonra silinir) | sırada |
-| 3 | t4b #2, #3 (atomik yazım + çökme testi), #6, #7 | sırada |
-| 4 | K‑41 `ters_netlesme` (#4) + pano | sırada |
-| 5 | #5 `hl_ofset` yatırma/çekme + `non_funding_ledger` sayfalama | sırada |
-| 6 | Telegram: baslat DUR sıfırlama, vardiya arası komut yanıtı, `/durum` gerçek bayraklar | sırada |
-| 7 | 300 $ paralel sanal vardiya (`canli-durum-deneme`) + yan yana atlanan oran | sırada |
-| 8 | `yatirma_payi` 7 gün ölçüm satırı (radar özeti); `sonnet_isci.yml` kaldır | sırada |
+| 1 | Docs: K‑41 + kararlar + 300 $ | ✔ #537 |
+| 2 | Dal temizliği (22 birleşmiş dal silindi; liste #538; `copytrade-izleme` kullanıcı ayrıca onaylamadı → durur; geçici `claude/gecici-dal-sil` kaldı, silinecek) | ✔ (kısmen) |
+| 3 | t4b #2, #3 (atomik yazım + çökme testi), #6, #7 | ✔ #541 (Opus bulguları düzeltildi) |
+| 4 | K‑41 `ters_netlesme` + #5 `hl_ofset += net` (yatırma−çekme; Opus: HL−yerel birikmiş farkı silmesin) + `non_funding_ledger` sayfalama | ✔ #540 |
+| 5 | Telegram: baslat DUR sıfırlama, vardiya arası komut yanıtı, `/durum` bayrakları; DUR dosyası kapanıştan ÖNCE atomik (Opus bloklayıcı) | ✔ #539 |
+| 6 | Pano: Sağlık+Risk K/Z altına (#542), KADRO sekmesi SAHADA n/11 / BEKLİYOR sarı / İNİYOR / YEDEK (#543) | ✔ |
+| 7 | 300 $ paralel sanal vardiya | **İPTAL (kullanıcı kararı 05.11: iki iş yapıp sistemi yormayalım)**; yerine gerekirse mevcut 1.000 $ kayıtlarından tek seferlik "300 $ olsaydı" yeniden hesabı |
+| 8 | `yatirma_payi` 7 gün ölçüm satırı (radar özeti) | sırada |
+| 9 | `sonnet_isci.yml`: aktif (@sonnet yorumu tetikler), KALDIRILMADI | karar lidere |
+| 10 | K‑38 (#530): kod Opus denetiminde doğru; önceki vardiya sayıları BAŞKA dalın koşusuydu (geçersiz). Temiz deneme vardiyası 21:35Z başladı (≈ 01:50Z biter) | bekliyor |
+
+**7 günlük sayaç:** B ve C maddeleri main'de (#539/#540/#541, 05.11 21:2x Z). Sayaç, bunlardan sonra YENİ KODLA başlayan ilk ana vardiyadan başlar: mevcut vardiya (run 42101416359) 20:40Z'de eski kodla başladı, ≈ 00:55Z'de biter; sonraki vardiya (≈ 00:55Z = 03:55 TSİ) sayacın başı. Yeni pano görünümü de o vardiyada canlıya gelir.
+
+**OLAY 06.11 00:57Z — üretim vardiyası BAŞLAMADI (≈ 3 sa boşluk):** `ModuleNotFoundError: numpy`. Kök neden: K-42 takip (#547) `motor`'u `olcut.asset_class`'a bağladı (olcut → numpy/pandas); vardiya iş akışı yalnız websockets/PyYAML/requests kurar; CI'da numpy kurulu olduğundan testler yakalamadı. Düzeltme #552 (`copytrade/coin_sinif.py`, numpy'siz; `tests/test_canli_numpysiz.py` vardiya modüllerini numpy/pandas/scipy ENGELLİYKEN içe aktarır). Düzeltmeyle birlikte üretim vardiyası 01:07Z'de yeniden başladı (run 42141603604). **7 günlük sayaç bu vardiyadan başlar** (K-42 22:04:55Z ve K-43 kadro yayını bu sayaç öncesinde; kadro yayın zamanı sabah radar koşusundan sonra yazılacak). Ders: iş akışında kurulu olmayan bir paketi gerektiren import CI'da görünmez; bu sınıf için numpysiz import testi artık zorunlu.
+
+**T5 öncesi kalanlar (Opus notları):** HL < 10 $ reduce-only (toz kalıntı, kullanıcı onaylı küçük gerçek deneme); kısmi azaltma kalıntısı 1–10 $ trader tam kapatınca `kapanis_eksik` (t4b); `kucuk_kalan_kapat` için hesap okuması yaşı/sapması koruması; `canli-durum-deneme` tek veri dalı iki dal çakışması (kilit); `azalt_oransal_yedek` tam/kısmi ayrımı kayda alanı; `orderStatus canceled` kalan `sz` varsayımı T5 denemesinde doğrulanacak.
 
 ## Önerilen kararlar (lider)
 - **Telegram komutları (kullanıcı kararı 2026-11-05, lider denetimine):** `/kapat` = eski `/dur` (tüm pozisyonları kapat, motor durur, `DUR` dosyası). **Yeni `/dur`** = yalnız yeni giriş/artırma durur (`risk.acilis_durdu["elle_dur"]`, kalıcı); çıkış/azaltma serbest, motor çalışır, `DUR` yazılmaz (`docs/H2_KURULUM.md`'deki özgün `/dur` anlamı). `/devam` (= `/baslat`) duraklatmayı açar; `/kapat` sonrası açmaz (motor kapalı; yeniden açmak sunucudan — T5 sürekli sunucuda `DUR` silme/yeniden başlatma). Eski `/dur` testi `/kapat` ile aynen korundu.
@@ -58,3 +66,25 @@ Güncel tutulur; lider 09.11'de bunu okuyarak devralır. Saatler UTC, aksi belir
 | Tarih | radar çalıştı | gecti | ana vardiya sayısı/boşluk | kasa / özsermaye | olaylar |
 |---|---|---|---|---|---|
 | 05.11 | 07:18Z'de (birincil 6,7 sa geç; kadro var) | — | 04:58Z + 09:31Z; boşluk yok | 1.000 / ~1.000,7 | #510 #512 #514 birleşti; Telegram çalışıyor |
+
+## Sayaç — temiz tanımı (genişletilmiş, lider kararı 05.11 gece)
+Sayaç günü "temiz" sayılır ancak hepsi doğruysa:
+- vardiya işi başarısız / iptal / zaman aşımı yok;
+- `BAŞLAMADI` ve vardiya boşluğu yok;
+- mutabakat alarmı yok; `adim_hata`, `olay_hata`, `defter_hata` 0;
+- `kapanis_eksik` 0;
+- kadro her gün geldi;
+- sağlık işi günde ≥ 20 kez koştu;
+- komut kaybı yok;
+- KRİTİK yok.
+
+## T5 öncesi zorunlular (Opus uçtan uca denetim, 05.11 gece)
+1. Telegram tek tüketici (B1): deneme dalında token yok — ✔ bu PR (`canli_vardiya.yml`, `saglik.yml`: secret yalnız `refs/heads/main`).
+2. Kip/kasa yalnız sunucuda okunsun (B2; radar ve sanal seri etkilenmesin).
+3. API cüzdanı doğrulaması (Y3: ana anahtar değil agent; HL değeri ≤ 1.000 $ uyarısı).
+4. HIP-3 + spot kararı (B3 + Y1).
+5. Gerçek funding/ücret deftere (B4).
+6. Gerçek motor nabız/özet yayını + sağlık kontrolünün okuması (Y2).
+7. Kip/kasa uyuşmazlığında başlama yok (O11); kurulum belgesinde `/dur` ↔ `/kapat` (O10) — ✔ bu PR.
+8. HL 10 $ altı reduce-only tam kapanış: kullanıcı onaylı küçük gerçek deneme.
+9. Patlama freni (O1); K-38 kararı (O2: birleş ya da belge notu).

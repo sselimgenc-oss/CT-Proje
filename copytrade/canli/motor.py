@@ -38,6 +38,7 @@ from copytrade.dinleyici import Ayar, Dinleyici, Izlenen, Olay, clearinghouse_ay
 from copytrade.hl_ortak import spot_usdc
 from copytrade.izleme_liste import perp_dex_names
 from copytrade.kurallar import load_rules
+from copytrade.coin_sinif import asset_class
 from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter, ledger_sayfala
 
 EPS = 1e-12
@@ -123,6 +124,12 @@ def eylem_belirle(once: float, sonra: float, biz_sz: float) -> list[str]:
     if abs(sonra) > abs(once) + EPS:
         return ["ac"] if abs(biz_sz) < EPS else ["artir"]
     return ["azalt"] if abs(biz_sz) > EPS else []
+
+
+def coin_sinifi(coin: str) -> str:
+    """K‑42: 'spot' | 'hip3' (`dex:COIN`) | 'perp'. Tek kaynak `coin_sinif.asset_class` (numpy gerektirmez) (spot ve `dex:` ayrımı); burada yalnız üç sınıfa indirgenir."""
+    sinif = asset_class(coin)
+    return "spot" if sinif == "spot" else "perp" if sinif == "kripto" else "hip3"
 
 
 @dataclass
@@ -228,7 +235,10 @@ class Motor:
         self._ozet_oz: float | None = m.get("ozet_oz")              # önceki günlük özetteki özsermaye ("dünün sonucu" bundan hesaplanır)
         self._ozet_emir = int(m.get("ozet_emir", 0))               # önceki özetten beri emir sayısı
         self._emir_tampon: list[dict] = []                 # Telegram: emirler dakikalık adımda TEK özet mesajına toplanır
+        self._atla_tampon: dict[str, int] = {}             # Telegram sanal saatlik özet: pencerede atlanan sinyaller (neden -> adet)
+        self._ozet_pencere_bas: int = self.baslama_ms      # saatlik özet penceresinin başı (motor saati); kalıcı DEĞİL (çökmede tampon kaybolabilir)
         self.kor_kirpildi: list[dict] = []
+        self.atlanan_trader: dict[str, dict[str, int]] = {"spot_atlandi": {}, "hip3_atlandi": {}}      # K‑42 bilgi: neden -> {adres: adet}
         self.neden_say: dict[str, int] = {}          # boyut / risk nedenleri sayacı (slot_tavani, marj_yok, coin_tavani …)
         self.niyet = Niyet(durum_dizin / "niyet.jsonl")
         if self._oynat_gecis:
@@ -426,6 +436,14 @@ class Motor:
         if acilis and simdi - o.zaman_ms > float(self.rules["canli_olay_stale_sn"]) * 1000:
             self.sayac["gec_acilis"] += 1
             return self._atla(o, adres, eylem, "atlandi", "gec_acilis")
+        if acilis:                                                  # K‑42: spot (`@N`, `A/B`) ve HIP‑3 (`dex:COIN`) açılışı/artırması kopyalanmaz; kapanış/azaltma ASLA engellenmez
+            sinif = coin_sinifi(o.coin)
+            if sinif == "spot":
+                self.atlanan_trader["spot_atlandi"][adres] = self.atlanan_trader["spot_atlandi"].get(adres, 0) + 1
+                return self._atla(o, adres, eylem, "atlandi", "spot_atlandi")
+            if sinif == "hip3" and not bool(self.rules.get("canli_hip3_kopya", False)):
+                self.atlanan_trader["hip3_atlandi"][adres] = self.atlanan_trader["hip3_atlandi"].get(adres, 0) + 1
+                return self._atla(o, adres, eylem, "atlandi", "hip3_atlandi")
         inen = adres in self.saha.inen and adres not in self.saha.uyeler
         if acilis and inen:
             return self._atla(o, adres, eylem, "engel", "inen_trader")
@@ -461,6 +479,8 @@ class Motor:
             sonuc = self._kapat_coin(adres, o.coin, neden, simdi, o)
             return sonuc[1] or Sonuc(adres, o.coin, eylem, "atlandi", "kapanis_yok")
         s = self._yurut(o, adres, eylem, yon, emir_usd, not acilis, abs(biz_sz) if not acilis else None, neden, gec, simdi)
+        if yeni_coin and s.karar == "emir":                        # O1: patlama freni yalnız GERÇEKTEN açılan farklı coinleri sayar (emir sonrası)
+            self.risk.yeni_coin_kaydet(adres, o.coin, simdi)
         if eylem == "azalt":                                       # kısmi dolum kalırsa bir sonraki dakikada yeniden dene
             hedef = biz_sz - (1 if biz_sz > 0 else -1) * min(emir_usd / (mk or o.px), abs(biz_sz))
             self._azalt_kuyruga(adres, o.coin, hedef, neden, simdi, mk or o.px)
@@ -473,6 +493,8 @@ class Motor:
     def _atla(self, o: Olay, adres: str, eylem: str, karar: str, neden: str) -> Sonuc:
         self.sayac[karar] += 1
         self._say_neden(neden)
+        if self.kip == "sanal":
+            self._atla_tampon[neden] = self._atla_tampon.get(neden, 0) + 1
         self.kayit({"olay": "emir_yok", "adres": adres, "coin": o.coin, "eylem": eylem, "karar": karar, "neden": neden, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
                     "yas_ms": self.saat_ms() - o.zaman_ms})
         return Sonuc(adres, o.coin, eylem, karar, neden)
@@ -918,11 +940,27 @@ class Motor:
 
     def emir_ozeti(self, simdi: int, zorla: bool = False) -> None:
         """Biriken emirleri tek Telegram mesajı olarak gönderir (`canli_telegram_emir_ozet_sn` aralığında; vardiya sonunda `zorla`)."""
+        dk = float(self.rules.get("canli_telegram_sanal_ozet_dk", 0) or 0)
+        if self.kip == "sanal" and dk > 0:
+            return self._saatlik_ozet(simdi, dk, zorla)
         sn = float(self.rules["canli_telegram_emir_ozet_sn"])
         if not self._emir_tampon or not (zorla or self._aralik_mi("emir_ozeti", simdi, sn)):
             return
         emirler, self._emir_tampon = self._emir_tampon, []
         self.tg.gonder(tg.msg_emir_ozeti(self.kip, emirler, sn / 60.0))
+
+    def _saatlik_ozet(self, simdi: int, dk: float, zorla: bool) -> None:
+        """SANAL kip: emirler `canli_telegram_sanal_ozet_dk` dakikalık pencerede TEK mesajda (pencere motor saatinden). Emir yoksa mesaj yok. `zorla` (vardiya sonu): kalan pencere hemen gider."""
+        bas = self._ozet_pencere_bas
+        if not zorla and simdi - bas < dk * DAKIKA:
+            return
+        emirler, atlanan = self._emir_tampon, self._atla_tampon
+        self._emir_tampon, self._atla_tampon = [], {}
+        self._ozet_pencere_bas = simdi
+        metin = tg.msg_sanal_saatlik(bas, simdi, round((simdi - bas) / DAKIKA) if zorla else dk, emirler, atlanan,
+                                     (self.ozsermaye(), self.risk.gun_basi, self.kasa) if emirler else None)
+        if metin:
+            self.tg.gonder(metin)
 
     def _tasfiye(self, simdi: int) -> None:
         if self.kip != "sanal":
@@ -1075,7 +1113,9 @@ class Motor:
                 "gec_acilis": self.sayac["gec_acilis"], "kapanis_eksik": self.sayac["kapanis_eksik"], "kapanis_kuyrugu": len(self.kapanis_kuyrugu), "min_nosyonel": self.sayac["min_nosyonel"],
                 "funding_usd": self.hesap.funding_toplam(), "funding_oran_yok": self.sayac["funding_oran_yok"], "kuyruk_gecikme_ms": self.gecikme_ozeti(), "en_buyuk_emir": dict(self.en_buyuk_emir),
                 "min_emir_say": {k: v for k, v in sorted(self.neden_say.items()) if k.startswith("min_emir")},
-                "ters_netlesme": self.neden_say.get("ters_netlesme", 0)}
+                "ters_netlesme": self.neden_say.get("ters_netlesme", 0),
+                "spot_atlandi": self.neden_say.get("spot_atlandi", 0), "hip3_atlandi": self.neden_say.get("hip3_atlandi", 0),
+                "trader_atlanan": {k: dict(sorted(v.items())) for k, v in self.atlanan_trader.items()}}
 
     def gecikme_ozeti(self) -> dict[str, float | int | None]:
         g = sorted(self.kuyruk_gecikme)

@@ -28,19 +28,12 @@ def _funding_amount(item: dict[str, Any]) -> float:
     return float(value or 0)
 
 
-COMMODITIES = {"CL", "BRENTOIL", "OIL", "GOLD", "SILVER", "XAU", "XAG", "NATGAS", "NG", "COPPER", "HG", "PLATINUM"}
-INDICES = {"XYZ100", "SPX", "US500", "NDX", "NAS100", "US30", "DJI", "RUT", "SP500", "USA500", "USTECH"}
+from copytrade.coin_sinif import COMMODITIES, INDICES, asset_class  # noqa: E402,F401  (numpy gerektirmeyen tek kaynak; canlı motor da buradan alır)
 
 
-def asset_class(coin: str) -> str:
-    """Hyperliquid coin -> kripto / hisse / endeks / emtia / spot. HIP-3 markets carry a ``dex:`` prefix."""
-    coin = str(coin)
-    if coin.startswith("@") or "/" in coin:
-        return "spot"
-    if ":" not in coin:
-        return "kripto"
-    name = coin.split(":", 1)[1].upper()
-    return "emtia" if name in COMMODITIES else "endeks" if name in INDICES else "hisse"
+def is_hip3(coin: str) -> bool:
+    """HIP‑3 (builder dex, `dex:COIN`): `asset_class` kripto ya da spot değilse (motor `coin_sinifi` ile aynı ayrım)."""
+    return asset_class(coin) not in ("kripto", "spot")
 
 
 def perp_fills(fills: list[dict[str, Any]]) -> list[dict[str, Any]]:

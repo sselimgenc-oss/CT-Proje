@@ -32,6 +32,6 @@ jobs:
         run: git fetch origin canli-durum radar
       - name: Sağlık kontrolü
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ github.ref == 'refs/heads/main' && secrets.TELEGRAM_BOT_TOKEN || '' }}
+          TELEGRAM_CHAT_ID: ${{ github.ref == 'refs/heads/main' && secrets.TELEGRAM_CHAT_ID || '' }}
         run: python -u -m copytrade.saglik --veri-dali canli-durum --kadro-dali radar --canli-url "https://sg-pano.sselimgenc-c18.workers.dev/" --telegram | tee -a "$GITHUB_STEP_SUMMARY"

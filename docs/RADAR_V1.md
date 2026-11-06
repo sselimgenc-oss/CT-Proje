@@ -40,6 +40,8 @@ Akış: **R0 evren → R1 kopyalanabilirlik (şimdi) → R2 form puanı (son 7 g
 | 8 | **Şans süzgeci (K‑27)** | G (R2: kopya işlem getirilerinden bootstrap toplamın %20 alt yüzdeliği) > 0 | 300 kişi her gün tarandığında şansla parlayanlar çok; kârı birkaç işleme dayanan elenir |
 | 9 | Akıl sağlığı | kopya getirisi ≤ +%300, hesap > 0 | Uç değer = veri hatası şüphesi → elenir, raporlanır |
 
+**K‑43 notu (06.11, Opus onayı, kullanıcı onayı bekliyor):** yöntem aynı; yalnız HIP‑3 (`dex:COIN`) dolumları oynatmadan çıkar (`radar_hip3_kopya: false` varsayılan; motor K‑42 ile aynı). `true` = yukarıdaki yöntem aynen (eski v1); kapılar ve eşikler değişmez. Bilgi alanı `hip3_nosyonel_pay`.
+
 Ölçüm sırası ucuzdan pahalıya (devir → vault → dolum tavanı 5.000 → dolum kuralları → kopya oynatma); zaman bütçesi 120 dk (K‑27, T2 lider kararı).
 R1'den geçenlere **"radar havuzu"** denir. Her eleme nedeniyle (`neden` kodu) raporlanır.
 
@@ -91,7 +93,7 @@ gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez
   kısmi dolum zincirinde patlıyordu.)
 - **Azaltma (K‑38, hedef tabanlı):** hedef = slot × |trader_poz_sonra| × fiyat / trader_hesap (3 × slot tavanlı); fark = biz − hedef. fark ≥ 11 $ → fark kadar azalt; fark < 11 $ → atla (birikir, sonraki dolumda yakalanır); hedef < 11 $ ve biz ≥ 11 $ → tamamını kapat; trader tamamen kapatınca biz de tamamen kapatırız (reduce‑only). Trader hesabı bilinmiyorsa eski oransal kural yedek olarak kullanılır.
 - **Marj:** coin başına **izole, 3x** (bir pozisyonun tasfiyesi kasanın geri kalanını yakmaz).
-- **Emir:** IOC limit, fiyat = en iyi karşı fiyat ± **%0,5** kayma tavanı; dolmayan kısım yeniden denenmez (`dolmadi` kaydı).
+- **Emir:** IOC limit, fiyat = en iyi karşı fiyat ± **%0,5** kayma tavanı; dolmayan kısım aynı emirde yeniden denenmez (`dolmadi` kaydı); kalan fark sonraki olayda hedef tabanlı (K‑36/K‑38) kapanır.
 - Her emir için kayıt: trader dolum zamanı, bizim görme zamanımız, emir/dolum fiyatı, kayma, ücret, neden.
 - **Güvenlik:** HL **API cüzdanı** (işlem yetkili, para çekme yetkisiz); ana cüzdan anahtarı hiçbir yere konmaz. API anahtarı yalnız sunucuda.
 
@@ -101,7 +103,7 @@ gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez
 - **Benzer trader:** sahada `son7g` günlük kopya getirisi korelasyonu ≥ 0,7 olan en fazla 2 kişi; fazlası sıradaki üyeye yer verir.
 - **Patlama freni (K‑27):** bir trader 10 dk içinde ≥ 8 yeni coin açarsa ondan 30 dk yeni açılış kopyalanmaz (kapanışları izlenir).
 - Günlük kasa kaybı ≥ %5 → o gün yeni açılış yok. Kasa zirveden düşüş ≥ **%20** → tüm pozisyonlar kapatılır, motor durur, Telegram (K‑19).
-- **/dur şalteri:** Telegram komutu ya da sunucuda dosya → aynı kapanış.
+- **Şalterler (komut tutarlılığı, 2026-11-05):** `/kapat` (Telegram) ya da sunucuda `DUR` dosyası → tüm pozisyonlar kapatılır, motor durur. `/dur` yalnız yeni giriş/artırmayı durdurur (çıkış serbest, motor çalışır); `/devam` ikisini de kaldırır (`/kapat` sonrası sunucudan).
 
 ## 7. R5 — Büyütme kapısı (kasaya para eklemek; son karar kullanıcının)
 Kasa 1.000 $'da kalır; artırım ancak hepsi sağlanırsa **önerilir**:
