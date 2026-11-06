@@ -1912,3 +1912,5 @@
 {"zaman_ms":1793979230361,"olay":"emir_yok","adres":"0xd2cfeee986ae1e83fb2e6385f6d54cfedb2ea029","coin":"xyz:SOXL","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1793979229910,"gorme_ms":1793979230361,"yas_ms":451}
 {"zaman_ms":1793979230362,"olay":"emir_yok","adres":"0xd2cfeee986ae1e83fb2e6385f6d54cfedb2ea029","coin":"xyz:SOXL","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1793979229910,"gorme_ms":1793979230361,"yas_ms":452}
 {"zaman_ms":1793979230362,"olay":"emir_yok","adres":"0xd2cfeee986ae1e83fb2e6385f6d54cfedb2ea029","coin":"xyz:SOXL","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1793979229910,"gorme_ms":1793979230361,"yas_ms":452}
+{"zaman_ms":1793980398555,"olay":"telegram_hata","tur":"ConnectionError"}
+{"zaman_ms":1793980658635,"olay":"telegram","metin":"🧾 Son 1 saat (17:57–18:57 TSİ): 30 emir · sanal\n➕ açılış 3 · ⬆️ artırma 18 · ⬇️ azaltma 8 · ✖️ kapanış 1\n🏆 En büyük: 137 $ (BTC, AL) · 0xda9f35…\n⏭️ Atlanan sinyal: 208 (en çok: inen_trader 109)\n⚠️ 1 emir tam dolmadı\n💵 Tutar toplamı: 919 $ · kayma ort. %0,015\n💰 Kasa: 963,53 $ · bugün 🟢 +3,51 $ (+%0,4","acik":true}
