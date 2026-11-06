@@ -1,7 +1,7 @@
 # Canlı motor kurulumu (Ubuntu 24.04) — T5'e hazır
 
 > **Gerçek para sınırı (AGENTS.md):** tek Hyperliquid hesabı, kasa ≤ 1.000 $, yalnız **para çekme yetkisiz API cüzdanı**. Anahtar yalnız sunucuda (`/etc/sg-canli.env`); repoda, günlükte, Telegram'da ASLA.
-> Varsayılan kip **sanal**. Gerçek kipe geçiş = anahtar + `copytrade/kurallar.yaml` `canli_kip: gercek` + servisin yeniden başlatılması (kullanıcı kararı, T5).
+> Varsayılan kip **sanal**. Gerçek kip **yalnız sunucu ortamından** açılır (G4): `/etc/sg-canli.env` içinde `CANLI_KIP=gercek` + `CANLI_KASA_USD` + anahtarlar, sonra servis yeniden başlatılır (kullanıcı kararı, T5). `kurallar.yaml canli_kip` yalnız `sanal` kabul eder (`gercek` yazılırsa motor KipHatasi ile başlamaz; depodan gerçek kip açılamaz).
 
 ## 1. Paketler ve kullanıcı
 ```bash
@@ -22,10 +22,18 @@ sudo -e /etc/sg-canli.env
 ```
 HL_API_CUZDAN_ANAHTARI=<para çekme yetkisiz API cüzdanı özel anahtarı>
 HL_HESAP_ADRESI=<ana hesap adresi 0x…>
+# Gerçek kip (T5'te, kullanıcı kararıyla; sanal denemede bu iki satır YAZILMAZ):
+# CANLI_KIP=gercek
+# CANLI_KASA_USD=300        # $; gerçek kipte ZORUNLU, 0 < kasa <= 1000 (canli_kasa_ust_usd). Yalnız motor süreci kullanır; radar/kadro/sanal seri kurallar.yaml canli_kasa_usd (1000) ile hesaplanır
+TELEGRAM_KOMUT=             # sunucuda boş bırak (motor komutları alır)
 TELEGRAM_BOT_TOKEN=<bot token>
 TELEGRAM_CHAT_ID=<sohbet kimliği>
 ```
 Kontrol: `stat -c '%a %U' /etc/sg-canli.env` → `600 sgcanli`.
+
+**Telegram tek tüketici (G4):** aynı bot için `getUpdates` çağıran yalnız BİR süreç olmalı (iki tüketici komut kaybettirir). Gerçek sunucu devreye girdiğinde GitHub Actions vardiyası
+`vars.TELEGRAM_KOMUT=kapali` ile çalıştırılır (repo değişkeni; GitHub → Settings → Variables): `TELEGRAM_KOMUT=kapali` iken motor yalnız mesaj gönderir, komut (`getUpdates`) almaz. Bu not hazırlıktır;
+iş akışına ayar eklenmesi o geçişte yapılır. `--kontrol` raporunda `kasa_kaynagi` gerçek kipte `"ortam"` olmalıdır.
 
 ## 3. Açılış kontrolü (emir göndermez)
 ```bash
