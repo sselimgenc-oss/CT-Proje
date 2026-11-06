@@ -54,6 +54,8 @@ Güncel tutulur; lider 09.11'de bunu okuyarak devralır. Saatler UTC, aksi belir
 
 **7 günlük sayaç:** B ve C maddeleri main'de (#539/#540/#541, 05.11 21:2x Z). Sayaç, bunlardan sonra YENİ KODLA başlayan ilk ana vardiyadan başlar: mevcut vardiya (run 42101416359) 20:40Z'de eski kodla başladı, ≈ 00:55Z'de biter; sonraki vardiya (≈ 00:55Z = 03:55 TSİ) sayacın başı. Yeni pano görünümü de o vardiyada canlıya gelir.
 
+**OLAY 06.11 00:57Z — üretim vardiyası BAŞLAMADI (≈ 3 sa boşluk):** `ModuleNotFoundError: numpy`. Kök neden: K-42 takip (#547) `motor`'u `olcut.asset_class`'a bağladı (olcut → numpy/pandas); vardiya iş akışı yalnız websockets/PyYAML/requests kurar; CI'da numpy kurulu olduğundan testler yakalamadı. Düzeltme #552 (`copytrade/coin_sinif.py`, numpy'siz; `tests/test_canli_numpysiz.py` vardiya modüllerini numpy/pandas/scipy ENGELLİYKEN içe aktarır). Düzeltmeyle birlikte üretim vardiyası 01:07Z'de yeniden başladı (run 42141603604). **7 günlük sayaç bu vardiyadan başlar** (K-42 22:04:55Z ve K-43 kadro yayını bu sayaç öncesinde; kadro yayın zamanı sabah radar koşusundan sonra yazılacak). Ders: iş akışında kurulu olmayan bir paketi gerektiren import CI'da görünmez; bu sınıf için numpysiz import testi artık zorunlu.
+
 **T5 öncesi kalanlar (Opus notları):** HL < 10 $ reduce-only (toz kalıntı, kullanıcı onaylı küçük gerçek deneme); kısmi azaltma kalıntısı 1–10 $ trader tam kapatınca `kapanis_eksik` (t4b); `kucuk_kalan_kapat` için hesap okuması yaşı/sapması koruması; `canli-durum-deneme` tek veri dalı iki dal çakışması (kilit); `azalt_oransal_yedek` tam/kısmi ayrımı kayda alanı; `orderStatus canceled` kalan `sz` varsayımı T5 denemesinde doğrulanacak.
 
 ## Önerilen kararlar (lider)
