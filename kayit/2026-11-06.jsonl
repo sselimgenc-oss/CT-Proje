@@ -979,3 +979,7 @@
 {"zaman_ms":1793947376459,"olay":"emir_yok","adres":"0xd2cfeee986ae1e83fb2e6385f6d54cfedb2ea029","coin":"xyz:CRWV","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1793947376221,"gorme_ms":1793947376459,"yas_ms":238}
 {"zaman_ms":1793947401755,"olay":"emir_yok","adres":"0xd2cfeee986ae1e83fb2e6385f6d54cfedb2ea029","coin":"xyz:CRWV","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1793947401451,"gorme_ms":1793947401755,"yas_ms":304}
 {"zaman_ms":1793947944662,"olay":"emir_yok","adres":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee","coin":"ZEC","eylem":"ac","karar":"engel","neden":"inen_trader","trader_dolum_ms":1793947944306,"gorme_ms":1793947944662,"yas_ms":356}
+{"zaman_ms":1793948407372,"olay":"funding","saat":498319,"saat_adet":1,"funding_usd":-0.006720715686384785,"toplam_funding_usd":-0.08045735718832513}
+{"zaman_ms":1793948532088,"olay":"emir_yok","adres":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee","coin":"ZEC","eylem":"ac","karar":"engel","neden":"inen_trader","trader_dolum_ms":1793948531415,"gorme_ms":1793948532088,"yas_ms":673}
+{"zaman_ms":1793948535182,"olay":"emir_yok","adres":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee","coin":"ZEC","eylem":"ac","karar":"engel","neden":"inen_trader","trader_dolum_ms":1793948534897,"gorme_ms":1793948535182,"yas_ms":285}
+{"zaman_ms":1793948604503,"olay":"emir_yok","adres":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee","coin":"ZEC","eylem":"ac","karar":"engel","neden":"inen_trader","trader_dolum_ms":1793948604172,"gorme_ms":1793948604502,"yas_ms":331}
