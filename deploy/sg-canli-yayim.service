@@ -1,0 +1,18 @@
+# Gerçek motor nabzı: maskeli ozet.json + kilit.json -> yerel nabiz.json (+ GERCEK_YAYIM_HEDEF varsa canli-gercek dalı). Zamanlayıcı: sg-canli-yayim.timer (15 dk).
+[Unit]
+Description=sg-arge gercek motor nabzi (maskeli yayim)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=sgcanli
+Group=sgcanli
+WorkingDirectory=/opt/sg-arge
+EnvironmentFile=-/etc/sg-canli.env
+ExecStart=/bin/bash /opt/sg-arge/deploy/gercek_yayimla.sh
+StateDirectory=sg-canli
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sg-canli

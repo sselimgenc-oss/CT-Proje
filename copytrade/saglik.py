@@ -30,6 +30,9 @@ VERI_DALI_COMMIT_UYARI = 45 * DAKIKA       # veri dalının SON commit'i (ozet.y
 VERI_DALI_COMMIT_KRITIK = 90 * DAKIKA
 KRITIK_KAYIT_OLAYLARI = {"vardiya_baslamadi": "Vardiya BAŞLAMADI (başka vardiya kilidi tutuyordu)", "vardiya_boslugu": "Vardiyalar arasında boşluk oldu (kesinti)"}
 UYARI_KAYIT_OLAYLARI = {"kuyruk_tasti": "Olay kuyruğu taştı (açılış olayları düştü)", "kadro_bayat": "Kadro bayat (motor eski kadroyla çalıştı)"}
+# G8 (2026-11-06): gerçek kip nabzı (`canli-gercek` dalı; sunucu `deploy/gercek_yayimla.sh` ile 15 dk'da bir yayımlar)
+GERCEK_NABIZ_KRITIK = 20 * DAKIKA          # nabız (kilit/özet/yayım en yeni) 20 dk'dan eski: gerçek motor sessiz
+GERCEK_OFSET_ORAN = 0.25                   # |hl_ofset| > kasa × 0,25: HL hesabı ile yerel defter arasındaki sabit fark büyük (yatırma/çekme dışı kayma ya da kasa yanlış)
 HATA_SAYACLARI = ("adim_hata", "olay_hata", "defter_hata")      # ozet.kayit_sayac (vardiya başına)
 VARDIYA_IS_AKISI = "canli_vardiya.yml"
 KOSU_API = "https://api.github.com/repos/sselimgenc-oss/sg-arge/actions/workflows/{wf}/runs?branch=main&per_page=5"
@@ -109,6 +112,35 @@ def kalici_kontrol(simdi_ms: int, motor: dict[str, Any] | None, risk: dict[str, 
             b.append(Bulgu("KRITIK", "veri_dali_durdu", f"Veri dalında {_sa(yas)}dir yeni commit yok: yayım durmuş olabilir."))
         elif yas is not None and yas * DAKIKA >= VERI_DALI_COMMIT_UYARI:
             b.append(Bulgu("UYARI", "veri_dali_bayat", f"Veri dalının son commit'i {_sa(yas)} eski."))
+    return b
+
+
+def gercek_kontrol(simdi_ms: int, ozet: dict[str, Any] | None, nabiz: dict[str, Any] | None, kilit: dict[str, Any] | None = None) -> list[Bulgu]:
+    """G8: `canli-gercek` dalı (maskeli ozet + kilit + nabiz.json). Yalnız `kip == "gercek"` iken bulgu üretir (sanal üretim kontrolü `kontrol` değişmez).
+    KRİTİK: nabız yaşı > 20 dk (kilit nabzı / özet / yayım zamanından EN YENİSİ), `hl_ofset` büyük (> kasa × 0,25), mutabakat bayrağı. Veri hiç yok: KRİTİK (gerçek kip dalı boşsa sessiz ölüm)."""
+    if not ozet and not nabiz:
+        return [Bulgu("KRITIK", "gercek_nabiz_yok", "Gerçek motor nabzı okunamadı (canli-gercek dalında ozet/nabiz yok): yayım ya da sunucu durmuş olabilir.")]
+    nabiz, kilit, ozet = nabiz or {}, kilit or {}, ozet or {}
+    kip = ozet.get("kip") or nabiz.get("kip")
+    if kip != "gercek":
+        return []
+    b: list[Bulgu] = []
+    zamanlar = [float(z) for z in (kilit.get("nabiz_ms"), ozet.get("yazildi_ms"), nabiz.get("ozet_yazildi_ms")) if z]
+    if not zamanlar:
+        b.append(Bulgu("KRITIK", "gercek_nabiz_zaman_yok", "Gerçek motor nabzında zaman yok; yaş ölçülemedi."))
+    else:
+        yas = _yas_dk(simdi_ms, max(zamanlar))
+        if yas is not None and yas * DAKIKA > GERCEK_NABIZ_KRITIK and not kilit.get("birakildi"):
+            b.append(Bulgu("KRITIK", "gercek_nabiz_eski", f"Gerçek motor nabzı {_sa(yas)} eski (en çok 20 dk): sunucu servisi düşmüş olabilir."))
+        elif yas is not None and yas * DAKIKA > GERCEK_NABIZ_KRITIK:
+            b.append(Bulgu("UYARI", "gercek_motor_birakti", f"Gerçek motor kilidi bırakılmış ve {_sa(yas)}dir nabız yok (temiz kapanış; yeniden başlatılmadı)."))
+    ofset, kasa = nabiz.get("hl_ofset"), nabiz.get("kasa_usd") or ozet.get("kasa_usd")
+    if ofset is not None and kasa and abs(float(ofset)) > GERCEK_OFSET_ORAN * float(kasa):
+        b.append(Bulgu("KRITIK", "gercek_hl_ofset_buyuk", f"Gerçek kip HL ofseti {float(ofset):+.0f} $ (kasa {float(kasa):.0f} $ için sınır ±{GERCEK_OFSET_ORAN * float(kasa):.0f} $): hesap ile defter ayrışmış olabilir."))
+    if nabiz.get("mutabakat"):
+        b.append(Bulgu("KRITIK", "gercek_mutabakat", "Gerçek kip: mutabakat bayrağı AÇIK (borsa ↔ kayıt uyuşmuyor, yeni işlem kapalı)."))
+    if nabiz.get("dur"):
+        b.append(Bulgu("KRITIK", "gercek_dur", "Gerçek motor DUR durumunda: elle müdahale gerekir."))
     return b
 
 
@@ -302,11 +334,12 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Sistem sağlık kontrolü: veri dallarını (origin/<dal>) ve canlı pano sayfasını okur; bulguları yazar, Telegram'a alarm gönderir.")
     ap.add_argument("--veri-dali", default="canli-durum")
     ap.add_argument("--kadro-dali", default="radar")
+    ap.add_argument("--gercek-dali", "--veri-dali-gercek", dest="gercek_dali", default="", help="gerçek kip nabız dalı (ör. canli-gercek); verilirse ikinci kontrol yapılır (yayım hedefi kullanıcı kararı; boşsa atlanır)")
     ap.add_argument("--canli-url", default="", help="Cloudflare pano adresi (boşsa canlı sayfa kontrol edilmez)")
     ap.add_argument("--telegram", action="store_true", help="bulgu varsa Telegram alarmı gönder (KRITIK her koşuda, UYARI her 3 saatte bir)")
     args = ap.parse_args(argv)
     simdi = int(time.time() * 1000)
-    if not _git_fetch([args.veri_dali, args.kadro_dali]):
+    if not _git_fetch([args.veri_dali, args.kadro_dali] + ([args.gercek_dali] if args.gercek_dali else [])):
         print("BILGI: git fetch başarısız; yerel ref'ler bayat olabilir (bu yüzden bulgu üretilmedi).")
     ozet_ham, kadro_ham = _git_oku(args.veri_dali, "durum/ozet.json"), _git_oku(args.kadro_dali, "radar/son/kadro.json")
     ozet, kadro = (json.loads(ozet_ham) if ozet_ham else None), (json.loads(kadro_ham) if kadro_ham else None)
@@ -321,6 +354,9 @@ def main(argv: list[str] | None = None) -> int:
     bulgular = kontrol(simdi, ozet, kadro, pano_ms=_git_zaman_ms(args.veri_dali, "pano/index.html"), canli_pano_ms=canli_ms, canli_pano_ulasildi=ulasildi,
                        motor=json.loads(motor_ham) if motor_ham else None, risk=json.loads(risk_ham) if risk_ham else None, dur_dosyasi=_git_var(args.veri_dali, "durum/DUR"),
                        olaylar=kayit_olaylari(args.veri_dali, simdi), vardiya_kosulari=vardiya_kosulari_oku(), veri_dali_commit_ms=_git_son_commit_ms(args.veri_dali))
+    if args.gercek_dali:
+        g = lambda yol: (lambda h: json.loads(h) if h else None)(_git_oku(args.gercek_dali, yol))          # noqa: E731
+        bulgular += gercek_kontrol(simdi, g("durum/ozet.json"), g("nabiz.json"), g("durum/kilit.json"))
     metin, st = ozet_metin(bulgular), durum(bulgular)
     print(f"DURUM: {st}\n{metin}")
     if args.telegram and st != "SAGLIKLI":
