@@ -529,18 +529,29 @@ def test_telegram_komutlari_yalniz_yapilandirilmis_sohbetten_ve_biçim():
 
 
 # ================================================================================================ kip güvencesi
-def test_kip_varsayilan_sanal_gercek_yalniz_ayar_anahtar_ve_actions_degil():
+ANAHTAR = {"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": "0x1"}
+
+
+def test_kip_varsayilan_sanal_gercek_yalniz_ortam_anahtar_ve_actions_degil():
+    """G4: gerçek kip YALNIZ `CANLI_KIP=gercek` ortamıyla (eski `kurallar.yaml canli_kip: gercek` senaryosu ortama taşındı; yaml artık yalnız sanal)."""
     assert mt.kip_belirle(RULES, None, {}) == "sanal" and str(RULES["canli_kip"]) == "sanal"
     with pytest.raises(mt.KipHatasi):
-        mt.kip_belirle(RULES, "gercek", {"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": "0x1"})                    # kurallar.yaml sanal: gercek istenemez
-    gercek_kurallar = {**RULES, "canli_kip": "gercek"}
+        mt.kip_belirle(RULES, "gercek", dict(ANAHTAR))                                                          # ortamda CANLI_KIP yok: gercek istenemez
     with pytest.raises(yu.AnahtarYok):
-        mt.kip_belirle(gercek_kurallar, None, {})
-    assert mt.kip_belirle(gercek_kurallar, None, {"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": "0x1"}) == "gercek"
+        mt.kip_belirle(RULES, None, {"CANLI_KIP": "gercek"})
+    assert mt.kip_belirle(RULES, None, {**ANAHTAR, "CANLI_KIP": "gercek"}) == "gercek"
+    assert mt.kip_belirle(RULES, "sanal", {**ANAHTAR, "CANLI_KIP": "gercek"}) == "sanal"                      # açık --kip sanal kazanır
     with pytest.raises(mt.KipHatasi):
-        mt.kip_belirle(gercek_kurallar, None, {"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": "0x1", "GITHUB_ACTIONS": "true"})        # Actions'ta ASLA
+        mt.kip_belirle(RULES, None, {**ANAHTAR, "CANLI_KIP": "gercek", "GITHUB_ACTIONS": "true"})              # Actions'ta ASLA
+    with pytest.raises(mt.KipHatasi):
+        mt.kip_belirle(RULES, None, {"CANLI_KIP": "sanal", "GITHUB_ACTIONS": "true"})                           # Actions + herhangi CANLI_* → ret
+    with pytest.raises(mt.KipHatasi):
+        mt.kip_belirle(RULES, None, {"CANLI_KASA_USD": "300", "GITHUB_ACTIONS": "true"})
+    assert mt.kip_belirle(RULES, None, {"GITHUB_ACTIONS": "true"}) == "sanal"                                   # CANLI_* yoksa sanal vardiya aynen
     with pytest.raises(mt.KipHatasi):
         mt.kip_belirle(RULES, "x", {})
+    with pytest.raises(mt.KipHatasi):
+        mt.kip_belirle(RULES, None, {"CANLI_KIP": "x"})
 
 
 def test_kasa_siniri_asan_kasada_motor_baslamaz(tmp_path):
@@ -561,8 +572,9 @@ def test_kontrol_emir_gondermez_rapor_yazar(tmp_path):
     assert all(i["type"] in ("meta",) for i in hl.istekler) and not cagri                    # yalnız meta okundu (anahtarsız): l2Book / emir yok
     gercek = mt.kontrol(RULES, "gercek", hl, lambda: None, tg.Telegram("", "", ortam={}), ortam={})
     assert gercek["tamam"] is False and gercek["kadro"]["var"] is False
-    ok = mt.kontrol(RULES, "gercek", hl, lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "gizli-anahtar-xyz", "HL_HESAP_ADRESI": adr(7)})
-    assert ok["bakiye_usd"] == 100_000.0 and ok["hl_hesap_degeri"] == 100_000.0 and ok["etkin_kasa_usd"] == 1000.0 and ok["tamam"] is True and "gizli-anahtar-xyz" not in json.dumps(ok)                  # anahtar rapora yazılmaz
+    assert rapor["kasa_kaynagi"] == "yaml" and gercek["kasa_kaynagi"] == "yaml" and gercek["kasa_siniri_ok"] is False and "CANLI_KASA_USD" in gercek["kasa_hata"]      # G4: gerçek kip + ortam kasası yok
+    ok = mt.kontrol(RULES, "gercek", hl, lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "gizli-anahtar-xyz", "HL_HESAP_ADRESI": adr(7), "CANLI_KASA_USD": "1000"})
+    assert ok["kasa_kaynagi"] == "ortam" and ok["bakiye_usd"] == 100_000.0 and ok["hl_hesap_degeri"] == 100_000.0 and ok["etkin_kasa_usd"] == 1000.0 and ok["tamam"] is True and "gizli-anahtar-xyz" not in json.dumps(ok)                  # anahtar rapora yazılmaz
 
 
 # ================================================================================================ dayanıklılık (WS)
@@ -881,18 +893,18 @@ def test_k35_motor_emir_boyutu_birlesik_hesap_paydasiyla(tmp_path):
 
 def test_k35_gercek_kipte_kasa_min_ayar_ve_hl_hesap_degeri():
     """Ayar 1.000: HL 600 → 600; HL 5.000 → 1.000 (hesapta fazla olsa da ayarın üstü kullanılmaz); sanal kip HL'ye bakmaz; okunamazsa KipHatasi."""
-    assert mt.etkin_kasa(RULES, "gercek", BirlesikHL(spot=-89_400.0), {"HL_HESAP_ADRESI": adr(7)}) == (600.0, 600.0)           # 60.000 + 30.000 − 89.400 (test girdisi) = 600
-    assert mt.etkin_kasa(RULES, "gercek", BirlesikHL(spot=10_000.0), {"HL_HESAP_ADRESI": adr(7)}) == (1000.0, 100_000.0)
+    assert mt.etkin_kasa(RULES, "gercek", BirlesikHL(spot=-89_400.0), {"CANLI_KASA_USD": "1000", "HL_HESAP_ADRESI": adr(7)}) == (600.0, 600.0)           # 60.000 + 30.000 − 89.400 (test girdisi) = 600
+    assert mt.etkin_kasa(RULES, "gercek", BirlesikHL(spot=10_000.0), {"CANLI_KASA_USD": "1000", "HL_HESAP_ADRESI": adr(7)}) == (1000.0, 100_000.0)
     assert mt.etkin_kasa(RULES, "sanal", SahteHL(), {}) == (1000.0, None)
     def bozuk(y):
         raise ConnectionError("x")
     with pytest.raises(mt.KipHatasi):
-        mt.etkin_kasa(RULES, "gercek", bozuk, {"HL_HESAP_ADRESI": adr(7)})
+        mt.etkin_kasa(RULES, "gercek", bozuk, {"CANLI_KASA_USD": "1000", "HL_HESAP_ADRESI": adr(7)})
 
 
 def test_k35_kontrol_etkin_kasayi_raporlar():
-    r = mt.kontrol(RULES, "gercek", BirlesikHL(spot=-89_400.0), lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": adr(7)})
-    assert r["hl_hesap_degeri"] == pytest.approx(600.0) and r["etkin_kasa_usd"] == pytest.approx(600.0) and r["kasa_usd"] == 1000.0 and r["tamam"] is True
+    r = mt.kontrol(RULES, "gercek", BirlesikHL(spot=-89_400.0), lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": adr(7), "CANLI_KASA_USD": "1000"})
+    assert r["kasa_kaynagi"] == "ortam" and r["hl_hesap_degeri"] == pytest.approx(600.0) and r["etkin_kasa_usd"] == pytest.approx(600.0) and r["kasa_usd"] == 1000.0 and r["tamam"] is True
     r2 = mt.kontrol(RULES, "sanal", BirlesikHL(spot=10_000.0), lambda: n_kadro(3), tg.Telegram(TOKEN, CHAT, SahteTG()), ortam={"HL_API_CUZDAN_ANAHTARI": "k", "HL_HESAP_ADRESI": adr(7)})
     assert r2["etkin_kasa_usd"] == 1000.0                                                           # sanal kip: ayar
 

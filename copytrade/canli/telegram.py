@@ -47,6 +47,7 @@ class Telegram:
         self.token = (token if token is not None else ortam.get("TELEGRAM_BOT_TOKEN", "")).strip()
         self.chat_id = str(chat_id if chat_id is not None else ortam.get("TELEGRAM_CHAT_ID", "")).strip()
         self.post = post or varsayilan_post
+        self.komut_kapali = str(ortam.get("TELEGRAM_KOMUT", "")).strip().lower() == "kapali"      # G4: tek getUpdates tüketicisi (sunucu); kapalıysa yalnız gönderim
         self.kayit = kayit
         self.sessiz_utc, self.saat_s = sessiz_utc, saat_s or time.time          # gece (UTC saat aralığı) önemsiz mesajlar sessiz (bildirim sesi yok); alarmlar HER ZAMAN sesli
         self.offset = 0
@@ -101,7 +102,7 @@ class Telegram:
 
     def komutlari_al(self) -> list[str]:
         """Yeni komutları (`KOMUTLAR`) döner; yalnız `chat_id`'den gelenler; offset ilerler."""
-        if not self.acik:
+        if not self.acik or self.komut_kapali:
             return []
         try:
             yanit = self.post(self._url("getUpdates"), {"offset": self.offset, "timeout": 0, "allowed_updates": ["message"]})
