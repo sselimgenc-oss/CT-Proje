@@ -520,3 +520,7 @@
 {"t":"sonuc","cloid":"0xd037e4c7dade8633b7300c44efb8e372","durum":"dolu","ms":1793981119507,"sz":0.010749674597650253,"px":1348.4,"ucret":0.006522687552362221}
 {"t":"niyet","kimlik":"0x8730154f2c794a59cd6adb0d8328a9770c13b616:335886300624524","eylem":"artir","adres":"0x8730154f2c794a59cd6adb0d8328a9770c13b616","coin":"ZEC","yon":"A","usd":12.601803,"reduce_only":false,"cloid":"0xb8d7cda24d8f679206c2fbae9d4c9cbf","ms":1793981119512}
 {"t":"sonuc","cloid":"0xb8d7cda24d8f679206c2fbae9d4c9cbf","durum":"dolu","ms":1793981119653,"sz":0.0093457451325029,"px":1348.4,"ucret":0.00567081123150011}
+{"t":"niyet","kimlik":"0x8730154f2c794a59cd6adb0d8328a9770c13b616:288871596172039","eylem":"azalt","adres":"0x8730154f2c794a59cd6adb0d8328a9770c13b616","coin":"ZEC","yon":"B","usd":33.414693,"reduce_only":true,"cloid":"0xef36441b99c6e0be38cd876c25d67dc0","ms":1793982285463}
+{"t":"sonuc","cloid":"0xef36441b99c6e0be38cd876c25d67dc0","durum":"dolu","ms":1793982285676,"sz":0.024580471567920537,"px":1359.4,"ucret":0.01503661187224403}
+{"t":"niyet","kimlik":"0x8730154f2c794a59cd6adb0d8328a9770c13b616:523719670463757","eylem":"azalt","adres":"0x8730154f2c794a59cd6adb0d8328a9770c13b616","coin":"ZEC","yon":"B","usd":33.351783,"reduce_only":true,"cloid":"0x5c5a07b247bbfc884ffb272fffd0fa46","ms":1793982285680}
+{"t":"sonuc","cloid":"0x5c5a07b247bbfc884ffb272fffd0fa46","durum":"dolu","ms":1793982285820,"sz":0.024546833511789694,"px":1358.7,"ucret":0.015008302211610897}
