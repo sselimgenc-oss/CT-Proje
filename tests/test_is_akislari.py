@@ -272,3 +272,56 @@ def test_telegram_tokensiz_kanal_kapali_ve_sessiz_b1():
     assert not t.token and not t.chat_id
     assert t.gonder("deneme") is False
     assert t.komutlari_al() == []
+
+
+
+# ---------------------------------------------------------------------------------------------------- G3: vardiya zinciri (ayrı `zincir` işi)
+def _zincir_calistir(tmp_path: Path, gh_cikis: int, curl_cikis: int = 0, telegram: bool = False):
+    """`zincir` işinin run: bloğunu sahte gh/curl ile gerçekten çalıştırır; (çıktı, gh çağrıları, curl çağrıları)."""
+    run = adim(yukle("canli_vardiya.yml"), "zincir", "tetikle")["run"]
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    for ad, cikis in (("gh", gh_cikis), ("curl", curl_cikis)):
+        kayit = tmp_path / f"{ad}.txt"
+        (bin_ / ad).write_text(f'#!/usr/bin/env bash\necho "$@" >> "{kayit}"\nexit {cikis}\n', encoding="utf-8")
+        (bin_ / ad).chmod(0o755)
+    env = {**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}", "RUN_URL": "http://x/run", "TELEGRAM_BOT_TOKEN": "TOK" if telegram else "", "TELEGRAM_CHAT_ID": "CH" if telegram else ""}
+    r = subprocess.run(["bash", "-euo", "pipefail", "-c", run], env=env, capture_output=True, text=True)
+    oku = lambda ad: (tmp_path / f"{ad}.txt").read_text(encoding="utf-8").splitlines() if (tmp_path / f"{ad}.txt").exists() else []
+    return r, oku("gh"), oku("curl")
+
+
+def test_g3_zincir_basarida_vardiya_ve_saglik_tetiklenir(tmp_path):
+    r, gh, curl = _zincir_calistir(tmp_path, 0, telegram=True)
+    assert r.returncode == 0 and gh == ["workflow run canli_vardiya.yml --ref main", "workflow run saglik.yml --ref main"] and curl == []
+    assert "TOK" not in r.stdout + r.stderr                                                          # secret yazdırılmaz
+
+
+def test_g3_zincir_hatasi_sessiz_yutulmaz_uyari_ve_telegram_ama_isi_kirmaz(tmp_path):
+    r, gh, curl = _zincir_calistir(tmp_path, 1, telegram=True)
+    assert r.returncode == 0 and "::warning::canli_vardiya.yml tetiklenemedi" in r.stdout and "::warning::saglik.yml tetiklenemedi" in r.stdout
+    assert len(curl) == 1 and "sendMessage" in curl[0] and "TOK" not in r.stdout + r.stderr          # yalnız vardiya zinciri için alarm
+    assert "TOK" in curl[0]                                                                          # (sahte curl argümanı; gerçek çıktıya yazılmaz)
+
+
+def test_g3_zincir_hatasi_telegram_yoksa_sessiz_gecer_ama_uyari_kalir(tmp_path):
+    r, gh, curl = _zincir_calistir(tmp_path, 1)
+    assert r.returncode == 0 and curl == [] and "::warning::canli_vardiya.yml tetiklenemedi" in r.stdout
+
+
+def test_g3_actions_write_yalniz_zincir_isinde_main_ve_basari_kosullu_checkoutsuz():
+    wf = yukle("canli_vardiya.yml")
+    metin = (WF / "canli_vardiya.yml").read_text(encoding="utf-8")
+    assert wf["permissions"] == {"contents": "write"} and "permissions" not in wf["jobs"]["kontrol"] and "permissions" not in wf["jobs"]["vardiya"]      # vardiya/kontrol: actions yazma yok
+    z = wf["jobs"]["zincir"]
+    assert z["permissions"] == {"actions": "write", "contents": "read"} and metin.count("actions: write") == 1
+    assert z["needs"] == "vardiya" and z["if"] == "${{ github.ref == 'refs/heads/main' && needs.vardiya.result == 'success' }}"
+    assert "always()" not in z["if"] and "failure()" not in z["if"]
+    assert all("uses" not in a for a in z["steps"])                                                    # checkout yok (kimlik bilgisi diske bırakılmaz)
+    assert "GH_TOKEN" not in str(wf["jobs"]["vardiya"]) and "github.token" not in str(wf["jobs"]["vardiya"]) and "github.token" not in str(wf["jobs"]["kontrol"])
+    run = z["steps"][0]["run"]
+    assert "echo \"$GH_TOKEN\"" not in run and "echo \"$TELEGRAM" not in run and "|| true" not in run
+    assert z["env"]["TELEGRAM_BOT_TOKEN"].startswith("${{ github.ref == 'refs/heads/main' &&") and z["env"]["GH_REPO"] == "${{ github.repository }}"
+    assert "workflow_dispatch" in wf["on"] and "workflow_dispatch" in yukle("saglik.yml")["on"]
+    assert "zincir_tetikle" not in metin
+    assert "pkill -P \"$yayim\"" in adim(wf, "vardiya", "Canlı motor")["run"]                          # çalışan yayım betiği sahipsiz kalmaz

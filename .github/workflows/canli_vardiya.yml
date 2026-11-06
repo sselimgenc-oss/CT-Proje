@@ -6,6 +6,9 @@ name: Canlı vardiya (sanal kip)
 # durum veri dalı `canli-durum` (dal doğrulamasında `canli-durum-deneme`): durum/*.json + kayit/<tarih>.jsonl; her 15 dk ve vardiya sonunda yayımlanır; yeni vardiya kaldığı yerden devam eder
 # (açılışta kaçan dolumlar REST ile tamamlanır, `gec_goruldu`). Ek koruma: `durum/kilit.json` (başka vardiya 20 dk içinde nabız attıysa motor başlamaz).
 # Dal doğrulaması: `copytrade/canli/CALISTIR` dosyasına satır eklenen push (main dışı dal) AYNI iş akışını koşturur, ama `canli-durum-deneme` dalına yazar ve kadroyu `radar-deneme`'den okur.
+# G3 (cron geç kalıyor/kaçırıyor): motor NORMAL bitince vardiya bir SONRAKİ vardiyayı `workflow_dispatch` ile tetikler (yalnız main); cron'lar yedek olarak kalır. Dispatch koşusu da taze kilit varsa atlar.
+# Zincir AYRI `zincir` işindedir (needs: vardiya, yalnız main, yalnız vardiya başarılıysa; checkout yok; Actions yazma izni yalnız orada): vardiya işindeki adımlar (kurulum, pano yayını, motor) bu yetkiyi görmez. Aynı işte vardiya sonu bir kez saglik.yml de tetiklenir.
+# Zincir hatası ::warning + Telegram olur; yedek cron devam eder.
 on:
   schedule:
     - cron: "7 */4 * * *"
@@ -104,6 +107,8 @@ jobs:
           env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID python -u -m copytrade.canli.motor --kip sanal --kadro-dali "$KADRO_DALI" --durum-dizin durum --kayit-dizin kayit --sure-sn "$((sure_dk * 60))" --vardiya "${GITHUB_RUN_ID}"
           cikis=$?
           set -e
+          # çalışan bir yayım betiği sahipsiz kalmasın: önce alt kabuğun çocukları, sonra alt kabuk
+          if pkill -P "$yayim" 2>/dev/null; then echo "çalışan yayım betiği durduruldu"; fi
           if kill -0 "$yayim" 2>/dev/null; then kill "$yayim"; fi
           exit "$cikis"
       - name: Vardiya özeti
@@ -144,3 +149,34 @@ jobs:
           ADIM_ACILIS: ${{ steps.acilis.outcome }}
           ADIM_MOTOR: ${{ steps.motor.outcome }}
         run: bash .github/scripts/vardiya_alarm.sh vardiya
+  zincir:
+    # G3: bir sonraki vardiyayı + sağlık kontrolünü tetikler. AYRI iş: Actions yazma izni ve token yalnız burada; checkout YOK (vardiya işindeki kurulum/yayın/motor adımları bu yetkiyi görmez).
+    # Yalnız main'de ve yalnız vardiya işi başarılı bittiyse (always() DEĞİL). Döngü yok: tetik ancak motor bitip veri dalına yazıldıktan sonra gelir; concurrency yeni koşuyu bu koşu TAMAMEN bitene kadar bekletir.
+    needs: vardiya
+    if: ${{ github.ref == 'refs/heads/main' && needs.vardiya.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TELEGRAM_BOT_TOKEN: ${{ github.ref == 'refs/heads/main' && secrets.TELEGRAM_BOT_TOKEN || '' }}
+      TELEGRAM_CHAT_ID: ${{ github.ref == 'refs/heads/main' && secrets.TELEGRAM_CHAT_ID || '' }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Sonraki vardiya ve sağlık kontrolü tetikle
+        run: |
+          for dosya in canli_vardiya.yml saglik.yml; do
+            if gh workflow run "$dosya" --ref main; then
+              echo "$dosya tetiklendi"
+              continue
+            fi
+            echo "::warning::$dosya tetiklenemedi; yedek cron devrede"
+            if [ "$dosya" = canli_vardiya.yml ] && [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+              if ! curl -fsS --max-time 30 --retry 2 -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" --data-urlencode "text=⚠️ Vardiya zinciri: bir sonraki vardiya tetiklenemedi (yedek cron devrede): ${RUN_URL}" >/dev/null 2>&1; then
+                echo "::warning::zincir alarmı gönderilemedi"
+              fi
+            fi
+          done
