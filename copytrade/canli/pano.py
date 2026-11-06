@@ -186,12 +186,13 @@ def _kapanan_html(kayitlar: list[dict]) -> str:
     def satir(ad: str, o: tuple) -> str:
         n, oran, ok, oz_, pf, toplam = o
         return (f'<tr><td>{esc(ad)}</td><td class="sg">{n}</td><td class="sg">{"—" if oran is None else "%" + tr_sayi(oran * 100, 0)}</td><td class="sg art">{esc(tl2(ok))}</td><td class="sg eks">{esc(tl2(oz_))}</td>'
-                f'<td class="sg">{"—" if pf is None else tr_sayi(pf)}</td><td class="sg {"art" if toplam >= 0 else "eks"}">{esc(tl2(toplam, True))}</td></tr>')
+                f'<td class="sg {"art" if toplam >= 0 else "eks"}">{esc(tl2(toplam, True))}</td></tr>'
+                f'<tr class="alt"><td colspan="6">kâr faktörü {"—" if pf is None else tr_sayi(pf)}</td></tr>')
     gruplar: dict[str, list[dict]] = {}
     for k in kap:
         gruplar.setdefault(k.get("adres", ""), []).append(k)
     govde = satir("TOPLAM", ozet(kap)) + "".join(satir(kisa(a), ozet(v)) for a, v in sorted(gruplar.items(), key=lambda kv: -sum(float(x["pnl_usd"]) for x in kv[1])))
-    return (f'<div class="tw"><table><tr><th>TRADER</th><th class="sg">ADET</th><th class="sg">KAZANMA</th><th class="sg">ORT. KÂR</th><th class="sg">ORT. ZARAR</th><th class="sg">KÂR FAKTÖRÜ</th><th class="sg">NET</th></tr>{govde}</table></div>'
+    return (f'<div class="tw"><table><tr><th>TRADER</th><th class="sg">ADET</th><th class="sg">KAZANMA</th><th class="sg">ORT. KÂR</th><th class="sg">ORT. ZARAR</th><th class="sg">NET</th></tr>{govde}</table></div>'
             '<div class="ha" style="padding:6px 11px">Her kapanış dolumu bir işlem sayılır (kısmi azaltmalar dahil); net = gerçekleşen − ücret. Kâr faktörü = toplam kâr / toplam zarar.</div>')
 
 
@@ -244,7 +245,9 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     k24 = pencere24(kayitlar, simdi_ms)
     emirler = [k for k in k24 if k.get("olay") == "emir"]
     dolum = [k for k in emirler if k.get("durum") in ("dolu", "kismi")]
-    kaymalar = [abs(k["kayma_trader"]) * 1e4 for k in dolum if k.get("kayma_trader") is not None]
+    kaymalar = [abs(k["kayma_trader"]) * 1e4 for k in dolum if k.get("kayma_trader") is not None]            # mutlak fark (bp)
+    kayma_isaretli = sorted(k["kayma_trader"] * 1e4 for k in dolum if k.get("kayma_trader") is not None)      # işaretli fark (bp; + = trader fiyatından kötü)
+    kayma_ortanca = (kayma_isaretli[len(kayma_isaretli) // 2] if len(kayma_isaretli) % 2 else (kayma_isaretli[len(kayma_isaretli) // 2 - 1] + kayma_isaretli[len(kayma_isaretli) // 2]) / 2) if kayma_isaretli else None
     funding24 = sum(float(k.get("funding_usd") or 0.0) for k in k24 if k.get("olay") == "funding")
     din = ozet.get("dinleyici") or {}
     veri_ms = int(ozet.get("yazildi_ms") or max([int(k["zaman_ms"]) for k in kayitlar if k.get("olay") == "kapanis" and (k.get("ozet") or {}).get("vardiya") == ozet.get("vardiya")] or [simdi_ms]))   # verinin YAZILDIĞI an (motor ozet.json'u yazarken); yoksa kapanış kaydı / üretim anı
@@ -266,6 +269,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
 
     # özsermaye serisi: tur sonu kayıtları (kapanis) + günlük geçmiş + şimdi
     seri = sorted({int(k["zaman_ms"]): float(k["ozet"]["ozsermaye_usd"]) for k in kayitlar if k.get("olay") == "kapanis" and (k.get("ozet") or {}).get("ozsermaye_usd") is not None}.items())
+    tur_nokta = sorted({int(k["zaman_ms"]): float(k["ozsermaye_usd"]) for k in kayitlar if k.get("olay") == "tur" and k.get("ozsermaye_usd") is not None}.items())       # ~15 dk'lık tur noktaları (motor `tur` kaydı)
     if len(seri) < 2:
         seri = [(0, float(g["ozsermaye"])) for g in gecmis if g.get("ozsermaye") is not None] + seri
     deg = [v for _, v in seri]
@@ -275,6 +279,13 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     if len(gseri) >= 2:                                    # günlük geçmiş (15 güne kadar) varsa grafikler onunla; yoksa tur sonu kayıtlarıyla
         bugun_gun = datetime.fromtimestamp(simdi_ms / 1000, UTC).date().isoformat()
         deg = (gseri[:-1] if gecmis[-1].get("gun") == bugun_gun else gseri) + [oz]
+    deg_gun = deg                                          # günlük çubuklar için
+    x_tur = None
+    if len(tur_nokta) >= 3:                               # grafikler 15 dk'lık tur noktalarıyla (başlık "tur sonları"); yoksa günlük/tur-sonu yedeği
+        deg = [v for _, v in tur_nokta]
+        if deg[-1] != oz:
+            deg.append(oz)
+        x_tur = (_tsi(tur_nokta[0][0], "%d.%m %H:%M"), _tsi(veri_ms, "%d.%m %H:%M"))
     tepe, dd = (kasa if kasa > 0 else (deg[0] if deg else 0.0)), []                  # B1: koşan azami (başlangıç = kasa); gelecekteki zirve geçmişe uygulanmaz
     for v in deg:
         tepe = max(tepe, v)
@@ -283,7 +294,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     for ms, v in seri:
         if ms:
             gunluk[datetime.fromtimestamp(ms / 1000, UTC).date().isoformat()] = v
-    gv = [kasa] + (list(gunluk.values()) if len(gseri) < 2 else deg)                 # B2: ilk gün de çubuk (taban = kasa)
+    gv = [kasa] + (list(gunluk.values()) if len(gseri) < 2 else deg_gun)                 # B2: ilk gün de çubuk (taban = kasa)
     cubuklar = [b - a for a, b in zip(gv, gv[1:])]
     if len(gseri) >= 2:
         x_et = (".".join(reversed(str(gecmis[0].get("gun", ""))[5:].split("-"))) if gecmis else "", _tsi(veri_ms, "%d.%m"))
@@ -291,6 +302,8 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
         ilk_ms = next((ms for ms, _ in seri if ms), None)
         x_et = (_tsi(ilk_ms, "%d.%m %H:%M") if ilk_ms else "", _tsi(veri_ms, "%d.%m %H:%M"))
 
+    if x_tur:
+        x_et = x_tur
     kz_ozeti = (f'<div class="ek ek2">son gün {esc(tl(cubuklar[-1], True))} · en iyi {esc(tl(max(cubuklar), True))} · en kötü {esc(tl(min(cubuklar), True))} · toplam {esc(tl(sum(cubuklar), True))}</div>' if cubuklar else "")
     acik = ozet.get("acik")
     if acik is None:
@@ -321,7 +334,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
         a_, n_ = max(sayim.items(), key=lambda x: x[1])
         ic.append(f'Son 24 saatte en çok işlem yapan trader: <b>{esc(kisa(a_))}</b> ({n_} emir).')
     if kaymalar:
-        ic.append(f'Emirler trader fiyatına ortalama {tr_sayi(sum(kaymalar) / len(kaymalar), 1)} bp farkla doldu (küçük = iyi).')
+        ic.append(f'Emirler trader fiyatından ortanca {tr_sayi(kayma_ortanca, 1)} bp, ortalama mutlak {tr_sayi(sum(kaymalar) / len(kaymalar), 1)} bp farkla doldu (küçük = iyi).')
     ic.append(f'Brüt pozisyon {esc(tl(sum(q.get("usd") or 0 for q in acik)))} = kasanın %{(sum(q.get("usd") or 0 for q in acik) / kasa * 100 if kasa > 0 else 0):.0f}\'i.')
     saha = [k for k in k24 if k.get("olay") in ("saha_giris", "saha_dus")]
     saha_html = "".join(f'<div class="s">{"➕ giriş" if k["olay"] == "saha_giris" else "➖ çıkış"} · {_tsi(int(k["zaman_ms"]), "%H:%M")} · {esc(kisa(k["adres"]))} · {esc(str(k.get("neden", "")))}</div>' for k in saha) or '<div class="bos">Trader listesinde değişiklik yok</div>'
@@ -443,7 +456,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
 .izgara{{display:grid;grid-template-columns:1fr;gap:8px}}.sag{{display:contents}}.p{{background:var(--k);border:1px solid var(--cz);min-width:0}}
 .pb{{font-size:10px;letter-spacing:.09em;color:var(--tu);text-transform:uppercase;padding:8px 11px;border-bottom:1px solid var(--cz);display:flex;justify-content:space-between}}.pb span{{color:var(--so)}}
 .pi{{padding:10px 11px}}.gr{{width:100%;height:110px;display:block}}.ek{{display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--so);margin-top:4px}}.ek2{{justify-content:center;text-align:center}}.bos{{color:var(--so);padding:14px 4px;font-size:12px}}
-table{{width:100%;border-collapse:collapse;font-size:12px}}td,th{{padding:6px 8px;border-bottom:1px solid #1c1c21;text-align:left;white-space:nowrap}}th{{font-size:10px;color:var(--so);letter-spacing:.08em}}.sg{{text-align:right}}tr:last-child td{{border:0}}
+table{{width:100%;border-collapse:collapse;font-size:12px}}td,th{{padding:6px 8px;border-bottom:1px solid #1c1c21;text-align:left;white-space:nowrap}}th{{font-size:10px;color:var(--so);letter-spacing:.08em}}.sg{{text-align:right}}tr:last-child td{{border:0}}tr.alt td{{font-size:10px;color:var(--so);padding:0 8px 5px;white-space:normal}}
 .tw{{overflow-x:auto}}.dg{{display:flex;height:16px;border-radius:3px;overflow:hidden;background:#1c1c21}}.dg span{{display:block;height:100%}}
 .lg{{display:inline-block;margin:6px 12px 0 0;font-size:11px;color:var(--so)}}.lg i{{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}}
 .s{{padding:4px 0;font-size:12px}}.ic div{{padding:5px 0 5px 12px;border-bottom:1px solid #1c1c21;position:relative}}.ic div:before{{content:"›";color:var(--tu);position:absolute;left:0}}
@@ -478,7 +491,7 @@ input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler sectio
 <div class="p g3"><div class="pb">Maruziyet <span>net / brüt / teminat / coin tavanı</span></div>{maruziyet_html}</div>
 </section>
 <section class="n3 izgara">
-<div class="g3 sirit">{hucre("Emir (24 sa)", str(len(emirler)), "", f"dolum {len(dolum)}")}{hucre("Ort. fark", f"{tr_sayi(sum(kaymalar) / len(kaymalar), 1)} bp" if kaymalar else "—", "", "trader fiyatına göre")}{hucre("Funding (24 sa)", tl(funding24, True), renk(funding24), "sanal")}{hucre("Takipte", f"{ozet.get('saha', '—')}/{ozet.get('saha_n', '—')}", "", "trader")}</div>
+<div class="g3 sirit">{hucre("Emir (24 sa)", str(len(emirler)), "", f"dolum {len(dolum)}")}{hucre("Ortanca fark (bp)", f"{tr_sayi(kayma_ortanca, 1)} bp" if kayma_ortanca is not None else "—", "", f"ort. mutlak {tr_sayi(sum(kaymalar) / len(kaymalar), 1)} bp · trader fiyatına göre" if kaymalar else "trader fiyatına göre")}{hucre("Funding (24 sa)", tl(funding24, True), renk(funding24), "sanal")}{hucre("Takipte", f"{ozet.get('saha', '—')}/{ozet.get('saha_n', '—')}", "", "trader")}</div>
 <div class="p g2"><div class="pb">Son işlemler <span>fark: + aleyhe, − lehe</span></div><div class="tw"><table><tr><th>SAAT</th><th>COİN</th><th>YÖN</th><th class="sg">TUTAR</th><th class="sg">FARK</th></tr>{islem_satir}</table></div></div>
 <div class="p"><div class="pb">Trader değişiklikleri <span>24 sa</span></div><div class="pi">{saha_html}</div></div>
 <div class="p"><div class="pb">Atlanan sinyaller <span>24 sa · neden başına</span></div><div class="pi">{atlanan_html}</div></div>

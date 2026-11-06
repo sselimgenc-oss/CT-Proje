@@ -336,6 +336,8 @@ class Motor:
         self._atla_tampon: dict[str, int] = {}             # Telegram sanal saatlik özet: pencerede atlanan sinyaller (neden -> adet)
         self._ozet_pencere_bas: int = self.baslama_ms      # saatlik özet penceresinin başı (motor saati); kalıcı DEĞİL (çökmede tampon kaybolabilir)
         self.kor_kirpildi: list[dict] = []
+        self._boyut_girdi: dict | None = None                  # son _emir_isle boyut girdileri (emir kaydına eklenir, sonra silinir)
+        self._kor_imza: dict[str, tuple] = {}                  # aday -> son kor_kirpildi imzası (tekrar kaydı önler)
         self.atlanan_trader: dict[str, dict[str, int]] = {"spot_atlandi": {}, "hip3_atlandi": {}}      # K‑42 bilgi: neden -> {adres: adet}
         self.neden_say: dict[str, int] = {}          # boyut / risk nedenleri sayacı (slot_tavani, marj_yok, coin_tavani …)
         self.niyet = Niyet(durum_dizin / "niyet.jsonl")
@@ -567,6 +569,9 @@ class Motor:
         trader_once, trader_sonra = (0.0, sonra) if eylem == "ac" else ((once, 0.0) if eylem == "kapat" else (once, sonra))
         slot_toplam = sum(abs(p.sz) * (self.mark(c, p.giris) or p.giris) for c, p in self.hesap.poz.get(adres, {}).items())       # trader'ın TÜM coinlerdeki kopya nosyoneli (K‑35)
         emir_usd, neden = boyut.hedef_emir(eylem, trader_once, trader_sonra, hesap_usd or 0.0, biz_usd, slot, o.px, self.rules, slot_toplam)
+        hedef = (min(float(slot) * abs(trader_sonra) * o.px / hesap_usd, float(self.rules["radar_slot_tavan_carpan"]) * float(slot)) if hesap_usd and o.px > 0 else None)
+        self._boyut_girdi = {"trader_poz_once": trader_once, "trader_poz_sonra": trader_sonra, "trader_hesap_usd": hesap_usd or None, "slot_usd": slot,        # elle denetim (VERI_SOZLESMESI): boyut girdileri
+                             "biz_poz_usd": biz_usd, "biz_slot_toplam_usd": slot_toplam, "hedef_usd": hedef}
         if emir_usd <= 0:
             return self._atla(o, adres, eylem, "atlandi", neden)
         if acilis:
@@ -595,6 +600,7 @@ class Motor:
             self.neden_say[neden] = self.neden_say.get(neden, 0) + 1
 
     def _atla(self, o: Olay, adres: str, eylem: str, karar: str, neden: str) -> Sonuc:
+        self._boyut_girdi = None
         self.sayac[karar] += 1
         self._say_neden(neden)
         if self.kip == "sanal":
@@ -650,7 +656,9 @@ class Motor:
         self.kayit({"olay": "emir", "kip": self.kip, "adres": adres, "coin": o.coin, "eylem": eylem, "yon": yon, "usd_istenen": usd, "usd_dolan": d.usd_dolan, "sz": d.sz,
                     "reduce_only": reduce_only, "pnl_usd": (round(pnl, 6) if pnl is not None else None), "durum": d.durum, "red_neden": d.neden, "boyut_neden": neden, "trader_px": o.px, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
                     "emir_ms": emir_ms, "dolum_ms": dolum_ms, "referans_px": d.referans_px, "dolum_px": d.px, "kayma_ref": d.kayma_oran, "kayma_trader": kayma_trader, "ucret": d.ucret,
-                    "gec_goruldu": gec, "kaynak": o.kaynak, "bant": bant, "cloid": cloid, "funding_usd": round(self.hesap.funding.get(adres, 0.0), 6)})
+                    "gec_goruldu": gec, "kaynak": o.kaynak, "bant": bant, "cloid": cloid, "funding_usd": round(self.hesap.funding.get(adres, 0.0), 6),
+                    **{k: (round(v, 8) if isinstance(v, float) else v) for k, v in (self._boyut_girdi or {}).items()}})
+        self._boyut_girdi = None
         self._ozet_emir += 1
         e = {"adres": adres, "coin": o.coin, "yon": yon, "usd": d.usd_dolan or usd, "px": d.px, "kayma": kayma_trader, "durum": d.durum, "eylem": eylem}
         if self.kip == "gercek":                            # gerçek parada her emir ANINDA ve ayrı mesaj (risk gecikmeden görülür)
@@ -776,6 +784,7 @@ class Motor:
     def karar_uygula(self, kararlar: list[Karar], simdi: int) -> None:
         for k in kararlar:
             if k.tur == "giris":
+                self._kor_imza.pop(k.adres, None)
                 self.hesap.slot_ac(k.adres, self.saha.slot)
                 self.trader_pozlari_oku(k.adres)
                 self.trader_hesap_usd(k.adres, simdi, zorla=True)
@@ -791,8 +800,11 @@ class Motor:
                 self._adres_kapat(k.adres, "inen_24sa", simdi)
                 self.hesap.slot_kapat(k.adres)
             elif k.tur == "giris_atlandi":
-                self.kor_kirpildi.append({"adres": k.adres, "uyeler": k.kor_kirpildi})
-                self.kayit({"olay": "kor_kirpildi", "adres": k.adres, "uyeler": k.kor_kirpildi})
+                imza = tuple(sorted(k.kor_kirpildi or []))
+                if self._kor_imza.get(k.adres) != imza:                          # yalnız durum değişince (aday ya da engelleyen üyeler); 5 dk'da bir tekrar yazılmaz
+                    self._kor_imza[k.adres] = imza
+                    self.kor_kirpildi.append({"adres": k.adres, "uyeler": k.kor_kirpildi})
+                    self.kayit({"olay": "kor_kirpildi", "adres": k.adres, "uyeler": k.kor_kirpildi})
 
     def _adres_kapat(self, adres: str, neden: str, simdi: int) -> int:
         """Adresin tüm açık kopya pozisyonlarını reduce‑only, teyitli kapatır (yeniden deneme merdiveni). Döner: TEYİTLİ kapanan coin sayısı."""
@@ -1093,6 +1105,7 @@ class Motor:
                 ("kadro", lambda: self._kadro_uygula(kadro, simdi)), ("senkron", lambda: (self.senkron_uygula(senkron), self.hesap_uygula(hesaplar, simdi)) if senkron is not None else None),
                 ("telegram", lambda: self._komutlar(komutlar)), ("ozet", lambda: self._gunluk_ozet(simdi)),
                 ("emir_ozeti", lambda: self.emir_ozeti(simdi)),
+                ("tur_kaydi", lambda: self._tur_kaydi(simdi)),
             ]
             for ad, f in adimlar:
                 try:
@@ -1100,6 +1113,11 @@ class Motor:
                 except Exception as hata:                  # noqa: BLE001
                     self.kayit({"olay": "adim_hata", "adim": ad, "tur": type(hata).__name__, "mesaj": str(hata)[:160]})
             self.durum_yaz()
+
+    def _tur_kaydi(self, simdi: int) -> None:
+        """Pano özsermaye/düşüş grafiği için ~15 dk'da bir `tur` kaydı (özsermaye $). Karar mantığına girmez."""
+        if self._aralik_mi("tur_kaydi", simdi, 14 * 60):
+            self.kayit({"olay": "tur", "ozsermaye_usd": round(self.ozsermaye(), 4)})
 
     def _aralik_mi(self, ad: str, simdi: int, sn: float) -> bool:
         if simdi - self._son.get(ad, 0) >= sn * 1000:

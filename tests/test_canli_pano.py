@@ -215,7 +215,7 @@ def test_pano_c2_c3_c4_c5_atlanan_kapanan_maliyet_maruziyet():
     # C2: min_emir_atlandi ×2, slot_tavani ×1 → %67 / %33
     assert "<b>2</b> × Emir 11 $ alt sınırının altında kaldı" in h and "<b>1</b> × Slot tavanı doldu" in h and "%67" in h
     # C3: iki kapanış dolumu: net +5,0 − 0,5 = +4,5 (kâr) ve −2,0 − 0,1 = −2,1 (zarar) → 2 adet, kazanma %50, ort. kâr 4,50 $, ort. zarar −2,10 $, kâr faktörü 4,5 / 2,1 = 2,14, net +2,40 $
-    assert '<td>TOPLAM</td><td class="sg">2</td><td class="sg">%50</td><td class="sg art">4,50 $</td><td class="sg eks">−2,10 $</td><td class="sg">2,14</td><td class="sg art">+2,40 $</td>' in h
+    assert '<td>TOPLAM</td><td class="sg">2</td><td class="sg">%50</td><td class="sg art">4,50 $</td><td class="sg eks">−2,10 $</td><td class="sg art">+2,40 $</td></tr><tr class="alt"><td colspan="6">kâr faktörü 2,14</td>' in h        # 06.11: kâr faktörü telefonda taşmasın diye ikinci satıra alındı (sayı aynı)
     # C4: ücret 0,5 + 0,1 + 0,2 = 0,8; kayma = 0,001 × 100 + (−0,0004 × 50) + 0 = 0,1 − 0,02 = 0,08; funding −0,1 ⇒ maliyet = 0,8 + 0,08 − (−0,1) = 0,98; net 1004 − 1000 = +4,00; brüt = 4,98
     assert "−0,80 $" in h and "−0,08 $" in h and "−0,10 $" in h and "+4,98 $" in h and "Toplam maliyet 0,98 $" in h
     # C5: uzun 200, kısa 100 ⇒ net +100; brüt 300 = %30 kasa; teminat 300 / 3 = 100 = %10 özsermaye (1004); BTC 200 / (0,30 × 1000 = 300) = %67 doluluk
@@ -258,3 +258,15 @@ def test_html_pano_kadro_sahada_bos_bolum_gizlenmez():
     for k, s in ((kadro, {}), (None, None)):
         h = pano.html_olustur(ozet, {}, {}, [], [], 1_793_900_000_000, k, s)
         assert "SAHADA (0/11)" in h and "henüz sahaya çıkan yok" in h and "KADRO <em>0/11</em>" in h
+
+
+def test_pano_grafik_tur_noktalarindan_kapanan_tablo_ve_ortanca_fark():
+    """06.11 lider: özsermaye grafiği 15 dk'lık `tur` kayıtlarını kullanır (günlük geçmiş varken de); kapanan işlemlerde kâr faktörü ikinci satırda; ortanca + ortalama mutlak fark."""
+    now = 1_793_900_000_000
+    tur = [{"olay": "tur", "zaman_ms": now - (6 - i) * 900_000, "ozsermaye_usd": 1000.0 + 5 * i} for i in range(6)]
+    emirler = [{"olay": "emir", "adres": A1, "zaman_ms": now - 1000 * (i + 1), "coin": "BTC", "yon": "B", "durum": "dolu", "usd_dolan": 20.0, "reduce_only": True, "pnl_usd": p, "ucret": 0.0, "kayma_trader": k}
+               for i, (p, k) in enumerate([(2.0, 0.0001), (-1.0, 0.0003), (3.0, -0.0002)])]
+    ozet = {"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1030.0, "getiri": 0.03, "saha": 3, "saha_n": 11, "acik": []}
+    h = pano.html_olustur(ozet, {"gun_basi": 1000.0}, {}, tur + emirler, [{"gun": "2026-11-01", "ozsermaye": 990.0}, {"gun": "2026-11-02", "ozsermaye": 1000.0}], now)
+    assert "Özsermaye (tur sonları)" in h and "KÂR FAKTÖRÜ" not in h and "kâr faktörü 5" in h                 # (2+3)/1 = 5
+    assert "Ortanca fark (bp)" in h and "1,0 bp" in h and "ort. mutlak 2,0 bp" in h                           # sıralı fark [-2, 1, 3] bp → ortanca 1; |.| ort. 2

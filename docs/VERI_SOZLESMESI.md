@@ -446,3 +446,15 @@ Adresler trader'ların halka açık adresleridir; API anahtarı, hesap adresimiz
   - `nabiz.json` (G8; üretici `deploy/gercek_yayimla.sh`, yalnız gerçek sunucu → `canli-gercek` dalı kökü; **maskeli**: adresler `0xAAAA…ZZZZ`, anahtar/gizli alanlar `[gizli]`; yalnız sayı/bayrak): `yayim_ms` (UTC ms, yayım anı), `kip` (`sanal`|`gercek`), `ozet_yazildi_ms` (UTC ms, `ozet.json` yazılış anı), `kilit_nabiz_ms` (UTC ms, `kilit.json` nabzı), `vardiya` (metin), `hl_ofset` (ms, HL saat farkı), `kasa_usd` (**$**, etkin kasa), `mutabakat` (bool, mutabakat sapması açılışı durdurdu), `dur` (bool, `/kapat` ya da risk DUR). Sağlık eşiği: en yaşlı nabız zamanı > 20 dk → KRİTİK; `--gercek-dali` verilmedikçe okunmaz (K2).
   - `kayit` risk olayları pano/sağlık için: `vardiya_boslugu` (vardiyalar arası `canli_bosluk_dk` aşıldı; `dk` = boşluk dakikası, `onceki` = önceki vardiya), `vardiya_baslamadi` (yukarıda).
 
+
+
+## Emir kaydı: boyut girdileri (06.11, lider denetimi; elle denetim için)
+`kayit/<gün>.jsonl` `emir` satırına eklenen alanlar (o emri üreten `boyut.hedef_emir` girdileri; `emir_yok` satırlarında YOK):
+- `trader_poz_once`, `trader_poz_sonra`: trader'ın o coindeki işaretli pozisyonu, **coin adedi**, dolum öncesi / sonrası (trader hesabı ölçeği; `ac`'ta önce = 0, `kapat`'ta sonra = 0).
+- `trader_hesap_usd`: trader hesap değeri, **$ (trader hesabı)**; bilinmiyorsa `null`.
+- `slot_usd`: bu trader için slot tutarı, **$ (sanal kopya ölçeği)**.
+- `biz_poz_usd`: bizim o coindeki kopya nosyoneli, **$ (kopya ölçeği)**, emir anı mark'ı ile.
+- `biz_slot_toplam_usd`: bizim o trader slotundaki TÜM coinlerin toplam nosyoneli, **$ (kopya ölçeği)** (K‑35 tavanı için).
+- `hedef_usd`: hedef nosyonel = `min(slot_usd × |trader_poz_sonra| × trader_px / trader_hesap_usd, radar_slot_tavan_carpan × slot_usd)`, **$ (kopya ölçeği)**; hesap bilinmiyorsa `null`.
+Oranlar yoktur; hepsi mutlak sayıdır (adet ya da $). Zaman: UTC ms alanları değişmedi.
+- `kor_kirpildi` kaydı (K‑44 ile) yalnız durum DEĞİŞİNCE yazılır (aday ya da engelleyen üye kümesi farklıysa); aynı durumun 5 dk'lık tekrarı yazılmaz.
