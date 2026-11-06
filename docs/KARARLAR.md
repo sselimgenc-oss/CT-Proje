@@ -147,18 +147,13 @@
   - T4b 6 (kuyruk önceliği) ve 9 (sanal defter derinliği) çıkarıldı: 11–90 $'lık emirlerde etkisi önemsiz.
 
 ### K‑38. Azaltma hedef tabanlı (lider, 2026-11-05)
-<<<<<<< HEAD
-=======
 - durum: **main'e girdi (PR #554, 06.11 ≈ 01:59Z)**; üretimde bir sonraki vardiyadan itibaren (≈ 05:22Z) geçerli. Temiz deneme vardiyası (run 42113249911): azaltmada toz emri 0 (eski kural 9), `min_emir_atlandi` azaltma 350 → 79, `hesap_yok` 0, `kapanis_eksik` 0. 7 günlük sayaç 01:07Z'de başladı; K-38 ilk üretim vardiyasından önceki kısa dilim eski azaltma kuralıyla koştu (sayaç açısından kayıt notu).
->>>>>>> origin/main
 - **Bulgu:** küçük parçalı azaltmalar < 11 $ olduğu için atlanıyor ve kayboluyor. Bizim pozisyon trader'a göre büyük kalıyor (vardiya 42003105254: 1.535 `min_emir_atlandi`).
 - **Kural:** `docs/DENETIM_PANO_2026-11-05.md` §A. `boyut.hedef_emir` `azalt`; `kopya_v5` ve motor aynı fonksiyonu kullanır; eski/yeni R1 sayıları yan yana verilir.
 
 ### K‑39. Kadro dışı düşme iki farklı UTC günü ister, bekleme yok (lider, 2026-11-05)
 - **Bulgu:** aynı gün ikinci radar koşusu 3 üyeyi girişlerinden 3 saat sonra düşürdü ve 14 gün yasakladı.
 - **Kural:** `docs/DENETIM_PANO_2026-11-05.md` §A. Motor gün başına ilk kadroyu uygular. Sonuçla düşme ve bekleme kuralları değişmez.
-<<<<<<< HEAD
-=======
 
 ### K‑40. Pano Cloudflare Workers `sg-pano` ile gösterilir — K‑20 istisnası (lider onayı, 2026-11-05)
 - Kullanıcı kendi Cloudflare hesabında `sg-pano` Workers statik sayfasını kurdu; GitHub reposuna bağlı, üretim dalı `canli-durum`, çıktı klasörü `pano`.
@@ -211,4 +206,3 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - **Testler:** `test_gunde_en_fazla_2_degisiklik…` (3 boş slot aynı gün dolar, sayaç 0), `test_k44_gunluk_sinir_yalniz_uye_degistirmek_icin…` (değiştirme hâlâ günde ≤ 2).
 - **Aynı PR (lider denetimi 06.11 maddeleri 2–4):** emir kaydına boyut girdileri (VERI_SOZLESMESI), `kor_kirpildi` yalnız durum değişince, pano: özsermaye/düşüş grafiği 15 dk `tur` noktalarıyla, kapanan işlemler kâr faktörü alt satırda, "ortanca fark (bp)" + ortalama mutlak fark.
 - **Yöntem DEĞİŞMEZ:** zarar seçimden geliyor (brüt −39,07 $, maliyet −2,83 $; 38 kapanan işlem, %34 kazanma); 12.11 isabet ölçümü beklenir.
->>>>>>> origin/main
