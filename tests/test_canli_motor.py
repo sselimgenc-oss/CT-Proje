@@ -1110,3 +1110,111 @@ def test_dur_dosyasi_yazilamazsa_alarm_ve_kayit_sessiz_gecilmez(tmp_path):
     (tmp_path / "durum" / "DUR.tmp").mkdir()                                                   # geçici dosya yazılamaz (dizin engeli) → OSError
     m.dur_tetikle("komut")
     assert kayitlar(tmp_path, "dur_yazim_hata") and any("DUR dosyası YAZILAMADI" in x for x in tgp.gonderilen) and m.risk.dur
+
+
+
+# ---------------------------------------------------------------- G5: kip/kasa uyuşmazlığında başlama yok
+def kur_kip(tmp_path, kip, ayar=300.0, saat=None):
+    """Aynı durum dizinine `kip` kipinde Motor kurar (gerçek kip: ayarlı kasa `ayar`, etkin kasa = ayar)."""
+    rules = {**RULES, "canli_kasa_usd": ayar, "canli_kasa_ayar_usd": ayar}
+    hl, saat = SahteHL(), saat or Saat()
+    yur = yu.SanalYurutucu(hl, rules)
+    yur.kip = kip
+    k = kadro([satir(1, 1)], saat() - SAAT)
+    return mt.Motor(rules, yur, hl, tg.Telegram(TOKEN, CHAT, SahteTG()), tmp_path / "durum", tmp_path / "kayit", lambda: k, saat), saat
+
+
+def test_g5_sanal_durum_dizininde_gercek_kip_acilmaz(tmp_path):
+    m, saat = kur_kip(tmp_path, "sanal", 1000.0)
+    m.baslat()
+    m.durum_yaz()
+    assert json.loads((tmp_path / "durum" / "motor.json").read_text())["kip"] == "sanal"
+    g, _ = kur_kip(tmp_path, "gercek", 300.0, saat)
+    with pytest.raises(mt.KipHatasi, match="sanal durum dizininde gerçek kip açılmaz"):
+        g.baslat()
+    assert kayitlar(tmp_path, "vardiya_baslamadi")[-1]["neden"] == "sanal durum dizininde gerçek kip açılmaz"
+
+
+def test_g5_gercek_durum_dizininde_sanal_kip_acilmaz(tmp_path):
+    g, saat = kur_kip(tmp_path, "gercek", 300.0)
+    g.baslat()
+    g.durum_yaz()
+    s, _ = kur_kip(tmp_path, "sanal", 1000.0, saat)
+    with pytest.raises(mt.KipHatasi, match="gerçek durum dizininde sanal kip açılmaz"):
+        s.baslat()
+    assert kayitlar(tmp_path, "vardiya_baslamadi")
+
+
+def test_g5_gercek_farkli_kasa_acik_pozisyon_varsa_ret(tmp_path):
+    g, saat = kur_kip(tmp_path, "gercek", 300.0)
+    g.baslat()
+    g.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    assert any(g.hesap.poz.values())
+    g.durum_yaz()
+    g2, _ = kur_kip(tmp_path, "gercek", 500.0, saat)
+    with pytest.raises(mt.KipHatasi, match="açık pozisyon var"):
+        g2.baslat()
+    assert not kayitlar(tmp_path, "kasa_degisti") and kayitlar(tmp_path, "vardiya_baslamadi")
+
+
+def test_g5_gercek_farkli_kasa_pozisyon_yoksa_kabul_ve_kasa_degisti(tmp_path):
+    g, saat = kur_kip(tmp_path, "gercek", 300.0)
+    g.baslat()
+    g.durum_yaz()
+    g2, _ = kur_kip(tmp_path, "gercek", 500.0, saat)
+    g2.baslat()
+    g2.durum_yaz()
+    k = kayitlar(tmp_path, "kasa_degisti")
+    assert len(k) == 1 and k[0]["eski_usd"] == 300.0 and k[0]["yeni_usd"] == 500.0
+    assert json.loads((tmp_path / "durum" / "motor.json").read_text())["kasa_ayar_usd"] == 500.0
+    g3, _ = kur_kip(tmp_path, "gercek", 500.0, saat)                                              # aynı ayar: kayıt yok
+    g3.baslat()
+    assert len(kayitlar(tmp_path, "kasa_degisti")) == 1
+
+
+def test_g5_bos_dizin_serbest_gercek_de_sanal_da(tmp_path):
+    g, _ = kur_kip(tmp_path / "a", "gercek", 300.0)
+    g.baslat()
+    s, _ = kur_kip(tmp_path / "b", "sanal", 1000.0)
+    s.baslat()
+
+
+def test_g5_eski_bicim_kip_alani_yok_sanal_sayilir(tmp_path):
+    m, saat = kur_kip(tmp_path, "sanal", 1000.0)
+    m.baslat()
+    m.durum_yaz()
+    yol = tmp_path / "durum" / "motor.json"
+    j = json.loads(yol.read_text())
+    j.pop("kip")
+    j.pop("kasa_ayar_usd")
+    yol.write_text(json.dumps(j))
+    s, _ = kur_kip(tmp_path, "sanal", 1000.0, saat)
+    s.baslat()                                                                                    # sanal + eski biçim: aynen devam
+    yol.write_text(json.dumps(j))
+    g, _ = kur_kip(tmp_path, "gercek", 300.0, saat)
+    with pytest.raises(mt.KipHatasi, match="sanal durum dizininde"):
+        g.baslat()
+
+
+def test_g5_main_uyusmazlikta_cikis_3_ve_telegram(monkeypatch, tmp_path):
+    from tests.test_g1_alarm import SahteTg as TabanTg
+
+    class SahteTg(TabanTg):
+        ornekler: list = []
+        offset, kayit, maske = 0, None, []
+
+    SahteTg.ornekler = []
+    m, saat = kur_kip(tmp_path, "sanal", 1000.0)
+    m.baslat()
+    m.durum_yaz()
+    monkeypatch.setattr(mt.tg, "Telegram", SahteTg)
+    monkeypatch.setattr(mt, "rest_post_olustur", lambda rules: None)
+    monkeypatch.setattr(mt, "kip_belirle", lambda rules, istenen=None, ortam=None: "gercek")
+    monkeypatch.setattr(mt, "etkin_kasa", lambda rules, kip, post, ortam=None: (300.0, 300.0))
+    monkeypatch.setattr(mt, "kasa_belirle", lambda rules, kip, ortam=None: (300.0, "ortam"))
+    hl = SahteHL()
+    yur = yu.SanalYurutucu(hl, {**RULES, "canli_kasa_usd": 300.0})
+    yur.kip = "gercek"
+    monkeypatch.setattr(mt, "gercek_yurutucu_olustur", lambda post, rules: yur)
+    assert mt.main(["--kip", "gercek", "--durum-dizin", str(tmp_path / "durum")]) == 3
+    assert "sanal durum dizininde gerçek kip açılmaz" in TabanTg.ornekler[0].gonderilen[0]
