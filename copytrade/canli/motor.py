@@ -124,11 +124,21 @@ def anahtardan_adres(anahtar: str) -> str:
     return str(Account.from_key(anahtar).address)
 
 
+_ADRES_RE = re.compile(r"0x[0-9a-f]{40}")
+
+
+def _gecerli_ms(valid_until: Any, simdi_ms: int) -> bool:
+    """extraAgents `validUntil` (ms): yoksa/geçersizse/süresi dolmuşsa (şimdi ≥ validUntil) False."""
+    if isinstance(valid_until, bool) or not isinstance(valid_until, (int, float)) or not math.isfinite(valid_until):
+        return False
+    return simdi_ms < valid_until
+
+
 def _kucuk(x: Any) -> str:
     return str(x or "").strip().lower()
 
 
-def api_cuzdan_dogrula(post: Callable[[dict], Any], ortam: dict, turet: Callable[[str], str] | None = None) -> dict:
+def api_cuzdan_dogrula(post: Callable[[dict], Any], ortam: dict, turet: Callable[[str], str] | None = None, simdi_ms: int | None = None) -> dict:
     """G6 (Y3): gerçek kipte API cüzdanı doğrulaması — EMİR GÖNDERMEZ. Döner yalnız bool/sabit metin: {"ana_anahtar", "agent_dogrulandi", "tamam", "neden"}; anahtar ve adresler ASLA döndürülmez.
     (1) anahtardan türetilen adres == `HL_HESAP_ADRESI` → ana cüzdan anahtarı (para çekme yetkisi riski) → ret. Türetme yapılamazsa (eth_account yok/anahtar bozuk) → ret.
     (2) HL `userRole` (gerçek biçim: `{"role":"agent","data":{"user":<ana hesap>}}`) agent ve bağlı hesap == `HL_HESAP_ADRESI`; bulunamazsa ikinci yöntem `extraAgents` listesi (`[{"name","address","validUntil"}]`).
@@ -145,6 +155,9 @@ def api_cuzdan_dogrula(post: Callable[[dict], Any], ortam: dict, turet: Callable
     except Exception as hata:                              # noqa: BLE001 - ImportError dahil; hata metni anahtar içerebilir: yalnız tür adı
         r["neden"] = f"anahtardan adres türetilemedi ({type(hata).__name__})"
         return r
+    if not _ADRES_RE.fullmatch(agent) or not _ADRES_RE.fullmatch(hesap):
+        r["neden"] = "adres biçimi geçersiz"                # adresin kendisi mesaja YAZILMAZ
+        return r
     if agent == hesap:
         r["ana_anahtar"] = True
         r["neden"] = "ana cüzdan anahtarı kullanılıyor (para çekme yetkisiz API cüzdanı gerekli)"
@@ -159,7 +172,8 @@ def api_cuzdan_dogrula(post: Callable[[dict], Any], ortam: dict, turet: Callable
     if not r["agent_dogrulandi"]:
         try:
             liste = post({"type": "extraAgents", "user": str(ortam.get("HL_HESAP_ADRESI") or "").strip()})
-            if isinstance(liste, list) and any(isinstance(a, dict) and _kucuk(a.get("address")) == agent for a in liste):
+            su_an = int(time.time() * 1000) if simdi_ms is None else simdi_ms
+            if isinstance(liste, list) and any(isinstance(a, dict) and _kucuk(a.get("address")) == agent and _gecerli_ms(a.get("validUntil"), su_an) for a in liste):
                 r["agent_dogrulandi"] = True
         except Exception:                                  # noqa: BLE001
             pass
@@ -1734,9 +1748,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if rapor["tamam"] else 1
     try:
         if kip == "gercek":                                # G6: emirden önce API cüzdanı doğrulaması (ana anahtar / agent değil → başlamaz)
-            ap = api_cuzdan_dogrula(post, os.environ)
-            if not ap["tamam"]:
-                raise KipHatasi(f"API cüzdanı doğrulanamadı: {ap['neden']}")
+            dogrulama = api_cuzdan_dogrula(post, os.environ)
+            if not dogrulama["tamam"]:
+                raise KipHatasi(f"API cüzdanı doğrulanamadı: {dogrulama['neden']}")
         kasa, hl_deger = etkin_kasa(rules, kip, post)
         if kip == "gercek" and hl_deger is not None and hl_deger > float(rules["canli_kasa_ust_usd"]) + 1e-9:
             raise KipHatasi(f"HL hesap değeri {hl_deger:.0f} $ > sınır {float(rules['canli_kasa_ust_usd']):g} $ (K‑22)")

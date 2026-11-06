@@ -57,9 +57,32 @@ def test_userrole_bozuk_bicim_savunmaci_extraagents_yedegi():
             return super().__call__(y)
     b = Bozuk(hesap=300.0)
     assert kont(b)["agent_dogrulandi"] is False                                                   # extraAgents None -> doğrulanamadı
-    b.extra = [{"name": "x", "address": adr(3), "validUntil": 1}, {"name": "IMS", "address": AGENT.upper().replace("0X", "0x"), "validUntil": 1796032025040}]
+    b.extra = [{"name": "x", "address": adr(3), "validUntil": 1}, {"name": "IMS", "address": AGENT.upper().replace("0X", "0x"), "validUntil": 4102444800000}]
     r = kont(b)
     assert r["agent_dogrulandi"] is True and r["tamam"] is True
+
+
+def test_adres_bicimi_gecersiz_ayri_neden_ana_anahtar_yaniltmaz():
+    r = kont(hl_300(), ortam={**ORTAM, "HL_HESAP_ADRESI": HESAP[2:]}, turet=lambda k: HESAP)                # 0x'siz hesap + ana anahtar
+    assert r["tamam"] is False and r["api_cuzdan_neden"] == "adres biçimi geçersiz" and HESAP[2:] not in json.dumps(r)
+    for kotu in ("0x123", "0x" + "g" * 40):
+        assert kont(hl_300(), turet=lambda k, kotu=kotu: kotu)["api_cuzdan_neden"] == "adres biçimi geçersiz"
+
+
+def test_extraagents_validuntil_gecerli_kabul_dolmus_veya_yok_ret():
+    class Ex(SahteHL):
+        vu: dict = {}
+
+        def __call__(self, y):
+            if y["type"] == "userRole":
+                return {"role": "user"}
+            if y["type"] == "extraAgents":
+                return [{"name": "IMS", "address": AGENT, **self.vu}]
+            return super().__call__(y)
+    e = Ex(hesap=300.0)
+    for vu, beklenen in (({"validUntil": 2_000}, True), ({"validUntil": 1_000}, False), ({"validUntil": 999}, False), ({}, False), ({"validUntil": "x"}, False), ({"validUntil": None}, False)):
+        e.vu = vu
+        assert mt.api_cuzdan_dogrula(e, ORTAM, lambda k: AGENT, simdi_ms=1_000)["agent_dogrulandi"] is beklenen, vu
 
 
 def test_userrole_hata_atarsa_ret_istisna_sizmaz():
