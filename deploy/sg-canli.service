@@ -3,6 +3,8 @@
 Description=sg-arge canli motor (Form Radari v1)
 After=network-online.target
 Wants=network-online.target
+# Servis kalıcı düştüyse (5 yeniden başlatma/10 dk sonrası ya da çıkış 3) sessiz kalmasın: alarm birimi çalışır (token yoksa yalnız günlüğe 'atlandı')
+OnFailure=sg-canli-alarm.service
 StartLimitIntervalSec=600
 StartLimitBurst=5
 

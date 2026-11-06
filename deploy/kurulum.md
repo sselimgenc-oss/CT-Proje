@@ -57,3 +57,14 @@ Telegram komutları: `/kapat` = tüm pozisyonları kapat + motor durur (`DUR`); 
 sudo systemctl stop sg-canli && sudo -u sgcanli git -C /opt/sg-arge pull --ff-only && sudo systemctl start sg-canli
 ```
 Yeniden başlatmada motor `durum/` ve HL açık pozisyonlarını okuyup kaldığı yerden devam eder (işlenen dolum kimlikleri saklanır: çift emir yok).
+
+## 6. Sessiz ölüm alarmı ve gerçek motor nabzı (G8)
+```bash
+sudo cp /opt/sg-arge/deploy/sg-canli*.service /opt/sg-arge/deploy/sg-canli-yayim.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now sg-canli-yayim.timer
+```
+- `sg-canli.service` `OnFailure=sg-canli-alarm.service`: servis kalıcı düşünce (5 yeniden başlatma/10 dk sonrası ya da çıkış 3) `deploy/alarm.sh` Telegram'a tek mesaj atar. Token/chat `/etc/sg-canli.env`'den; yoksa "atlandı" yazıp 0 ile biter. Çıkış 3 (BAŞLAMADI/DUR) yeniden başlatılmaz.
+- `sg-canli-yayim.timer` (15 dk) `deploy/gercek_yayimla.sh` çalıştırır: maskeli `ozet.json` + `kilit.json` + `nabiz.json` (adresler `0xAAAA…ZZZZ`, anahtar alanları `[gizli]`) `/var/lib/sg-canli/yayim/` altına yazılır.
+- Dışarı yayım **`GERCEK_YAYIM_HEDEF`** (git uzak adresi; `/etc/sg-canli.env`) tanımlıysa `canli-gercek` dalına itilir (`GERCEK_YAYIM_TOKEN` isteğe bağlı). Tanımlı değilse yalnız yerel nabız. **Hedef (K2/K3) kullanıcı kararı bekliyor**; karar gelene kadar boş bırakın.
+- Deneme: `sudo systemctl start sg-canli-yayim && journalctl -u sg-canli-yayim -n 5`; alarm: `sudo systemctl start sg-canli-alarm`.

@@ -1,0 +1,14 @@
+# sg-canli düşünce (OnFailure) bir kez çalışır: Telegram'a kısa alarm. Token/chat /etc/sg-canli.env içinden; yoksa "atlandı" yazıp 0 ile biter.
+[Unit]
+Description=sg-arge canli motor alarmi (OnFailure)
+
+[Service]
+Type=oneshot
+User=sgcanli
+Group=sgcanli
+EnvironmentFile=-/etc/sg-canli.env
+ExecStart=/bin/bash /opt/sg-arge/deploy/alarm.sh sg-canli
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
