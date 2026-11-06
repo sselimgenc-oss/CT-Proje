@@ -46,6 +46,13 @@ jobs:
           ZAMANLAMA: ${{ github.event.schedule }}
           YEDEK_CRON: "37 */4 * * *"
         run: bash .github/scripts/zamanlama_kontrol.sh canli
+      - name: Alarm (Telegram, kontrol başarısız)
+        if: ${{ failure() }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ github.ref == 'refs/heads/main' && secrets.TELEGRAM_BOT_TOKEN || '' }}
+          TELEGRAM_CHAT_ID: ${{ github.ref == 'refs/heads/main' && secrets.TELEGRAM_CHAT_ID || '' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: bash .github/scripts/vardiya_alarm.sh kontrol
   vardiya:
     needs: kontrol
     if: ${{ needs.kontrol.outputs.atla != 'true' }}
@@ -67,7 +74,8 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install websockets==15.0.1 PyYAML==6.0.3 requests==2.34.2
-      - name: Durumu veri dalından geri yükle
+      - id: geri
+        name: Durumu veri dalından geri yükle
         run: |
           mkdir -p durum kayit
           if git ls-remote --exit-code --heads origin "$VERI_DALI" >/dev/null; then
@@ -78,9 +86,11 @@ jobs:
             status=$?
             if [ "$status" -ne 2 ]; then exit "$status"; fi
           fi
-      - name: Açılış kontrolü (anahtarsız, emir göndermez)
+      - id: acilis
+        name: Açılış kontrolü (anahtarsız, emir göndermez)
         run: python -u -m copytrade.canli.motor --kontrol --kadro-dali "$KADRO_DALI" --durum-dizin kontrol
-      - name: Canlı motor (sanal kip)
+      - id: motor
+        name: Canlı motor (sanal kip)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -124,3 +134,13 @@ jobs:
             kontrol/kontrol.json
             kayit
           if-no-files-found: ignore
+      - name: Alarm (Telegram, vardiya başarısız)
+        if: ${{ failure() }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ github.ref == 'refs/heads/main' && secrets.TELEGRAM_BOT_TOKEN || '' }}
+          TELEGRAM_CHAT_ID: ${{ github.ref == 'refs/heads/main' && secrets.TELEGRAM_CHAT_ID || '' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ADIM_GERI: ${{ steps.geri.outcome }}
+          ADIM_ACILIS: ${{ steps.acilis.outcome }}
+          ADIM_MOTOR: ${{ steps.motor.outcome }}
+        run: bash .github/scripts/vardiya_alarm.sh vardiya
