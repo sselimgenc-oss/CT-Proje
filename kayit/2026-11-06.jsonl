@@ -1063,3 +1063,4 @@
 {"zaman_ms":1793960555534,"olay":"emir_yok","adres":"0x4b9b60ccb8c40581890f2224dafd7f826967f47a","coin":"kPEPE","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1793960555042,"gorme_ms":1793960555415,"yas_ms":492}
 {"zaman_ms":1793961635111,"olay":"telegram","metin":"🧾 Son 1 saat (12:40–13:40 TSİ): 2 emir · sanal\n➕ açılış 0 · ⬆️ artırma 2 · ⬇️ azaltma 0 · ✖️ kapanış 0\n🏆 En büyük: 16,6 $ (kPEPE, AL) · 0x4b9b60…\n⏭️ Atlanan sinyal: 20 (en çok: min_emir_atlandi 20)\n💵 Tutar toplamı: 32 $ · kayma ort. %0,039\n💰 Kasa: 960,78 $ · bugün 🟢 +0,77 $ (+%0,1) · başlangıçtan 🔴 ","acik":true}
 {"zaman_ms":1793962817643,"olay":"funding","saat":498323,"saat_adet":1,"funding_usd":-0.0056954349280458815,"toplam_funding_usd":-0.057620034284289835}
+{"zaman_ms":1793966413485,"olay":"funding","saat":498324,"saat_adet":1,"funding_usd":-0.005973925466781008,"toplam_funding_usd":-0.06359395975107084}
