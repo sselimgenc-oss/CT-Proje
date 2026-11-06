@@ -173,6 +173,8 @@ class Saha:
     def _gun_kadrosu(self, kadro: dict) -> dict:
         """K‑39: kadronun UTC günü (`kosu_ms`) için İLK görülen kadro saklanır ve o gün yalnız o uygulanır; aynı günün sonraki (geç / elle) kadrosu yok sayılır."""
         g = self._gun(int(kadro["kosu_ms"]))
+        if self.gun_kadro and int(kadro["kosu_ms"]) < int(self.gun_kadro["kadro"]["kosu_ms"]):      # K‑45: uygulanandan ESKİ kadro (CDN önbelleği) yok sayılır; gün kuralları iki kez çalışmaz
+            return self.gun_kadro["kadro"]
         if self.gun_kadro and self.gun_kadro.get("gun") == g:
             return self.gun_kadro["kadro"]
         self.gun_kadro = {"gun": g, "kadro": kadro}
@@ -211,8 +213,7 @@ class Saha:
         return kor_bilesen_boyutu(kume, kadro.get("korelasyon"), float(self.rules["canli_kor_esik"])) <= int(self.rules["canli_kor_max"])
 
     def _doldur(self, kadro: dict, satirlar: dict[str, dict], simdi_ms: int, ilk_gun: bool, kararlar: list[Karar]) -> None:
-        ilk = int(self.rules["radar_kadro_ilk"])
-        hedef_sira = self.n if ilk_gun else ilk
+        hedef_sira = 10**6                                      # K‑45: boş slot sıradaki adayla dolar (İlk 11 önce, sonra Yedek; RADAR §6 "sıradaki üyeye yer verir")
         for s in self._uygun_adaylar(kadro, simdi_ms, hedef_sira):
             if len(self.uyeler) >= self.n:
                 break

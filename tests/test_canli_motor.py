@@ -92,6 +92,34 @@ def test_gunde_en_fazla_2_degisiklik_ve_sonuc_ile_dusene_14_gun_bekleme():
     assert sd._bekliyor(adr(1), bitis - 1) is True and sd._bekliyor(adr(1), bitis) is False                      # 14 gün: bitiş anında serbest
 
 
+def test_k45_bos_slot_kor_kirpilinca_yedekten_sirayla_dolar():
+    """K‑45 (lider denetimi 06.11): 2. gün 3 üye kadro dışı düşer. İlk 11'deki 2 aday (sıra 10, 11) sahadaki adr(1) ile r=0,9 → bileşen 3 kişi > 2 olur (kor_kirpildi);
+    boş slotlar sıradaki Yedek ile dolar: sıra 9 (adr 12, İlk 11), sıra 12 (adr 15) ve 13 (adr 16). Eskiden yalnız sıra ≤ 11 alınırdı → saha 9/11 kalırdı."""
+    s = hazir_11()
+    rows = [satir(i, i, 90 - i) for i in range(1, 9)] + [satir(12, 9), satir(13, 10), satir(14, 11), satir(15, 12), satir(16, 13), satir(17, 14)]
+    adresler = [adr(1), adr(2), adr(13), adr(14)]
+    m = [[1, 0.9, 0.9, 0.9], [0.9, 1, 0.0, 0.0], [0.9, 0.0, 1, 0.0], [0.9, 0.0, 0.0, 1]]      # adr1–adr2 zaten bağlı (2 kişi); 13 ya da 14 eklenirse 3 kişi
+    kor = {"adresler": adresler, "gun_sayisi": 8, "matris": m}
+    s.degerlendir(kadro(rows, T0 + GUN, kor), T0 + GUN + SAAT)                                               # 1. gün: 9, 10, 11 yalnız işaretlenir
+    karar, _ = s.degerlendir(kadro(rows, T0 + 2 * GUN, kor), T0 + 2 * GUN + SAAT)
+    assert [k.adres for k in karar if k.tur == "dus"] == [adr(9), adr(10), adr(11)]
+    assert [(k.adres, k.neden) for k in karar if k.tur == "giris_atlandi"] == [(adr(13), "kor_kirpildi"), (adr(14), "kor_kirpildi")]
+    assert [(k.adres, k.neden) for k in karar if k.tur == "giris"] == [(adr(12), "bos_slot"), (adr(15), "bos_slot"), (adr(16), "bos_slot")]
+    assert len(s.uyeler) == 11 and adr(17) not in s.uyeler and s.degisiklik["adet"] == 0
+
+
+def test_k45_uygulanandan_eski_kadro_yok_sayilir_gun_kurallari_iki_kez_calismaz():
+    """K‑45: D+1 kadrosu uygulandıktan sonra CDN önbelleğinden D kadrosu yeniden gelirse yok sayılır (gun_kadro ve son_kosu_ms değişmez; sıra/düşme sayaçları ikinci kez artmaz)."""
+    s = hazir_11()
+    rows_d1 = [satir(i, i, 90 - i) for i in range(1, 11)] + [satir(11, 25)]                                 # adr(11) sıra 25 (> 22: sira_ust +1)
+    s.degerlendir(kadro(rows_d1, T0 + GUN), T0 + GUN + SAAT)
+    assert s.uyeler[adr(11)]["sira_ust"] == 1
+    s.degerlendir(n_kadro(11, T0), T0 + GUN + 2 * SAAT)                                                      # eski (D) kadro geri geldi
+    assert s.gun_kadro["kadro"]["kosu_ms"] == T0 + GUN and s.son_kosu_ms == T0 + GUN
+    s.degerlendir(kadro(rows_d1, T0 + GUN), T0 + GUN + 3 * SAAT)                                             # D+1 yine: yeni gün sayılmaz
+    assert s.uyeler[adr(11)]["sira_ust"] == 1
+
+
 def test_k44_gunluk_sinir_yalniz_uye_degistirmek_icin_gunde_2_degistirme():
     """K‑44: sahadaki üyeyi değiştirme (histerezis) günde ≤ 2; ertesi gün üçüncü. Boş slot doldurma sınıra girmez (üstteki test)."""
     s = hazir_11()

@@ -206,3 +206,10 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - **Testler:** `test_gunde_en_fazla_2_degisiklik…` (3 boş slot aynı gün dolar, sayaç 0), `test_k44_gunluk_sinir_yalniz_uye_degistirmek_icin…` (değiştirme hâlâ günde ≤ 2).
 - **Aynı PR (lider denetimi 06.11 maddeleri 2–4):** emir kaydına boyut girdileri (VERI_SOZLESMESI), `kor_kirpildi` yalnız durum değişince, pano: özsermaye/düşüş grafiği 15 dk `tur` noktalarıyla, kapanan işlemler kâr faktörü alt satırda, "ortanca fark (bp)" + ortalama mutlak fark.
 - **Yöntem DEĞİŞMEZ:** zarar seçimden geliyor (brüt −39,07 $, maliyet −2,83 $; 38 kapanan işlem, %34 kazanma); 12.11 isabet ölçümü beklenir.
+
+## K-45 — Boş slot sıradaki adayla dolar (Yedek dahil); eski kadro yok sayılır (lider, 06.11)
+- **Karar:** Boş slot doldurma (`Saha._doldur`) kadroda sıradaki uygun adayı alır: önce İlk 11, korelasyon (r ≥ 0,7 en çok 2) ya da bekleme yüzünden alınamayan olursa **Yedek**. RADAR §6 "fazlası sıradaki üyeye yer verir" bu şekilde okunur. Histerezis değiştirme (`_degistir`) değişmez: yalnız İlk 11 adayı.
+- **Ek:** Uygulanan kadrodan daha eski `kosu_ms` taşıyan kadro (CDN önbelleği) yok sayılır; günlük kurallar aynı gün iki kez çalışmaz.
+- **Gerekçe:** Devir denetimi (06.11 gece): bugünkü kadroyla yarın 7 eski üye K-39'la düşer; İlk 11'den 4 aday birbirine r 0,85–0,94 bağlı olduğundan alınamaz → eski kodla saha **7/11** kalırdı (4 slot nakit).
+- **Doğrulama (gerçek veri, yerel):** canli-durum `saha.json` + `radar/2026-11-06/kadro.json` (kosu +1 gün) → yeni kodla saha **11/11** (8 giriş `bos_slot`, 4 aday `kor_kirpildi`). Testler: `test_k45_bos_slot_kor_kirpilinca_yedekten_sirayla_dolar`, `test_k45_uygulanandan_eski_kadro_yok_sayilir…` (ikisi eski kodda kırılır). Tam paket 880 geçti.
+- **Yöntem eşikleri DEĞİŞMEZ** (R1/R2/korelasyon eşiği aynı).
