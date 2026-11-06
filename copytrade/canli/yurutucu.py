@@ -34,6 +34,7 @@ class Dolum:
     sz: float = 0.0
     px: float | None = None       # yürünen ortalama fiyat
     ucret: float = 0.0            # $ (taker)
+    ucret_gercek: bool = False    # True: `ucret` HL `userFills.fee` (kesin); False: tahmin (`maliyet_taker` × nosyonel)
     referans_px: float | None = None      # en iyi karşı fiyat (emir anı)
     kayma_oran: float | None = None
     reduce_only: bool = False
@@ -208,8 +209,22 @@ class GercekYurutucu:
             raise RuntimeError(f"update_leverage reddedildi: {coin}")
         self._ayarli.add(coin)
 
+    def _gercek_ucret(self, coin: str, oid: Any, cloid: str | None, baslangic_ms: int) -> float | None:
+        """G7: bu emrin dolumlarının gerçek `fee` toplamı ($, HL hesabı; `userFillsByTime`, `oid` ya da `cloid` eşleşmesi). Bulunamaz / hata / ağ yok → None (çağıran tahmine düşer)."""
+        adres = os.environ.get("HL_HESAP_ADRESI", "").strip()
+        if not adres:
+            return None
+        try:
+            satirlar = self.post({"type": "userFillsByTime", "user": adres, "startTime": max(0, int(baslangic_ms) - 5000)}) or []
+            fee = [float(x["fee"]) for x in satirlar if x.get("coin") == coin and x.get("fee") is not None
+                   and ((oid is not None and x.get("oid") == oid) or (cloid and str(x.get("cloid") or "").lower() == str(cloid).lower()))]
+            return sum(fee) if fee else None
+        except Exception:                              # noqa: BLE001 - ücret araması emri bozmaz
+            return None
+
     def emir(self, coin: str, yon: str, usd: float, reduce_only: bool = False, acik_sz: float | None = None, bant: float | None = None, cloid: str | None = None) -> Dolum:
         d = Dolum(coin, yon, float(usd), reduce_only=reduce_only)
+        emir_oncesi_ms = int(time.time() * 1000)
         try:
             self.hazirla(coin)
             kitap = self.post({"type": "l2Book", "coin": coin})
@@ -244,7 +259,10 @@ class GercekYurutucu:
         if "filled" in durum:
             d.sz, d.px = float(durum["filled"]["totalSz"]), float(durum["filled"]["avgPx"])
             d.usd_dolan = d.sz * d.px
-            d.ucret = d.usd_dolan * float(self.rules["maliyet_taker"])             # tahmini; kesin ücret `userFills` / mutabakattan
+            d.ucret = d.usd_dolan * float(self.rules["maliyet_taker"])             # tahmini; kesin ücret bulunursa (G7) aşağıda üzerine yazılır
+            gercek = self._gercek_ucret(coin, durum["filled"].get("oid"), cloid, emir_oncesi_ms)
+            if gercek is not None:
+                d.ucret, d.ucret_gercek = gercek, True
             d.kayma_oran = kayma(yon, en_iyi, d.px)
             d.durum = "dolu" if d.usd_dolan >= usd * 0.999 else "kismi"
         elif "error" in durum:
