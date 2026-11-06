@@ -429,14 +429,6 @@
    "inis_ms": 1793895900970,
    "neden": "slot_dusus"
   },
-  "0x62edf4fae01255c64496e2241e5da680ac959c1c": {
-   "inis_ms": 1793866044543,
-   "neden": "kadro_disi"
-  },
-  "0xc32f19039aee519e22bd8c6145ef03951274e558": {
-   "inis_ms": 1793866044543,
-   "neden": "kadro_disi"
-  },
   "0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee": {
    "inis_ms": 1793923361896,
    "neden": "slot_dusus"
@@ -444,10 +436,6 @@
   "0xf43a34220cc930b573554d5e1454d5c8d7ca8872": {
    "inis_ms": 1793895900970,
    "neden": "slot_dusus"
-  },
-  "0xf90c9edfd2ee7fa07615978b348b99500bb17963": {
-   "inis_ms": 1793866044543,
-   "neden": "kadro_disi"
   }
  },
  "k39_gecis": true,
@@ -477,7 +465,7 @@
    "giris_sira": 1,
    "hesap_giris_usd": 78943.79836015,
    "sira_ust": 0,
-   "son_islem_ms": 1793951485026
+   "son_islem_ms": 1793952211141
   },
   "0x6015e674d03cabeba664406f517d172e9fad7dec": {
    "disi_gunler": [
