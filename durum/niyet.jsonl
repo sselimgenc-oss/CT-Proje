@@ -288,3 +288,11 @@
 {"t":"sonuc","cloid":"0x20db502a126c0fac39337b6d0bc5ae9b","durum":"dolu","ms":1793924598492,"sz":0.008855654815081018,"px":1297.7}
 {"t":"niyet","kimlik":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee:379132115791455","eylem":"azalt","adres":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee","coin":"ZEC","yon":"B","usd":50.870135,"reduce_only":true,"cloid":"0x26bb9b1fc4c00b13bb5392ab0349b1a0","ms":1793924598495}
 {"t":"sonuc","cloid":"0x26bb9b1fc4c00b13bb5392ab0349b1a0","durum":"dolu","ms":1793924598654,"sz":0.03919116701842751,"px":1298.0}
+{"t":"niyet","kimlik":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee:744434539118780","eylem":"azalt","adres":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee","coin":"ZEC","yon":"B","usd":13.127682,"reduce_only":true,"cloid":"0x046f3905d039628b9d8f5923b4bd3b55","ms":1793927243749}
+{"t":"sonuc","cloid":"0x046f3905d039628b9d8f5923b4bd3b55","durum":"dolu","ms":1793927243909,"sz":0.009901706295388337,"px":1325.8,"ucret":0.005907456992891635}
+{"t":"niyet","kimlik":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee:35047507854490","eylem":"azalt","adres":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee","coin":"ZEC","yon":"B","usd":30.017262,"reduce_only":true,"cloid":"0x035ca55a116692e4ce6d5a2a2a2f2797","ms":1793927243916}
+{"t":"sonuc","cloid":"0x035ca55a116692e4ce6d5a2a2a2f2797","durum":"dolu","ms":1793927244076,"sz":0.02263745285129616,"px":1326.0,"ucret":0.013507768116368418}
+{"t":"niyet","kimlik":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee:666170349117109","eylem":"azalt","adres":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee","coin":"ZEC","yon":"B","usd":12.756558,"reduce_only":true,"cloid":"0xef7fa70fa89709af3e8ea81e2de51e8c","ms":1793927244083}
+{"t":"sonuc","cloid":"0xef7fa70fa89709af3e8ea81e2de51e8c","durum":"dolu","ms":1793927244242,"sz":0.009620330303955926,"px":1326.0,"ucret":0.005740451092370502}
+{"t":"niyet","kimlik":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee:207039360630426","eylem":"azalt","adres":"0xd18820ff81eda9e80c5437e7f31ae1ffc09707ee","coin":"ZEC","yon":"B","usd":38.363344,"reduce_only":true,"cloid":"0x8e888340e3ef42c8fe5b38dcd1e94010","ms":1793927244248}
+{"t":"sonuc","cloid":"0x8e888340e3ef42c8fe5b38dcd1e94010","durum":"dolu","ms":1793927244503,"sz":0.028931632166306114,"px":1326.0,"ucret":0.017263504913634858}
