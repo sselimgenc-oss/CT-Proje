@@ -20,8 +20,20 @@ def kisa(adres: str) -> str:
     return adres[:8] + "…" if len(adres) > 8 else adres
 
 
+def _urllib_post(url: str, yuk: dict) -> dict:
+    """`requests` kurulu değilse yedek yol (yalnız standart kütüphane); HTTP hatasında istisna atar."""
+    import json
+    import urllib.request
+    istek = urllib.request.Request(url, data=json.dumps(yuk).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
+    with urllib.request.urlopen(istek, timeout=25) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
 def varsayilan_post(url: str, yuk: dict) -> dict:
-    import requests
+    try:
+        import requests
+    except ImportError:
+        return _urllib_post(url, yuk)
     r = requests.post(url, json=yuk, timeout=25)
     r.raise_for_status()
     return r.json()

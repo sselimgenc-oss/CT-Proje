@@ -1462,13 +1462,22 @@ def kadro_url(rules: dict, dal: str | None = None) -> str:
     return f"https://raw.githubusercontent.com/{rules['canli_kadro_repo']}/{dal or rules['canli_kadro_dali']}/radar/son/kadro.json"
 
 
-def http_kadro_oku(rules: dict, dal: str | None = None) -> dict | None:
+def http_kadro_oku(rules: dict, dal: str | None = None, deneme: int = 3, bekle_sn: float = 2.0) -> dict | None:
+    """O9: geçici ağ/5xx hatasında `deneme` kez dener (kısa bekleme); 404 = kadro yok (None, yeniden denenmez); kalıcı hata son denemede yükselir."""
     import requests
-    r = requests.get(kadro_url(rules, dal), timeout=20)
-    if r.status_code == 404:
-        return None
-    r.raise_for_status()
-    return r.json()
+    for i in range(deneme):
+        try:
+            r = requests.get(kadro_url(rules, dal), timeout=20)
+            if r.status_code == 404:
+                return None
+            r.raise_for_status()
+            return r.json()
+        except (requests.ConnectionError, requests.Timeout, requests.HTTPError, ValueError) as hata:
+            kalici = isinstance(hata, requests.HTTPError) and getattr(hata.response, "status_code", 500) < 500 and getattr(hata.response, "status_code", 500) != 429
+            if i == deneme - 1 or kalici:
+                raise
+            time.sleep(bekle_sn * (i + 1))
+    return None
 
 
 def kontrol(rules: dict, kip: str, post: Callable[[dict], Any], kadro_oku: Callable[[], dict | None], tgram: tg.Telegram, ortam: dict | None = None) -> dict:
@@ -1504,6 +1513,16 @@ def kontrol(rules: dict, kip: str, post: Callable[[dict], Any], kadro_oku: Calla
     return r
 
 
+def baslamadi_alarmi(tgram: tg.Telegram, hata: object) -> None:
+    """Vardiya `kilit_al` öncesi başlayamadı: stderr'e ek olarak Telegram alarmı (kanal kapalıysa yalnız kayda yazılır)."""
+    if any(str(hata) in m for m in tgram.gonderilen):             # kilit_al zaten alarm gönderdi: çift mesaj yok
+        return
+    try:
+        tgram.gonder(tg.alarm("Vardiya BAŞLAMADI", f"{str(hata)[:300]}\nÇıkış kodu 3; motor çalışmıyor."))
+    except Exception as e:                                          # noqa: BLE001 - alarm hatası çıkış kodunu değiştirmez
+        print(f"Telegram alarmı gönderilemedi: {type(e).__name__}", file=sys.stderr)
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--kontrol", action="store_true", help="emir göndermeden anahtar/bakiye/HL/kadro/Telegram kontrolü; rapor yazar")
@@ -1515,10 +1534,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--vardiya", default="yerel")
     args = ap.parse_args(argv)
     rules = load_rules()
-    kip = kip_belirle(rules, args.kip)
+    tgram = tg.Telegram(arka_plan=not args.kontrol, sessiz_utc=(int(rules["canli_telegram_sessiz_bas_utc"]), int(rules["canli_telegram_sessiz_bit_utc"])))
+    try:
+        kip = kip_belirle(rules, args.kip)
+    except KipHatasi as hata:
+        print(f"BAŞLAMADI: {hata}", file=sys.stderr)
+        if not args.kontrol:
+            baslamadi_alarmi(tgram, hata)
+        return 3
     post = rest_post_olustur(rules)
     kadro_oku = lambda: http_kadro_oku(rules, args.kadro_dali)          # noqa: E731
-    tgram = tg.Telegram(arka_plan=not args.kontrol, sessiz_utc=(int(rules["canli_telegram_sessiz_bas_utc"]), int(rules["canli_telegram_sessiz_bit_utc"])))
     if args.kontrol:
         rapor = kontrol(rules, kip, post, kadro_oku, tgram)
         args.durum_dizin.mkdir(parents=True, exist_ok=True)
@@ -1531,6 +1556,7 @@ def main(argv: list[str] | None = None) -> int:
         boyut.saha_sayisi(kasa, rules)
     except (KipHatasi, ValueError) as hata:
         print(f"BAŞLAMADI: {hata}", file=sys.stderr)
+        baslamadi_alarmi(tgram, hata)
         return 3
     yur: Yurutucu = gercek_yurutucu_olustur(post, rules) if kip == "gercek" else SanalYurutucu(post, rules)
     motor = Motor(rules, yur, post, tgram, args.durum_dizin, args.kayit_dizin or (args.durum_dizin / "kayit"), kadro_oku, vardiya_id=args.vardiya)
@@ -1538,6 +1564,7 @@ def main(argv: list[str] | None = None) -> int:
         motor.baslat()
     except KipHatasi as hata:
         print(f"BAŞLAMADI: {hata}", file=sys.stderr)
+        baslamadi_alarmi(tgram, hata)
         return 3
     ozet = asyncio.run(calis(motor, args.sure_sn))
     print(json.dumps(ozet, ensure_ascii=False, indent=1, default=str))
