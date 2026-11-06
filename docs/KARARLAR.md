@@ -189,5 +189,5 @@
 - **Karar:** `radar_hip3_kopya: false` varsayılan: R1 kopya oynatmasında HIP‑3 (`dex:COIN`) dolumları oynatmadan çıkar. K‑28 TUTARLILIK DÜZELTMESİ: motor K‑42 ile zaten HIP‑3 açmıyor; eşik/ağırlık/yöntem değişmez.
 - **Gerekçe (A↔B yan yana; A: HIP‑3 dahil, B: hariç):** `gecti` A 20, B 15. İlk 11'de ortak 6 / yeni 5 / düşen 5. HIP‑3 payı ≥ 0,7 olan 7 kişiden A'nın İlk 11'indeki 5'i B'de `kopya_zarar` ile düştü; A'da tam HIP‑3 olanların 0,024–0,045 getirisi motorun açamadığı pozisyonlardandı.
 - **Geri alma:** tek satır `radar_hip3_kopya: true` (eski v1 davranışı). Kullanıcı onayı BEKLİYOR (sabah sunulacak; reddederse true'ya dönülür).
-- **Sayaç:** kadro yayın zamanı (UTC ms) sonraki `radar.yml` koşusundan sonra yazılacak: bekliyor.
+- **Sayaç / ilk false kadro (06.11):** radar.yml (main, elle tetik #565) kadroyu **06:34:44Z (= 1793946884000 ms UTC)** yayımladı: `gecti_sayisi` **15** (≥ 11 ✔; İlk 11 + 4 yedek); İlk 11'in `hip3_nosyonel_pay` değerleri 0–0,73 (çoğu < 0,5). K-43 kadrosu motora bu andan sonraki ilk 5 dk okumasında geçti; 7 günlük sanal doğrulama ölçümü bu kadroyu da içerir (üretim vardiyası 05:22Z'de yeni kodla başlamıştı).
 - **Uyarı:** `gecti` < 11 ise radar özeti ve sağlık kontrolü UYARI verir (`kadro_11den_az`); otomatik true'ya dönülmez, lider karar verir.
