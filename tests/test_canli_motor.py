@@ -81,15 +81,25 @@ def test_gunde_en_fazla_2_degisiklik_ve_sonuc_ile_dusene_14_gun_bekleme():
     assert [k for k in karar if k.tur == "dus"] == [] and [k for k in karar if k.tur == "giris"] == []        # 1. gün: yalnız işaretlenir, düşme yok
     karar2, _ = s.degerlendir(kadro(rows, T0 + 2 * GUN), T0 + 2 * GUN + SAAT)                                  # 2. gün: üçü düşer (SONUÇ DIŞI)
     assert [k.adres for k in karar2 if k.tur == "dus"] == [adr(9), adr(10), adr(11)] and not any(k.sonuc for k in karar2 if k.tur == "dus")
-    assert [k.adres for k in karar2 if k.tur == "giris"] == [adr(12), adr(13)] and adr(14) not in s.uyeler        # günde 2 giriş
-    assert not s.bekleme                                                                                       # kadro dışı: bekleme YOK
-    karar3, _ = s.degerlendir(kadro(rows, T0 + 3 * GUN), T0 + 3 * GUN + SAAT)                                  # ertesi gün üçüncü girer
-    assert [k.adres for k in karar3 if k.tur == "giris"] == [adr(14)]
+    assert [k.adres for k in karar2 if k.tur == "giris"] == [adr(12), adr(13), adr(14)] and len(s.uyeler) == 11   # K‑44: boş slot doldurma günlük değişiklik sınırına SAYILMAZ → 3 boş slot aynı gün dolar
+    assert s.degisiklik["adet"] == 0 and not s.bekleme                                                         # sınır sayacı artmadı; kadro dışı: bekleme YOK
+    karar3, _ = s.degerlendir(kadro(rows, T0 + 3 * GUN), T0 + 3 * GUN + SAAT)
+    assert [k.adres for k in karar3 if k.tur == "giris"] == []                                                 # zaten dolu
     sd = hazir_11()                                                                                            # sonuçla düşen (slot düşüşü) 14 gün bekler
     kd_ = sd.anlik(T0 + GUN + SAAT, lambda a: 10.0 if a == adr(1) else None)
     assert [(k.adres, k.neden, k.sonuc) for k in kd_] == [(adr(1), "slot_dusus", True)] and sd.bekleme[adr(1)] == T0 + GUN + SAAT + 14 * GUN
     bitis = T0 + GUN + SAAT + 14 * GUN
     assert sd._bekliyor(adr(1), bitis - 1) is True and sd._bekliyor(adr(1), bitis) is False                      # 14 gün: bitiş anında serbest
+
+
+def test_k44_gunluk_sinir_yalniz_uye_degistirmek_icin_gunde_2_degistirme():
+    """K‑44: sahadaki üyeyi değiştirme (histerezis) günde ≤ 2; ertesi gün üçüncü. Boş slot doldurma sınıra girmez (üstteki test)."""
+    s = hazir_11()
+    rows = [satir(i, i, 90 - i) for i in range(1, 9)] + [satir(9, 12, 40.0), satir(10, 13, 40.0), satir(11, 14, 40.0)] + [satir(12, 9, 80.0), satir(13, 10, 80.0), satir(14, 11, 80.0)]
+    k1, _ = s.degerlendir(kadro(rows, T0 + GUN), T0 + GUN + SAAT)
+    assert [(k.adres, k.neden) for k in k1 if k.tur == "giris"] == [(adr(12), "degistirme"), (adr(13), "degistirme")] and s.degisiklik["adet"] == 2 and adr(14) not in s.uyeler
+    k2, _ = s.degerlendir(kadro(rows, T0 + 2 * GUN), T0 + 2 * GUN + SAAT)
+    assert [(k.adres, k.neden) for k in k2 if k.tur == "giris"] == [(adr(14), "degistirme")] and s.degisiklik["adet"] == 1
 
 
 def test_k39_ayni_utc_gununde_ikinci_kadro_saha_kararini_tetiklemez_ilk_kadro_saklanir_ve_gecis_beklemesi_silinir():
@@ -1225,3 +1235,39 @@ def test_g5_main_uyusmazlikta_cikis_3_ve_telegram(monkeypatch, tmp_path):
     monkeypatch.setattr(mt, "gercek_yurutucu_olustur", lambda post, rules: yur)
     assert mt.main(["--kip", "gercek", "--durum-dizin", str(tmp_path / "durum")]) == 3
     assert "sanal durum dizininde gerçek kip açılmaz" in TabanTg.ornekler[0].gonderilen[0]
+
+
+def test_emir_kaydinda_boyut_girdileri_elle_denetim(tmp_path):
+    """06.11 lider: emir kaydı boyut girdilerini taşır. Altın örnek (üstteki test): slot 90,909 $, trader hesap 100.000 $, BTC 300 × 100 $ açılış → hedef 90,909 × 300 × 100 / 100.000 = 27,2727 $."""
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    m.piyasa_oku(saat())
+    m.olay_isle(olay("a:2", adr(1), "BTC", "A", 150, 100.0, 300.0, saat))
+    e1, e2 = kayitlar(tmp_path, "emir")[:2]
+    assert (e1["trader_poz_once"], e1["trader_poz_sonra"], e1["trader_hesap_usd"]) == (0.0, 300.0, 100000.0)
+    assert e1["slot_usd"] == pytest.approx(1000 / 11) and e1["biz_poz_usd"] == 0.0 and e1["biz_slot_toplam_usd"] == 0.0 and e1["hedef_usd"] == pytest.approx(27.2727, abs=1e-4)
+    assert (e2["trader_poz_once"], e2["trader_poz_sonra"]) == (300.0, 150.0) and e2["biz_poz_usd"] == pytest.approx(27.2727, abs=1e-3) and e2["hedef_usd"] == pytest.approx(13.6364, abs=1e-4)
+    assert e2["biz_slot_toplam_usd"] == pytest.approx(27.2727, abs=1e-3)
+
+
+def test_kor_kirpildi_kaydi_yalniz_durum_degisince(tmp_path):
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    a, b = adr(7), adr(8)
+    m.karar_uygula([kd.Karar("giris_atlandi", a, "kor_kirpildi", kor_kirpildi=[adr(1), adr(2)])], saat())
+    m.karar_uygula([kd.Karar("giris_atlandi", a, "kor_kirpildi", kor_kirpildi=[adr(2), adr(1)])], saat())          # aynı durum (sıra farkı): yeni kayıt YOK
+    assert len(kayitlar(tmp_path, "kor_kirpildi")) == 1
+    m.karar_uygula([kd.Karar("giris_atlandi", a, "kor_kirpildi", kor_kirpildi=[adr(1), adr(3)])], saat())          # engelleyen küme değişti: yazılır
+    m.karar_uygula([kd.Karar("giris_atlandi", b, "kor_kirpildi", kor_kirpildi=[adr(1), adr(3)])], saat())          # başka aday: yazılır
+    assert len(kayitlar(tmp_path, "kor_kirpildi")) == 3
+
+
+def test_tur_kaydi_14_dakikada_bir(tmp_path):
+    m, hl, saat, _ = kur(tmp_path)
+    m.baslat()
+    m._tur_kaydi(saat())
+    m._tur_kaydi(saat() + 5 * 60_000)                                       # çok erken: yazılmaz
+    m._tur_kaydi(saat() + 15 * 60_000)
+    t = kayitlar(tmp_path, "tur")
+    assert len(t) == 2 and t[0]["ozsermaye_usd"] == pytest.approx(1000.0, abs=1e-6)

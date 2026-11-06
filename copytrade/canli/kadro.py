@@ -3,7 +3,7 @@
 Saha = en çok N üye (`boyut.saha_sayisi`); kadro N'den küçükse (K‑33) boş slot NAKİT kalır (slot tutarı yine kasa / N; başka trader'a dağıtılmaz) ve kadro büyüdükçe giriş kuralıyla dolar.
 Kararlar `Karar` olarak döner (giriş / düş / değiştir / inen_kapat) — uygulamayı motor yapar (slot aç, pozisyon kapat, Telegram, kayıt).
 - İlk gün (saha hiç kurulmadıysa): sıra 1…N sahaya (korelasyon kuralı uygulanır); günlük değişiklik sınırına SAYILMAZ.
-- Giriş: slot boşsa İlk 11'in (katman `ilk11`) sahada olmayan, beklemede olmayan en iyi sıralısı; günde ≤ `canli_gunde_degisiklik` saha girişi/değişikliği.
+- Giriş: slot boşsa İlk 11'in (katman `ilk11`) sahada olmayan, beklemede olmayan en iyi sıralısı. K‑44: boş slot doldurma günlük sınıra SAYILMAZ; `canli_gunde_degisiklik` yalnız sahadaki üyeyi değiştirmek (histerezis) için.
 - Değiştirme (histerezis): aday sıra ≤ N **ve** üye sıra > İlk 11 sınırı **ve** aday formu ≥ üye formu + `canli_histerezis_puan` → üye "daha_iyisi_geldi" (sonuç dışı) ile iner.
 - Düşme — anında: slot düşüşü ≥ `canli_slot_dusus_oran`, kaldıraç > `radar_max_kaldirac` (R1/4); günlük (yeni `kosu_ms`): sıra 2 gün üst üste > `canli_sira_dus`, `canli_islem_yok_saat` saat işlem yok (sonuç dışı);
   **kadro dışı (K‑39):** kadroda yok / sıra > `canli_kadro_disi_sira` durumu İKİ FARKLI UTC GÜNÜNÜN kadrosunda üst üste görülürse düşer (`kadro_disi`); düşme SONUÇ DIŞIDIR, bekleme yok. **Gün başına yalnız İLK kadro uygulanır (K‑39):** aynı `kosu_ms` UTC gününde gelen ikinci kadro
@@ -216,13 +216,10 @@ class Saha:
         for s in self._uygun_adaylar(kadro, simdi_ms, hedef_sira):
             if len(self.uyeler) >= self.n:
                 break
-            if not self._degisiklik_hakki(simdi_ms, ilk_gun):
-                break
-            if not self._kor_uygun(s["adres"], kadro):
+            if not self._kor_uygun(s["adres"], kadro):          # K‑44: boş slot doldurma günlük değişiklik sınırına bağlı DEĞİL (sınır yalnız üye değiştirmek için)
                 kararlar.append(Karar("giris_atlandi", s["adres"], "kor_kirpildi", kor_kirpildi=list(self.uyeler)))
                 continue
             self._ekle(s["adres"], s, simdi_ms)
-            self._say(simdi_ms, ilk_gun)
             kararlar.append(Karar("giris", s["adres"], "ilk_gun" if ilk_gun else "bos_slot"))
 
     def _degistir(self, kadro: dict, satirlar: dict[str, dict], simdi_ms: int, kararlar: list[Karar]) -> None:
