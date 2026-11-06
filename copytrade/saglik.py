@@ -24,6 +24,15 @@ GECTI_ALT = 8                              # RADAR_V1 günlük beklenti 8–20 (
 GECTI_UST = 20
 TELEGRAM_HATA_UYARI = 5
 KOPMA_UYARI = 5
+# G2 (2026-11-06): kalıcı durum + kayıt olayları + iş akışı koşusu + veri dalı commit yaşı
+KAYIT_PENCERE = 2 * SAAT                   # kayıt olayları (kayit/<tarih>.jsonl) için bakılan son pencere
+VERI_DALI_COMMIT_UYARI = 45 * DAKIKA       # veri dalının SON commit'i (ozet.yazildi_ms'den bağımsız ikinci ölçü)
+VERI_DALI_COMMIT_KRITIK = 90 * DAKIKA
+KRITIK_KAYIT_OLAYLARI = {"vardiya_baslamadi": "Vardiya BAŞLAMADI (başka vardiya kilidi tutuyordu)", "vardiya_boslugu": "Vardiyalar arasında boşluk oldu (kesinti)"}
+UYARI_KAYIT_OLAYLARI = {"kuyruk_tasti": "Olay kuyruğu taştı (açılış olayları düştü)", "kadro_bayat": "Kadro bayat (motor eski kadroyla çalıştı)"}
+HATA_SAYACLARI = ("adim_hata", "olay_hata", "defter_hata")      # ozet.kayit_sayac (vardiya başına)
+VARDIYA_IS_AKISI = "canli_vardiya.yml"
+KOSU_API = "https://api.github.com/repos/sselimgenc-oss/sg-arge/actions/workflows/{wf}/runs?branch=main&per_page=5"
 
 
 @dataclass(frozen=True)
@@ -41,7 +50,81 @@ def _sa(dk: float) -> str:
     return f"{dk / 60:.1f} saat" if dk >= 120 else f"{dk:.0f} dk"
 
 
-def kontrol(simdi_ms: int, ozet: dict[str, Any] | None, kadro: dict[str, Any] | None, *, pano_ms: int | None = None, canli_pano_ms: int | None = None, canli_pano_ulasildi: bool | None = None) -> list[Bulgu]:
+def kalici_kontrol(simdi_ms: int, motor: dict[str, Any] | None, risk: dict[str, Any] | None, dur_dosyasi: bool, olaylar: list[dict[str, Any]] | None, kayit_sayac: dict[str, Any] | None,
+                   vardiya_kosulari: list[dict[str, Any]] | None, veri_dali_commit_ms: int | None) -> list[Bulgu]:
+    """G2: kalıcı durum (`motor.json` kapanış kuyruğu, `risk.json` bayrakları, `DUR` dosyası), kayıt olayları, hata sayaçları, son vardiya koşusu, veri dalı commit yaşı.
+    Okunamayan girdi (None) bulgu ÜRETMEZ (ağ/okuma hatası yanlış alarm olmasın; yokluk zaten `ozet_yok` vb. ile görünür)."""
+    b: list[Bulgu] = []
+    risk = risk or {}
+    kuyruk = (motor or {}).get("kapanis_kuyrugu") or {}
+    eksikler = [(k, v) for k, v in kuyruk.items() if isinstance(v, dict) and v.get("eksik")]
+    if eksikler:
+        en_eski = min((float(v["ms"]) for _, v in eksikler if v.get("ms")), default=None)
+        yas = f", en eskisi {_sa((simdi_ms - en_eski) / DAKIKA)}dir" if en_eski else ""
+        b.append(Bulgu("KRITIK", "kapanis_kuyrugu_eksik", f"Kalıcı kapanış kuyruğunda {len(eksikler)} EKSİK girdi{yas}: {', '.join(k.split('|')[-1] for k, _ in eksikler[:5])} borsada kapanmadı."))
+    ad = risk.get("acilis_durdu") or {}
+    if ad.get("mutabakat"):
+        b.append(Bulgu("KRITIK", "mutabakat_bayragi", "Mutabakat bayrağı AÇIK: bizim kayıt ile borsa uyuşmuyor, yeni işlem kapalı."))
+    if risk.get("dur") or dur_dosyasi:
+        neden = f": {risk['dur_neden']}" if risk.get("dur_neden") else ""
+        b.append(Bulgu("KRITIK", "risk_dur", f"Motor DUR durumunda ({'risk.dur' if risk.get('dur') else 'DUR dosyası'}{neden}): elle müdahale gerekir."))
+    if (motor or {}).get("dur_bekliyor"):
+        b.append(Bulgu("BILGI", "dur_bekliyor", "Motor DUR bekliyor: pozisyonlar kapanınca duracak."))
+    if ad.get("gunluk_kayip"):
+        b.append(Bulgu("UYARI", "gunluk_kayip", "Günlük kayıp freni açık: bugün yeni işlem yok."))
+    if ad.get("elle_dur"):
+        b.append(Bulgu("UYARI", "elle_dur", "Yeni işlem elle duraklatıldı (/devam ile açılır)."))
+    if ad.get("kasa_siniri"):
+        b.append(Bulgu("UYARI", "kasa_siniri", "Kasa sınırı bayrağı açık: yeni işlem kapalı."))
+    if ad.get("kapanis_eksik") and not eksikler:
+        b.append(Bulgu("UYARI", "kapanis_eksik_bayragi", "Risk kaydında kapanış-eksik bayrağı açık ama kuyrukta eksik girdi yok (bayrak temizlenmemiş olabilir)."))
+    # kayıt olayları (son KAYIT_PENCERE)
+    sayim: dict[str, list[dict[str, Any]]] = {}
+    for o in olaylar or []:
+        if o.get("zaman_ms") is not None and 0 <= simdi_ms - float(o["zaman_ms"]) <= KAYIT_PENCERE:
+            sayim.setdefault(str(o.get("olay")), []).append(o)
+    for kod, aciklama in KRITIK_KAYIT_OLAYLARI.items():
+        if kod in sayim:
+            son = sayim[kod][-1]
+            ek = f" ({son['dk']} dk)" if son.get("dk") is not None else ""
+            b.append(Bulgu("KRITIK", kod, f"{aciklama}{ek}: son 2 saatte {len(sayim[kod])} kez."))
+    for kod, aciklama in UYARI_KAYIT_OLAYLARI.items():
+        if kod in sayim:
+            b.append(Bulgu("UYARI", kod, f"{aciklama}: son 2 saatte {len(sayim[kod])} kez."))
+    for sayac in HATA_SAYACLARI:
+        n = int((kayit_sayac or {}).get(sayac) or 0)
+        if n > 0:
+            b.append(Bulgu("KRITIK", sayac, f"Motor kaydında {sayac} = {n} (bu vardiyada; hata ayıklanmalı)."))
+    k = vardiya_kosu_bulgusu(vardiya_kosulari)
+    if k:
+        b.append(k)
+    if veri_dali_commit_ms is not None:
+        yas = _yas_dk(simdi_ms, veri_dali_commit_ms)
+        if yas is not None and yas * DAKIKA >= VERI_DALI_COMMIT_KRITIK:
+            b.append(Bulgu("KRITIK", "veri_dali_durdu", f"Veri dalında {_sa(yas)}dir yeni commit yok: yayım durmuş olabilir."))
+        elif yas is not None and yas * DAKIKA >= VERI_DALI_COMMIT_UYARI:
+            b.append(Bulgu("UYARI", "veri_dali_bayat", f"Veri dalının son commit'i {_sa(yas)} eski."))
+    return b
+
+
+def vardiya_kosu_bulgusu(kosular: list[dict[str, Any]] | None) -> Bulgu | None:
+    """GitHub REST `workflow runs` listesinden (en yeni önce) son TAMAMLANMIŞ üretim vardiya koşusunun sonucu. Yalnız `failure`/`timed_out` bulgudur (KRITIK);
+    `cancelled` (concurrency iptali / bekleyen koşu / süre sınırı) yalnız BILGI (sahte KRİTİK üretmesin). Liste yok/boş/okunamadı: bulgu yok."""
+    for r in kosular or []:
+        if r.get("status") != "completed":
+            continue
+        sonuc, no = r.get("conclusion"), r.get("run_number") or r.get("id")
+        if sonuc in ("failure", "timed_out"):
+            return Bulgu("KRITIK", "vardiya_kosusu_basarisiz", f"Son üretim vardiya koşusu (#{no}) {sonuc} bitti: {r.get('html_url') or VARDIYA_IS_AKISI}")
+        if sonuc == "cancelled":
+            return Bulgu("BILGI", "vardiya_kosusu_iptal", f"Son vardiya koşusu (#{no}) iptal edildi (concurrency/süre sınırı olabilir; adımsız iptal normaldir).")
+        return None
+    return None
+
+
+def kontrol(simdi_ms: int, ozet: dict[str, Any] | None, kadro: dict[str, Any] | None, *, pano_ms: int | None = None, canli_pano_ms: int | None = None, canli_pano_ulasildi: bool | None = None,
+            motor: dict[str, Any] | None = None, risk: dict[str, Any] | None = None, dur_dosyasi: bool = False, olaylar: list[dict[str, Any]] | None = None,
+            vardiya_kosulari: list[dict[str, Any]] | None = None, veri_dali_commit_ms: int | None = None) -> list[Bulgu]:
     """Bulguları döndürür (boşsa sağlıklı). `pano_ms`: veri dalındaki pano dosyasının son güncelleme anı; `canli_pano_ms`: Cloudflare'deki sayfanın içindeki veri anı (`data-ms`);
     `canli_pano_ulasildi`: sayfa indirilebildi mi (None = bu ölçüm yapılmadı)."""
     b: list[Bulgu] = []
@@ -49,6 +132,7 @@ def kontrol(simdi_ms: int, ozet: dict[str, Any] | None, kadro: dict[str, Any] | 
     # --- motor / vardiya
     if not ozet:
         b.append(Bulgu("KRITIK", "ozet_yok", "Motor özeti (durum/ozet.json) okunamadı: vardiya hiç yazmamış olabilir."))
+        b.extend(kalici_kontrol(simdi_ms, motor, risk, dur_dosyasi, olaylar, None, vardiya_kosulari, veri_dali_commit_ms))
     else:
         yas = _yas_dk(simdi_ms, ozet.get("yazildi_ms"))
         if yas is None:
@@ -65,6 +149,7 @@ def kontrol(simdi_ms: int, ozet: dict[str, Any] | None, kadro: dict[str, Any] | 
         hata = int(ozet.get("telegram_hata") or 0)
         if hata >= TELEGRAM_HATA_UYARI:
             b.append(Bulgu("UYARI", "telegram_hata", f"Telegram mesajı {hata} kez gönderilemedi."))
+        b.extend(kalici_kontrol(simdi_ms, motor, risk, dur_dosyasi, olaylar, ozet.get("kayit_sayac"), vardiya_kosulari, veri_dali_commit_ms))
         din = ozet.get("dinleyici") or {}
         kopma = int(din.get("kopma") or 0)
         if kopma >= KOPMA_UYARI:
@@ -147,6 +232,57 @@ def _git_zaman_ms(dal: str, yol: str) -> int | None:
     return int(s.stdout.strip()) * 1000 if s.returncode == 0 and s.stdout.strip() else None
 
 
+def _git_var(dal: str, yol: str) -> bool:
+    import subprocess
+    return subprocess.run(["git", "cat-file", "-e", f"origin/{dal}:{yol}"], capture_output=True).returncode == 0
+
+
+def _git_son_commit_ms(dal: str) -> int | None:
+    import subprocess
+    s = subprocess.run(["git", "log", "-1", "--format=%ct", f"origin/{dal}"], capture_output=True, text=True)
+    return int(s.stdout.strip()) * 1000 if s.returncode == 0 and s.stdout.strip() else None
+
+
+def _git_fetch(dallar: list[str]) -> bool:
+    """CLI başında `git fetch origin <dal>`: bayat YEREL ref yanlış KRİTİK üretmesin (2026-11-06 gecesi). Başarısızsa False (bulgu üretilmez; yalnız bilgi satırı)."""
+    import subprocess
+    try:
+        return subprocess.run(["git", "fetch", "origin", *dallar], capture_output=True, text=True, timeout=120).returncode == 0
+    except Exception:                                                                        # noqa: BLE001
+        return False
+
+
+def kayit_olaylari(dal: str, simdi_ms: int) -> list[dict[str, Any]] | None:
+    """Dünün ve bugünün (UTC; gece yarısı geçişi için) `kayit/<tarih>.jsonl` satırları; hiç dosya yoksa None."""
+    import json
+    import time
+    out, bulundu = [], False
+    for d in (1, 0):
+        ham = _git_oku(dal, f"kayit/{time.strftime('%Y-%m-%d', time.gmtime((simdi_ms - d * 86_400_000) / 1000))}.jsonl")
+        if ham is None:
+            continue
+        bulundu = True
+        for satir in ham.splitlines():
+            try:
+                o = json.loads(satir)
+            except ValueError:
+                continue
+            if isinstance(o, dict):
+                out.append(o)
+    return out if bulundu else None
+
+
+def vardiya_kosulari_oku(url: str = "", timeout: int = 20) -> list[dict[str, Any]] | None:
+    """GitHub REST (public repo: herkese açık okuma, token gerekmez). Ağ/ayrıştırma hatasında None (bulgu üretilmez)."""
+    import json
+    import urllib.request
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url or KOSU_API.format(wf=VARDIYA_IS_AKISI), headers={"User-Agent": "sg-saglik/1", "Accept": "application/vnd.github+json"}), timeout=timeout) as r:
+            return list(json.loads(r.read().decode("utf-8")).get("workflow_runs") or [])
+    except Exception:                                                                        # noqa: BLE001
+        return None
+
+
 def main(argv: list[str] | None = None) -> int:
     import argparse
     import json
@@ -160,6 +296,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--telegram", action="store_true", help="bulgu varsa Telegram alarmı gönder (KRITIK her koşuda, UYARI her 3 saatte bir)")
     args = ap.parse_args(argv)
     simdi = int(time.time() * 1000)
+    if not _git_fetch([args.veri_dali, args.kadro_dali]):
+        print("BILGI: git fetch başarısız; yerel ref'ler bayat olabilir (bu yüzden bulgu üretilmedi).")
     ozet_ham, kadro_ham = _git_oku(args.veri_dali, "durum/ozet.json"), _git_oku(args.kadro_dali, "radar/son/kadro.json")
     ozet, kadro = (json.loads(ozet_ham) if ozet_ham else None), (json.loads(kadro_ham) if kadro_ham else None)
     canli_ms, ulasildi = None, None
@@ -169,7 +307,10 @@ def main(argv: list[str] | None = None) -> int:
                 canli_ms, ulasildi = canli_sayfa_ms(r.read().decode("utf-8", "replace")), True
         except Exception:                                                                    # noqa: BLE001 - ağ hatası: bulgu olarak raporlanır, kontrol çökmez
             ulasildi = False
-    bulgular = kontrol(simdi, ozet, kadro, pano_ms=_git_zaman_ms(args.veri_dali, "pano/index.html"), canli_pano_ms=canli_ms, canli_pano_ulasildi=ulasildi)
+    motor_ham, risk_ham = _git_oku(args.veri_dali, "durum/motor.json"), _git_oku(args.veri_dali, "durum/risk.json")
+    bulgular = kontrol(simdi, ozet, kadro, pano_ms=_git_zaman_ms(args.veri_dali, "pano/index.html"), canli_pano_ms=canli_ms, canli_pano_ulasildi=ulasildi,
+                       motor=json.loads(motor_ham) if motor_ham else None, risk=json.loads(risk_ham) if risk_ham else None, dur_dosyasi=_git_var(args.veri_dali, "durum/DUR"),
+                       olaylar=kayit_olaylari(args.veri_dali, simdi), vardiya_kosulari=vardiya_kosulari_oku(), veri_dali_commit_ms=_git_son_commit_ms(args.veri_dali))
     metin, st = ozet_metin(bulgular), durum(bulgular)
     print(f"DURUM: {st}\n{metin}")
     if args.telegram and st != "SAGLIKLI":
