@@ -94,6 +94,21 @@ def test_is_akisi_salt_okur_push_yok_hata_orulmez():
     assert not re.search(r"R2_|aws s3|wrangler|AWS_|API_TOKEN", metin)                              # yalnız Telegram secret'ları; Cloudflare/depo anahtarı yok
 
 
+def test_g1_telegram_gonderimi_basarisizsa_cikis_2_ve_stderr(monkeypatch, capsys):
+    class T:
+        acik = True
+
+        def gonder(self, m):
+            return False
+
+    from copytrade.canli import telegram as tg
+    monkeypatch.setattr(tg, "Telegram", T)
+    monkeypatch.setattr(s, "_git_oku", lambda dal, yol: ('{"dur": false}' if yol.endswith("ozet.json") else None))
+    monkeypatch.setattr(s, "_git_zaman_ms", lambda dal, yol: None)
+    assert s.main(["--telegram"]) == 2
+    assert "gönderilemedi" in capsys.readouterr().err
+
+
 def test_telegram_alarm_kurali_kritik_her_kosuda_uyari_3_saatte_bir(monkeypatch, capsys):
     gonderilen: list[str] = []
 

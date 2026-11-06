@@ -28,6 +28,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - run: pip install requests==2.34.2 PyYAML==6.0.3
       - name: Veri dallarını al
         run: git fetch origin canli-durum radar
       - name: Sağlık kontrolü

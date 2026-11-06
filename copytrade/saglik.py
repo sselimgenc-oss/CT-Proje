@@ -178,7 +178,9 @@ def main(argv: list[str] | None = None) -> int:
             from copytrade.canli import telegram as tg
             t = tg.Telegram()
             if t.acik:
-                t.gonder(tg.alarm("ALARM: sistem sağlık kontrolü" if st == "KRITIK" else "Sağlık uyarısı", metin))
+                if not t.gonder(tg.alarm("ALARM: sistem sağlık kontrolü" if st == "KRITIK" else "Sağlık uyarısı", metin)):
+                    print("HATA: Telegram alarmı gönderilemedi", file=sys.stderr)                 # sessiz yutulmaz: iş kırmızı biter
+                    return 2
             else:
                 print("UYARI: Telegram anahtarı yok; alarm gönderilemedi", file=sys.stderr)
     return 2 if st == "KRITIK" else 0                                                       # KRITIK: iş kırmızı biter (Actions e-postası + görünür)
