@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-06 04:39 UTC
+# Canlı rapor — 2026-11-06 04:54 UTC
 
 **Kip** sanal · vardiya `42141603604` · saha 7/11 (inen 6)
 
@@ -6,23 +6,24 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 956,30 $ | −%0,37 | — (geçmiş < 7 gün) | −%4,37 | −%4,47 |
+| 1.000,00 $ | 955,88 $ | −%0,41 | — (geçmiş < 7 gün) | −%4,41 | −%4,51 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x323f5a… | xyz:GOLD | L | 260,68 $ | −5,36 $ |
-| 0x62edf4… | xyz:DRAM | L | 80,48 $ | −7,67 $ |
-| 0x873015… | BNB | S | 64,95 $ | +2,00 $ |
-| 0x6015e6… | SOL | L | 48,58 $ | −0,41 $ |
-| 0x6015e6… | ETH | L | 36,53 $ | −0,35 $ |
-| 0x873015… | PUMP | S | 21,32 $ | +1,07 $ |
+| 0x323f5a… | xyz:GOLD | L | 260,64 $ | −5,40 $ |
+| 0xfbd234… | HYPE | L | 189,94 $ | −0,04 $ |
+| 0x62edf4… | xyz:DRAM | L | 80,35 $ | −7,80 $ |
+| 0x873015… | BNB | S | 64,96 $ | +1,99 $ |
+| 0x6015e6… | SOL | L | 48,53 $ | −0,47 $ |
+| 0x6015e6… | ETH | L | 36,53 $ | −0,36 $ |
+| 0x873015… | PUMP | S | 21,37 $ | +1,01 $ |
 
 ## Son 24 saat
 
-- emir 178 · dolum 178 · kayma p50 +%0,00 / max +%0,37 (n=178)
-- funding −0,07 $ · ücret 1,61 $
+- emir 188 · dolum 188 · kayma p50 +%0,00 / max +%0,37 (n=188)
+- funding −0,07 $ · ücret 1,69 $
 
 ## Saha değişiklikleri (24 sa)
 
@@ -52,7 +53,7 @@
 
 ## Vardiya sağlığı
 
-- süre 212 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk 157.4 dk · REST 429 0
+- süre 227 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk 157.4 dk · REST 429 0
 
 ## Seçim isabeti (son 7)
 
