@@ -1,3 +1,5 @@
+> **KAPANDI (2026-11-06 18:05Z):** kullanıcı kararıyla liderlik Opus'a döndü. Bu belge kayıt olarak kalır; §4 yetkileri artık geçerli değil (AGENTS kural 8 geçerli).
+
 # Lider devri: Claude (Opus) → Sonnet, 2026-11-05 → 2026-11-09 (Pazartesi) 14:00 TSİ
 
 Kullanıcı kararı: lider (Opus) haftalık limitine yaklaştı. Pazartesi 14:00 TSİ'ye kadar **liderlik görevi Sonnet'te**. Bu belge o süre için
