@@ -38,7 +38,7 @@ from copytrade.dinleyici import Ayar, Dinleyici, Izlenen, Olay, clearinghouse_ay
 from copytrade.hl_ortak import spot_usdc
 from copytrade.izleme_liste import perp_dex_names
 from copytrade.kurallar import load_rules
-from copytrade.olcut import asset_class
+from copytrade.coin_sinif import asset_class
 from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter, ledger_sayfala
 
 EPS = 1e-12
@@ -127,7 +127,7 @@ def eylem_belirle(once: float, sonra: float, biz_sz: float) -> list[str]:
 
 
 def coin_sinifi(coin: str) -> str:
-    """K‑42: 'spot' | 'hip3' (`dex:COIN`) | 'perp'. Tek kaynak `olcut.asset_class` (spot ve `dex:` ayrımı); burada yalnız üç sınıfa indirgenir."""
+    """K‑42: 'spot' | 'hip3' (`dex:COIN`) | 'perp'. Tek kaynak `coin_sinif.asset_class` (numpy gerektirmez) (spot ve `dex:` ayrımı); burada yalnız üç sınıfa indirgenir."""
     sinif = asset_class(coin)
     return "spot" if sinif == "spot" else "perp" if sinif == "kripto" else "hip3"
 
