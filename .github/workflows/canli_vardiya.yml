@@ -6,6 +6,8 @@ name: Canlı vardiya (sanal kip)
 # durum veri dalı `canli-durum` (dal doğrulamasında `canli-durum-deneme`): durum/*.json + kayit/<tarih>.jsonl; her 15 dk ve vardiya sonunda yayımlanır; yeni vardiya kaldığı yerden devam eder
 # (açılışta kaçan dolumlar REST ile tamamlanır, `gec_goruldu`). Ek koruma: `durum/kilit.json` (başka vardiya 20 dk içinde nabız attıysa motor başlamaz).
 # Dal doğrulaması: `copytrade/canli/CALISTIR` dosyasına satır eklenen push (main dışı dal) AYNI iş akışını koşturur, ama `canli-durum-deneme` dalına yazar ve kadroyu `radar-deneme`'den okur.
+# G3 (cron geç kalıyor/kaçırıyor): motor NORMAL bitince vardiya bir SONRAKİ vardiyayı `workflow_dispatch` ile tetikler (yalnız main; `zincir_tetikle.sh`); cron'lar yedek olarak kalır. Dispatch koşusu da taze kilit varsa atlar.
+# Ayrıca saatte bir (4. yayın turunda) saglik.yml tetiklenir. `actions: write` yalnız vardiya işindedir. Zincir hatası ::warning + Telegram olur; yedek cron devam eder.
 on:
   schedule:
     - cron: "7 */4 * * *"
@@ -58,6 +60,9 @@ jobs:
     if: ${{ needs.kontrol.outputs.atla != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 290
+    permissions:
+      contents: write
+      actions: write          # G3: yalnız bu iş; zincir (sonraki vardiya) ve saatlik sağlık tetiği için `gh workflow run` (yalnız main'de çalışır)
     env:
       VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'canli-durum' || 'canli-durum-deneme' }}
       KADRO_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
@@ -94,12 +99,15 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ github.ref == 'refs/heads/main' && github.token || '' }}
         run: |
           sure_dk="${GIRDI_SURE_DK:-255}"
           case "$sure_dk" in ''|*[!0-9]*) sure_dk=255 ;; esac
           # 15 dk'da bir durumu veri dalına yayımlayan arka plan döngüsü (ayrı git worktree: motorun çalıştığı dizin değişmez)
-          ( while sleep 900; do bash .github/scripts/canli_yayimla.sh || echo "yayım denemesi başarısız (döngü sürer)"; done ) &
+          # G3: her 4. turda (saatte bir) saglik.yml tetiklenir (yalnız main; betik kontrol eder, hata uyarı olur). GH_TOKEN yalnız bu döngüye aittir: döngü başlatıldıktan sonra kabuktan silinir, motor görmez.
+          ( n=0; while sleep 900; do bash .github/scripts/canli_yayimla.sh || echo "yayım denemesi başarısız (döngü sürer)"; n=$((n + 1)); if [ $((n % 4)) -eq 0 ]; then bash .github/scripts/zincir_tetikle.sh saglik; fi; done ) &
           yayim=$!
+          unset GH_TOKEN
           set +e
           env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID python -u -m copytrade.canli.motor --kip sanal --kadro-dali "$KADRO_DALI" --durum-dizin durum --kayit-dizin kayit --sure-sn "$((sure_dk * 60))" --vardiya "${GITHUB_RUN_ID}"
           cikis=$?
@@ -124,6 +132,15 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: bash .github/scripts/canli_yayimla.sh
+      - name: Sonraki vardiyayı tetikle (zincir, G3)
+        # `always()` DEĞİL: yalnız motor normal bitince (önceki tüm adımlar başarılı). Döngü yok: dispatch ancak motor bittikten sonra gelir; yeni koşu concurrency kuyruğunda bu koşunun bitmesini bekler.
+        if: ${{ github.ref == 'refs/heads/main' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TELEGRAM_BOT_TOKEN: ${{ github.ref == 'refs/heads/main' && secrets.TELEGRAM_BOT_TOKEN || '' }}
+          TELEGRAM_CHAT_ID: ${{ github.ref == 'refs/heads/main' && secrets.TELEGRAM_CHAT_ID || '' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: bash .github/scripts/zincir_tetikle.sh vardiya
       - uses: actions/upload-artifact@v4
         if: always()
         with:

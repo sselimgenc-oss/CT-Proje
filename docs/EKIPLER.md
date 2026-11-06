@@ -19,3 +19,8 @@ Eksik bulunmuştu: arka planda çalışan sistemde bir şey ters giderse kimse f
 - **`saglik.yml` (saatlik, salt okur):** aynı kontrol + veri dalındaki pano yaşı + **Cloudflare'deki canlı sayfa** erişilebilir mi / bayat mı. KRİTİK bulguda iş kırmızı biter ve Telegram'a `ALARM` gider; UYARI 3 saatte bir.
 - Seviyeler: `KRITIK` (acil: vardiya durdu, kapanış eksik, radar çok eski, kadro/özet yok), `UYARI`, `BILGI`. Eşikler `copytrade/saglik.py` başındaki sabitlerdir (strateji eşiği değildir).
 - Sınır: GitHub cron'u bazen geç/hiç tetiklenir; panodaki tarayıcı "VERİ BAYAT" uyarısı ikinci güvenlik ağıdır.
+
+## Vardiya zinciri (G3, 2026-11-06)
+- GitHub cron geç kalıyor/kaçırıyor (05.11: 157 dk boşluk). Çare: canlı vardiya, motor NORMAL bitince bir sonrakini `gh workflow run canli_vardiya.yml --ref main` ile kendisi tetikler (yalnız main; dal denemeleri zincirlemez). Cron (7 ve 37. dk) yedek olarak durur.
+- Çift vardiya olmaz: dispatch koşusu `zamanlama_kontrol.sh` içinde taze kilitte (20 dk nabız) atlar; `concurrency` yeni koşuyu eskisi bitene kadar bekletir (fazla bekleyen iptal = `cancelled`, G2 sağlık bunu bilgi sayar).
+- Dispatch başarısızsa `::warning` + Telegram uyarısı; yedek cron ve vardiya hata alarmı sürer. `actions: write` yalnız vardiya işinde. Saatte bir (4. yayın turunda) `saglik.yml` de tetiklenir; saglik.yml kendi cron'unu korur.

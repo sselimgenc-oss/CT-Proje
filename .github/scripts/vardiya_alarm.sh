@@ -7,7 +7,9 @@ if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
   echo "Telegram anahtarı yok (deneme dalı ya da tanımsız): alarm atlandı"
   exit 0
 fi
-if [ "$is_adi" = "kontrol" ]; then
+if [ "$is_adi" = "zincir" ]; then
+  adim="zincir"
+elif [ "$is_adi" = "kontrol" ]; then
   adim="zamanlama kontrolü"
 elif [ "${ADIM_GERI:-}" = "failure" ]; then
   adim="durumu geri yükleme"
@@ -18,8 +20,12 @@ elif [ "${ADIM_MOTOR:-}" = "failure" ]; then
 else
   adim="kurulum / sonraki adım"
 fi
-metin="🚨 Vardiya BAŞLAMADI/ÇÖKTÜ (${is_adi}): ${RUN_URL:-?}
+if [ "$is_adi" = "zincir" ]; then
+  metin="⚠️ Vardiya zinciri: bir sonraki vardiya tetiklenemedi (yedek cron devrede): ${RUN_URL:-?}"
+else
+  metin="🚨 Vardiya BAŞLAMADI/ÇÖKTÜ (${is_adi}): ${RUN_URL:-?}
 adım: ${adim}"
+fi
 if ! curl -fsS --max-time 30 --retry 2 -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
   --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" --data-urlencode "text=${metin}" >/dev/null 2>&1; then
   echo "Telegram alarmı gönderilemedi" >&2

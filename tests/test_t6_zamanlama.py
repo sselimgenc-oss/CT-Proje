@@ -155,3 +155,26 @@ def test_b7_canli_yayimla_her_yayimda_pano_uretir_bayat_ozet_ile_uretmez(tmp_pat
     assert r2.returncode == 0, r2.stderr
     html2 = subprocess.run(["git", "show", "canli-durum-deneme:pano/index.html"], cwd=bare, capture_output=True, text=True).stdout
     assert "1.001,50 $" in html2 and "1.234,00 $" not in html2
+
+
+@pytest.mark.parametrize("kilit, beklenen", [
+    ({"birakildi": False, "nabiz_ms": int(time.time() * 1000) - 5 * 60_000}, "atla=true"),             # G3: zincir dispatch'i, kilit taze → çift vardiya olmaz
+    ({"birakildi": True, "nabiz_ms": int(time.time() * 1000) - 1_000}, "atla=false"),                  # önceki vardiya kilidi bıraktı → yeni vardiya başlar
+    ({"birakildi": False, "nabiz_ms": int(time.time() * 1000) - 21 * 60_000}, "atla=false"),            # 20 dk kuralı korunur: bayat kilit devralınır
+])
+def test_g3_canli_dispatch_taze_kilitte_atlar(tmp_path, kilit, beklenen):
+    c = kur(tmp_path, "canli-durum", {"durum/kilit.json": json.dumps({"vardiya": "A", **kilit})})
+    cikti, stdout = calistir(c, "canli", "canli-durum", olay="workflow_dispatch", zamanlama="", yedek="37 */4 * * *")
+    assert cikti == beklenen and "BAŞLAMADI" not in stdout
+    assert calistir(c, "canli", "canli-durum", olay="push", zamanlama="", yedek="37 */4 * * *")[0] == "atla=false"        # push (dal denemesi) her zaman çalışır
+
+
+def test_g3_canli_dispatch_veri_dali_yoksa_calisir(tmp_path):
+    c = tmp_path / "c"
+    c.mkdir()
+    git(c, "init", "-q")
+    subprocess.run(["git", "init", "-q", "--bare", str(tmp_path / "yok.git")], check=True)
+    git(c, "remote", "add", "origin", str(tmp_path / "yok.git"))
+    (c / "copytrade").mkdir()
+    shutil.copy(ROOT / "copytrade/kurallar.yaml", c / "copytrade/kurallar.yaml")
+    assert calistir(c, "canli", "canli-durum", olay="workflow_dispatch", zamanlama="")[0] == "atla=false"

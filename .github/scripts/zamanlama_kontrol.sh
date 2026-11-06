@@ -10,8 +10,10 @@ veri_dali="${VERI_DALI:?}"
 atla=false
 neden="yedek cron değil: normal çalışır"
 # radar: HER schedule koşusu (birincil de) bugün yapılmışsa atlar — geç gelen birincil koşu kadroyu gün içinde ikinci kez yazmasın (Opus denetimi, 05.11). canli: yalnız yedek cron.
-if [ "${GITHUB_EVENT_NAME:-}" = schedule ] && { [ "$mod" = radar ] || { [ -n "${YEDEK_CRON:-}" ] && [ "${ZAMANLAMA:-}" = "$YEDEK_CRON" ]; }; }; then
-  neden="yedek cron; veri dalı ($veri_dali) yok: çalışır"
+olay="${GITHUB_EVENT_NAME:-}"
+# G3: canli için workflow_dispatch de aynı "taze kilit varsa atla" mantığına girer (vardiya zinciri bir sonrakini dispatch ile tetikler; çift vardiya olmasın).
+if { [ "$olay" = schedule ] && { [ "$mod" = radar ] || { [ -n "${YEDEK_CRON:-}" ] && [ "${ZAMANLAMA:-}" = "$YEDEK_CRON" ]; }; }; } || { [ "$olay" = workflow_dispatch ] && [ "$mod" = canli ]; }; then
+  neden="yedek cron/dispatch; veri dalı ($veri_dali) yok: çalışır"
   if git ls-remote --exit-code --heads origin "$veri_dali" >/dev/null; then
     git fetch -q --depth=1 origin "$veri_dali"
     case "$mod" in
@@ -26,7 +28,7 @@ if [ "${GITHUB_EVENT_NAME:-}" = schedule ] && { [ "$mod" = radar ] || { [ -n "${
         else
           taze=hayir
         fi
-        if [ "$taze" = evet ]; then atla=true; neden="yedek cron: kilit taze (başka vardiya aktif) — başlamadı (beklenen, alarm yok)"; else neden="yedek cron: kilit taze değil — vardiya başlar"; fi
+        if [ "$taze" = evet ]; then atla=true; neden="$olay: kilit taze (başka vardiya aktif) — başlamadı (beklenen, alarm yok)"; else neden="$olay: kilit taze değil — vardiya başlar"; fi
         ;;
       *) echo "bilinmeyen mod: $mod" >&2; exit 1 ;;
     esac

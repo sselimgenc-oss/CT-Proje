@@ -272,3 +272,49 @@ def test_telegram_tokensiz_kanal_kapali_ve_sessiz_b1():
     assert not t.token and not t.chat_id
     assert t.gonder("deneme") is False
     assert t.komutlari_al() == []
+
+
+# ---------------------------------------------------------------------------------------------------- G3: vardiya zinciri + saatlik sağlık tetiği
+def _sahte_gh(tmp_path: Path, cikis: int) -> dict:
+    kayit = tmp_path / "gh_cagri.txt"
+    gh = tmp_path / "bin" / "gh"
+    gh.parent.mkdir()
+    gh.write_text(f'#!/usr/bin/env bash\necho "$@" >> "{kayit}"\nexit {cikis}\n', encoding="utf-8")
+    gh.chmod(0o755)
+    return {**os.environ, "PATH": f"{gh.parent}:{os.environ['PATH']}", "TELEGRAM_BOT_TOKEN": "", "TELEGRAM_CHAT_ID": ""}
+
+
+@pytest.mark.parametrize("hedef, dosya", [("vardiya", "canli_vardiya.yml"), ("saglik", "saglik.yml")])
+def test_g3_zincir_betigi_yalniz_main_de_tetikler(tmp_path, hedef, dosya):
+    env = _sahte_gh(tmp_path, 0)
+    r = subprocess.run(["bash", str(SCRIPTS / "zincir_tetikle.sh"), hedef], env={**env, "GITHUB_REF": "refs/heads/main"}, capture_output=True, text=True)
+    assert r.returncode == 0 and (tmp_path / "gh_cagri.txt").read_text(encoding="utf-8").strip() == f"workflow run {dosya} --ref main"
+    (tmp_path / "gh_cagri.txt").unlink()
+    r = subprocess.run(["bash", str(SCRIPTS / "zincir_tetikle.sh"), hedef], env={**env, "GITHUB_REF": "refs/heads/claude/deneme"}, capture_output=True, text=True)
+    assert r.returncode == 0 and not (tmp_path / "gh_cagri.txt").exists()                  # dal denemeleri zincirlemez
+
+
+def test_g3_zincir_hatasi_sessiz_yutulmaz_uyari_verir_ama_isi_kirmaz(tmp_path):
+    env = {**_sahte_gh(tmp_path, 1), "GITHUB_REF": "refs/heads/main"}
+    r = subprocess.run(["bash", str(SCRIPTS / "zincir_tetikle.sh"), "vardiya"], env=env, capture_output=True, text=True)
+    assert r.returncode == 0 and "::warning::canli_vardiya.yml tetiklenemedi" in r.stdout          # yedek cron + alarm sürer; hata görünür
+
+
+def test_g3_canli_vardiya_zincir_izinleri_ve_kosullari():
+    wf = yukle("canli_vardiya.yml")
+    metin = (WF / "canli_vardiya.yml").read_text(encoding="utf-8")
+    assert wf["permissions"] == {"contents": "write"} and "permissions" not in wf["jobs"]["kontrol"]                          # actions: write yalnız vardiya işinde
+    assert wf["jobs"]["vardiya"]["permissions"] == {"contents": "write", "actions": "write"}
+    assert metin.count("actions: write") == 1
+    zincir = adim(wf, "vardiya", "Sonraki vardiyayı tetikle")
+    assert zincir["if"] == "${{ github.ref == 'refs/heads/main' }}" and "always()" not in zincir["if"] and "failure()" not in zincir["if"]      # yalnız main + yalnız motor normal bitince
+    assert zincir["run"] == "bash .github/scripts/zincir_tetikle.sh vardiya"
+    ad = adimlar(wf, "vardiya")
+    assert ad.index("Durumu veri dalına yaz") < ad.index("Sonraki vardiyayı tetikle (zincir, G3)")                             # durum/kilit önce yayımlanır
+    motor = adim(wf, "vardiya", "Canlı motor")
+    assert "zincir_tetikle.sh saglik" in motor["run"] and "n % 4" in motor["run"] and motor["run"].index("unset GH_TOKEN") < motor["run"].index("python -u -m copytrade.canli.motor")
+    assert motor["env"]["GH_TOKEN"] == "${{ github.ref == 'refs/heads/main' && github.token || '' }}"
+    assert "workflow_dispatch" in wf["on"] and "workflow_dispatch" in yukle("saglik.yml")["on"]
+    sc = (SCRIPTS / "zincir_tetikle.sh").read_text(encoding="utf-8")
+    assert "refs/heads/main" in sc and "echo \"$GH_TOKEN\"" not in sc and "echo \"$TELEGRAM" not in sc and "|| true" not in sc
+    assert "workflow_dispatch" in (SCRIPTS / "zamanlama_kontrol.sh").read_text(encoding="utf-8")
