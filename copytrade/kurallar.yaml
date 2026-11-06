@@ -152,6 +152,7 @@ canli_mutabakat_oran: 0.01              # oran (fark_usd > kasa x bu => alarm + 
 canli_hesap_okuma_sn: 600               # sn (trader hesap değeri / pozisyon senkron okuma sıklığı)
 canli_ozet_saat_utc: 6                  # UTC saati (09:00 TR günlük özet)
 canli_telegram_emir_ozet_sn: 900     # sn (Telegram, SANAL kip: emirler bu aralıkta TEK özet mesajında toplanır; gerçek kipte her emir anında gider)
+canli_telegram_sanal_bos_mesaj: true    # SANAL kip: pencerede emir yoksa da tek kısa "emir yok · sistem çalışıyor" + kasa satırı (kullanıcı kararı 06.11); false = emir yoksa sessiz
 canli_telegram_sanal_ozet_dk: 60      # dakika (SANAL kip: emir bildirimleri bu pencerede TEK mesajda toplanır; emir yoksa mesaj yok; 0 = eski davranış = yukarıdaki 15 dk'lık özet. Gerçek kip ve alarmlar HER ZAMAN anında)
 canli_telegram_sessiz_bas_utc: 21    # UTC saati (00:00 TSİ; bu saatten sonra alarm dışı mesajlar sessiz gelir)
 canli_telegram_sessiz_bit_utc: 5     # UTC saati (08:00 TSİ)

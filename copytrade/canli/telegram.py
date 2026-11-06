@@ -282,6 +282,20 @@ def msg_sanal_saatlik(bas_ms: int, bit_ms: int, sure_dk: float, emirler: list[di
     return "\n".join(satirlar)
 
 
+def msg_sanal_saatlik_bos(bas_ms: int, bit_ms: int, sure_dk: float, atlanan: dict[str, int], kasa_bilgi: tuple[float, float, float] | None = None) -> str:
+    """SANAL kip: pencerede emir YOK ama sistem canlı (`canli_telegram_sanal_bos_mesaj`). Tek kısa satır grubu; emir sayısı 0."""
+    sure = f"{int(sure_dk // 60)} saat" if sure_dk >= 60 and sure_dk % 60 == 0 else f"{sure_dk:.0f} dk"
+    satirlar = [f"🧾 Son {sure} ({_tsi_saat(bas_ms)}–{_tsi_saat(bit_ms)} TSİ): emir yok · sistem çalışıyor"]
+    if atlanan:
+        satirlar.append(f"⏭️ Atlanan sinyal: {sum(atlanan.values())}")
+    if kasa_bilgi is not None and kasa_bilgi[2] > 0:
+        oz, gun_basi, kasa = kasa_bilgi
+        gun, top = oz - gun_basi, oz - kasa
+        isaret = lambda x: "🟢" if x >= 0 else "🔴"        # noqa: E731
+        satirlar.append(f"💰 Kasa: {tr_sayi(oz)} $ · bugün {isaret(gun)} {tr_isaretli(gun)} $ ({_yuzde1(gun / kasa)}) · başlangıçtan {isaret(top)} {tr_isaretli(top)} $ ({_yuzde1(top / kasa)})")
+    return "\n".join(satirlar)
+
+
 def alarm(baslik: str, govde: str, ikon: str = "🚨") -> str:
     """Sorun mesajı: ikon + başlık, ayraç, sade açıklama. Her zaman sesli (`ONEMLI_ONEKLER`)."""
     return f"{ikon} {baslik}\n{AYRAC}\n{govde}"
