@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-06 10:40 UTC
+# Canlı rapor — 2026-11-06 10:56 UTC
 
 **Kip** sanal · vardiya `42196589872` · saha 8/11 (inen 3)
 
@@ -6,19 +6,19 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 960,78 $ | +%0,08 | — (geçmiş < 7 gün) | −%3,92 | −%4,02 |
+| 1.000,00 $ | 960,22 $ | +%0,02 | — (geçmiş < 7 gün) | −%3,98 | −%4,08 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x323f5a… | xyz:GOLD | L | 262,23 $ | −3,81 $ |
-| 0xfbd234… | HYPE | L | 190,45 $ | +0,47 $ |
-| 0x4b9b60… | kPEPE | L | 155,68 $ | +2,55 $ |
-| 0x873015… | BNB | S | 65,23 $ | +1,72 $ |
-| 0x6015e6… | SOL | L | 48,93 $ | −0,06 $ |
-| 0x6015e6… | ETH | L | 36,69 $ | −0,19 $ |
-| 0x873015… | PUMP | S | 21,37 $ | +1,02 $ |
+| 0x323f5a… | xyz:GOLD | L | 261,96 $ | −4,08 $ |
+| 0xfbd234… | HYPE | L | 190,23 $ | +0,25 $ |
+| 0x4b9b60… | kPEPE | L | 155,61 $ | +2,49 $ |
+| 0x873015… | BNB | S | 65,13 $ | +1,82 $ |
+| 0x6015e6… | SOL | L | 48,86 $ | −0,13 $ |
+| 0x6015e6… | ETH | L | 36,64 $ | −0,25 $ |
+| 0x873015… | PUMP | S | 21,34 $ | +1,04 $ |
 
 ## Son 24 saat
 
@@ -39,7 +39,7 @@
 
 ## Vardiya sağlığı
 
-- süre 60 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk 157.4 dk · REST 429 0
+- süre 76 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk 157.4 dk · REST 429 0
 
 ## Seçim isabeti (son 7)
 
