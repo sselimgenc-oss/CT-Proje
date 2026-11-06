@@ -55,14 +55,14 @@ def test_hip3_bayrak_acikken_acilir(tmp_path):
 
 def test_hip3_acik_pozisyonun_azaltma_ve_kapanisi_engellenmez(tmp_path):
     m, saat = _motor(tmp_path, canli_hip3_kopya=True)
-    m.olay_isle(olay("a:1", adr(1), "xyz:GOLD", "B", 300, 100.0, 0.0, saat))
+    m.olay_isle(olay("a:1", adr(1), "xyz:GOLD", "B", 600, 100.0, 0.0, saat))                 # K-38: hedef tabanlı azaltma; 11 $ altına inmesin diye 600
     m.rules["canli_hip3_kopya"] = False                                                     # bayrak kapandı; açık sanal pozisyon duruyor
     ilk = m.hesap.sz(adr(1), "xyz:GOLD")
-    s = m.olay_isle(olay("a:2", adr(1), "xyz:GOLD", "A", 200, 100.0, 300.0, saat))          # azaltma (2/3 ≈ 18 $ ≥ 11 $)
+    s = m.olay_isle(olay("a:2", adr(1), "xyz:GOLD", "A", 200, 100.0, 600.0, saat))          # azaltma (hedef 400/600 → fark ≈ 18 $ ≥ 11 $)
     assert s[0].eylem == "azalt" and s[0].karar == "emir" and 0 < m.hesap.sz(adr(1), "xyz:GOLD") < ilk
-    s = m.olay_isle(olay("a:3", adr(1), "xyz:GOLD", "B", 50, 100.0, 100.0, saat))           # artırma: atlanır
+    s = m.olay_isle(olay("a:3", adr(1), "xyz:GOLD", "B", 50, 100.0, 400.0, saat))           # artırma: atlanır
     assert s[0].neden == "hip3_atlandi"
-    s = m.olay_isle(olay("a:4", adr(1), "xyz:GOLD", "A", 150, 100.0, 150.0, saat))          # tam kapanış
+    s = m.olay_isle(olay("a:4", adr(1), "xyz:GOLD", "A", 450, 100.0, 450.0, saat))          # tam kapanış
     assert s[0].eylem == "kapat" and m.hesap.sz(adr(1), "xyz:GOLD") == 0.0
 
 

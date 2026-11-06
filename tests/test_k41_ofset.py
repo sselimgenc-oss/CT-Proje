@@ -69,12 +69,12 @@ def test_ters_netlesme_sonrasi_atlanan_traderin_kapanisi_net_pozisyonu_buyutmez(
 def test_karsi_yonde_pozisyon_tutan_traderin_azalt_ve_kapat_islemi_engellenmez(tmp_path):
     """T1 BTC long (kopya var). T2 short açamadı (ters_netlesme). Ayrıca T2 başka coinde (ETH) short tutuyken T1'in ETH long AÇILIŞI atlanır; ama T2'nin kendi ETH azaltma/kapatması çalışır."""
     m, hl, saat = _iki_trader(tmp_path)
-    m.olay_isle(olay("b:1", adr(2), "ETH", "A", 15, 2000.0, 0.0, saat))                    # T2 ETH short açtı
+    m.olay_isle(olay("b:1", adr(2), "ETH", "A", 30, 2000.0, 0.0, saat))                    # T2 ETH short açtı (K-38: azaltma hedef tabanlı; 11 $ altına inmesin diye 30)
     assert m.hesap.sz(adr(2), "ETH") < 0
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))                    # T1 long BTC
-    s = m.olay_isle(olay("b:2", adr(2), "ETH", "B", 10, 2000.0, -15.0, saat))              # T2 azaltır (2/3 → ~18 $)
+    s = m.olay_isle(olay("b:2", adr(2), "ETH", "B", 10, 2000.0, -30.0, saat))              # T2 azaltır (hedef 20/30 → fark ~18 $ ≥ 11 $)
     assert s[0].eylem == "azalt" and s[0].karar == "emir"
-    s = m.olay_isle(olay("b:3", adr(2), "ETH", "B", 5, 2000.0, -5.0, saat))                 # T2 kapatır
+    s = m.olay_isle(olay("b:3", adr(2), "ETH", "B", 20, 2000.0, -20.0, saat))                # T2 kapatır
     assert s[0].eylem == "kapat" and m.hesap.sz(adr(2), "ETH") == 0.0
     assert not [x for x in kayitlar(tmp_path, "emir_yok") if x["neden"] == "ters_netlesme"]
 

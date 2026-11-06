@@ -42,7 +42,8 @@ def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trad
       kalan < `radar_min_emir_usd` ise 0). Hedef < minimum ise: tavandan kalan ≥ minimum → minimum'a yuvarlanır (`min_emir_yuvarlandi`), değilse 0 (`min_emir_atlandi` / kalan yetmiyorsa `slot_tavani`).
     - `artir` (K‑36, hedef tabanlı): hedef = slot × trader nosyonel(sonra) / trader hesap, coin tavanı 3 × slot; emir = max(0, hedef − mevcut); sonra K‑35 toplam tavanı
       (`slot_tavani`); emir < minimum → 0 (`min_emir_atlandi`); hesap/fiyat ≤ 0 → 0 (`hesap_yok`).
-    - `azalt`: bizim pozisyon × trader'ın azaltma oranı; < minimum ise kalan < minimum → tamamı kapat (`kucuk_kalan_kapat`), değilse 0 (`min_emir_atlandi`).
+    - `azalt` (K‑38, hedef tabanlı): hedef = slot × trader nosyonel(sonra) / trader hesap (coin tavanı 3 × slot); fark = biz − hedef. hedef < minimum ve biz ≥ minimum → tamamı kapat (`kucuk_kalan_kapat`);
+      fark ≥ minimum → fark kadar azalt; aksi halde 0 (`min_emir_atlandi`; atlanan azaltma KAYBOLMAZ, hedef tabanlı olduğundan bir sonraki dolumda yakalanır). Trader hesabı bilinmiyorsa eski oransal kural (yedek).
     - `kapat`: bizim pozisyonun tamamı (trader tam kapattı)."""
     rules = rules or load_rules()
     minimum, tavan = float(rules["radar_min_emir_usd"]), float(rules["radar_slot_tavan_carpan"]) * float(slot)
@@ -81,10 +82,20 @@ def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trad
             return emir, neden
         return (0.0, "slot_tavani") if neden == "slot_tavani" else (0.0, "min_emir_atlandi")
     if eylem == "azalt":
-        if once <= 0:
-            return 0.0, "min_emir_atlandi"
-        emir = biz * (once - sonra) / once
-        if emir >= minimum - EPS:
-            return emir, "tamam"
-        return (biz, "kucuk_kalan_kapat") if biz - emir < minimum - EPS else (0.0, "min_emir_atlandi")
+        # K‑38 (K‑36'nın simetriği): hedef tabanlı. hedef = slot × trader nosyonel(sonra) / trader hesap (coin tavanı 3 × slot); fark = biz − hedef.
+        # hedef < minimum ve biz ≥ minimum → tamamı kapat (kucuk_kalan_kapat); fark ≥ minimum → fark kadar azalt; aksi halde atla (birikir, bir sonraki dolumda yakalanır).
+        if trader_hesap_usd <= 0 or fiyat <= 0:                          # hesap bilinmiyor: eski oransal kural (azaltma ATLANMAZ; pozisyonu büyük bırakmak riskli)
+            if once <= 0:
+                return 0.0, "min_emir_atlandi"
+            emir = biz * (once - sonra) / once
+            if emir >= minimum - EPS:
+                return emir, "azalt_oransal_yedek"                       # lider onayı (05.11): yedek yol SAYILIR (neden_say / kayıt `boyut_neden`)
+            return (biz, "azalt_oransal_yedek") if biz - emir < minimum - EPS else (0.0, "min_emir_atlandi")
+        hedef = min(float(slot) * sonra * float(fiyat) / float(trader_hesap_usd), tavan)
+        if hedef < minimum - EPS and biz >= minimum - EPS:
+            return biz, "kucuk_kalan_kapat"
+        fark = biz - hedef
+        if fark >= minimum - EPS:
+            return fark, "tamam"
+        return 0.0, "min_emir_atlandi"
     raise ValueError(f"bilinmeyen eylem: {eylem}")
