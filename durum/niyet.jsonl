@@ -676,3 +676,11 @@
 {"t":"sonuc","cloid":"0x94708dacdecd4bd48280f9ce8c188223","durum":"kismi","ms":1794093325977,"sz":125.25620587565476,"px":0.088224,"ucret":0.0049727715782281945}
 {"t":"niyet","kimlik":"0xd5ac4fa2cd568dd7573e081d405da541ff82cbec:126027081840629","eylem":"ac","adres":"0xd5ac4fa2cd568dd7573e081d405da541ff82cbec","coin":"CASHCAT","yon":"B","usd":11.0,"reduce_only":false,"cloid":"0x5a0776954f25f27d51ec3b7c1e0354d0","ms":1794094605254}
 {"t":"sonuc","cloid":"0x5a0776954f25f27d51ec3b7c1e0354d0","durum":"dolu","ms":1794094605394,"sz":126.07305360397017,"px":0.087251,"ucret":0.0049499999999999995}
+{"t":"niyet","kimlik":"0x92d8c46701a992e007849ab09d5cc578d5330cdf:333311625982291","eylem":"artir","adres":"0x92d8c46701a992e007849ab09d5cc578d5330cdf","coin":"ZEC","yon":"A","usd":11.411402,"reduce_only":false,"cloid":"0x6998502a809838ee4e6ee57e99099c3e","ms":1794094994547}
+{"t":"sonuc","cloid":"0x6998502a809838ee4e6ee57e99099c3e","durum":"dolu","ms":1794094994686,"sz":0.009044465113135445,"px":1261.7,"ucret":0.005135130734959346}
+{"t":"niyet","kimlik":"0x92d8c46701a992e007849ab09d5cc578d5330cdf:297994533942008","eylem":"azalt","adres":"0x92d8c46701a992e007849ab09d5cc578d5330cdf","coin":"ZEC","yon":"B","usd":11.154657,"reduce_only":true,"cloid":"0x9b0473852828a25321b7430be7ec0fe2","ms":1794095098728}
+{"t":"sonuc","cloid":"0x9b0473852828a25321b7430be7ec0fe2","durum":"dolu","ms":1794095098867,"sz":0.008856416748394776,"px":1259.5,"ucret":0.005019595602571448}
+{"t":"niyet","kimlik":"0x92d8c46701a992e007849ab09d5cc578d5330cdf:679626337004153","eylem":"azalt","adres":"0x92d8c46701a992e007849ab09d5cc578d5330cdf","coin":"ZEC","yon":"B","usd":11.401,"reduce_only":true,"cloid":"0x72d42c4fd72dbb3b1f634bdeda548a96","ms":1794095098922}
+{"t":"sonuc","cloid":"0x72d42c4fd72dbb3b1f634bdeda548a96","durum":"dolu","ms":1794095099177,"sz":0.009052005101427306,"px":1259.5,"ucret":0.0051304501913614605}
+{"t":"niyet","kimlik":"0x92d8c46701a992e007849ab09d5cc578d5330cdf:497992045581431","eylem":"azalt","adres":"0x92d8c46701a992e007849ab09d5cc578d5330cdf","coin":"ZEC","yon":"B","usd":15.595993,"reduce_only":true,"cloid":"0xa211a723eda8b0ee20ee7e1e2f1b6ad7","ms":1794095099183}
+{"t":"sonuc","cloid":"0xa211a723eda8b0ee20ee7e1e2f1b6ad7","durum":"kismi","ms":1794095099321,"sz":0.012381211624151033,"px":1259.5,"ucret":0.007017361218278202}
