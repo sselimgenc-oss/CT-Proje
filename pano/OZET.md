@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-07 15:07 UTC
+# Canlı rapor — 2026-11-07 15:22 UTC
 
 **Kip** sanal · vardiya `42367713644` · saha 8/11 (inen 7)
 
@@ -6,29 +6,30 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 959,14 $ | −%0,14 | — (geçmiş < 7 gün) | −%4,09 | −%4,19 |
+| 1.000,00 $ | 959,59 $ | −%0,10 | — (geçmiş < 7 gün) | −%4,04 | −%4,14 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x323f5a… | xyz:GOLD | L | 262,50 $ | −3,54 $ |
-| 0xda9f35… | BTC | L | 177,22 $ | +2,19 $ |
-| 0x57da5c… | ZEC | S | 162,81 $ | +3,16 $ |
-| 0x4b9b60… | kPEPE | L | 150,48 $ | −2,62 $ |
-| 0x873015… | BTC | L | 123,22 $ | +0,18 $ |
-| 0x3da36d… | ETH | L | 87,83 $ | −0,13 $ |
-| 0x6015e6… | SOL | L | 48,66 $ | −0,33 $ |
-| 0x6015e6… | ETH | L | 36,70 $ | −0,18 $ |
-| 0x873015… | LINK | L | 26,04 $ | −0,01 $ |
-| 0x873015… | SOL | L | 25,90 $ | −0,12 $ |
-| 0x873015… | PENDLE | L | 22,32 $ | −0,56 $ |
-| 0x873015… | AAVE | L | 10,98 $ | −0,02 $ |
+| 0x323f5a… | xyz:GOLD | L | 262,47 $ | −3,57 $ |
+| 0xda9f35… | BTC | L | 177,13 $ | +2,11 $ |
+| 0x57da5c… | ZEC | S | 162,60 $ | +3,37 $ |
+| 0x4b9b60… | kPEPE | L | 150,72 $ | −2,37 $ |
+| 0x873015… | BTC | L | 123,16 $ | +0,12 $ |
+| 0x3da36d… | ETH | L | 87,85 $ | −0,11 $ |
+| 0x6015e6… | SOL | L | 48,68 $ | −0,31 $ |
+| 0x6015e6… | ETH | L | 36,71 $ | −0,17 $ |
+| 0x873015… | LINK | L | 26,15 $ | +0,10 $ |
+| 0x873015… | SOL | L | 25,91 $ | −0,11 $ |
+| 0x92d8c4… | ZEC | S | 25,74 $ | −0,11 $ |
+| 0x873015… | PENDLE | L | 22,40 $ | −0,48 $ |
+| 0x873015… | AAVE | L | 11,01 $ | +0,01 $ |
 
 ## Son 24 saat
 
-- emir 95 · dolum 95 · kayma p50 +%0,00 / max +%0,07 (n=95)
-- funding −0,16 $ · ücret 0,86 $
+- emir 81 · dolum 81 · kayma p50 +%0,00 / max +%0,10 (n=81)
+- funding −0,16 $ · ücret 0,67 $
 
 ## Saha değişiklikleri (24 sa)
 
@@ -53,7 +54,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 227 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
+- süre 242 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
