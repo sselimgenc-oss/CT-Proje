@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-07 19:08 UTC
+# Canlı rapor — 2026-11-07 19:23 UTC
 
 **Kip** sanal · vardiya `42387175578` · saha 8/11 (inen 7)
 
@@ -6,30 +6,30 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 957,50 $ | −%0,30 | — (geçmiş < 7 gün) | −%4,25 | −%4,35 |
+| 1.000,00 $ | 957,10 $ | −%0,34 | — (geçmiş < 7 gün) | −%4,29 | −%4,39 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x323f5a… | xyz:GOLD | L | 262,51 $ | −3,53 $ |
-| 0xda9f35… | BTC | L | 176,96 $ | +1,93 $ |
-| 0x57da5c… | ZEC | S | 162,97 $ | +3,00 $ |
-| 0x4b9b60… | kPEPE | L | 149,95 $ | −3,14 $ |
-| 0x873015… | BTC | L | 123,04 $ | −0,00 $ |
-| 0x3da36d… | ETH | L | 87,50 $ | −0,46 $ |
-| 0x6015e6… | SOL | L | 48,64 $ | −0,35 $ |
-| 0x92d8c4… | ZEC | S | 36,96 $ | −0,18 $ |
-| 0x6015e6… | ETH | L | 36,56 $ | −0,32 $ |
-| 0x873015… | LINK | L | 26,04 $ | −0,01 $ |
+| 0x323f5a… | xyz:GOLD | L | 262,47 $ | −3,56 $ |
+| 0xda9f35… | BTC | L | 176,95 $ | +1,93 $ |
+| 0x57da5c… | ZEC | S | 163,05 $ | +2,93 $ |
+| 0x4b9b60… | kPEPE | L | 149,86 $ | −3,23 $ |
+| 0x873015… | BTC | L | 123,04 $ | −0,01 $ |
+| 0x3da36d… | ETH | L | 87,47 $ | −0,49 $ |
+| 0x92d8c4… | ZEC | S | 63,74 $ | −0,20 $ |
+| 0x6015e6… | SOL | L | 48,63 $ | −0,37 $ |
+| 0x6015e6… | ETH | L | 36,55 $ | −0,33 $ |
+| 0x873015… | LINK | L | 26,01 $ | −0,04 $ |
 | 0x873015… | SOL | L | 25,88 $ | −0,13 $ |
-| 0x873015… | PENDLE | L | 22,49 $ | −0,39 $ |
+| 0x873015… | PENDLE | L | 22,42 $ | −0,45 $ |
 | 0x873015… | AAVE | L | 10,98 $ | −0,02 $ |
 
 ## Son 24 saat
 
-- emir 43 · dolum 43 · kayma p50 +%0,00 / max +%0,10 (n=43)
-- funding −0,14 $ · ücret 0,29 $
+- emir 45 · dolum 45 · kayma p50 +%0,00 / max +%0,10 (n=45)
+- funding −0,14 $ · ücret 0,30 $
 
 ## Saha değişiklikleri (24 sa)
 
@@ -51,7 +51,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 212 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
+- süre 227 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
