@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-07 16:52 UTC
+# Canlı rapor — 2026-11-07 17:07 UTC
 
 **Kip** sanal · vardiya `42387175578` · saha 8/11 (inen 7)
 
@@ -6,30 +6,30 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 956,38 $ | −%0,42 | — (geçmiş < 7 gün) | −%4,36 | −%4,46 |
+| 1.000,00 $ | 957,10 $ | −%0,35 | — (geçmiş < 7 gün) | −%4,29 | −%4,39 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x323f5a… | xyz:GOLD | L | 262,46 $ | −3,58 $ |
-| 0xda9f35… | BTC | L | 176,78 $ | +1,75 $ |
-| 0x57da5c… | ZEC | S | 162,70 $ | +3,27 $ |
-| 0x4b9b60… | kPEPE | L | 149,28 $ | −3,82 $ |
-| 0x873015… | BTC | L | 122,91 $ | −0,13 $ |
-| 0x3da36d… | ETH | L | 87,46 $ | −0,50 $ |
-| 0x6015e6… | SOL | L | 48,56 $ | −0,43 $ |
+| 0x323f5a… | xyz:GOLD | L | 262,47 $ | −3,57 $ |
+| 0xda9f35… | BTC | L | 176,89 $ | +1,87 $ |
+| 0x57da5c… | ZEC | S | 162,71 $ | +3,26 $ |
+| 0x4b9b60… | kPEPE | L | 149,68 $ | −3,42 $ |
+| 0x873015… | BTC | L | 123,00 $ | −0,05 $ |
+| 0x3da36d… | ETH | L | 87,48 $ | −0,48 $ |
+| 0x6015e6… | SOL | L | 48,59 $ | −0,40 $ |
 | 0x92d8c4… | ZEC | S | 36,90 $ | −0,12 $ |
-| 0x6015e6… | ETH | L | 36,55 $ | −0,34 $ |
-| 0x873015… | LINK | L | 26,01 $ | −0,04 $ |
-| 0x873015… | SOL | L | 25,84 $ | −0,17 $ |
-| 0x873015… | PENDLE | L | 22,29 $ | −0,58 $ |
-| 0x873015… | AAVE | L | 10,96 $ | −0,04 $ |
+| 0x6015e6… | ETH | L | 36,56 $ | −0,33 $ |
+| 0x873015… | LINK | L | 26,04 $ | −0,01 $ |
+| 0x873015… | SOL | L | 25,86 $ | −0,15 $ |
+| 0x873015… | PENDLE | L | 22,31 $ | −0,56 $ |
+| 0x873015… | AAVE | L | 10,98 $ | −0,02 $ |
 
 ## Son 24 saat
 
 - emir 57 · dolum 57 · kayma p50 +%0,00 / max +%0,10 (n=57)
-- funding −0,16 $ · ücret 0,45 $
+- funding −0,15 $ · ücret 0,45 $
 
 ## Saha değişiklikleri (24 sa)
 
@@ -54,7 +54,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 75 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 91 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
