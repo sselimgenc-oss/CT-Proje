@@ -112,6 +112,14 @@ def test_g1_telegram_gonderimi_basarisizsa_cikis_2_ve_stderr(monkeypatch, capsys
     assert "gönderilemedi" in capsys.readouterr().err
 
 
+def test_kayipsiz_kopma_yalniz_bilgi_kayipli_kopma_uyari():
+    """07.11: vardiyada 8 kopma, 60 sn üstü gecikme 0, atlanan kapanış 0 → yeniden bağlandı, veri kaybı yok: BİLGİ (Telegram alarmı yok)."""
+    b = s.kontrol(SIMDI, ozet(dinleyici={"kopma": 8, "kapanis_atlanan": 0, "gecikme_60sn_ustu": 0}), kadro())
+    assert [(x.kod, x.seviye) for x in b] == [("kopma", "BILGI")] and "veri kaybı yok" in b[0].mesaj and s.durum(b) == "SAGLIKLI"
+    b2 = s.kontrol(SIMDI, ozet(dinleyici={"kopma": 8, "kapanis_atlanan": 0, "gecikme_60sn_ustu": 2}), kadro())
+    assert {x.kod: x.seviye for x in b2}["kopma"] == "UYARI" and s.durum(b2) == "UYARI"
+
+
 def test_telegram_alarm_kurali_kritik_her_kosuda_uyari_3_saatte_bir(monkeypatch, capsys):
     gonderilen: list[str] = []
 
@@ -129,10 +137,10 @@ def test_telegram_alarm_kurali_kritik_her_kosuda_uyari_3_saatte_bir(monkeypatch,
     assert s.main(["--telegram"]) == 2 and len(gonderilen) == 1 and "ALARM" in gonderilen[0]
     # UYARI: yalnız saat % 3 == 0'da
     import time as _t
-    for saat, beklenen in ((10, 0), (9, 1)):
+    for saat, dakika, beklenen in ((10, 0, 0), (9, 0, 1), (9, 14, 1), (9, 20, 0), (9, 50, 0)):      # 07.11 hatası: 09:05/20/35/50 UTC dört kez gönderiliyordu → yalnız saatin ilk 15 dk'sı
         gonderilen.clear()
         monkeypatch.setattr(s, "_git_oku", lambda dal, yol: ('{"dur": false}' if yol.endswith("ozet.json") else '{"kosu_ms": %d, "gecti_sayisi": 14, "saha_n": 11, "satirlar": []}' % int(_t.time() * 1000)))
-        monkeypatch.setattr(_t, "time", lambda saat=saat: float(saat * 3600 + 86400 * 20000))
+        monkeypatch.setattr(_t, "time", lambda saat=saat, dakika=dakika: float(saat * 3600 + dakika * 60 + 86400 * 20000))
         s.main(["--telegram"])
         assert len(gonderilen) == beklenen
 

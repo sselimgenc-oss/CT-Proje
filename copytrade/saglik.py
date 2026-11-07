@@ -194,8 +194,10 @@ def kontrol(simdi_ms: int, ozet: dict[str, Any] | None, kadro: dict[str, Any] | 
         b.extend(kalici_kontrol(simdi_ms, motor, risk, dur_dosyasi, olaylar, ozet.get("kayit_sayac"), vardiya_kosulari, veri_dali_commit_ms, ozet.get("yazildi_ms")))
         din = ozet.get("dinleyici") or {}
         kopma = int(din.get("kopma") or 0)
-        if kopma >= KOPMA_UYARI:
-            b.append(Bulgu("UYARI", "kopma", f"Hyperliquid bağlantısı {kopma} kez koptu."))
+        if kopma >= KOPMA_UYARI:                                                       # kayıpsız kopma (yeniden bağlandı, 60 sn üstü gecikme / atlanan kapanış yok) yalnız BİLGİ: alarm değil
+            kayipsiz = int(din.get("gecikme_60sn_ustu") or 0) == 0 and int(din.get("kapanis_atlanan") or 0) == 0
+            b.append(Bulgu("BILGI", "kopma", f"Hyperliquid bağlantısı {kopma} kez koptu, yeniden bağlandı; veri kaybı yok.") if kayipsiz
+                     else Bulgu("UYARI", "kopma", f"Hyperliquid bağlantısı {kopma} kez koptu."))
         if int(din.get("kapanis_atlanan") or 0) > 0:
             b.append(Bulgu("UYARI", "kapanis_atlanan", f"{din.get('kapanis_atlanan')} kapanış olayı atlandı (dinleyici)."))
         if int(din.get("gecikme_60sn_ustu") or 0) > 0:
@@ -336,7 +338,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--kadro-dali", default="radar")
     ap.add_argument("--gercek-dali", "--veri-dali-gercek", dest="gercek_dali", default="", help="gerçek kip nabız dalı (ör. canli-gercek); verilirse ikinci kontrol yapılır (yayım hedefi kullanıcı kararı; boşsa atlanır)")
     ap.add_argument("--canli-url", default="", help="Cloudflare pano adresi (boşsa canlı sayfa kontrol edilmez)")
-    ap.add_argument("--telegram", action="store_true", help="bulgu varsa Telegram alarmı gönder (KRITIK her koşuda, UYARI her 3 saatte bir)")
+    ap.add_argument("--telegram", action="store_true", help="bulgu varsa Telegram alarmı gönder (KRITIK her koşuda, UYARI 3 saatte bir: saat %% 3 == 0 ve dakika < 15)")
     args = ap.parse_args(argv)
     simdi = int(time.time() * 1000)
     if not _git_fetch([args.veri_dali, args.kadro_dali] + ([args.gercek_dali] if args.gercek_dali else [])):
@@ -360,8 +362,8 @@ def main(argv: list[str] | None = None) -> int:
     metin, st = ozet_metin(bulgular), durum(bulgular)
     print(f"DURUM: {st}\n{metin}")
     if args.telegram and st != "SAGLIKLI":
-        saat_utc = int(time.strftime("%H", time.gmtime(simdi / 1000)))
-        if st == "KRITIK" or saat_utc % 3 == 0:
+        saat_utc, dakika = int(time.strftime("%H", time.gmtime(simdi / 1000))), int(time.strftime("%M", time.gmtime(simdi / 1000)))
+        if st == "KRITIK" or (saat_utc % 3 == 0 and dakika < 15):                          # UYARI 3 saatte BİR kez (vardiya döngüsü 15 dk'da bir koşar: yalnız saatin ilk 15 dk'sı)
             from copytrade.canli import telegram as tg
             t = tg.Telegram()
             if t.acik:
