@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-07 18:07 UTC
+# Canlı rapor — 2026-11-07 18:23 UTC
 
 **Kip** sanal · vardiya `42387175578` · saha 8/11 (inen 7)
 
@@ -6,36 +6,33 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 958,67 $ | −%0,19 | — (geçmiş < 7 gün) | −%4,13 | −%4,23 |
+| 1.000,00 $ | 958,01 $ | −%0,25 | — (geçmiş < 7 gün) | −%4,20 | −%4,30 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x323f5a… | xyz:GOLD | L | 262,47 $ | −3,56 $ |
-| 0xda9f35… | BTC | L | 177,05 $ | +2,03 $ |
-| 0x57da5c… | ZEC | S | 162,63 $ | +3,34 $ |
-| 0x4b9b60… | kPEPE | L | 150,32 $ | −2,77 $ |
-| 0x873015… | BTC | L | 123,10 $ | +0,06 $ |
-| 0x3da36d… | ETH | L | 87,57 $ | −0,39 $ |
-| 0x6015e6… | SOL | L | 48,70 $ | −0,29 $ |
-| 0x92d8c4… | ZEC | S | 36,89 $ | −0,11 $ |
-| 0x6015e6… | ETH | L | 36,59 $ | −0,29 $ |
-| 0x873015… | LINK | L | 26,14 $ | +0,09 $ |
-| 0x873015… | SOL | L | 25,92 $ | −0,09 $ |
-| 0x873015… | PENDLE | L | 22,44 $ | −0,44 $ |
-| 0x873015… | AAVE | L | 10,99 $ | −0,01 $ |
+| 0x323f5a… | xyz:GOLD | L | 262,45 $ | −3,58 $ |
+| 0xda9f35… | BTC | L | 177,14 $ | +2,12 $ |
+| 0x57da5c… | ZEC | S | 163,88 $ | +2,09 $ |
+| 0x4b9b60… | kPEPE | L | 150,66 $ | −2,43 $ |
+| 0x873015… | BTC | L | 123,17 $ | +0,13 $ |
+| 0x3da36d… | ETH | L | 87,66 $ | −0,30 $ |
+| 0x6015e6… | SOL | L | 48,78 $ | −0,21 $ |
+| 0x92d8c4… | ZEC | S | 37,17 $ | −0,39 $ |
+| 0x6015e6… | ETH | L | 36,63 $ | −0,25 $ |
+| 0x873015… | LINK | L | 26,21 $ | +0,16 $ |
+| 0x873015… | SOL | L | 25,96 $ | −0,05 $ |
+| 0x873015… | PENDLE | L | 22,54 $ | −0,33 $ |
+| 0x873015… | AAVE | L | 10,98 $ | −0,02 $ |
 
 ## Son 24 saat
 
-- emir 54 · dolum 54 · kayma p50 +%0,00 / max +%0,10 (n=54)
-- funding −0,14 $ · ücret 0,42 $
+- emir 43 · dolum 43 · kayma p50 +%0,00 / max +%0,10 (n=43)
+- funding −0,14 $ · ücret 0,29 $
 
 ## Saha değişiklikleri (24 sa)
 
-- 2026-11-06 18:13 giriş 0xa577a0… — bos_slot
-- 2026-11-06 18:13 giriş 0x3da36d… — bos_slot
-- 2026-11-06 18:13 giriş 0x79743d… — bos_slot
 - 2026-11-07 07:21 çıkış 0x20ad98… — kadro_disi
 - 2026-11-07 07:21 çıkış 0x323f5a… — kadro_disi
 - 2026-11-07 07:21 çıkış 0x6015e6… — kadro_disi
@@ -54,7 +51,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 151 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 166 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
