@@ -1,0 +1,3 @@
+{"zaman_ms":1794009606488,"olay":"emir_yok","adres":"0x8730154f2c794a59cd6adb0d8328a9770c13b616","coin":"SOL","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1794009606006,"gorme_ms":1794009606487,"yas_ms":482}
+{"zaman_ms":1794009625731,"olay":"funding","saat":498336,"saat_adet":1,"funding_usd":-0.016620945128684977,"toplam_funding_usd":-0.12766830380627994}
+{"zaman_ms":1794009626387,"olay":"emir_yok","adres":"0x8730154f2c794a59cd6adb0d8328a9770c13b616","coin":"AAVE","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1794009626056,"gorme_ms":1794009626386,"yas_ms":331}
