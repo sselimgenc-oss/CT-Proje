@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-07 14:52 UTC
+# Canlı rapor — 2026-11-07 15:07 UTC
 
 **Kip** sanal · vardiya `42367713644` · saha 8/11 (inen 7)
 
@@ -6,29 +6,29 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 959,52 $ | −%0,10 | — (geçmiş < 7 gün) | −%4,05 | −%4,15 |
+| 1.000,00 $ | 959,14 $ | −%0,14 | — (geçmiş < 7 gün) | −%4,09 | −%4,19 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x323f5a… | xyz:GOLD | L | 262,52 $ | −3,52 $ |
-| 0xda9f35… | BTC | L | 177,39 $ | +2,37 $ |
-| 0x57da5c… | ZEC | S | 164,72 $ | +1,25 $ |
-| 0x4b9b60… | kPEPE | L | 151,52 $ | −1,57 $ |
-| 0x873015… | BTC | L | 123,34 $ | +0,30 $ |
-| 0x3da36d… | ETH | L | 88,02 $ | +0,06 $ |
-| 0x6015e6… | SOL | L | 48,87 $ | −0,12 $ |
-| 0x6015e6… | ETH | L | 36,78 $ | −0,10 $ |
-| 0x873015… | LINK | L | 26,16 $ | +0,11 $ |
-| 0x873015… | SOL | L | 26,01 $ | −0,00 $ |
-| 0x873015… | PENDLE | L | 22,49 $ | −0,38 $ |
-| 0x873015… | AAVE | L | 11,02 $ | +0,02 $ |
+| 0x323f5a… | xyz:GOLD | L | 262,50 $ | −3,54 $ |
+| 0xda9f35… | BTC | L | 177,22 $ | +2,19 $ |
+| 0x57da5c… | ZEC | S | 162,81 $ | +3,16 $ |
+| 0x4b9b60… | kPEPE | L | 150,48 $ | −2,62 $ |
+| 0x873015… | BTC | L | 123,22 $ | +0,18 $ |
+| 0x3da36d… | ETH | L | 87,83 $ | −0,13 $ |
+| 0x6015e6… | SOL | L | 48,66 $ | −0,33 $ |
+| 0x6015e6… | ETH | L | 36,70 $ | −0,18 $ |
+| 0x873015… | LINK | L | 26,04 $ | −0,01 $ |
+| 0x873015… | SOL | L | 25,90 $ | −0,12 $ |
+| 0x873015… | PENDLE | L | 22,32 $ | −0,56 $ |
+| 0x873015… | AAVE | L | 10,98 $ | −0,02 $ |
 
 ## Son 24 saat
 
-- emir 105 · dolum 105 · kayma p50 +%0,00 / max +%0,07 (n=105)
-- funding −0,16 $ · ücret 1,02 $
+- emir 95 · dolum 95 · kayma p50 +%0,00 / max +%0,07 (n=95)
+- funding −0,16 $ · ücret 0,86 $
 
 ## Saha değişiklikleri (24 sa)
 
@@ -53,7 +53,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 212 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
+- süre 227 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
