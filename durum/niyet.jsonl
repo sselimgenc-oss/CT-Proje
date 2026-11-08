@@ -20,3 +20,5 @@
 {"t":"sonuc","cloid":"0xdf96ad199e0be53ec656133159ea1cdc","durum":"dolu","ms":1794175177052,"sz":0.0003177556401452686,"px":74011.0,"ucret":0.010582835707256162}
 {"t":"niyet","kimlik":"0x3da36da44a0e67e7f0273333ec870248aa38740f:694095040109688","eylem":"ac","adres":"0x3da36da44a0e67e7f0273333ec870248aa38740f","coin":"ETH","yon":"B","usd":42.295125,"reduce_only":false,"cloid":"0x52e53142dbd6ec4e88b8be070952625d","ms":1794175195435}
 {"t":"sonuc","cloid":"0x52e53142dbd6ec4e88b8be070952625d","durum":"dolu","ms":1794175195584,"sz":0.019918585895732095,"px":2123.4,"ucret":0.01903280638094889}
+{"t":"niyet","kimlik":"0x5d908c88be270889c0953e7dff1c8e1d699ceea3:973065106716985","eylem":"ac","adres":"0x5d908c88be270889c0953e7dff1c8e1d699ceea3","coin":"XPL","yon":"A","usd":11.0,"reduce_only":false,"cloid":"0xbb401984ad113aa1400fe93eca0df604","ms":1794176053814}
+{"t":"sonuc","cloid":"0xbb401984ad113aa1400fe93eca0df604","durum":"dolu","ms":1794176053988,"sz":213.80811693360286,"px":0.051448,"ucret":0.0049499999999999995}
