@@ -29,3 +29,6 @@ results/u4/islemler_*.csv
 
 # TV-2 veri önbelleği (Binance her zaman yeniden verir).
 data/tv2/
+
+# G-23: pano yayın aracı yalnız Actions `pano` işinde `npm ci` ile kurulur
+.github/pano/node_modules/
