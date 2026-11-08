@@ -1,0 +1,8 @@
+{
+  "name": "sg-pano-yayin",
+  "private": true,
+  "description": "G-23: Cloudflare pano yayin araci; yalniz canli_vardiya.yml `pano` isi (contents: read) kilit dosyasindan npm ci ile kurar",
+  "devDependencies": {
+    "wrangler": "4.158.0"
+  }
+}

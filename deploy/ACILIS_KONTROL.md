@@ -107,7 +107,12 @@ Kural: bir adımda beklenen sonucu görmezseniz **DURUN** ve ekrandaki çıktıy
     journalctl -u sg-canli --since '24 hours ago' | grep -c Traceback
     ```
     Birincisi `active`, ikincisi `0` olmalı. `ozet.json` 2 dakikadan taze olmalı (donma kontrolü).
-19. API cüzdanının bitişine 14 gün kala yenileyin: yeni anahtar → adım 9 (yalnız anahtar satırı) → adım 10 → `sudo systemctl restart sg-canli`.
+19. **İlk 50 gerçek emirden sonra** (S-12, kural 6) yeni açılışa devam etmeden önce karşılaştırma raporunu alın ve lidere gönderin:
+    ```
+    sudo -u sgcanli /opt/sg-arge/.venv/bin/python -m copytrade.canli.gercek_sanal_karsilastir --gercek-kayit /var/lib/sg-canli/kayit --n 50 --md /tmp/s12.md --json /tmp/s12.json
+    ```
+    `/tmp/s12.md` ve `/tmp/s12.json` dosyalarını lidere iletin (anahtar içermez). Lider "devam" demeden kasayı artırmayın; red ya da kısmi oranı sanaldan belirgin yüksekse lider kararını bekleyin.
+20. API cüzdanının bitişine 14 gün kala yenileyin: yeni anahtar → adım 9 (yalnız anahtar satırı) → adım 10 → `sudo systemctl restart sg-canli`.
 
 ## Acil durum
 - **Her şeyi kapat:** Telegram'da `/kapat` (yanına başka söz yazmadan). "Tüm pozisyonlar kapandı" mesajı 2 dakikada gelmezse HL web'den pozisyonları elle kapatın, ardından `sudo systemctl stop sg-canli`.

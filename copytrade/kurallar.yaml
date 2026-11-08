@@ -100,6 +100,8 @@ radar_akil_sagligi_getiri_max: 3.0      # oran (+%300), üstü veri hatası şü
 radar_dolum_tavan: 5000                 # dolum (7 günde bu kadar ya da fazlası = ≈ 2 dk'da bir dolum: kopyalanamaz; `dolum_fazla`, kopya oynatılmaz, dolum alanları null)
 radar_api_agirlik_dk: 1100              # ağırlık/dk (radar istemcisi hız sınırı; HL IP sınırı 1.200)
 radar_zaman_butcesi_dk: 120             # dakika (koşu süresi; aşılınca kalan adaylar `zaman_yok`)
+radar_payda_zaman: true                 # bool, B8 hata düzeltmesi (08.11 seçim denetimi): kopya oynatmasında trader hesap paydası emir anındaki değer (portfolio accountValueHistory); false = eski sabit koşu anı accountValue. Eşik/ağırlık DEĞİL
+radar_veri_hatasi_pay_max: 0.10         # oran, R-2: `veri_hatasi` satırı bu payı AŞAN koşu eksik sayılır (kadro yazılmaz, çıkış 2, son/ güncellenmez); tam %10 tamdır
 # ---- Canlı boyut (K-28, K-30; RADAR_V1.md §5/§5b): tek yer copytrade/boyut.py. Birim: $ (kasa = sanal/gerçek kopya kasası, kopya_$) ----
 canli_kasa_usd: 1000                    # $ (kullanıcı ayarı; üst sınır 1.000, AGENTS.md)
 canli_kasa_ust_usd: 1000                # $ (güvenlik üst sınırı; aşan kasa ValueError)

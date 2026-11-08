@@ -358,3 +358,28 @@ def test_s22_alarm_basligina_kip_etiketi(tmp_path):
     assert m.tg.kip == "sanal"
     m.tg.gonder(tg.alarm("DUR: komut", "x", "🛑"))
     assert tgp.gonderilen[-1].startswith("🛑 DUR: komut (sanal · deneme parası)\n")
+
+
+# ================================================================================================ S-12 (lider eki)
+def test_s12_gercek_emir_defteri_dolum_ve_kayitta(tmp_path):
+    """Gerçek kipte emir anı l2Book (ilk 10 seviye) Dolum.defter'e ve `emir` kaydına yazılır; sanal kipte kayda yazılmaz."""
+    d = yu.GercekYurutucu(SahteExchange(dolu("0.11", "100")), meta_post, RULES).emir("BTC", "B", 11.0)
+    assert d.defter is not None and len(d.defter["levels"]) == 2 and len(d.defter["levels"][0]) <= 10 and len(d.defter["levels"][1]) <= 10
+    defter = {"levels": [[{"px": "99.9", "sz": "1"}], [{"px": "100", "sz": "1"}]]}
+
+    class Gercek:
+        kip = "gercek"
+
+        def hazirla(self, coin):
+            return None
+
+        def emir(self, coin, yon, usd, reduce_only=False, acik_sz=None, bant=None, cloid=None):
+            return yu.Dolum(coin, yon, usd, usd_dolan=11.0, sz=0.11, px=100.0, referans_px=100.0, reduce_only=reduce_only, durum="dolu", defter=defter)
+    m = mt.Motor(RULES, Gercek(), SahteHL(), tg.Telegram("", "", ortam={}), tmp_path / "durum", tmp_path / "kayit", lambda: kadro([satir(1, 1)], T0), Saat())
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, Saat()))
+    assert kayitlar(tmp_path, "emir")[0]["defter"] == defter
+    m2, hl, saat, _ = kur(tmp_path / "s")
+    m2.baslat()
+    m2.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    assert "defter" not in kayitlar(tmp_path / "s", "emir")[0]

@@ -1,0 +1,6 @@
+{
+  "name": "sg-nabiz",
+  "private": true,
+  "type": "module",
+  "description": "G-10: dis olu adam alarmi (Cloudflare Worker). Bagimlilik YOK; wrangler .github/pano kilit dosyasindan kurulur (nabiz_yayim.yml)."
+}

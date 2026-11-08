@@ -28,6 +28,22 @@ if { [ "$olay" = schedule ] && { [ "$mod" = radar ] || { [ -n "${YEDEK_CRON:-}" 
         else
           taze=hayir
         fi
+        # A-2 (b) (denetim 08.11): kilitteki `vardiya` = sahibi koşunun run_id'si (motor `--vardiya $GITHUB_RUN_ID`). Son yayım düşüp kilit bırakılmadan kaldıysa ve o koşu
+        # BİTMİŞSE (gh api status=completed) kilit bayattır: vardiya başlar (zincir kopmaz). Okunamazsa kilit taze sayılır (güvenli yön: çift vardiya yok).
+        if [ "$taze" = evet ]; then
+          sahip="$(git show FETCH_HEAD:durum/kilit.json | python3 -c 'import json,sys; print(json.load(sys.stdin).get("vardiya") or "")')"
+          case "$sahip" in
+            ''|*[!0-9]*) ;;
+            *)
+              sahip_durum=""
+              if ! sahip_durum="$(gh api "repos/${GITHUB_REPOSITORY:-}/actions/runs/${sahip}" --jq .status 2>/dev/null)"; then sahip_durum=""; fi
+              if [ "$sahip_durum" = completed ]; then
+                taze=hayir
+                echo "::warning::kilit bırakılmamış ama sahibi koşu ($sahip) bitmiş: bayat kilit, vardiya başlar"
+              fi
+              ;;
+          esac
+        fi
         if [ "$taze" = evet ]; then atla=true; neden="$olay: kilit taze (başka vardiya aktif) — başlamadı (beklenen, alarm yok)"; else neden="$olay: kilit taze değil — vardiya başlar"; fi
         ;;
       *) echo "bilinmeyen mod: $mod" >&2; exit 1 ;;

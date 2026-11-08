@@ -9,7 +9,8 @@ Kararlar `Karar` olarak döner (giriş / düş / değiştir / inen_kapat) — uy
   **kadro dışı (K‑39):** kadroda yok / sıra > `canli_kadro_disi_sira` durumu İKİ FARKLI UTC GÜNÜNÜN kadrosunda üst üste görülürse düşer (`kadro_disi`); düşme SONUÇ DIŞIDIR, bekleme yok. **Gün başına yalnız İLK kadro uygulanır (K‑39):** aynı `kosu_ms` UTC gününde gelen ikinci kadro
   saha kararlarını tetiklemez (ilk kadro `gun_kadro`da saklanır; yeniden başlatmada da ilki kullanılır). SONUÇLA düşen (slot, sıra, kadro dışı, kaldıraç/R1) `canli_bekleme_gun` gün sahaya dönemez; sonuç dışı düşenin bekleme cezası yok.
 - Korelasyon: sahada birbirine ≥ `canli_kor_esik` benzeyen (bağlı bileşen) en çok `canli_kor_max` kişi; ihlal eden aday atlanır (`kor_kirpildi`).
-- Kadro bayat / yok (`kosu_ms` > `canli_kadro_eski_saat` saat): yeni giriş yok, düşme kuralları çalışır (günlük sıra kuralları kadro verisi gerektirdiğinden yeni kosu_ms olmadan işlemez).
+- Kadro bayat / yok (`kosu_ms` > `canli_kadro_eski_saat` saat): yeni giriş yok, düşme kuralları çalışır (günlük sıra kuralları kadro verisi gerektirdiğinden yeni kosu_ms olmadan işlemez;
+  R-6: kadro verisi gerektirmeyen `canli_islem_yok_saat` (72 sa) işlem yok düşmesi bayat/yok kadroda da HER çağrıda denetlenir).
 - Sahadan inen: yeni açılış durur, trader'ın kapanışları izlenir, `canli_inen_saat` sonra kalan pozisyon kapatılır (`inen_kapat`).
 """
 from __future__ import annotations
@@ -159,6 +160,8 @@ class Saha:
         taze, neden = kadro_taze_mi(kadro, simdi_ms, self.rules)
         kararlar: list[Karar] = []
         if not taze:
+            for adres in list(self.uyeler):                         # R-6 (06.11 denetimi): kadro bayatken de işlem yok (72 sa) düşmesi çalışır (kadro verisi gerektirmez; sonuç dışı)
+                self._islem_yok_dus(adres, simdi_ms, kararlar)
             return kararlar, neden
         kadro = self._gun_kadrosu(kadro)
         satirlar = {s["adres"]: s for s in kadro["satirlar"]}
@@ -203,9 +206,18 @@ class Saha:
                     continue
             else:
                 u["sira_ust"] = 0
-            temel = int(u["son_islem_ms"]) if u.get("son_islem_ms") is not None else int(u.get("giris_ms") or 0)   # B15: trader'ın SON dolumu (girişten önceki dahil; motor girişte REST'le okur); bilinmiyorsa giriş anı
-            if simdi_ms - temel >= float(self.rules["canli_islem_yok_saat"]) * SAAT:
-                self._dus(adres, "islem_yok", False, simdi_ms, kararlar)
+            self._islem_yok_dus(adres, simdi_ms, kararlar)
+
+    def _islem_yok_dus(self, adres: str, simdi_ms: int, kararlar: list[Karar]) -> bool:
+        """`canli_islem_yok_saat` saattir işlem yoksa sonuç dışı düşür (bekleme yok). Döner: düştü mü."""
+        u = self.uyeler.get(adres)
+        if u is None:
+            return False
+        temel = int(u["son_islem_ms"]) if u.get("son_islem_ms") is not None else int(u.get("giris_ms") or 0)   # B15: trader'ın SON dolumu (girişten önceki dahil; motor girişte REST'le okur); bilinmiyorsa giriş anı
+        if simdi_ms - temel >= float(self.rules["canli_islem_yok_saat"]) * SAAT:
+            self._dus(adres, "islem_yok", False, simdi_ms, kararlar)
+            return True
+        return False
 
     def _uygun_adaylar(self, kadro: dict, simdi_ms: int, hedef_sira: int) -> list[dict]:
         return [s for s in sorted(kadro["satirlar"], key=lambda x: int(x["sira"]))

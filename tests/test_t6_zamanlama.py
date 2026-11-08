@@ -178,3 +178,44 @@ def test_g3_canli_dispatch_veri_dali_yoksa_calisir(tmp_path):
     (c / "copytrade").mkdir()
     shutil.copy(ROOT / "copytrade/kurallar.yaml", c / "copytrade/kurallar.yaml")
     assert calistir(c, "canli", "canli-durum", olay="workflow_dispatch", zamanlama="")[0] == "atla=false"
+
+
+def _sahte_gh_ile(tmp_path, kilit, gh_govde):
+    c = kur(tmp_path, "canli-durum", {"durum/kilit.json": json.dumps(kilit)})
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    (bin_ / "gh").write_text(f'#!/usr/bin/env bash\necho "$@" >> "{tmp_path}/gh.txt"\n{gh_govde}\n', encoding="utf-8")
+    (bin_ / "gh").chmod(0o755)
+    cikti = c / "cikti.txt"
+    env = {**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}", "GITHUB_ACTIONS": "true", "GITHUB_EVENT_NAME": "workflow_dispatch", "ZAMANLAMA": "", "YEDEK_CRON": "37 */4 * * *",
+           "VERI_DALI": "canli-durum", "GITHUB_OUTPUT": str(cikti), "GITHUB_REPOSITORY": "o/r"}
+    r = subprocess.run(["bash", str(BETIK), "canli"], cwd=c, env=env, capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    gh = (tmp_path / "gh.txt").read_text().split() if (tmp_path / "gh.txt").exists() else []
+    return cikti.read_text(encoding="utf-8").strip(), r.stdout, gh
+
+
+@pytest.mark.parametrize("gh_govde, beklenen", [
+    ("echo completed", "atla=false"),       # A-2 (b): kilit bırakılmamış ama sahibi koşu BİTMİŞ (son yayım düştü) → bayat kilit, vardiya başlar (zincir kopmaz)
+    ("echo in_progress", "atla=true"),      # sahibi koşu sürüyor → gerçek taze kilit, atla (çift vardiya yok)
+    ("exit 1", "atla=true"),                # durum okunamadı → güvenli yön: taze say, atla
+])
+def test_a2_canli_dispatch_kilit_sahibi_kosu_bittiyse_bayat_sayilir(tmp_path, gh_govde, beklenen):
+    kilit = {"vardiya": "123456", "birakildi": False, "nabiz_ms": int(time.time() * 1000) - 2 * 60_000}
+    cikti, stdout, gh = _sahte_gh_ile(tmp_path, kilit, gh_govde)
+    assert cikti == beklenen and gh[:3] == ["api", "repos/o/r/actions/runs/123456", "--jq"]
+    assert ("bayat kilit" in stdout) == (beklenen == "atla=false")
+
+
+def test_a2_kilit_sahibi_sayisal_degilse_ya_da_kilit_bayatsa_gh_cagrilmaz(tmp_path):
+    """Kilitteki `vardiya` run_id değilse (eski/yerel) davranış değişmez: taze kilit atlar, gh çağrılmaz. Zaten bayat/bırakılmış kilitte de gh çağrılmaz."""
+    simdi = int(time.time() * 1000)
+    cikti, _, gh = _sahte_gh_ile(tmp_path / "a", {"vardiya": "A", "birakildi": False, "nabiz_ms": simdi - 2 * 60_000}, "echo completed")
+    assert cikti == "atla=true" and gh == []
+    cikti, _, gh = _sahte_gh_ile(tmp_path / "b", {"vardiya": "99", "birakildi": True, "nabiz_ms": simdi}, "echo in_progress")
+    assert cikti == "atla=false" and gh == []
+
+
+def test_a2_kontrol_isi_salt_okur_actions_okuma_ve_gh_token():
+    k = yukle("canli_vardiya.yml")["jobs"]["kontrol"]
+    assert k["permissions"] == {"contents": "read", "actions": "read"} and k["steps"][1]["env"]["GH_TOKEN"] == "${{ github.token }}"
