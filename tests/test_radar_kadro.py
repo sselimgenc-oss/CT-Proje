@@ -30,7 +30,7 @@ def test_kadro_altin_ornek_3_kisi_elle():
     assert kd["sema"] == "radar-kadro-v1" and kd["kasa_usd"] == 1000.0 and kd["slot_usd"] == pytest.approx(1000 / 11) and kd["saha_n"] == 11 and kd["gecti_sayisi"] == 3
     assert [s["adres"] for s in kd["satirlar"]] == ["0xA", "0xB", "0xC"] and [s["sira"] for s in kd["satirlar"]] == [1, 2, 3]
     assert [s["form"] for s in kd["satirlar"]] == pytest.approx([67.5, 57.5, 25.0]) and {s["katman"] for s in kd["satirlar"]} == {"ilk11"}
-    assert set(kd["satirlar"][0]) == {"adres", "sira", "katman", "form", "bilesenler", "kopya_getiri_7g", "max_kaldirac"}
+    assert set(kd["satirlar"][0]) == {"adres", "sira", "katman", "form", "bilesenler", "kopya_getiri_7g", "max_kaldirac", "form_h_siz", "sira_h_siz"}
     assert kd["korelasyon"]["adresler"] == ["0xA", "0xB", "0xC"]
 
 
@@ -76,3 +76,59 @@ def test_main_yazar_ve_eksik_kosuda_yazmaz(tmp_path):
     kotu.parent.mkdir()
     kotu.write_text(json.dumps(havuz([elenen("0xA", "zaman_yok")])), encoding="utf-8")
     assert k.main(["--havuz", str(kotu)]) == 2 and not (kotu.parent / "kadro.json").exists()
+
+
+# --- Bilgi alanları (H'siz form, önceki kadro karşılaştırması): seçimi/sırayı DEĞİŞTİRMEZ ---
+
+def test_form_h_siz_altin_3_kisi_elle():
+    """Aynı 3 kişi (A G100 K50; B G50 K100; C 0/0; İ1/İ2/Y/H hepsi 50). H'siz ağırlık toplamı 0,35+0,15+0,10+0,10+0,10 = 0,80:
+    A = (35 + 7,5 + 0,30×50) / 0,80 = 57,5 / 0,80 = 71,875; B = (17,5 + 15 + 15) / 0,80 = 59,375; C = 15 / 0,80 = 18,75. Sıra form ile aynı (1, 2, 3)."""
+    h = havuz([gecen("0xB", 0.02, 0.03), gecen("0xC", 0.01, 0.01), gecen("0xA", 0.03, 0.02), elenen("0xD")])
+    kd = k.kadro_olustur(h, RULES)
+    assert [s["form_h_siz"] for s in kd["satirlar"]] == pytest.approx([71.875, 59.375, 18.75])
+    assert [s["sira_h_siz"] for s in kd["satirlar"]] == [1, 2, 3] and kd["h_siz_girenler"] == []
+    assert kd["onceki_kosu_ms"] is None and kd["elenenler"] == [] and kd["eski_uye_neden"] == {}
+
+
+def test_h_sirayi_ceviriyor_bilgi_alani_secimi_degistirmez():
+    """2 kişi (yüzdelik 0/100): X G100 K0 İ1 0 H0; Y G0 K100 İ1 100 H100; İ2 ve Y eşit (50).
+    form X = 35 + 0,20×50 = 45; Y = 15 + 10 + 10 + 20 = 55 → karar sırası Y, X (DEĞİŞMEZ).
+    H'siz: X = 45 / 0,80 = 56,25; Y = (15 + 10 + 10) / 0,80 = 43,75 → sira_h_siz X 1, Y 2. Kadro tavanı 1 iken H'siz giren = X."""
+    h = havuz([gecen("0xX", 0.03, 0.01, i1=0.4, h=0.0), gecen("0xY", 0.02, 0.02, i1=0.6, h=0.5)])
+    kd = k.kadro_olustur(h, RULES)
+    assert [s["adres"] for s in kd["satirlar"]] == ["0xY", "0xX"] and [s["form"] for s in kd["satirlar"]] == pytest.approx([55.0, 45.0])
+    assert [s["form_h_siz"] for s in kd["satirlar"]] == pytest.approx([43.75, 56.25]) and [s["sira_h_siz"] for s in kd["satirlar"]] == [2, 1]
+    tek = k.kadro_olustur(h, {**RULES, "radar_kadro_toplam": 1})
+    assert [s["adres"] for s in tek["satirlar"]] == ["0xY"]
+    assert tek["h_siz_girenler"] == [{"adres": "0xX", "sira_h_siz": 1, "form_h_siz": pytest.approx(56.25)}]
+
+
+def onceki_kadro(adresler, kosu_ms=1_799_913_600_000):
+    return {"sema": "radar-kadro-v1", "kosu_ms": kosu_ms, "satirlar": [{"adres": a, "sira": i} for i, a in enumerate(adresler, 1)]}
+
+
+def test_onceki_kadro_eski_uye_nedenleri_elle():
+    """Önceki kadro (sıra): 0xA 1 (bugün de kadroda → listede yok), 0xR 2 (bugün R1 'devir_yuksek'), 0xZ 3 (havuzda yok → r0_disi), 0xS 4 (geçti ama soğuyor),
+    0xC 5 (puanlandı, kadro tavanı 2 → sira_disi). Bugün puanlı: A (G 0,03), B (0,02), C (0,01) → kadro A, B."""
+    h = havuz([gecen("0xA", 0.03, 0.03), gecen("0xB", 0.02, 0.02), gecen("0xC", 0.01, 0.01), gecen("0xS", 0.05, 0.05, s72=-0.05), elenen("0xR", "devir_yuksek")])
+    kd = k.kadro_olustur(h, {**RULES, "radar_kadro_toplam": 2}, onceki=onceki_kadro(["0xA", "0xR", "0xZ", "0xS", "0xC"]))
+    assert [s["adres"] for s in kd["satirlar"]] == ["0xA", "0xB"]
+    assert kd["elenenler"] == [{"adres": "0xR", "onceki_sira": 2, "neden": "devir_yuksek"}]
+    assert kd["eski_uye_neden"] == {"0xR": "r1:devir_yuksek", "0xZ": "r0_disi", "0xS": "soguyan", "0xC": "sira_disi"}
+    assert kd["onceki_kosu_ms"] == 1_799_913_600_000
+    ayni = k.kadro_olustur(h, {**RULES, "radar_kadro_toplam": 2})                     # önceki kadro seçimi etkilemez
+    assert [(s["adres"], s["sira"], s["form"]) for s in ayni["satirlar"]] == [(s["adres"], s["sira"], s["form"]) for s in kd["satirlar"]]
+    with pytest.raises(ValueError):
+        k.kadro_olustur(h, RULES, onceki={"sema": "yanlis", "satirlar": []})
+    bos = k.kadro_olustur(h, RULES, onceki=onceki_kadro([]))
+    assert bos["elenenler"] == [] and bos["eski_uye_neden"] == {}
+
+
+def test_main_onceki_kadro_argumani(tmp_path):
+    ok = tmp_path / "havuz.json"
+    ok.write_text(json.dumps(havuz([gecen("0xA", 0.03, 0.02), elenen("0xB", "kopya_zarar")])), encoding="utf-8")
+    onceki = tmp_path / "onceki.json"
+    onceki.write_text(json.dumps(onceki_kadro(["0xB", "0xA"])), encoding="utf-8")
+    assert k.main(["--havuz", str(ok), "--onceki-kadro", str(onceki)]) == 0
+    kd = json.loads((tmp_path / "kadro.json").read_text(encoding="utf-8"))
+    assert kd["elenenler"] == [{"adres": "0xB", "onceki_sira": 1, "neden": "kopya_zarar"}] and kd["eski_uye_neden"] == {"0xB": "r1:kopya_zarar"}

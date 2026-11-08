@@ -371,6 +371,17 @@ erken giriş = açılışı bilinen kârlı işlem, trend coin, coinin hareketi 
 Üst düzey: `sema` (`"radar-kadro-v1"`), `kosu_ms`, `kasa_usd`, `slot_usd` (= kasa / `saha_n`), `saha_n` (N = min(`radar_saha_max`, taban(kasa / `radar_canli_slot_min_usd`))), `gecti_sayisi`, `soguyan` ([{adres, neden, kopya_getiri_72s}]),
 `satirlar` (form azalan, en çok `radar_kadro_toplam`), `korelasyon` ({`adresler` (tüm kadro: İlk 11 + Yedek; K-45 eki 08.11, önce yalnız İlk 11), `gun_sayisi`, `matris` (Pearson, günlük `kopya_gunluk`; sabit seri `null`)}).
 `satirlar[]`: `adres`, `sira` (1…30), `katman` (`ilk11` ≤ `radar_kadro_ilk` < `yedek`), `form`, `bilesenler` {G,K,I1,I2,Y,H}, `kopya_getiri_7g` (oran, kopya_$), `max_kaldirac` (x).
+**Bilgi alanları (v1.30; YALNIZ BİLGİ — seçim, sıra, katman, eşik ve ağırlıklar `form`'a göredir ve değişmez; motor/pano bunlarla karar vermez):**
+| alan | birim | anlam |
+|---|---|---|
+| `satirlar[].form_h_siz` | 0–100 puan | aynı bileşen yüzdelikleriyle H çıkarılmış form: Σ_{b≠H} `radar_agirlik_b` × yüzdelik_b / Σ_{b≠H} `radar_agirlik_b` (0,35/0,15/0,10/0,10/0,10 → /0,80) |
+| `satirlar[].sira_h_siz` | sıra (1 = en iyi) | `form_h_siz` azalan sıra (eşitlikte adres), soğuyanlar hariç **tüm puanlanan havuzda** (kadroyla sınırlı değil) |
+| `h_siz_girenler` | — | [{adres, sira_h_siz, form_h_siz}]: `sira_h_siz` ≤ `radar_kadro_toplam` olup kadroda olmayanlar (H'siz seçimde girecekler; puanlı havuz ≤ 30 iken hep boş) |
+| `onceki_kosu_ms` | UTC ms | karşılaştırılan önceki kadronun `kosu_ms`'i (koşu başlangıcı); önceki kadro verilmediyse `null` |
+| `elenenler` | — | [{adres, onceki_sira, neden}]: önceki kadroda olup **bugünkü havuzda** R1'i geçemeyenler; `neden` = bugünkü havuz satırının `neden`'i; önceki sıra artan |
+| `eski_uye_neden` | {adres: kod} | önceki kadroda olup bugünkü kadroda olmayan her adres: `r1:<neden>` (havuzda, `gecti` false) · `r0_disi` (havuzda yok: 7 g getiride ilk `radar_aday_tavan` dışı) · `soguyan` · `sira_disi` (puanlandı, form sırası > `radar_kadro_toplam`) |
+Önceki kadro = `--onceki-kadro` (radar.yml: veri dalındaki `radar/son/kadro.json`, bugünkü yayından önce — son TAM koşunun kadrosu; bir gün eksikse daha eskidir, `onceki_kosu_ms`'e bakın). Verilmezse `elenenler` = [], `eski_uye_neden` = {}.
+Havuzda olmadığı için **yazılmayanlar:** G'nin işlem başı kopya getirileri (t istatistiği için) ve kopya işlem sayısı — `havuz.json` yalnız `kopya_alt20` (bootstrap alt yüzdelik) ve trader `islem_sayisi`'nı tutar; ikisi için `radar_tarama` değişikliği gerekir.
 **Saha kararları (slot −%10, bekleme, günde 2 değişiklik, benzer trader ≥ 0,7) kadroda DEĞİL:** T4 motoru okuyup §5/§6 kurallarını uygular.
 
 

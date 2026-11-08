@@ -150,6 +150,14 @@ def form_puanla(havuz_satirlari: list[dict], rules: dict | None = None) -> tuple
     return puanli, soguyanlar
 
 
+def form_h_siz(bilesenler: dict, rules: dict | None = None) -> float:
+    """BİLGİ AMAÇLI (karar kodu değil): aynı yüzdeliklerle H çıkarılmış form = Σ_{b≠H} ağırlık_b × yüzdelik_b / Σ_{b≠H} ağırlık_b (0,35/0,15/0,10/0,10/0,10 → /0,80; 0–100).
+    Altın: G 100, K 50, diğerleri 50 → (35 + 7,5 + 15) / 0,80 = 71,875."""
+    rules = rules or load_rules()
+    agirlik = {b: float(rules[AGIRLIK_ANAHTARI[b]]) for b in BILESENLER if b != "H"}
+    return sum(agirlik[b] * float(bilesenler[b]) for b in agirlik) / sum(agirlik.values())
+
+
 def korelasyon(satirlar: list[dict]) -> dict:
     """Günlük kopya getirisi korelasyon matrisi (Pearson) — `satirlar` = [{adres, kopya_gunluk}] (aynı gün sayısı). Sabit seri / <2 gün → None. Canlı motor §6 'benzer trader ≥ 0,7' kuralını uygular."""
     adresler = [s["adres"] for s in satirlar]
