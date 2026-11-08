@@ -494,3 +494,79 @@ def test_canli_yayimla_300_dallarini_kabul_eder_digerlerini_reddeder(tmp_path):
         r = subprocess.run(["bash", str(betik)], cwd=tmp_path, env={**os.environ, "GITHUB_ACTIONS": "true", "VERI_DALI": dal}, capture_output=True, text=True)
         assert r.returncode == beklenen, (dal, r.stdout, r.stderr)
     assert '[ "$veri_dali" = canli-durum ] &&' in betik.read_text(encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------------------------------- dönem sıfırlama (kullanıcı kararı 08.11: 09.11 00:01 TSİ sıfırdan)
+def _canli_checkout(tmp_path: Path, remote: Path, ad: str, donem: str) -> Path:
+    co = tmp_path / ad
+    (co / "copytrade" / "canli").mkdir(parents=True)
+    _git(co, "init", "-q")
+    _git(co, "config", "user.name", "Test")
+    _git(co, "config", "user.email", "test@example.com")
+    _git(co, "remote", "add", "origin", str(remote))
+    (co / "copytrade" / "canli" / "DONEM").write_text(donem + "\n")
+    _git(co, "add", ".")
+    _git(co, "commit", "-qm", "kaynak")
+    return co
+
+
+def _kos(co: Path, betik: str, **ek) -> subprocess.CompletedProcess:
+    env = {**os.environ, "GITHUB_ACTIONS": "true", "VERI_DALI": "canli-durum", "GITHUB_ENV": str(co / "genv"), **ek}
+    return subprocess.run(["bash", str(SCRIPTS / betik)], cwd=co, env=env, capture_output=True, text=True)
+
+
+def test_donem_yeni_donemde_eski_durum_yuklenmez_ve_dal_ucundan_silinir_ayni_donemde_devam(tmp_path):
+    """Eski dönem (donem.txt yok) → donem_geri.sh hiçbir şey yüklemez, durum/donem.txt yazar; ilk yayım eski durum/kayıt/pano'yu dal ucundan siler (geçmişte kalır).
+    Sonraki koşu aynı dönemde → durum ve kayıt geri yüklenir (normal devam)."""
+    remote = tmp_path / "remote.git"
+    remote.mkdir()
+    _git(remote, "init", "-q", "--bare")
+    eski = _canli_checkout(tmp_path, remote, "eski", "2026-01-01T00:00:00Z")          # eski dönemin verisini dala koy (donem.txt olmadan: eski kod)
+    _git(eski, "checkout", "-q", "--orphan", "canli-durum")
+    _git(eski, "rm", "-rqf", ".")
+    for yol, icerik in {"durum/hesap.json": '{"eski": 1}', "durum/saha.json": '{"uyeler": {"0xeski": {}}}', "kayit/2026-11-05.jsonl": "{}\n", "pano/gecmis.json": "[1]"}.items():
+        (eski / yol).parent.mkdir(parents=True, exist_ok=True)
+        (eski / yol).write_text(icerik)
+    _git(eski, "add", "-f", "durum", "kayit", "pano")
+    _git(eski, "commit", "-qm", "eski donem")
+    _git(eski, "push", "-q", "origin", "canli-durum")
+    yeni = _canli_checkout(tmp_path, remote, "yeni", "2026-01-02T00:00:00Z")           # geçmişte: bekleme yok
+    s = _kos(yeni, "donem_geri.sh")
+    assert s.returncode == 0, s.stderr
+    assert "YENİ DÖNEM" in s.stdout and sorted(p.name for p in (yeni / "durum").iterdir()) == ["donem.txt"] and not any((yeni / "kayit").iterdir()) and not (yeni / "pano").exists()
+    (yeni / "durum" / "hesap.json").write_text('{"yeni": 1}')
+    import datetime as dt
+    bugun = dt.datetime.now(dt.UTC).date().isoformat()                                                       # 14 günlük kayıt silmesine takılmasın
+    (yeni / "kayit" / f"{bugun}.jsonl").write_text("{}\n")
+    s = _kos(yeni, "canli_yayimla.sh")
+    assert s.returncode == 0, s.stderr
+    uc = _git(remote, "ls-tree", "-r", "--name-only", "canli-durum").splitlines()
+    assert sorted(uc) == ["durum/donem.txt", "durum/hesap.json", f"kayit/{bugun}.jsonl"]                    # eski saha, kayıt, pano dal ucundan silindi
+    assert _git(remote, "show", "canli-durum~1:durum/saha.json") == '{"uyeler": {"0xeski": {}}}'            # geçmişte arşivli
+    devam = _canli_checkout(tmp_path, remote, "devam", "2026-01-02T00:00:00Z")
+    s = _kos(devam, "donem_geri.sh")
+    assert s.returncode == 0 and "YENİ DÖNEM" not in s.stdout
+    assert (devam / "durum" / "hesap.json").read_text() == '{"yeni": 1}' and (devam / "kayit" / f"{bugun}.jsonl").exists()
+
+
+def test_donem_baslangicindan_once_bekler_ve_motor_suresini_kisaltir_cok_uzaksa_hata(tmp_path):
+    import datetime as dt
+    remote = tmp_path / "remote.git"
+    remote.mkdir()
+    _git(remote, "init", "-q", "--bare")
+    yakin = (dt.datetime.now(dt.UTC) + dt.timedelta(seconds=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    co = _canli_checkout(tmp_path, remote, "yakin", yakin)
+    s = _kos(co, "donem_geri.sh")
+    assert s.returncode == 0, s.stderr
+    assert "bekleniyor" in s.stdout and "GIRDI_SURE_DK=250" in (co / "genv").read_text()                       # 255 − 0 dk − 5 pay
+    uzak = (dt.datetime.now(dt.UTC) + dt.timedelta(hours=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    co2 = _canli_checkout(tmp_path, remote, "uzak", uzak)
+    s = _kos(co2, "donem_geri.sh")
+    assert s.returncode == 1 and "230 dk" in s.stderr
+
+
+def test_iki_canli_is_akisi_donem_betigini_kullanir():
+    for ad in ("canli_vardiya.yml", "canli_vardiya_300.yml"):
+        geri = [a for a in yukle(ad)["jobs"]["vardiya"]["steps"] if a.get("id") == "geri"][0]
+        assert geri["run"].strip() == "bash .github/scripts/donem_geri.sh", ad
+    assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\n?", (ROOT / "copytrade" / "canli" / "DONEM").read_text())

@@ -69,17 +69,8 @@ jobs:
           cache: pip
       - run: pip install websockets==15.0.1 PyYAML==6.0.3 requests==2.34.2
       - id: geri
-        name: Durumu veri dalından geri yükle
-        run: |
-          mkdir -p durum kayit
-          if git ls-remote --exit-code --heads origin "$VERI_DALI" >/dev/null; then
-            git fetch origin "$VERI_DALI"
-            git archive FETCH_HEAD durum kayit | tar -x
-            if git cat-file -e FETCH_HEAD:pano/gecmis.json 2>/dev/null; then mkdir -p pano; git show FETCH_HEAD:pano/gecmis.json > pano/gecmis.json; fi
-          else
-            status=$?
-            if [ "$status" -ne 2 ]; then exit "$status"; fi
-          fi
+        name: Durumu veri dalından geri yükle (dönem kuralı)
+        run: bash .github/scripts/donem_geri.sh
       - id: acilis
         name: Açılış kontrolü (anahtarsız, emir göndermez)
         run: python -u -m copytrade.canli.motor --kontrol --kip sanal --sanal-kasa-usd 300 --kadro-dali "$KADRO_DALI" --durum-dizin kontrol
