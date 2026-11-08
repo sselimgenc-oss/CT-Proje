@@ -150,6 +150,7 @@ class Olcum:
         self.toplam = {ad: TraderOlcum() for ad in self.adlar}
         self.saat = {ad: TraderOlcum() for ad in self.adlar}
         self.gorulen: dict[str, int] = {}            # kimlik -> dolum zamanı (REST karşılaştırması ve tekilleştirme)
+        self.snapshot_gorulen: set[str] = set()       # G-17b: YALNIZ snapshot (abonelik öncesi) olarak görülen kimlikler: dolgu bunları atlamaz (kopukken olan dolum emir üretebilsin)
         self.genel = {"kopma": 0, "yeniden_baglanma": 0, "yeniden_baslama": 0, "error": 0, "subscription_response": 0, "tekrar": 0,
                       "trades_mesaj": 0, "userfills_mesaj": 0, "ping": 0, "abonelik_oncesi_snapshot_gibi": 0, "gecikme_60sn_ustu": 0,
                       "rest_abonelik_oncesi_atlanan": 0}
@@ -174,6 +175,8 @@ class Olcum:
         if not o.snapshot and self.snapshot_mi(o):
             o = replace(o, snapshot=True)           # abonelikten önce gerçekleşmiş: sunucu abonelik anında geçmişi gönderir (trades kanalı dahil)
             self.genel["abonelik_oncesi_snapshot_gibi"] += 1
+        if o.snapshot:
+            self.snapshot_gorulen.add(o.kimlik)
         if not o.snapshot and o.alma_ms - o.zaman_ms > 60_000:
             self.genel["gecikme_60sn_ustu"] += 1
         for pencere in (self.toplam, self.saat):
@@ -219,9 +222,11 @@ class Olcum:
             zaman = int(f["time"])
             kimlik = f"{adres}:{f['tid']}"
             coin = str(f.get("coin", ""))
-            if not bas_ms <= zaman <= simdi_ms or kimlik in self.gorulen or coin.startswith("@") or "/" in coin:
+            canli_goruldu = kimlik in self.gorulen and kimlik not in self.snapshot_gorulen      # G-17b: yalnız CANLI görülen atlanır; snapshot'ta görülen (kopukken olmuş) dolum dolguyla emir üretir
+            if not bas_ms <= zaman <= simdi_ms or canli_goruldu or coin.startswith("@") or "/" in coin:
                 continue
             self.gorulen[kimlik] = zaman
+            self.snapshot_gorulen.discard(kimlik)
             self.dolgu_yeni.append((ad, f))
             kurtarilan += 1
             for pencere in (self.toplam, self.saat):
@@ -240,6 +245,7 @@ class Olcum:
 
     def temizle(self, simdi_ms: int, saklama_ms: int = 2 * SAAT_MS) -> None:
         self.gorulen = {k: z for k, z in self.gorulen.items() if z >= simdi_ms - saklama_ms}
+        self.snapshot_gorulen &= self.gorulen.keys()
 
     def saati_sifirla(self) -> None:
         self.saat = {ad: TraderOlcum() for ad in self.adlar}
@@ -550,8 +556,9 @@ class Dinleyici:
             genel["dolgu"] = genel.get("dolgu", 0) + self.olcum.dolgu(i.ad, i.adres, dolumlar, bas, bit)
             yeni, self.olcum.dolgu_yeni = sorted(self.olcum.dolgu_yeni, key=lambda x: int(x[1]["time"])), []
             for ad, f in yeni:       # H5: dolgu geç gelir -> girişler `gec_sinyal` ile reddedilir, çıkışlar serbest
-                self.risk_isle(Olay("", ad, "", int(f["time"]), bit, "dolgu", False, "", str(f.get("coin", "")), _sayi(f.get("px")), _sayi(f.get("sz")),
-                                    str(f.get("side", "")), _sayi(f.get("startPosition"))), True, bit)
+                adres = next((x.adres for x in self.liste if x.ad == ad), "")
+                self.risk_isle(Olay(f"{adres}:{f['tid']}" if adres else "", ad, adres, int(f["time"]), bit, "dolgu", False, "", str(f.get("coin", "")), _sayi(f.get("px")),
+                                    _sayi(f.get("sz")), str(f.get("side", "")), _sayi(f.get("startPosition"))), True, bit)       # kimlik: motor aynı dolumu snapshot'tan tanır (poz_tr bir kez)
 
     def _hakem_baslat(self) -> None:
         """REST hakem turunu ARKA PLANDA başlatır (WS akışı beklemez). Önceki tur sürüyorsa bu tur atlanır (`genel.rest_tur_atlanan`). Doldurulamayan dolgu varsa onu da yeniden dener."""
@@ -606,17 +613,21 @@ class Dinleyici:
         ozet_yaz(self.cikti / "ozet.json", self.ozet())
 
     async def _oturum(self, ws: Any) -> None:
-        son_ping = son_rest = son_ozet = self.mono()
+        son_ping = son_rest = son_ozet = son_alma = self.mono()
         while not self._dur.is_set():
             if self.ayar.sure_sn is not None and self.mono() - self._t0 >= self.ayar.sure_sn:
                 return
             try:
-                ham = await asyncio.wait_for(ws.recv(), timeout=min(self.ayar.ping_sn, 1.0))
+                ham = await asyncio.wait_for(ws.recv(), timeout=min(self.ayar.ping_sn, self.ayar.alma_zaman_asimi_sn, 1.0))
             except asyncio.TimeoutError:
                 ham = None
-            if ham is not None:
-                self.mesaj_isle(ham)
             simdi = self.mono()
+            if ham is not None:
+                son_alma = simdi
+                self.mesaj_isle(ham)
+            elif simdi - son_alma >= self.ayar.alma_zaman_asimi_sn:        # G-17a: yarı açık TCP (send hata vermez, recv hiç dönmez); normalde saniyede 11-60 mesaj gelir
+                self.olcum.genel["alma_zaman_asimi"] = self.olcum.genel.get("alma_zaman_asimi", 0) + 1
+                raise ConnectionError(f"{self.ayar.alma_zaman_asimi_sn:g} sn mesaj yok (sessiz kopma)")
             if simdi - son_ping >= self.ayar.ping_sn:
                 await ws.send(json.dumps({"method": "ping"}))
                 self.olcum.genel["ping"] += 1
@@ -692,7 +703,7 @@ async def ws_baglan(ws_url: str = DEFAULT_WS_URL) -> Any:
         from websockets.asyncio.client import connect
     except ImportError as hata:
         raise RuntimeError("websockets paketi kurulmalı: pip install -r requirements-dinleyici.txt") from hata
-    return await connect(ws_url, open_timeout=20, ping_interval=None, max_size=2 ** 24)       # ping uygulama düzeyinde (HL {"method":"ping"})
+    return await connect(ws_url, open_timeout=20, ping_interval=20, ping_timeout=20, max_size=2 ** 24)       # uygulama pingi (HL {"method":"ping"}) + G-17a: WS protokol pingi (yanıtsız bağlantı kapanır → kopma yolu)
 
 
 def clearinghouse_yuk(adres: str, dex: str = "") -> dict[str, Any]:

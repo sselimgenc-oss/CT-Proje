@@ -160,7 +160,8 @@ canli_olay_stale_sn: 120                # sn (trader dolumu bundan eskiyse "geç
 canli_mark_stale_sn: 300                # sn (mark fiyatı bundan eskiyse sanal tutarlılık alarmı)
 canli_kadro_repo: sselimgenc-oss/sg-arge    # kadro.json'un okunduğu halka açık repo (raw.githubusercontent.com/<repo>/<dal>/radar/son/kadro.json)
 canli_kacan_pencere_dk: 60              # dakika (açılışta/kopmada REST ile tamamlanan dolum penceresi; daha eskisi yalnız trader pozisyonunu günceller, emir üretmez)
-canli_islenen_sakla: 5000               # adet (işlenen dolum kimliklerinden saklanan en son sayı; yeniden başlatmada çift emir yok)
+canli_islenen_sakla: 5000               # adet (niyet.jsonl sıkıştırmasında saklanan son niyet sayısı)
+canli_islenen_adres_sakla: 2000         # adet, ADRES BAŞINA (işlenen dolum kimlikleri `{adres}:{tid}`; yeniden başlatmada çift emir yok; G-14: yoğun adres diğerlerinin kaydını düşürmez)
 canli_kilit_dk: 20                      # dakika (başka vardiyanın kilit nabzı bu süreden tazeyse motor başlamaz)
 canli_api_agirlik_dk: 800               # ağırlık/dk (motorun TÜM REST istekleri için ortak hız sınırı; HL IP sınırı 1.200, geri kalan WS/dinleyici payı)
 

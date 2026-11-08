@@ -44,6 +44,7 @@ from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter, le
 
 EPS = 1e-12
 DAKIKA = 60_000
+SNAP_SAKLA = 50_000          # adet (yalnız snapshot görülen dolum kimlikleri, bellekte; HL userFills snapshot'ı adres başına ≤ 2000 dolum × 10 adres + trades snapshot'ları)
 
 
 AGIRLIK = {"allMids": 2, "l2Book": 2, "clearinghouseState": 2, "perpDexs": 2, "orderStatus": 2, "meta": 20, "metaAndAssetCtxs": 20, "userFillsByTime": 20}          # HL info istek ağırlıkları (belge); bilinmeyen 20
@@ -331,12 +332,21 @@ class Motor:
         self.hesap.kasa_usd = self.kasa                          # kasa ayarı/etkin kasa değişmiş olabilir (gerçek kip: min(ayar, HL değeri)); pozisyon/K‑Z kaydı KORUNUR
         self.saha = Saha(rules, self.kasa, _oku(durum_dizin / "saha.json"))
         self.risk = Risk(rules, self.kasa, _oku(durum_dizin / "risk.json"))
-        self.islenen: list[str] = list(m.get("islenen", []))
-        self._islenen_set = set(self.islenen)
+        self._islenen: dict[str, None] = {}                     # işlenen (canlı) dolum kimlikleri, ekleme sırasıyla; G-14: sınır ADRES BAŞINA (`canli_islenen_adres_sakla`), tek yoğun adres diğerlerini düşürmez
+        self._islenen_adres: dict[str, deque[str]] = {}
+        for k in m.get("islenen", []):
+            self._islenen_ekle(str(k))
+        self._snap: dict[str, tuple[float, float]] = {}        # G-14/G-17b: yalnız snapshot (canlı değil) görülen kimlik -> (önce, sonra); aynı dolum sonra dolgu/rest ile gelirse poz_tr ikinci kez değişmez, emir bu değerlerle
         self.poz_tr: dict[str, dict[str, float]] = {a: dict(c) for a, c in (m.get("poz_tr") or {}).items()}       # trader işaretli pozisyonları (coin birimi)
         self.hesap_tr: dict[str, dict] = dict(m.get("hesap_tr") or {})                                              # adres -> {deger, ms}
         self.son_olay_ms: int = int(m.get("son_olay_ms", 0))
         self._poz_tr_ms: dict[tuple[str, str], int] = {}              # (adres, coin) -> poz_tr'yi son güncelleyen trader dolum zamanı (kuyruktan düşen olayın geç uygulanması yeniyi ezmesin)
+        for k, v in (m.get("poz_tr_ms") or {}).items():               # G-14: kalıcı (yeniden başlatmada snapshot'taki eski dolum poz_tr'yi ezmesin)
+            a, _, c = str(k).partition("|")
+            self._poz_tr_ms[(a, c)] = int(v)
+        self._poz_tr_senk_ms: dict[str, int] = {a: int(v) for a, v in (m.get("poz_tr_senk_ms") or {}).items()}   # adres -> son REST pozisyon okumasının anı (ms, UTC); coin kaydı yoksa eşik budur
+        if m and "poz_tr_senk_ms" not in m:                           # G-14 geçişi (eski biçim motor.json): poz_tr en az son işlenen dolum kadar taze sayılır
+            self._poz_tr_senk_ms = {a: self.son_olay_ms for a in self.poz_tr}
         self.baslama_ms: int = self.saat_ms()
         self.marks: dict[str, float] = {}
         self.mark_ms: dict[str, int] = {}
@@ -361,9 +371,7 @@ class Motor:
             nl = [x["cloid"] for x in self.niyet.satirlar() if x.get("t") == "niyet"]
             self.hesap.son_niyet_cloid = nl[-1] if nl else None
         for k in self.niyet.kimlikler():                       # emir öncesi yazılmış kimlikler de "işlendi": çökme sonrası çift emir yok (K‑37 §3)
-            if k not in self._islenen_set:
-                self._islenen_set.add(k)
-                self.islenen.append(k)
+            self._islenen_ekle(k)
         self.kapanis_kuyrugu: dict[str, dict] = {k: dict(v) for k, v in (m.get("kapanis_kuyrugu") or {}).items()}      # "adres|coin" -> {tur, hedef_sz, neden, deneme, ms}
         self.dur_bekliyor: bool = bool(m.get("dur_bekliyor", False))
         self.hl_ofset: float | None = m.get("hl_ofset")          # gerçek kip: HL hesap değeri − yerel özsermaye (ilk okuma); risk temeli = HL değeri − ofset
@@ -420,7 +428,7 @@ class Motor:
         self.niyet.sikistir(int(self.rules["canli_islenen_sakla"]))
 
     def _motor_json(self) -> dict:
-        return {"islenen": self.islenen[-int(self.rules["canli_islenen_sakla"]):], "poz_tr": self.poz_tr, "hesap_tr": self.hesap_tr, "son_olay_ms": self.son_olay_ms,
+        return {"islenen": self.islenen, "poz_tr": self.poz_tr, "poz_tr_ms": {f"{a}|{c}": ms for (a, c), ms in self._poz_tr_ms.items()}, "poz_tr_senk_ms": self._poz_tr_senk_ms, "hesap_tr": self.hesap_tr, "son_olay_ms": self.son_olay_ms,
                 "ozet_gunu": self._ozet_gunu, "ozet_oz": self._ozet_oz, "ozet_emir": self._ozet_emir, "kip": self.kip, "kasa_usd": self.kasa, "kasa_ayar_usd": self.kasa_ayar, "vardiya": self.vardiya_id, "yazildi_ms": self.saat_ms(),
                 "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.offset,
                 "son_funding_ms": self.son_funding_ms, "funding_kimlik": self.funding_kimlik[-500:], "funding_gercek_usd": self.funding_gercek_usd, "ucret_gercek_usd": self.ucret_gercek_usd, "ucret_tahmin_say": self.ucret_tahmin_say}
@@ -430,17 +438,28 @@ class Motor:
         _yaz(self.durum_dizin / "motor.json", self._motor_json())
         _yaz(self.durum_dizin / "hesap.json", self.hesap.to_json())
 
+    @property
+    def islenen(self) -> list[str]:
+        """İşlenen kimlikler (ekleme sırası; adres başına en çok `canli_islenen_adres_sakla`)."""
+        return list(self._islenen)
+
+    def _islenen_ekle(self, kimlik: str) -> None:
+        """G-14: kimlik `{adres}:{tid}` → adres kovası; kova sınırı aşılırsa YALNIZ o adresin en eskisi düşer (34 adres ortak 5000'i paylaşmaz)."""
+        if kimlik in self._islenen:
+            return
+        self._islenen[kimlik] = None
+        kova = self._islenen_adres.setdefault(kimlik.rsplit(":", 1)[0], deque())
+        kova.append(kimlik)
+        while len(kova) > int(self.rules.get("canli_islenen_adres_sakla", 2000)):
+            self._islenen.pop(kova.popleft(), None)
+
     def _gorulduysa_isaretle(self, kimlik: str) -> bool:
-        """Dolum kimliği daha önce işlendiyse True (çift emir yok: yeniden başlatmada da). Kimliksiz (dolgu) olaylar zaten dinleyicide tekilleştirilir."""
+        """Dolum kimliği daha önce işlendiyse True (çift emir yok: yeniden başlatmada da). Kimliksiz olay tekilleştirilemez (False)."""
         if not kimlik:
             return False
-        if kimlik in self._islenen_set:
+        if kimlik in self._islenen:
             return True
-        self._islenen_set.add(kimlik)
-        self.islenen.append(kimlik)
-        if len(self.islenen) > 2 * int(self.rules["canli_islenen_sakla"]):
-            self.islenen = self.islenen[-int(self.rules["canli_islenen_sakla"]):]
-            self._islenen_set = set(self.islenen)
+        self._islenen_ekle(kimlik)
         return False
 
     # ------------------------------------------------------------------ yardımcılar
@@ -477,7 +496,9 @@ class Motor:
 
     def trader_pozlari_oku(self, adres: str, dexler: list[str] | None = None) -> bool:
         try:
+            okuma_ms = self.saat_ms()
             self.poz_tr[adres] = clearinghouse_pozisyonlari(self.post, adres, dexler if dexler is not None else self._dexler())
+            self._poz_tr_senk_isaretle(adres, okuma_ms)
             return True
         except Exception as hata:                          # noqa: BLE001
             self.kayit({"olay": "poz_okuma_hata", "adres": adres, "tur": type(hata).__name__})
@@ -517,6 +538,28 @@ class Motor:
         sonra = once + (o.sz if o.yon == "B" else -o.sz) if o.sz is not None else once
         return once * sonra < 0 or abs(sonra) < abs(once) - EPS
 
+    def _poz_tr_esik(self, adres: str, coin: str, canli: bool) -> int:
+        """G-14: bundan ESKİ dolum poz_tr'yi değiştirmez (ms, UTC). Her olay için: bu coinde son uygulanan dolumun zamanı. Canlı OLMAYAN olay (snapshot / abonelik öncesi) için ayrıca
+        adresin son REST pozisyon okumasının anı: okumadan önceki dolum REST değerinde zaten var (snapshot'taki eski dolum yeniden uygulanıp poz_tr'yi ezmesin)."""
+        ms = self._poz_tr_ms.get((adres, coin), 0)
+        return ms if canli else max(ms, self._poz_tr_senk_ms.get(adres, 0))
+
+    def _poz_tr_senk_isaretle(self, adres: str, okuma_ms: int) -> None:
+        """REST okuması poz_tr[adres]'i yazdı: canlı olmayan olay eşiği = okuma anı (kalıcı, `motor.json` `poz_tr_senk_ms`)."""
+        self._poz_tr_senk_ms[adres] = max(self._poz_tr_senk_ms.get(adres, 0), okuma_ms)
+
+    def _poz_tr_guncelle(self, o: Olay, canli: bool) -> tuple[float, float, bool]:
+        """G-14: dolum eşikten (`_poz_tr_esik`) eskiyse poz_tr'ye DOKUNMAZ (REST okuması/sonraki dolum onu zaten içeriyor); karar için (önce, sonra) türetilir:
+        `bas_poz` varsa (userFills/REST `startPosition`) ondan, yoksa mevcut poz_tr'den geriye. Döner (önce, sonra, uygulandı_mı)."""
+        if o.zaman_ms < self._poz_tr_esik(o.adres, o.coin, canli):
+            d = o.sz if o.yon == "B" else -o.sz
+            if o.bas_poz is not None:
+                return o.bas_poz, o.bas_poz + d, False
+            simdi_poz = self.poz_tr.get(o.adres, {}).get(o.coin, 0.0)
+            return simdi_poz - d, simdi_poz, False
+        once, sonra = self._poz_tr_isle(o)
+        return once, sonra, True
+
     def _poz_tr_isle(self, o: Olay) -> tuple[float, float]:
         """Trader pozisyon tablosunu (`poz_tr`) dolumla günceller; döner (önce, sonra) işaretli coin miktarı."""
         once = o.bas_poz if o.bas_poz is not None else self.poz_tr.get(o.adres, {}).get(o.coin, 0.0)
@@ -532,9 +575,9 @@ class Motor:
         with self._lock:
             if not o.adres or not o.coin or o.sz is None or o.px is None or o.yon not in ("B", "A"):
                 return
-            if o.zaman_ms < self._poz_tr_ms.get((o.adres, o.coin), 0):
+            if o.zaman_ms < self._poz_tr_esik(o.adres, o.coin, True):
                 return
-            if self._gorulduysa_isaretle(o.kimlik):        # aynı ms'deki FARKLI dolum uygulanır; aynı kimlik (zaten işlenmiş / düşmüş) ikinci kez sayılmaz
+            if o.kimlik in self._snap or self._gorulduysa_isaretle(o.kimlik):        # aynı ms'deki FARKLI dolum uygulanır; aynı kimlik (işlenmiş / snapshot'ta uygulanmış / düşmüş) ikinci kez sayılmaz
                 return
             self._poz_tr_isle(o)
             self.kayit({"olay": "dusen_olay_poz_tr", "adres": o.adres, "coin": o.coin, "yon": o.yon, "sz": o.sz})
@@ -547,11 +590,25 @@ class Motor:
         sonuclar: list[Sonuc] = []
         if not adres or not o.coin or o.sz is None or o.px is None or o.yon not in ("B", "A"):
             return sonuclar
-        if self._gorulduysa_isaretle(o.kimlik):
+        if o.kimlik and o.kimlik in self._islenen:
+            return sonuclar
+        onceki = self._snap.get(o.kimlik) if o.kimlik else None
+        if not canli and onceki is not None:                       # aynı dolum ikinci kanaldan / ikinci snapshot'tan: bir kez
             return sonuclar
         simdi = self.saat_ms()
-        once, sonra = self._poz_tr_isle(o)
-        self._son_olay_coin[(adres, o.coin)] = simdi
+        if onceki is not None:                                     # G-17b: snapshot'ta poz_tr'ye zaten işlendi (ya da eşikten eski bulundu); canlı/dolgu kopyası emri o değerlerle üretir
+            (once, sonra), uygulandi = onceki, False
+            del self._snap[o.kimlik]
+        else:
+            once, sonra, uygulandi = self._poz_tr_guncelle(o, canli)     # G-14: eşikten eski dolum poz_tr'yi DEĞİŞTİRMEZ
+        if canli:
+            self._gorulduysa_isaretle(o.kimlik)
+        elif o.kimlik:                                             # snapshot kimliği `islenen`e girmez (sonra dolgu ile emir üretebilsin); sınırlı bellek
+            self._snap[o.kimlik] = (once, sonra)
+            if len(self._snap) > SNAP_SAKLA:
+                del self._snap[next(iter(self._snap))]
+        if uygulandi:
+            self._son_olay_coin[(adres, o.coin)] = simdi
         self.son_olay_ms = max(self.son_olay_ms, o.zaman_ms)
         if adres in self.saha.uyeler:
             self.saha.islem_gordu(adres, o.zaman_ms)
@@ -1035,11 +1092,28 @@ class Motor:
                 self.kayit({"olay": "poz_senkron", "adres": adres, "fark": {c: list(v) for c, v in list(fark.items())[:10]}})
                 duzeltilen += 1
             self.poz_tr[adres] = dict(gercek)
+            self._poz_tr_senk_isaretle(adres, self._senkron_okuma_ms)          # G-14: okumadan eski snapshot dolumu bu değeri artık ezemez
             for coin in list(self.hesap.poz.get(adres, {})):
-                if abs(gercek.get(coin, 0.0)) < EPS and coin not in yeni_olay:
+                if coin in yeni_olay:
+                    continue
+                g, i = gercek.get(coin, 0.0), izlenen.get(coin, 0.0)
+                if abs(g) < EPS:
                     self.kayit({"olay": "senkron_kapanis", "adres": adres, "coin": coin})
                     self._kapat_coin(adres, coin, "trader_kapali_senkron", simdi)
+                elif g * i > 0 and abs(g) < abs(i) - 1e-9 * max(1.0, abs(g)) and g * self.hesap.sz(adres, coin) > 0:
+                    self._senkron_azalt(adres, coin, i, g, simdi)                       # S-1: kaçan kısmi azaltma (trader küçüldü, izlenen büyük kaldı)
         return duzeltilen
+
+    def _senkron_azalt(self, adres: str, coin: str, izlenen: float, gercek: float, simdi: int) -> None:
+        """S-1: REST trader pozisyonu izlenenden küçük (aynı yön) → normal hedef tabanlı azaltma yolu (K‑38, `boyut.hedef_emir` `azalt`, reduce-only). Hedef zaten karşılanıyorsa emir yok."""
+        mk = self.mark(coin)
+        if not mk:
+            self.kayit({"olay": "senkron_azalt_atlandi", "adres": adres, "coin": coin, "neden": "mark_yok"})
+            return
+        sahte = Olay(f"senkron:{adres}:{coin}:{simdi}", adres[:12], adres, simdi, simdi, "senkron", False, "", coin, mk, abs(izlenen - gercek), "A" if izlenen > 0 else "B", izlenen)
+        biz_sz = self.hesap.sz(adres, coin)
+        s = self._emir_isle(sahte, adres, "azalt", izlenen, gercek, biz_sz, simdi, True)
+        self.kayit({"olay": "senkron_azalt", "adres": adres, "coin": coin, "trader_once": izlenen, "trader_sonra": gercek, "karar": s.karar, "neden": s.neden})
 
     def yerel_ozsermaye(self) -> float:
         return self.hesap.ozsermaye(self.marks)
