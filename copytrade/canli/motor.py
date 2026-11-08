@@ -73,9 +73,11 @@ def rest_post_olustur(rules: dict, istemci: PublicClient | None = None) -> Calla
     return post
 
 
-def hesap_degeri_oku(post: Callable[[dict], Any], adres: str, dexler: list[str]) -> float:
-    """Hesap değeri ($) = TÜM perp dex'lerin `marginSummary.accountValue` toplamı + spot USDC (`hl_ortak.spot_usdc`; K‑35 tek payda). Radar lider tablosu `accountValue` ile aynı tanım. Herhangi bir okuma
+def hesap_degeri_oku(post: Callable[[dict], Any], adres: str, dexler: list[str] | None) -> float | None:
+    """G-6: `dexler` None (dex listesi bilinmiyor) → None (kısmi toplam YOK; çağıran hesabı bilinmiyor sayar). Hesap değeri ($) = TÜM perp dex'lerin `marginSummary.accountValue` toplamı + spot USDC (`hl_ortak.spot_usdc`; K‑35 tek payda). Radar lider tablosu `accountValue` ile aynı tanım. Herhangi bir okuma
     başarısızsa istisna (kısmi toplam dönmez: oran paydası eksik olursa emirler şişer)."""
+    if dexler is None:
+        return None
     toplam = 0.0
     for dex in ["", *dexler]:
         toplam += float(post(clearinghouse_yuk(adres, dex))["marginSummary"]["accountValue"])
@@ -227,9 +229,12 @@ def kip_belirle(rules: dict, istenen: str | None = None, ortam: dict | None = No
 
 def eylem_belirle(once: float, sonra: float, biz_sz: float) -> list[str]:
     """Trader dolumu (işaretli pozisyon önce → sonra) ve bizim pozisyonumuz → yürütülecek eylem sırası (`boyut.hedef_emir` eylemleri): kapat | azalt | ac | artir.
-    Ters dönüş = [kapat (varsa), ac]. Bizde pozisyon yokken trader azaltıyorsa eylem yok."""
+    Ters dönüş = [kapat (varsa), ac]. Bizde pozisyon yokken trader azaltıyorsa eylem yok.
+    G-3: bizim pozisyon trader'ın SONRAKİ yönüne TERS ise (kaçan ters dönüş) önce reduce-only kapat, sonra hedefe göre aç → ters yönde reduce-only OLMAYAN emir hiç gitmez."""
     if abs(sonra) < EPS:
         return ["kapat"] if abs(biz_sz) > EPS else []
+    if abs(biz_sz) > EPS and biz_sz * sonra < 0:
+        return ["kapat", "ac"]
     if once * sonra < 0:
         return (["kapat"] if abs(biz_sz) > EPS else []) + ["ac"]
     if abs(sonra) > abs(once) + EPS:
@@ -520,12 +525,19 @@ class Motor:
         self.saha.islem_gordu(adres, max(zamanlar) if zamanlar else bas)
 
     def _dexler(self) -> list[str]:
-        if not hasattr(self, "_dex_adlari"):
-            try:
-                self._dex_adlari = perp_dex_names(self.post({"type": "perpDexs"}))
-            except Exception:                              # noqa: BLE001
-                self._dex_adlari = []
+        """HIP-3 perp dex adları. Başarılı okuma süreç boyunca önbellekte; HATA önbelleğe ALINMAZ (G-6): istisna yükselir, bir sonraki çağrı yeniden okur.
+        Çağıranlar hatayı yakalar (hesap değeri bilinmiyor → açılış `trader_hesap_yok`; pozisyon okunamadı) — eksik dex listesiyle kısmi toplam/pozisyon ASLA üretilmez."""
+        if getattr(self, "_dex_adlari", None) is None:
+            self._dex_adlari = perp_dex_names(self.post({"type": "perpDexs"}))
         return self._dex_adlari
+
+    def _dexler_guvenli(self) -> list[str]:
+        """Yalnız dinleyici kurulumu için (arka plan okuması; kısmi liste yalnız HIP-3 aboneliğini eksik bırakır): hata → [] (önbelleğe alınmaz)."""
+        try:
+            return self._dexler()
+        except Exception as hata:                          # noqa: BLE001
+            self.kayit({"olay": "perp_dex_okuma_hata", "tur": type(hata).__name__})
+            return []
 
     # ------------------------------------------------------------------ olay işleme (çekirdek)
     def olay_isle(self, o: Olay, canli: bool = True) -> list[Sonuc]:
@@ -623,6 +635,8 @@ class Motor:
             sonuclar.append(s)
             biz_sz = self.hesap.sz(adres, o.coin)
             once = 0.0 if eylem == "kapat" and once * sonra < 0 else once          # ters dönüşte açılış parçası sıfırdan
+            if eylem == "kapat" and abs(biz_sz) > EPS and biz_sz * sonra < 0:      # G-3: ters pozisyon kapanmadı (kuyrukta) → ters yönde açılış YOK (net küçülme / ters emir olmasın)
+                break
         return sonuclar
 
     def _emir_isle(self, o: Olay, adres: str, eylem: str, once: float, sonra: float, biz_sz: float, simdi: int, gec: bool) -> Sonuc:
@@ -1100,6 +1114,9 @@ class Motor:
                 if abs(g) < EPS:
                     self.kayit({"olay": "senkron_kapanis", "adres": adres, "coin": coin})
                     self._kapat_coin(adres, coin, "trader_kapali_senkron", simdi)
+                elif g * self.hesap.sz(adres, coin) < 0:                                    # G-3: trader ters döndü (kaçan dönüş), bizimki eski yönde → reduce-only kapat
+                    self.kayit({"olay": "senkron_ters_kapanis", "adres": adres, "coin": coin, "trader": g, "biz": self.hesap.sz(adres, coin)})
+                    self._kapat_coin(adres, coin, "trader_ters_senkron", simdi)
                 elif g * i > 0 and abs(g) < abs(i) - 1e-9 * max(1.0, abs(g)) and g * self.hesap.sz(adres, coin) > 0:
                     self._senkron_azalt(adres, coin, i, g, simdi)                       # S-1: kaçan kısmi azaltma (trader küçüldü, izlenen büyük kaldı)
         return duzeltilen
@@ -2012,7 +2029,7 @@ async def calis(motor: Motor, sure_sn: float | None = None, ws: Callable[[], Any
     coinler = coin_listesi(motor.post)
     kuyruk = OncelikliKuyruk(motor.kapanis_mi, int(motor.rules["canli_kuyruk_max"]), motor.saat_ms)
     cikti = cikti or (motor.durum_dizin / "dinleyici")
-    din = CanliDinleyici(kuyruk, liste, coinler, ws, motor.post, cikti, Ayar(userfills_adet=10, sure_sn=sure_sn), saat_ms=motor.saat_ms, dex_adlari=motor._dexler())
+    din = CanliDinleyici(kuyruk, liste, coinler, ws, motor.post, cikti, Ayar(userfills_adet=10, sure_sn=sure_sn), saat_ms=motor.saat_ms, dex_adlari=motor._dexler_guvenli())
     durdur = asyncio.Event()
     try:
         loop = asyncio.get_running_loop()

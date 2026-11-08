@@ -191,17 +191,29 @@ class GercekYurutucu:
     def __init__(self, exchange: Any, post: Callable[[dict], Any], rules: dict | None = None) -> None:
         self.exchange, self.post = exchange, post
         self.rules = rules or load_rules()
-        self._sz_dec: dict[str, int] | None = None
+        self._sz_dec_dex: dict[str, dict[str, int]] = {}         # S-11: dex → {coin: szDecimals}
         self._ayarli: set[str] = set()
 
+    def _meta_oku(self, dex: str) -> dict[str, int]:
+        meta = self.post({"type": "meta", **({"dex": dex} if dex else {})})
+        return {str(u["name"]): int(u["szDecimals"]) for u in meta["universe"]}
+
     def _sz_decimals(self, coin: str) -> int:
-        if self._sz_dec is None:
-            meta = self.post({"type": "meta"})
-            self._sz_dec = {u["name"]: int(u["szDecimals"]) for u in meta["universe"]}
-        return self._sz_dec[coin]
+        """S-11: szDecimals önbelleği dex başına (ana dex ""; HIP-3 `dex:COIN` → o dex'in `meta`'sı, YALNIZ `canli_hip3_kopya` açıkken). Önbellekte olmayan coin → meta BİR KEZ yeniden okunur
+        (açılıştan sonra listelenen coin yeniden başlatma beklemesin); yine yoksa açık metinli hata `bilinmeyen coin: X`."""
+        dex = coin.split(":", 1)[0] if ":" in coin else ""
+        if dex and not bool(self.rules.get("canli_hip3_kopya", False)):
+            raise ValueError(f"bilinmeyen coin: {coin} (HIP-3 kapalı: canli_hip3_kopya=false)")
+        tablo = self._sz_dec_dex.get(dex)
+        if tablo is None or coin not in tablo:
+            tablo = self._meta_oku(dex)                   # ilk okuma ya da bilinmeyen coin → bir kez tazele
+            self._sz_dec_dex[dex] = tablo
+        if coin not in tablo:
+            raise ValueError(f"bilinmeyen coin: {coin}")
+        return tablo[coin]
 
     def hazirla(self, coin: str) -> None:
-        """Coin başına izole marj + `canli_marj_kaldirac`x (ilk emirden önce, bir kez)."""
+        """Coin başına izole marj + `canli_marj_kaldirac`x (ilk AÇILIŞ/ARTIRMA emrinden önce, bir kez). G-4: reduce-only emirde çağrılmaz (kaldıraç reddi kapanışı engellemez)."""
         if coin in self._ayarli:
             return
         yanit = self.exchange.update_leverage(int(self.rules["canli_marj_kaldirac"]), coin, False)        # is_cross=False → izole
@@ -226,7 +238,8 @@ class GercekYurutucu:
         d = Dolum(coin, yon, float(usd), reduce_only=reduce_only)
         emir_oncesi_ms = int(time.time() * 1000)
         try:
-            self.hazirla(coin)
+            if not reduce_only:                         # G-4: kaldıraç ayarı yalnız açılış/artırmada; reduce-only kapanış/azaltma kaldıraçtan bağımsız gider
+                self.hazirla(coin)
             kitap = self.post({"type": "l2Book", "coin": coin})
             seviyeler = kitap["levels"][1 if yon == "B" else 0]
             en_iyi = float(seviyeler[0]["px"])
@@ -244,7 +257,7 @@ class GercekYurutucu:
                 d.durum, d.neden = "red", "min_nosyonel"
                 return d
         except Exception as hata:                      # noqa: BLE001 - emir ÖNCESİ (kaldıraç, defter, meta) hata: emir GİTMEDİ → red; motor çökmez
-            d.durum, d.neden = "red", f"sdk_hatasi: {type(hata).__name__}"
+            d.durum, d.neden = "red", (str(hata)[:160] if isinstance(hata, ValueError) and str(hata).startswith("bilinmeyen coin") else f"sdk_hatasi: {type(hata).__name__}")
             return d
         try:
             if cloid:
@@ -294,4 +307,8 @@ def gercek_yurutucu_olustur(post: Callable[[dict], Any], rules: dict | None = No
         raise RuntimeError("hyperliquid-python-sdk kurulmalı: pip install -r requirements-canli.txt") from hata
     rules = rules or load_rules()
     zaman_asimi = float(rules.get("canli_emir_zaman_asimi_sn", 10))         # G-12a: SDK varsayılanı None (süresiz bekler, motor kilidi tutulur); `API.post` → `session.post(..., timeout=)`
-    return GercekYurutucu(Exchange(Account.from_key(anahtar), constants.MAINNET_API_URL, account_address=hesap, timeout=zaman_asimi), post, rules)
+    ek: dict[str, Any] = {}
+    if bool(rules.get("canli_hip3_kopya", False)):                       # S-11 / K-42: HIP-3 (`dex:COIN`) SDK varlık tablosu YALNIZ HIP-3 kopyası açıkken (okunamazsa motor başlamaz)
+        from copytrade.izleme_liste import perp_dex_names
+        ek["perp_dexs"] = ["", *perp_dex_names(post({"type": "perpDexs"}))]
+    return GercekYurutucu(Exchange(Account.from_key(anahtar), constants.MAINNET_API_URL, account_address=hesap, timeout=zaman_asimi, **ek), post, rules)
