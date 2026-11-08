@@ -321,6 +321,7 @@ def test_telegram_secretlari_yalniz_main_dalinda_verilir_b1():
                 continue
             bulunan += 1
             assert f"secrets.{ad}" in deger and "github.ref == 'refs/heads/main'" in deger and deger.rstrip("} ").endswith("|| ''"), (dosya.name, ad, deger)
+            assert "vars.TELEGRAM_ACIK == 'evet'" in deger, (dosya.name, ad, deger)      # kullanıcı kararı 08.11: Telegram varsayılan KAPALI; repo değişkeni TELEGRAM_ACIK=evet ile açılır
         for satir in metin.splitlines():                  # hiçbir yerde çıplak Telegram secret'ı yok
             if "secrets.TELEGRAM" in satir and not satir.lstrip().startswith("#"):
                 assert "refs/heads/main" in satir, (dosya.name, satir)
