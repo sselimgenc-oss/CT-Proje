@@ -7,7 +7,7 @@ from copytrade.canli import pano
 
 SAAT = 3_600_000
 GUN = 24 * SAAT
-SIMDI = 1_800_000_000_000 + 10 * SAAT          # gün başı + 10 sa
+SIMDI = 1_800_000_000_000 + 10 * SAAT          # 2027-01-15 18:00 UTC (T0 = 08:00 UTC + 10 sa; gece yarısı değil)
 A1, A2 = "0x" + "11" * 20, "0x" + "22" * 20
 
 

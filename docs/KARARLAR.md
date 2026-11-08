@@ -239,3 +239,7 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 ## K-49 — Yeni dönem: 09.11 00:01 TSİ (2026-11-08T21:01Z) sıfırdan başlangıç (kullanıcı kararı 08.11)
 - Tüm denetim düzeltmeleriyle temiz ölçüm. `copytrade/canli/DONEM` = başlangıç; `.github/scripts/donem_geri.sh`: bu andan önce başlayan vardiya bekler (≤ 230 dk; motor süresi kalan bütçeye iner); veri dalındaki dönem farklıysa durum/kayıt/pano YÜKLENMEZ (saha, pozisyonlar, bekleme cezaları, K-39 gün sayaçları sıfır). `canli_yayimla.sh` yeni dönemin ilk yayımında eski dosyaları dal ucundan siler; **git geçmişinde arşivli kalır** (geri dönülebilir).
 - Yalnız `canli-durum` (1.000 $). **300 $ paralel seri iptal** (kullanıcı 08.11: "bir tane olsun, 1.000 $"; `canli_vardiya_300.yml` silindi, `--sanal-kasa-usd` bayrağı kodda kalır). 7 temiz gün sayacı ve isabet/canlı karşılaştırması bu dönemden başlar.
+
+## K-50 — Gerçek para da 1.000 $ ile başlar; G-24 kapandı (kullanıcı kararı 08.11)
+- Kullanıcı: "gerçek paraya da 1.000 USD ile geçeriz". Gerçek kasa = sanal kasa = 1.000 $ (K-22/K-26 üst sınırı). Sanal seri ile aynı boyut rejimi → 300 $ paralel ölçüm (G-24) gereksiz; K-47 "300 $ sanal ≥ 7 gün" şartı yerine **1.000 $ sanal ≥ 7 temiz gün** (K-49 döneminden).
+- Diğer gerçek para ön koşulları (K-48) aynen: G-1…G-6, G-9, G-12…G-23 main'de ve testli; G-8 + dış nabız (G-10) kullanıcıyla; açılış listesi `deploy/ACILIS_KONTROL.md`. Geçiş kararı yine kullanıcının.

@@ -6,11 +6,11 @@ Kural: bir adımda beklenen sonucu görmezseniz **DURUN** ve ekrandaki çıktıy
 ## Ön koşul (lider onaylar; size yalnız "hazır" denir)
 - Denetim düzeltmeleri (G-1…G-6, G-9, G-12…G-23) main'de ve testli.
 - G-8 + G-23 tamam; G-10 Actions zamanlayıcısına dayanmadan çalışıyor.
-- G-24'ün 300 $ sonucu size sunuldu.
+- 1.000 $ sanal seri (K-49 dönemi) en az 7 temiz gün koştu (K-50; 300 $ seri iptal).
 - 7 temiz sanal gün tamam.
 
 ## A) Bir gün önce
-1. **Hyperliquid ekranı:** açık pozisyon 0, açık emir 0, hesapta yalnız 300 $ USDC; toplam değer 1.000 $'ın altında.
+1. **Hyperliquid ekranı:** açık pozisyon 0, açık emir 0, hesapta yalnız 1.000 $ USDC (fazlası yok).
    Para yalnız Arbitrum köprüsüyle girip çıkar. Vault, "send" ya da alt hesap transferi YAPMAYIN.
 2. **Yeni API cüzdanı** açın (adı: `sg-canli`). Bitiş tarihini takvime yazın. Anahtar yalnız şifre yöneticisinde.
 3. **GitHub → Settings → Variables:** `TELEGRAM_ACIK` "evet" OLMASIN (Actions sessiz kalsın).
@@ -46,7 +46,7 @@ Kural: bir adımda beklenen sonucu görmezseniz **DURUN** ve ekrandaki çıktıy
      HL_API_CUZDAN_ANAHTARI=...
      HL_HESAP_ADRESI=0x...
      CANLI_KIP=gercek
-     CANLI_KASA_USD=300
+     CANLI_KASA_USD=1000
      TELEGRAM_KOMUT=
      ```
    - `/etc/sg-canli-telegram.env` tam olarak şu 2 satır:
@@ -71,7 +71,7 @@ Kural: bir adımda beklenen sonucu görmezseniz **DURUN** ve ekrandaki çıktıy
     ```
     Görmeniz gerekenler:
     - `"tamam": true` (ilk komut "failed" demediyse)
-    - `"kip": "gercek"`, `"kasa_kaynagi": "ortam"`, `"etkin_kasa_usd"` ≈ 300
+    - `"kip": "gercek"`, `"kasa_kaynagi": "ortam"`, `"etkin_kasa_usd"` ≈ 1000
     - `"ana_anahtar": false`, `"agent_dogrulandi": true`
     - `"kadro"` içinde `"taze": true`
     - `"hl_acik_poz": 0`, `"hl_acik_emir": 0`

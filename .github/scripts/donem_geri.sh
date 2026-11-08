@@ -19,6 +19,7 @@ if [ "$simdi_s" -lt "$bas_s" ]; then
   kalan=$((sure - bekle / 60 - 5))
   if [ "$kalan" -lt 20 ]; then kalan=20; fi
   echo "GIRDI_SURE_DK=${kalan}" >> "${GITHUB_ENV:-/dev/null}"
+  echo "DONEM_SURE_DK=${kalan}" >> "${GITHUB_ENV:-/dev/null}"     # iş düzeyi `env: GIRDI_SURE_DK` GITHUB_ENV'i ezebilir; motor adımı önce bunu okur
   echo "Motor süresi kalan bütçeye indirildi: ${kalan} dk"
 fi
 mkdir -p durum kayit

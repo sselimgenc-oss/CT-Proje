@@ -238,7 +238,7 @@ def test_hesap_json_gidis_donus_ve_slot_kapat_ozsermaye_surekli():
 
 # ------------------------------------------------------------------------------------------------ risk
 HOUR = 3_600_000
-T0 = 1_800_000_000_000
+T0 = 1_800_000_000_000                       # 2027-01-15 08:00 UTC (gece yarısı değil)
 
 
 def test_coin_tavani_kirpma_ve_sifir():

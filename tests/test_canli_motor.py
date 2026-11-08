@@ -17,7 +17,7 @@ from copytrade.kurallar import load_rules
 
 RULES = load_rules()
 ROOT = Path(__file__).resolve().parents[1]
-T0 = 1_800_000_000_000
+T0 = 1_800_000_000_000                       # 2027-01-15 08:00 UTC (gece yarısı DEĞİL; UTC gün sınırı = (T0 // GUN + 1) * GUN)
 GUN, SAAT = 86_400_000, 3_600_000
 
 
@@ -133,8 +133,8 @@ def test_k44_gunluk_sinir_yalniz_uye_degistirmek_icin_gunde_2_degistirme():
 def test_k39_ayni_utc_gununde_ikinci_kadro_saha_kararini_tetiklemez_ilk_kadro_saklanir_ve_gecis_beklemesi_silinir():
     s = hazir_11()
     ilk = [satir(i, i, 90 - i) for i in range(1, 12)]                                                         # 11 üye de kadroda
-    s.degerlendir(kadro(ilk, T0 + GUN + SAAT), T0 + GUN + 2 * SAAT)                                            # günün İLK kadrosu 01:00
-    ikinci = [satir(i, i, 90 - i) for i in range(1, 9)] + [satir(12, 9), satir(13, 10), satir(14, 11)]          # aynı UTC gününde 07:00'de geç/elle ikinci kadro: 9, 10, 11 yok
+    s.degerlendir(kadro(ilk, T0 + GUN + SAAT), T0 + GUN + 2 * SAAT)                                            # günün İLK kadrosu 09:00 UTC (T0 08:00 + 1 sa)
+    ikinci = [satir(i, i, 90 - i) for i in range(1, 9)] + [satir(12, 9), satir(13, 10), satir(14, 11)]          # aynı UTC gününde 15:00'te geç/elle ikinci kadro: 9, 10, 11 yok
     karar, _ = s.degerlendir(kadro(ikinci, T0 + GUN + 7 * SAAT), T0 + GUN + 8 * SAAT)
     assert karar == [] and all(adr(i) in s.uyeler for i in (9, 10, 11)) and all(not u.get("disi_gunler") for u in s.uyeler.values())      # ikinci kadro yok sayıldı
     yeni = kd.Saha(RULES, 1000.0, s.to_json())                                                                  # yeniden başlatma: ilk kadro saklı, ikinci yine yok sayılır
@@ -691,7 +691,9 @@ def test_motor_tuketici_kuyruktan_emir_uretir(tmp_path):
         kuyruk, durdur = asyncio.Queue(), asyncio.Event()
         kuyruk.put_nowait((olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat), True))
         gorev = asyncio.create_task(mt._tuketici(m, kuyruk, durdur))
-        await asyncio.sleep(0.3)
+        son = time.monotonic() + 10.0                                       # S-24: sabit uyku yerine koşul beklemesi (zaman aşımı 10 sn; yavaş makinede de belirleyici)
+        while m.sayac["emir"] < 1 and time.monotonic() < son and not gorev.done():
+            await asyncio.sleep(0.01)
         durdur.set()
         await gorev
     asyncio.run(kos())
@@ -1227,8 +1229,14 @@ def test_g5_gercek_farkli_kasa_pozisyon_yoksa_kabul_ve_kasa_degisti(tmp_path):
 def test_g5_bos_dizin_serbest_gercek_de_sanal_da(tmp_path):
     g, _ = kur_kip(tmp_path / "a", "gercek", 300.0)
     g.baslat()
+    g.durum_yaz()
     s, _ = kur_kip(tmp_path / "b", "sanal", 1000.0)
     s.baslat()
+    s.durum_yaz()
+    for alt, kip in (("a", "gercek"), ("b", "sanal")):                                            # S-24: boş dizinde iki kip de açılır (KipHatasi yok), kip kaydedilir, red kaydı yok
+        assert json.loads((tmp_path / alt / "durum" / "motor.json").read_text())["kip"] == kip
+        assert not kayitlar(tmp_path / alt, "vardiya_baslamadi")
+    assert not g.risk.dur and not s.risk.dur
 
 
 def test_g5_eski_bicim_kip_alani_yok_sanal_sayilir(tmp_path):

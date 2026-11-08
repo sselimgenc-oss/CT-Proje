@@ -487,10 +487,19 @@ def test_donem_baslangicindan_once_bekler_ve_motor_suresini_kisaltir_cok_uzaksa_
     s = _kos(co, "donem_geri.sh")
     assert s.returncode == 0, s.stderr
     assert "bekleniyor" in s.stdout and "GIRDI_SURE_DK=250" in (co / "genv").read_text()                       # 255 − 0 dk − 5 pay
+    assert "DONEM_SURE_DK=250" in (co / "genv").read_text()                                                      # iş düzeyi env'in ezemeyeceği ad
     uzak = (dt.datetime.now(dt.UTC) + dt.timedelta(hours=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
     co2 = _canli_checkout(tmp_path, remote, "uzak", uzak)
     s = _kos(co2, "donem_geri.sh")
     assert s.returncode == 1 and "230 dk" in s.stderr
+
+
+def test_motor_adimi_once_donem_suresini_okur():
+    """İş düzeyi `env: GIRDI_SURE_DK` GITHUB_ENV'deki kısaltılmış süreyi ezebilir: motor adımı önce DONEM_SURE_DK'yı okur (bekleme + 255 dk > 290 dk zaman aşımı olmasın)."""
+    adim = [a for a in yukle("canli_vardiya.yml")["jobs"]["vardiya"]["steps"] if "--sure-sn" in a.get("run", "")][0]
+    assert 'sure_dk="${DONEM_SURE_DK:-${GIRDI_SURE_DK:-255}}"' in adim["run"]
+    s = subprocess.run(["bash", "-c", 'GIRDI_SURE_DK=""; DONEM_SURE_DK=196; sure_dk="${DONEM_SURE_DK:-${GIRDI_SURE_DK:-255}}"; echo $sure_dk'], capture_output=True, text=True)
+    assert s.stdout.strip() == "196"
 
 
 def test_iki_canli_is_akisi_donem_betigini_kullanir():
