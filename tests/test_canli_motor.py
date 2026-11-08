@@ -1299,3 +1299,15 @@ def test_tur_kaydi_14_dakikada_bir(tmp_path):
     m._tur_kaydi(saat() + 15 * 60_000)
     t = kayitlar(tmp_path, "tur")
     assert len(t) == 2 and t[0]["ozsermaye_usd"] == pytest.approx(1000.0, abs=1e-6)
+
+
+def test_k45_eki_yedekten_giris_de_korelasyon_denetimine_tabi():
+    """08.11 denetimi: Yedek (sıra 12) sahadaki iki bağlı üyeye r=0,94 benzer → üçüncü olurdu (bileşen 3 > 2): girmez, sıra 13 (ilişkisiz) girer.
+    Önceden korelasyon matrisi yalnız İlk 11'i kapsıyordu ve Yedek 'ilişkisiz' sayılıp geçiyordu."""
+    s = kd.Saha(RULES, 100.0)                                                                  # N = 4
+    rows = [satir(1, 1), satir(2, 2), satir(3, 3), satir(4, 12), satir(5, 13)]
+    adresler = [adr(i) for i in range(1, 6)]
+    m = [[1, 0.9, 0.0, 0.94, 0.0], [0.9, 1, 0.0, 0.94, 0.0], [0.0, 0.0, 1, 0.0, 0.0], [0.94, 0.94, 0.0, 1, 0.0], [0.0, 0.0, 0.0, 0.0, 1]]
+    karar, _ = s.degerlendir(kadro(rows, kor={"adresler": adresler, "gun_sayisi": 8, "matris": m}), T0 + SAAT)
+    assert set(s.uyeler) == {adr(1), adr(2), adr(3), adr(5)}
+    assert [(k.adres, k.neden) for k in karar if k.tur == "giris_atlandi"] == [(adr(4), "kor_kirpildi")]

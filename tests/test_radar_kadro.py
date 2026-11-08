@@ -40,7 +40,7 @@ def test_ilk11_yedek_19_ve_30_siniri():
     assert len(kd["satirlar"]) == 30 and kd["satirlar"][0]["adres"] == "0x40" and kd["satirlar"][29]["adres"] == "0x11"
     assert [s["katman"] for s in kd["satirlar"]].count("ilk11") == 11 and [s["katman"] for s in kd["satirlar"]].count("yedek") == 19
     assert kd["satirlar"][10]["katman"] == "ilk11" and kd["satirlar"][11]["katman"] == "yedek"
-    assert len(kd["korelasyon"]["adresler"]) == 11                                         # korelasyon yalnız İlk 11
+    assert len(kd["korelasyon"]["adresler"]) == 30 and kd["korelasyon"]["adresler"][11] == kd["satirlar"][11]["adres"]   # K-45 eki: korelasyon tüm kadro (Yedek boş slota girebilir)
 
 
 def test_soguyan_kadroya_girmez_ve_kasa_degisince_slot():
