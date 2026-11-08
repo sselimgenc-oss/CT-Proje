@@ -5,7 +5,7 @@ T4 motoru `kadro.json`'u okuyup §5 kurallarını uygular.
 
 `kadro.json` (docs/VERI_SOZLESMESI.md "Radar kadro"): {sema "radar-kadro-v1", kosu_ms, kasa_usd, slot_usd, saha_n, gecti_sayisi, soguyan[], satirlar[{adres, sira, katman, form, bilesenler{G,K,I1,I2,Y,H},
 kopya_getiri_7g, max_kaldirac, form_h_siz, sira_h_siz}], korelasyon{adresler, gun_sayisi, matris}, h_siz_girenler[], onceki_kosu_ms, elenenler[], eski_uye_neden{}}.
-`form_h_siz`/`sira_h_siz`/`h_siz_girenler`/`onceki_kosu_ms`/`elenenler`/`eski_uye_neden` YALNIZ BİLGİDİR: seçim, sıra ve eşikler değişmez (karar `form`'dadır). Eksik koşuda (zaman bütçesi aşıldı / satır eksik) kadro YAZILMAZ ve çıkış kodu 2 (`radar.yml` `son/` yayımlamaz)."""
+`form_h_siz`/`sira_h_siz`/`h_siz_girenler`/`onceki_kosu_ms`/`elenenler`/`eski_uye_neden` YALNIZ BİLGİDİR: seçim, sıra ve eşikler değişmez (karar `form`'dadır). Eksik koşuda (zaman bütçesi aşıldı / satır eksik / `veri_hatasi` payı > `radar_veri_hatasi_pay_max`, R-2) kadro YAZILMAZ ve çıkış kodu 2 (`radar.yml` `son/` yayımlamaz)."""
 from __future__ import annotations
 
 import argparse
@@ -22,7 +22,8 @@ HAVUZ_SEMA = "radar-havuz-v1"
 
 
 def kosu_tam_mi(havuz: dict, rules: dict | None = None) -> tuple[bool, str | None]:
-    """Koşu tam mı: `zaman_yok` satırı yok ve satır sayısı = min(`radar_aday_tavan`, evren_toplam). Değilse (False, neden). Aday sayısı kurala göredir (deneme `--aday-sayisi` koşuları `radar.yml`'de yok)."""
+    """Koşu tam mı: `zaman_yok` satırı yok, satır sayısı = min(`radar_aday_tavan`, evren_toplam) ve (R-2, 06.11 denetimi) `veri_hatasi` satırlarının payı ≤ `radar_veri_hatasi_pay_max`
+    (HL kesintisinde küçük/boş kadro "taze" yayımlanmasın; tam sınır tamdır). Değilse (False, neden). Aday sayısı kurala göredir (deneme `--aday-sayisi` koşuları `radar.yml`'de yok)."""
     rules = rules or load_rules()
     satirlar = havuz["satirlar"]
     zaman_yok = sum(1 for s in satirlar if s.get("neden") == "zaman_yok")
@@ -31,6 +32,10 @@ def kosu_tam_mi(havuz: dict, rules: dict | None = None) -> tuple[bool, str | Non
     beklenen = min(int(rules["radar_aday_tavan"]), int(havuz["evren_toplam"]))
     if len(satirlar) < beklenen:
         return False, f"satır {len(satirlar)} < beklenen {beklenen}"
+    hatali = sum(1 for s in satirlar if s.get("neden") == "veri_hatasi")
+    esik = float(rules["radar_veri_hatasi_pay_max"])
+    if satirlar and hatali / len(satirlar) > esik + 1e-12:
+        return False, f"{hatali}/{len(satirlar)} satır veri_hatasi (pay {hatali / len(satirlar):.3f} > {esik:g})"
     return True, None
 
 
