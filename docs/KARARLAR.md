@@ -243,3 +243,9 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 ## K-50 — Gerçek para da 1.000 $ ile başlar; G-24 kapandı (kullanıcı kararı 08.11)
 - Kullanıcı: "gerçek paraya da 1.000 USD ile geçeriz". Gerçek kasa = sanal kasa = 1.000 $ (K-22/K-26 üst sınırı). Sanal seri ile aynı boyut rejimi → 300 $ paralel ölçüm (G-24) gereksiz; K-47 "300 $ sanal ≥ 7 gün" şartı yerine **1.000 $ sanal ≥ 7 temiz gün** (K-49 döneminden).
 - Diğer gerçek para ön koşulları (K-48) aynen: G-1…G-6, G-9, G-12…G-23 main'de ve testli; G-8 + dış nabız (G-10) kullanıcıyla; açılış listesi `deploy/ACILIS_KONTROL.md`. Geçiş kararı yine kullanıcının.
+
+## K-51 — Fable denetimleri kapanışı (lider, 08.11)
+- **Main'de ve testli (#573–#587):** G-1…G-6, G-9, G-11…G-23 (G-24 K-50 ile düştü); S-1…S-22 (S-6 bilinçli tasarım: para yalnız köprüyle, açılış listesinde); M-1…M-3; R-1, R-2, R-6, R-7; seçim B4, B6/B9 (isabet ek grupları), B8, B11, B12/B3 (bilgi), B14 (bilgi), B15; A-2.
+- **Kullanıcıyla kapandı:** G-7 (Telegram açık, 08.11), G-8 (`main-koruma` ruleset, 08.11), G-10 (dış nabız `sg-nabiz`).
+- **Açık:** S-23 (gerçek HL yanıt kaydı → ilk gerçek deneme), S-24 dışı test hijyeni yok; A-1 (Cloudflare token kapsamı, kullanıcı); B1/B7/B10/B13/B16/B17 ve G t ≥ 2 v1.1 adayları → 28. gün, tek tek, kayıtlı havuzlarla çevrimdışı sınanarak (K-47).
+- **Doğrulama kanıtı:** B8 300 aday gerçek koşu (gecti 15 → 16, 3 açıklanabilir fark); G-23/S-20 dal vardiyası (dönem beklemesi → 74 dk, yayımlar sorunsuz); yeni dönem 21:01Z temiz başladı (donem.txt, eski dosyalar dal ucundan silindi, 347 coin maxLeverage).

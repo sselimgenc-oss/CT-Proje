@@ -1,6 +1,6 @@
 # Ajan kuralları (Sonnet ve diğer ajanlar her oturumda okur)
 
-Bu repo bir copy trade projesidir (Hyperliquid). Strateji: **Form Radarı v1** (`docs/RADAR_V1.md`, K‑19). Lider: Claude (Opus; tasarım, görev, denetim, birleştirme). Yazıcı: Sonnet. Son karar: kullanıcı.
+Bu repo bir copy trade projesidir (Hyperliquid). Strateji: **Form Radarı v1** (`docs/RADAR_V1.md`, K‑19). Lider: Claude (Opus; tasarım, görev, denetim, birleştirme). Yazıcı: lidere bağlı ajanlar (Sonnet 06.11 emekli). Son karar: kullanıcı.
 
 ## Başlarken
 1. `main`'i çek; işe `main`'den yeni bir dal aç: `claude/<iş-adı>`.
