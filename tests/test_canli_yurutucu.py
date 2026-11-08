@@ -106,7 +106,7 @@ def test_gercek_yurutucu_satis_reduce_only_ve_limit_asagi():
     d = yu.GercekYurutucu(ex, meta_post, RULES).emir("BTC", "A", 50.0, reduce_only=True, acik_sz=0.1)
     c = ex.cagrilar[0]
     assert c["is_buy"] is False and c["reduce_only"] is True and c["px"] == 99.5 and c["sz"] == 0.1          # 99,9 × 0,995 = 99,4005 → tick 0,1 (6 − szDecimals 5 = 1 ondalık); satışta YUKARI → 99,5 (eski yuvarlama 99,4 verirdi: bant aşılırdı); açık pozisyon tavanı 0,1; 9,99 $ < 10 $ ama TAM kapanış (reduce-only) → minimum aranmaz
-    assert d.durum == "kismi"                                                    # istenen 50 $ > açık pozisyon (9,99 $): reduce-only tavanı → kısmi (motor kapamada tutarı pozisyon kadar ister)
+    assert d.durum == "dolu"                                                     # M-3: istenen 50 $ > açık pozisyon (9,99 $) → sz pozisyonla (0,1) kırpıldı ve 0,1'in tamamı doldu = TAM kapanış (eskiden yanlışlıkla "kismi")
 
 
 def test_gercek_yurutucu_red_hata_ve_dolmayan_yanitlar_motoru_dusurmez():

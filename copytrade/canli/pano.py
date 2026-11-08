@@ -21,7 +21,7 @@ from datetime import UTC, datetime, timedelta, timezone
 from html import escape as esc
 from pathlib import Path
 
-from copytrade.canli.telegram import kip_adi, tr_isaretli, tr_sayi, tr_yuzde
+from copytrade.canli.telegram import ATLA_TR, KACIRILAN_NEDENLER, kip_adi, tr_isaretli, tr_sayi, tr_yuzde
 from copytrade.saglik import durum as saglik_durum, kontrol as saglik_kontrol, ozet_metin as saglik_metin
 
 SAAT_MS = 3_600_000
@@ -185,23 +185,18 @@ def _cubuk(deg: list[float]) -> str:
     return f'<svg viewBox="0 0 300 80" preserveAspectRatio="none" class="gr"><line x1="0" y1="40" x2="300" y2="40" stroke="#3a3a40" stroke-width=".6"/>{r}</svg>'
 
 
-ATLA_ETIKET = {
-    "min_emir_atlandi": "Emir 11 $ alt sınırının altında kaldı", "patlama_freni": "Patlama freni (coin kısa süre durduruldu)", "inen_trader": "Trader sahadan iniyor (yeni açılış yok)",
-    "slot_tavani": "Slot tavanı doldu (3 × slot)", "marj_yok": "Teminat sınırı", "gec_acilis": "Sinyal geç görüldü (> 120 sn)", "coin_tavani": "Coin tavanı (kasanın %30'u)",
-    "trader_hesap_yok": "Trader hesap değeri okunamadı", "hesap_yok": "Trader hesap değeri kullanılamadı (hata)",
-    "spot_atlandi": "Spot dolum kopyalanmaz (yalnız perp, K‑42)", "hip3_atlandi": "HIP‑3 (dex önekli) coin kopyalanmaz (K‑42)",
-    "ters_netlesme": "Aynı coinde ters yönlü kopya pozisyonu var (netleşme, K‑41)"}
 BILESEN_AD = (("G", "Güven ayarlı getiri"), ("K", "Kopya getirisi"), ("I1", "Kârlı gün oranı"), ("I2", "Düşüş (az = iyi)"), ("Y", "Yayılma"), ("H", "Hype yakalama"))
 ADRES_RE = re.compile(r"0x[0-9a-fA-F]{40}")
 
 
 def _atlanan_html(k24: list[dict]) -> str:
-    """C2: atlanan sinyaller (24 sa) — neden başına sayı. Yalnız `emir_yok` kayıtları (yeni hesap yok)."""
+    """C2: atlanan sinyaller (24 sa) — neden başına sayı. Yalnız `emir_yok` kayıtları (yeni hesap yok). S-13: etiketler Telegram ile TEK sözlükten (`telegram.ATLA_TR`); kaçırılan nedenler işaretlenir."""
     sayim = Counter(str(k.get("neden") or "?") for k in k24 if k.get("olay") == "emir_yok")
     if not sayim:
         return '<div class="bos">Son 24 saatte atlanan sinyal yok</div>'
     toplam = sum(sayim.values())
-    return "".join(f'<div class="s"><b>{n}</b> × {esc(ATLA_ETIKET.get(neden, neden))} <span class="so">(%{n / toplam * 100:.0f})</span></div>' for neden, n in sayim.most_common())
+    return "".join(f'<div class="s"><b>{n}</b> × {esc(ATLA_TR.get(neden, neden))}{" (kaçırılan)" if neden in KACIRILAN_NEDENLER else ""} <span class="so">(%{n / toplam * 100:.0f})</span></div>'
+                   for neden, n in sayim.most_common())
 
 
 def _kapanan_html(kayitlar: list[dict]) -> str:

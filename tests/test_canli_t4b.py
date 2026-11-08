@@ -447,7 +447,7 @@ def test_telegram_from_id_zorunlu_yetkisiz_kayda_eski_mesaj_yok_sayilir_offset_k
                                           tg_mesaj(4, "/durum", tarih=simdi + 5),                # geçerli
                                           tg_mesaj(5, "merhaba")]), kayit=kayit.append, baslangic_s=simdi)
     assert t.komutlari_al() == ["/durum"] and t.offset == 6 and t.yetkisiz_sayisi == 2
-    assert [k["olay"] for k in kayit] == ["telegram_yetkisiz", "telegram_yetkisiz", "telegram_eski_komut"]
+    assert [k["olay"] for k in kayit] == ["telegram_yetkisiz", "telegram_yetkisiz", "telegram_eski_komut", "telegram"]      # G-16: eski /dur yürütülmez ama "İŞLENMEDİ" yanıtı gider
     # offset motor.json'da kalıcı
     m, hl, saat, _ = kur(tmp_path)
     m.baslat()
