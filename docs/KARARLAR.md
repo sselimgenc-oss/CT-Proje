@@ -229,3 +229,9 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - **Hemen (yöntem değişmez):** K-45 eki (birleşti, #576); R-1 isabet günün ilk kadrosu; `islem_yok` sayacı son dolumdan; `kor_kirpildi` tekilleştirme; bilgi alanları (H'siz form, çıkış nedeni); **300 $ paralel sanal motor** (`canli-durum-300`).
 - **İkinci adım (Actions'ta gerçek veriyle):** R1 hesap paydası zaman bağımlı (B8, eski ↔ yeni yan yana); R1/kadro 300 $ ile yan yana; `kopya_islem_sayisi`, `yuvarlanan_pay`.
 - **Gerçek para şartı (güncel):** 300 $ sanal ≥ 7 gün; G-1…G-10 kapalı; isabet havuz ortalaması belirgin negatif değil. v1.1 adayları (evren ölçüsü, nedene bağlı çıkış, yuvarlama kuralı, kopya işlem kapısı, H çıkarma, net yön tavanı) 28. günden sonra, tek tek ve çevrimdışı sınanarak.
+
+## K-48 — Proje denetimi (Fable, 08.11) sonrası gerçek para ön koşulları
+- `docs/DENETIM_PROJE_2026-11-08.md`: yeni zorunlu maddeler **G-12…G-24** (kritik: G-12 sessiz donma/zaman aşımsız emir, G-13 tasfiye sonrası ters reduce-only, G-14 bayat trader pozisyonu ezmesi; G-1'in kurtarma yolu hiç çalışmıyor). Açılış kontrol listesi ve Telegram metin önerileri belgede.
+- **Hüküm:** sanal ölçüm motoru olarak sağlam; gerçek para yürütücüsü olarak henüz hazır değil. Gerçek para öncesi: G-1…G-6, G-9, G-12…G-23 main'de ve testli; G-8/G-23 + dış nabız (G-10); 300 $ seri (G-24) sonucu kullanıcıya sunulmuş; 7 temiz sanal gün.
+- **12.11'den önce:** S-4 (pano maliyet/kapanan işlemler yalnız 2 günü okuyor).
+- **Not (kullanıcı kararı #577):** Actions'ta Telegram kapalıyken sanal motor ölürse alarm yok; tek iz pano "VERİ BAYAT". Lider günlük gözetimle izler.
