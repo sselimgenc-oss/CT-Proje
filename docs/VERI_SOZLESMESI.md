@@ -369,7 +369,7 @@ Her bileşen kalan havuzda 0–100 yüzdelik sıra (eşitlikte ortalama sıra; 1
 erken giriş = açılışı bilinen kârlı işlem, trend coin, coinin hareketi işlem yönünde ve açılış anında bu hareketin `radar_hype_erken_pay`'ından azı gerçekleşmiş.
 
 Üst düzey: `sema` (`"radar-kadro-v1"`), `kosu_ms`, `kasa_usd`, `slot_usd` (= kasa / `saha_n`), `saha_n` (N = min(`radar_saha_max`, taban(kasa / `radar_canli_slot_min_usd`))), `gecti_sayisi`, `soguyan` ([{adres, neden, kopya_getiri_72s}]),
-`satirlar` (form azalan, en çok `radar_kadro_toplam`), `korelasyon` ({`adresler` (İlk 11), `gun_sayisi`, `matris` (Pearson, günlük `kopya_gunluk`; sabit seri `null`)}).
+`satirlar` (form azalan, en çok `radar_kadro_toplam`), `korelasyon` ({`adresler` (tüm kadro: İlk 11 + Yedek; K-45 eki 08.11, önce yalnız İlk 11), `gun_sayisi`, `matris` (Pearson, günlük `kopya_gunluk`; sabit seri `null`)}).
 `satirlar[]`: `adres`, `sira` (1…30), `katman` (`ilk11` ≤ `radar_kadro_ilk` < `yedek`), `form`, `bilesenler` {G,K,I1,I2,Y,H}, `kopya_getiri_7g` (oran, kopya_$), `max_kaldirac` (x).
 **Saha kararları (slot −%10, bekleme, günde 2 değişiklik, benzer trader ≥ 0,7) kadroda DEĞİL:** T4 motoru okuyup §5/§6 kurallarını uygular.
 

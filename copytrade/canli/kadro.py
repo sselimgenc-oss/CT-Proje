@@ -45,7 +45,7 @@ def kadro_taze_mi(kadro: dict | None, simdi_ms: int, rules: dict) -> tuple[bool,
 
 
 def kor_bilesen_boyutu(adresler: list[str], kor: dict | None, esik: float) -> int:
-    """`adresler` arasında korelasyon ≥ eşik kenarlarıyla bağlı en büyük bileşenin kişi sayısı (kadro.json `korelasyon` İlk 11 içindir; olmayan çift ilişkisiz sayılır)."""
+    """`adresler` arasında korelasyon ≥ eşik kenarlarıyla bağlı en büyük bileşenin kişi sayısı (kadro.json `korelasyon` tüm kadro içindir (K-45 eki); kadroda olmayan üye/çift ilişkisiz sayılır)."""
     if not kor or len(adresler) < 2:
         return min(1, len(adresler))
     idx = {a: i for i, a in enumerate(kor.get("adresler", []))}

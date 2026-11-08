@@ -213,3 +213,9 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - **Gerekçe:** Devir denetimi (06.11 gece): bugünkü kadroyla yarın 7 eski üye K-39'la düşer; İlk 11'den 4 aday birbirine r 0,85–0,94 bağlı olduğundan alınamaz → eski kodla saha **7/11** kalırdı (4 slot nakit).
 - **Doğrulama (gerçek veri, yerel):** canli-durum `saha.json` + `radar/2026-11-06/kadro.json` (kosu +1 gün) → yeni kodla saha **11/11** (8 giriş `bos_slot`, 4 aday `kor_kirpildi`). Testler: `test_k45_bos_slot_kor_kirpilinca_yedekten_sirayla_dolar`, `test_k45_uygulanandan_eski_kadro_yok_sayilir…` (ikisi eski kodda kırılır). Tam paket 880 geçti.
 - **Yöntem eşikleri DEĞİŞMEZ** (R1/R2/korelasyon eşiği aynı).
+
+## K-45 eki — Benzerlik matrisi tüm kadroyu kapsar (lider, 08.11)
+- **Hata:** `radar_kadro` korelasyon matrisini yalnız İlk 11 için yazıyordu; K-45 ile Yedek boş slota girebildiği halde matris dışında kaldığı için "ilişkisiz" sayıldı. 08.11 sahasında 3 Yedek girişi (sıra 12–14) ile **5 kişilik bağlı küme** (r 0,74–0,96; sınır 2) oluştu. Bulgu: seçim denetimi iş akışı (kadro-dinamigi, kod-sadakati mercekleri), lider gerçek veriyle doğruladı.
+- **Düzeltme:** matris tüm kadro satırları için (`radar_kadro.py`). Eşik/yöntem aynı. Yarınki radar koşusundan itibaren geçerli.
+- **Doğrulama:** `radar/2026-11-08/havuz.json` ile yeniden kadro → matris 14×14; bugünkü saha üyeleri arasında 7 kenar r ≥ 0,7, en büyük küme 5. Testler: `test_ilk11_yedek_19_ve_30_siniri` (matris 30), `test_k45_eki_yedekten_giris_de_korelasyon_denetimine_tabi`. Tam paket 882.
+- **Açık soru (kullanıcı/lider):** mevcut fazla benzer üyeler sahadan çıkarılsın mı? Kod yalnız GİRİŞİ denetler; RADAR §6 "fazlası sıradaki üyeye yer verir" çıkarmayı da ima eder. Şimdilik doğal çıkışlarla (K-39) azalması beklenir.
