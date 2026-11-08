@@ -191,6 +191,68 @@ def test_radar_yayimla_yalniz_radar_dalina_ve_90_gun():
     assert "|| true" not in metin
 
 
+def _git(cwd: Path, *args: str) -> str:
+    return subprocess.run(["git", "-C", str(cwd), *args], check=True, capture_output=True, text=True).stdout.strip()
+
+
+def _radar_kosusu(tmp_path: Path, remote: Path, ad: str, gun: str, kosu_ms: int) -> Path:
+    """Actions'taki gibi taze checkout (main'i taklit eden tek commit) + o koşunun radar/<gun>/{havuz,kadro}.json'u; radar_yayimla.sh'yi koşturur."""
+    co = tmp_path / ad
+    co.mkdir()
+    _git(co, "init", "-q")
+    _git(co, "config", "user.name", "Test")
+    _git(co, "config", "user.email", "test@example.com")
+    _git(co, "remote", "add", "origin", str(remote))
+    (co / "kaynak.py").write_text("kaynak veri dalına girmez")
+    _git(co, "add", ".")
+    _git(co, "commit", "-qm", "kaynak")
+    (co / "radar" / gun).mkdir(parents=True)
+    (co / "radar" / gun / "havuz.json").write_text(json.dumps({"sema": "radar-havuz-v1", "kosu_ms": kosu_ms, "satirlar": []}))
+    (co / "radar" / gun / "kadro.json").write_text(json.dumps({"sema": "radar-kadro-v1", "kosu_ms": kosu_ms, "satirlar": []}))
+    s = subprocess.run(["bash", str(SCRIPTS / "radar_yayimla.sh")], cwd=co, env={**os.environ, "GITHUB_ACTIONS": "true", "VERI_DALI": "radar"}, capture_output=True, text=True)
+    assert s.returncode == 0, s.stderr
+    return co
+
+
+def _dal_json(remote: Path, yol: str) -> dict | None:
+    s = subprocess.run(["git", "-C", str(remote), "show", f"radar:{yol}"], capture_output=True, text=True)
+    return json.loads(s.stdout) if s.returncode == 0 else None
+
+
+def test_radar_yayimla_gunun_ilk_kadrosunu_korur_ikinci_yayim_ezmez(tmp_path):
+    """Denetim R-1 (altın örnek 2026-11-05 deseni): 01:16Z koşusu (kosu 1) ilk yayım → kadro_ilk/havuz_ilk = 1; aynı gün 07:19Z koşusu (kosu 2) → kadro.json ve son/ = 2,
+    kadro_ilk/havuz_ilk HÂLÂ 1. Ertesi gün (kosu 3) kendi kadro_ilk'ini alır; önceki günün dosyaları değişmez."""
+    import datetime as dt
+    remote = tmp_path / "remote.git"
+    remote.mkdir()
+    _git(remote, "init", "-q", "--bare")
+    bugun = dt.datetime.now(dt.UTC).date()
+    gun, yarin = bugun.isoformat(), (bugun + dt.timedelta(days=1)).isoformat()     # 90 gün silmesine takılmasın diye bugün
+    _radar_kosusu(tmp_path, remote, "kosu1", gun, 1)
+    assert _dal_json(remote, f"radar/{gun}/kadro_ilk.json")["kosu_ms"] == 1 and _dal_json(remote, f"radar/{gun}/havuz_ilk.json")["kosu_ms"] == 1
+    _radar_kosusu(tmp_path, remote, "kosu2", gun, 2)
+    assert _dal_json(remote, f"radar/{gun}/kadro.json")["kosu_ms"] == 2 and _dal_json(remote, "radar/son/kadro.json")["kosu_ms"] == 2      # eski davranış korunur
+    assert _dal_json(remote, f"radar/{gun}/kadro_ilk.json")["kosu_ms"] == 1 and _dal_json(remote, f"radar/{gun}/havuz_ilk.json")["kosu_ms"] == 1   # ilk kadro ezilmedi
+    _radar_kosusu(tmp_path, remote, "kosu3", yarin, 3)
+    assert _dal_json(remote, f"radar/{yarin}/kadro_ilk.json")["kosu_ms"] == 3 and _dal_json(remote, f"radar/{gun}/kadro_ilk.json")["kosu_ms"] == 1
+    assert _git(remote, "rev-list", "--count", "radar") == "3"
+
+
+def test_radar_yayimla_eski_gunde_kadro_varsa_yanlis_ilk_yazmaz(tmp_path):
+    """Bu değişiklikten önce yayımlanmış gün (dalda kadro.json var, kadro_ilk.json yok): ikinci yayım kadro_ilk.json YAZMAZ (yazsa 2. kadroyu "ilk" sanırdı); isabet git geçmişinden kurar."""
+    import datetime as dt
+    remote = tmp_path / "remote.git"
+    remote.mkdir()
+    _git(remote, "init", "-q", "--bare")
+    gun = dt.datetime.now(dt.UTC).date().isoformat()
+    co = _radar_kosusu(tmp_path, remote, "kosu1", gun, 1)
+    _git(co, "rm", "-q", f"radar/{gun}/kadro_ilk.json", f"radar/{gun}/havuz_ilk.json")       # eski biçimli günü taklit et
+    _git(co, "commit", "-qm", "eski biçim")
+    _git(co, "push", "-q", "origin", "HEAD:radar")
+    _radar_kosusu(tmp_path, remote, "kosu2", gun, 2)
+    assert _dal_json(remote, f"radar/{gun}/kadro.json")["kosu_ms"] == 2 and _dal_json(remote, f"radar/{gun}/kadro_ilk.json") is None
+
+
 def test_radar_deneme_kural_ust_girdisi_var_yazamaz():
     wf = yukle("radar_deneme.yml")
     assert "kural_ust" in wf["on"]["workflow_dispatch"]["inputs"] and wf["permissions"] == {"contents": "read"}
@@ -259,6 +321,7 @@ def test_telegram_secretlari_yalniz_main_dalinda_verilir_b1():
                 continue
             bulunan += 1
             assert f"secrets.{ad}" in deger and "github.ref == 'refs/heads/main'" in deger and deger.rstrip("} ").endswith("|| ''"), (dosya.name, ad, deger)
+            assert "vars.TELEGRAM_ACIK == 'evet'" in deger, (dosya.name, ad, deger)      # kullanıcı kararı 08.11: Telegram varsayılan KAPALI; repo değişkeni TELEGRAM_ACIK=evet ile açılır
         for satir in metin.splitlines():                  # hiçbir yerde çıplak Telegram secret'ı yok
             if "secrets.TELEGRAM" in satir and not satir.lstrip().startswith("#"):
                 assert "refs/heads/main" in satir, (dosya.name, satir)

@@ -219,3 +219,13 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - **Düzeltme:** matris tüm kadro satırları için (`radar_kadro.py`). Eşik/yöntem aynı. Yarınki radar koşusundan itibaren geçerli.
 - **Doğrulama:** `radar/2026-11-08/havuz.json` ile yeniden kadro → matris 14×14; bugünkü saha üyeleri arasında 7 kenar r ≥ 0,7, en büyük küme 5. Testler: `test_ilk11_yedek_19_ve_30_siniri` (matris 30), `test_k45_eki_yedekten_giris_de_korelasyon_denetimine_tabi`. Tam paket 882.
 - **Açık soru (kullanıcı/lider):** mevcut fazla benzer üyeler sahadan çıkarılsın mı? Kod yalnız GİRİŞİ denetler; RADAR §6 "fazlası sıradaki üyeye yer verir" çıkarmayı da ima eder. Şimdilik doğal çıkışlarla (K-39) azalması beklenir.
+
+## K-46 — İsabet karar kuralı yeniden kaydedildi (lider + kullanıcı onayı, 08.11; 12.11 verisi görülmeden)
+- RADAR §7b'ye eklendi: ana ölçü havuz `sonraki_7g` ortalaması (maliyet sonrası) + havuz − elenen; gün bloklu bootstrap %80 güven aralığı; ≥ 21 ölçülmüş gün (≈ 02–03.12). Alt > 0 devam; üst < 0 dur; arada kasa artmaz. 19.11'de yalnız üst < 0 ise dur. IC ve (b) bilgi.
+- Gerekçe: Fable seçim denetimi B6 (`docs/DENETIM_SECIM_2026-11-08.md`): n = 11–15'te 7 günlük IC ortalaması gerçek IC 0,03 iken %38 olasılıkla ≤ 0 çıkar; (b) İlk 11 havuzun %73–100'ü olduğundan ≈ 0.
+
+## K-47 — Seçim denetimi (Fable, 08.11) sonrası plan (kullanıcı onayı 08.11)
+- **Lider v1.1 önerisi geri çekildi** (7 gün tutma, kadro dışı 3 gün, haftalık değiştirme, 72 sa inen, slot %15): veri teşhisi çürüttü — çıkan 15 kişiden 0'ı geri döndü; çıkanlar −18,44 $, kalanlar −0,74 $; zorla kapanış zararının −11,8 $'ı K-42 öncesi HIP-3 kalıntısı.
+- **Hemen (yöntem değişmez):** K-45 eki (birleşti, #576); R-1 isabet günün ilk kadrosu; `islem_yok` sayacı son dolumdan; `kor_kirpildi` tekilleştirme; bilgi alanları (H'siz form, çıkış nedeni); **300 $ paralel sanal motor** (`canli-durum-300`).
+- **İkinci adım (Actions'ta gerçek veriyle):** R1 hesap paydası zaman bağımlı (B8, eski ↔ yeni yan yana); R1/kadro 300 $ ile yan yana; `kopya_islem_sayisi`, `yuvarlanan_pay`.
+- **Gerçek para şartı (güncel):** 300 $ sanal ≥ 7 gün; G-1…G-10 kapalı; isabet havuz ortalaması belirgin negatif değil. v1.1 adayları (evren ölçüsü, nedene bağlı çıkış, yuvarlama kuralı, kopya işlem kapısı, H çıkarma, net yön tavanı) 28. günden sonra, tek tek ve çevrimdışı sınanarak.

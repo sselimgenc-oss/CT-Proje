@@ -141,19 +141,21 @@ def test_zaman_butcesi_asilinca_eksik_yazilir_kalanlar_olculmez(monkeypatch):
 
 
 def test_main_havuz_yoksa_atlar_cikis_0(monkeypatch, capsys, tmp_path):
-    monkeypatch.setattr(ri, "git_oku", lambda dal, yol: None)
+    monkeypatch.setattr(ri, "git_oku", lambda dal, yol, rev=None: None)
+    monkeypatch.setattr(ri, "git_ilk_commit", lambda dal, yol: None)
     assert ri.main(["--cikti", str(tmp_path), "--veri-dali", "radar"]) == 0
     assert "ilk ölçüm 2026-11-12" in capsys.readouterr().out and not list(tmp_path.iterdir())
 
 
 def test_main_hata_olursa_tarama_bozulmaz_eksik_dosyaya_yazilir(monkeypatch, tmp_path):
     havuz, kadro = havuz_kadro(2)
-    monkeypatch.setattr(ri, "git_oku", lambda dal, yol: havuz if yol.endswith("havuz.json") else kadro)
+    monkeypatch.setattr(ri, "git_oku", lambda dal, yol, rev=None: {"havuz.json": havuz, "kadro.json": kadro}.get(yol.rsplit("/", 1)[1]))      # yalnız eski adlar (kadro_ilk yok)
+    monkeypatch.setattr(ri, "git_ilk_commit", lambda dal, yol: None)
     monkeypatch.setattr(ri, "calistir", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
     monkeypatch.setattr(ri.radar_tarama, "radar_istemcisi", lambda rules=None: object())
     assert ri.main(["--cikti", str(tmp_path), "--tarih", "2026-11-04"]) == 0
     d = json.loads((tmp_path / "2026-11-04" / "isabet.json").read_text(encoding="utf-8"))
-    assert d["eksik"] is True and d["hata"] == "RuntimeError"
+    assert d["eksik"] is True and d["hata"] == "RuntimeError" and d["kadro_kaynagi"] == "son"
 
 
 def test_varsayilan_tarih_gec_baslayan_havuzu_ertesi_gun_yakalar(monkeypatch):
@@ -170,3 +172,113 @@ def test_varsayilan_tarih_gec_baslayan_havuzu_ertesi_gun_yakalar(monkeypatch):
     d_olcu = lambda dal, yol: d.get(yol.split("/")[1]) if yol.endswith("havuz.json") else ({"x": 1} if yol.endswith("isabet.json") else None)
     monkeypatch.setattr(ri, "git_oku", d_olcu)                       # ölçüm yazılmışsa tekrar seçilmez → bugün−7
     assert ri.varsayilan_tarih(ertesi, kural, "radar") == "2026-11-06"
+
+
+# ------------------------------------------------------------------------------------------------------------------------------ R-1: günün İLK kadrosu ölçülür; R-7: isabet hatası yayımı engellemez
+ILK_KOSU, SON_KOSU = 1_793_841_373_358, 1_793_863_142_722           # gerçek 2026-11-05: ilk yayım 01:16Z (c566fbc5), güncel kadro.json 07:19Z (e3c10cde)
+
+
+def iki_kosu():
+    """İlk koşu: İlk 11 = adr(1), adr(2); aynı günün sonraki koşusu: İlk 11 = adr(3), adr(4)."""
+    havuz1, kadro1 = havuz_kadro(2)
+    havuz1["kosu_ms"] = kadro1["kosu_ms"] = ILK_KOSU
+    havuz2, _ = havuz_kadro(2)
+    havuz2["kosu_ms"] = SON_KOSU
+    kadro2 = {"kosu_ms": SON_KOSU, "satirlar": [{"adres": adr(i), "sira": i, "katman": "ilk11" if i in (3, 4) else "yedek", "form": 100.0 - 10 * i} for i in range(1, 6)]}
+    return (havuz1, kadro1), (havuz2, kadro2)
+
+
+def sahte_dal(guncel: dict, gecmis: dict | None = None):
+    """git_oku taklidi: `guncel` = origin/<dal> ucundaki dosyalar {yol: json}; `gecmis` = {sha: {yol: json}}."""
+    return lambda dal, yol, rev=None: (gecmis or {}).get(rev, {}).get(yol) if rev else guncel.get(yol)
+
+
+def test_gun_oku_kadro_ilk_varsa_onu_ve_ayni_kosunun_havuzunu_kullanir(monkeypatch):
+    (h1, k1), (h2, k2) = iki_kosu()
+    k = "radar/2026-11-05"
+    monkeypatch.setattr(ri, "git_oku", sahte_dal({f"{k}/kadro_ilk.json": k1, f"{k}/havuz_ilk.json": h1, f"{k}/kadro.json": k2, f"{k}/havuz.json": h2}))
+    monkeypatch.setattr(ri, "git_ilk_commit", lambda dal, yol: pytest.fail("kadro_ilk varken git geçmişine bakılmaz"))
+    havuz, kadro, kaynak = ri.gun_oku("radar", "2026-11-05")
+    assert kaynak == "ilk" and kadro["kosu_ms"] == havuz["kosu_ms"] == ILK_KOSU
+
+
+def test_gun_oku_eski_gunde_ilk_kadroyu_git_gecmisinden_kurar_yoksa_son(monkeypatch):
+    (h1, k1), (h2, k2) = iki_kosu()
+    k = "radar/2026-11-05"
+    monkeypatch.setattr(ri, "git_oku", sahte_dal({f"{k}/kadro.json": k2, f"{k}/havuz.json": h2}, {"c566fbc5": {f"{k}/kadro.json": k1, f"{k}/havuz.json": h1}}))
+    monkeypatch.setattr(ri, "git_ilk_commit", lambda dal, yol: "c566fbc5" if yol == f"{k}/kadro.json" else None)
+    havuz, kadro, kaynak = ri.gun_oku("radar", "2026-11-05")
+    assert kaynak == "ilk_git" and kadro["kosu_ms"] == havuz["kosu_ms"] == ILK_KOSU
+    monkeypatch.setattr(ri, "git_ilk_commit", lambda dal, yol: None)                      # geçmiş yok (sığ checkout) → güncel kadro, "son" diye işaretli
+    havuz, kadro, kaynak = ri.gun_oku("radar", "2026-11-05")
+    assert kaynak == "son" and kadro["kosu_ms"] == havuz["kosu_ms"] == SON_KOSU
+
+
+def test_git_ilk_commit_gercek_git_ile_gunun_ilk_yayimini_bulur(tmp_path, monkeypatch):
+    """Gerçek git: veri dalında aynı gün iki yayım (kosu 1 → 2); ilk commit'teki kadro + havuz kosu 1, uç kosu 2; yayımı olmayan gün → None."""
+    import subprocess
+    co, uzak = tmp_path / "co", tmp_path / "remote.git"
+    co.mkdir()
+    subprocess.run(["git", "init", "-q", "--bare", str(uzak)], check=True)
+
+    def g(*a):
+        subprocess.run(["git", "-C", str(co), *a], check=True, capture_output=True, text=True)
+    g("init", "-q")
+    g("config", "user.name", "T")
+    g("config", "user.email", "t@e")
+    g("remote", "add", "origin", str(uzak))
+    d = co / "radar/2026-11-05"
+    d.mkdir(parents=True)
+    for kosu in (1, 2):
+        (d / "kadro.json").write_text(json.dumps({"kosu_ms": kosu, "satirlar": []}))
+        (d / "havuz.json").write_text(json.dumps({"kosu_ms": kosu, "satirlar": []}))
+        g("add", ".")
+        g("commit", "-qm", f"radar {kosu}")
+    g("push", "-q", "origin", "HEAD:radar")
+    g("fetch", "-q", "origin")
+    monkeypatch.chdir(co)
+    havuz, kadro, kaynak = ri.gun_oku("radar", "2026-11-05")
+    assert kaynak == "ilk_git" and kadro["kosu_ms"] == 1 and havuz["kosu_ms"] == 1
+    assert ri.git_oku("radar", "radar/2026-11-05/kadro.json")["kosu_ms"] == 2
+    assert ri.git_ilk_commit("radar", "radar/2026-11-06/kadro.json") is None
+
+
+def test_main_kadro_ilk_ile_olcer_ilk11_ilk_kadronun_ve_kaynak_yazilir(monkeypatch, tmp_path):
+    """Uçtan uca: İlk 11 = ilk kadronun (adr 1, 2), sonraki kadronun (adr 3, 4) DEĞİL; pencere başı = ilk koşu; `kadro_kaynagi: "ilk"`."""
+    import time as _t
+    (h1, k1), (h2, k2) = iki_kosu()
+    simdi = int(_t.time() * 1000)
+    h1["kosu_ms"] = k1["kosu_ms"] = simdi - 8 * GUN
+    h2["kosu_ms"] = k2["kosu_ms"] = simdi - 8 * GUN + 6 * 3600 * 1000
+    k = "radar/2026-11-05"
+    monkeypatch.setattr(ri, "git_oku", sahte_dal({f"{k}/kadro_ilk.json": k1, f"{k}/havuz_ilk.json": h1, f"{k}/kadro.json": k2, f"{k}/havuz.json": h2}))
+    monkeypatch.setattr(ri.radar_tarama, "Baglam", SahteBaglam)
+    monkeypatch.setattr(ri.radar_tarama, "radar_istemcisi", lambda rules=None: SahteIstemci())
+    assert ri.main(["--cikti", str(tmp_path), "--tarih", "2026-11-05"]) == 0
+    d = json.loads((tmp_path / "2026-11-05" / "isabet.json").read_text(encoding="utf-8"))
+    assert d["kadro_kaynagi"] == "ilk" and d["kadro_kosu_ms"] == d["havuz_kosu_ms"] == d["pencere_bas_ms"] == h1["kosu_ms"]
+    assert [s["adres"] for s in d["satirlar"] if s["grup"] == "ilk11"] == [adr(1), adr(2)]
+
+
+def test_main_beklenmeyen_hata_isabet_hatasi_basar_ve_cikis_0(monkeypatch, tmp_path, capsys):
+    """R-7: try dışındaki çağrılar (varsayilan_tarih / okuma / json.dumps allow_nan=False) patlasa da çıkış 0 → radar.yml'de kadro yayımı engellenmez; hata AÇIKÇA basılır."""
+    monkeypatch.setattr(ri, "varsayilan_tarih", lambda *a, **k: (_ for _ in ()).throw(json.JSONDecodeError("bozuk", "x", 0)))
+    assert ri.main(["--cikti", str(tmp_path)]) == 0
+    c = capsys.readouterr()
+    assert "ISABET HATASI" in c.err and "JSONDecodeError" in c.err and "::error title=ISABET HATASI::" in c.out
+    havuz, kadro = havuz_kadro(2)
+    monkeypatch.setattr(ri, "gun_oku", lambda dal, tarih: (havuz, kadro, "ilk"))
+    monkeypatch.setattr(ri.radar_tarama, "radar_istemcisi", lambda rules=None: object())
+    monkeypatch.setattr(ri, "calistir", lambda *a, **k: {"x": float("nan")})                    # allow_nan=False → ValueError
+    assert ri.main(["--cikti", str(tmp_path), "--tarih", "2026-11-04"]) == 0
+    assert "ISABET HATASI" in capsys.readouterr().err and not (tmp_path / "2026-11-04" / "isabet.json").exists()
+
+
+def test_radar_yml_isabet_adimi_yayimdan_once_ve_hata_yayimi_engellemez():
+    """isabet.json'lar yayımla taşındığı için isabet adımı yayımdan önce kalır; bu yüzden main() her hatada 0 döner (yukarıdaki test)."""
+    from pathlib import Path
+
+    import yaml
+    wf = yaml.safe_load((Path(__file__).resolve().parents[1] / ".github/workflows/radar.yml").read_text(encoding="utf-8"))
+    ad = [a.get("name", "") for a in wf["jobs"]["radar"]["steps"]]
+    assert ad.index("Seçim isabeti (§7b)") < ad.index("Veri dalına yaz (radar)")

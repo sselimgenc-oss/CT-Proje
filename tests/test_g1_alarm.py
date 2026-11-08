@@ -22,8 +22,8 @@ def test_basarisizlik_alarmi_failure_ve_main_kosullu(is_adi):
     wf = yukle("canli_vardiya.yml")
     a = adim(wf, is_adi, "Alarm (Telegram")
     assert a["if"] == "${{ failure() }}"
-    assert a["env"]["TELEGRAM_BOT_TOKEN"] == "${{ github.ref == 'refs/heads/main' && secrets.TELEGRAM_BOT_TOKEN || '' }}"
-    assert a["env"]["TELEGRAM_CHAT_ID"] == "${{ github.ref == 'refs/heads/main' && secrets.TELEGRAM_CHAT_ID || '' }}"
+    assert a["env"]["TELEGRAM_BOT_TOKEN"] == "${{ github.ref == 'refs/heads/main' && vars.TELEGRAM_ACIK == 'evet' && secrets.TELEGRAM_BOT_TOKEN || '' }}"
+    assert a["env"]["TELEGRAM_CHAT_ID"] == "${{ github.ref == 'refs/heads/main' && vars.TELEGRAM_ACIK == 'evet' && secrets.TELEGRAM_CHAT_ID || '' }}"
     assert "vardiya_alarm.sh" in a["run"] and "github.run_id" in a["env"]["RUN_URL"]
     if is_adi == "vardiya":
         assert adimlar(wf, is_adi)[-1] == a["name"]                              # son adım: önceki adımların sonucunu görür

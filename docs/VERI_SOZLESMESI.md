@@ -371,7 +371,21 @@ erken giriş = açılışı bilinen kârlı işlem, trend coin, coinin hareketi 
 Üst düzey: `sema` (`"radar-kadro-v1"`), `kosu_ms`, `kasa_usd`, `slot_usd` (= kasa / `saha_n`), `saha_n` (N = min(`radar_saha_max`, taban(kasa / `radar_canli_slot_min_usd`))), `gecti_sayisi`, `soguyan` ([{adres, neden, kopya_getiri_72s}]),
 `satirlar` (form azalan, en çok `radar_kadro_toplam`), `korelasyon` ({`adresler` (tüm kadro: İlk 11 + Yedek; K-45 eki 08.11, önce yalnız İlk 11), `gun_sayisi`, `matris` (Pearson, günlük `kopya_gunluk`; sabit seri `null`)}).
 `satirlar[]`: `adres`, `sira` (1…30), `katman` (`ilk11` ≤ `radar_kadro_ilk` < `yedek`), `form`, `bilesenler` {G,K,I1,I2,Y,H}, `kopya_getiri_7g` (oran, kopya_$), `max_kaldirac` (x).
+**Bilgi alanları (v1.30; YALNIZ BİLGİ — seçim, sıra, katman, eşik ve ağırlıklar `form`'a göredir ve değişmez; motor/pano bunlarla karar vermez):**
+| alan | birim | anlam |
+|---|---|---|
+| `satirlar[].form_h_siz` | 0–100 puan | aynı bileşen yüzdelikleriyle H çıkarılmış form: Σ_{b≠H} `radar_agirlik_b` × yüzdelik_b / Σ_{b≠H} `radar_agirlik_b` (0,35/0,15/0,10/0,10/0,10 → /0,80) |
+| `satirlar[].sira_h_siz` | sıra (1 = en iyi) | `form_h_siz` azalan sıra (eşitlikte adres), soğuyanlar hariç **tüm puanlanan havuzda** (kadroyla sınırlı değil) |
+| `h_siz_girenler` | — | [{adres, sira_h_siz, form_h_siz}]: `sira_h_siz` ≤ `radar_kadro_toplam` olup kadroda olmayanlar (H'siz seçimde girecekler; puanlı havuz ≤ 30 iken hep boş) |
+| `onceki_kosu_ms` | UTC ms | karşılaştırılan önceki kadronun `kosu_ms`'i (koşu başlangıcı); önceki kadro verilmediyse `null` |
+| `elenenler` | — | [{adres, onceki_sira, neden}]: önceki kadroda olup **bugünkü havuzda** R1'i geçemeyenler; `neden` = bugünkü havuz satırının `neden`'i; önceki sıra artan |
+| `eski_uye_neden` | {adres: kod} | önceki kadroda olup bugünkü kadroda olmayan her adres: `r1:<neden>` (havuzda, `gecti` false) · `r0_disi` (havuzda yok: 7 g getiride ilk `radar_aday_tavan` dışı) · `soguyan` · `sira_disi` (puanlandı, form sırası > `radar_kadro_toplam`) |
+Önceki kadro = `--onceki-kadro` (radar.yml: veri dalındaki `radar/son/kadro.json`, bugünkü yayından önce — son TAM koşunun kadrosu; bir gün eksikse daha eskidir, `onceki_kosu_ms`'e bakın). Verilmezse `elenenler` = [], `eski_uye_neden` = {}.
+Havuzda olmadığı için **yazılmayanlar:** G'nin işlem başı kopya getirileri (t istatistiği için) ve kopya işlem sayısı — `havuz.json` yalnız `kopya_alt20` (bootstrap alt yüzdelik) ve trader `islem_sayisi`'nı tutar; ikisi için `radar_tarama` değişikliği gerekir.
 **Saha kararları (slot −%10, bekleme, günde 2 değişiklik, benzer trader ≥ 0,7) kadroda DEĞİL:** T4 motoru okuyup §5/§6 kurallarını uygular.
+**Günün ilk kadrosu — `radar/<YYYY-MM-DD>/kadro_ilk.json` + `havuz_ilk.json` (denetim R-1, 08.11):** radar aynı UTC gününde birden çok koşabilir (elle tetik, `CALISTIR`, yedek cron); her yayım `kadro.json`/`havuz.json`/`son/` dosyalarını EZER,
+ama motor (K‑39) o günün **ilk** kadrosunu uygular. `radar_yayimla.sh` günün ilk yayımında (veri dalında o günün `kadro.json`'u henüz yokken) aynı içeriği `kadro_ilk.json` ve `havuz_ilk.json` olarak da yazar; bu iki dosya
+**asla üzerine yazılmaz**. Biçim `kadro.json` / `havuz.json` ile birebir aynı (aynı koşu, aynı `kosu_ms`). Bu değişiklikten önce yayımlanmış günlerde yoktur (ör. 2026-11-05…08); o günlerin ilk kadrosu veri dalı geçmişinden kurulur (§13b).
 
 
 ## 13b. Seçim isabeti — `radar/<havuz tarihi>/isabet.json` (v1.27, T6; `copytrade/radar_isabet.py`, strateji: `docs/RADAR_V1.md` §7b)
@@ -385,9 +399,12 @@ Oranlar kesirdir (0,02 = %2), kopya_$ = 1.000 $ sanal kasa ölçeğinde net geti
 | `fark_ilk11_havuz`, `fark_ilk11_elenen` (+ `_kotu`) | oran | İlk 11 ortalaması − havuz ortalaması / − elenenler ortalaması |
 | `tohum` | tamsayı | `elenen` seçimi: YYYYMMDD (sabit; aynı gün aynı seçim); `elenen_aday_sayisi`: seçilebilecek aday (kopya aşamasına varıp elenen) |
 | `eksik`, `hata`, `sure_dk` | bool, metin, dk | bütçe (`isabet_butce_dk` 30) aşıldı / bir adres ölçülemedi / ölçüm hatası; tarama işi bozulmaz |
+| `kadro_kaynagi` | metin | ölçülen kadro (R-1; motorun uyguladığı günün İLK kadrosu): `"ilk"` = `kadro_ilk.json` + `havuz_ilk.json`; `"ilk_git"` = (eski günler) veri dalı geçmişinde `kadro.json`'a dokunan ilk commit'teki kadro + havuz; `"son"` = güncel `kadro.json` + `havuz.json` (geçmiş okunamadı; günün ilk kadrosu OLMAYABİLİR); eski dosyalarda alan yok |
+| `kadro_kosu_ms` | UTC ms | ölçülen kadronun `kosu_ms`'i (= `havuz_kosu_ms` = `pencere_bas_ms`; havuz her zaman kadroyla aynı koşudan) |
 | `satirlar[]` | — | `adres`, `grup`, `form`, `sonraki_7g`, `sonraki_7g_kotu`, `hata` |
 Gruplar: (i) `ilk11` = kadro `katman == ilk11`; (ii) `havuz_geri` = R1'i geçip İlk 11 dışında kalanlar (Yedek dahil); (iii) `elenen` = kopya aşamasına varıp (`kopya_getiri_7g` dolu) elenenlerden en çok 30 (sabit tohumla rastgele).
 **Kötü senaryo:** kayma `isabet_kotu_kayma_carpan` (2) kat, gecikme `isabet_kotu_gecikme_dk` (3 dk). Pencerede hiç dolumu olmayan adresin getirisi 0 (ölçüldü). `pencere_tam: false` yalnız deneme (`--kismi`).
+**Hata (R-7):** isabet adımı `radar.yml`'de yayımdan önce koşar; beklenmeyen her hata günlüğe `ISABET HATASI …` (+ Actions `::error::`) olarak basılır ve adım 0 ile biter → o günün kadro yayımı engellenmez (o gün `isabet.json` yazılmayabilir).
 
 ## 13c. Günlük rapor — `canli-durum` dalında `pano/OZET.md` ve `pano/gecmis.json` (v1.27, T6 §3; `copytrade/canli/pano.py`)
 Telefonda okunan Markdown; her vardiya sonunda güncellenir. Yeni hesap yok: `ozet.json`, `risk.json`, `hesap.json`, `kayit/*.jsonl` sayıları biçimlenir. Oranlar yüzde gösterilir; $ kasa ölçeği; saatler UTC; kayma = (dolum − trader fiyatı) / trader fiyatı (aleyhe +).

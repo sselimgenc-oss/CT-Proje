@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Yalnız Actions'ın geçici checkout'unda çalışır; kullanıcı checkout'unda çalıştırmayın.
 # Veri dalı `radar` (main'den) ya da `radar-deneme` (dal doğrulaması; `VERI_DALI`): radar/<tarih>/{havuz,kadro}.json + radar/son/kadro.json; 90 günden eski tarihli klasörler silinir. Kök commit yalnız dal ilk kez oluşurken (orphan); sonra düz commit.
+# Denetim R-1: günün İLK yayımı ayrıca radar/<tarih>/{kadro_ilk,havuz_ilk}.json olarak saklanır ve ASLA üzerine yazılmaz (motor K-39 ile günün ilk kadrosunu uygular; §7b isabeti onu ölçer).
 set -euo pipefail
 [ "${GITHUB_ACTIONS:-}" = true ] || { echo 'Yalnız GitHub Actions için.' >&2; exit 1; }
 veri_dali="${VERI_DALI:-radar}"
@@ -35,6 +36,13 @@ fi
 mkdir -p "radar/$gun" radar/son
 cp "$archive/havuz.json" "$archive/kadro.json" "radar/$gun/"
 cp "$archive/kadro.json" radar/son/kadro.json
+if [ ! -e "radar/$gun/kadro_ilk.json" ] && ! git cat-file -e "HEAD:radar/$gun/kadro.json" 2>/dev/null; then
+  # Günün ilk yayımı (veri dalında o günün kadrosu henüz yok): ilk kadro + aynı koşunun havuzu korunur; aynı günün sonraki yayımları bu iki dosyaya dokunmaz.
+  # Bu değişiklikten ÖNCE yayımlanmış bir günde (kadro.json var, kadro_ilk.json yok) ikinci yayım kadro_ilk.json YAZMAZ (yanlış "ilk" olurdu); isabet onu git geçmişinden kurar.
+  cp "$archive/kadro.json" "radar/$gun/kadro_ilk.json"
+  cp "$archive/havuz.json" "radar/$gun/havuz_ilk.json"
+  git add -f "radar/$gun/kadro_ilk.json" "radar/$gun/havuz_ilk.json"
+fi
 for f in "$archive"/isabet/*/isabet.json; do
   [ -f "$f" ] || continue
   g="$(basename "$(dirname "$f")")"

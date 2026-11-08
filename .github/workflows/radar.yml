@@ -60,9 +60,17 @@ jobs:
           mkdir -p radar
           python -u -m copytrade.radar_tarama --cikti radar --ozet-md radar/OZET.md
       - name: Günlük kadro (R2 form puanı)
+        env:
+          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
         run: |
           havuz="$(ls radar/*/havuz.json | tail -n 1)"
-          python -u -m copytrade.radar_kadro --havuz "$havuz"
+          # Yalnız bilgi alanları (elenenler, eski_uye_neden): önceki kadro = veri dalındaki son/kadro.json (bugünkü yayından önce). Dal/dosya yoksa (ilk koşu) argümansız; seçim etkilenmez.
+          onceki=()
+          if git cat-file -e "origin/$VERI_DALI:radar/son/kadro.json" 2>/dev/null; then
+            git show "origin/$VERI_DALI:radar/son/kadro.json" > "$RUNNER_TEMP/onceki_kadro.json"
+            onceki=(--onceki-kadro "$RUNNER_TEMP/onceki_kadro.json")
+          fi
+          python -u -m copytrade.radar_kadro --havuz "$havuz" "${onceki[@]}"
       - name: Seçim isabeti (§7b)
         env:
           VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
