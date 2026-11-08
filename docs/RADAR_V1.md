@@ -119,6 +119,11 @@ Kasa 1.000 $'da kalır; artırım ancak hepsi sağlanırsa **önerilir**:
   (c) sahadaki gerçek sonuç ile (b)'nin karşılaştırması.
 - **Önceden kayıtlı kural:** 14 gün (≥ 7 ölçülmüş gün) sonra ortalama IC ≤ 0 **ve** (b) ≤ 0 ise: kasaya para eklenmez, lider tasarımı gözden
   geçirir ve kullanıcıya rapor eder (kasa küçültme önerisi dahil). 28. günde aynı ölçüm büyütme kapısının 4. şartıdır.
+- **K‑46 (08.11, veriyi görmeden önceden kayıt; yukarıdaki 14 gün kuralının YERİNE):** havuz 11–15 kişiyken günlük IC'nin standart hatası
+  0,27–0,32 ve (b) yapısal olarak ≈ 0 olduğundan karar ölçüsü değişir. **Ana ölçü:** havuzun `sonraki_7g` ortalaması (maliyet sonrası) ve
+  havuz − elenenler farkı; **güven aralığı:** gün bloklu bootstrap, %80. **En az 21 ölçülmüş gün** (≈ 02–03.12). Alt sınır > 0 → devam
+  (büyütmeye aday); üst sınır < 0 → dur, tasarım gözden geçirilir, kullanıcıya rapor; arada → kasa artmaz. 7. ölçülmüş günde (≈ 19.11)
+  yalnız "üst sınır < 0" ise durulur. IC ve (b) yalnız bilgi. 12.11 ilk ölçümü boru hattı kontrolüdür, karar verisi değildir.
 
 ## 8. Kilit ve değişiklik
 - Tüm eşik ve ağırlıklar **v1'de donar**, `kurallar.yaml` `radar_*` anahtarlarında tek yerde (kodda sayı sabiti yok).
