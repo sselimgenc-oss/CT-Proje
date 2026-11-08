@@ -94,7 +94,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          sure_dk="${GIRDI_SURE_DK:-255}"
+          sure_dk="${DONEM_SURE_DK:-${GIRDI_SURE_DK:-255}}"           # dönem beklemesi sonrası kısaltılmış süre önce (donem_geri.sh)
           case "$sure_dk" in ''|*[!0-9]*) sure_dk=255 ;; esac
           # 15 dk'da bir durumu veri dalına yayımlayan arka plan döngüsü (ayrı git worktree: motorun çalıştığı dizin değişmez)
           # Y-2 (denetim #3): yalnız main'de her turda SALT OKUR sağlık kontrolü (veri dalı + Cloudflare sayfası + REST); hata/zaman aşımı döngüyü ve motoru etkilemez
