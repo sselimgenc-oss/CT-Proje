@@ -1,0 +1,46 @@
+name: Eski dalları sil (tek seferlik)
+
+# Kullanıcı onayı 08.11: Sonnet dönemi eski `claude/*` dalları silinir (hepsi birleşmiş/terk edilmiş; açık PR yok).
+# YALNIZ aşağıdaki sabit liste; veri dalları (canli-durum*, radar*), main ve claude/stoic-carson-w3xagz listede YOK. Yalnız elle, yalnız main.
+# İş bitince bu dosya silinir (S-21: yazma yetkili kalıntı iş akışı bırakılmaz).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sil:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Listedeki dalları sil
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -u
+          hata=0
+          for dal in \
+            claude/baslangic-dogrulama claude/canliya-gecis-kararlari claude/dal-temizligi-listesi claude/denetim-b1-belge \
+            claude/denetim3-duzeltmeler claude/devir-gece-ozet claude/devir-guncel-0511b claude/devir-k38-birlesti \
+            claude/devir-olay-numpy claude/fix-motor-numpy claude/g1-vardiya-alarm claude/g2-saglik-kalici \
+            claude/g3-cron-zincir claude/g4-kip-sunucu-env claude/g5-kip-uyusmazlik claude/g6-api-cuzdan-dogrulama \
+            claude/g7-funding-ucret claude/g8-sunucu-nabiz claude/gracious-fermi-anjejo claude/k38-azaltma \
+            claude/k38-baz claude/k39-kadro-disi claude/k41-ofset claude/k42-spot-hip3 claude/k42-takip \
+            claude/k43-radar-hip3 claude/k43-sayac-notu claude/k43-uygula claude/k44 claude/kullanici-onay-0611 \
+            claude/lider-kararlari-0511 claude/pano-kadro-11 claude/pano-ozet-duzen claude/radar-gunluk-0611 \
+            claude/saatlik-bos-mesaj claude/t4b-guvenlik-1 claude/telegram-lider-kararlari claude/telegram-ozet-kasa \
+            claude/telegram-saatlik-ozet claude/vardiya-kuyruk-0611; do
+            if gh api -X DELETE "repos/${GH_REPO}/git/refs/heads/${dal}" >/dev/null 2>&1; then
+              echo "silindi: ${dal}"
+            elif ! gh api "repos/${GH_REPO}/git/ref/heads/${dal}" >/dev/null 2>&1; then
+              echo "zaten yok: ${dal}"
+            else
+              echo "::error::silinemedi: ${dal}"; hata=1
+            fi
+          done
+          exit "$hata"
