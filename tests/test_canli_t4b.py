@@ -59,8 +59,16 @@ class BorsaSim:
         return {"status": "ok"}
 
     def order(self, coin, is_buy, sz, px, tif, reduce_only, cloid=None):
+        """HL reduce-only kuralı (G-13): pozisyon yoksa ya da emir pozisyonla AYNI yöndeyse RED (eşleşmeden önce; `doluluk` tüketilmez);
+        aksi hâlde dolan miktar |pozisyon| ile kırpılır (reduce-only pozisyonu asla ters çeviremez)."""
+        cur = self.poz.get(coin, 0.0)
+        if reduce_only and (abs(cur) < 1e-12 or (cur > 0) == is_buy):
+            self.siparisler.append({"coin": coin, "is_buy": is_buy, "sz": sz, "px": px, "reduce_only": True, "cloid": cloid, "dolan": 0.0, "red": True})
+            return {"status": "ok", "response": {"type": "order", "data": {"statuses": [{"error": "Reduce only order would increase position. asset=0"}]}}}
         oran = self.doluluk.pop(0) if len(self.doluluk) > 1 else self.doluluk[0]
         dolan = round(sz * oran, 5)
+        if reduce_only:
+            dolan = round(min(dolan, abs(cur)), 5)
         self.siparisler.append({"coin": coin, "is_buy": is_buy, "sz": sz, "px": px, "reduce_only": reduce_only, "cloid": cloid, "dolan": dolan})
         if dolan <= 0:
             return {"status": "ok", "response": {"type": "order", "data": {"statuses": [{"error": "Order could not immediately match"}]}}}

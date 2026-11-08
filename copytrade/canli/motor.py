@@ -714,7 +714,31 @@ class Motor:
             self.kayit({"olay": "kapanis_borsa_okuma_hata", "tur": type(hata).__name__})
             return yerel, False
         diger = sum(c[coin].sz for a, c in self.hesap.poz.items() if a != adres and coin in c)
-        return hl.get(coin, 0.0) - diger, True
+        self._kalan_hl = {"coin": coin, "hl": hl.get(coin, 0.0), "diger": diger}
+        return self._kirp(yerel, hl.get(coin, 0.0) - diger), True
+
+    @staticmethod
+    def _kirp(yerel: float, k: float) -> float:
+        """G-13: borsadaki pay `k` (= HL − diğer adreslerin yerel payı) yerel pozisyonla işaret ve büyüklükte kırpılır. `yerel·k ≤ 0` → 0 (kapatılacak bir şey yok: borsa
+        payı yok ya da ters); değilse işaret `yerel`'in, büyüklük `min(|k|, |yerel|)`. Böylece kapanış emri ASLA pozisyonu büyütecek yönde ya da yerel paydan büyük gitmez."""
+        if yerel * k <= 0:
+            return 0.0
+        return math.copysign(min(abs(k), abs(yerel)), yerel)
+
+    def _harici_kapanis(self, adres: str, coin: str, kalan: float, mk: float, simdi: int, neden: str) -> None:
+        """G-13: gerçek kipte borsadaki pay yerel defterden belirgin küçük (HL tasfiye / ADL / elle kapatma). Fark emir göndermeden yerel defterden mark ile düşülür
+        (`_yerel_temizle`; K/Z realize'a geçer → özdeşlik korunur), kayıt + sayaç + Telegram alarmı. Kuyruğa girmez (sonsuz yeniden deneme yok)."""
+        yerel = self.hesap.sz(adres, coin)
+        fark = abs(yerel) - abs(kalan)
+        if fark <= EPS or (mk and fark * mk <= float(self.rules["canli_kapanis_toz_usd"])):
+            return
+        bilgi = getattr(self, "_kalan_hl", None) or {}
+        hl = bilgi.get("hl") if bilgi.get("coin") == coin else None
+        self.sayac["harici_kapanis"] = self.sayac.get("harici_kapanis", 0) + 1
+        self.kayit({"olay": "harici_kapanis", "adres": adres, "coin": coin, "yerel_sz": yerel, "borsa_pay_sz": kalan, "hl_sz": hl, "mark": mk, "usd": round(fark * (mk or 0.0), 6), "neden": neden})
+        self.tg.gonder(tg.alarm("ALARM: borsada pozisyon yok (harici kapanış)",
+                                f"{coin} (trader {tg.kisa(adres)}): defter {yerel:g}, borsadaki pay {kalan:g} (HL {hl if hl is not None else '?'}).\n"
+                                f"Fark ({fark:g} {coin}) borsa dışında kapanmış (tasfiye/ADL/elle); emir gönderilmedi, defterden mark {mk:g} ile düşüldü."))
 
     def _yerel_temizle(self, adres: str, coin: str, mk: float, simdi: int, neden: str) -> None:
         """Borsa/toz teyidi: pozisyon 0 → yerel defterde kalan toz varsa mark'ta kapatılır (ücretsiz)."""
@@ -733,9 +757,11 @@ class Motor:
         toz = float(self.rules["canli_kapanis_toz_usd"])
         son: Sonuc | None = None
         for i in range(baslangic, len(bantlar) + 1):
-            kalan, _ = self._kalan_sz(adres, coin)
+            kalan, borsadan = self._kalan_sz(adres, coin)
             mk = self._mark_kapanis(adres, coin) or (o.px if o else 0.0) or 0.0
             if abs(kalan) < EPS or (mk and abs(kalan) * mk <= toz):
+                if borsadan:
+                    self._harici_kapanis(adres, coin, kalan, mk, simdi, neden)
                 self._yerel_temizle(adres, coin, mk, simdi, neden)
                 self.kapanis_kuyrugu.pop(f"{adres}|{coin}", None)
                 return True, son
@@ -802,8 +828,61 @@ class Motor:
             self.tg.gonder(tg.alarm("ALARM: pozisyonlar hâlâ kapanmadı", f"kapanış eksik: {len(eksik)} pozisyon ({', '.join(k.split('|')[1] + ' ' + tg.kisa(k.split('|')[0]) for k in eksik[:5])}).\nYeniden deneniyor."))
         self._dur_bitir_mi()
 
+    def _borsa_fazla(self, simdi: int) -> dict[str, float] | None:
+        """G-2: gerçek kipte borsada (clearinghouseState, tüm dex) defterin KARŞILAMADIĞI pay: coin → işaretli sz (= `_kirp(hl, hl − defter toplamı)`; toz üstü).
+        Defterde hiç olmayan coin (ör. elle açılmış ETH) tamamıyla buraya düşer. Okuma hatası → None (düz SAYILMAZ)."""
+        try:
+            hl = clearinghouse_pozisyonlari(self.post, os.environ.get("HL_HESAP_ADRESI", ""), self._dexler())
+        except Exception as hata:                          # noqa: BLE001
+            self.kayit({"olay": "borsa_yetim_okuma_hata", "tur": type(hata).__name__})
+            return None
+        if any(abs(v) > EPS and not self.mark(c) for c, v in hl.items()):
+            self.mids_uygula(self.mids_al(), simdi)
+        toz = float(self.rules["canli_kapanis_toz_usd"])
+        fazla: dict[str, float] = {}
+        for coin, v in hl.items():
+            f = self._kirp(v, v - sum(c[coin].sz for c in self.hesap.poz.values() if coin in c))
+            mk = self.mark(coin)
+            if abs(f) > EPS and (not mk or abs(f) * mk > toz):
+                fazla[coin] = f
+        return fazla
+
+    def _borsa_yetim_kapat(self, neden: str, simdi: int) -> dict[str, float] | None:
+        """G-2: DUR / `/kapat` için borsadaki defter dışı payı reduce-only IOC ile kapatır (bant merdiveni; her turdan sonra borsa yeniden okunur). Yerel deftere dokunmaz
+        (defterde olmayan pozisyon). Döner: kalan fazla ({} = borsa düz) ya da None (borsa okunamadı)."""
+        bantlar = [float(x) for x in self.rules["canli_kapanis_bantlari"]]
+        fazla: dict[str, float] | None = None
+        for i in range(len(bantlar) + 1):
+            fazla = self._borsa_fazla(simdi)
+            if not fazla or i >= len(bantlar):
+                break
+            for coin, sz in fazla.items():
+                mk = self.mark(coin)
+                if not mk:
+                    self.kayit({"olay": "borsa_yetim_mark_yok", "coin": coin, "sz": sz})
+                    continue
+                yon = "A" if sz > 0 else "B"
+                cloid = cloid_uret(f"yetim:{coin}:{self.saat_ms()}:{i}:{neden[:12]}", "kapat")
+                try:
+                    d = self.yurutucu.emir(coin, yon, abs(sz) * mk * 1.05, True, abs(sz), bant=bantlar[i], cloid=cloid)
+                except Exception as hata:                  # noqa: BLE001 - bir coinin hatası diğerlerini durdurmaz; sonraki tur / dakika yeniden dener
+                    self.kayit({"olay": "borsa_yetim_emir_hata", "coin": coin, "tur": type(hata).__name__})
+                    continue
+                self.kayit({"olay": "borsa_yetim_kapat", "coin": coin, "sz_istenen": sz, "yon": yon, "durum": d.durum, "sz": d.sz, "px": d.px, "ucret": d.ucret, "red_neden": d.neden,
+                            "bant": bantlar[i], "cloid": cloid, "neden": neden})
+        if fazla:
+            self.kayit({"olay": "borsa_yetim_kaldi", "fazla": fazla, "neden": neden})
+        return fazla
+
     def _dur_bitir_mi(self) -> None:
         if self.dur_bekliyor and not self.kapanis_kuyrugu and not any(self.hesap.poz.values()):
+            if self.kip == "gercek":                       # G-2: "tümü kapandı" yalnız BORSA düzken (defter dışı pozisyon dahil)
+                fazla = self._borsa_yetim_kapat("dur_bekliyor", self.saat_ms())
+                if fazla != {}:
+                    if self._aralik_mi("borsa_yetim_alarm", self.saat_ms(), 60):
+                        self.tg.gonder(tg.alarm("ALARM: borsa düzleşmedi", "Defter boş ama borsada açık pozisyon var: "
+                                                + (", ".join(f"{c} {v:g}" for c, v in list(fazla.items())[:5]) if fazla else "borsa okunamadı") + ".\nYeniden deneniyor; motor henüz durmadı."))
+                    return
             self.dur_bekliyor = False
             self.dur_istendi = True
             self._dur_yaz_atomik(self.risk.dur_neden or "dur", self.saat_ms(), False)
@@ -876,14 +955,23 @@ class Motor:
             except Exception as hata:                                                           # noqa: BLE001 - kapanış hatası DUR'u bozmaz; kalan pozisyon dakikalık yeniden denenir
                 self.kayit({"olay": "dur_kapanis_hata", "adres": a, "tur": type(hata).__name__})
         kalan = sum(len(c) for c in self.hesap.poz.values())
-        if kalan == 0:
+        fazla: dict[str, float] | None = {}
+        if self.kip == "gercek":                                                                # G-2: defterde OLMAYAN borsa pozisyonları da kapatılır; "kapandı" yalnız borsa düzken
+            try:
+                fazla = self._borsa_yetim_kapat(f"dur:{neden}", simdi)
+            except Exception as hata:                                                           # noqa: BLE001
+                self.kayit({"olay": "dur_kapanis_hata", "adres": "borsa", "tur": type(hata).__name__})
+                fazla = None
+        duz = kalan == 0 and fazla == {}
+        if duz:
             self._dur_yaz_atomik(neden, simdi, False)
-        self.kayit({"olay": "dur", "neden": neden, "kapatilan": kapatilan, "kalan": kalan})
-        if kalan == 0:
+        self.kayit({"olay": "dur", "neden": neden, "kapatilan": kapatilan, "kalan": kalan, "borsa_fazla": fazla})
+        if duz:
             self.tg.gonder(tg.alarm(f"DUR: {neden}", f"{kapatilan} pozisyon kapatıldı, motor durdu.\nYeniden açmak için `durum/DUR` dosyası elle silinmeli.", "🛑"))
             self._dur_bitir_mi()
         else:
-            self.tg.gonder(tg.alarm(f"DUR: {neden}", f"{kapatilan} pozisyon kapandı, {kalan} pozisyon DÜZLEŞMEDİ.\nYeniden denenecek; hepsi kapanınca motor durur.", "🛑"))
+            ek = "" if fazla == {} else (f"; borsada defter dışı açık: {', '.join(f'{c} {v:g}' for c, v in list(fazla.items())[:5])}" if fazla else "; borsa okunamadı (düz teyidi yok)")
+            self.tg.gonder(tg.alarm(f"DUR: {neden}", f"{kapatilan} pozisyon kapandı, {kalan} pozisyon DÜZLEŞMEDİ{ek}.\nYeniden denenecek; hepsi kapanınca motor durur.", "🛑"))
         self.durum_yaz()
 
     # ------------------------------------------------------------------ periyodik görevler
