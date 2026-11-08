@@ -654,9 +654,17 @@ class Motor:
             ek["cloid"] = cloid
         d = self.yurutucu.emir(o.coin, yon, usd, reduce_only, acik_sz, **ek)
         dolum_ms = self.saat_ms()
-        self.niyet.sonuc_yaz(cloid, d.durum, dolum_ms, sz=d.sz, px=d.px, ucret=d.ucret)
+        belirsiz = d.durum == "belirsiz" and self.kip == "gercek"
+        if belirsiz:                                        # G-1: emir HL'ye ulaşmış olabilir → sonuç satırı YAZILMAZ (niyet açık kalır), "red" sayılmaz; `belirsiz_coz` orderStatus(cloid) ile çözer
+            self.hesap.belirsiz[cloid] = {"ms": emir_ms, "deneme": 0}
+            self.risk.bayrak("belirsiz", True)              # çözülene dek yeni açılış/artırma yok (kapanış serbest)
+            self.sayac["belirsiz"] = self.sayac.get("belirsiz", 0) + 1
+            self.tg.gonder(tg.alarm("ALARM: emir sonucu belirsiz", f"{o.coin} {eylem} emrine borsa yanıtı alınamadı ({d.neden}).\nEmir durumu borsadan sorgulanıp deftere işlenecek; o zamana dek yeni pozisyon açılmıyor."))
+        else:
+            self.niyet.sonuc_yaz(cloid, d.durum, dolum_ms, sz=d.sz, px=d.px, ucret=d.ucret)
         self.sayac["emir"] += 1
-        self.sayac[d.durum if d.durum in self.sayac else "red"] += 1
+        if not belirsiz:
+            self.sayac[d.durum if d.durum in self.sayac else "red"] += 1
         if d.neden == "min_nosyonel":
             self.sayac["min_nosyonel"] += 1
             self._say_neden("min_nosyonel")
@@ -692,11 +700,13 @@ class Motor:
         self._boyut_girdi = None
         self._ozet_emir += 1
         e = {"adres": adres, "coin": o.coin, "yon": yon, "usd": d.usd_dolan or usd, "px": d.px, "kayma": kayma_trader, "durum": d.durum, "eylem": eylem}
-        if self.kip == "gercek":                            # gerçek parada her emir ANINDA ve ayrı mesaj (risk gecikmeden görülür)
+        if belirsiz:                                        # alarm yukarıda gitti; sonuç `belirsiz_coz`da bildirilir
+            pass
+        elif self.kip == "gercek":                          # gerçek parada her emir ANINDA ve ayrı mesaj (risk gecikmeden görülür)
             self.tg.gonder(tg.msg_emir_ozeti(self.kip, [e], 0))
         else:
             self._emir_tampon.append(e)
-        return Sonuc(adres, o.coin, eylem, "emir" if d.dolu_mu else "red", d.neden or neden, d)
+        return Sonuc(adres, o.coin, eylem, "emir" if d.dolu_mu else ("belirsiz" if belirsiz else "red"), d.neden or neden, d)
 
     # ------------------------------------------------------------------ kapanış teyidi (K‑37 §1)
     def _mark_kapanis(self, adres: str, coin: str) -> float:
@@ -1219,6 +1229,7 @@ class Motor:
             if self.son_funding_saat is None:
                 self.son_funding_saat = simdi // 3_600_000
             adimlar: list[tuple[str, Callable[[], None]]] = [
+                ("belirsiz", lambda: self.belirsiz_coz(simdi)),                    # G-1: sonucu belirsiz emirler risk/mutabakattan ÖNCE deftere
                 ("tasfiye", lambda: self._tasfiye(simdi)), ("funding", lambda: self.funding_uygula(oranlar, simdi)), ("funding_gercek", lambda: self.funding_gercek_uygula(fgercek, simdi)),
                 ("hl_ozsermaye", lambda: self.hl_uygula(hl[1], simdi) if hl else None), ("ofset", lambda: self.ofset_yenile(ledger, simdi)), ("risk", lambda: self._risk(simdi)), ("anlik_saha", lambda: self._anlik(simdi)),
                 ("inen", lambda: self.karar_uygula(self.saha.inenleri_kapat(simdi), simdi)), ("mutabakat", lambda: self._mutabakat(simdi, hl)), ("kapanis_kuyrugu", lambda: self._kuyruk_isle(simdi)),
@@ -1226,13 +1237,15 @@ class Motor:
                 ("telegram", lambda: self._komutlar(komutlar)), ("ozet", lambda: self._gunluk_ozet(simdi)),
                 ("emir_ozeti", lambda: self.emir_ozeti(simdi)),
                 ("tur_kaydi", lambda: self._tur_kaydi(simdi)),
+                ("durum_yaz", self.durum_yaz),                                     # G-12b: disk dolu / salt okunur → dakikalık görev ölmez; kayıt + alarm
             ]
             for ad, f in adimlar:
                 try:
                     f()
                 except Exception as hata:                  # noqa: BLE001
                     self.kayit({"olay": "adim_hata", "adim": ad, "tur": type(hata).__name__, "mesaj": str(hata)[:160]})
-            self.durum_yaz()
+                    if ad == "durum_yaz" and self._aralik_mi("durum_yaz_alarm", simdi, 3600):
+                        self.tg.gonder(tg.alarm("ALARM: durum diske yazılamıyor", f"Dakikalık durum kaydı başarısız ({type(hata).__name__}).\nYeniden başlatmada son durum kaybolabilir; disk/izinleri kontrol edin."))
 
     def _tur_kaydi(self, simdi: int) -> None:
         """Pano özsermaye/düşüş grafiği için ~15 dk'da bir `tur` kaydı (özsermaye $). Karar mantığına girmez."""
@@ -1490,6 +1503,8 @@ class Motor:
         sayi = 0
         takip: list[tuple[dict, float, float]] = []                  # (niyet, dolan sz, limit px): kısmi kalan için izleme
         for n in self.niyet.sonucsuz():
+            if n["cloid"] in self.hesap.belirsiz:              # G-1: belirsiz emir — işaretçi zaten geçti; `belirsiz_coz` deftere doğrudan (bir kez) uygular
+                continue
             durum = "sonucsuz"
             ek: dict[str, Any] = {}
             if self.kip == "gercek":
@@ -1524,6 +1539,93 @@ class Motor:
         for n, dolan, px in takip:
             self._kismi_takip(n, dolan, px, simdi)
         if sayi or oynatilan:
+            self._dolum_yaz()
+        return sayi + self.belirsiz_coz(simdi)
+
+    def belirsiz_coz(self, simdi: int) -> int:
+        """G-1/G-12a: sonucu belirsiz emirler (`hesap.belirsiz`; yalnız gerçek kip: SDK zaman aşımı / bağlantı hatası emir gönderildikten SONRA). Açılışta ve her dakika (ilk adım) çağrılır.
+        Emir anından en az `canli_emir_zaman_asimi_sn` sonra `orderStatus(cloid)` sorulur: emir varsa dolan miktar (`origSz − sz`; fiyat limitPx, YAKLAŞIK — kesin değer mutabakatta; ücret HL `fee`
+        bulunursa o, yoksa `maliyet_taker` tahmini) deftere TEK kez uygulanır; emir yoksa (`unknownOid`) dolmadı sayılır. Sorgu hata verirse girdi kalır, sonraki dakika yeniden denenir (yeni açılış
+        `belirsiz` bayrağıyla durur, kapanış serbest). Sonuç satırı yazılıp defter kaydedilemeden çökülmüşse yazılmış sonuç kullanılır (ikinci sorgu ve çift uygulama yok). reduce‑only dolum defterdeki
+        pozisyondan fazla uygulanmaz (kapanış teyidi borsada 0 görüp yerel pozisyonu zaten temizlemiş olabilir). Azalt/kapat tam dolmadıysa kalan kapanış kuyruğuna girer. Döner: çözülen sayı."""
+        if not self.hesap.belirsiz:
+            if self.risk.acilis_durdu.get("belirsiz"):
+                self.risk.bayrak("belirsiz", False)
+            return 0
+        satirlar = self.niyet.satirlar()
+        niyetler = {x["cloid"]: x for x in satirlar if x.get("t") == "niyet"}
+        sonuclar = {x["cloid"]: x for x in satirlar if x.get("t") == "sonuc"}
+        bekle_ms = float(self.rules.get("canli_emir_zaman_asimi_sn", 10)) * 1000
+        sayi = 0
+        takip: list[tuple[dict, float, float]] = []
+        for cloid, b in list(self.hesap.belirsiz.items()):
+            n = niyetler.get(cloid)
+            if n is None or not n.get("adres") or not n.get("coin"):          # niyet satırı yok (bozulma): uygulanamaz → borsa ile mutabakat
+                self.hesap.belirsiz.pop(cloid, None)
+                self.kayit({"olay": "belirsiz_niyet_yok", "cloid": cloid})
+                self.risk.bayrak("mutabakat", True)
+                continue
+            r = sonuclar.get(cloid)
+            if r is None:
+                if self.kip != "gercek":
+                    durum, dolan, px, kalan_sz, ucret = "sonucsuz", 0.0, 0.0, 0.0, 0.0
+                else:
+                    if simdi - int(b.get("ms", 0)) < bekle_ms:
+                        continue
+                    try:
+                        y = self.post({"type": "orderStatus", "user": os.environ.get("HL_HESAP_ADRESI", ""), "oid": cloid})
+                    except Exception as hata:                  # noqa: BLE001 - ağ yok: girdi kalır, sonraki dakika yeniden
+                        b["deneme"] = int(b.get("deneme", 0)) + 1
+                        self.kayit({"olay": "belirsiz_sorgu_hata", "cloid": cloid, "coin": n["coin"], "deneme": b["deneme"], "tur": type(hata).__name__})
+                        if b["deneme"] == 5:
+                            self.tg.gonder(tg.alarm("ALARM: belirsiz emir çözülemiyor", f"{n['coin']} {n.get('eylem')} emrinin durumu {b['deneme']} kez sorgulanamadı.\nYeni pozisyon açılmıyor; her dakika yeniden deneniyor."))
+                        continue
+                    durum, dolan, px, kalan_sz, ucret = "emir_yok", 0.0, 0.0, 0.0, 0.0
+                    if (y or {}).get("status") == "order":
+                        emir = y["order"]
+                        durum = str(emir.get("status", "?"))
+                        e = emir.get("order", {})
+                        kalan_sz = float(e.get("sz", 0))
+                        dolan = max(0.0, float(e.get("origSz", 0)) - kalan_sz)
+                        px = float(e.get("limitPx", 0))
+                        if dolan > 0:
+                            ucret_bul = getattr(self.yurutucu, "_gercek_ucret", None)
+                            gercek = ucret_bul(n["coin"], e.get("oid"), cloid, int(n.get("ms", simdi))) if ucret_bul else None
+                            ucret = gercek if gercek is not None else dolan * px * float(self.rules["maliyet_taker"])
+                            if gercek is not None:
+                                self.ucret_gercek_usd += gercek
+                            else:
+                                self.ucret_tahmin_say += 1
+                self.niyet.sonuc_yaz(cloid, f"cozuldu:{durum}", simdi, sz=dolan, px=px, ucret=ucret, belirsiz=True, kalan_sz=kalan_sz)      # ÖNCE sonuç (fsync), SONRA defter
+            else:
+                durum = str(r.get("durum", "")).removeprefix("cozuldu:")
+                dolan, px, ucret, kalan_sz = float(r.get("sz") or 0.0), float(r.get("px") or 0.0), float(r.get("ucret") or 0.0), float(r.get("kalan_sz") or 0.0)
+            uygulanan = dolan
+            if dolan > 0 and n.get("reduce_only"):
+                yerel = self.hesap.sz(n["adres"], n["coin"])
+                azaltir = (yerel > EPS and n["yon"] == "A") or (yerel < -EPS and n["yon"] == "B")
+                uygulanan = min(dolan, abs(yerel)) if azaltir else 0.0
+            if uygulanan > EPS and px > 0:
+                try:
+                    self.hesap.uygula(n["adres"], n["coin"], n["yon"], uygulanan, px, ucret * uygulanan / dolan, simdi)
+                except ValueError as hata:
+                    self.kayit({"olay": "defter_hata", "adres": n["adres"], "coin": n["coin"], "hata": str(hata)[:120]})
+            else:
+                uygulanan = 0.0
+            self.hesap.belirsiz.pop(cloid, None)
+            sayi += 1
+            self.kayit({"olay": "belirsiz_cozuldu", "kip": self.kip, "cloid": cloid, "adres": n["adres"], "coin": n["coin"], "eylem": n.get("eylem"), "yon": n.get("yon"), "durum": durum,
+                        "dolan_sz": dolan, "uygulanan_sz": uygulanan, "px": px, "ucret": ucret})
+            self.tg.gonder(tg.alarm("Belirsiz emir çözüldü", f"{n['coin']} {n.get('eylem')}: borsada {f'doldu {dolan:.6g}' if dolan > 0 else 'dolmadı'} ({durum}); deftere işlendi.", "✅"))
+            if n.get("eylem") in ("azalt", "kapat") and (dolan <= 0 or kalan_sz > EPS or durum != "filled"):
+                if dolan > 0:
+                    takip.append((n, dolan, px))
+                else:
+                    self._takip_ekle(takip, n)
+        for n, dolan, px in takip:
+            self._kismi_takip(n, dolan, px, simdi)
+        self.risk.bayrak("belirsiz", bool(self.hesap.belirsiz))
+        if sayi:
             self._dolum_yaz()
         return sayi
 
@@ -1735,10 +1837,81 @@ async def _tuketici(motor: Motor, kuyruk: asyncio.Queue | OncelikliKuyruk, durdu
             motor.kayit({"olay": "olay_hata", "tur": type(hata).__name__, "mesaj": str(hata)[:160]})
 
 
-async def _periyodik(motor: Motor, durdur: asyncio.Event, dinleyici: CanliDinleyici, aralik_sn: float = 30.0) -> None:
+class Bekci:
+    """G-12 bekçi: dakikalık bakımın İLERLEDİĞİNİ izler (`nabiz()` her başarılı `dakika` sonunda). Son nabızdan `sinir_sn` (`canli_bekci_sn`) geçtiyse — `dakika` kilitte ya da ağda asılı, sürekli hata
+    veriyor ya da olay döngüsü donmuş — kayıt + Telegram alarmı (en çok `alarm_bekle_sn` beklenir) ve `cik(1)`. Varsayılan `os._exit`: asılı iş parçacığı olsa da süreç biter, systemd yeniden başlatır.
+    Saat (`saat`, sn; varsayılan `time.monotonic`) ve çıkış (`cik`) enjekte edilir (test). Ayrı iş parçacığında koşar (`calistir`): olay döngüsü dursa da çalışır."""
+
+    def __init__(self, motor: Any, sinir_sn: float, saat: Callable[[], float] = time.monotonic, cik: Callable[[int], Any] = os._exit, alarm_bekle_sn: float = 10.0) -> None:
+        self.motor, self.sinir_sn, self.saat, self.cik, self.alarm_bekle_sn = motor, float(sinir_sn), saat, cik, float(alarm_bekle_sn)
+        self.son = saat()
+        self.tetiklendi = False
+
+    def nabiz(self) -> None:
+        self.son = self.saat()
+
+    def kontrol(self) -> bool:
+        """True: tetiklendi (alarm + çıkış çağrıldı)."""
+        gecen = self.saat() - self.son
+        if self.tetiklendi or gecen < self.sinir_sn:
+            return False
+        self.tetiklendi = True
+        metin = tg.alarm("ALARM: motor dondu, yeniden başlatılıyor", f"Dakikalık bakım {gecen:.0f} sn'dir tamamlanmadı (sınır {self.sinir_sn:.0f} sn).\nSüreç çıkış kodu 1 ile kapanıyor; sunucu yeniden başlatır.")
+
+        def bildir() -> None:
+            try:
+                self.motor.kayit({"olay": "bekci_tetik", "gecen_sn": round(gecen, 1), "sinir_sn": self.sinir_sn})
+            except Exception:                              # noqa: BLE001 - disk dolu olabilir: çıkış yine olur
+                pass
+            try:
+                self.motor.tg.gonder(metin)
+                havuz = getattr(self.motor.tg, "_havuz", None)
+                if havuz is not None:
+                    havuz.shutdown(wait=True)              # arka plan gönderimi bitsin (çıkış onu öldürmeden)
+            except Exception:                              # noqa: BLE001
+                pass
+        t = threading.Thread(target=bildir, daemon=True, name="bekci-alarm")
+        t.start()
+        t.join(self.alarm_bekle_sn)                        # Telegram asılı kalsa da çıkış gecikmez
+        self.cik(1)
+        return True
+
+    def calistir(self, durdur: threading.Event, aralik_sn: float = 5.0) -> None:
+        while not durdur.wait(aralik_sn):
+            if self.kontrol():
+                return
+
+
+def _gorev_bitti(motor: Motor, durdur: asyncio.Event, dinleyici: Any, ad: str, gorev: asyncio.Task) -> None:
+    """G-12b: tüketici / periyodik görev `durdur` gelmeden biterse (yakalanmamış istisna) sessiz ölüm yok: kayıt + alarm + motor durdurulur ve `main` çıkış kodu 1 döner (systemd yeniden başlatır)."""
+    hata = None if gorev.cancelled() else gorev.exception()
+    if hata is None and durdur.is_set():
+        return                                             # olağan bitiş (DUR / süre / SIGTERM)
+    motor.cikis_kodu = 1
+    try:
+        motor.kayit({"olay": "gorev_bitti", "gorev": ad, "tur": type(hata).__name__ if hata else "beklenmedik", "mesaj": str(hata)[:160] if hata else ""})
+        motor.tg.gonder(tg.alarm("ALARM: motor görevi durdu", f"'{ad}' görevi beklenmedik biçimde bitti ({type(hata).__name__ if hata else 'beklenmedik'}).\nMotor kapanıyor (çıkış kodu 1); sunucu yeniden başlatır."))
+    finally:
+        try:
+            dinleyici.durdur()
+        finally:
+            durdur.set()
+
+
+async def _periyodik(motor: Motor, durdur: asyncio.Event, dinleyici: CanliDinleyici, aralik_sn: float = 30.0, bekci: Bekci | None = None) -> None:
+    ardisik_hata = 0
     while not durdur.is_set():
-        await asyncio.to_thread(motor.dakika)
-        try:                                                # pano (15 dk'lık yayım) taze `durum/ozet.json` ister: vardiya boyunca her döngüde yazılır (B7); hata motoru durdurmaz
+        try:                                                # G-12b: tek istisna görevi öldürmez; ilerleme yoksa bekçi süreci yeniden başlatır
+            await asyncio.to_thread(motor.dakika)
+            ardisik_hata = 0
+            if bekci is not None:
+                bekci.nabiz()
+        except Exception as hata:                           # noqa: BLE001
+            ardisik_hata += 1
+            motor.kayit({"olay": "adim_hata", "adim": "dakika", "tur": type(hata).__name__, "mesaj": str(hata)[:160], "ardisik": ardisik_hata})
+            if ardisik_hata == 1 or ardisik_hata % 20 == 0:
+                motor.tg.gonder(tg.alarm("ALARM: dakikalık bakım hata verdi", f"{type(hata).__name__}: {str(hata)[:120]} (üst üste {ardisik_hata}).\nYeniden deneniyor; ilerleme olmazsa bekçi motoru yeniden başlatır."))
+        try:                                               # pano (15 dk'lık yayım) taze `durum/ozet.json` ister: vardiya boyunca her döngüde yazılır (B7); hata motoru durdurmaz
             _yaz(motor.durum_dizin / "ozet.json", {**motor.ozet(), **motor.pano_ek(), "dinleyici": dinleyici.ozet()["genel"], "yazildi_ms": motor.saat_ms()})
         except Exception as hata:                           # noqa: BLE001
             motor.kayit({"olay": "ozet_yazma_hata", "tur": type(hata).__name__, "mesaj": str(hata)[:120]})
@@ -1774,7 +1947,12 @@ async def calis(motor: Motor, sure_sn: float | None = None, ws: Callable[[], Any
     except (NotImplementedError, RuntimeError):
         pass
     motor.kacanlari_tamamla()
-    gorevler = [asyncio.create_task(_tuketici(motor, kuyruk, durdur)), asyncio.create_task(_periyodik(motor, durdur, din))]
+    bekci = Bekci(motor, float(motor.rules.get("canli_bekci_sn", 180)))
+    bekci_dur = threading.Event()
+    threading.Thread(target=bekci.calistir, args=(bekci_dur,), daemon=True, name="bekci").start()
+    gorevler = [asyncio.create_task(_tuketici(motor, kuyruk, durdur)), asyncio.create_task(_periyodik(motor, durdur, din, bekci=bekci))]
+    for ad, gorev in zip(("tuketici", "periyodik"), gorevler):
+        gorev.add_done_callback(lambda g, ad=ad: _gorev_bitti(motor, durdur, din, ad, g))
     try:
         await din.calis()
     finally:
@@ -1787,6 +1965,7 @@ async def calis(motor: Motor, sure_sn: float | None = None, ws: Callable[[], Any
         motor.durum_yaz()
         motor._kilit_birakildi = True
         motor.kilit_yaz(True)                              # temiz kapanış: sonraki vardiya hemen devralır
+        bekci_dur.set()                                    # kapanış asılı kalırsa bekçi buraya gelinmeden süreci bitirir
     return ozet
 
 
@@ -1924,7 +2103,7 @@ def main(argv: list[str] | None = None) -> int:
         return 3
     ozet = asyncio.run(calis(motor, args.sure_sn))
     print(json.dumps(ozet, ensure_ascii=False, indent=1, default=str))
-    return 0
+    return int(getattr(motor, "cikis_kodu", 0))           # G-12b: görev beklenmedik bittiyse 1 (systemd yeniden başlatır)
 
 
 if __name__ == "__main__":

@@ -170,6 +170,8 @@ canli_kapanis_bantlari: [0.005, 0.01, 0.02, 0.02, 0.02]   # oran (kapanış yeni
 canli_kapanis_toz_usd: 1.0              # $ (borsa pozisyonu bu nosyonelin altındaysa "0" sayılır; toz)
 canli_bosluk_dk: 30                     # dakika (açılışta önceki kilit nabzı bundan eskiyse "vardiya boşluğu" alarmı)
 canli_kuyruk_max: 10000                 # olay (motor olay kuyruğu sınırı; taşarsa açılışlar düşer, kapanışlar kalır)
+canli_emir_zaman_asimi_sn: 10          # sn (G-12a: gerçek kip SDK `Exchange` HTTP zaman aşımı; aşılırsa emir "belirsiz" sayılır ve orderStatus(cloid) ile çözülür, G-1)
+canli_bekci_sn: 180                     # sn (G-12: dakikalık bakım bu süre boyunca tamamlanmazsa bekçi alarm verir ve süreç çıkış kodu 1 ile biter; systemd yeniden başlatır)
 
 # T6 (K-37): seçim isabeti ölçümü (docs/RADAR_V1.md §7b; yalnız ölçer, radar_* eşiklerine dokunmaz)
 isabet_pencere_gun: 7                   # gün (havuz tarihinden bu kadar sonra ölçülür; sonraki_7g penceresi)
