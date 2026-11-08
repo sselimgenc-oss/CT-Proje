@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-08 14:00 UTC
+# Canlı rapor — 2026-11-08 14:15 UTC
 
 **Kip** sanal · vardiya `42482756300` · saha 11/11 (inen 2)
 
@@ -6,24 +6,24 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 959,52 $ | +%0,07 | — (geçmiş < 7 gün) | −%4,05 | −%4,15 |
+| 1.000,00 $ | 959,47 $ | +%0,07 | — (geçmiş < 7 gün) | −%4,05 | −%4,15 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x57da5c… | ZEC | S | 163,23 $ | +2,75 $ |
-| 0x4b9b60… | kPEPE | L | 154,94 $ | +1,85 $ |
-| 0x3da36d… | ETH | L | 99,84 $ | −0,35 $ |
-| 0x4b9b60… | ENA | L | 58,13 $ | +0,14 $ |
-| 0x4b9b60… | UNI | L | 44,16 $ | −0,47 $ |
-| 0x3da36d… | SOL | L | 35,04 $ | +0,02 $ |
-| 0xd5ac4f… | CASHCAT | L | 32,67 $ | −0,90 $ |
+| 0x57da5c… | ZEC | S | 163,51 $ | +2,46 $ |
+| 0x4b9b60… | kPEPE | L | 154,88 $ | +1,79 $ |
+| 0x3da36d… | ETH | L | 99,98 $ | −0,20 $ |
+| 0x4b9b60… | ENA | L | 58,07 $ | +0,08 $ |
+| 0x4b9b60… | UNI | L | 44,23 $ | −0,40 $ |
+| 0x3da36d… | SOL | L | 35,07 $ | +0,05 $ |
+| 0xd5ac4f… | CASHCAT | L | 32,79 $ | −0,77 $ |
 
 ## Son 24 saat
 
 - emir 41 · dolum 41 · kayma p50 +%0,00 / max +%0,22 (n=41)
-- funding −0,04 $ · ücret 0,51 $
+- funding −0,03 $ · ücret 0,51 $
 
 ## Saha değişiklikleri (24 sa)
 
@@ -41,7 +41,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 61 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 75 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
