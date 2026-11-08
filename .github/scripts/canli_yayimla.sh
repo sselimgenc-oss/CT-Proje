@@ -41,8 +41,14 @@ if [ -s "$kaynak/durum/ozet.json" ]; then
     echo "UYARI: pano üretilemedi (durum yayımı sürer)" >&2
   fi
 fi
+# Dönem (donem_geri.sh): veri dalındaki dönem bu koşununkinden farklıysa (yeni dönemin ilk yayımı) eski durum/kayıt/pano dal UCUNDAN silinir (git geçmişinde arşivli kalır).
+if [ -f "$kaynak/durum/donem.txt" ] && ! cmp -s "$kaynak/durum/donem.txt" "$work/durum/donem.txt" 2>/dev/null; then
+  echo "Yeni dönem: veri dalının ucundaki eski durum/kayıt/pano siliniyor (geçmişte arşivli)"
+  git -C "$work" rm -rq --ignore-unmatch durum kayit pano
+  rm -rf "$work/durum" "$work/kayit" "$work/pano"
+fi
 mkdir -p "$work/durum" "$work/kayit"
-for f in hesap.json saha.json risk.json motor.json kilit.json ozet.json niyet.jsonl DUR; do
+for f in hesap.json saha.json risk.json motor.json kilit.json ozet.json niyet.jsonl DUR donem.txt; do
   if [ -f "$kaynak/durum/$f" ]; then cp "$kaynak/durum/$f" "$work/durum/$f"; fi
 done
 if [ -d "$kaynak/kayit" ]; then cp -r "$kaynak/kayit/." "$work/kayit/"; fi

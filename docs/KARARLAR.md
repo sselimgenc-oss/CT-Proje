@@ -235,3 +235,7 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - **Hüküm:** sanal ölçüm motoru olarak sağlam; gerçek para yürütücüsü olarak henüz hazır değil. Gerçek para öncesi: G-1…G-6, G-9, G-12…G-23 main'de ve testli; G-8/G-23 + dış nabız (G-10); 300 $ seri (G-24) sonucu kullanıcıya sunulmuş; 7 temiz sanal gün.
 - **12.11'den önce:** S-4 (pano maliyet/kapanan işlemler yalnız 2 günü okuyor).
 - **Not (kullanıcı kararı #577):** Actions'ta Telegram kapalıyken sanal motor ölürse alarm yok; tek iz pano "VERİ BAYAT". Lider günlük gözetimle izler.
+
+## K-49 — Yeni dönem: 09.11 00:01 TSİ (2026-11-08T21:01Z) sıfırdan başlangıç (kullanıcı kararı 08.11)
+- Tüm denetim düzeltmeleriyle temiz ölçüm. `copytrade/canli/DONEM` = başlangıç; `.github/scripts/donem_geri.sh`: bu andan önce başlayan vardiya bekler (≤ 230 dk; motor süresi kalan bütçeye iner); veri dalındaki dönem farklıysa durum/kayıt/pano YÜKLENMEZ (saha, pozisyonlar, bekleme cezaları, K-39 gün sayaçları sıfır). `canli_yayimla.sh` yeni dönemin ilk yayımında eski dosyaları dal ucundan siler; **git geçmişinde arşivli kalır** (geri dönülebilir).
+- Hem `canli-durum` (1.000 $) hem `canli-durum-300` (300 $). 7 temiz gün sayacı ve isabet/canlı karşılaştırması bu dönemden başlar.
