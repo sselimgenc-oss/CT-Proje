@@ -1,2 +1,4 @@
 {"t":"niyet","kimlik":"0x92d8c46701a992e007849ab09d5cc578d5330cdf:679314230754769","eylem":"ac","adres":"0x92d8c46701a992e007849ab09d5cc578d5330cdf","coin":"ZEC","yon":"B","usd":67.002051,"reduce_only":false,"cloid":"0xd8b181990cde32f04958b42f0b6c2724","ms":1794173182446}
 {"t":"sonuc","cloid":"0xd8b181990cde32f04958b42f0b6c2724","durum":"dolu","ms":1794173182605,"sz":0.054437805765395676,"px":1230.8,"ucret":0.030150923101222044}
+{"t":"niyet","kimlik":"0x92d8c46701a992e007849ab09d5cc578d5330cdf:725680703932116","eylem":"artir","adres":"0x92d8c46701a992e007849ab09d5cc578d5330cdf","coin":"ZEC","yon":"B","usd":29.982487,"reduce_only":false,"cloid":"0x5cdb06e7e4e60da008791166782705f6","ms":1794174044450}
+{"t":"sonuc","cloid":"0x5cdb06e7e4e60da008791166782705f6","durum":"dolu","ms":1794174044603,"sz":0.02458790110647223,"px":1219.4,"ucret":0.013492118974154508}
