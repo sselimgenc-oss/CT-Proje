@@ -1127,7 +1127,11 @@ class Motor:
         HIP‑3 adları `dex:COIN` biçimindedir (önek yoksa eklenir). Okunamazsa eski değerler kalır, bilinmeyen coin için `tasfiye_fiyati` 20x varsayar (kayıt: `maks_kaldirac_okunamadi`). Döner: okunan coin sayısı."""
         okunan: dict[str, float] = {}
         hata_dex: list[str] = []
-        for dex in ["", *[x for x in self._dexler() if x]]:
+        try:
+            dexler = ["", *[x for x in self._dexler() if x]]
+        except Exception as hata:                          # noqa: BLE001 - dex listesi yoksa yalnız ana dex
+            dexler, hata_dex = [""], [f"dex_listesi:{type(hata).__name__}"]
+        for dex in dexler:
             try:
                 meta = self.post({"type": "meta", "dex": dex} if dex else {"type": "meta"}) or {}
                 for u in meta.get("universe") or []:
