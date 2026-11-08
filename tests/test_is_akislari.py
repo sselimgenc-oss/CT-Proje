@@ -16,7 +16,7 @@ from test_izleme import ADDRESS, NOW, Client, project
 ROOT = Path(__file__).resolve().parents[1]
 WF = ROOT / ".github/workflows"
 SCRIPTS = ROOT / ".github/scripts"
-ISLER = ("izleme.yml", "dinleyici_deneme.yml", "izleme_deneme.yml", "radar_deneme.yml", "radar.yml", "canli_vardiya.yml", "isabet_deneme.yml", "canli_vardiya_300.yml")
+ISLER = ("izleme.yml", "dinleyici_deneme.yml", "izleme_deneme.yml", "radar_deneme.yml", "radar.yml", "canli_vardiya.yml", "isabet_deneme.yml")
 
 
 def yukle(ad: str) -> dict:
@@ -156,7 +156,7 @@ def test_izleme_listesi_main_den_okunur_ve_veri_dalina_yazilir():
 
 # ---------------------------------------------------------------------------------------------------- artık dosya temizliği
 def test_eski_sistem_is_akislari_ve_betikleri_yok():
-    kalanlar = {"canli_vardiya.yml", "canli_vardiya_300.yml", "ci.yml", "dinleyici_deneme.yml", "dolgu_deneme.yml", "gecikme_kar_deneme.yml", "isabet_deneme.yml", "izleme.yml", "izleme_deneme.yml", "radar.yml", "radar_deneme.yml", "saglik.yml"}  # sonnet_isci.yml kaldırıldı (devir denetimi G-11, 06.11); saglik.yml: sağlık kontrolü (kullanıcı kararı 2026-11-05; salt okur, testi test_saglik.py)
+    kalanlar = {"canli_vardiya.yml", "ci.yml", "dinleyici_deneme.yml", "dolgu_deneme.yml", "gecikme_kar_deneme.yml", "isabet_deneme.yml", "izleme.yml", "izleme_deneme.yml", "radar.yml", "radar_deneme.yml", "saglik.yml"}  # canli_vardiya_300.yml kaldırıldı (kullanıcı 08.11: tek sanal motor 1.000 $); sonnet_isci.yml kaldırıldı (devir denetimi G-11, 06.11); saglik.yml: sağlık kontrolü (kullanıcı kararı 2026-11-05; salt okur, testi test_saglik.py)
     assert {p.name for p in WF.glob("*.yml")} == kalanlar          # eski sistem iş akışları (kapı, Pazar kadrosu, İlk 11 denemesi, v3 yan yana) geri gelmedi
     assert not (WF / "pano.yml").exists() and not (ROOT / "copytrade" / "pano_veri.py").exists() and not (ROOT / "pano").exists()     # eski GitHub Pages panosu (copytrade-izleme'ye bağlı) kaldırıldı; yeni pano `copytrade/canli/pano.py`
     assert not (SCRIPTS / "kapi_yayimla.sh").exists()
@@ -280,7 +280,7 @@ def test_canli_yayimla_ayri_worktree_yalniz_canli_dallarina_14_gun():
     for satir in metin.splitlines():
         if "push" in satir and "git" in satir:
             assert 'HEAD:$veri_dali' in satir, satir
-    assert 'case "$veri_dali" in canli-durum|canli-durum-deneme|canli-durum-300|canli-durum-300-deneme)' in metin and "git worktree add" in metin and "14 days ago" in metin and "|| true" not in metin
+    assert 'case "$veri_dali" in canli-durum|canli-durum-deneme)' in metin and "git worktree add" in metin and "14 days ago" in metin and "|| true" not in metin
     assert "git checkout -f" not in metin                                                                                  # motorun çalıştığı dizini değiştirmez
 
 
@@ -418,82 +418,10 @@ def test_y1_zincir_20_dk_ve_uzeri_iki_tetik(tmp_path):
     assert r.returncode == 0 and gh == ["workflow run canli_vardiya.yml --ref main", "workflow run saglik.yml --ref main"] and curl == []
 
 
-# ---------------------------------------------------------------------------------------------------- 300 $ paralel sanal seri (08.11, kullanıcı onayı)
-W300 = "canli_vardiya_300.yml"
-
-
-def test_300_secret_yok_bildirim_yok_gercek_kip_yok():
-    """300 $ işi hiçbir secret görmez (HL anahtarı, Telegram, pano dış yayını yok); sağlık kontrolü yok; gerçek kip/CANLI_* yok."""
-    metin = (WF / W300).read_text(encoding="utf-8")
-    assert "secrets." not in metin and "TELEGRAM" not in metin and not re.search("cloud" + "flare|wrang" + "ler", metin, re.I)
-    assert "HL_API_CUZDAN_ANAHTARI" not in metin and "HL_HESAP_ADRESI" not in metin and "CANLI_" not in metin and "--kip gercek" not in metin
-    assert "copytrade.saglik" not in metin and "saglik.yml" not in metin and "vardiya_alarm.sh" not in metin
-    wf = yukle(W300)
-    assert list(_telegram_envleri(wf)) == []
-    for is_ in wf["jobs"].values():                                                                          # ortamda yalnız bilinen, secret'sız değişkenler
-        envler = dict(is_.get("env") or {})
-        for a in is_["steps"]:
-            envler.update(a.get("env") or {})
-        assert set(envler) <= {"VERI_DALI", "KADRO_DALI", "GIRDI_SURE_DK", "ZAMANLAMA", "YEDEK_CRON", "GH_TOKEN", "GH_REPO"}, envler
-    assert wf["jobs"]["zincir"]["env"]["GH_TOKEN"] == "${{ github.token }}" and "GH_TOKEN" not in str(wf["jobs"]["vardiya"]) and "github.token" not in str(wf["jobs"]["vardiya"])
-
-
-def test_300_yalniz_canli_durum_300_dalina_yazar_ve_ayni_kadro():
-    metin = (WF / W300).read_text(encoding="utf-8")
-    assert not re.search(r"canli-durum(?!-300)", metin)                                                        # üretim dalı (canli-durum / canli-durum-deneme) hiç geçmez
-    wf = yukle(W300)
-    veri = "${{ github.ref == 'refs/heads/main' && 'canli-durum-300' || 'canli-durum-300-deneme' }}"           # main dışı push: deneme dalı
-    assert wf["jobs"]["vardiya"]["env"]["VERI_DALI"] == veri and adim(wf, "kontrol", "Zamanlama kontrolü")["env"]["VERI_DALI"] == veri
-    assert wf["jobs"]["vardiya"]["env"]["KADRO_DALI"] == yukle("canli_vardiya.yml")["jobs"]["vardiya"]["env"]["KADRO_DALI"]      # aynı kadro (radar)
-    yaz = adim(wf, "vardiya", "Durumu veri dalına yaz")
-    assert yaz["run"] == "bash .github/scripts/canli_yayimla.sh" and yaz["if"] == "${{ always() }}" and "env" not in yaz
-
-
-def test_300_motor_bayrakla_sanal_300_ve_uretim_dosyasi_bayraksiz():
-    wf = yukle(W300)
-    acilis, motor = adim(wf, "vardiya", "Açılış kontrolü")["run"], adim(wf, "vardiya", "Canlı motor")["run"]
-    assert "--kontrol --kip sanal --sanal-kasa-usd 300 " in acilis and "--durum-dizin kontrol" in acilis
-    assert "python -u -m copytrade.canli.motor --kip sanal --sanal-kasa-usd 300 " in motor and "--durum-dizin durum" in motor and "255" in motor
-    metin = (WF / W300).read_text(encoding="utf-8")
-    assert metin.count("copytrade.canli.motor") == metin.count("--sanal-kasa-usd 300") == 2                    # her motor çağrısı bayraklı (G5: 300 dizininde 1.000 $ koşmaz)
-    assert "--sanal-kasa-usd" not in (WF / "canli_vardiya.yml").read_text(encoding="utf-8")                   # 1.000 $ üretim bayraksız (yaml kasası)
-    assert wf["jobs"]["vardiya"]["timeout-minutes"] >= 285
-
-
-def test_300_ayri_kuyruk_ayri_tetik_ve_zamanlama():
-    wf, uretim = yukle(W300), yukle("canli_vardiya.yml")
-    assert wf["concurrency"] == {"group": "${{ github.ref == 'refs/heads/main' && 'canli-vardiya-300-uretim' || format('canli-vardiya-300-deneme-{0}', github.ref_name) }}", "cancel-in-progress": False}
-    assert wf["concurrency"]["group"] != uretim["concurrency"]["group"] and "'canli-vardiya-uretim'" not in wf["concurrency"]["group"]
-    assert wf["on"]["push"] == {"paths": ["copytrade/canli/CALISTIR_300"]} and uretim["on"]["push"] == {"paths": ["copytrade/canli/CALISTIR"]}
-    assert (ROOT / "copytrade/canli/CALISTIR_300").exists()
-    assert wf["on"]["schedule"] == [{"cron": "22 */4 * * *"}, {"cron": "52 */4 * * *"}] and adim(wf, "kontrol", "Zamanlama")["env"]["YEDEK_CRON"] == "52 */4 * * *"
-    assert adim(wf, "kontrol", "Zamanlama")["run"] == "bash .github/scripts/zamanlama_kontrol.sh canli"        # taze kilit (o dalda) varsa dispatch/yedek atlar
-    assert wf["permissions"] == {"contents": "write"} and wf["jobs"]["kontrol"]["permissions"] == {"contents": "read"} and "permissions" not in wf["jobs"]["vardiya"]
-    z = wf["jobs"]["zincir"]
-    assert z["permissions"] == {"actions": "write", "contents": "read"} and (WF / W300).read_text(encoding="utf-8").count("actions: write") == 1
-    assert z["if"] == uretim["jobs"]["zincir"]["if"] and z["needs"] == "vardiya" and all("uses" not in a for a in z["steps"])
-    art = next(a for a in wf["jobs"]["vardiya"]["steps"] if str(a.get("uses", "")).startswith("actions/upload-artifact"))
-    assert art["with"]["name"] == "canli-vardiya-300"
-
-
-def test_300_zincir_yalniz_kendini_tetikler_bildirimsiz(tmp_path):
-    for ad in ("a", "b", "c"):
-        (tmp_path / ad).mkdir()
-    r, gh, curl = _zincir_calistir(tmp_path / "a", 0, telegram=True, wf_adi=W300)
-    assert r.returncode == 0 and gh == ["workflow run canli_vardiya_300.yml --ref main"] and curl == []        # sağlık / üretim vardiyası tetiklenmez
-    r, gh, curl = _zincir_calistir(tmp_path / "b", 1, telegram=True, wf_adi=W300)
-    assert r.returncode == 0 and "::warning::canli_vardiya_300.yml tetiklenemedi" in r.stdout and curl == []
-    r, gh, curl = _zincir_calistir(tmp_path / "c", 0, telegram=True, yas_dk=3, wf_adi=W300)
-    assert r.returncode == 0 and gh == [] and curl == [] and "20 dk'dan kısa" in r.stdout                      # hata döngüsü koruması
-
-
-def test_canli_yayimla_300_dallarini_kabul_eder_digerlerini_reddeder(tmp_path):
-    """Betik gerçekten çalıştırılır (durum/ yok → yayım yok, çıkış 0); bilinmeyen dal → çıkış 1. Pano dış yayını yalnız `canli-durum`."""
-    betik = SCRIPTS / "canli_yayimla.sh"
-    for dal, beklenen in (("canli-durum-300", 0), ("canli-durum-300-deneme", 0), ("canli-durum-3000", 1), ("main", 1)):
-        r = subprocess.run(["bash", str(betik)], cwd=tmp_path, env={**os.environ, "GITHUB_ACTIONS": "true", "VERI_DALI": dal}, capture_output=True, text=True)
-        assert r.returncode == beklenen, (dal, r.stdout, r.stderr)
-    assert '[ "$veri_dali" = canli-durum ] &&' in betik.read_text(encoding="utf-8")
+# ---------------------------------------------------------------------------------------------------- 300 $ paralel seri KALDIRILDI (kullanıcı 08.11: tek sanal motor, 1.000 $)
+def test_300_paralel_seri_kaldirildi_tek_sanal_motor():
+    assert not (WF / "canli_vardiya_300.yml").exists() and not (ROOT / "copytrade/canli/CALISTIR_300").exists()
+    assert "canli-durum-300" not in (SCRIPTS / "canli_yayimla.sh").read_text(encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------------------------------- dönem sıfırlama (kullanıcı kararı 08.11: 09.11 00:01 TSİ sıfırdan)
@@ -566,7 +494,7 @@ def test_donem_baslangicindan_once_bekler_ve_motor_suresini_kisaltir_cok_uzaksa_
 
 
 def test_iki_canli_is_akisi_donem_betigini_kullanir():
-    for ad in ("canli_vardiya.yml", "canli_vardiya_300.yml"):
+    for ad in ("canli_vardiya.yml",):
         geri = [a for a in yukle(ad)["jobs"]["vardiya"]["steps"] if a.get("id") == "geri"][0]
         assert geri["run"].strip() == "bash .github/scripts/donem_geri.sh", ad
     assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\n?", (ROOT / "copytrade" / "canli" / "DONEM").read_text())

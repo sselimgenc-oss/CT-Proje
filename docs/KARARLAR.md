@@ -238,4 +238,4 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 
 ## K-49 — Yeni dönem: 09.11 00:01 TSİ (2026-11-08T21:01Z) sıfırdan başlangıç (kullanıcı kararı 08.11)
 - Tüm denetim düzeltmeleriyle temiz ölçüm. `copytrade/canli/DONEM` = başlangıç; `.github/scripts/donem_geri.sh`: bu andan önce başlayan vardiya bekler (≤ 230 dk; motor süresi kalan bütçeye iner); veri dalındaki dönem farklıysa durum/kayıt/pano YÜKLENMEZ (saha, pozisyonlar, bekleme cezaları, K-39 gün sayaçları sıfır). `canli_yayimla.sh` yeni dönemin ilk yayımında eski dosyaları dal ucundan siler; **git geçmişinde arşivli kalır** (geri dönülebilir).
-- Hem `canli-durum` (1.000 $) hem `canli-durum-300` (300 $). 7 temiz gün sayacı ve isabet/canlı karşılaştırması bu dönemden başlar.
+- Yalnız `canli-durum` (1.000 $). **300 $ paralel seri iptal** (kullanıcı 08.11: "bir tane olsun, 1.000 $"; `canli_vardiya_300.yml` silindi, `--sanal-kasa-usd` bayrağı kodda kalır). 7 temiz gün sayacı ve isabet/canlı karşılaştırması bu dönemden başlar.
