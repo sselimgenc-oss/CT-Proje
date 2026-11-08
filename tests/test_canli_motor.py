@@ -1084,17 +1084,20 @@ def test_vardiya_arasinda_gelen_komut_yanitlanir_calistirilmaz_bir_kez_yetki_ve_
     simdi = time.time()
     tgp = SahteTG([tg_mesaj(1, "/kapat", tarih=simdi - 300),                      # 5 dk önce: yanıt, ÇALIŞTIRILMAZ
                    tg_mesaj(2, "/dur", tarih=simdi - 14 * 60),                    # pencere içinde
-                   tg_mesaj(3, "/devam", tarih=simdi - 16 * 60),                  # 15 dk dışında: sessiz
+                   tg_mesaj(3, "/devam", tarih=simdi - 16 * 60),                  # G-16: 15 dk dışında da YANIT alır (eskiden sessizdi), yürütülmez
                    tg_mesaj(4, "/kapat", tarih=simdi - 60, kimden=999),           # yetkisiz: yanıt yok
                    tg_mesaj(5, "merhaba", tarih=simdi - 60)])                     # komut değil
     m, hl, saat, _ = kur(tmp_path, tgp=tgp)
     m.baslat()
     m.dakika()
-    yanit = [x for x in tgp.gonderilen if "vardiya arasında geldi" in x]
-    assert len(yanit) == 1 and "/kapat" in yanit[0] and "/dur" in yanit[0] and "/devam" not in yanit[0] and "işlenmedi" in yanit[0] and "Tekrar gönder" in yanit[0]
+    yanit = [x for x in tgp.gonderilen if "İŞLENMEDİ" in x]
+    assert len(yanit) == 1 and yanit[0].splitlines() == [
+        "📭 /kapat 5 dk önce geldi, motor o sırada kapalıydı; İŞLENMEDİ. Hâlâ istiyorsan yeniden gönder.",
+        "📭 /dur 14 dk önce geldi, motor o sırada kapalıydı; İŞLENMEDİ. Hâlâ istiyorsan yeniden gönder.",
+        "📭 /devam 16 dk önce geldi, motor o sırada kapalıydı; İŞLENMEDİ. Hâlâ istiyorsan yeniden gönder."]
     assert not m.dur_istendi and not m.risk.dur and not m.risk.acilis_durdu.get("elle_dur") and not (tmp_path / "durum" / "DUR").exists()      # komut yürütülmedi
     m.dakika()
-    assert len([x for x in tgp.gonderilen if "vardiya arasında geldi" in x]) == 1          # spam yok
+    assert len([x for x in tgp.gonderilen if "İŞLENMEDİ" in x]) == 1          # spam yok
     assert m.tg.yetkisiz_sayisi == 1
     t = tg.Telegram(TOKEN, CHAT, SahteTG([tg_mesaj(7, "/durum", tarih=simdi - 100)]), baslangic_s=simdi)
     assert t.komutlari_al() == [] and len(t.gonderilen) == 1

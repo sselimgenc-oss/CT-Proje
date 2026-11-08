@@ -147,7 +147,8 @@ class SanalYurutucu:
         d.sz, d.usd_dolan, d.px = sz, dolan, dolan / sz
         d.ucret = dolan * float(self.rules["maliyet_taker"])
         d.kayma_oran = kayma(yon, referans, d.px)
-        d.durum = "dolu" if dolan >= usd - 1e-6 else "kismi"
+        tam_kapanis = reduce_only and acik_sz is not None and sz >= abs(float(acik_sz)) - 1e-12      # M-3: kapanış (kalan × mk × 1,05) pozisyonla kırpılır; pozisyonun tamamı kapandıysa DOLU
+        d.durum = "dolu" if dolan >= usd - 1e-6 or tam_kapanis else "kismi"
         return d
 
 
@@ -247,8 +248,9 @@ class GercekYurutucu:
             dec = self._sz_decimals(coin)
             limit = limit_yuvarla(en_iyi * (1 + bant) if yon == "B" else en_iyi * (1 - bant), dec, yon)
             sz = round(float(usd) / en_iyi, dec)
-            if reduce_only and acik_sz is not None:
-                sz = min(sz, round(abs(acik_sz), dec))
+            tavan_sz = round(abs(acik_sz), dec) if reduce_only and acik_sz is not None else None
+            if tavan_sz is not None:
+                sz = min(sz, tavan_sz)
             if sz <= 0:
                 d.durum, d.neden = "red", "sz_sifir"
                 return d
@@ -258,6 +260,7 @@ class GercekYurutucu:
                 return d
         except Exception as hata:                      # noqa: BLE001 - emir ÖNCESİ (kaldıraç, defter, meta) hata: emir GİTMEDİ → red; motor çökmez
             d.durum, d.neden = "red", (str(hata)[:160] if isinstance(hata, ValueError) and str(hata).startswith("bilinmeyen coin") else f"sdk_hatasi: {type(hata).__name__}")
+            d.ham = {"istisna": type(hata).__name__, "metin": str(hata)[:300]}          # G-19: hata metni kayda (red → motor `ham` yazar)
             return d
         try:
             if cloid:
@@ -269,8 +272,12 @@ class GercekYurutucu:
             # Yalnız HL'nin açıkça reddettiği istek (SDK `ClientError`, HTTP 4xx) kesin red sayılır.
             d.durum = "red" if type(hata).__name__ == "ClientError" else "belirsiz"
             d.neden = f"sdk_hatasi: {type(hata).__name__}"
+            d.ham = {"istisna": type(hata).__name__, "metin": str(getattr(hata, "error_message", None) or hata)[:300]}      # G-19: HL'nin açıklaması kaybolmasın
             return d
         d.ham = yanit if isinstance(yanit, dict) else {"yanit": str(yanit)[:200]}
+        if isinstance(yanit, dict) and yanit.get("status") == "err":                  # G-19: üst düzey HL hatası {"status":"err","response":"<metin>"} (ör. "Invalid nonce", agent yok)
+            d.durum, d.neden = "red", f"hl_err: {str(yanit.get('response'))[:160]}"
+            return d
         try:
             durum = yanit["response"]["data"]["statuses"][0]
         except (KeyError, IndexError, TypeError):
@@ -284,7 +291,8 @@ class GercekYurutucu:
             if gercek is not None:
                 d.ucret, d.ucret_gercek = gercek, True
             d.kayma_oran = kayma(yon, en_iyi, d.px)
-            d.durum = "dolu" if d.usd_dolan >= usd * 0.999 else "kismi"
+            tam_kapanis = tavan_sz is not None and sz >= tavan_sz and d.sz >= tavan_sz - 0.5 * 10 ** -dec      # M-3: istek pozisyonla kırpıldı ve kırpılan miktarın tamamı doldu → TAM kapanış
+            d.durum = "dolu" if d.usd_dolan >= usd * 0.999 or tam_kapanis else "kismi"
         elif "error" in durum:
             d.durum, d.neden = "red", str(durum["error"])[:160]
         else:

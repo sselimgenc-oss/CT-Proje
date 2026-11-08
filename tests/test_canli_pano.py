@@ -213,7 +213,7 @@ def test_pano_c2_c3_c4_c5_atlanan_kapanan_maliyet_maruziyet():
     a1, a2, kadro, ozet, hesap, saha, kayit = _c_veri()
     h = pano.html_olustur(ozet, {}, hesap, kayit, [], 1_793_900_000_000, kadro, saha)
     # C2: min_emir_atlandi ×2, slot_tavani ×1 → %67 / %33
-    assert "<b>2</b> × Emir 11 $ alt sınırının altında kaldı" in h and "<b>1</b> × Slot tavanı doldu" in h and "%67" in h
+    assert "<b>2</b> × çok küçük (&lt; 11 $)" in h and "<b>1</b> × slot tavanı" in h and "%67" in h                  # S-13: etiketler telegram.ATLA_TR'den (tek sözlük)
     # C3: iki kapanış dolumu: net +5,0 − 0,5 = +4,5 (kâr) ve −2,0 − 0,1 = −2,1 (zarar) → 2 adet, kazanma %50, ort. kâr 4,50 $, ort. zarar −2,10 $, kâr faktörü 4,5 / 2,1 = 2,14, net +2,40 $
     assert '<td>TOPLAM</td><td class="sg">2</td><td class="sg">%50</td><td class="sg art">4,50 $</td><td class="sg eks">−2,10 $</td><td class="sg art">+2,40 $</td></tr><tr class="alt"><td colspan="6">kâr faktörü 2,14</td>' in h        # 06.11: kâr faktörü telefonda taşmasın diye ikinci satıra alındı (sayı aynı)
     # C4: ücret 0,5 + 0,1 + 0,2 = 0,8; kayma = 0,001 × 100 + (−0,0004 × 50) + 0 = 0,1 − 0,02 = 0,08; funding −0,1 ⇒ maliyet = 0,8 + 0,08 − (−0,1) = 0,98; net 1004 − 1000 = +4,00; brüt = 4,98

@@ -35,7 +35,8 @@ def test_saatlik_toplama_tek_mesaj_pencere_motor_saatinden(tmp_path):
     assert len(oz) == 1
     assert oz[0].startswith(f"🧾 Son 1 saat ({tg._tsi_saat(bas)}–{tg._tsi_saat(bas + SAAT)} TSİ): 3 emir · sanal")
     assert "➕ açılış 1 · ⬆️ artırma 0 · ⬇️ azaltma 1 · ✖️ kapanış 1" in oz[0]
-    assert "🏆 En büyük: 27,3 $ (BTC, AL)" in oz[0] and "⏭️ Atlanan sinyal: 2 (en çok: spot coin 2)" in oz[0]
+    assert "🏆 En büyük: 27,3 $ (BTC, AL)" in oz[0] and ("⏭️ Kopyalanmayan trader dolumu: 2 (≈1 ayrı işlem)\n"           # S-13: iki spot dolumu aynı (adres, coin, saniye) → 1 ayrı işlem
+                                                                   "   • kural gereği 2: 2 spot coin\n   • kaçırılan 0 (geç görülen / veri yok)") in oz[0]
     assert "💵 Tutar toplamı: 55 $" in oz[0] and "kayma ort. %" in oz[0]
     print("\n" + oz[0])
     saat.ms += SAAT
@@ -86,7 +87,8 @@ def test_gercek_kip_emir_anlik(tmp_path):
     m = mt.Motor(RULES, Gercek(), SahteHL(), tg.Telegram(TOKEN, CHAT, tgp), tmp_path / "durum", tmp_path / "kayit", lambda: kadro([satir(1, 1)], T0), saat)
     m.baslat()
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
-    assert any(x.startswith("⚠️ BTC AL: emir tam dolmadı") for x in tgp.gonderilen)       # saat dolmadan, hemen
+    sorun = [x for x in tgp.gonderilen if x.startswith("🚨 [GERÇEK] EMİR REDDEDİLDİ — BTC ac ")]       # saat dolmadan, hemen; G-18: gerçek kipte dolu olmayan emir 🚨 (gece sesli)
+    assert len(sorun) == 1 and "\nneden: sdk_hatasi: X\n" in sorun[0] and not m.tg.sessiz_mi(sorun[0])
     assert _ozetler(tgp) == [] and m._emir_tampon == []
 
 
@@ -108,7 +110,9 @@ def test_mesaj_bicimi_altin_ornek():
         f"🧾 Son 1 saat ({tg._tsi_saat(bas)}–{tg._tsi_saat(bas + SAAT)} TSİ): 3 emir · sanal\n"
         "➕ açılış 1 · ⬆️ artırma 1 · ⬇️ azaltma 0 · ✖️ kapanış 1\n"
         "🏆 En büyük: 230 $ (BTC, SAT) · 0xf43a34…\n"
-        "⏭️ Atlanan sinyal: 7 (en çok: geç görülen açılış 5)\n"
+        "⚠️ Kopyalanmayan trader dolumu: 7\n"                                            # S-13: kaçırılan (gec_acilis 5) > 0 → ⚠️; HIP-3 2 kural gereği
+        "   • kural gereği 2\n"
+        "   • KAÇIRILAN 5: geç görülen açılış\n"
         "⚠️ 1 emir tam dolmadı\n"
         "💵 Tutar toplamı: 253 $ · kayma ort. %0,020")                                    # |kayma| ort. = (0,02 + 0,04 + 0) / 3 = %0,02
 

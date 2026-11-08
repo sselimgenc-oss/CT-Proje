@@ -205,6 +205,30 @@ def api_cuzdan_dogrula(post: Callable[[dict], Any], ortam: dict, turet: Callable
     return r
 
 
+def ajan_bitis_oku(post: Callable[[dict], Any], ortam: dict, turet: Callable[[str], str] | None = None) -> dict:
+    """G-19: API cüzdanının (agent) HL `extraAgents` listesindeki `validUntil`'i (ms, UTC). EMİR GÖNDERMEZ; anahtar/adres DÖNMEZ.
+    Döner {"durum": "bulundu", "valid_until": ms | None} | {"durum": "listede_yok", "agent_rol": bool} | {"durum": "okunamadi", "tur": hata türü}."""
+    anahtar, hesap = str(ortam.get("HL_API_CUZDAN_ANAHTARI") or "").strip(), str(ortam.get("HL_HESAP_ADRESI") or "").strip()
+    if not anahtar or not hesap:
+        return {"durum": "okunamadi", "tur": "anahtar_yok"}
+    try:
+        agent = _kucuk((turet or anahtardan_adres)(anahtar))
+        liste = post({"type": "extraAgents", "user": hesap})
+    except Exception as hata:                              # noqa: BLE001 - hata metni anahtar içerebilir: yalnız tür adı
+        return {"durum": "okunamadi", "tur": type(hata).__name__}
+    for a in liste if isinstance(liste, list) else []:
+        if isinstance(a, dict) and _kucuk(a.get("address")) == agent:
+            vu = a.get("validUntil")
+            return {"durum": "bulundu", "valid_until": int(vu) if isinstance(vu, (int, float)) and not isinstance(vu, bool) and math.isfinite(vu) else None}
+    try:                                                   # listede yoksa: userRole hâlâ agent diyorsa süresiz/başka yolla onaylı (alarm yok)
+        rol = post({"type": "userRole", "user": agent})
+        veri = rol.get("data") if isinstance(rol, dict) else None
+        agent_rol = isinstance(rol, dict) and rol.get("role") == "agent" and isinstance(veri, dict) and _kucuk(veri.get("user")) == _kucuk(hesap)
+    except Exception:                                      # noqa: BLE001
+        return {"durum": "okunamadi", "tur": "userRole"}
+    return {"durum": "listede_yok", "agent_rol": bool(agent_rol)}
+
+
 def kip_belirle(rules: dict, istenen: str | None = None, ortam: dict | None = None) -> str:
     """`sanal` (varsayılan) | `gercek`. `gercek` YALNIZ `CANLI_KIP=gercek` ortamıyla + anahtarlar + GitHub Actions DEĞİL; `kurallar.yaml canli_kip` yalnız `sanal` olabilir.
     Aksi halde KipHatasi (sessizce sanala DÜŞMEZ: yanlış beklenti)."""
@@ -324,6 +348,8 @@ class Motor:
         self.kayit = Kayit(kayit_dizin, self.saat_ms)
         self.tg.kayit = self.kayit
         self.kip = yurutucu.kip
+        self.tg.kip = self.kip                                                      # S-22: alarm başlıklarına kip etiketi
+        self.tg.tampon_sn = float(rules.get("canli_telegram_gercek_tampon_sn", 0) or 0) if self.kip == "gercek" else 0.0      # G-18: gerçek kip emir mesajı birleştirme
         self.vardiya_id = vardiya_id
         self.kasa = float(rules["canli_kasa_usd"])
         self.kasa_ayar = float(rules.get("canli_kasa_ayar_usd", self.kasa))        # G5: ayarlı kasa ($; gerçek kip CANLI_KASA_USD). `kasa` etkin (min(ayar, HL değeri)) ve oynak; uyuşmazlık denetimi ayara bakar
@@ -376,6 +402,8 @@ class Motor:
         self._ozet_emir = int(m.get("ozet_emir", 0))               # önceki özetten beri emir sayısı
         self._emir_tampon: list[dict] = []                 # Telegram: emirler dakikalık adımda TEK özet mesajına toplanır
         self._atla_tampon: dict[str, int] = {}             # Telegram sanal saatlik özet: pencerede atlanan sinyaller (neden -> adet)
+        self._atla_islem: set[tuple[str, str, int]] = set()  # S-13: atlanan dolumların ayrı işlemleri (adres, coin, trader_dolum_ms // 1000)
+        self._atla_adres: dict[str, dict[str, int]] = {}  # S-13: neden -> {adres: adet} (ör. tek ayrılan trader adresi mesajda gösterilir)
         self._ozet_pencere_bas: int = self.baslama_ms      # saatlik özet penceresinin başı (motor saati); kalıcı DEĞİL (çökmede tampon kaybolabilir)
         self.kor_kirpildi: list[dict] = []
         self._boyut_girdi: dict | None = None                  # son _emir_isle boyut girdileri (emir kaydına eklenir, sonra silinir)
@@ -449,7 +477,7 @@ class Motor:
     def _motor_json(self) -> dict:
         return {"islenen": self.islenen, "poz_tr": self.poz_tr, "poz_tr_ms": {f"{a}|{c}": ms for (a, c), ms in self._poz_tr_ms.items()}, "poz_tr_senk_ms": self._poz_tr_senk_ms, "hesap_tr": self.hesap_tr, "son_olay_ms": self.son_olay_ms,
                 "ozet_gunu": self._ozet_gunu, "ozet_oz": self._ozet_oz, "ozet_emir": self._ozet_emir, "kip": self.kip, "kasa_usd": self.kasa, "kasa_ayar_usd": self.kasa_ayar, "vardiya": self.vardiya_id, "yazildi_ms": self.saat_ms(),
-                "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.offset,
+                "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.kalici_offset,
                 "son_funding_ms": self.son_funding_ms, "funding_kimlik": self.funding_kimlik[-500:], "funding_gercek_usd": self.funding_gercek_usd, "ucret_gercek_usd": self.ucret_gercek_usd, "ucret_tahmin_say": self.ucret_tahmin_say}
 
     def _dolum_yaz(self) -> None:
@@ -721,6 +749,9 @@ class Motor:
         self._say_neden(neden)
         if self.kip == "sanal":
             self._atla_tampon[neden] = self._atla_tampon.get(neden, 0) + 1
+            self._atla_islem.add((adres, o.coin, int(o.zaman_ms) // 1000))
+            ad = self._atla_adres.setdefault(neden, {})
+            ad[adres] = ad.get(adres, 0) + 1
         self.kayit({"olay": "emir_yok", "adres": adres, "coin": o.coin, "eylem": eylem, "karar": karar, "neden": neden, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
                     "yas_ms": self.saat_ms() - o.zaman_ms})
         return Sonuc(adres, o.coin, eylem, karar, neden)
@@ -781,14 +812,15 @@ class Motor:
                     "reduce_only": reduce_only, "pnl_usd": (round(pnl, 6) if pnl is not None else None), "durum": d.durum, "red_neden": d.neden, "boyut_neden": neden, "trader_px": o.px, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
                     "emir_ms": emir_ms, "dolum_ms": dolum_ms, "referans_px": d.referans_px, "dolum_px": d.px, "kayma_ref": d.kayma_oran, "kayma_trader": kayma_trader, "ucret": d.ucret,
                     "gec_goruldu": gec, "kaynak": o.kaynak, "bant": bant, "cloid": cloid, "funding_usd": round(self.hesap.funding.get(adres, 0.0), 6),
+                    **({"ham": maskele(json.dumps(d.ham, ensure_ascii=False, default=str))[:300]} if d.durum == "red" and d.ham else {}),       # G-19: red → HL ham yanıtı (300 karakter)
                     **{k: (round(v, 8) if isinstance(v, float) else v) for k, v in (self._boyut_girdi or {}).items()}})
         self._boyut_girdi = None
         self._ozet_emir += 1
-        e = {"adres": adres, "coin": o.coin, "yon": yon, "usd": d.usd_dolan or usd, "px": d.px, "kayma": kayma_trader, "durum": d.durum, "eylem": eylem}
+        e = {"adres": adres, "coin": o.coin, "yon": yon, "usd": d.usd_dolan or usd, "px": d.px, "kayma": kayma_trader, "durum": d.durum, "eylem": eylem, "neden": d.neden}
         if belirsiz:                                        # alarm yukarıda gitti; sonuç `belirsiz_coz`da bildirilir
             pass
-        elif self.kip == "gercek":                          # gerçek parada her emir ANINDA ve ayrı mesaj (risk gecikmeden görülür)
-            self.tg.gonder(tg.msg_emir_ozeti(self.kip, [e], 0))
+        elif self.kip == "gercek":                          # gerçek parada emir hemen bildirilir; G-18: `canli_telegram_gercek_tampon_sn` içindeki emirler TEK mesajda; dolu olmayan 🚨 (sesli)
+            self.tg.tampona(e, lambda liste: tg.msg_emir_ozeti(self.kip, liste, 0))
         else:
             self._emir_tampon.append(e)
         return Sonuc(adres, o.coin, eylem, "emir" if d.dolu_mu else ("belirsiz" if belirsiz else "red"), d.neden or neden, d)
@@ -1379,6 +1411,7 @@ class Motor:
         oranlar = self.funding_oku() if self.funding_bekliyor(simdi) else None
         fgercek = self.funding_gercek_oku(simdi)                                # G7: gerçek kip, saatte bir; sanalda None
         ledger = self.ledger_oku(simdi) if hl else None                          # gerçek kip: yatırma/çekme kaydı (#5)
+        ajan = self.ajan_suresi_oku(simdi)                                       # G-19: gerçek kip, günde bir: API cüzdanı `validUntil`
         with self._lock:
             self.mids_uygula(mids, simdi)
             if self.son_funding_saat is None:
@@ -1389,7 +1422,7 @@ class Motor:
                 ("hl_ozsermaye", lambda: self.hl_uygula(hl[1], simdi) if hl else None), ("ofset", lambda: self.ofset_yenile(ledger, simdi)), ("risk", lambda: self._risk(simdi)), ("anlik_saha", lambda: self._anlik(simdi)),
                 ("inen", lambda: self.karar_uygula(self.saha.inenleri_kapat(simdi), simdi)), ("mutabakat", lambda: self._mutabakat(simdi, hl)), ("kapanis_kuyrugu", lambda: self._kuyruk_isle(simdi)),
                 ("kadro", lambda: self._kadro_uygula(kadro, simdi)), ("senkron", lambda: (self.senkron_uygula(senkron), self.hesap_uygula(hesaplar, simdi)) if senkron is not None else None),
-                ("telegram", lambda: self._komutlar(komutlar)), ("ozet", lambda: self._gunluk_ozet(simdi)),
+                ("telegram", lambda: self._komutlar(komutlar)), ("ajan_suresi", lambda: self.ajan_suresi_uygula(ajan, simdi)), ("ozet", lambda: self._gunluk_ozet(simdi)),
                 ("emir_ozeti", lambda: self.emir_ozeti(simdi)),
                 ("tur_kaydi", lambda: self._tur_kaydi(simdi)),
                 ("durum_yaz", self.durum_yaz),                                     # G-12b: disk dolu / salt okunur → dakikalık görev ölmez; kayıt + alarm
@@ -1420,6 +1453,8 @@ class Motor:
 
     def emir_ozeti(self, simdi: int, zorla: bool = False) -> None:
         """Biriken emirleri tek Telegram mesajı olarak gönderir (`canli_telegram_emir_ozet_sn` aralığında; vardiya sonunda `zorla`)."""
+        if zorla:
+            self.tg.tampon_bosalt()                      # G-18: gerçek kip emir tamponu vardiya sonunda beklemeden gider
         dk = float(self.rules.get("canli_telegram_sanal_ozet_dk", 0) or 0)
         if self.kip == "sanal" and dk > 0:
             return self._saatlik_ozet(simdi, dk, zorla)
@@ -1437,10 +1472,12 @@ class Motor:
         emirler, atlanan = self._emir_tampon, self._atla_tampon
         self._emir_tampon, self._atla_tampon = [], {}
         self._ozet_pencere_bas = simdi
+        islem, adresler = len(self._atla_islem), self._atla_adres
+        self._atla_islem, self._atla_adres = set(), {}
         metin = tg.msg_sanal_saatlik(bas, simdi, round((simdi - bas) / DAKIKA) if zorla else dk, emirler, atlanan,
-                                     (self.ozsermaye(), self.risk.gun_basi, self.kasa) if emirler else None)
+                                     (self.ozsermaye(), self.risk.gun_basi, self.kasa) if emirler else None, islem, adresler)
         if not metin and not zorla and self.rules.get("canli_telegram_sanal_bos_mesaj", False):
-            metin = tg.msg_sanal_saatlik_bos(bas, simdi, dk, atlanan, (self.ozsermaye(), self.risk.gun_basi, self.kasa))
+            metin = tg.msg_sanal_saatlik_bos(bas, simdi, dk, atlanan, (self.ozsermaye(), self.risk.gun_basi, self.kasa), islem, adresler)
         if metin:
             self.tg.gonder(metin)
 
@@ -1531,8 +1568,37 @@ class Motor:
         self._kadro_uygula(self._kadro_al(simdi), simdi)
 
     def _komutlar(self, komutlar: list[str]) -> None:
+        """Telegram komutları. G-16: bitince (hata olsa da) offset kalıcı olur (`tg.onayla`); öncesinde motor.json partiden önceki offset'i taşır."""
+        try:
+            self._komutlari_yurut(komutlar)
+        finally:
+            self.tg.onayla()
+
+    def ajan_suresi_oku(self, simdi: int) -> dict | None:
+        """G-19 (ağ, kilitsiz): yalnız GERÇEK kipte, günde bir (`canli_ajan_kontrol_sn`) API cüzdanı `validUntil` okuması. Sanal kipte None."""
+        if self.kip != "gercek" or not self._aralik_mi("ajan_suresi", simdi, float(self.rules.get("canli_ajan_kontrol_sn", 86400))):
+            return None
+        return ajan_bitis_oku(self.post, dict(os.environ), getattr(self, "ajan_turet", None))
+
+    def ajan_suresi_uygula(self, okuma: dict | None, simdi: int) -> None:
+        """G-19: bitişe `canli_ajan_uyari_gun` (7) gün ya da daha az kaldıysa (ya da cüzdan HL'de artık agent değilse) ALARM; her okumada kayıt. Süre dolunca her emir — kapanışlar da — reddedilir."""
+        if okuma is None:
+            return
+        self.kayit({"olay": "ajan_suresi", **okuma})
+        esik_gun = float(self.rules.get("canli_ajan_uyari_gun", 7))
+        if okuma.get("durum") == "bulundu" and okuma.get("valid_until") is not None:
+            kalan_gun = (int(okuma["valid_until"]) - simdi) / 86_400_000
+            if kalan_gun <= esik_gun:
+                tarih = datetime.fromtimestamp(int(okuma["valid_until"]) / 1000, UTC).strftime("%d.%m.%Y %H:%M UTC")
+                durum = "süresi DOLDU" if kalan_gun <= 0 else f"süresi {kalan_gun:.1f} gün sonra bitiyor"
+                self.tg.gonder(tg.alarm("ALARM: API cüzdanı süresi", f"HL API cüzdanının {durum} ({tarih}).\nSüre dolunca her emir (kapanışlar da) reddedilir. Yeni API cüzdanı oluşturup sunucuya kaydedin, sonra motoru yeniden başlatın."))
+        elif okuma.get("durum") == "listede_yok" and not okuma.get("agent_rol"):
+            self.tg.gonder(tg.alarm("ALARM: API cüzdanı HL'de yok", "API cüzdanı HL agent listesinde bulunamadı (süresi dolmuş ya da iptal edilmiş olabilir).\nEmirler reddedilir; yeni API cüzdanı gerekli. Acil durumda HL web'den pozisyonları kapatın."))
+
+    def _komutlari_yurut(self, komutlar: list[str]) -> None:
         for k in komutlar:
             if k == "/kapat":                                                  # eski /dur: tüm pozisyonları kapat, motor durur (DUR dosyası)
+                self.tg.gonder(tg.msg_kapat_alindi(self.kip))                  # G-16: anında alındı yanıtı (kapanış sonucu ayrı mesajla)
                 self.dur_tetikle("komut")
             elif k == "/dur":                                                  # yeni /dur: yalnız yeni giriş/artırma durur; çıkış/azaltma serbest, pozisyonlar trader'ı izlemeye devam eder
                 self._duraklat(True)
@@ -2237,6 +2303,7 @@ def main(argv: list[str] | None = None) -> int:
     tgram = tg.Telegram(arka_plan=not args.kontrol, sessiz_utc=(int(rules["canli_telegram_sessiz_bas_utc"]), int(rules["canli_telegram_sessiz_bit_utc"])))
     try:
         kip = kip_belirle(rules, args.kip)
+        tgram.kip = kip                                    # S-22: açılış alarmlarında da kip etiketi
         if args.sanal_kasa_usd is not None:
             sanal_kasa_dogrula(rules, kip, args.sanal_kasa_usd)          # gerçek kipte / sınır dışında erken ret (kontrol dahil)
     except KipHatasi as hata:
