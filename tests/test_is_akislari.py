@@ -136,12 +136,26 @@ def test_s21_izleme_yayimla_betigini_hicbir_is_akisi_cagirmaz():
 
 # ---------------------------------------------------------------------------------------------------- artık dosya temizliği
 def test_eski_sistem_is_akislari_ve_betikleri_yok():
-    kalanlar = {"canli_vardiya.yml", "ci.yml", "dinleyici_deneme.yml", "dolgu_deneme.yml", "gecikme_kar_deneme.yml", "isabet_deneme.yml", "izleme_deneme.yml", "radar.yml", "radar_deneme.yml", "saglik.yml", "nabiz_yayim.yml"}  # canli_vardiya_300.yml kaldırıldı (kullanıcı 08.11: tek sanal motor 1.000 $); sonnet_isci.yml kaldırıldı (devir denetimi G-11, 06.11); saglik.yml: sağlık kontrolü (kullanıcı kararı 2026-11-05; salt okur, testi test_saglik.py); nabiz_yayim.yml: G-10 dış ölü adam alarmı yayını (testi test_nabiz.py)
+    kalanlar = {"canli_vardiya.yml", "ci.yml", "dinleyici_deneme.yml", "dolgu_deneme.yml", "gecikme_kar_deneme.yml", "isabet_deneme.yml", "izleme_deneme.yml", "radar.yml", "radar_deneme.yml", "saglik.yml", "nabiz_yayim.yml"} | ({"dal_sil.yml"} if (WF / "dal_sil.yml").exists() else set())   # dal_sil.yml: tek seferlik eski dal temizliği (kullanıcı onayı 08.11; iş bitince silinir)  # canli_vardiya_300.yml kaldırıldı (kullanıcı 08.11: tek sanal motor 1.000 $); sonnet_isci.yml kaldırıldı (devir denetimi G-11, 06.11); saglik.yml: sağlık kontrolü (kullanıcı kararı 2026-11-05; salt okur, testi test_saglik.py); nabiz_yayim.yml: G-10 dış ölü adam alarmı yayını (testi test_nabiz.py)
     assert {p.name for p in WF.glob("*.yml")} == kalanlar          # eski sistem iş akışları (kapı, Pazar kadrosu, İlk 11 denemesi, v3 yan yana) geri gelmedi
     assert not (WF / "pano.yml").exists() and not (ROOT / "copytrade" / "pano_veri.py").exists() and not (ROOT / "pano").exists()     # eski GitHub Pages panosu (copytrade-izleme'ye bağlı) kaldırıldı; yeni pano `copytrade/canli/pano.py`
     assert not (SCRIPTS / "kapi_yayimla.sh").exists()
     assert not (WF / "sonnet_isci.yml").exists()                     # G-11: yazma yetkili ajan iş akışı geri gelmedi
     assert (SCRIPTS / "izleme_yayimla.sh").exists() and not (WF / "izleme.yml").exists()      # S-21: izleme.yml (silinmiş copytrade-izleme dalına yazan) kaldırıldı; betik test_izleme.py testleriyle duruyor
+
+
+def test_dal_sil_yalniz_eski_claude_dallari_elle_main():
+    """Tek seferlik temizlik: veri dalları, main ve oturum dalı listede olamaz; yalnız elle (dispatch) ve yalnız main'de; yazma yalnız iş düzeyinde."""
+    if not (WF / "dal_sil.yml").exists():
+        return
+    wf = yukle("dal_sil.yml")
+    assert set(wf["on"]) == {"workflow_dispatch"} and wf["permissions"] == {"contents": "read"} and wf["jobs"]["sil"]["permissions"] == {"contents": "write"}
+    assert wf["jobs"]["sil"]["if"] == "${{ github.ref == 'refs/heads/main' }}"
+    run = wf["jobs"]["sil"]["steps"][0]["run"]
+    dallar = re.findall(r"claude/[a-z0-9-]+", run)
+    assert len(dallar) == 40 and all(d.startswith("claude/") for d in dallar) and "claude/stoic-carson-w3xagz" not in dallar
+    for korunan in ("main", "canli-durum", "radar", "radar-deneme", "canli-durum-deneme"):
+        assert f" {korunan} " not in run and f"heads/{korunan}" not in run
 
 
 # ---------------------------------------------------------------------------------------------------- radar (T3)
