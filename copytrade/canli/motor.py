@@ -467,6 +467,21 @@ class Motor:
             self.kayit({"olay": "poz_okuma_hata", "adres": adres, "tur": type(hata).__name__})
             return False
 
+    def trader_son_islem_oku(self, adres: str, simdi_ms: int) -> None:
+        """B15 (RADAR §5 "72 sa yeni işlem yok"): sayaç trader'ın SON dolumundan başlar, giriş anından değil. Girişte son `canli_islem_yok_saat` saatin dolumları REST'le okunur
+        (`userFillsByTime`): en yeni dolumun `time`'ı (ms, UTC) saha kaydına yazılır; pencerede dolum yoksa son dolum ≤ pencere başı → pencere başı yazılır (ilk günlük
+        kontrolde düşer). Okuma hatası → yazılmaz (bilinmiyor: sayaç giriş anından; `son_islem_okuma_hata` kaydı)."""
+        if adres not in self.saha.uyeler:
+            return
+        bas = int(simdi_ms - float(self.rules["canli_islem_yok_saat"]) * 3_600_000)
+        try:
+            satirlar = self.post({"type": "userFillsByTime", "user": adres, "startTime": bas}) or []
+            zamanlar = [int(r["time"]) for r in satirlar if isinstance(r, dict) and r.get("time") is not None]
+        except Exception as hata:                          # noqa: BLE001
+            self.kayit({"olay": "son_islem_okuma_hata", "adres": adres, "tur": type(hata).__name__})
+            return
+        self.saha.islem_gordu(adres, max(zamanlar) if zamanlar else bas)
+
     def _dexler(self) -> list[str]:
         if not hasattr(self, "_dex_adlari"):
             try:
@@ -787,6 +802,7 @@ class Motor:
                 self._kor_imza.pop(k.adres, None)
                 self.hesap.slot_ac(k.adres, self.saha.slot)
                 self.trader_pozlari_oku(k.adres)
+                self.trader_son_islem_oku(k.adres, simdi)
                 self.trader_hesap_usd(k.adres, simdi, zorla=True)
                 giris_hesap = (self.hesap_tr.get(k.adres) or {}).get("deger")
                 if giris_hesap is not None and k.adres in self.saha.uyeler:        # pano §C1: trader hesap değeri GİRİŞTE bir kez saklanır (canlı kopya koruması = bizim slot getirimiz ↔ trader'ın hesap getirisi)
@@ -800,8 +816,8 @@ class Motor:
                 self._adres_kapat(k.adres, "inen_24sa", simdi)
                 self.hesap.slot_kapat(k.adres)
             elif k.tur == "giris_atlandi":
-                imza = tuple(sorted(k.kor_kirpildi or []))
-                if self._kor_imza.get(k.adres) != imza:                          # yalnız durum değişince (aday ya da engelleyen üyeler); 5 dk'da bir tekrar yazılmaz
+                imza = (self.saha.son_kosu_ms, tuple(sorted(k.saha if k.saha is not None else (k.kor_kirpildi or []))))
+                if self._kor_imza.get(k.adres) != imza:                          # B11: imza = (kadro koşusu, adayın karşılaştığı TAM saha); değiştirmede üye başına değişen `kalan` imzaya girmez → aynı durum bir kez yazılır
                     self._kor_imza[k.adres] = imza
                     self.kor_kirpildi.append({"adres": k.adres, "uyeler": k.kor_kirpildi})
                     self.kayit({"olay": "kor_kirpildi", "adres": k.adres, "uyeler": k.kor_kirpildi})
@@ -1349,6 +1365,9 @@ class Motor:
         self.niyetleri_coz(simdi)
         self.piyasa_oku(simdi)
         self._son["kadro"] = 0
+        for adres in list(self.saha.uyeler):                                                     # B15 geçişi: düzeltmeden önce girmiş, o günden beri dolum görülmemiş üyenin son dolumu bir kez okunur
+            if self.saha.uyeler[adres].get("son_islem_ms") is None:
+                self.trader_son_islem_oku(adres, simdi)
         self._kadro(simdi)
         for adres in [*self.saha.uyeler, *self.saha.inen]:
             if adres not in self.poz_tr:
