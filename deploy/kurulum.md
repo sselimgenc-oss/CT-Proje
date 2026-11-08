@@ -8,7 +8,7 @@
 ```bash
 sudo apt-get update && sudo apt-get install -y python3 python3-venv git
 sudo useradd --system --create-home --shell /usr/sbin/nologin sgcanli
-sudo git clone https://github.com/sselimgenc-oss/sg-arge.git /opt/sg-arge
+sudo git clone https://github.com/sselimgenc-oss/CT-Proje.git /opt/sg-arge
 sudo chown -R sgcanli:sgcanli /opt/sg-arge
 sudo -u sgcanli python3 -m venv /opt/sg-arge/.venv
 sudo -u sgcanli /opt/sg-arge/.venv/bin/pip install --require-hashes -r /opt/sg-arge/requirements-canli.lock

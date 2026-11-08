@@ -6,7 +6,7 @@
 // Veri okunamazsa (3 deneme, ~80 sn) durum "bilinmiyor": alarm yalnız UTC 3 saatlik ızgaranın ilk tikinde (00:00, 03:00, … +10 dk) — tek kesintide en çok bir uyarı.
 
 const DAKIKA = 60000;
-const DEPO = "sselimgenc-oss/sg-arge";
+const DEPO = "sselimgenc-oss/CT-Proje";
 const HAM = `https://raw.githubusercontent.com/${DEPO}`;
 export const KAYNAK = {
   kilit: `${HAM}/canli-durum/durum/kilit.json`,

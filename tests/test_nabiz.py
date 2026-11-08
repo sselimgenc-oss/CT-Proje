@@ -136,7 +136,7 @@ def test_tur_bayat_veri_tek_telegram_mesaji_turkce_ve_actions_baglantili():
     assert (s["durum"], s["alarm"], s["gonderildi"], s["yas_dk"]) == ("bayat", True, True, 50)
     assert len(r["tg"]) == 1 and r["tg"][0]["url"] == "https://api.telegram.org/botGIZLI_TOKEN_123/sendMessage" and r["tg"][0]["govde"]["chat_id"] == "42"
     metin = r["tg"][0]["govde"]["text"]
-    assert metin.startswith("🚨 ALARM: Sanal motor nabzı yok — son yayım 50 dk önce. Vardiya zinciri kopmuş olabilir: https://github.com/sselimgenc-oss/sg-arge/actions/workflows/canli_vardiya.yml")
+    assert metin.startswith("🚨 ALARM: Sanal motor nabzı yok — son yayım 50 dk önce. Vardiya zinciri kopmuş olabilir: https://github.com/sselimgenc-oss/CT-Proje/actions/workflows/canli_vardiya.yml")
     assert all("?t=" in u for u in r["istek"]) and any("/canli-durum/durum/kilit.json" in u for u in r["istek"]) and any("/main/copytrade/canli/DONEM" in u for u in r["istek"])
 
 
@@ -189,7 +189,7 @@ def test_elle_sorgu_json_durum_doner_gondermez_secret_sizdirmaz():
     s = r["sonuc"]
     assert r["tg"] == [] and s["telegram"] == "acik" and s["cc"] == "no-store" and s["okundu"]["kilit"] is True
     assert "GIZLI_TOKEN_123" not in json.dumps(r["sonuc"]) and not any(k.startswith("TELEGRAM_") for k in s)
-    assert s["kaynak"]["kilit"] == "https://raw.githubusercontent.com/sselimgenc-oss/sg-arge/canli-durum/durum/kilit.json"
+    assert s["kaynak"]["kilit"] == "https://raw.githubusercontent.com/sselimgenc-oss/CT-Proje/canli-durum/durum/kilit.json"
 
 
 # ---------------------------------------------------------------------------------------------------- yapılandırma ve yayın iş akışı

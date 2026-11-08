@@ -29,7 +29,7 @@ NTP kapalıysa: `timedatectl set-ntp true`.
 ## 4. Kodu al (repo açık; token gerekmez)
 ```bash
 su - sg
-git clone https://github.com/sselimgenc-oss/sg-arge.git
+git clone https://github.com/sselimgenc-oss/CT-Proje.git
 cd sg-arge
 python3 -m venv .venv
 .venv/bin/pip install -r requirements-dinleyici.txt

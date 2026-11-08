@@ -35,7 +35,7 @@ GERCEK_NABIZ_KRITIK = 20 * DAKIKA          # nabız (kilit/özet/yayım en yeni)
 GERCEK_OFSET_ORAN = 0.25                   # |hl_ofset| > kasa × 0,25: HL hesabı ile yerel defter arasındaki sabit fark büyük (yatırma/çekme dışı kayma ya da kasa yanlış)
 HATA_SAYACLARI = ("adim_hata", "olay_hata", "defter_hata")      # ozet.kayit_sayac (vardiya başına)
 VARDIYA_IS_AKISI = "canli_vardiya.yml"
-KOSU_API = "https://api.github.com/repos/sselimgenc-oss/sg-arge/actions/workflows/{wf}/runs?branch=main&per_page=5"
+KOSU_API = "https://api.github.com/repos/sselimgenc-oss/CT-Proje/actions/workflows/{wf}/runs?branch=main&per_page=5"
 
 
 @dataclass(frozen=True)
