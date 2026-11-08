@@ -130,13 +130,15 @@ class Saha:
             u["son_islem_ms"] = max(int(u.get("son_islem_ms") or 0), int(zaman_ms))
 
     # ------------------------------------------------------------------ anlık kontroller (dakikalık)
-    def anlik(self, simdi_ms: int, slot_ozsermaye: Callable[[str], float | None], kadro: dict | None = None) -> list[Karar]:
-        """Slot düşüşü ≥ eşik ya da kaldıraç ihlali → anında düş (sonuçla). `kadro` verilirse kaldıraç (R1/4) kadro satırından okunur."""
+    def anlik(self, simdi_ms: int, slot_ozsermaye: Callable[[str], float | None], kadro: dict | None = None, slot_bas: Callable[[str], float | None] | None = None) -> list[Karar]:
+        """Slot düşüşü ≥ eşik ya da kaldıraç ihlali → anında düş (sonuçla). `kadro` verilirse kaldıraç (R1/4) kadro satırından okunur.
+        S-3: `slot_bas` verilirse düşüş üyenin KENDİ slot tabanına göre ölçülür (kasa değişince eski tabanla açılmış üye yeni slota göre yanlış düşmez); yoksa / bilinmiyorsa güncel slot."""
         kararlar: list[Karar] = []
         satir = {s["adres"]: s for s in (kadro or {}).get("satirlar", [])}
         for adres in list(self.uyeler):
             ozs = slot_ozsermaye(adres)
-            if ozs is not None and ozs <= self.slot * (1 - float(self.rules["canli_slot_dusus_oran"])) + 1e-9:
+            taban = (slot_bas(adres) if slot_bas is not None else None) or self.slot
+            if ozs is not None and ozs <= taban * (1 - float(self.rules["canli_slot_dusus_oran"])) + 1e-9:
                 self._dus(adres, "slot_dusus", True, simdi_ms, kararlar)
             elif (satir.get(adres) or {}).get("max_kaldirac") is not None and float(satir[adres]["max_kaldirac"]) > float(self.rules["radar_max_kaldirac"]):
                 self._dus(adres, "kaldirac_ihlali", True, simdi_ms, kararlar)

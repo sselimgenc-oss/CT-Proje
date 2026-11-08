@@ -478,6 +478,16 @@ Adresler trader'ların halka açık adresleridir; API anahtarı, hesap adresimiz
 
 
 
+- **Denetim G-5 / S-2 / S-3 / S-7 / S-8 / M-1 / M-2 (2026-11-08) — kasa, risk, kuyruk:**
+  - `kasa_usd` (motor/ozet, `hesap.json`; **$**, kopya hesabı = HL hesabı ölçeği) artık DÖNEM BAŞI sermayesidir ve kalıcıdır (G-5): gerçek kipte durum varken ve ayar değişmemişken yeniden başlatma `kasa_usd`'yi min(ayar, HL) ile EZMEZ. Yeni dönem yalnız boş dizinde (kasa = min(ayar, HL)) ya da ayar değişince (pozisyonsuz) başlar. Yerel özsermaye = `kasa_usd` + realize − ücret + funding + açık K/Z + `kapanmis_net`.
+  - Kasa ayarı değişince (S-3; yalnız pozisyonsuz): üyelerin girişten beri neti (realize − ücret + funding, $) `kapanmis_net`e taşınır, `slot_bas` = yeni slot ($), `hl_ofset` ve `ledger_son_ms` sıfırlanır (ilk HL okumasında yeniden kurulur), risk `zirve` = `gun_basi` = yeni dönem özsermayesi. `kayit` olayı `donem_yenilendi` {`eski_kasa_usd`, `yeni_kasa_usd`, `eski_ozsermaye`, `ozsermaye`, `kapanmis_net`, `slot_usd` ($), `uye` (adet)}.
+  - Slot düşüş kuralı üyenin KENDİ `slot_bas`'ına göre ölçülür (bilinmiyorsa güncel slot).
+  - S-2: `DUR` silinip yeniden başlatılınca risk `zirve` güncel özsermayeye kurulur; `kayit` olayı `zirve_yenilendi` {`eski_zirve`, `yeni_zirve` ($), `gerekce` (`dur_sonrasi_yeniden_baslatma` | `dur_sonrasi_ilk_risk`)}.
+  - M-1: `slot_ac` (yeniden giriş) eski net K/Z'yi önce `kapanmis_net`e taşır; özsermaye değişmez.
+  - M-2: `adim_hata` her adımda `ardisik` (üst üste hata sayısı) taşır; aynı adım 3. kez üst üste hata verince Telegram alarmı (sonra her 60.).
+  - S-7: `hesap.json` `maks_kaldirac` {coin: azami kaldıraç, **x**} sanal kipte açılışta HL `meta` (ana + HIP‑3 dex) `maxLeverage`'dan dolar; okunamazsa `kayit` `maks_kaldirac_okunamadi` {`hata` (liste), `okunan` (adet), `yedek_kaldirac` (20, x)} ve tasfiye 20x varsayar.
+  - S-8: `kapanis_kuyrugu` girdisine yeni alanlar: `geri_sayac` (başarısız kuyruk denemesi, adet), `sonraki_ms` (sonraki deneme anı, ms UTC, motor saati; aralık 1, 2, 4, 8, 16, 30 dk), `gun` (UTC günü), `gun_deneme` (o gün deneme, adet), `tavan_alarm_gun`. Günlük deneme `canli_kuyruk_gunluk_tavan`'a (varsayılan 24; yaml'da yoksa kod varsayılanı) varınca o gün bir kez alarm + `kayit` `kuyruk_gunluk_tavan` {`adres`, `coin`, `deneme`, `tur`}; denemeler 30 dk aralıkla sürer.
+
 ## Emir kaydı: boyut girdileri (06.11, lider denetimi; elle denetim için)
 `kayit/<gün>.jsonl` `emir` satırına eklenen alanlar (o emri üreten `boyut.hedef_emir` girdileri; `emir_yok` satırlarında YOK):
 - `trader_poz_once`, `trader_poz_sonra`: trader'ın o coindeki işaretli pozisyonu, **coin adedi**, dolum öncesi / sonrası (trader hesabı ölçeği; `ac`'ta önce = 0, `kapat`'ta sonra = 0).
