@@ -1,0 +1,13 @@
+# G-10 (denetim 08.11): dış ölü adam alarmı `sg-nabiz`. Yayın yalnız .github/workflows/nabiz_yayim.yml (main) ile.
+# Telegram secret'ları (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID) burada DEĞİL: `wrangler secret put` ile worker'da; TELEGRAM_ACIK yayında `--var` ile verilir.
+name = "sg-nabiz"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+[vars]
+ESIK_DK = "45"      # dakika: en yeni nabız/yayım bundan eskiyse alarm
+TEKRAR_DK = "180"   # dakika: alarm sürerse yineleme aralığı
+
+[triggers]
+crons = ["*/10 * * * *"]   # 10 dk'da bir (worker.js VARSAYILAN.tik_dk ile aynı olmalı)

@@ -1,0 +1,63 @@
+name: Nabız alarmı yayını (Cloudflare sg-nabiz)
+
+# G-10 (denetim 08.11): dış ölü adam alarmı. Cloudflare Worker `sg-nabiz` (.github/nabiz/) kendi Cron Trigger'ı ile 10 dk'da bir veri dalının nabzını okur;
+# GitHub Actions cron'una BAĞLI DEĞİL. Bu iş akışı yalnız worker'ı YAYIMLAR (main'e .github/nabiz/** push'u ya da elle). Yalnız main.
+# Yazma izni YOK (contents: read); checkout kimlik bırakmaz. wrangler `.github/pano/package-lock.json`'dan `npm ci --ignore-scripts` ile (sürüm + bütünlük sabit).
+# Telegram: kullanıcı kararı 08.11 — yalnız `vars.TELEGRAM_ACIK == 'evet'` iken worker'a secret konur ve `TELEGRAM_ACIK=evet` verilir; değilse worker sessiz (yalnız günlük).
+# Secret'lar `wrangler secret put` ile STDIN'den verilir: argv'ye, çıktıya, diske yazılmaz.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/nabiz/**"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+concurrency:
+  group: nabiz-yayim
+  cancel-in-progress: false
+
+jobs:
+  yayim:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      WRANGLER_SEND_METRICS: "false"
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - name: Yayın aracını kilit dosyasından kur
+        run: npm ci --prefix .github/pano --ignore-scripts --no-audit --no-fund
+      - name: Worker yayını (sg-nabiz, cron 10 dk)
+        env:
+          NABIZ_TG_ACIK: ${{ vars.TELEGRAM_ACIK == 'evet' && 'evet' || 'hayir' }}   # secret değil; TELEGRAM_* adı yalnız main'e kapılı secret'lara ayrılmış (B1 testi)
+        run: |
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then echo "::error::Cloudflare secret'ları yok: sg-nabiz yayımlanamadı"; exit 1; fi
+          .github/pano/node_modules/.bin/wrangler deploy --config .github/nabiz/wrangler.toml --var "TELEGRAM_ACIK:${NABIZ_TG_ACIK}"
+          echo "sg-nabiz yayımlandı (Telegram: ${NABIZ_TG_ACIK})" >> "$GITHUB_STEP_SUMMARY"
+      - name: Telegram secret'larını worker'a koy (yalnız TELEGRAM_ACIK=evet)
+        if: ${{ vars.TELEGRAM_ACIK == 'evet' }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ github.ref == 'refs/heads/main' && vars.TELEGRAM_ACIK == 'evet' && secrets.TELEGRAM_BOT_TOKEN || '' }}
+          TELEGRAM_CHAT_ID: ${{ github.ref == 'refs/heads/main' && vars.TELEGRAM_ACIK == 'evet' && secrets.TELEGRAM_CHAT_ID || '' }}
+        run: |
+          for ad in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID; do
+            if [ -z "${!ad:-}" ]; then echo "::error::${ad} secret'ı yok"; exit 1; fi
+            printf '%s' "${!ad}" | .github/pano/node_modules/.bin/wrangler secret put "$ad" --config .github/nabiz/wrangler.toml >/dev/null
+          done
+          echo "Telegram secret'ları sg-nabiz'e konuldu" >> "$GITHUB_STEP_SUMMARY"

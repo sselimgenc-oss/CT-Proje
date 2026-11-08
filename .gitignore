@@ -32,3 +32,6 @@ data/tv2/
 
 # G-23: pano yayın aracı yalnız Actions `pano` işinde `npm ci` ile kurulur
 .github/pano/node_modules/
+
+# wrangler geçici dizini (G-10 sg-nabiz yayını)
+.wrangler/
