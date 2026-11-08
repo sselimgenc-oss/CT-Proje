@@ -33,19 +33,19 @@ def test_ana_birim_onfailure_ve_cikis3():
 
 def test_alarm_ve_yayim_birimleri():
     a = (DEPLOY / "sg-canli-alarm.service").read_text(encoding="utf-8")
-    assert "Type=oneshot" in a and "alarm.sh" in a and "EnvironmentFile=-/etc/sg-canli.env" in a
+    assert "Type=oneshot" in a and "alarm.sh" in a and "EnvironmentFile=-/etc/sg-canli-telegram.env" in a and "/etc/sg-canli.env" not in a          # G-22: HL anahtarı alarm biriminde YOK
     y = (DEPLOY / "sg-canli-yayim.service").read_text(encoding="utf-8")
-    assert "gercek_yayimla.sh" in y and "EnvironmentFile=-/etc/sg-canli.env" in y
+    assert "gercek_yayimla.sh" in y and "EnvironmentFile=-/etc/sg-canli-yayim.env" in y and "/etc/sg-canli.env" not in y and "sg-canli-telegram.env" not in y          # G-22
     t = (DEPLOY / "sg-canli-yayim.timer").read_text(encoding="utf-8")
     assert "OnUnitActiveSec=15min" in t and "WantedBy=timers.target" in t
-    for ad in ("sg-canli.service", "sg-canli-alarm.service", "sg-canli-yayim.service", "sg-canli-yayim.timer"):
+    for ad in ("sg-canli.service", "sg-canli-alarm.service", "sg-canli-yayim.service", "sg-canli-yayim.timer", "sg-canli-kontrol.service"):
         assert not re.search(r"0x[0-9a-fA-F]{40}|HL_API_CUZDAN_ANAHTARI=\S", (DEPLOY / ad).read_text(encoding="utf-8")), ad
 
 
 @pytest.mark.skipif(shutil.which("systemd-analyze") is None, reason="systemd-analyze yok")
 def test_systemd_analyze_verify():
     # /opt/sg-arge ve kullanıcı sunucuda olur; yalnız sözdizimi/anahtar hataları aranır
-    r = subprocess.run(["systemd-analyze", "verify", *(str(DEPLOY / a) for a in ("sg-canli.service", "sg-canli-alarm.service", "sg-canli-yayim.service", "sg-canli-yayim.timer"))],
+    r = subprocess.run(["systemd-analyze", "verify", *(str(DEPLOY / a) for a in ("sg-canli.service", "sg-canli-alarm.service", "sg-canli-yayim.service", "sg-canli-yayim.timer", "sg-canli-kontrol.service"))],
                        capture_output=True, text=True)
     cikti = r.stdout + r.stderr
     assert not re.search(r"Unknown key|Unknown section|Invalid|Failed to parse", cikti), cikti

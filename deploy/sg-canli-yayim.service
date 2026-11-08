@@ -1,4 +1,5 @@
 # Gerçek motor nabzı: maskeli ozet.json + kilit.json -> yerel nabiz.json (+ GERCEK_YAYIM_HEDEF varsa canli-gercek dalı). Zamanlayıcı: sg-canli-yayim.timer (15 dk).
+# G-22: HL anahtarı ve Telegram bu birime YÜKLENMEZ; yalnız isteğe bağlı /etc/sg-canli-yayim.env (GERCEK_YAYIM_HEDEF, GERCEK_YAYIM_TOKEN).
 [Unit]
 Description=sg-arge gercek motor nabzi (maskeli yayim)
 After=network-online.target
@@ -8,7 +9,7 @@ Type=oneshot
 User=sgcanli
 Group=sgcanli
 WorkingDirectory=/opt/sg-arge
-EnvironmentFile=-/etc/sg-canli.env
+EnvironmentFile=-/etc/sg-canli-yayim.env
 ExecStart=/bin/bash /opt/sg-arge/deploy/gercek_yayimla.sh
 StateDirectory=sg-canli
 NoNewPrivileges=true

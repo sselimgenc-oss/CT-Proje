@@ -1,9 +1,12 @@
-# Canlı motor (T4/T5). Ubuntu 24.04. Kurulum: deploy/kurulum.md. Anahtarlar, CANLI_KIP=gercek ve CANLI_KASA_USD YALNIZ /etc/sg-canli.env içinde (izin 600, sahibi sgcanli); repoda ASLA (kurallar.yaml canli_kip yalnız sanal; gerçek kip depodan açılamaz).
+# Canlı motor (T4/T5). Ubuntu 24.04 (systemd 255). Kurulum: deploy/kurulum.md. Anahtarlar, CANLI_KIP=gercek ve CANLI_KASA_USD YALNIZ /etc/sg-canli.env içinde (izin 600, sahibi sgcanli); repoda ASLA (kurallar.yaml canli_kip yalnız sanal; gerçek kip depodan açılamaz).
+# G-22: HL anahtarı (/etc/sg-canli.env) YALNIZ bu birime yüklenir; Telegram değişkenleri ayrı dosyada (/etc/sg-canli-telegram.env) ve alarm birimi yalnız onu okur.
+# Çıkış kodları (G-15): 3 = kalıcı neden (DUR, kip uyumsuzluğu, ana anahtar, kasa sınırı, agent listede yok, ikinci motor) → yeniden BAŞLATILMAZ + OnFailure alarmı;
+#   75 = geçici HL/ağ okuma hatası (açılışta yeniden denemelerden sonra), 1 = beklenmedik → artan beklemeyle (30 sn → 10 dk) yeniden başlatılır.
 [Unit]
 Description=sg-arge canli motor (Form Radari v1)
 After=network-online.target
 Wants=network-online.target
-# Servis kalıcı düştüyse (5 yeniden başlatma/10 dk sonrası ya da çıkış 3) sessiz kalmasın: alarm birimi çalışır (token yoksa yalnız günlüğe 'atlandı')
+# Servis kalıcı düştüyse (çıkış 3 ya da 10 dk içinde 5'ten fazla başlatma) sessiz kalmasın: alarm birimi çalışır (token yoksa yalnız günlüğe 'atlandı')
 OnFailure=sg-canli-alarm.service
 StartLimitIntervalSec=600
 StartLimitBurst=5
@@ -14,11 +17,15 @@ User=sgcanli
 Group=sgcanli
 WorkingDirectory=/opt/sg-arge
 EnvironmentFile=/etc/sg-canli.env
+EnvironmentFile=/etc/sg-canli-telegram.env
 StateDirectory=sg-canli
 ExecStart=/opt/sg-arge/.venv/bin/python -u -m copytrade.canli.motor --durum-dizin ${STATE_DIRECTORY}/durum --kayit-dizin ${STATE_DIRECTORY}/kayit
 Restart=on-failure
-RestartSec=10
-# DUR dosyası varken motor 3 koduyla çıkar: yeniden başlatma döngüsüne girmesin
+# G-15: geçici kesintide artan bekleme (30 sn'den 10 dk'ya 5 adımda); motor kendisi de açılışta HL okumasını 3 kez yeniden dener
+RestartSec=30
+RestartSteps=5
+RestartMaxDelaySec=600
+# Kalıcı nedenle (3) çıkan motor yeniden başlatma döngüsüne girmesin
 RestartPreventExitStatus=3
 TimeoutStopSec=90
 NoNewPrivileges=true
