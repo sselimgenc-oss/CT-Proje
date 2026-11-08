@@ -16,7 +16,7 @@ from test_izleme import ADDRESS, NOW, Client, project
 ROOT = Path(__file__).resolve().parents[1]
 WF = ROOT / ".github/workflows"
 SCRIPTS = ROOT / ".github/scripts"
-ISLER = ("dinleyici_deneme.yml", "izleme_deneme.yml", "radar_deneme.yml", "radar.yml", "canli_vardiya.yml", "isabet_deneme.yml")
+ISLER = ("radar_deneme.yml", "radar.yml", "canli_vardiya.yml", "isabet_deneme.yml")   # 08.11 kullanıcı: eski deneme iş akışları (dinleyici/dolgu/gecikme_kar/izleme_deneme) silindi
 
 
 def yukle(ad: str) -> dict:
@@ -55,7 +55,8 @@ def test_veri_dali_yazimlari_yalniz_veri_dallarina():
     for ad in ISLER:
         for satir in (WF / ad).read_text(encoding="utf-8").splitlines():
             assert "git push" not in satir, (ad, satir)              # push yalnız betikte; iş akışları (deneme dahil) doğrudan push etmez
-    assert (WF / "izleme_deneme.yml").read_text(encoding="utf-8").count("permissions:\n  contents: read") == 1          # deneme yazamaz
+    for ad in ("radar_deneme.yml", "isabet_deneme.yml"):
+        assert yukle(ad)["permissions"] == {"contents": "read"}, ad                                 # deneme yazamaz
     for satir in (SCRIPTS / "izleme_yayimla.sh").read_text(encoding="utf-8").splitlines():
         if "git push" in satir:
             assert "HEAD:copytrade-izleme" in satir, satir
@@ -136,7 +137,7 @@ def test_s21_izleme_yayimla_betigini_hicbir_is_akisi_cagirmaz():
 
 # ---------------------------------------------------------------------------------------------------- artık dosya temizliği
 def test_eski_sistem_is_akislari_ve_betikleri_yok():
-    kalanlar = {"canli_vardiya.yml", "ci.yml", "dinleyici_deneme.yml", "dolgu_deneme.yml", "gecikme_kar_deneme.yml", "isabet_deneme.yml", "izleme_deneme.yml", "radar.yml", "radar_deneme.yml", "saglik.yml", "nabiz_yayim.yml"} | ({"dal_sil.yml"} if (WF / "dal_sil.yml").exists() else set())   # dal_sil.yml: tek seferlik eski dal temizliği (kullanıcı onayı 08.11; iş bitince silinir)  # canli_vardiya_300.yml kaldırıldı (kullanıcı 08.11: tek sanal motor 1.000 $); sonnet_isci.yml kaldırıldı (devir denetimi G-11, 06.11); saglik.yml: sağlık kontrolü (kullanıcı kararı 2026-11-05; salt okur, testi test_saglik.py); nabiz_yayim.yml: G-10 dış ölü adam alarmı yayını (testi test_nabiz.py)
+    kalanlar = {"canli_vardiya.yml", "ci.yml", "isabet_deneme.yml", "radar.yml", "radar_deneme.yml", "saglik.yml", "nabiz_yayim.yml"}   # 08.11 kullanıcı: eski deneme iş akışları ve tek seferlik dal_sil.yml (40 dal silindi) kaldırıldı   # dal_sil.yml: tek seferlik eski dal temizliği (kullanıcı onayı 08.11; iş bitince silinir)  # canli_vardiya_300.yml kaldırıldı (kullanıcı 08.11: tek sanal motor 1.000 $); sonnet_isci.yml kaldırıldı (devir denetimi G-11, 06.11); saglik.yml: sağlık kontrolü (kullanıcı kararı 2026-11-05; salt okur, testi test_saglik.py); nabiz_yayim.yml: G-10 dış ölü adam alarmı yayını (testi test_nabiz.py)
     assert {p.name for p in WF.glob("*.yml")} == kalanlar          # eski sistem iş akışları (kapı, Pazar kadrosu, İlk 11 denemesi, v3 yan yana) geri gelmedi
     assert not (WF / "pano.yml").exists() and not (ROOT / "copytrade" / "pano_veri.py").exists() and not (ROOT / "pano").exists()     # eski GitHub Pages panosu (copytrade-izleme'ye bağlı) kaldırıldı; yeni pano `copytrade/canli/pano.py`
     assert not (SCRIPTS / "kapi_yayimla.sh").exists()
@@ -646,7 +647,7 @@ def test_g23_ucuncu_taraf_eylemler_tam_commit_sha_ile_sabit():
             eylem, ref, yorum = m_.groups()
             assert re.fullmatch(r"[0-9a-f]{40}", ref) and yorum, (yol.name, satir)
             assert bilinen[eylem] == (ref, yorum), (yol.name, satir)
-    assert sayi >= 30
+    assert sayi >= 20 and sayi == sum(t.count("uses:") for t in (y.read_text(encoding="utf-8") for y in WF.glob("*.yml")))   # her `uses:` satırı yakalandı (08.11: 5 deneme iş akışı silindi, 30 → 25)
 
 
 def test_s19_radar_concurrency_ref_e_bagli():
