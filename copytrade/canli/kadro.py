@@ -33,6 +33,7 @@ class Karar:
     sonuc: bool = False       # dus: sonuçla mı (14 gün bekleme)
     yerine: str | None = None  # değiştirme: yerine giren
     kor_kirpildi: list[str] | None = None
+    saha: list[str] | None = None   # giris_atlandi: karar anındaki TAM saha (B11: tekrar kaydı imzası; `kor_kirpildi` değiştirmede çıkacak üye hariç kalanı verir)
 
 
 def kadro_taze_mi(kadro: dict | None, simdi_ms: int, rules: dict) -> tuple[bool, str]:
@@ -200,7 +201,7 @@ class Saha:
                     continue
             else:
                 u["sira_ust"] = 0
-            temel = max(int(u.get("son_islem_ms") or 0), int(u.get("giris_ms") or 0))
+            temel = int(u["son_islem_ms"]) if u.get("son_islem_ms") is not None else int(u.get("giris_ms") or 0)   # B15: trader'ın SON dolumu (girişten önceki dahil; motor girişte REST'le okur); bilinmiyorsa giriş anı
             if simdi_ms - temel >= float(self.rules["canli_islem_yok_saat"]) * SAAT:
                 self._dus(adres, "islem_yok", False, simdi_ms, kararlar)
 
@@ -218,7 +219,7 @@ class Saha:
             if len(self.uyeler) >= self.n:
                 break
             if not self._kor_uygun(s["adres"], kadro):          # K‑44: boş slot doldurma günlük değişiklik sınırına bağlı DEĞİL (sınır yalnız üye değiştirmek için)
-                kararlar.append(Karar("giris_atlandi", s["adres"], "kor_kirpildi", kor_kirpildi=list(self.uyeler)))
+                kararlar.append(Karar("giris_atlandi", s["adres"], "kor_kirpildi", kor_kirpildi=list(self.uyeler), saha=list(self.uyeler)))
                 continue
             self._ekle(s["adres"], s, simdi_ms)
             kararlar.append(Karar("giris", s["adres"], "ilk_gun" if ilk_gun else "bos_slot"))
@@ -238,7 +239,7 @@ class Saha:
                     return
                 kalan = [a for a in self.uyeler if a != adres]
                 if not self._kor_uygun(aday["adres"], kadro, kalan):
-                    kararlar.append(Karar("giris_atlandi", aday["adres"], "kor_kirpildi", kor_kirpildi=kalan))
+                    kararlar.append(Karar("giris_atlandi", aday["adres"], "kor_kirpildi", kor_kirpildi=kalan, saha=list(self.uyeler)))
                     continue
                 self._dus(adres, "daha_iyisi_geldi", False, simdi_ms, kararlar)
                 self._ekle(aday["adres"], aday, simdi_ms)

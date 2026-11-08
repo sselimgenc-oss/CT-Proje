@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Yalnız Actions'ın geçici checkout'unda çalışır. Canlı motor durumunu veri dalına (VERI_DALI: canli-durum | canli-durum-deneme) yazar: durum/*.json, durum/niyet.jsonl (çift emir koruması, vardiyalar arası kalıcı), durum/DUR (varsa), pano/OZET.md + pano/gecmis.json (T6 günlük rapor, varsa), kayit/<tarih>.jsonl.
+# Yalnız Actions'ın geçici checkout'unda çalışır. Canlı motor durumunu veri dalına (VERI_DALI: canli-durum | canli-durum-deneme | 300 $ paralel sanal seri canli-durum-300 | canli-durum-300-deneme) yazar: durum/*.json, durum/niyet.jsonl (çift emir koruması, vardiyalar arası kalıcı), durum/DUR (varsa), pano/OZET.md + pano/gecmis.json (T6 günlük rapor, varsa), kayit/<tarih>.jsonl.
 # AYRI git worktree'de çalışır: motorun çalıştığı çalışma dizini DEĞİŞMEZ (arka planda 15 dk'da bir çağrılır). Kayıt 14 günden eskisi silinir. Kök commit yalnız dal ilk kez oluşurken (orphan).
 set -euo pipefail
 [ "${GITHUB_ACTIONS:-}" = true ] || { echo 'Yalnız GitHub Actions için.' >&2; exit 1; }
 veri_dali="${VERI_DALI:-canli-durum}"
-case "$veri_dali" in canli-durum|canli-durum-deneme) ;; *) echo "Geçersiz VERI_DALI: $veri_dali" >&2; exit 1 ;; esac
+case "$veri_dali" in canli-durum|canli-durum-deneme|canli-durum-300|canli-durum-300-deneme) ;; *) echo "Geçersiz VERI_DALI: $veri_dali" >&2; exit 1 ;; esac
 kaynak="$(pwd)"
 # Cloudflare Workers `sg-pano` yayını (K-40 ek; yalnız ana dal `canli-durum`, yalnız pano/index.html; yalnız iki secret de varsa). Cloudflare'in kendi build sistemi takıldığı için yayın buradan yapılır.
 # Durum push'undan SONRA çağrılır (yayım gecikse bile çift emir koruması `niyet.jsonl` zamanında yazılır). Anahtar yalnız "Workers düzenle" yetkili; log'da GitHub gizler. Hata yayımı durdurmaz ama GÖRÜNÜR.
