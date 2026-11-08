@@ -1385,3 +1385,128 @@ def test_b11_kor_kirpildi_degistirmede_uye_basina_tekrar_yazilmaz(tmp_path):
     yeni = [*tam[:10], adr(12)]
     m.karar_uygula([kd.Karar("giris_atlandi", adr(20), "kor_kirpildi", kor_kirpildi=yeni[1:], saha=yeni)], saat())    # saha gerçekten değişti: yazılır
     assert len(kayitlar(tmp_path, "kor_kirpildi")) == 2
+
+# ---------------------------------------------------------------- 300 $ paralel sanal seri (`--sanal-kasa-usd`, 08.11 kullanıcı onayı)
+def test_sanal_kasa_bayragi_yalniz_sanal_ve_sinir_icinde():
+    assert mt.kasa_belirle(RULES, "sanal", {}, 300) == (300.0, "arg")
+    assert mt.kasa_belirle(RULES, "sanal", {}, 1000) == (1000.0, "arg")                                    # sınır dahil
+    assert mt.kasa_belirle(RULES, "sanal", {}) == (1000.0, "yaml")                                         # bayraksız: aynen yaml (1.000 $ seri)
+    assert mt.kasa_belirle(RULES, "sanal", {"CANLI_KASA_USD": "500"}, 300) == (300.0, "arg")               # ortam kasası sanalda yine yok sayılır
+    for kotu in (0, -1, 1000.01, 5000, float("nan"), float("inf"), "x"):
+        with pytest.raises(mt.KipHatasi, match="--sanal-kasa-usd"):
+            mt.kasa_belirle(RULES, "sanal", {}, kotu)
+    with pytest.raises(mt.KipHatasi, match="yalnız sanal kipte"):                                         # gerçek kipte bayrak ret (ortam kasası olsa da)
+        mt.kasa_belirle(RULES, "gercek", {"CANLI_KASA_USD": "300"}, 300)
+    with pytest.raises(mt.KipHatasi, match="yalnız sanal kipte"):
+        mt.etkin_kasa(RULES, "gercek", SahteHL(), {"CANLI_KASA_USD": "300", "HL_HESAP_ADRESI": adr(7)}, sanal_kasa=300)
+    assert mt.etkin_kasa(RULES, "sanal", SahteHL(), {}, sanal_kasa=300) == (300.0, None)
+
+
+def test_sanal_kasa_300_altin_ornek_n11_slot_27_27_ve_emir(tmp_path):
+    """Altın örnek (elle): kasa 300 $ → N = min(11, taban(300 / 25 = 12)) = 11; slot = 300 / 11 = 27,2727 $.
+    Trader hesap 100.000 $, 300 BTC × 100 $ açar (oran 0,30): hedef = 27,2727 × 0,30 = 8,1818 $ < `radar_min_emir_usd` 11 $; tavandan kalan (3 × 27,27 = 81,82 $) yeter → 11 $'a yuvarlanır: 0,11 BTC.
+    1000 BTC (oran 1,0): hedef 27,2727 $ → 0,272727 BTC. (1.000 $ seride aynı olaylar 27,27 $ / 90,91 $ olur: küçük kasada min emir yuvarlaması ağırlığı artırır — ölçülmek istenen budur.)"""
+    from copytrade import boyut
+    assert boyut.saha_sayisi(300.0, RULES) == 11 and boyut.slot_usd(300.0, RULES) == pytest.approx(27.272727, abs=1e-6)
+    s = kd.Saha(RULES, 300.0)
+    assert s.n == 11 and s.slot == pytest.approx(300 / 11)
+    for sz, hedef, dolan, coin in ((300, 8.1818, 11.0, 0.11), (1000, 27.2727, 27.2727, 0.272727)):
+        t = tmp_path / str(sz)
+        m, hl, saat, _ = kur(t, kasa=300.0, kurallar={"canli_kasa_ayar_usd": 300.0, "canli_kasa_kaynagi": "arg"})
+        m.baslat()
+        assert m.kasa == 300.0 and m.hesap.kasa_usd == 300.0 and m.saha.n == 11 and m.saha.slot == pytest.approx(27.272727, abs=1e-6)
+        m.olay_isle(olay("a:1", adr(1), "BTC", "B", sz, 100.0, 0.0, saat))
+        e = kayitlar(t, "emir")
+        assert len(e) == 1 and e[0]["slot_usd"] == pytest.approx(300 / 11)
+        assert e[0]["hedef_usd"] == pytest.approx(hedef, abs=1e-4) and e[0]["usd_dolan"] == pytest.approx(dolan, abs=1e-4) and e[0]["sz"] == pytest.approx(coin, abs=1e-6)
+
+
+def test_g5_sanal_kasa_bayragi_farkli_kasali_dizinde_baslamaz(tmp_path):
+    """300 $ koşusu 1.000 $ serisinin durum dizinine yazamaz (kayıtlı kasa_ayar_usd farklı ya da eksik → ret); kendi dizininde / boş dizinde başlar."""
+    m, saat = kur_kip(tmp_path, "sanal", 1000.0)
+    m.baslat()
+    m.durum_yaz()
+    s, _ = kur_kip(tmp_path, "sanal", 300.0, saat)
+    s.rules = {**s.rules, "canli_kasa_kaynagi": "arg"}
+    with pytest.raises(mt.KipHatasi, match="ayrı durum dizini"):
+        s.baslat()
+    assert "1000 $" in kayitlar(tmp_path, "vardiya_baslamadi")[-1]["neden"]
+    yol = tmp_path / "durum" / "motor.json"                                                     # kayıtlı kasa bilinmiyor (eski biçim): güvenli yön, ret
+    j = json.loads(yol.read_text())
+    j.pop("kasa_ayar_usd")
+    yol.write_text(json.dumps(j))
+    s2, _ = kur_kip(tmp_path, "sanal", 300.0, saat)
+    s2.rules = {**s2.rules, "canli_kasa_kaynagi": "arg"}
+    with pytest.raises(mt.KipHatasi, match="bilinmiyor"):
+        s2.baslat()
+    b, saat_b = kur_kip(tmp_path / "b", "sanal", 300.0)                                          # boş dizin: serbest; sonra aynı kasa: devam
+    b.rules = {**b.rules, "canli_kasa_kaynagi": "arg"}
+    b.baslat()
+    b.durum_yaz()
+    assert json.loads((tmp_path / "b" / "durum" / "motor.json").read_text())["kasa_ayar_usd"] == 300.0
+    b2, _ = kur_kip(tmp_path / "b", "sanal", 300.0, saat_b)
+    b2.rules = {**b2.rules, "canli_kasa_kaynagi": "arg"}
+    b2.baslat()
+
+
+def _main_hazirla(monkeypatch, hl=None):
+    for ad in ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "CANLI_KIP", "CANLI_KASA_USD", "HL_API_CUZDAN_ANAHTARI", "HL_HESAP_ADRESI"):
+        monkeypatch.delenv(ad, raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")                                                   # Actions koşusu gibi
+    hl = hl or SahteHL()
+    monkeypatch.setattr(mt, "rest_post_olustur", lambda rules: hl)
+    monkeypatch.setattr(mt, "http_kadro_oku", lambda rules, dal=None: n_kadro(3, int(time.time() * 1000)))
+    return hl
+
+
+def test_main_sanal_kasa_bayragi_reddi_cikis_3_ag_yok(monkeypatch, tmp_path):
+    """Gerçek kip + bayrak, > 1.000 $, ≤ 0: motor başlamaz (çıkış 3), HL'ye istek gitmez; kontrol kipinde de ret."""
+    def ag_yok(rules):
+        raise AssertionError("ret öncesi ağ çağrısı olmamalı")
+    _main_hazirla(monkeypatch)
+    monkeypatch.setattr(mt, "rest_post_olustur", ag_yok)
+    d = str(tmp_path / "durum")
+    assert mt.main(["--sanal-kasa-usd", "1500", "--durum-dizin", d]) == 3
+    assert mt.main(["--sanal-kasa-usd", "0", "--durum-dizin", d]) == 3
+    assert mt.main(["--kontrol", "--sanal-kasa-usd", "2000", "--durum-dizin", d]) == 3
+    assert mt.main(["--kip", "gercek", "--sanal-kasa-usd", "300", "--durum-dizin", d]) == 3                 # Actions: gerçek kip zaten ret
+    monkeypatch.delenv("GITHUB_ACTIONS")
+    monkeypatch.setattr(mt, "kip_belirle", lambda rules, istenen=None, ortam=None: "gercek")                # sunucuda gerçek kip olsa bile bayrak ret
+    assert mt.main(["--kip", "gercek", "--sanal-kasa-usd", "300", "--durum-dizin", d]) == 3
+    assert not (tmp_path / "durum").exists()
+
+
+def test_main_sanal_kasa_300_kontrol_ve_motor_actions_ortaminda(monkeypatch, tmp_path):
+    """Kuru argüman denetimi: Actions ortamında (CANLI_* yok) `--kip sanal --sanal-kasa-usd 300` → kontrol.json kasa 300 / "arg"; motor 300 $ kasa, N 11, slot 27,27 ile açılır, motor.json kasa_ayar_usd 300."""
+    _main_hazirla(monkeypatch)
+    assert mt.main(["--kontrol", "--kip", "sanal", "--sanal-kasa-usd", "300", "--durum-dizin", str(tmp_path / "kontrol")]) == 0
+    r = json.loads((tmp_path / "kontrol" / "kontrol.json").read_text())
+    assert (r["kip"], r["kasa_usd"], r["kasa_kaynagi"], r["etkin_kasa_usd"], r["kasa_siniri_ok"], r["emir_gonderildi"]) == ("sanal", 300.0, "arg", 300.0, True, False)
+    yakalanan = {}
+
+    async def sahte_calis(motor, sure_sn=None, **_):
+        yakalanan["m"] = motor
+        motor.durum_yaz()
+        return {"tamam": True}
+    monkeypatch.setattr(mt, "calis", sahte_calis)
+    assert mt.main(["--kip", "sanal", "--sanal-kasa-usd", "300", "--durum-dizin", str(tmp_path / "durum"), "--kayit-dizin", str(tmp_path / "kayit"), "--sure-sn", "1"]) == 0
+    m = yakalanan["m"]
+    assert m.kip == "sanal" and m.kasa == 300.0 and m.kasa_ayar == 300.0 and m.saha.n == 11 and m.saha.slot == pytest.approx(300 / 11) and m.rules["canli_kasa_kaynagi"] == "arg"
+    assert json.loads((tmp_path / "durum" / "motor.json").read_text())["kasa_ayar_usd"] == 300.0
+    yakalanan.clear()                                                                                # aynı 300 $ dizinde bayrakla FARKLI kasa (1.000 $): G5 ret, motor kurulmaz
+    assert mt.main(["--kip", "sanal", "--sanal-kasa-usd", "1000", "--durum-dizin", str(tmp_path / "durum"), "--kayit-dizin", str(tmp_path / "kayit")]) == 3
+    assert "m" not in yakalanan
+
+
+def test_main_bayraksiz_cagri_eskisiyle_ayni(monkeypatch, tmp_path):
+    """1.000 $ üretim: bayrak yoksa kasa yaml (1.000 $), kaynak anahtarı rules'a eklenmez (G5 sanal kasa denetimi devreye girmez; davranış değişmez)."""
+    _main_hazirla(monkeypatch)
+    yakalanan = {}
+
+    async def sahte_calis(motor, sure_sn=None, **_):
+        yakalanan["m"] = motor
+        return {}
+    monkeypatch.setattr(mt, "calis", sahte_calis)
+    assert mt.main(["--kip", "sanal", "--durum-dizin", str(tmp_path / "durum")]) == 0
+    m = yakalanan["m"]
+    assert m.kasa == 1000.0 and m.kasa_ayar == 1000.0 and m.saha.slot == pytest.approx(1000 / 11) and "canli_kasa_kaynagi" not in m.rules

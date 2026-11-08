@@ -1,0 +1,155 @@
+name: Canlı vardiya 300 $ (sanal kip, paralel ölçüm)
+
+# 300 $ PARALEL SANAL SERİ (kullanıcı onayı 2026-11-08): üretimdeki 1.000 $ sanal motorla (canli_vardiya.yml, HİÇ DEĞİŞMEDİ) yan yana, planlanan gerçek para boyutunda
+# (kasa 300 $ → N = min(11, taban(300 / 25)) = 11, slot 27,27 $) sistemin davranışını ölçer. Aynı motor, aynı kadro (`radar` dalı), aynı kurallar; yalnız kasa 300 $ (motor bayrağı `--sanal-kasa-usd`).
+# GERÇEK KİP ASLA BURADA ÇALIŞMAZ: secret YOK (HL anahtarı, Telegram, pano dış yayını yok); motor `GITHUB_ACTIONS=true` iken `gercek` kipi ve kip/kasa ortam değişkenlerini reddeder,
+# `--sanal-kasa-usd` yalnız sanal kipte ve 0 < kasa <= `canli_kasa_ust_usd` (1.000 $) kabul edilir; G5: 300 $ koşusu kasası farklı (1.000 $) bir durum dizininde BAŞLAMAZ.
+# Ayrı iş akışı (üretim dosyasını parametreleştirmek yerine): 1.000 $ vardiyasının YAML'ı ve testleri birebir kalır; bu dosya yalnız orkestrasyon (hesap yalnız motorda, kural 7).
+# Veri dalı `canli-durum-300` (main dışı dal: `canli-durum-300-deneme`), kendi kilidi (`durum/kilit.json` o dalda), kendi kuyruğu (concurrency `canli-vardiya-300-*`), kendi zinciri.
+# Bildirim YOK (ikinci getUpdates tüketicisi ve karışık mesaj olmasın); sağlık kontrolü YOK; pano yalnız veri dalında: pano/OZET.md + pano/index.html.
+# Başlatma: `copytrade/canli/CALISTIR_300` dosyasına satır eklenen push (main → canli-durum-300; diğer dallar → canli-durum-300-deneme + radar-deneme). Sonra zincir + yedek cron.
+on:
+  schedule:
+    - cron: "22 */4 * * *"
+    - cron: "52 */4 * * *"          # YEDEK: birincil tetiklenmezse; kilit taze ise (başka 300 vardiyası aktif) başlamaz
+  workflow_dispatch:
+    inputs:
+      sure_dk:
+        description: "vardiya süresi (dakika); varsayılan 255 (4 sa 15 dk)"
+        default: "255"
+  push:
+    paths:
+      - copytrade/canli/CALISTIR_300
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+concurrency:
+  # 1.000 $ kuyruğundan (canli-vardiya-uretim / canli-vardiya-deneme-*) AYRI; üretim ve dal denemeleri de birbirinden ayrı.
+  group: ${{ github.ref == 'refs/heads/main' && 'canli-vardiya-300-uretim' || format('canli-vardiya-300-deneme-{0}', github.ref_name) }}
+  cancel-in-progress: false
+
+jobs:
+  kontrol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      atla: ${{ steps.k.outputs.atla }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: k
+        name: Zamanlama kontrolü (yedek cron)
+        env:
+          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'canli-durum-300' || 'canli-durum-300-deneme' }}
+          ZAMANLAMA: ${{ github.event.schedule }}
+          YEDEK_CRON: "52 */4 * * *"
+        run: bash .github/scripts/zamanlama_kontrol.sh canli
+  vardiya:
+    needs: kontrol
+    if: ${{ needs.kontrol.outputs.atla != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 290
+    env:
+      VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'canli-durum-300' || 'canli-durum-300-deneme' }}
+      KADRO_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
+      GIRDI_SURE_DK: ${{ inputs.sure_dk }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install websockets==15.0.1 PyYAML==6.0.3 requests==2.34.2
+      - id: geri
+        name: Durumu veri dalından geri yükle
+        run: |
+          mkdir -p durum kayit
+          if git ls-remote --exit-code --heads origin "$VERI_DALI" >/dev/null; then
+            git fetch origin "$VERI_DALI"
+            git archive FETCH_HEAD durum kayit | tar -x
+            if git cat-file -e FETCH_HEAD:pano/gecmis.json 2>/dev/null; then mkdir -p pano; git show FETCH_HEAD:pano/gecmis.json > pano/gecmis.json; fi
+          else
+            status=$?
+            if [ "$status" -ne 2 ]; then exit "$status"; fi
+          fi
+      - id: acilis
+        name: Açılış kontrolü (anahtarsız, emir göndermez)
+        run: python -u -m copytrade.canli.motor --kontrol --kip sanal --sanal-kasa-usd 300 --kadro-dali "$KADRO_DALI" --durum-dizin kontrol
+      - id: motor
+        name: Canlı motor (sanal kip, kasa 300 $)
+        run: |
+          sure_dk="${GIRDI_SURE_DK:-255}"
+          case "$sure_dk" in ''|*[!0-9]*) sure_dk=255 ;; esac
+          # 15 dk'da bir durumu veri dalına yayımlayan arka plan döngüsü (ayrı git worktree: motorun çalıştığı dizin değişmez). Sağlık kontrolü yok.
+          ( while sleep 900; do
+              bash .github/scripts/canli_yayimla.sh || echo "yayım denemesi başarısız (döngü sürer)"
+            done ) &
+          yayim=$!
+          set +e
+          python -u -m copytrade.canli.motor --kip sanal --sanal-kasa-usd 300 --kadro-dali "$KADRO_DALI" --durum-dizin durum --kayit-dizin kayit --sure-sn "$((sure_dk * 60))" --vardiya "${GITHUB_RUN_ID}"
+          cikis=$?
+          set -e
+          if pkill -P "$yayim" 2>/dev/null; then echo "çalışan yayım betiği durduruldu"; fi
+          if kill -0 "$yayim" 2>/dev/null; then kill "$yayim"; fi
+          exit "$cikis"
+      - name: Vardiya özeti
+        if: ${{ always() && hashFiles('durum/ozet.json') != '' }}
+        run: |
+          {
+            echo '### Canlı vardiya 300 $ (sanal)'
+            echo '```json'
+            cat durum/ozet.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Günlük rapor (pano/OZET.md)
+        if: ${{ always() && hashFiles('durum/ozet.json') != '' }}
+        run: python -u -m copytrade.canli.pano --durum durum --kayit kayit --gecmis pano/gecmis.json --cikti pano/OZET.md --html pano/index.html --vardiya "${GITHUB_RUN_ID}" --isabet-dali "$KADRO_DALI"
+      - name: Durumu veri dalına yaz
+        if: ${{ always() }}
+        run: bash .github/scripts/canli_yayimla.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: canli-vardiya-300
+          path: |
+            durum/ozet.json
+            kontrol/kontrol.json
+            kayit
+          if-no-files-found: ignore
+  zincir:
+    # Sonraki 300 $ vardiyasını tetikler (yalnız main; vardiya iptal/atlanmadıysa). Actions yazma izni yalnız burada; checkout yok. Koşu 20 dk'dan genç bittiyse tetik YOK (hata döngüsü koruması), yalnız ::warning.
+    needs: vardiya
+    if: ${{ always() && github.ref == 'refs/heads/main' && needs.vardiya.result != 'cancelled' && needs.vardiya.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Sonraki 300 $ vardiyasını tetikle
+        run: |
+          yas_dk=0
+          if basladi="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --jq .run_started_at 2>/dev/null)" && bs="$(date -u -d "$basladi" +%s 2>/dev/null)"; then
+            yas_dk=$(( ($(date -u +%s) - bs) / 60 ))
+          fi
+          echo "koşu yaşı: ${yas_dk} dk"
+          if [ "$yas_dk" -lt 20 ]; then
+            echo "::warning::300 $ vardiyası 20 dk'dan kısa sürdü (${yas_dk} dk): hata döngüsü koruması, sonraki vardiya TETİKLENMEDİ (yedek cron / elle devam)"
+            exit 0
+          fi
+          if gh workflow run canli_vardiya_300.yml --ref main; then
+            echo "canli_vardiya_300.yml tetiklendi"
+          else
+            echo "::warning::canli_vardiya_300.yml tetiklenemedi; yedek cron devrede"
+          fi

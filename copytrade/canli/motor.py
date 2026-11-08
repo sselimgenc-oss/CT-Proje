@@ -4,7 +4,7 @@ Akış: `dinleyici.py` WebSocket (trades + userFills; İlk 11'in sahadaki adresl
 → yürütücü (`yurutucu.py`: sanal l2Book yürüyüşü / gerçek HL SDK) → hesap (`hesap.py`) → kayıt JSONL + Telegram. Saha kararları `kadro.py` (kadro.json, her 5 dk).
 
 Kip güvencesi (G4): varsayılan SANAL. `gercek` YALNIZ sunucu ortamında `CANLI_KIP=gercek` + `HL_API_CUZDAN_ANAHTARI`/`HL_HESAP_ADRESI` ile (`kurallar.yaml canli_kip` yalnız `sanal`; depodan gerçek kip açılamaz) ve ASLA GitHub Actions'ta (`GITHUB_ACTIONS=true` + `CANLI_*` → ret).
-Kasa: sanal kip `canli_kasa_usd` (yaml); gerçek kip `CANLI_KASA_USD` ortam değişkeni ($, zorunlu; üst sınır `canli_kasa_ust_usd` = 1.000 $ — AGENTS.md): sınır aşılırsa yeni açılış yok + alarm.
+Kasa: sanal kip `canli_kasa_usd` (yaml) ya da `--sanal-kasa-usd` (yalnız sanal; 0 < kasa ≤ `canli_kasa_ust_usd`; ayrı durum dizini/veri dalı, ör. 300 $ paralel seri `canli-durum-300`); gerçek kip `CANLI_KASA_USD` ortam değişkeni ($, zorunlu; üst sınır `canli_kasa_ust_usd` = 1.000 $ — AGENTS.md): sınır aşılırsa yeni açılış yok + alarm.
 T4b (K‑37): kapanış teyidi + yeniden deneme (`kapanis_kuyrugu`), emir öncesi niyet kaydı + cloid (`niyet.py`), gerçek kipte risk temeli HL özsermayesi, sanal kipte funding, gecikmiş AÇILIŞ yok
 (`gec_acilis`: olay yaşı > `canli_olay_stale_sn`; kapanış/azaltma yaşa bakmaz), öncelikli kuyruk (kapat/azalt önce), kendi hesap adresimiz kayıt/Telegram'a yazılmaz.
 `DUR` dosyası varken motor başlamaz (elle silinmeden yeniden açılmaz).
@@ -85,10 +85,26 @@ class KipHatasi(RuntimeError):
     """Kip kuralı ihlali (gerçek kip Actions'ta / ayar yok): motor BAŞLAMAZ."""
 
 
-def kasa_belirle(rules: dict, kip: str, ortam: dict | None = None) -> tuple[float, str]:
-    """Ayarlı kasa ($) ve kaynağı. Sanal kip: `canli_kasa_usd` (yaml) → "yaml"; `CANLI_KASA_USD` YOK SAYILIR (sanal seri 1.000 $ kalır).
-    Gerçek kip: `CANLI_KASA_USD` ortam değişkeni ZORUNLU, 0 < kasa ≤ `canli_kasa_ust_usd` (G4; K‑22) → "ortam". Aksi halde KipHatasi."""
+def sanal_kasa_dogrula(rules: dict, kip: str, sanal_kasa: Any) -> float:
+    """`--sanal-kasa-usd` ($): YALNIZ sanal kipte, sonlu ve 0 < kasa ≤ `canli_kasa_ust_usd` (K‑22). Gerçek kipte / sınır dışında KipHatasi (gerçek kip kasası yalnız sunucuda `CANLI_KASA_USD`)."""
+    if kip != "sanal":
+        raise KipHatasi("--sanal-kasa-usd yalnız sanal kipte kullanılabilir (gerçek kip kasası yalnız sunucu ortamından)")
+    try:
+        kasa = float(sanal_kasa)
+    except (TypeError, ValueError) as hata:
+        raise KipHatasi(f"--sanal-kasa-usd sayı değil: {str(sanal_kasa)[:20]}") from hata
+    ust = float(rules["canli_kasa_ust_usd"])
+    if not math.isfinite(kasa) or kasa <= 0 or kasa > ust + 1e-9:
+        raise KipHatasi(f"--sanal-kasa-usd 0 < kasa <= {ust:g} $ olmalı: {str(sanal_kasa)[:20]}")
+    return kasa
+
+
+def kasa_belirle(rules: dict, kip: str, ortam: dict | None = None, sanal_kasa: float | None = None) -> tuple[float, str]:
+    """Ayarlı kasa ($) ve kaynağı. Sanal kip: `sanal_kasa` (`--sanal-kasa-usd`) verildiyse o → "arg"; yoksa `canli_kasa_usd` (yaml) → "yaml"; `CANLI_KASA_USD` YOK SAYILIR (sanal seri 1.000 $ kalır).
+    Gerçek kip: `sanal_kasa` verilirse KipHatasi; `CANLI_KASA_USD` ortam değişkeni ZORUNLU, 0 < kasa ≤ `canli_kasa_ust_usd` (G4; K‑22) → "ortam". Aksi halde KipHatasi."""
     ortam = os.environ if ortam is None else ortam
+    if sanal_kasa is not None:
+        return sanal_kasa_dogrula(rules, kip, sanal_kasa), "arg"
     if kip != "gercek":
         return float(rules["canli_kasa_usd"]), "yaml"
     ham = str(ortam.get("CANLI_KASA_USD", "")).strip()
@@ -104,10 +120,10 @@ def kasa_belirle(rules: dict, kip: str, ortam: dict | None = None) -> tuple[floa
     return kasa, "ortam"
 
 
-def etkin_kasa(rules: dict, kip: str, post: Callable[[dict], Any], ortam: dict | None = None) -> tuple[float, float | None]:
+def etkin_kasa(rules: dict, kip: str, post: Callable[[dict], Any], ortam: dict | None = None, sanal_kasa: float | None = None) -> tuple[float, float | None]:
     """Kullanılan kasa: sanal kip `canli_kasa_usd` (yaml); GERÇEK kip min(`CANLI_KASA_USD` ortamı, HL hesap değeri) (K‑35; hesapta daha fazla olsa da ayarın üstü kullanılmaz). Döner (etkin kasa, HL hesap değeri | None)."""
     ortam = os.environ if ortam is None else ortam
-    kasa, _ = kasa_belirle(rules, kip, ortam)
+    kasa, _ = kasa_belirle(rules, kip, ortam, **({} if sanal_kasa is None else {"sanal_kasa": sanal_kasa}))          # bayrak yoksa çağrı birebir eskisi
     if kip != "gercek":
         return kasa, None
     try:
@@ -1328,12 +1344,16 @@ class Motor:
 
     # ------------------------------------------------------------------ açılış
     def kip_uyumu_denetle(self) -> None:
-        """G5: durum dizinindeki kayıtlı kip ile geçerli kip farklıysa BAŞLAMAZ. Gerçek kipte ayarlı kasa değiştiyse yalnız açık pozisyon yokken kabul (`kasa_degisti` kaydı)."""
+        """G5: durum dizinindeki kayıtlı kip ile geçerli kip farklıysa BAŞLAMAZ. Gerçek kipte ayarlı kasa değiştiyse yalnız açık pozisyon yokken kabul (`kasa_degisti` kaydı).
+        Sanal kipte `--sanal-kasa-usd` ile (kaynak "arg") kayıtlı kasa farklıysa ya da bilinmiyorsa BAŞLAMAZ (ör. 300 $ koşusu 1.000 $ serisinin durum dizinine yazamaz). Kaynak yaml iken davranış değişmez."""
         if not self._durum_var:
             return                                                                              # boş dizin: serbest
         neden = None
         if self._kayitli_kip != self.kip:
             neden = ("sanal durum dizininde gerçek kip açılmaz" if self.kip == "gercek" else "gerçek durum dizininde sanal kip açılmaz")
+        elif self.kip == "sanal" and self.rules.get("canli_kasa_kaynagi") == "arg" and (self._kayitli_kasa_ayar is None or abs(float(self._kayitli_kasa_ayar) - self.kasa_ayar) > 1e-9):
+            eski = "bilinmiyor" if self._kayitli_kasa_ayar is None else f"{float(self._kayitli_kasa_ayar):g} $"
+            neden = f"sanal kasa {self.kasa_ayar:g} $ (--sanal-kasa-usd) durum dizinindeki kasa ({eski}) ile uyuşmuyor: ayrı durum dizini / veri dalı gerekli"
         elif self.kip == "gercek" and self._kayitli_kasa_ayar is not None and abs(float(self._kayitli_kasa_ayar) - self.kasa_ayar) > 1e-9:
             if any(self.hesap.poz.values()):
                 neden = f"kasa ayarı değişti ({float(self._kayitli_kasa_ayar):g} → {self.kasa_ayar:g} $) ama açık pozisyon var: önce pozisyonlar kapatılmalı"
@@ -1705,15 +1725,16 @@ def http_kadro_oku(rules: dict, dal: str | None = None, deneme: int = 3, bekle_s
     return None
 
 
-def kontrol(rules: dict, kip: str, post: Callable[[dict], Any], kadro_oku: Callable[[], dict | None], tgram: tg.Telegram, ortam: dict | None = None, turet: Callable[[str], str] | None = None) -> dict:
+def kontrol(rules: dict, kip: str, post: Callable[[dict], Any], kadro_oku: Callable[[], dict | None], tgram: tg.Telegram, ortam: dict | None = None, turet: Callable[[str], str] | None = None,
+            sanal_kasa: float | None = None) -> dict:
     """`--kontrol` (T5 açılış kontrolü): anahtar, bakiye, HL bağlantısı, kadro okuma, Telegram — EMİR GÖNDERMEZ. Döner rapor; `tamam` hepsi geçtiyse True."""
     ortam = os.environ if ortam is None else ortam
     try:
-        kasa, kaynak = kasa_belirle(rules, kip, ortam)
+        kasa, kaynak = kasa_belirle(rules, kip, ortam, **({} if sanal_kasa is None else {"sanal_kasa": sanal_kasa}))
         kasa_hata = None
     except KipHatasi as hata:
         kasa, kaynak, kasa_hata = float(rules["canli_kasa_usd"]), "yaml", str(hata)
-    r: dict[str, Any] = {"kip": kip, "kasa_usd": kasa, "kasa_kaynagi": kaynak}          # kaynak: "ortam" (gerçek kip CANLI_KASA_USD) | "yaml" (sanal)
+    r: dict[str, Any] = {"kip": kip, "kasa_usd": kasa, "kasa_kaynagi": kaynak}          # kaynak: "ortam" (gerçek kip CANLI_KASA_USD) | "yaml" (sanal) | "arg" (sanal, --sanal-kasa-usd)
     if kasa_hata:
         r["kasa_hata"] = kasa_hata
     r["kasa_siniri_ok"] = kasa_hata is None and r["kasa_usd"] <= float(rules["canli_kasa_ust_usd"])
@@ -1767,20 +1788,24 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--sure-sn", type=float, default=None, help="vardiya süresi (sn); varsayılan sonsuz")
     ap.add_argument("--kadro-dali", default=None, help="kadro.json veri dalı (varsayılan canli_kadro_dali; dal doğrulamasında radar-deneme)")
     ap.add_argument("--vardiya", default="yerel")
+    ap.add_argument("--sanal-kasa-usd", type=float, default=None, help="yalnız sanal kip: kasa $ (0 < kasa <= canli_kasa_ust_usd); varsayılan kurallar.yaml canli_kasa_usd. Ayrı --durum-dizin ile (G5)")
     args = ap.parse_args(argv)
     rules = load_rules()
     tgram = tg.Telegram(arka_plan=not args.kontrol, sessiz_utc=(int(rules["canli_telegram_sessiz_bas_utc"]), int(rules["canli_telegram_sessiz_bit_utc"])))
     try:
         kip = kip_belirle(rules, args.kip)
+        if args.sanal_kasa_usd is not None:
+            sanal_kasa_dogrula(rules, kip, args.sanal_kasa_usd)          # gerçek kipte / sınır dışında erken ret (kontrol dahil)
     except KipHatasi as hata:
         print(f"BAŞLAMADI: {hata}", file=sys.stderr)
         if not args.kontrol:
             baslamadi_alarmi(tgram, hata)
         return 3
+    sk = {} if args.sanal_kasa_usd is None else {"sanal_kasa": args.sanal_kasa_usd}      # bayrak yoksa çağrılar birebir eskisi (1.000 $ seri değişmez)
     post = rest_post_olustur(rules)
     kadro_oku = lambda: http_kadro_oku(rules, args.kadro_dali)          # noqa: E731
     if args.kontrol:
-        rapor = kontrol(rules, kip, post, kadro_oku, tgram)
+        rapor = kontrol(rules, kip, post, kadro_oku, tgram, **sk)
         args.durum_dizin.mkdir(parents=True, exist_ok=True)
         _yaz(args.durum_dizin / "kontrol.json", rapor)
         print(json.dumps(rapor, ensure_ascii=False, indent=1))
@@ -1790,10 +1815,12 @@ def main(argv: list[str] | None = None) -> int:
             dogrulama = api_cuzdan_dogrula(post, os.environ)
             if not dogrulama["tamam"]:
                 raise KipHatasi(f"API cüzdanı doğrulanamadı: {dogrulama['neden']}")
-        kasa, hl_deger = etkin_kasa(rules, kip, post)
+        kasa, hl_deger = etkin_kasa(rules, kip, post, **sk)
         if kip == "gercek" and hl_deger is not None and hl_deger > float(rules["canli_kasa_ust_usd"]) + 1e-9:
             raise KipHatasi(f"HL hesap değeri {hl_deger:.0f} $ > sınır {float(rules['canli_kasa_ust_usd']):g} $ (K‑22)")
-        rules = {**rules, "canli_kasa_ayar_usd": kasa_belirle(rules, kip)[0], "canli_kasa_usd": kasa}
+        rules = {**rules, "canli_kasa_ayar_usd": kasa_belirle(rules, kip, **sk)[0], "canli_kasa_usd": kasa}
+        if sk:
+            rules["canli_kasa_kaynagi"] = "arg"                     # G5: Motor sanal kasa uyumunu denetler (bayraksız koşuda anahtar yok, davranış aynı)
         boyut.saha_sayisi(kasa, rules)
     except (KipHatasi, ValueError) as hata:
         print(f"BAŞLAMADI: {hata}", file=sys.stderr)

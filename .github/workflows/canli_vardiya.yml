@@ -10,6 +10,7 @@ name: Canlı vardiya (sanal kip)
 # Zincir AYRI `zincir` işindedir (needs: vardiya, yalnız main; vardiya İPTAL edilmediyse `always()` ile çalışır — pano/yayım/artifact adımı düşse de zincir sürer; hata döngüsü koruması: koşu 20 dk'dan genç bittiyse tetik YOK, yalnız alarm; checkout yok; Actions yazma izni yalnız orada): vardiya işindeki adımlar (kurulum, pano yayını, motor) bu yetkiyi görmez. Aynı işte vardiya sonu bir kez saglik.yml de tetiklenir.
 # Zincir hatası ::warning + Telegram olur; yedek cron devam eder.
 # Kullanıcı kararı 08.11: Telegram (bildirim, alarm, komut) varsayılan KAPALI — token yalnız repo değişkeni `TELEGRAM_ACIK=evet` iken verilir (Settings → Variables). Tokensiz kanal sessiz kapanır.
+# 300 $ paralel sanal seri (08.11) AYRI dosyada: canli_vardiya_300.yml (veri dalı canli-durum-300, ayrı kuyruk/kilit/zincir); bu iş akışı ondan etkilenmez.
 on:
   schedule:
     - cron: "7 */4 * * *"
