@@ -44,6 +44,7 @@ from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter, le
 
 EPS = 1e-12
 DAKIKA = 60_000
+SNAP_SAKLA = 50_000          # adet (yalnız snapshot görülen dolum kimlikleri, bellekte; HL userFills snapshot'ı adres başına ≤ 2000 dolum × 10 adres + trades snapshot'ları)
 
 
 AGIRLIK = {"allMids": 2, "l2Book": 2, "clearinghouseState": 2, "perpDexs": 2, "orderStatus": 2, "meta": 20, "metaAndAssetCtxs": 20, "userFillsByTime": 20}          # HL info istek ağırlıkları (belge); bilinmeyen 20
@@ -331,12 +332,21 @@ class Motor:
         self.hesap.kasa_usd = self.kasa                          # kasa ayarı/etkin kasa değişmiş olabilir (gerçek kip: min(ayar, HL değeri)); pozisyon/K‑Z kaydı KORUNUR
         self.saha = Saha(rules, self.kasa, _oku(durum_dizin / "saha.json"))
         self.risk = Risk(rules, self.kasa, _oku(durum_dizin / "risk.json"))
-        self.islenen: list[str] = list(m.get("islenen", []))
-        self._islenen_set = set(self.islenen)
+        self._islenen: dict[str, None] = {}                     # işlenen (canlı) dolum kimlikleri, ekleme sırasıyla; G-14: sınır ADRES BAŞINA (`canli_islenen_adres_sakla`), tek yoğun adres diğerlerini düşürmez
+        self._islenen_adres: dict[str, deque[str]] = {}
+        for k in m.get("islenen", []):
+            self._islenen_ekle(str(k))
+        self._snap: dict[str, tuple[float, float]] = {}        # G-14/G-17b: yalnız snapshot (canlı değil) görülen kimlik -> (önce, sonra); aynı dolum sonra dolgu/rest ile gelirse poz_tr ikinci kez değişmez, emir bu değerlerle
         self.poz_tr: dict[str, dict[str, float]] = {a: dict(c) for a, c in (m.get("poz_tr") or {}).items()}       # trader işaretli pozisyonları (coin birimi)
         self.hesap_tr: dict[str, dict] = dict(m.get("hesap_tr") or {})                                              # adres -> {deger, ms}
         self.son_olay_ms: int = int(m.get("son_olay_ms", 0))
         self._poz_tr_ms: dict[tuple[str, str], int] = {}              # (adres, coin) -> poz_tr'yi son güncelleyen trader dolum zamanı (kuyruktan düşen olayın geç uygulanması yeniyi ezmesin)
+        for k, v in (m.get("poz_tr_ms") or {}).items():               # G-14: kalıcı (yeniden başlatmada snapshot'taki eski dolum poz_tr'yi ezmesin)
+            a, _, c = str(k).partition("|")
+            self._poz_tr_ms[(a, c)] = int(v)
+        self._poz_tr_senk_ms: dict[str, int] = {a: int(v) for a, v in (m.get("poz_tr_senk_ms") or {}).items()}   # adres -> son REST pozisyon okumasının anı (ms, UTC); coin kaydı yoksa eşik budur
+        if m and "poz_tr_senk_ms" not in m:                           # G-14 geçişi (eski biçim motor.json): poz_tr en az son işlenen dolum kadar taze sayılır
+            self._poz_tr_senk_ms = {a: self.son_olay_ms for a in self.poz_tr}
         self.baslama_ms: int = self.saat_ms()
         self.marks: dict[str, float] = {}
         self.mark_ms: dict[str, int] = {}
@@ -361,9 +371,7 @@ class Motor:
             nl = [x["cloid"] for x in self.niyet.satirlar() if x.get("t") == "niyet"]
             self.hesap.son_niyet_cloid = nl[-1] if nl else None
         for k in self.niyet.kimlikler():                       # emir öncesi yazılmış kimlikler de "işlendi": çökme sonrası çift emir yok (K‑37 §3)
-            if k not in self._islenen_set:
-                self._islenen_set.add(k)
-                self.islenen.append(k)
+            self._islenen_ekle(k)
         self.kapanis_kuyrugu: dict[str, dict] = {k: dict(v) for k, v in (m.get("kapanis_kuyrugu") or {}).items()}      # "adres|coin" -> {tur, hedef_sz, neden, deneme, ms}
         self.dur_bekliyor: bool = bool(m.get("dur_bekliyor", False))
         self.hl_ofset: float | None = m.get("hl_ofset")          # gerçek kip: HL hesap değeri − yerel özsermaye (ilk okuma); risk temeli = HL değeri − ofset
@@ -420,7 +428,7 @@ class Motor:
         self.niyet.sikistir(int(self.rules["canli_islenen_sakla"]))
 
     def _motor_json(self) -> dict:
-        return {"islenen": self.islenen[-int(self.rules["canli_islenen_sakla"]):], "poz_tr": self.poz_tr, "hesap_tr": self.hesap_tr, "son_olay_ms": self.son_olay_ms,
+        return {"islenen": self.islenen, "poz_tr": self.poz_tr, "poz_tr_ms": {f"{a}|{c}": ms for (a, c), ms in self._poz_tr_ms.items()}, "poz_tr_senk_ms": self._poz_tr_senk_ms, "hesap_tr": self.hesap_tr, "son_olay_ms": self.son_olay_ms,
                 "ozet_gunu": self._ozet_gunu, "ozet_oz": self._ozet_oz, "ozet_emir": self._ozet_emir, "kip": self.kip, "kasa_usd": self.kasa, "kasa_ayar_usd": self.kasa_ayar, "vardiya": self.vardiya_id, "yazildi_ms": self.saat_ms(),
                 "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.offset,
                 "son_funding_ms": self.son_funding_ms, "funding_kimlik": self.funding_kimlik[-500:], "funding_gercek_usd": self.funding_gercek_usd, "ucret_gercek_usd": self.ucret_gercek_usd, "ucret_tahmin_say": self.ucret_tahmin_say}
@@ -430,17 +438,28 @@ class Motor:
         _yaz(self.durum_dizin / "motor.json", self._motor_json())
         _yaz(self.durum_dizin / "hesap.json", self.hesap.to_json())
 
+    @property
+    def islenen(self) -> list[str]:
+        """İşlenen kimlikler (ekleme sırası; adres başına en çok `canli_islenen_adres_sakla`)."""
+        return list(self._islenen)
+
+    def _islenen_ekle(self, kimlik: str) -> None:
+        """G-14: kimlik `{adres}:{tid}` → adres kovası; kova sınırı aşılırsa YALNIZ o adresin en eskisi düşer (34 adres ortak 5000'i paylaşmaz)."""
+        if kimlik in self._islenen:
+            return
+        self._islenen[kimlik] = None
+        kova = self._islenen_adres.setdefault(kimlik.rsplit(":", 1)[0], deque())
+        kova.append(kimlik)
+        while len(kova) > int(self.rules.get("canli_islenen_adres_sakla", 2000)):
+            self._islenen.pop(kova.popleft(), None)
+
     def _gorulduysa_isaretle(self, kimlik: str) -> bool:
-        """Dolum kimliği daha önce işlendiyse True (çift emir yok: yeniden başlatmada da). Kimliksiz (dolgu) olaylar zaten dinleyicide tekilleştirilir."""
+        """Dolum kimliği daha önce işlendiyse True (çift emir yok: yeniden başlatmada da). Kimliksiz olay tekilleştirilemez (False)."""
         if not kimlik:
             return False
-        if kimlik in self._islenen_set:
+        if kimlik in self._islenen:
             return True
-        self._islenen_set.add(kimlik)
-        self.islenen.append(kimlik)
-        if len(self.islenen) > 2 * int(self.rules["canli_islenen_sakla"]):
-            self.islenen = self.islenen[-int(self.rules["canli_islenen_sakla"]):]
-            self._islenen_set = set(self.islenen)
+        self._islenen_ekle(kimlik)
         return False
 
     # ------------------------------------------------------------------ yardımcılar
@@ -477,7 +496,9 @@ class Motor:
 
     def trader_pozlari_oku(self, adres: str, dexler: list[str] | None = None) -> bool:
         try:
+            okuma_ms = self.saat_ms()
             self.poz_tr[adres] = clearinghouse_pozisyonlari(self.post, adres, dexler if dexler is not None else self._dexler())
+            self._poz_tr_senk_isaretle(adres, okuma_ms)
             return True
         except Exception as hata:                          # noqa: BLE001
             self.kayit({"olay": "poz_okuma_hata", "adres": adres, "tur": type(hata).__name__})
@@ -517,6 +538,28 @@ class Motor:
         sonra = once + (o.sz if o.yon == "B" else -o.sz) if o.sz is not None else once
         return once * sonra < 0 or abs(sonra) < abs(once) - EPS
 
+    def _poz_tr_esik(self, adres: str, coin: str, canli: bool) -> int:
+        """G-14: bundan ESKİ dolum poz_tr'yi değiştirmez (ms, UTC). Her olay için: bu coinde son uygulanan dolumun zamanı. Canlı OLMAYAN olay (snapshot / abonelik öncesi) için ayrıca
+        adresin son REST pozisyon okumasının anı: okumadan önceki dolum REST değerinde zaten var (snapshot'taki eski dolum yeniden uygulanıp poz_tr'yi ezmesin)."""
+        ms = self._poz_tr_ms.get((adres, coin), 0)
+        return ms if canli else max(ms, self._poz_tr_senk_ms.get(adres, 0))
+
+    def _poz_tr_senk_isaretle(self, adres: str, okuma_ms: int) -> None:
+        """REST okuması poz_tr[adres]'i yazdı: canlı olmayan olay eşiği = okuma anı (kalıcı, `motor.json` `poz_tr_senk_ms`)."""
+        self._poz_tr_senk_ms[adres] = max(self._poz_tr_senk_ms.get(adres, 0), okuma_ms)
+
+    def _poz_tr_guncelle(self, o: Olay, canli: bool) -> tuple[float, float, bool]:
+        """G-14: dolum eşikten (`_poz_tr_esik`) eskiyse poz_tr'ye DOKUNMAZ (REST okuması/sonraki dolum onu zaten içeriyor); karar için (önce, sonra) türetilir:
+        `bas_poz` varsa (userFills/REST `startPosition`) ondan, yoksa mevcut poz_tr'den geriye. Döner (önce, sonra, uygulandı_mı)."""
+        if o.zaman_ms < self._poz_tr_esik(o.adres, o.coin, canli):
+            d = o.sz if o.yon == "B" else -o.sz
+            if o.bas_poz is not None:
+                return o.bas_poz, o.bas_poz + d, False
+            simdi_poz = self.poz_tr.get(o.adres, {}).get(o.coin, 0.0)
+            return simdi_poz - d, simdi_poz, False
+        once, sonra = self._poz_tr_isle(o)
+        return once, sonra, True
+
     def _poz_tr_isle(self, o: Olay) -> tuple[float, float]:
         """Trader pozisyon tablosunu (`poz_tr`) dolumla günceller; döner (önce, sonra) işaretli coin miktarı."""
         once = o.bas_poz if o.bas_poz is not None else self.poz_tr.get(o.adres, {}).get(o.coin, 0.0)
@@ -532,9 +575,9 @@ class Motor:
         with self._lock:
             if not o.adres or not o.coin or o.sz is None or o.px is None or o.yon not in ("B", "A"):
                 return
-            if o.zaman_ms < self._poz_tr_ms.get((o.adres, o.coin), 0):
+            if o.zaman_ms < self._poz_tr_esik(o.adres, o.coin, True):
                 return
-            if self._gorulduysa_isaretle(o.kimlik):        # aynı ms'deki FARKLI dolum uygulanır; aynı kimlik (zaten işlenmiş / düşmüş) ikinci kez sayılmaz
+            if o.kimlik in self._snap or self._gorulduysa_isaretle(o.kimlik):        # aynı ms'deki FARKLI dolum uygulanır; aynı kimlik (işlenmiş / snapshot'ta uygulanmış / düşmüş) ikinci kez sayılmaz
                 return
             self._poz_tr_isle(o)
             self.kayit({"olay": "dusen_olay_poz_tr", "adres": o.adres, "coin": o.coin, "yon": o.yon, "sz": o.sz})
@@ -547,11 +590,25 @@ class Motor:
         sonuclar: list[Sonuc] = []
         if not adres or not o.coin or o.sz is None or o.px is None or o.yon not in ("B", "A"):
             return sonuclar
-        if self._gorulduysa_isaretle(o.kimlik):
+        if o.kimlik and o.kimlik in self._islenen:
+            return sonuclar
+        onceki = self._snap.get(o.kimlik) if o.kimlik else None
+        if not canli and onceki is not None:                       # aynı dolum ikinci kanaldan / ikinci snapshot'tan: bir kez
             return sonuclar
         simdi = self.saat_ms()
-        once, sonra = self._poz_tr_isle(o)
-        self._son_olay_coin[(adres, o.coin)] = simdi
+        if onceki is not None:                                     # G-17b: snapshot'ta poz_tr'ye zaten işlendi (ya da eşikten eski bulundu); canlı/dolgu kopyası emri o değerlerle üretir
+            (once, sonra), uygulandi = onceki, False
+            del self._snap[o.kimlik]
+        else:
+            once, sonra, uygulandi = self._poz_tr_guncelle(o, canli)     # G-14: eşikten eski dolum poz_tr'yi DEĞİŞTİRMEZ
+        if canli:
+            self._gorulduysa_isaretle(o.kimlik)
+        elif o.kimlik:                                             # snapshot kimliği `islenen`e girmez (sonra dolgu ile emir üretebilsin); sınırlı bellek
+            self._snap[o.kimlik] = (once, sonra)
+            if len(self._snap) > SNAP_SAKLA:
+                del self._snap[next(iter(self._snap))]
+        if uygulandi:
+            self._son_olay_coin[(adres, o.coin)] = simdi
         self.son_olay_ms = max(self.son_olay_ms, o.zaman_ms)
         if adres in self.saha.uyeler:
             self.saha.islem_gordu(adres, o.zaman_ms)
@@ -654,9 +711,17 @@ class Motor:
             ek["cloid"] = cloid
         d = self.yurutucu.emir(o.coin, yon, usd, reduce_only, acik_sz, **ek)
         dolum_ms = self.saat_ms()
-        self.niyet.sonuc_yaz(cloid, d.durum, dolum_ms, sz=d.sz, px=d.px, ucret=d.ucret)
+        belirsiz = d.durum == "belirsiz" and self.kip == "gercek"
+        if belirsiz:                                        # G-1: emir HL'ye ulaşmış olabilir → sonuç satırı YAZILMAZ (niyet açık kalır), "red" sayılmaz; `belirsiz_coz` orderStatus(cloid) ile çözer
+            self.hesap.belirsiz[cloid] = {"ms": emir_ms, "deneme": 0}
+            self.risk.bayrak("belirsiz", True)              # çözülene dek yeni açılış/artırma yok (kapanış serbest)
+            self.sayac["belirsiz"] = self.sayac.get("belirsiz", 0) + 1
+            self.tg.gonder(tg.alarm("ALARM: emir sonucu belirsiz", f"{o.coin} {eylem} emrine borsa yanıtı alınamadı ({d.neden}).\nEmir durumu borsadan sorgulanıp deftere işlenecek; o zamana dek yeni pozisyon açılmıyor."))
+        else:
+            self.niyet.sonuc_yaz(cloid, d.durum, dolum_ms, sz=d.sz, px=d.px, ucret=d.ucret)
         self.sayac["emir"] += 1
-        self.sayac[d.durum if d.durum in self.sayac else "red"] += 1
+        if not belirsiz:
+            self.sayac[d.durum if d.durum in self.sayac else "red"] += 1
         if d.neden == "min_nosyonel":
             self.sayac["min_nosyonel"] += 1
             self._say_neden("min_nosyonel")
@@ -692,11 +757,13 @@ class Motor:
         self._boyut_girdi = None
         self._ozet_emir += 1
         e = {"adres": adres, "coin": o.coin, "yon": yon, "usd": d.usd_dolan or usd, "px": d.px, "kayma": kayma_trader, "durum": d.durum, "eylem": eylem}
-        if self.kip == "gercek":                            # gerçek parada her emir ANINDA ve ayrı mesaj (risk gecikmeden görülür)
+        if belirsiz:                                        # alarm yukarıda gitti; sonuç `belirsiz_coz`da bildirilir
+            pass
+        elif self.kip == "gercek":                          # gerçek parada her emir ANINDA ve ayrı mesaj (risk gecikmeden görülür)
             self.tg.gonder(tg.msg_emir_ozeti(self.kip, [e], 0))
         else:
             self._emir_tampon.append(e)
-        return Sonuc(adres, o.coin, eylem, "emir" if d.dolu_mu else "red", d.neden or neden, d)
+        return Sonuc(adres, o.coin, eylem, "emir" if d.dolu_mu else ("belirsiz" if belirsiz else "red"), d.neden or neden, d)
 
     # ------------------------------------------------------------------ kapanış teyidi (K‑37 §1)
     def _mark_kapanis(self, adres: str, coin: str) -> float:
@@ -714,7 +781,31 @@ class Motor:
             self.kayit({"olay": "kapanis_borsa_okuma_hata", "tur": type(hata).__name__})
             return yerel, False
         diger = sum(c[coin].sz for a, c in self.hesap.poz.items() if a != adres and coin in c)
-        return hl.get(coin, 0.0) - diger, True
+        self._kalan_hl = {"coin": coin, "hl": hl.get(coin, 0.0), "diger": diger}
+        return self._kirp(yerel, hl.get(coin, 0.0) - diger), True
+
+    @staticmethod
+    def _kirp(yerel: float, k: float) -> float:
+        """G-13: borsadaki pay `k` (= HL − diğer adreslerin yerel payı) yerel pozisyonla işaret ve büyüklükte kırpılır. `yerel·k ≤ 0` → 0 (kapatılacak bir şey yok: borsa
+        payı yok ya da ters); değilse işaret `yerel`'in, büyüklük `min(|k|, |yerel|)`. Böylece kapanış emri ASLA pozisyonu büyütecek yönde ya da yerel paydan büyük gitmez."""
+        if yerel * k <= 0:
+            return 0.0
+        return math.copysign(min(abs(k), abs(yerel)), yerel)
+
+    def _harici_kapanis(self, adres: str, coin: str, kalan: float, mk: float, simdi: int, neden: str) -> None:
+        """G-13: gerçek kipte borsadaki pay yerel defterden belirgin küçük (HL tasfiye / ADL / elle kapatma). Fark emir göndermeden yerel defterden mark ile düşülür
+        (`_yerel_temizle`; K/Z realize'a geçer → özdeşlik korunur), kayıt + sayaç + Telegram alarmı. Kuyruğa girmez (sonsuz yeniden deneme yok)."""
+        yerel = self.hesap.sz(adres, coin)
+        fark = abs(yerel) - abs(kalan)
+        if fark <= EPS or (mk and fark * mk <= float(self.rules["canli_kapanis_toz_usd"])):
+            return
+        bilgi = getattr(self, "_kalan_hl", None) or {}
+        hl = bilgi.get("hl") if bilgi.get("coin") == coin else None
+        self.sayac["harici_kapanis"] = self.sayac.get("harici_kapanis", 0) + 1
+        self.kayit({"olay": "harici_kapanis", "adres": adres, "coin": coin, "yerel_sz": yerel, "borsa_pay_sz": kalan, "hl_sz": hl, "mark": mk, "usd": round(fark * (mk or 0.0), 6), "neden": neden})
+        self.tg.gonder(tg.alarm("ALARM: borsada pozisyon yok (harici kapanış)",
+                                f"{coin} (trader {tg.kisa(adres)}): defter {yerel:g}, borsadaki pay {kalan:g} (HL {hl if hl is not None else '?'}).\n"
+                                f"Fark ({fark:g} {coin}) borsa dışında kapanmış (tasfiye/ADL/elle); emir gönderilmedi, defterden mark {mk:g} ile düşüldü."))
 
     def _yerel_temizle(self, adres: str, coin: str, mk: float, simdi: int, neden: str) -> None:
         """Borsa/toz teyidi: pozisyon 0 → yerel defterde kalan toz varsa mark'ta kapatılır (ücretsiz)."""
@@ -733,9 +824,11 @@ class Motor:
         toz = float(self.rules["canli_kapanis_toz_usd"])
         son: Sonuc | None = None
         for i in range(baslangic, len(bantlar) + 1):
-            kalan, _ = self._kalan_sz(adres, coin)
+            kalan, borsadan = self._kalan_sz(adres, coin)
             mk = self._mark_kapanis(adres, coin) or (o.px if o else 0.0) or 0.0
             if abs(kalan) < EPS or (mk and abs(kalan) * mk <= toz):
+                if borsadan:
+                    self._harici_kapanis(adres, coin, kalan, mk, simdi, neden)
                 self._yerel_temizle(adres, coin, mk, simdi, neden)
                 self.kapanis_kuyrugu.pop(f"{adres}|{coin}", None)
                 return True, son
@@ -802,8 +895,61 @@ class Motor:
             self.tg.gonder(tg.alarm("ALARM: pozisyonlar hâlâ kapanmadı", f"kapanış eksik: {len(eksik)} pozisyon ({', '.join(k.split('|')[1] + ' ' + tg.kisa(k.split('|')[0]) for k in eksik[:5])}).\nYeniden deneniyor."))
         self._dur_bitir_mi()
 
+    def _borsa_fazla(self, simdi: int) -> dict[str, float] | None:
+        """G-2: gerçek kipte borsada (clearinghouseState, tüm dex) defterin KARŞILAMADIĞI pay: coin → işaretli sz (= `_kirp(hl, hl − defter toplamı)`; toz üstü).
+        Defterde hiç olmayan coin (ör. elle açılmış ETH) tamamıyla buraya düşer. Okuma hatası → None (düz SAYILMAZ)."""
+        try:
+            hl = clearinghouse_pozisyonlari(self.post, os.environ.get("HL_HESAP_ADRESI", ""), self._dexler())
+        except Exception as hata:                          # noqa: BLE001
+            self.kayit({"olay": "borsa_yetim_okuma_hata", "tur": type(hata).__name__})
+            return None
+        if any(abs(v) > EPS and not self.mark(c) for c, v in hl.items()):
+            self.mids_uygula(self.mids_al(), simdi)
+        toz = float(self.rules["canli_kapanis_toz_usd"])
+        fazla: dict[str, float] = {}
+        for coin, v in hl.items():
+            f = self._kirp(v, v - sum(c[coin].sz for c in self.hesap.poz.values() if coin in c))
+            mk = self.mark(coin)
+            if abs(f) > EPS and (not mk or abs(f) * mk > toz):
+                fazla[coin] = f
+        return fazla
+
+    def _borsa_yetim_kapat(self, neden: str, simdi: int) -> dict[str, float] | None:
+        """G-2: DUR / `/kapat` için borsadaki defter dışı payı reduce-only IOC ile kapatır (bant merdiveni; her turdan sonra borsa yeniden okunur). Yerel deftere dokunmaz
+        (defterde olmayan pozisyon). Döner: kalan fazla ({} = borsa düz) ya da None (borsa okunamadı)."""
+        bantlar = [float(x) for x in self.rules["canli_kapanis_bantlari"]]
+        fazla: dict[str, float] | None = None
+        for i in range(len(bantlar) + 1):
+            fazla = self._borsa_fazla(simdi)
+            if not fazla or i >= len(bantlar):
+                break
+            for coin, sz in fazla.items():
+                mk = self.mark(coin)
+                if not mk:
+                    self.kayit({"olay": "borsa_yetim_mark_yok", "coin": coin, "sz": sz})
+                    continue
+                yon = "A" if sz > 0 else "B"
+                cloid = cloid_uret(f"yetim:{coin}:{self.saat_ms()}:{i}:{neden[:12]}", "kapat")
+                try:
+                    d = self.yurutucu.emir(coin, yon, abs(sz) * mk * 1.05, True, abs(sz), bant=bantlar[i], cloid=cloid)
+                except Exception as hata:                  # noqa: BLE001 - bir coinin hatası diğerlerini durdurmaz; sonraki tur / dakika yeniden dener
+                    self.kayit({"olay": "borsa_yetim_emir_hata", "coin": coin, "tur": type(hata).__name__})
+                    continue
+                self.kayit({"olay": "borsa_yetim_kapat", "coin": coin, "sz_istenen": sz, "yon": yon, "durum": d.durum, "sz": d.sz, "px": d.px, "ucret": d.ucret, "red_neden": d.neden,
+                            "bant": bantlar[i], "cloid": cloid, "neden": neden})
+        if fazla:
+            self.kayit({"olay": "borsa_yetim_kaldi", "fazla": fazla, "neden": neden})
+        return fazla
+
     def _dur_bitir_mi(self) -> None:
         if self.dur_bekliyor and not self.kapanis_kuyrugu and not any(self.hesap.poz.values()):
+            if self.kip == "gercek":                       # G-2: "tümü kapandı" yalnız BORSA düzken (defter dışı pozisyon dahil)
+                fazla = self._borsa_yetim_kapat("dur_bekliyor", self.saat_ms())
+                if fazla != {}:
+                    if self._aralik_mi("borsa_yetim_alarm", self.saat_ms(), 60):
+                        self.tg.gonder(tg.alarm("ALARM: borsa düzleşmedi", "Defter boş ama borsada açık pozisyon var: "
+                                                + (", ".join(f"{c} {v:g}" for c, v in list(fazla.items())[:5]) if fazla else "borsa okunamadı") + ".\nYeniden deneniyor; motor henüz durmadı."))
+                    return
             self.dur_bekliyor = False
             self.dur_istendi = True
             self._dur_yaz_atomik(self.risk.dur_neden or "dur", self.saat_ms(), False)
@@ -876,14 +1022,23 @@ class Motor:
             except Exception as hata:                                                           # noqa: BLE001 - kapanış hatası DUR'u bozmaz; kalan pozisyon dakikalık yeniden denenir
                 self.kayit({"olay": "dur_kapanis_hata", "adres": a, "tur": type(hata).__name__})
         kalan = sum(len(c) for c in self.hesap.poz.values())
-        if kalan == 0:
+        fazla: dict[str, float] | None = {}
+        if self.kip == "gercek":                                                                # G-2: defterde OLMAYAN borsa pozisyonları da kapatılır; "kapandı" yalnız borsa düzken
+            try:
+                fazla = self._borsa_yetim_kapat(f"dur:{neden}", simdi)
+            except Exception as hata:                                                           # noqa: BLE001
+                self.kayit({"olay": "dur_kapanis_hata", "adres": "borsa", "tur": type(hata).__name__})
+                fazla = None
+        duz = kalan == 0 and fazla == {}
+        if duz:
             self._dur_yaz_atomik(neden, simdi, False)
-        self.kayit({"olay": "dur", "neden": neden, "kapatilan": kapatilan, "kalan": kalan})
-        if kalan == 0:
+        self.kayit({"olay": "dur", "neden": neden, "kapatilan": kapatilan, "kalan": kalan, "borsa_fazla": fazla})
+        if duz:
             self.tg.gonder(tg.alarm(f"DUR: {neden}", f"{kapatilan} pozisyon kapatıldı, motor durdu.\nYeniden açmak için `durum/DUR` dosyası elle silinmeli.", "🛑"))
             self._dur_bitir_mi()
         else:
-            self.tg.gonder(tg.alarm(f"DUR: {neden}", f"{kapatilan} pozisyon kapandı, {kalan} pozisyon DÜZLEŞMEDİ.\nYeniden denenecek; hepsi kapanınca motor durur.", "🛑"))
+            ek = "" if fazla == {} else (f"; borsada defter dışı açık: {', '.join(f'{c} {v:g}' for c, v in list(fazla.items())[:5])}" if fazla else "; borsa okunamadı (düz teyidi yok)")
+            self.tg.gonder(tg.alarm(f"DUR: {neden}", f"{kapatilan} pozisyon kapandı, {kalan} pozisyon DÜZLEŞMEDİ{ek}.\nYeniden denenecek; hepsi kapanınca motor durur.", "🛑"))
         self.durum_yaz()
 
     # ------------------------------------------------------------------ periyodik görevler
@@ -937,11 +1092,28 @@ class Motor:
                 self.kayit({"olay": "poz_senkron", "adres": adres, "fark": {c: list(v) for c, v in list(fark.items())[:10]}})
                 duzeltilen += 1
             self.poz_tr[adres] = dict(gercek)
+            self._poz_tr_senk_isaretle(adres, self._senkron_okuma_ms)          # G-14: okumadan eski snapshot dolumu bu değeri artık ezemez
             for coin in list(self.hesap.poz.get(adres, {})):
-                if abs(gercek.get(coin, 0.0)) < EPS and coin not in yeni_olay:
+                if coin in yeni_olay:
+                    continue
+                g, i = gercek.get(coin, 0.0), izlenen.get(coin, 0.0)
+                if abs(g) < EPS:
                     self.kayit({"olay": "senkron_kapanis", "adres": adres, "coin": coin})
                     self._kapat_coin(adres, coin, "trader_kapali_senkron", simdi)
+                elif g * i > 0 and abs(g) < abs(i) - 1e-9 * max(1.0, abs(g)) and g * self.hesap.sz(adres, coin) > 0:
+                    self._senkron_azalt(adres, coin, i, g, simdi)                       # S-1: kaçan kısmi azaltma (trader küçüldü, izlenen büyük kaldı)
         return duzeltilen
+
+    def _senkron_azalt(self, adres: str, coin: str, izlenen: float, gercek: float, simdi: int) -> None:
+        """S-1: REST trader pozisyonu izlenenden küçük (aynı yön) → normal hedef tabanlı azaltma yolu (K‑38, `boyut.hedef_emir` `azalt`, reduce-only). Hedef zaten karşılanıyorsa emir yok."""
+        mk = self.mark(coin)
+        if not mk:
+            self.kayit({"olay": "senkron_azalt_atlandi", "adres": adres, "coin": coin, "neden": "mark_yok"})
+            return
+        sahte = Olay(f"senkron:{adres}:{coin}:{simdi}", adres[:12], adres, simdi, simdi, "senkron", False, "", coin, mk, abs(izlenen - gercek), "A" if izlenen > 0 else "B", izlenen)
+        biz_sz = self.hesap.sz(adres, coin)
+        s = self._emir_isle(sahte, adres, "azalt", izlenen, gercek, biz_sz, simdi, True)
+        self.kayit({"olay": "senkron_azalt", "adres": adres, "coin": coin, "trader_once": izlenen, "trader_sonra": gercek, "karar": s.karar, "neden": s.neden})
 
     def yerel_ozsermaye(self) -> float:
         return self.hesap.ozsermaye(self.marks)
@@ -1131,6 +1303,7 @@ class Motor:
             if self.son_funding_saat is None:
                 self.son_funding_saat = simdi // 3_600_000
             adimlar: list[tuple[str, Callable[[], None]]] = [
+                ("belirsiz", lambda: self.belirsiz_coz(simdi)),                    # G-1: sonucu belirsiz emirler risk/mutabakattan ÖNCE deftere
                 ("tasfiye", lambda: self._tasfiye(simdi)), ("funding", lambda: self.funding_uygula(oranlar, simdi)), ("funding_gercek", lambda: self.funding_gercek_uygula(fgercek, simdi)),
                 ("hl_ozsermaye", lambda: self.hl_uygula(hl[1], simdi) if hl else None), ("ofset", lambda: self.ofset_yenile(ledger, simdi)), ("risk", lambda: self._risk(simdi)), ("anlik_saha", lambda: self._anlik(simdi)),
                 ("inen", lambda: self.karar_uygula(self.saha.inenleri_kapat(simdi), simdi)), ("mutabakat", lambda: self._mutabakat(simdi, hl)), ("kapanis_kuyrugu", lambda: self._kuyruk_isle(simdi)),
@@ -1138,13 +1311,15 @@ class Motor:
                 ("telegram", lambda: self._komutlar(komutlar)), ("ozet", lambda: self._gunluk_ozet(simdi)),
                 ("emir_ozeti", lambda: self.emir_ozeti(simdi)),
                 ("tur_kaydi", lambda: self._tur_kaydi(simdi)),
+                ("durum_yaz", self.durum_yaz),                                     # G-12b: disk dolu / salt okunur → dakikalık görev ölmez; kayıt + alarm
             ]
             for ad, f in adimlar:
                 try:
                     f()
                 except Exception as hata:                  # noqa: BLE001
                     self.kayit({"olay": "adim_hata", "adim": ad, "tur": type(hata).__name__, "mesaj": str(hata)[:160]})
-            self.durum_yaz()
+                    if ad == "durum_yaz" and self._aralik_mi("durum_yaz_alarm", simdi, 3600):
+                        self.tg.gonder(tg.alarm("ALARM: durum diske yazılamıyor", f"Dakikalık durum kaydı başarısız ({type(hata).__name__}).\nYeniden başlatmada son durum kaybolabilir; disk/izinleri kontrol edin."))
 
     def _tur_kaydi(self, simdi: int) -> None:
         """Pano özsermaye/düşüş grafiği için ~15 dk'da bir `tur` kaydı (özsermaye $). Karar mantığına girmez."""
@@ -1402,6 +1577,8 @@ class Motor:
         sayi = 0
         takip: list[tuple[dict, float, float]] = []                  # (niyet, dolan sz, limit px): kısmi kalan için izleme
         for n in self.niyet.sonucsuz():
+            if n["cloid"] in self.hesap.belirsiz:              # G-1: belirsiz emir — işaretçi zaten geçti; `belirsiz_coz` deftere doğrudan (bir kez) uygular
+                continue
             durum = "sonucsuz"
             ek: dict[str, Any] = {}
             if self.kip == "gercek":
@@ -1436,6 +1613,93 @@ class Motor:
         for n, dolan, px in takip:
             self._kismi_takip(n, dolan, px, simdi)
         if sayi or oynatilan:
+            self._dolum_yaz()
+        return sayi + self.belirsiz_coz(simdi)
+
+    def belirsiz_coz(self, simdi: int) -> int:
+        """G-1/G-12a: sonucu belirsiz emirler (`hesap.belirsiz`; yalnız gerçek kip: SDK zaman aşımı / bağlantı hatası emir gönderildikten SONRA). Açılışta ve her dakika (ilk adım) çağrılır.
+        Emir anından en az `canli_emir_zaman_asimi_sn` sonra `orderStatus(cloid)` sorulur: emir varsa dolan miktar (`origSz − sz`; fiyat limitPx, YAKLAŞIK — kesin değer mutabakatta; ücret HL `fee`
+        bulunursa o, yoksa `maliyet_taker` tahmini) deftere TEK kez uygulanır; emir yoksa (`unknownOid`) dolmadı sayılır. Sorgu hata verirse girdi kalır, sonraki dakika yeniden denenir (yeni açılış
+        `belirsiz` bayrağıyla durur, kapanış serbest). Sonuç satırı yazılıp defter kaydedilemeden çökülmüşse yazılmış sonuç kullanılır (ikinci sorgu ve çift uygulama yok). reduce‑only dolum defterdeki
+        pozisyondan fazla uygulanmaz (kapanış teyidi borsada 0 görüp yerel pozisyonu zaten temizlemiş olabilir). Azalt/kapat tam dolmadıysa kalan kapanış kuyruğuna girer. Döner: çözülen sayı."""
+        if not self.hesap.belirsiz:
+            if self.risk.acilis_durdu.get("belirsiz"):
+                self.risk.bayrak("belirsiz", False)
+            return 0
+        satirlar = self.niyet.satirlar()
+        niyetler = {x["cloid"]: x for x in satirlar if x.get("t") == "niyet"}
+        sonuclar = {x["cloid"]: x for x in satirlar if x.get("t") == "sonuc"}
+        bekle_ms = float(self.rules.get("canli_emir_zaman_asimi_sn", 10)) * 1000
+        sayi = 0
+        takip: list[tuple[dict, float, float]] = []
+        for cloid, b in list(self.hesap.belirsiz.items()):
+            n = niyetler.get(cloid)
+            if n is None or not n.get("adres") or not n.get("coin"):          # niyet satırı yok (bozulma): uygulanamaz → borsa ile mutabakat
+                self.hesap.belirsiz.pop(cloid, None)
+                self.kayit({"olay": "belirsiz_niyet_yok", "cloid": cloid})
+                self.risk.bayrak("mutabakat", True)
+                continue
+            r = sonuclar.get(cloid)
+            if r is None:
+                if self.kip != "gercek":
+                    durum, dolan, px, kalan_sz, ucret = "sonucsuz", 0.0, 0.0, 0.0, 0.0
+                else:
+                    if simdi - int(b.get("ms", 0)) < bekle_ms:
+                        continue
+                    try:
+                        y = self.post({"type": "orderStatus", "user": os.environ.get("HL_HESAP_ADRESI", ""), "oid": cloid})
+                    except Exception as hata:                  # noqa: BLE001 - ağ yok: girdi kalır, sonraki dakika yeniden
+                        b["deneme"] = int(b.get("deneme", 0)) + 1
+                        self.kayit({"olay": "belirsiz_sorgu_hata", "cloid": cloid, "coin": n["coin"], "deneme": b["deneme"], "tur": type(hata).__name__})
+                        if b["deneme"] == 5:
+                            self.tg.gonder(tg.alarm("ALARM: belirsiz emir çözülemiyor", f"{n['coin']} {n.get('eylem')} emrinin durumu {b['deneme']} kez sorgulanamadı.\nYeni pozisyon açılmıyor; her dakika yeniden deneniyor."))
+                        continue
+                    durum, dolan, px, kalan_sz, ucret = "emir_yok", 0.0, 0.0, 0.0, 0.0
+                    if (y or {}).get("status") == "order":
+                        emir = y["order"]
+                        durum = str(emir.get("status", "?"))
+                        e = emir.get("order", {})
+                        kalan_sz = float(e.get("sz", 0))
+                        dolan = max(0.0, float(e.get("origSz", 0)) - kalan_sz)
+                        px = float(e.get("limitPx", 0))
+                        if dolan > 0:
+                            ucret_bul = getattr(self.yurutucu, "_gercek_ucret", None)
+                            gercek = ucret_bul(n["coin"], e.get("oid"), cloid, int(n.get("ms", simdi))) if ucret_bul else None
+                            ucret = gercek if gercek is not None else dolan * px * float(self.rules["maliyet_taker"])
+                            if gercek is not None:
+                                self.ucret_gercek_usd += gercek
+                            else:
+                                self.ucret_tahmin_say += 1
+                self.niyet.sonuc_yaz(cloid, f"cozuldu:{durum}", simdi, sz=dolan, px=px, ucret=ucret, belirsiz=True, kalan_sz=kalan_sz)      # ÖNCE sonuç (fsync), SONRA defter
+            else:
+                durum = str(r.get("durum", "")).removeprefix("cozuldu:")
+                dolan, px, ucret, kalan_sz = float(r.get("sz") or 0.0), float(r.get("px") or 0.0), float(r.get("ucret") or 0.0), float(r.get("kalan_sz") or 0.0)
+            uygulanan = dolan
+            if dolan > 0 and n.get("reduce_only"):
+                yerel = self.hesap.sz(n["adres"], n["coin"])
+                azaltir = (yerel > EPS and n["yon"] == "A") or (yerel < -EPS and n["yon"] == "B")
+                uygulanan = min(dolan, abs(yerel)) if azaltir else 0.0
+            if uygulanan > EPS and px > 0:
+                try:
+                    self.hesap.uygula(n["adres"], n["coin"], n["yon"], uygulanan, px, ucret * uygulanan / dolan, simdi)
+                except ValueError as hata:
+                    self.kayit({"olay": "defter_hata", "adres": n["adres"], "coin": n["coin"], "hata": str(hata)[:120]})
+            else:
+                uygulanan = 0.0
+            self.hesap.belirsiz.pop(cloid, None)
+            sayi += 1
+            self.kayit({"olay": "belirsiz_cozuldu", "kip": self.kip, "cloid": cloid, "adres": n["adres"], "coin": n["coin"], "eylem": n.get("eylem"), "yon": n.get("yon"), "durum": durum,
+                        "dolan_sz": dolan, "uygulanan_sz": uygulanan, "px": px, "ucret": ucret})
+            self.tg.gonder(tg.alarm("Belirsiz emir çözüldü", f"{n['coin']} {n.get('eylem')}: borsada {f'doldu {dolan:.6g}' if dolan > 0 else 'dolmadı'} ({durum}); deftere işlendi.", "✅"))
+            if n.get("eylem") in ("azalt", "kapat") and (dolan <= 0 or kalan_sz > EPS or durum != "filled"):
+                if dolan > 0:
+                    takip.append((n, dolan, px))
+                else:
+                    self._takip_ekle(takip, n)
+        for n, dolan, px in takip:
+            self._kismi_takip(n, dolan, px, simdi)
+        self.risk.bayrak("belirsiz", bool(self.hesap.belirsiz))
+        if sayi:
             self._dolum_yaz()
         return sayi
 
@@ -1647,10 +1911,81 @@ async def _tuketici(motor: Motor, kuyruk: asyncio.Queue | OncelikliKuyruk, durdu
             motor.kayit({"olay": "olay_hata", "tur": type(hata).__name__, "mesaj": str(hata)[:160]})
 
 
-async def _periyodik(motor: Motor, durdur: asyncio.Event, dinleyici: CanliDinleyici, aralik_sn: float = 30.0) -> None:
+class Bekci:
+    """G-12 bekçi: dakikalık bakımın İLERLEDİĞİNİ izler (`nabiz()` her başarılı `dakika` sonunda). Son nabızdan `sinir_sn` (`canli_bekci_sn`) geçtiyse — `dakika` kilitte ya da ağda asılı, sürekli hata
+    veriyor ya da olay döngüsü donmuş — kayıt + Telegram alarmı (en çok `alarm_bekle_sn` beklenir) ve `cik(1)`. Varsayılan `os._exit`: asılı iş parçacığı olsa da süreç biter, systemd yeniden başlatır.
+    Saat (`saat`, sn; varsayılan `time.monotonic`) ve çıkış (`cik`) enjekte edilir (test). Ayrı iş parçacığında koşar (`calistir`): olay döngüsü dursa da çalışır."""
+
+    def __init__(self, motor: Any, sinir_sn: float, saat: Callable[[], float] = time.monotonic, cik: Callable[[int], Any] = os._exit, alarm_bekle_sn: float = 10.0) -> None:
+        self.motor, self.sinir_sn, self.saat, self.cik, self.alarm_bekle_sn = motor, float(sinir_sn), saat, cik, float(alarm_bekle_sn)
+        self.son = saat()
+        self.tetiklendi = False
+
+    def nabiz(self) -> None:
+        self.son = self.saat()
+
+    def kontrol(self) -> bool:
+        """True: tetiklendi (alarm + çıkış çağrıldı)."""
+        gecen = self.saat() - self.son
+        if self.tetiklendi or gecen < self.sinir_sn:
+            return False
+        self.tetiklendi = True
+        metin = tg.alarm("ALARM: motor dondu, yeniden başlatılıyor", f"Dakikalık bakım {gecen:.0f} sn'dir tamamlanmadı (sınır {self.sinir_sn:.0f} sn).\nSüreç çıkış kodu 1 ile kapanıyor; sunucu yeniden başlatır.")
+
+        def bildir() -> None:
+            try:
+                self.motor.kayit({"olay": "bekci_tetik", "gecen_sn": round(gecen, 1), "sinir_sn": self.sinir_sn})
+            except Exception:                              # noqa: BLE001 - disk dolu olabilir: çıkış yine olur
+                pass
+            try:
+                self.motor.tg.gonder(metin)
+                havuz = getattr(self.motor.tg, "_havuz", None)
+                if havuz is not None:
+                    havuz.shutdown(wait=True)              # arka plan gönderimi bitsin (çıkış onu öldürmeden)
+            except Exception:                              # noqa: BLE001
+                pass
+        t = threading.Thread(target=bildir, daemon=True, name="bekci-alarm")
+        t.start()
+        t.join(self.alarm_bekle_sn)                        # Telegram asılı kalsa da çıkış gecikmez
+        self.cik(1)
+        return True
+
+    def calistir(self, durdur: threading.Event, aralik_sn: float = 5.0) -> None:
+        while not durdur.wait(aralik_sn):
+            if self.kontrol():
+                return
+
+
+def _gorev_bitti(motor: Motor, durdur: asyncio.Event, dinleyici: Any, ad: str, gorev: asyncio.Task) -> None:
+    """G-12b: tüketici / periyodik görev `durdur` gelmeden biterse (yakalanmamış istisna) sessiz ölüm yok: kayıt + alarm + motor durdurulur ve `main` çıkış kodu 1 döner (systemd yeniden başlatır)."""
+    hata = None if gorev.cancelled() else gorev.exception()
+    if hata is None and durdur.is_set():
+        return                                             # olağan bitiş (DUR / süre / SIGTERM)
+    motor.cikis_kodu = 1
+    try:
+        motor.kayit({"olay": "gorev_bitti", "gorev": ad, "tur": type(hata).__name__ if hata else "beklenmedik", "mesaj": str(hata)[:160] if hata else ""})
+        motor.tg.gonder(tg.alarm("ALARM: motor görevi durdu", f"'{ad}' görevi beklenmedik biçimde bitti ({type(hata).__name__ if hata else 'beklenmedik'}).\nMotor kapanıyor (çıkış kodu 1); sunucu yeniden başlatır."))
+    finally:
+        try:
+            dinleyici.durdur()
+        finally:
+            durdur.set()
+
+
+async def _periyodik(motor: Motor, durdur: asyncio.Event, dinleyici: CanliDinleyici, aralik_sn: float = 30.0, bekci: Bekci | None = None) -> None:
+    ardisik_hata = 0
     while not durdur.is_set():
-        await asyncio.to_thread(motor.dakika)
-        try:                                                # pano (15 dk'lık yayım) taze `durum/ozet.json` ister: vardiya boyunca her döngüde yazılır (B7); hata motoru durdurmaz
+        try:                                                # G-12b: tek istisna görevi öldürmez; ilerleme yoksa bekçi süreci yeniden başlatır
+            await asyncio.to_thread(motor.dakika)
+            ardisik_hata = 0
+            if bekci is not None:
+                bekci.nabiz()
+        except Exception as hata:                           # noqa: BLE001
+            ardisik_hata += 1
+            motor.kayit({"olay": "adim_hata", "adim": "dakika", "tur": type(hata).__name__, "mesaj": str(hata)[:160], "ardisik": ardisik_hata})
+            if ardisik_hata == 1 or ardisik_hata % 20 == 0:
+                motor.tg.gonder(tg.alarm("ALARM: dakikalık bakım hata verdi", f"{type(hata).__name__}: {str(hata)[:120]} (üst üste {ardisik_hata}).\nYeniden deneniyor; ilerleme olmazsa bekçi motoru yeniden başlatır."))
+        try:                                               # pano (15 dk'lık yayım) taze `durum/ozet.json` ister: vardiya boyunca her döngüde yazılır (B7); hata motoru durdurmaz
             _yaz(motor.durum_dizin / "ozet.json", {**motor.ozet(), **motor.pano_ek(), "dinleyici": dinleyici.ozet()["genel"], "yazildi_ms": motor.saat_ms()})
         except Exception as hata:                           # noqa: BLE001
             motor.kayit({"olay": "ozet_yazma_hata", "tur": type(hata).__name__, "mesaj": str(hata)[:120]})
@@ -1686,7 +2021,12 @@ async def calis(motor: Motor, sure_sn: float | None = None, ws: Callable[[], Any
     except (NotImplementedError, RuntimeError):
         pass
     motor.kacanlari_tamamla()
-    gorevler = [asyncio.create_task(_tuketici(motor, kuyruk, durdur)), asyncio.create_task(_periyodik(motor, durdur, din))]
+    bekci = Bekci(motor, float(motor.rules.get("canli_bekci_sn", 180)))
+    bekci_dur = threading.Event()
+    threading.Thread(target=bekci.calistir, args=(bekci_dur,), daemon=True, name="bekci").start()
+    gorevler = [asyncio.create_task(_tuketici(motor, kuyruk, durdur)), asyncio.create_task(_periyodik(motor, durdur, din, bekci=bekci))]
+    for ad, gorev in zip(("tuketici", "periyodik"), gorevler):
+        gorev.add_done_callback(lambda g, ad=ad: _gorev_bitti(motor, durdur, din, ad, g))
     try:
         await din.calis()
     finally:
@@ -1699,6 +2039,7 @@ async def calis(motor: Motor, sure_sn: float | None = None, ws: Callable[[], Any
         motor.durum_yaz()
         motor._kilit_birakildi = True
         motor.kilit_yaz(True)                              # temiz kapanış: sonraki vardiya hemen devralır
+        bekci_dur.set()                                    # kapanış asılı kalırsa bekçi buraya gelinmeden süreci bitirir
     return ozet
 
 
@@ -1836,7 +2177,7 @@ def main(argv: list[str] | None = None) -> int:
         return 3
     ozet = asyncio.run(calis(motor, args.sure_sn))
     print(json.dumps(ozet, ensure_ascii=False, indent=1, default=str))
-    return 0
+    return int(getattr(motor, "cikis_kodu", 0))           # G-12b: görev beklenmedik bittiyse 1 (systemd yeniden başlatır)
 
 
 if __name__ == "__main__":

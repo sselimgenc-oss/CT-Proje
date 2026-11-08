@@ -114,7 +114,7 @@ def test_gercek_yurutucu_red_hata_ve_dolmayan_yanitlar_motoru_dusurmez():
     d = yu.GercekYurutucu(SahteExchange(red), meta_post, RULES).emir("BTC", "B", 11.0)
     assert d.durum == "red" and "match" in d.neden and d.sz == 0
     d2 = yu.GercekYurutucu(SahteExchange(hata=ConnectionError("x")), meta_post, RULES).emir("BTC", "B", 11.0)
-    assert d2.durum == "red" and "sdk_hatasi" in d2.neden
+    assert d2.durum == "belirsiz" and "sdk_hatasi" in d2.neden and d2.sz == 0     # G-1: emir isteği gittikten sonra bağlantı hatası → HL emri almış olabilir: "red" DEĞİL "belirsiz"
     d3 = yu.GercekYurutucu(SahteExchange({"beklenmedik": 1}), meta_post, RULES).emir("BTC", "B", 11.0)
     assert d3.durum == "red" and d3.neden == "yanit_bicimi"
     resting = {"status": "ok", "response": {"type": "order", "data": {"statuses": [{"resting": {"oid": 5}}]}}}
@@ -122,6 +122,51 @@ def test_gercek_yurutucu_red_hata_ve_dolmayan_yanitlar_motoru_dusurmez():
     assert d4.durum == "dolmadi" and d4.sz == 0                                  # IOC: resting yeniden denenmez
     d5 = yu.GercekYurutucu(SahteExchange(dolu(), kaldirac_yanit={"status": "err"}), meta_post, RULES).emir("BTC", "B", 11.0)
     assert d5.durum == "red"                                                     # kaldıraç ayarı reddedilirse emir YOK
+
+
+# ------------------------------------------------------------------------------------------------ G-1 / G-12a: zaman aşımı → belirsiz
+class ClientError(Exception):
+    """SDK `hyperliquid.utils.error.ClientError` taklidi (HTTP 4xx: HL isteği açıkça reddetti; sınıf adıyla tanınır)."""
+
+
+def test_g1_emir_cagrisinda_zaman_asimi_belirsiz_emir_oncesi_hata_ve_4xx_red():
+    """Emir ÖNCESİ hata (defter okunamadı) → emir gitmedi → red; emir çağrısında zaman aşımı / 5xx → belirsiz (HL emri almış olabilir); HL 4xx (`ClientError`) → red."""
+    import requests
+
+    def bozuk_post(y):
+        raise TimeoutError("l2Book")
+    ex = SahteExchange(dolu())
+    d = yu.GercekYurutucu(ex, bozuk_post, RULES).emir("BTC", "B", 11.0, cloid="0x" + "1" * 32)
+    assert d.durum == "red" and ex.cagrilar == []                                # emir hiç gönderilmedi
+    for hata, beklenen in [(requests.exceptions.ReadTimeout("zaman aşımı"), "belirsiz"), (requests.exceptions.ConnectionError("koptu"), "belirsiz"),
+                           (RuntimeError("5xx"), "belirsiz"), (ClientError("422"), "red")]:
+        d = yu.GercekYurutucu(SahteExchange(hata=hata), meta_post, RULES).emir("BTC", "B", 11.0, cloid="0x" + "1" * 32)
+        assert (d.durum, d.sz, d.usd_dolan) == (beklenen, 0.0, 0.0) and d.neden == f"sdk_hatasi: {type(hata).__name__}"
+
+
+def test_g12a_exchange_zaman_asimi_kurallardan_sdk_kurucusuna_gecer(monkeypatch):
+    """`gercek_yurutucu_olustur` SDK `Exchange`'i `timeout=canli_emir_zaman_asimi_sn` (10 sn) ile kurar (SDK varsayılanı None = süresiz). SDK yerine sahte modüller (ağ/anahtar yok)."""
+    import sys
+    import types
+    kurulan = {}
+
+    class SahteEx:
+        def __init__(self, wallet, base_url=None, meta=None, vault_address=None, account_address=None, spot_meta=None, perp_dexs=None, timeout=None):
+            kurulan.update(wallet=wallet, base_url=base_url, account_address=account_address, timeout=timeout)
+    hl = types.ModuleType("hyperliquid")
+    hl_ex = types.ModuleType("hyperliquid.exchange")
+    hl_ex.Exchange = SahteEx
+    hl_ut = types.ModuleType("hyperliquid.utils")
+    hl_ut.constants = types.SimpleNamespace(MAINNET_API_URL="https://api.hyperliquid.xyz")
+    eth = types.ModuleType("eth_account")
+    eth.Account = types.SimpleNamespace(from_key=lambda k: "cuzdan")
+    for ad, mod in {"hyperliquid": hl, "hyperliquid.exchange": hl_ex, "hyperliquid.utils": hl_ut, "eth_account": eth}.items():
+        monkeypatch.setitem(sys.modules, ad, mod)
+    assert RULES["canli_emir_zaman_asimi_sn"] == 10
+    g = yu.gercek_yurutucu_olustur(lambda y: {}, RULES, {"HL_API_CUZDAN_ANAHTARI": "anahtar", "HL_HESAP_ADRESI": "0xabc"})
+    assert kurulan == {"wallet": "cuzdan", "base_url": "https://api.hyperliquid.xyz", "account_address": "0xabc", "timeout": 10.0} and isinstance(g, yu.GercekYurutucu)
+    yu.gercek_yurutucu_olustur(lambda y: {}, {**RULES, "canli_emir_zaman_asimi_sn": 3}, {"HL_API_CUZDAN_ANAHTARI": "a", "HL_HESAP_ADRESI": "0xabc"})
+    assert kurulan["timeout"] == 3.0
 
 
 def test_tick_yuvarlama_5_anlamli_basamak():

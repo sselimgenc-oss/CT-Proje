@@ -38,6 +38,8 @@ class Hesap:
         self.funding: dict[str, float] = {}          # adres -> girişten beri funding ($, işaretli: + alınan / − ödenen; sanal kip)
         self.son_niyet_cloid: str | None = None      # son UYGULANAN niyetin cloid'i (t4b #3: yeniden başlatmada bundan sonraki sonuçlu niyetler oynatılır)
         self.kapanmis_net = 0.0                      # sahadan çıkıp kaydı silinen üyelerin net K/Z'si (özsermaye sürekliliği)
+        self.belirsiz: dict[str, dict] = {}         # G-1: cloid -> {ms, deneme}; emri gönderilip yanıtı alınamayan (sonucu BELİRSİZ) niyetler. `son_niyet_cloid` ile AYNI atomik
+                                                     # yazımda tutulur: çözülünce dolum deftere TEK kez uygulanır ve buradan silinir (oynatma bu niyetleri atlar: işaretçi zaten geçti)
 
     # ------------------------------------------------------------------ slot
     def slot_ac(self, adres: str, slot_usd: float) -> None:
@@ -146,7 +148,8 @@ class Hesap:
     # ------------------------------------------------------------------ kalıcılık
     def to_json(self) -> dict[str, Any]:
         return {"kasa_usd": self.kasa_usd, "kaldirac": self.kaldirac, "maks_kaldirac": self.maks_kaldirac, "realize": self.realize, "ucret": self.ucret, "slot_bas": self.slot_bas,
-                "poz": {a: {c: asdict(p) for c, p in coinler.items()} for a, coinler in self.poz.items()}, "tasfiyeler": self.tasfiyeler[-200:], "kapanmis_net": self.kapanmis_net, "funding": self.funding, "son_niyet_cloid": self.son_niyet_cloid}
+                "poz": {a: {c: asdict(p) for c, p in coinler.items()} for a, coinler in self.poz.items()}, "tasfiyeler": self.tasfiyeler[-200:], "kapanmis_net": self.kapanmis_net, "funding": self.funding, "son_niyet_cloid": self.son_niyet_cloid,
+                "belirsiz": self.belirsiz}
 
     @classmethod
     def from_json(cls, d: dict[str, Any]) -> "Hesap":
@@ -157,4 +160,5 @@ class Hesap:
         h.kapanmis_net = float(d.get("kapanmis_net", 0.0))
         h.funding = dict(d.get("funding", {}))
         h.son_niyet_cloid = d.get("son_niyet_cloid")
+        h.belirsiz = {k: dict(v) for k, v in (d.get("belirsiz") or {}).items()}
         return h

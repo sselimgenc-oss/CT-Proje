@@ -38,7 +38,7 @@ class Dolum:
     referans_px: float | None = None      # en iyi karşı fiyat (emir anı)
     kayma_oran: float | None = None
     reduce_only: bool = False
-    durum: str = "dolmadi"        # dolu | kismi | dolmadi | red
+    durum: str = "dolmadi"        # dolu | kismi | dolmadi | red | belirsiz (G-1: emir gönderildi, yanıt alınamadı; sonucu `orderStatus(cloid)` belirler)
     neden: str = ""
     ham: dict = field(default_factory=dict)
 
@@ -243,12 +243,19 @@ class GercekYurutucu:
             if not min_nosyonel_ok(sz, en_iyi, reduce_only, round(abs(acik_sz), dec) if acik_sz is not None else None, float(self.rules.get("canli_min_nosyonel_usd", 10))):
                 d.durum, d.neden = "red", "min_nosyonel"
                 return d
+        except Exception as hata:                      # noqa: BLE001 - emir ÖNCESİ (kaldıraç, defter, meta) hata: emir GİTMEDİ → red; motor çökmez
+            d.durum, d.neden = "red", f"sdk_hatasi: {type(hata).__name__}"
+            return d
+        try:
             if cloid:
                 yanit = self.exchange.order(coin, yon == "B", sz, limit, TIF_IOC, reduce_only, cloid=cloid_nesne(cloid))
             else:
                 yanit = self.exchange.order(coin, yon == "B", sz, limit, TIF_IOC, reduce_only)
-        except Exception as hata:                      # noqa: BLE001 - SDK/ağ hatası kaydedilir, motor çökmez
-            d.durum, d.neden = "red", f"sdk_hatasi: {type(hata).__name__}"
+        except Exception as hata:                      # noqa: BLE001 - G-1: emir isteği GÖNDERİLDİKTEN sonra hata (zaman aşımı, bağlantı, 5xx)
+            # HL emri almış ve doldurmuş olabilir: "red" DEĞİL "belirsiz" → motor niyeti açık bırakır, `orderStatus(cloid)` ile çözer.
+            # Yalnız HL'nin açıkça reddettiği istek (SDK `ClientError`, HTTP 4xx) kesin red sayılır.
+            d.durum = "red" if type(hata).__name__ == "ClientError" else "belirsiz"
+            d.neden = f"sdk_hatasi: {type(hata).__name__}"
             return d
         d.ham = yanit if isinstance(yanit, dict) else {"yanit": str(yanit)[:200]}
         try:
@@ -285,4 +292,6 @@ def gercek_yurutucu_olustur(post: Callable[[dict], Any], rules: dict | None = No
         from hyperliquid.utils import constants
     except ImportError as hata:
         raise RuntimeError("hyperliquid-python-sdk kurulmalı: pip install -r requirements-canli.txt") from hata
-    return GercekYurutucu(Exchange(Account.from_key(anahtar), constants.MAINNET_API_URL, account_address=hesap), post, rules)
+    rules = rules or load_rules()
+    zaman_asimi = float(rules.get("canli_emir_zaman_asimi_sn", 10))         # G-12a: SDK varsayılanı None (süresiz bekler, motor kilidi tutulur); `API.post` → `session.post(..., timeout=)`
+    return GercekYurutucu(Exchange(Account.from_key(anahtar), constants.MAINNET_API_URL, account_address=hesap, timeout=zaman_asimi), post, rules)

@@ -701,13 +701,16 @@ def test_sdk_hatasi_ve_red_motoru_cokertmez_kayit_alir(tmp_path):
         def hazirla(self, coin):
             return None
 
-        def emir(self, coin, yon, usd, reduce_only=False, acik_sz=None, bant=None, cloid=None):
-            return yu.Dolum(coin, yon, usd, reduce_only=reduce_only, durum="red", neden="sdk_hatasi: ConnectionError")
+        def emir(self, coin, yon, usd, reduce_only=False, acik_sz=None, bant=None, cloid=None):          # GercekYurutucu: emir çağrısında ConnectionError → "belirsiz" (G-1)
+            return yu.Dolum(coin, yon, usd, reduce_only=reduce_only, durum="belirsiz", neden="sdk_hatasi: ConnectionError")
     hl = SahteHL()
     m = mt.Motor(RULES, Bozuk(), hl, tg.Telegram("", "", ortam={}), tmp_path / "durum", tmp_path / "kayit", lambda: kadro([satir(1, 1)], T0), Saat())
     m.baslat()
     s = m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, Saat()))
-    assert s[0].karar == "red" and "sdk_hatasi" in s[0].neden and m.hesap.sz(adr(1), "BTC") == 0.0 and kayitlar(tmp_path, "emir")[0]["red_neden"].startswith("sdk_hatasi")
+    assert s[0].karar == "belirsiz" and "sdk_hatasi" in s[0].neden and m.hesap.sz(adr(1), "BTC") == 0.0 and kayitlar(tmp_path, "emir")[0]["red_neden"].startswith("sdk_hatasi")
+    # G-1: "red" sayılmaz; niyet AÇIK kalır (sonuç satırı yok) ve `hesap.belirsiz`te bekler → orderStatus(cloid) ile çözülür; çözülene dek yeni açılış durur
+    assert kayitlar(tmp_path, "emir")[0]["durum"] == "belirsiz" and m.sayac["red"] == 0 and m.sayac["belirsiz"] == 1
+    assert [n["cloid"] for n in m.niyet.sonucsuz()] == list(m.hesap.belirsiz) and len(m.hesap.belirsiz) == 1 and m.risk.acilis_durdu["belirsiz"] is True
 
 
 def test_eylem_belirle_tablosu():

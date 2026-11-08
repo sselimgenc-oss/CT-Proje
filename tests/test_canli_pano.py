@@ -270,3 +270,108 @@ def test_pano_grafik_tur_noktalarindan_kapanan_tablo_ve_ortanca_fark():
     h = pano.html_olustur(ozet, {"gun_basi": 1000.0}, {}, tur + emirler, [{"gun": "2026-11-01", "ozsermaye": 990.0}, {"gun": "2026-11-02", "ozsermaye": 1000.0}], now)
     assert "Özsermaye (tur sonları)" in h and "KÂR FAKTÖRÜ" not in h and "kâr faktörü 5" in h                 # (2+3)/1 = 5
     assert "Ortanca fark (bp)" in h and "1,0 bp" in h and "ort. mutlak 2,0 bp" in h                           # sıralı fark [-2, 1, 3] bp → ortanca 1; |.| ort. 2
+
+
+# ---------------------------------------------------------------------------------------------- Proje denetimi 08.11 S-4, S-14..S-17 (pano): elle hesaplanmış altın örnekler
+SIMDI_D = 1_793_900_000_000                       # 2026-11-05 17:33 UTC
+
+
+def _gun_ms(gun: str, saat: int = 12) -> int:
+    from datetime import UTC, datetime
+    return int(datetime.fromisoformat(gun).replace(tzinfo=UTC).timestamp() * 1000) + saat * SAAT
+
+
+def test_s4_kayitlari_oku_14_gunu_okur_ikiyi_degil(tmp_path):
+    """16 günlük dosya (10-21 … 11-05), her birinde 1 kayıt → son 14 gün (10-23 … 11-05) okunur; en eski iki gün (veri dalı zaten siler) dışarıda. Eski kod yalnız son 2 dosyayı okuyordu."""
+    from datetime import date, timedelta
+    gunler = [(date(2026, 10, 21) + timedelta(days=i)).isoformat() for i in range(16)]
+    for g in gunler:
+        (tmp_path / f"{g}.jsonl").write_text(json.dumps({"zaman_ms": _gun_ms(g), "olay": "emir", "gun": g}) + "\n", encoding="utf-8")
+    k = pano.kayitlari_oku(tmp_path)
+    assert len(k) == 14 and [x["gun"] for x in k] == gunler[2:]
+    assert len(pano.kayitlari_oku(tmp_path, gun=2)) == 2
+    assert pano.kayit_donemi(k) == ("2026-10-23", "2026-11-05", 14) and pano.donem_etiketi(pano.kayit_donemi(k)) == "23.10–05.11 · 14 gün"
+    assert pano.donem_etiketi(None) == "kayıt yok" and pano.donem_etiketi(("2026-11-05", "2026-11-05", 1)) == "05.11 · 1 gün"
+
+
+def _s4_kayit():
+    """3 gün (11-03, 11-04, 11-05), her gün bir kapanış dolumu: pnl +3 / −1 / +2, ücret 0,5 / 0,25 / 0,25; ayrıca 11-03'te açılış (ücret 1,0, kayma 0,002 × 100 $ = 0,2 $); funding −0,05 (11-03) + −0,15 (11-05)."""
+    return [
+        {"olay": "emir", "zaman_ms": _gun_ms("2026-11-03"), "adres": A1, "coin": "BTC", "yon": "B", "eylem": "ac", "durum": "dolu", "reduce_only": False, "ucret": 1.0, "usd_dolan": 100.0, "kayma_trader": 0.002},
+        {"olay": "emir", "zaman_ms": _gun_ms("2026-11-03", 13), "adres": A1, "coin": "BTC", "yon": "A", "eylem": "azalt", "durum": "dolu", "reduce_only": True, "pnl_usd": 3.0, "ucret": 0.5},
+        {"olay": "emir", "zaman_ms": _gun_ms("2026-11-04"), "adres": A1, "coin": "BTC", "yon": "A", "eylem": "azalt", "durum": "dolu", "reduce_only": True, "pnl_usd": -1.0, "ucret": 0.25},
+        {"olay": "emir", "zaman_ms": _gun_ms("2026-11-05"), "adres": A1, "coin": "BTC", "yon": "A", "eylem": "kapat", "durum": "dolu", "reduce_only": True, "pnl_usd": 2.0, "ucret": 0.25},
+        {"olay": "funding", "zaman_ms": _gun_ms("2026-11-03", 14), "funding_usd": -0.05}, {"olay": "funding", "zaman_ms": _gun_ms("2026-11-05", 1), "funding_usd": -0.15}]
+
+
+def test_s4_cli_maliyet_ve_kapanan_tum_pencereyi_okur(tmp_path):
+    """Uçtan uca (CLI): kayıtlar 3 dosyada. Ücret 1,0 + 0,5 + 0,25 + 0,25 = 2,00 $ (eski kod son 2 gün: 0,50 $); kayma 0,20 $; funding −0,20 $ ⇒ maliyet 2,0 + 0,2 + 0,2 = 2,40 $.
+    Seri pencere içinde başladı (geçmişte 11-03'ten önce nokta yok) ⇒ net = 1004 − 1000 = +4,00; brüt = 6,40. Kapanan: 3 adet, net +2,5 −1,25 +1,75 = +3,00 $; kazanma 2/3 = %67."""
+    (tmp_path / "durum").mkdir()
+    (tmp_path / "kayit").mkdir()
+    (tmp_path / "durum/ozet.json").write_text(json.dumps({"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1004.0, "getiri": 0.004, "acik": []}), encoding="utf-8")
+    for k in _s4_kayit():
+        g = pano.gun_str(k["zaman_ms"])
+        with open(tmp_path / f"kayit/{g}.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(k) + "\n")
+    assert pano.main(["--durum", str(tmp_path / "durum"), "--kayit", str(tmp_path / "kayit"), "--gecmis", str(tmp_path / "p/gecmis.json"), "--cikti", str(tmp_path / "p/OZET.md"), "--html", str(tmp_path / "p/index.html")]) == 0
+    h = (tmp_path / "p/index.html").read_text(encoding="utf-8")
+    assert "−2,00 $" in h and "−0,20 $" in h and "Toplam maliyet 2,40 $" in h and "+6,40 $" in h and "Net K/Z (başlangıçtan beri)" in h
+    assert "Kayıt penceresi: 03.11–05.11 · 3 gün (UTC; en çok 14 gün)" in h and "Kayıtlı dönem (≤ 14 gün)" not in h
+    assert 'Kapanan işlemler <span>03.11–05.11 · 3 gün (UTC)</span>' in h
+    assert '<td>TOPLAM</td><td class="sg">3</td><td class="sg">%67</td>' in h and '<td class="sg art">+3,00 $</td>' in h
+
+
+def test_s4_maliyet_net_pencere_basindan_gecmisle():
+    """Kayıt 11-03'ten başlıyor, geçmişte 11-02 gün sonu 1.010 var (seri pencereden önce başlamış, kayıt budanmış) ⇒ net = 1004 − 1010 = −6,00 (aynı pencere); maliyet 2,40 ⇒ brüt −3,60."""
+    h = pano._maliyet_html(_s4_kayit(), 1004.0, 1000.0, [{"gun": "2026-11-01", "ozsermaye": 1020.0}, {"gun": "2026-11-02", "ozsermaye": 1010.0}, {"gun": "2026-11-03", "ozsermaye": 1008.0}])
+    assert "Net K/Z (pencere başından)" in h and "02.11 gün sonu özsermayesi" in h and "−6,00 $" in h and "−3,60 $" in h and "Toplam maliyet 2,40 $" in h
+    assert pano.pencere_basi([{"gun": "2026-11-03", "ozsermaye": 1.0}], ("2026-11-03", "2026-11-05", 3)) is None
+
+
+def test_s14_s17_bugun_cubuk_risk_payi_ve_zirve_tek_kaynak():
+    """risk.json: gün 2026-11-05, gün başı 1.002, zirve 1.015; özsermaye 990, kasa 1.000. Geçmiş: 11-03 1.010, 11-04 1.005, 11-05 (bugün) 990.
+    Bugün = 990 − 1002 = −12,00 $; oran −12 / 1002 = −%1,20 (payda gün başı, motor tanımı). Günlük çubuklar: [1000, 1010, 1002 (dünün kapanışı yerine gün başı), 990] ⇒ +10, −8, −12; toplam −10 = 990 − 1000.
+    Risk payı: günlük kayıp 0,011976 / 0,05 = %24; zirveden düşüş (1015 − 990) / 1015 = %2,463 ⇒ başlık −%2,46 (grafik başlığı da), çubuk 2,463 / 20 = %12."""
+    import re
+    ozet = {"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 990.0, "getiri": -0.01, "acik": []}
+    gecmis = [{"gun": "2026-11-03", "ozsermaye": 1010.0}, {"gun": "2026-11-04", "ozsermaye": 1005.0}, {"gun": "2026-11-05", "ozsermaye": 990.0}]
+    h = pano.html_olustur(ozet, {"gun": "2026-11-05", "gun_basi": 1002.0, "zirve": 1015.0}, {}, [], gecmis, SIMDI_D)
+    assert '<div class="hd eks">−%1,20</div><div class="ha">−12,00 $ · UTC gün başına göre</div>' in h
+    assert "Günlük net K/Z (UTC gün) <span>−12,00 $</span>" in h and "son gün −12,00 $ · en iyi +10,00 $ · en kötü −12,00 $ · toplam −10,00 $" in h
+    assert len(re.findall(r'<rect[^>]*fill="#3ddc84"', h)) == 1 and len(re.findall(r'<rect[^>]*fill="#ff5d5d"', h)) == 2
+    assert '<div class="hd eks">−%2,46</div><div class="ha">motor zirvesi 1.015,00 $</div>' in h and "Zirveden düşüş (tur sonları) <span>−%2,46 · motor</span>" in h
+    assert 'Günlük kayıp %1,20 (sınır %5; UTC gün başı özsermayesine göre, motorun freni)</div><div class="ol"><i style="width:24%"></i>' in h
+    assert 'Zirveden düşüş %2,46 (sınır %20; motorun zirvesine göre)</div><div class="ol"><i style="width:12%"></i>' in h
+    # risk.json başka günden (bayat gün başı) ⇒ çubuk geçmişten (990 − 1005 = −15), karışım yok
+    h2 = pano.html_olustur(ozet, {"gun": "2026-11-04", "gun_basi": 1002.0, "zirve": 1015.0}, {}, [], gecmis, SIMDI_D)
+    assert "Günlük net K/Z (UTC gün) <span>−15,00 $</span>" in h2
+    # sınırlar kurallardan: %10 / %40 ⇒ %12 / %6
+    h3 = pano.html_olustur(ozet, {"gun": "2026-11-05", "gun_basi": 1002.0, "zirve": 1015.0}, {}, [], gecmis, SIMDI_D,
+                           kurallar={"canli_gunluk_kayip_oran": 0.10, "canli_zirve_dusus_oran": 0.40, "canli_coin_tavan_oran": 0.30})
+    assert '(sınır %10; UTC gün başı özsermayesine göre, motorun freni)</div><div class="ol"><i style="width:12%"></i>' in h3
+    assert '(sınır %40; motorun zirvesine göre)</div><div class="ol"><i style="width:6%"></i>' in h3
+
+
+def test_s14_md_gun_payda_gun_basi():
+    """OZET.md 'gün' = (909 − 900) / 900 = +%1,00 (kasaya bölseydi +%0,90 olurdu); tanım satırı yazılır."""
+    md, _ = pano.pano_olustur({**OZET, "ozsermaye_usd": 909.0, "getiri": -0.091}, {"gun_basi": 900.0, "zirve": 1000.0}, {}, [], [], [], SIMDI)
+    assert "| 1.000,00 $ | 909,00 $ | +%1,00 | " in md and "−%9,10 |" in md and "UTC gün başı özsermayesi" in md
+
+
+def test_s15_bayat_uyarisi_periyodik_ve_gorunurlukte_yeniden_denetlenir():
+    h = pano.html_olustur({"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "yazildi_ms": SIMDI_D}, {}, {}, [], [], SIMDI_D)
+    js = h[h.index("<script>"):h.index("</script>")]
+    assert "setInterval(k,60000)" in js and 'addEventListener("visibilitychange"' in js and "3600*1000" in js and '"block":"none"' in js
+    from copytrade.saglik import canli_sayfa_ms
+    assert canli_sayfa_ms(h) == SIMDI_D                                                     # sağlık kontrolünün okuduğu öznitelik değişmedi
+
+
+def test_s16_funding_gercek_sayilir_ve_24sa_ile_pencere_ayri_etiketli():
+    """Gerçek kip: `funding_gercek` +0,30 (2 sa önce) ve +0,10 (30 sa önce) ⇒ 24 sa +0,30 $, pencere +0,40 $; maliyet satırı 'Funding (HL)'. Sanal `funding` −0,10 eklenirse toplam +0,30."""
+    kayit = [{"olay": "funding_gercek", "zaman_ms": SIMDI_D - 2 * SAAT, "funding_usd": 0.3}, {"olay": "funding_gercek", "zaman_ms": SIMDI_D - 30 * SAAT, "funding_usd": 0.1}]
+    h = pano.html_olustur({"kip": "gercek", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "acik": []}, {}, {}, kayit, [], SIMDI_D)
+    assert '<div class="hb">Funding (24 sa)</div><div class="hd art">+0,30 $</div><div class="ha">HL · pencere toplamı +0,40 $</div>' in h and "± Funding (HL)" in h
+    assert pano.funding_toplam(kayit + [{"olay": "funding", "zaman_ms": SIMDI_D - 3 * SAAT, "funding_usd": -0.1}]) == pytest.approx(0.3)
+    md, _ = pano.pano_olustur({**OZET, "acik": []}, RISK, {}, [{**kayit[0], "zaman_ms": SIMDI - 2 * SAAT}], [], [], SIMDI)
+    assert "funding +0,30 $" in md
