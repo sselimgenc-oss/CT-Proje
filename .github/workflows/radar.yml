@@ -3,7 +3,7 @@ name: Radar (günlük tarama + kadro)
 # T3 (docs/RADAR_V1.md §2, §4, §5): her gün 00:37 UTC (03:37 TSİ) T2 taraması (aday = radar_aday_tavan = 300, 7 gün getiriye göre; K-31) → R2 form puanı → kadro.
 # Salt okunur halka açık Hyperliquid verisi; secret YOK. Çıktı veri dalı `radar` (kök commit yalnız ilk koşuda; sonra tarihli klasör eklenir, 90 gün tutulur):
 #   radar/<tarih>/{havuz,kadro}.json  +  radar/son/kadro.json  (T4 motoru `son/kadro.json`'u okur).
-# Eksik koşuda (zaman bütçesi aşıldı / satır eksik) `radar_kadro` çıkış kodu 2 verir → iş kırmızı biter ve `son/` GÜNCELLENMEZ. Hata örtülmez (başarısızlık gizlenmez).
+# Eksik koşuda (zaman bütçesi aşıldı / satır eksik / `veri_hatasi` payı > `radar_veri_hatasi_pay_max`, R-2) `radar_kadro` çıkış kodu 2 verir → iş kırmızı biter ve `son/` GÜNCELLENMEZ. Hata örtülmez (başarısızlık gizlenmez).
 # `kural_ust` / `aday_sayisi` girdisi YOK (donmuş kurallar; deneme `radar_deneme.yml`'de).
 # Dal doğrulaması: `copytrade/radar/CALISTIR` dosyasına satır eklenen push (main dışı dal) AYNI iş akışını koşturur ama veri dalı `radar-deneme`'ye yazar (gerçek `radar` dalı yalnız main'den dokunulur).
 on:
@@ -58,7 +58,8 @@ jobs:
       - name: Radar taraması (R0 + R1 + R2 girdileri)
         run: |
           mkdir -p radar
-          python -u -m copytrade.radar_tarama --cikti radar --ozet-md radar/OZET.md
+          # B8 (08.11): zamana bağlı payda karar sayısıdır; `--payda-yan-yana` eski (sabit payda) sayıları `*_eski` alanlarına ve özete yazar (yalnız bilgi, kural 6: eski seri yan yana)
+          python -u -m copytrade.radar_tarama --cikti radar --payda-yan-yana --ozet-md radar/OZET.md
       - name: Günlük kadro (R2 form puanı)
         env:
           VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
