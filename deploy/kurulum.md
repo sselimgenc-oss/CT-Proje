@@ -43,7 +43,7 @@ HL_HESAP_ADRESI=<ana hesap adresi 0x…>
 HL_API_CUZDAN_ANAHTARI=<para çekme yetkisiz API cüzdanı özel anahtarı>
 HL_HESAP_ADRESI=<ana hesap adresi 0x…>
 CANLI_KIP=gercek
-CANLI_KASA_USD=300
+CANLI_KASA_USD=1000
 TELEGRAM_KOMUT=
 ```
 - `CANLI_KASA_USD` ($): gerçek kipte ZORUNLU, 0 < kasa ≤ 1.000 (`canli_kasa_ust_usd`). Yalnız motor süreci kullanır; radar/kadro/sanal seri `kurallar.yaml canli_kasa_usd` (1.000) ile hesaplanır.
@@ -92,7 +92,7 @@ Raporda bakılacaklar (gerçek kip; hepsi zorunlu):
 |---|---|
 | `tamam` | `true` |
 | `kip`, `kasa_kaynagi` | `"gercek"`, `"ortam"` |
-| `etkin_kasa_usd` | ≈ `CANLI_KASA_USD` (ör. 300) |
+| `etkin_kasa_usd` | ≈ `CANLI_KASA_USD` (ör. 1000) |
 | `ana_anahtar` / `agent_dogrulandi` | `false` / `true` |
 | `hl_deger_siniri_ok` | `true` (HL hesap değeri ≤ 1.000 $) |
 | `kadro.taze` | `true` |
