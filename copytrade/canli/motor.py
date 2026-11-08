@@ -47,6 +47,8 @@ DAKIKA = 60_000
 SNAP_SAKLA = 50_000          # adet (yalnız snapshot görülen dolum kimlikleri, bellekte; HL userFills snapshot'ı adres başına ≤ 2000 dolum × 10 adres + trades snapshot'ları)
 
 
+ADIM_ALARM_ARDISIK = 3                     # M-2: aynı dakikalık adım üst üste bu kadar hata verirse Telegram alarmı
+KUYRUK_GERI_DK = (1, 2, 4, 8, 16, 30)      # S-8: kapanış kuyruğu yeniden deneme aralıkları (dk; üstel, tavan 30)
 AGIRLIK = {"allMids": 2, "l2Book": 2, "clearinghouseState": 2, "perpDexs": 2, "orderStatus": 2, "meta": 20, "metaAndAssetCtxs": 20, "userFillsByTime": 20}          # HL info istek ağırlıkları (belge); bilinmeyen 20
 
 
@@ -334,9 +336,18 @@ class Motor:
         self._kayitli_kip = str(m.get("kip") or "sanal")                           # G5: motor.json yoksa/eski biçimse (kip alanı yok) sanal sayılır
         self._kayitli_kasa_ayar = m.get("kasa_ayar_usd")                           # G5: gerçek kipte son kabul edilen ayarlı kasa; yoksa karşılaştırma yok
         self._durum_var = bool(m) or h is not None
-        self.hesap.kasa_usd = self.kasa                          # kasa ayarı/etkin kasa değişmiş olabilir (gerçek kip: min(ayar, HL değeri)); pozisyon/K‑Z kaydı KORUNUR
+        kasa_degisti = h is not None and self._kayitli_kasa_ayar is not None and abs(float(self._kayitli_kasa_ayar) - self.kasa_ayar) > 1e-9
+        self._donem_eski: dict | None = None
+        if h is not None and self.kip == "gercek" and self._kayitli_kip == "gercek" and not kasa_degisti:
+            self.kasa = float(self.hesap.kasa_usd)               # G-5: kasa = DÖNEMİN başlangıç sermayesi (kalıcı). Zararla yeniden başlatmada min(ayar, HL) ile EZİLMEZ (zarar realize'da zaten var; iki kez sayılmaz)
+        elif kasa_degisti and not any(self.hesap.poz.values()):
+            self._donem_eski = self.hesap.donem_yenile(self.kasa, boyut.slot_usd(self.kasa, rules))      # S-3: yeni dönem (yalnız pozisyonsuz; G5 kuralı): slot tabanları yeni slota, eski net kapanmis_net'e
+        else:
+            self.hesap.kasa_usd = self.kasa                      # boş dizin / sanal kip (kasa sabit) / açık pozisyonla kasa değişikliği (baslat reddeder): eski davranış
         self.saha = Saha(rules, self.kasa, _oku(durum_dizin / "saha.json"))
         self.risk = Risk(rules, self.kasa, _oku(durum_dizin / "risk.json"))
+        if self._donem_eski is not None:
+            self.risk.donem_yenile(self.hesap.ozsermaye({}))     # S-3: zirve / gün başı yeni dönem özsermayesine (500 → 300 geçişi zirve düşüşü sayılmaz)
         self._islenen: dict[str, None] = {}                     # işlenen (canlı) dolum kimlikleri, ekleme sırasıyla; G-14: sınır ADRES BAŞINA (`canli_islenen_adres_sakla`), tek yoğun adres diğerlerini düşürmez
         self._islenen_adres: dict[str, deque[str]] = {}
         for k in m.get("islenen", []):
@@ -381,6 +392,8 @@ class Motor:
         self.dur_bekliyor: bool = bool(m.get("dur_bekliyor", False))
         self.hl_ofset: float | None = m.get("hl_ofset")          # gerçek kip: HL hesap değeri − yerel özsermaye (ilk okuma); risk temeli = HL değeri − ofset
         self.ledger_son_ms: int | None = m.get("ledger_son_ms")   # gerçek kip: kendi hesabımızın yatırma/çekme kaydında en son işlenen satırın zamanı (ms, UTC)
+        if self._donem_eski is not None:                          # S-3: yeni dönemde ofset ilk HL okumasında yeniden kurulur (kasa artırımı için yapılan yatırma ofsete İKİNCİ kez girmez → kalıcı 200 $ mutabakat farkı yok)
+            self.hl_ofset, self.ledger_son_ms = None, None
         self.hl_oz: float | None = None
         self.hl_oz_ms: int = 0
         self.son_funding_saat: int | None = m.get("son_funding_saat")
@@ -400,6 +413,7 @@ class Motor:
             self.tg.maske = [sahip]
         if hasattr(yurutucu, "saat_ms"):
             yurutucu.saat_ms = self.saat_ms
+        self._adim_ardisik: dict[str, int] = {}   # M-2: dakikalık adım adı -> üst üste hata sayısı (başarıda silinir)
         self._lock = threading.RLock()            # olay işleme (tüketici iş parçacığı) ile dakikalık bakım aynı durumu değiştirir: tek seferde biri
 
     # ------------------------------------------------------------------ kilit (vardiya devri: çift emir yok)
@@ -866,23 +880,48 @@ class Motor:
             e["eksik"] = True
             self.sayac["kapanis_eksik"] += 1
             self.kayit({"olay": "kapanis_eksik", "adres": adres, "coin": coin, "neden": neden})
-            self.tg.gonder(tg.alarm("ALARM: pozisyon kapanmadı", f"kapanış EKSİK: {coin} (trader {tg.kisa(adres)}) {len(self.rules['canli_kapanis_bantlari'])} denemede kapanmadı ({neden}).\nHer dakika yeniden denenecek, yeni pozisyon açılmıyor."))
+            self.tg.gonder(tg.alarm("ALARM: pozisyon kapanmadı", f"kapanış EKSİK: {coin} (trader {tg.kisa(adres)}) {len(self.rules['canli_kapanis_bantlari'])} denemede kapanmadı ({neden}).\nArtan aralıklarla (1 → 30 dk) yeniden denenecek, yeni pozisyon açılmıyor."))
 
     def _azalt_kuyruga(self, adres: str, coin: str, hedef_sz: float, neden: str, simdi: int, mk: float) -> None:
         kalan = self.hesap.sz(adres, coin) - hedef_sz
         if abs(kalan) * mk > float(self.rules["canli_kapanis_toz_usd"]) and kalan * self.hesap.sz(adres, coin) > 0:
             self._eksik_ekle(adres, coin, "azalt", hedef_sz, neden, simdi, deneme=0)
 
+    def _kuyruk_geri_cekil(self, anahtar: str, simdi: int) -> None:
+        """S-8: başarısız kuyruk denemesinden sonra üstel geri çekilme (1, 2, 4, 8, 16, 30, 30 … dk); girdi başına UTC günlük deneme sayacı; tavan (`canli_kuyruk_gunluk_tavan`, varsayılan 24)
+        aşılınca o gün bir kez alarm (yeniden deneme 30 dk aralıkla sürer: pozisyon açıkta bırakılmaz)."""
+        e = self.kapanis_kuyrugu.get(anahtar)
+        if e is None:
+            return
+        k = int(e.get("geri_sayac", 0)) + 1
+        e["geri_sayac"] = k
+        e["sonraki_ms"] = simdi + KUYRUK_GERI_DK[min(k, len(KUYRUK_GERI_DK)) - 1] * DAKIKA
+        g = gun(simdi)
+        if e.get("gun") != g:
+            e["gun"], e["gun_deneme"] = g, 0
+        e["gun_deneme"] = int(e.get("gun_deneme", 0)) + 1
+        tavan = int(self.rules.get("canli_kuyruk_gunluk_tavan", 24))
+        if e["gun_deneme"] >= tavan and e.get("tavan_alarm_gun") != g:
+            e["tavan_alarm_gun"] = g
+            adres, coin = anahtar.split("|", 1)
+            self.kayit({"olay": "kuyruk_gunluk_tavan", "adres": adres, "coin": coin, "deneme": e["gun_deneme"], "tur": e.get("tur")})
+            self.tg.gonder(tg.alarm("ALARM: kapanış bugün de olmadı", f"{coin} (trader {tg.kisa(adres)}) {e.get('tur')} bugün {e['gun_deneme']} denemede tamamlanmadı (günlük tavan {tavan}).\n"
+                                    "30 dk aralıkla denenmeye devam ediyor; borsayı elle kontrol edin."))
+
     def _kuyruk_isle(self, simdi: int) -> None:
-        """Dakikalık: kısmi kalan azaltma/kapanışları yeniden dener; eksik olanlar için alarm; DUR beklemesi bitince motoru durdurur."""
+        """Dakikalık: kısmi kalan azaltma/kapanışları yeniden dener; eksik olanlar için alarm; DUR beklemesi bitince motoru durdurur.
+        S-8: her girdi `sonraki_ms`e kadar beklenir (üstel geri çekilme, `_kuyruk_geri_cekil`): kilit altında her dakika ağ/emir beklemesi olmaz."""
         toz = float(self.rules["canli_kapanis_toz_usd"])
         for anahtar, e in list(self.kapanis_kuyrugu.items()):
+            if simdi < int(e.get("sonraki_ms", 0)):
+                continue
             adres, coin = anahtar.split("|", 1)
             mk = self._mark_kapanis(adres, coin)
             if e["tur"] == "kapat":
                 ok, _ = self._kapat_coin(adres, coin, str(e.get("neden", "kuyruk")), simdi, None, baslangic=0)
-                if not ok:
+                if not ok and anahtar in self.kapanis_kuyrugu:
                     self.kapanis_kuyrugu[anahtar]["deneme"] = int(self.kapanis_kuyrugu[anahtar].get("deneme", 0)) + 1
+                    self._kuyruk_geri_cekil(anahtar, simdi)
             else:
                 yerel = self.hesap.sz(adres, coin)
                 fark = yerel - float(e["hedef_sz"])
@@ -903,6 +942,7 @@ class Motor:
                 e["deneme"] = int(e.get("deneme", 0)) + 1
                 if e["deneme"] >= len(self.rules["canli_kapanis_bantlari"]):
                     self._eksik_ekle(adres, coin, "azalt", float(e["hedef_sz"]), str(e.get("neden", "")), simdi, deneme=e["deneme"])
+                self._kuyruk_geri_cekil(anahtar, simdi)
         eksik = [k for k, v in self.kapanis_kuyrugu.items() if v.get("eksik")]
         self.risk.bayrak("kapanis_eksik", bool(eksik))
         if eksik and self._aralik_mi("kapanis_alarm", simdi, 60):
@@ -1080,6 +1120,25 @@ class Motor:
 
     def piyasa_oku(self, simdi: int) -> None:
         self.mids_uygula(self.mids_al(), simdi)
+
+    def maks_kaldirac_oku(self) -> int:
+        """S-7 (sanal tasfiye): HL `meta` evreni (ana dex + HIP‑3 dex'leri) → coin başına `maxLeverage` → `hesap.maks_kaldirac` (açılışta bir kez; ağ, kilitsiz).
+        HIP‑3 adları `dex:COIN` biçimindedir (önek yoksa eklenir). Okunamazsa eski değerler kalır, bilinmeyen coin için `tasfiye_fiyati` 20x varsayar (kayıt: `maks_kaldirac_okunamadi`). Döner: okunan coin sayısı."""
+        okunan: dict[str, float] = {}
+        hata_dex: list[str] = []
+        for dex in ["", *[x for x in self._dexler() if x]]:
+            try:
+                meta = self.post({"type": "meta", "dex": dex} if dex else {"type": "meta"}) or {}
+                for u in meta.get("universe") or []:
+                    ad, ml = u.get("name"), u.get("maxLeverage")
+                    if ad and ml and not u.get("isDelisted"):
+                        okunan[str(ad) if not dex or ":" in str(ad) else f"{dex}:{ad}"] = float(ml)
+            except Exception as hata:                      # noqa: BLE001 - tasfiye 20x yedeğiyle sürer
+                hata_dex.append(f"{dex or 'ana'}:{type(hata).__name__}")
+        self.hesap.maks_kaldirac.update(okunan)
+        if hata_dex or not okunan:
+            self.kayit({"olay": "maks_kaldirac_okunamadi", "hata": hata_dex, "okunan": len(okunan), "yedek_kaldirac": 20})
+        return len(okunan)
 
     def senkron_oku(self) -> dict[str, dict[str, float]]:
         """Saha + inen adreslerin gerçek açık pozisyonları (REST; kilitsiz). Okunamayan adres atlanır."""
@@ -1333,10 +1392,15 @@ class Motor:
             for ad, f in adimlar:
                 try:
                     f()
+                    self._adim_ardisik.pop(ad, None)
                 except Exception as hata:                  # noqa: BLE001
-                    self.kayit({"olay": "adim_hata", "adim": ad, "tur": type(hata).__name__, "mesaj": str(hata)[:160]})
+                    n = self._adim_ardisik[ad] = self._adim_ardisik.get(ad, 0) + 1
+                    self.kayit({"olay": "adim_hata", "adim": ad, "tur": type(hata).__name__, "mesaj": str(hata)[:160], "ardisik": n})
                     if ad == "durum_yaz" and self._aralik_mi("durum_yaz_alarm", simdi, 3600):
                         self.tg.gonder(tg.alarm("ALARM: durum diske yazılamıyor", f"Dakikalık durum kaydı başarısız ({type(hata).__name__}).\nYeniden başlatmada son durum kaybolabilir; disk/izinleri kontrol edin."))
+                    elif ad != "durum_yaz" and (n == ADIM_ALARM_ARDISIK or (n > ADIM_ALARM_ARDISIK and n % 60 == 0)):      # M-2: aynı adım üst üste 3 kez → alarm (sonra saatte bir)
+                        self.tg.gonder(tg.alarm(f"ALARM: '{ad}' adımı hata veriyor", f"Dakikalık '{ad}' adımı üst üste {n} kez başarısız ({type(hata).__name__}: {str(hata)[:100]}).\n"
+                                                "Bu adımın koruması (risk/mutabakat/kapanış) çalışmıyor olabilir; kayıtları kontrol edin."))
 
     def _tur_kaydi(self, simdi: int) -> None:
         """Pano özsermaye/düşüş grafiği için ~15 dk'da bir `tur` kaydı (özsermaye $). Karar mantığına girmez."""
@@ -1382,8 +1446,15 @@ class Motor:
             self.kayit({"olay": "tasfiye", **e})
             self.tg.gonder(tg.alarm("TASFİYE (sanal)", f"{e['coin']} pozisyonu (trader {tg.kisa(e['adres'])}) {e['tasfiye_px']:.6g} fiyatında tasfiye oldu (piyasa {e['mark']:.6g}).", "💥"))
 
+    _zirve_yenile = False
+
     def _risk(self, simdi: int) -> None:
         oz = self.ozsermaye()
+        if self._zirve_yenile:                                                                  # S-2: DUR sonrası ilk risk adımı (gerçek kipte HL − ofset temeli artık okunmuş olabilir)
+            self._zirve_yenile = False
+            if abs(oz - self.risk.zirve) > 1e-9:
+                eski = self.risk.zirve_yenile(oz)
+                self.kayit({"olay": "zirve_yenilendi", "eski_zirve": eski, "yeni_zirve": oz, "gerekce": "dur_sonrasi_ilk_risk"})
         if self.risk.kasa_siniri_asildi(self.kasa):
             if self._aralik_mi("kasa_alarm", simdi, 3600):
                 self.tg.gonder(tg.alarm("ALARM: kasa sınırı aşıldı", f"Kasa {tg.tr_sayi(self.kasa, 0)} $ > sınır {tg.tr_sayi(float(self.rules['canli_kasa_ust_usd']), 0)} $.\nYeni pozisyon açılmıyor."))
@@ -1395,7 +1466,7 @@ class Motor:
                 self.tg.gonder(tg.alarm("ALARM: günlük kayıp sınırı", f"Bugünkü kayıp %{float(self.rules['canli_gunluk_kayip_oran']) * 100:.0f} sınırına ulaştı (özsermaye {tg.tr_sayi(oz)} $).\nBugün yeni pozisyon açılmıyor."))
 
     def _anlik(self, simdi: int) -> None:
-        self.karar_uygula(self.saha.anlik(simdi, lambda a: self.hesap.slot_ozsermaye(a, self.marks), self._son_kadro), simdi)
+        self.karar_uygula(self.saha.anlik(simdi, lambda a: self.hesap.slot_ozsermaye(a, self.marks), self._son_kadro, slot_bas=self.hesap.slot_bas.get), simdi)
 
     _son_kadro: dict | None = None
 
@@ -1558,9 +1629,16 @@ class Motor:
     def baslat(self) -> None:
         """Açılış: kip/kasa uyumu (G5); DUR varsa BAŞLAMAZ; kasa sınırı; kadro ilk okuması (saha kurulumu); saha üyelerinin pozisyon/hesap okuması; markları al."""
         self.kip_uyumu_denetle()
+        if self._donem_eski is not None:
+            e = self._donem_eski
+            self.kayit({"olay": "donem_yenilendi", "eski_kasa_usd": e["kasa_usd"], "yeni_kasa_usd": self.kasa, "eski_ozsermaye": e["ozsermaye"], "ozsermaye": self.hesap.ozsermaye({}),
+                        "kapanmis_net": self.hesap.kapanmis_net, "slot_usd": self.saha.slot, "uye": len(e["slot_bas"])})
         if not self.dur_dosyasi.exists() and self.risk.dur:                                      # DUR dosyası tek yetkili: dosya yoksa risk.json'daki bayat dur sıfırlanır
             self.kayit({"olay": "dur_sifirlandi", "neden": self.risk.dur_neden, "gerekce": "DUR dosyası yok"})
             self.risk.dur, self.risk.dur_neden = False, None
+            eski = self.risk.zirve_yenile(self.yerel_ozsermaye())                               # S-2: operatör DUR'u silip yeniden başlattı → zirve GÜNCEL özsermayeye (yoksa 60 sn'de yeniden DUR)
+            self._zirve_yenile = True                                                            # gerçek kipte ilk risk adımında HL temelli özsermayeyle bir kez daha kurulur
+            self.kayit({"olay": "zirve_yenilendi", "eski_zirve": eski, "yeni_zirve": self.risk.zirve, "gerekce": "dur_sonrasi_yeniden_baslatma"})
         if self.dur_dosyasi.exists():
             bekliyor = bool((_oku(self.dur_dosyasi) or {}).get("kapanis_bekliyor")) and any(self.hesap.poz.values())
             if not bekliyor:
@@ -1576,6 +1654,8 @@ class Motor:
         simdi = self.saat_ms()
         self.niyetleri_coz(simdi)
         self.piyasa_oku(simdi)
+        if self.kip == "sanal":
+            self.maks_kaldirac_oku()                                                             # S-7: sanal tasfiye coin başına azami kaldıraçla (gerçek kipte tasfiyeyi HL yapar)
         self._son["kadro"] = 0
         for adres in list(self.saha.uyeler):                                                     # B15 geçişi: düzeltmeden önce girmiş, o günden beri dolum görülmemiş üyenin son dolumu bir kez okunur
             if self.saha.uyeler[adres].get("son_islem_ms") is None:

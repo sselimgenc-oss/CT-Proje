@@ -2,7 +2,7 @@
 
 Birim: `$` = kasa ölçeği (kopya_$; `kasa_usd` = `canli_kasa_usd`), `sz` coin miktarı (işaretli: + long / − short), fiyat $/coin. Funding (K‑37, yalnız SANAL kip): saatlik `−sz × mark × oran` (long pozitif oranda öder; `defter.py` ile aynı işaret/birim) `funding[adres]`e eklenir ve özsermayeye girer; gerçek kipte HL kendi funding'ini hesaplar.
 Özsermaye = kasa + gerçekleşen − ücret + gerçekleşmemiş (mark). Slot özsermayesi = slot başlangıcı + o trader'ın girişten beri net K/Z'si (slot −%10 düşme kuralı).
-Tasfiye (izole): long `giris × (1 − 1/k) / (1 − mmr)`, short `giris × (1 + 1/k) / (1 + mmr)`; `mmr = 1 / (2 × coin azami kaldıracı)` (HL bakım marjı = azami kaldıracın başlangıç marjının yarısı); azami kaldıraç bilinmiyorsa 20.
+Tasfiye (izole): long `giris × (1 − 1/k) / (1 − mmr)`, short `giris × (1 + 1/k) / (1 + mmr)`; `mmr = 1 / (2 × coin azami kaldıracı)` (HL bakım marjı = azami kaldıracın başlangıç marjının yarısı); azami kaldıraç bilinmiyorsa 20 (S-7: motor sanal kipte açılışta HL `meta` evreninden `maxLeverage` okur → `maks_kaldirac`; okunamazsa 20 + kayıt).
 """
 from __future__ import annotations
 
@@ -43,9 +43,25 @@ class Hesap:
 
     # ------------------------------------------------------------------ slot
     def slot_ac(self, adres: str, slot_usd: float) -> None:
+        """Yeni slot. M-1: üyenin eski defteri varsa (kapanışı teyit edilmeden sahadan inip geri giren üye: realize/ücret/funding ≠ 0, açık pozisyon kalmış olabilir)
+        eski net (realize − ücret + funding) önce `kapanmis_net`e taşınır, sonra sıfırlanır: özsermaye değişmez (özdeşlik korunur). Açık pozisyon defterde kalır (K/Z'si yeni slota yazılır)."""
+        self.kapanmis_net += self.realize.get(adres, 0.0) - self.ucret.get(adres, 0.0) + self.funding.get(adres, 0.0)
         self.slot_bas[adres] = float(slot_usd)
         self.realize[adres] = self.ucret[adres] = self.funding[adres] = 0.0
         self.poz.setdefault(adres, {})
+
+    def donem_yenile(self, kasa_usd: float, slot_usd: float) -> dict[str, float]:
+        """S-3 (kasa değişikliği; yalnız pozisyonsuzken çağrılır): yeni dönem. Üyelerin girişten beri neti `kapanmis_net`e taşınır, slot tabanları yeni slota kurulur
+        (slot özsermayesi = yeni slot; eski taban yüzünden `slot_dusus` yok), `kasa_usd` yeni dönem kasası. Özdeşlik: yeni özsermaye = yeni kasa + kapanmis_net (eski net korunur). Döner: eski değerler (kayıt)."""
+        if any(self.poz.values()):
+            raise ValueError("dönem yalnız pozisyonsuzken yenilenir")
+        eski = {"kasa_usd": self.kasa_usd, "ozsermaye": self.ozsermaye({}), "kapanmis_net": self.kapanmis_net, "slot_bas": dict(self.slot_bas)}
+        for adres in list(self.slot_bas):
+            self.kapanmis_net += self.realize.get(adres, 0.0) - self.ucret.get(adres, 0.0) + self.funding.get(adres, 0.0)
+            self.realize[adres] = self.ucret[adres] = self.funding[adres] = 0.0
+            self.slot_bas[adres] = float(slot_usd)
+        self.kasa_usd = float(kasa_usd)
+        return eski
 
     def slot_kapat(self, adres: str) -> None:
         """Pozisyonsuz üyenin kaydını siler (açık pozisyonu varsa çağrılmaz)."""

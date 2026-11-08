@@ -3,7 +3,7 @@
 - Coin yoğunlaşması: aynı coinde TÜM slotların brüt nosyoneli ≤ kasa × `canli_coin_tavan_oran`; aşan açılış KIRPILIR (kırpılan < `radar_min_emir_usd` ise 0).
 - Patlama freni: bir trader `canli_patlama_pencere_dk` dk içinde ≥ `canli_patlama_coin` YENİ coin açarsa (o sekizinci açılış dahil) `canli_patlama_ara_dk` dk ondan yeni açılış kopyalanmaz (kapanışlar izlenir).
 - Günlük kayıp: UTC gün başı özsermayeden kayıp ≥ `canli_gunluk_kayip_oran` → o gün yeni açılış yok.
-- Zirveden düşüş ≥ `canli_zirve_dusus_oran` → `DUR`: tüm pozisyonlar reduce‑only kapatılır, motor durur, `durum/DUR` yazılır (elle silinmeden yeniden açılmaz). `/kapat` aynı (yeni `/dur` yalnız yeni girişi durdurur).
+- Zirveden düşüş ≥ `canli_zirve_dusus_oran` → `DUR`: tüm pozisyonlar reduce‑only kapatılır, motor durur, `durum/DUR` yazılır (elle silinmeden yeniden açılmaz; S-2: silinip yeniden başlatılınca zirve güncel özsermayeye kurulur). `/kapat` aynı (yeni `/dur` yalnız yeni girişi durdurur).
 - Kasa > `canli_kasa_ust_usd` (AGENTS.md sınırı): yeni açılış yok + alarm.
 """
 from __future__ import annotations
@@ -50,6 +50,17 @@ class Risk:
             self.dur, self.dur_neden = True, "zirve_dusus"
             olaylar.append("zirve_dusus")
         return olaylar
+
+    def zirve_yenile(self, ozsermaye: float) -> float:
+        """S-2: DUR sonrası operatör yeniden başlatınca (DUR dosyası silinmiş) zirve GÜNCEL özsermayeye kurulur; yoksa eski zirveye göre düşüş sürer ve 60 sn içinde yeniden DUR olur.
+        S-3: kasa değişikliğinde (yeni dönem) de çağrılır. Döner: eski zirve (kayıt için)."""
+        eski, self.zirve = self.zirve, float(ozsermaye)
+        return eski
+
+    def donem_yenile(self, ozsermaye: float) -> None:
+        """S-3: kasa değişikliği (yeni dönem): zirve ve gün başı yeni özsermayeye kurulur, günlük kayıp bayrağı iner (500 → 300 geçişi kayıp/DUR sayılmaz)."""
+        self.zirve = self.gun_basi = float(ozsermaye)
+        self.acilis_durdu["gunluk_kayip"] = False
 
     def dur_ver(self, neden: str) -> None:
         self.dur, self.dur_neden = True, neden
