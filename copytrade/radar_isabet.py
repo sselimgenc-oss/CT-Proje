@@ -7,6 +7,10 @@ havuz satırındaki `hesap_usd` (sabit, eski davranış; satırda `payda_kaynak`
 
 **Gruplar:** (i) `ilk11` (o günün kadrosunda `katman == ilk11`); (ii) `havuz_geri` (R1 havuzunda `gecti` olup İlk 11 dışındakiler; Yedek dahil); (iii) `elenen` (kopya aşamasına varıp
 — `kopya_getiri_7g` dolu — R1'den elenenler; en çok `isabet_elenen_ust` = 30 kişi, SABİT TOHUMLA rastgele; tohum = YYYYMMDD sayısı, dosyaya yazılır).
+**Ek gruplar (denetim B6/B9, 08.11; YALNIZ BİLGİ — K‑46 karar kuralı yalnız `havuz`/`elenen` ile; ek gruplar `havuz`, `ic` ve farklara GİRMEZ):** (iv) `ilk11_fiili` (o günün ilk kadrosundan
+FİİLEN sahaya oturan ilk 11; canlı motor kaydı `canli-durum` `kayit/*.jsonl`, `saha_fiili`); (v) `kor_kirpildi` (kadro üyesi olup o gün korelasyon kuralıyla saha girişi atlananlar; aynı kayıt);
+(vi) `cikanlar` (önceki kadroda olup bu kadroda olmayanlar: kadro `eski_uye_neden`; alan yoksa önceki günün `kadro.json`'u ile fark); (vii) `evren_ornek30` (havuzun TÜM taranan
+satırlarından sabit tohumla 30 kişi; tohum = YYYYMMDD + 1). Ek adresler ana gruplardan SONRA ölçülür; bütçe/okuma eksikleri `eksik_ek`'e yazılır (`eksik` ana gruplar içindir).
 **Kötü senaryo (K‑37):** aynı ölçüm kayma ×`isabet_kotu_kayma_carpan` (2) ve gecikme `isabet_kotu_gecikme_dk` (3 dk) ile; sütun adları `_kotu` ile biter.
 
 **Çıktı `radar/<havuz tarihi>/isabet.json`** (docs/VERI_SOZLESMESI.md "Radar isabet"): oranlar kesirdir (0,02 = %2), kopya_$ = 1.000 $ sanal kasa ölçeğinde getiri; zaman UTC ms.
@@ -37,6 +41,10 @@ from copytrade.olcut import perp_fills
 
 SEMA = "radar-isabet-v1"
 GUN_MS = 24 * HOUR
+ANA_GRUPLAR = ("ilk11", "havuz_geri", "elenen")
+EK_GRUPLAR = ("ilk11_fiili", "kor_kirpildi", "cikanlar", "evren_ornek30")     # B6/B9 (08.11): YALNIZ bilgi
+EVREN_ORNEK = 30                       # `evren_ornek30` kişi sayısı (adı gereği sabit)
+DURUM_DALI = "canli-durum"             # canlı motorun (1.000 $ sanal seri) durum/kayıt veri dalı
 HATALAR = radar_tarama.HATALAR
 
 
@@ -46,9 +54,9 @@ def tohum_uret(tarih: str) -> int:
     return int(tarih.replace("-", ""))
 
 
-def gruplari_sec(havuz: dict, kadro: dict, tarih: str, elenen_ust: int = 30) -> dict:
+def gruplari_sec(havuz: dict, kadro: dict, tarih: str, elenen_ust: int = 30, ek: dict | None = None) -> dict:
     """{`gruplar`: {ilk11, havuz_geri, elenen: [adres]}, `form`: {adres: form}, `tohum`}. `elenen`: kopya aşamasına varıp (kopya_getiri_7g dolu) `gecti=False` olanlar; aday listesi adres sırasına göre
-    SIRALANIR, sonra `random.Random(tohum).sample` ile en çok `elenen_ust` kişi seçilir (taşınabilir: aynı girdi aynı seçim)."""
+    SIRALANIR, sonra `random.Random(tohum).sample` ile en çok `elenen_ust` kişi seçilir (taşınabilir: aynı girdi aynı seçim). `ek` (`ek_gruplari_sec` çıktısı) verilirse bilgi grupları eklenir."""
     form = {s["adres"]: s.get("form") for s in kadro.get("satirlar", [])}
     ilk11 = [s["adres"] for s in kadro.get("satirlar", []) if s.get("katman") == "ilk11"]
     ilk_set = set(ilk11)
@@ -56,7 +64,76 @@ def gruplari_sec(havuz: dict, kadro: dict, tarih: str, elenen_ust: int = 30) -> 
     adaylar = sorted(r["adres"] for r in havuz["satirlar"] if not r.get("gecti") and r.get("kopya_getiri_7g") is not None)
     tohum = tohum_uret(tarih)
     elenen = sorted(random.Random(tohum).sample(adaylar, min(int(elenen_ust), len(adaylar))))
-    return {"gruplar": {"ilk11": ilk11, "havuz_geri": geri, "elenen": elenen}, "form": form, "tohum": tohum, "elenen_aday_sayisi": len(adaylar)}
+    secim = {"gruplar": {"ilk11": ilk11, "havuz_geri": geri, "elenen": elenen}, "form": form, "tohum": tohum, "elenen_aday_sayisi": len(adaylar)}
+    if ek is not None:                                                     # B6/B9 bilgi grupları: ana grupların seçimini DEĞİŞTİRMEZ (yalnız eklenir)
+        secim["gruplar"].update(ek["gruplar"])
+        secim["ek_kaynak"] = ek["kaynak"]
+    return secim
+
+
+def saha_fiili(kayitlar: list[dict], kadro: dict, bas_ms: int, bit_ms: int, ilk_n: int = 11) -> tuple[list[str], list[str], dict]:
+    """B9 (bilgi): canlı motor kaydından (`kayit/<gün>.jsonl` olayları, `zaman_ms` UTC ms) kadro penceresinde [bas_ms, bit_ms) FİİLİ saha. Döner (ilk11_fiili, kor_kirpildi, bilgi).
+    Pencere başındaki saha = `bas_ms`'ten önceki son `kapanis` olayının `ozet.uyeler`'i + o olay ile `bas_ms` arasındaki `saha_giris` (ekle) / `saha_dus` (çıkar); `kapanis` yoksa boş saha
+    (`bilgi.saha_bas_bilinen` false). `ilk11_fiili` = pencerede sahada bulunan KADRO üyelerinden ilk `ilk_n`: önce pencere başında sahada olanlar (kadro `sira` artan), sonra pencere içi
+    `saha_giris` sırasıyla (tekrar sayılmaz). Kadroda olmayan saha üyesi (önceki kadrodan kalan, motorun `kadro_disi` ile indireceği) sayılmaz. `kor_kirpildi` = pencerede `kor_kirpildi`
+    olayı olan kadro üyeleri (adres sırası, tekil)."""
+    kadro_sira = {r["adres"]: r.get("sira", 10 ** 6) for r in kadro.get("satirlar", [])}
+    olaylar = sorted((o for o in kayitlar if isinstance(o.get("zaman_ms"), int | float)), key=lambda o: o["zaman_ms"])
+    once = [o for o in olaylar if o["zaman_ms"] < bas_ms]
+    kapanis = [i for i, o in enumerate(once) if o.get("olay") == "kapanis" and isinstance((o.get("ozet") or {}).get("uyeler"), list)]
+    saha: set[str] = set(once[kapanis[-1]]["ozet"]["uyeler"]) if kapanis else set()
+    for o in once[(kapanis[-1] + 1) if kapanis else 0:]:
+        if o.get("olay") == "saha_giris":
+            saha.add(o.get("adres"))
+        elif o.get("olay") == "saha_dus":
+            saha.discard(o.get("adres"))
+    oturan = sorted((a for a in saha if a in kadro_sira), key=lambda a: (kadro_sira[a], a))
+    kor: set[str] = set()
+    pencere = [o for o in olaylar if bas_ms <= o["zaman_ms"] < bit_ms]
+    for o in pencere:
+        a = o.get("adres")
+        if a not in kadro_sira:
+            continue
+        if o.get("olay") == "saha_giris" and a not in oturan:
+            oturan.append(a)
+        elif o.get("olay") == "kor_kirpildi":
+            kor.add(a)
+    return oturan[:ilk_n], sorted(kor), {"saha_bas_bilinen": bool(kapanis), "kayit_olay": len(pencere), "oturan_toplam": len(oturan)}
+
+
+def cikanlar_sec(kadro: dict, onceki_kadro: dict | None = None) -> tuple[list[str], str | None]:
+    """B6 (bilgi): önceki kadroda olup bu kadroda olmayanlar. Kaynak 1: kadro `eski_uye_neden` anahtarları (radar_kadro yazar; sıra = önceki `sira`) → "eski_uye_neden";
+    alan yoksa (eski kadro) `onceki_kadro` (önceki günün `kadro.json`'u) ile fark (önceki `sira` artan) → "onceki_kadro"; ikisi de yoksa ([], None)."""
+    if isinstance(kadro.get("eski_uye_neden"), dict):
+        return list(kadro["eski_uye_neden"]), "eski_uye_neden"
+    if onceki_kadro and onceki_kadro.get("satirlar") is not None:
+        bugun = {r["adres"] for r in kadro.get("satirlar", [])}
+        return [r["adres"] for r in sorted(onceki_kadro["satirlar"], key=lambda r: r.get("sira", 0)) if r["adres"] not in bugun], "onceki_kadro"
+    return [], None
+
+
+def evren_ornegi(havuz: dict, tarih: str, k: int = EVREN_ORNEK) -> tuple[list[str], int, int]:
+    """B6 (bilgi): havuzun TÜM taranan satırlarından (R0 evreni; `gecti` ne olursa olsun) sabit tohumlu `k` kişi. Tohum = `tohum_uret(tarih) + 1` (elenen seçiminden ayrı dizi);
+    aday listesi adres sırasına göre sıralanır, seçilenler sıralı döner. Döner (adresler, tohum, aday sayısı)."""
+    adaylar = sorted({r["adres"] for r in havuz.get("satirlar", [])})
+    tohum = tohum_uret(tarih) + 1
+    return sorted(random.Random(tohum).sample(adaylar, min(int(k), len(adaylar)))), tohum, len(adaylar)
+
+
+def ek_gruplari_sec(havuz: dict, kadro: dict, tarih: str, kayitlar: list[dict] | None = None, onceki_kadro: dict | None = None, ilk_n: int = 11,
+                    bas_ms: int | None = None, durum_dali: str | None = None) -> dict:
+    """Ek gruplar (B6/B9, YALNIZ bilgi). `kayitlar` None → canlı kayıt okunamadı: `ilk11_fiili` ve `kor_kirpildi` boş, `saha_kaynak` None (İlk 11 ile doldurulmaz: o zaten `ilk11` grubu).
+    Saha penceresi = [kadro `kosu_ms`, + 24 sa) (`bas_ms` verilmezse kadro, o da yoksa havuz `kosu_ms`)."""
+    bas = int(bas_ms if bas_ms is not None else kadro.get("kosu_ms") or havuz["kosu_ms"])
+    if kayitlar is None:
+        fiili, kor, sb = [], [], {"saha_bas_bilinen": None, "kayit_olay": None, "oturan_toplam": None}
+    else:
+        fiili, kor, sb = saha_fiili(kayitlar, kadro, bas, bas + GUN_MS, ilk_n)
+    cik, cik_kaynak = cikanlar_sec(kadro, onceki_kadro)
+    evren, evren_tohum, evren_aday = evren_ornegi(havuz, tarih)
+    return {"gruplar": {"ilk11_fiili": fiili, "kor_kirpildi": kor, "cikanlar": cik, "evren_ornek30": evren},
+            "kaynak": {"saha_kaynak": durum_dali if kayitlar is not None else None, "saha_bas_ms": bas, "saha_bit_ms": bas + GUN_MS, **sb,
+                       "cikanlar_kaynak": cik_kaynak, "evren_tohum": evren_tohum, "evren_aday_sayisi": evren_aday}}
 
 
 def grup_ozeti(degerler: list[float]) -> dict:
@@ -98,7 +175,7 @@ def _fark(a: dict, b: dict, anahtar: str = "ortalama") -> float | None:
 
 
 def isabet_olustur(tarih: str, havuz: dict, kadro: dict, secim: dict, olcum: dict[str, dict], bas_ms: int, bit_ms: int, pencere_tam: bool, eksik: bool, sure_dk: float,
-                   hata: str | None = None, kadro_kaynagi: str | None = None) -> dict:
+                   hata: str | None = None, kadro_kaynagi: str | None = None, eksik_ek: bool | None = None) -> dict:
     """Saf montaj. `olcum`: {adres: {"sonraki_7g": float|None, "sonraki_7g_kotu": float|None, "hata": str|None}} (ölçülmeyen adres yok). `eksik`: bütçe/okuma nedeniyle ölçülemeyen adres var.
     `kadro_kaynagi` (R-1): "ilk" (kadro_ilk.json) | "ilk_git" (veri dalı geçmişindeki ilk yayım) | "son" (güncel kadro.json; günün ilk kadrosu olmayabilir) | None (bilinmiyor)."""
     gruplar, form = secim["gruplar"], secim["form"]
@@ -135,7 +212,8 @@ def isabet_olustur(tarih: str, havuz: dict, kadro: dict, secim: dict, olcum: dic
             "ic": ic_iyi, "ic_kotu": ic_kotu, "ic_n": ic_n,
             "fark_ilk11_havuz": _fark(ilk, havuz_iyi), "fark_ilk11_havuz_kotu": _fark(ilk_k, havuz_kotu),
             "fark_ilk11_elenen": _fark(ilk, elenen), "fark_ilk11_elenen_kotu": _fark(ilk_k, elenen_k),
-            "satirlar": satirlar}
+            "satirlar": satirlar,
+            **({"ek_gruplar": [g for g in EK_GRUPLAR if g in gruplar], "ek_kaynak": secim.get("ek_kaynak"), "eksik_ek": eksik_ek} if any(g in gruplar for g in EK_GRUPLAR) else {})}
 
 
 def ozet_md(i: dict) -> str:
@@ -143,11 +221,15 @@ def ozet_md(i: dict) -> str:
     f = lambda v: "—" if v is None else f"{v:+.4f}"            # noqa: E731
     c = [f"### Seçim isabeti {i['tarih']} (pencere {i['pencere_gun']:.2f} gün{'' if i['pencere_tam'] else ' — KISMİ, tam 7 gün değil'}{', EKSİK' if i['eksik'] else ''}; kadro kaynağı {i.get('kadro_kaynagi') or '?'})", "",
          "| grup | seçilen | n | ortalama | medyan | kâr oranı | ortalama (kötü) |", "|---|---|---|---|---|---|---|"]
-    for ad in ("ilk11", "havuz_geri", "elenen"):
+    for ad in (*ANA_GRUPLAR, *(g for g in EK_GRUPLAR if g in i["gruplar"])):
         g = i["gruplar"][ad]
-        c.append(f"| {ad} | {g['secilen']} | {g['n']} | {f(g['ortalama'])} | {f(g['medyan'])} | {'—' if g['kar_orani'] is None else format(g['kar_orani'], '.2f')} | {f(g['ortalama_kotu'])} |")
+        c.append(f"| {ad}{' (bilgi)' if ad in EK_GRUPLAR else ''} | {g['secilen']} | {g['n']} | {f(g['ortalama'])} | {f(g['medyan'])} | {'—' if g['kar_orani'] is None else format(g['kar_orani'], '.2f')} | {f(g['ortalama_kotu'])} |")
     c += ["", f"IC (form ↔ sonraki_7g, n={i['ic_n']}): {f(i['ic'])} (kötü {f(i['ic_kotu'])}) · İlk 11 − havuz: {f(i['fark_ilk11_havuz'])} (kötü {f(i['fark_ilk11_havuz_kotu'])}) · "
           f"İlk 11 − elenen: {f(i['fark_ilk11_elenen'])} (kötü {f(i['fark_ilk11_elenen_kotu'])}) · tohum {i['tohum']}", ""]
+    if i.get("ek_kaynak"):
+        e = i["ek_kaynak"]
+        c += [(f"Ek gruplar (B6/B9, yalnız bilgi; karar kuralına girmez): saha kaynağı {e.get('saha_kaynak') or 'yok'}, çıkanlar kaynağı {e.get('cikanlar_kaynak') or 'yok'}, "
+               f"evren tohumu {e.get('evren_tohum')} ({e.get('evren_aday_sayisi')} aday){', EKSİK' if i.get('eksik_ek') else ''}"), ""]
     return "\n".join(c)
 
 
@@ -159,8 +241,11 @@ def getiri_al(sonuc: dict) -> float | None:
     return radar_tarama._sayi(sonuc.get("getiri"))
 
 
-def olc(client: Any, havuz: dict, kadro: dict, secim: dict, rules: dict, bas_ms: int, bit_ms: int, log: Callable[[str], None] = print, saat: Callable[[], float] = time.monotonic) -> tuple[dict, bool]:
-    """Her seçilen adres için normal ve kötü senaryo `sonraki_7g`. Döner (ölçüm, eksik). Piyasa verisi (mum, hacim, azami kaldıraç) iki senaryoda ORTAK (bir kez çekilir)."""
+def olc(client: Any, havuz: dict, kadro: dict, secim: dict, rules: dict, bas_ms: int, bit_ms: int, log: Callable[[str], None] = print, saat: Callable[[], float] = time.monotonic,
+        eksik_ek_kutu: dict | None = None) -> tuple[dict, bool]:
+    """Her seçilen adres için normal ve kötü senaryo `sonraki_7g`. Döner (ölçüm, eksik). Piyasa verisi (mum, hacim, azami kaldıraç) iki senaryoda ORTAK (bir kez çekilir).
+    Sıra: önce ana gruplar, sonra (varsa) ek bilgi gruplarının henüz ölçülmemiş adresleri; `eksik` yalnız ana grup adresleri içindir, ek adreslerin eksiği `eksik_ek_kutu["eksik_ek"]`'e yazılır.
+    Havuzda olmayan adres (ör. `cikanlar`'da `r0_disi`) için sabit payda yedeği yoktur: portfolio okunamazsa `hata: "hesap_yok"`."""
     kotu_kurallar = {**rules, "radar_kopya_gecikme_dk": int(rules["isabet_kotu_gecikme_dk"]), "maliyet_kayma": float(rules["maliyet_kayma"]) * float(rules["isabet_kotu_kayma_carpan"])}
     iyi = radar_tarama.Baglam(client, bit_ms, bas_ms, rules)
     iyi.piyasa_oku()
@@ -171,11 +256,19 @@ def olc(client: Any, havuz: dict, kadro: dict, secim: dict, rules: dict, bas_ms:
     baslangic = saat()
     olcum: dict[str, dict] = {}
     eksik = False
-    adresler = [a for g in ("ilk11", "havuz_geri", "elenen") for a in secim["gruplar"][g]]
+    adresler = [a for g in ANA_GRUPLAR for a in secim["gruplar"][g]]
+    ana = set(adresler)
+    for g in EK_GRUPLAR:
+        for a in secim["gruplar"].get(g, []):
+            if a not in ana and a not in adresler:
+                adresler.append(a)
+    eksik_ek = False
     for sira, adres in enumerate(adresler, 1):
         if saat() - baslangic >= butce:
-            eksik = True
-            log(f"UYARI: isabet zaman bütçesi ({rules['isabet_butce_dk']} dk) aşıldı; kalan {len(adresler) - sira + 1} adres ölçülmedi")
+            kalan = adresler[sira - 1:]
+            eksik = eksik or any(a in ana for a in kalan)
+            eksik_ek = eksik_ek or any(a not in ana for a in kalan)
+            log(f"UYARI: isabet zaman bütçesi ({rules['isabet_butce_dk']} dk) aşıldı; kalan {len(kalan)} adres ölçülmedi")
             break
         satir = {"sonraki_7g": None, "sonraki_7g_kotu": None, "hata": None, "payda_kaynak": None}
         try:
@@ -187,18 +280,26 @@ def olc(client: Any, havuz: dict, kadro: dict, secim: dict, rules: dict, bas_ms:
                 if not dolumlar:
                     satir["sonraki_7g"] = satir["sonraki_7g_kotu"] = 0.0          # pencerede işlem yok → kopya getirisi 0 (ölçüldü)
                 else:
-                    payda, bilgi = radar_tarama.payda_oku(client, adres, hesap[adres], bas_ms, bit_ms, rules)     # B8: R1 ile aynı zamana bağlı payda (okunamazsa sabit hesap_usd)
+                    payda, bilgi = radar_tarama.payda_oku(client, adres, hesap.get(adres, 0.0), bas_ms, bit_ms, rules)     # B8: R1 ile aynı zamana bağlı payda (okunamazsa sabit hesap_usd)
                     satir["payda_kaynak"] = bilgi["payda_kaynak"]
-                    satir["sonraki_7g"] = getiri_al(iyi.kopya_oynat(dolumlar, payda))
-                    satir["sonraki_7g_kotu"] = getiri_al(kotu.kopya_oynat(dolumlar, payda))
-                    if satir["sonraki_7g"] is None or satir["sonraki_7g_kotu"] is None:
-                        satir["hata"] = "hesaplanamadi"
+                    if adres not in hesap and bilgi["payda_kaynak"] != "portfolio":
+                        satir["hata"] = "hesap_yok"                                   # havuz dışı (ek grup) adres: sabit payda yedeği yok
+                    else:
+                        satir["sonraki_7g"] = getiri_al(iyi.kopya_oynat(dolumlar, payda))
+                        satir["sonraki_7g_kotu"] = getiri_al(kotu.kopya_oynat(dolumlar, payda))
+                        if satir["sonraki_7g"] is None or satir["sonraki_7g_kotu"] is None:
+                            satir["hata"] = "hesaplanamadi"
         except HATALAR as hata:
             satir["hata"] = type(hata).__name__
         olcum[adres] = satir
         log(f"[{sira}/{len(adresler)}] {adres[:10]}… sonraki_7g {satir['sonraki_7g']} kötü {satir['sonraki_7g_kotu']} {satir['hata'] or ''}")
         if satir["hata"]:
-            eksik = True
+            if adres in ana:
+                eksik = True
+            else:
+                eksik_ek = True
+    if eksik_ek_kutu is not None:
+        eksik_ek_kutu["eksik_ek"] = eksik_ek
     return olcum, eksik
 
 
@@ -213,6 +314,33 @@ def git_ilk_commit(dal: str, yol: str) -> str | None:
     s = subprocess.run(["git", "log", "--reverse", "--format=%H", f"origin/{dal}", "--", yol], capture_output=True, text=True)
     satirlar = s.stdout.split() if s.returncode == 0 else []
     return satirlar[0] if satirlar else None
+
+
+def kayit_oku(dal: str, bas_ms: int, gun_sayisi: int = 1) -> list[dict] | None:
+    """Canlı motor kaydı (`origin/<dal>:kayit/<YYYY-MM-DD>.jsonl`, UTC gün dosyaları): `bas_ms`'in gününden bir önceki günden (pencere başındaki sahayı kurmak için son `kapanis`)
+    pencere sonu gününe kadar. Hiçbir dosya okunamazsa None (dal yok / sığ checkout); bozuk satır atlanır."""
+    gun0 = datetime.fromtimestamp(bas_ms / 1000, UTC).date()
+    olaylar: list[dict] = []
+    bulundu = False
+    for k in range(-1, gun_sayisi + 1):
+        s = subprocess.run(["git", "show", f"origin/{dal}:kayit/{(gun0 + timedelta(days=k)).isoformat()}.jsonl"], capture_output=True, text=True, check=False)
+        if s.returncode != 0:
+            continue
+        bulundu = True
+        for satir in s.stdout.splitlines():
+            try:
+                o = json.loads(satir)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(o, dict):
+                olaylar.append(o)
+    return olaylar if bulundu else None
+
+
+def onceki_kadro_oku(dal: str, tarih: str) -> dict | None:
+    """`cikanlar` yedeği: önceki UTC gününün güncel `kadro.json`'u (o günün son tam kadrosu; ertesi günün ilk koşusundaki `--onceki-kadro` ile aynı dosya)."""
+    onceki = (datetime.fromisoformat(tarih).date() - timedelta(days=1)).isoformat()
+    return git_oku(dal, f"radar/{onceki}/kadro.json")
 
 
 def gun_oku(dal: str, tarih: str, log: Callable[[str], None] = print) -> tuple[dict | None, dict | None, str | None]:
@@ -235,7 +363,8 @@ def gun_oku(dal: str, tarih: str, log: Callable[[str], None] = print) -> tuple[d
 
 
 def calistir(client: Any, havuz: dict, kadro: dict, tarih: str, simdi_ms: int, rules: dict, kismi: bool = False, log: Callable[[str], None] = print,
-             saat: Callable[[], float] = time.monotonic, kadro_kaynagi: str | None = None) -> dict | None:
+             saat: Callable[[], float] = time.monotonic, kadro_kaynagi: str | None = None, kayitlar: list[dict] | None = None, onceki_kadro: dict | None = None,
+             durum_dali: str | None = None) -> dict | None:
     """Tek havuz için isabet. Pencere = [havuz.kosu_ms, min(simdi, kosu_ms + 7 gün)]. Tam 7 gün dolmadıysa `kismi` yoksa None (ölçülmez); `kismi` ile ölçülür ve `pencere_tam: false` yazılır."""
     bas = int(havuz["kosu_ms"])
     tam_bit = bas + int(rules["isabet_pencere_gun"]) * GUN_MS
@@ -245,14 +374,17 @@ def calistir(client: Any, havuz: dict, kadro: dict, tarih: str, simdi_ms: int, r
         return None
     bit = min(simdi_ms, tam_bit)
     t0 = saat()
-    secim = gruplari_sec(havuz, kadro, tarih, int(rules["isabet_elenen_ust"]))
+    ek = ek_gruplari_sec(havuz, kadro, tarih, kayitlar, onceki_kadro, int(rules["radar_kadro_ilk"]), durum_dali=durum_dali)
+    secim = gruplari_sec(havuz, kadro, tarih, int(rules["isabet_elenen_ust"]), ek=ek)
     hata = None
+    kutu: dict = {"eksik_ek": False}
     try:
-        olcum, eksik = olc(client, havuz, kadro, secim, rules, bas, bit, log, saat)
+        olcum, eksik = olc(client, havuz, kadro, secim, rules, bas, bit, log, saat, kutu)
     except HATALAR as h:                                                  # piyasa verisi okunamadı: tarama bozulmaz; eksik + hata dosyada
         olcum, eksik, hata = {}, True, type(h).__name__
+        kutu["eksik_ek"] = True
         log(f"UYARI: isabet ölçümü yapılamadı ({hata})")
-    return isabet_olustur(tarih, havuz, kadro, secim, olcum, bas, bit, pencere_tam, eksik, (saat() - t0) / 60.0, hata, kadro_kaynagi=kadro_kaynagi)
+    return isabet_olustur(tarih, havuz, kadro, secim, olcum, bas, bit, pencere_tam, eksik, (saat() - t0) / 60.0, hata, kadro_kaynagi=kadro_kaynagi, eksik_ek=kutu["eksik_ek"])
 
 
 def varsayilan_tarih(simdi_ms: int, rules: dict, dal: str, geri_gun: int = 3) -> str:
@@ -286,6 +418,7 @@ def _main(argv: list[str] | None = None) -> int:
     ap.add_argument("--veri-dali", default="radar", help="havuz/kadro okunan veri dalı (origin/<dal>): radar | radar-deneme")
     ap.add_argument("--tarih", default=None, help="ölçülecek havuz tarihi (YYYY-MM-DD); varsayılan bugün − isabet_pencere_gun")
     ap.add_argument("--kismi", action="store_true", help="DENEME: 7 gün dolmamış pencereyi de ölç (`pencere_tam: false`)")
+    ap.add_argument("--durum-dali", default=DURUM_DALI, help="ek gruplar (ilk11_fiili, kor_kirpildi) için canlı motor kayıt dalı (origin/<dal>); okunamazsa bu iki grup boş")
     ap.add_argument("--ozet-md", type=Path, default=None)
     args = ap.parse_args(argv)
     rules = load_rules()
@@ -296,8 +429,13 @@ def _main(argv: list[str] | None = None) -> int:
         print(f"isabet: origin/{args.veri_dali} dalında radar/{tarih}/ havuz+kadro yok (ilk ölçüm 2026-11-12); atlandı")
         return 0
     print(f"isabet: radar/{tarih}/ kadro kaynağı {kaynak} (kadro kosu_ms {kadro.get('kosu_ms')}, havuz kosu_ms {havuz.get('kosu_ms')})")
+    kayitlar = kayit_oku(args.durum_dali, int(kadro.get("kosu_ms") or havuz["kosu_ms"]))                   # B9 bilgi: fiili saha; None → ek saha grupları boş
+    onceki_kadro = None if isinstance(kadro.get("eski_uye_neden"), dict) else onceki_kadro_oku(args.veri_dali, tarih)
+    print(f"isabet: ek gruplar — canlı kayıt origin/{args.durum_dali}: {'yok' if kayitlar is None else f'{len(kayitlar)} olay'}; "
+          f"önceki kadro yedeği {'gerekmedi (eski_uye_neden)' if isinstance(kadro.get('eski_uye_neden'), dict) else ('var' if onceki_kadro else 'yok')}")
     try:
-        sonuc = calistir(radar_tarama.radar_istemcisi(rules=rules), havuz, kadro, tarih, simdi, rules, args.kismi, kadro_kaynagi=kaynak)
+        sonuc = calistir(radar_tarama.radar_istemcisi(rules=rules), havuz, kadro, tarih, simdi, rules, args.kismi, kadro_kaynagi=kaynak, kayitlar=kayitlar, onceki_kadro=onceki_kadro,
+                         durum_dali=args.durum_dali)
     except Exception as hata:                                             # noqa: BLE001 — tarama işi bozulmaz; hata dosyada ve günlükte görünür
         print(f"UYARI: isabet adımı hata verdi: {type(hata).__name__}: {str(hata)[:200]}", file=sys.stderr)
         secim = gruplari_sec(havuz, kadro, tarih, int(rules["isabet_elenen_ust"]))

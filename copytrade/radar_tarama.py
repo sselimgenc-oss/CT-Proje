@@ -49,6 +49,7 @@ SAYISAL = ("hesap_usd", "hafta_pnl_usd", "trader_getiri_7g", "islem_sayisi", "me
            "net_yatirma_usd", "yatirma_payi",        # `kopya_kazanc_gun_orani` … `hype_payi` yalnız `gecti` satırlarında (R2 girdisi); son ikisi T6 §2 (bilgi; kapıyı değiştirmez)
            "payda_nokta", "payda_bas_usd", "payda_son_oran",                          # B8 (bilgi): zamana bağlı payda serisi
            "kopya_islem_sayisi", "yuvarlanan_pay", "oransal_ayna", "koruma_boyut",    # B3/B12 (bilgi; kapıyı değiştirmez)
+           "g_t_istat",                                                               # B14 (bilgi; `sans_riski` kapısı `kopya_alt20`'dedir)
            "kopya_getiri_7g_eski", "ayna_getiri_7g_eski", "kopya_koruma_eski", "kopya_alt20_eski")       # B8 yan yana (yalnız `--payda-yan-yana`): sabit payda ile eski sayılar
 ESKI_ALANLAR = ("kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "kopya_alt20")     # `--payda-yan-yana`: bu alanlar sabit paydayla da hesaplanıp `_eski` ekiyle yazılır
 PAYDA_DONEMLERI = ("week", "month", "allTime")       # portfolio dönemleri, inceden kabaya (tüm hesap; `perp*` dönemleri yalnız perp olduğundan kullanılmaz)
@@ -146,6 +147,14 @@ def bootstrap_alt(getiriler: list[float], tekrar: int, yuzdelik: float, tohum: i
     return float(np.quantile(dizi[secim].sum(axis=1), float(yuzdelik)))
 
 
+def t_istat(getiriler: list[float]) -> float | None:
+    """B14 (bilgi): `bootstrap_alt`'a giren AYNI işlem başı getiri dizisinin t istatistiği = ortalama / (s / √n); s örneklem std (n − 1). n < 2 ya da s = 0 → None. Birimsiz."""
+    if len(getiriler) < 2:
+        return None
+    s = statistics.stdev(getiriler)
+    return None if s == 0 else statistics.fmean(getiriler) / (s / math.sqrt(len(getiriler)))
+
+
 def adres_tohumu(adres: str) -> int:
     """Adresten türetilen sabit bootstrap tohumu (kodda sayı sabiti yok; aynı adres aynı sonuç)."""
     govde = adres.lower().removeprefix("0x")[:16]
@@ -188,10 +197,11 @@ def kopya_olculeri(sonuc: dict | None, adres: str, rules: dict | None = None) ->
     """Kopya oynatma sonucundan R1/6–9 ölçüleri (kopya_$ = kopya kasası ölçeği, `canli_kasa_usd`; K‑28/K‑32). `sonuc` = `Baglam.kopya_oynat` çıktısı: kopya (1 dk gecikme + maliyet) ve `ayna`
     (gecikmesiz, maliyetsiz; aynı slot). `kopya_koruma` = kopya getirisi / ayna getirisi (ayna ≤ 0 ya da yok → None: `kopya_koruma_dusuk`). Sonuç yok / hesaplanamadı → kopya alanları None.
     Bilgi (B3/B12; kapıya girmez): `kopya_islem_sayisi` = bootstrap'a giren kapanan kopya işlemi sayısı; `yuvarlanan_pay` (sonuçtaki); `oransal_ayna` = `sonuc["oransal_ayna"]` getirisi
-    (yoksa None); `koruma_boyut` = ayna / oransal_ayna (oransal ≤ 0 ya da yok → None)."""
+    (yoksa None); `koruma_boyut` = ayna / oransal_ayna (oransal ≤ 0 ya da yok → None). B14 (bilgi; kapıya girmez): `g_t_istat` = `t_istat(islem)` — bootstrap'ın kullandığı AYNI dizi."""
     rules = rules or load_rules()
     bos = {"kopya_getiri_7g": None, "ayna_getiri_7g": None, "kopya_koruma": None, "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None,
-           "v4_kopya_getiri_7g": None, "v5_onceki_kopya_getiri_7g": None, "kopya_islem_sayisi": None, "yuvarlanan_pay": None, "oransal_ayna": None, "koruma_boyut": None}
+           "v4_kopya_getiri_7g": None, "v5_onceki_kopya_getiri_7g": None, "kopya_islem_sayisi": None, "yuvarlanan_pay": None, "oransal_ayna": None, "koruma_boyut": None,
+           "g_t_istat": None}
     if not sonuc:
         return bos
     v4 = _sayi((sonuc.get("v4") or {}).get("getiri"))
@@ -208,6 +218,7 @@ def kopya_olculeri(sonuc: dict | None, adres: str, rules: dict | None = None) ->
             "kopya_islem_sayisi": len(islem), "yuvarlanan_pay": sonuc.get("yuvarlanan_pay"), "oransal_ayna": oransal,
             "koruma_boyut": None if ayna is None or oransal is None or oransal <= 0 else ayna / oransal,
             "kopya_alt20": bootstrap_alt(islem, int(rules["radar_bootstrap_tekrar"]), float(rules["radar_bootstrap_alt_yuzdelik"]), adres_tohumu(adres)),
+            "g_t_istat": t_istat(islem),                                  # B14 bilgi: aynı `islem` dizisi; karar `kopya_alt20`'de (kural 5: eşik değişmez)
             "fiyatsiz_eylem": sonuc.get("fiyatsiz_eylem"), "yaklasik_fiyat_eylem": sonuc.get("yaklasik_fiyat_eylem"), "v4_kopya_getiri_7g": v4, "v5_onceki_kopya_getiri_7g": v5o}
 
 
@@ -427,7 +438,7 @@ def _bos_satir(aday: dict, vlm: float, rules: dict) -> dict:
             "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None, "v4_kopya_getiri_7g": None, "v5_onceki_kopya_getiri_7g": None, "kopya_gunluk": None, "kopya_kazanc_gun_orani": None, "kopya_dusus": None, "yayilma": None,
             "kopya_getiri_72s": None, "hype_payi": None, "hip3_nosyonel_pay": None, "net_yatirma_usd": None, "yatirma_payi": None,
             "payda_kaynak": None, "payda_nokta": None, "payda_bas_usd": None, "payda_son_oran": None, "kopya_islem_sayisi": None, "yuvarlanan_pay": None, "oransal_ayna": None, "koruma_boyut": None,
-            "gecti": False, "neden": None, "hata": None}
+            "g_t_istat": None, "gecti": False, "neden": None, "hata": None}
 
 
 def kopyalanabilirlik(aday: dict, dolumlar: list[dict] | None, hata: str | None, baglam: Baglam) -> dict:
