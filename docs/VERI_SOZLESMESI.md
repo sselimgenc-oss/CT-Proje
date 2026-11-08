@@ -537,6 +537,7 @@ Oranlar yoktur; hepsi mutlak sayıdır (adet ya da $). Zaman: UTC ms alanları d
 - `dur` olayına `borsa_fazla` alanı: DUR anında defterin karşılamadığı borsa pozisyonları.
 
 ## Gerçek ↔ sanal karşılaştırma raporu (S-12, 08.11; `copytrade/canli/gercek_sanal_karsilastir.py`)
+- **`emir.defter` (lider eki 08.11, yalnız gerçek kip):** emir anı HL `l2Book`, `{"levels": [bids, asks]}`, her taraf ilk 10 seviye (`px` $, `sz` coin; HL dizgileri aynen). Rapor bu alan varsa `sanal_kaynak: defter` ile aynı defterle sanal modeli koşar. Sanal kipte yazılmaz.
 Çevrimdışı rapor; ağ ve emir yok, yeni kayıt yazmaz. Girdi: gerçek kip `kayit/*.jsonl` `emir` satırları (`kip` = `gercek`, `emir_ms` sırasıyla ilk `--n`, varsayılan 50), `ucret_tahmin` olayları (`cloid`), isteğe bağlı aynı pencerenin sanal `kayit` dizini, isteğe bağlı `--sz-decimals` JSON {coin: szDecimals (HL `meta`)}.
 Sanal taraf `SanalYurutucu.emir` ile hesaplanır (formül tekrar yazılmaz); `sanal_kaynak`:
 - `defter`: emir satırında `defter` / `l2Book` {`levels`: [bids, asks]} varsa o defter (motor bugün YAZMAZ; alan gelirse kullanılır).

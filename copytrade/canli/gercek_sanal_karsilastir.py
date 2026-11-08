@@ -5,7 +5,7 @@ Her gerçek emir için sanal taraf şu sırayla bulunur (`sanal_kaynak`):
 1. `defter`   — emir satırında defter kaydı varsa (`defter` ya da `l2Book` = {"levels": [bids, asks]}): `SanalYurutucu.emir` AYNI defterle çağrılır (formül tekrar yazılmaz).
 2. `sanal_kayit` — sanal kayıtta aynı (`adres`, `coin`, `eylem`, `trader_dolum_ms`) emri varsa: o satırın sanal sonucu kullanılır.
 3. `referans_tek_seviye` — yalnız `referans_px` varsa: `SanalYurutucu.emir`, `referans_px`'te tek ve yeterince derin seviyeli defterle çağrılır
-   (motor bugün defteri kaydetmiyor; bu, sanal modelin iyimser hâlidir: kayma 0, sz yuvarlanmaz).
+   (gerçek kipte motor 08.11 sonrası `defter` yazar; yoksa bu, sanal modelin iyimser hâlidir: kayma 0, sz yuvarlanmaz).
 4. `veri_yok` — hiçbiri yok (ör. emir öncesi hata, `referans_px` = null): sanal sütunlar boş.
 
 Birimler: `usd_*`, `ucret*` $ (kasa ölçeği); `*_1000` = × 1.000 / `kasa_usd` (1.000 $ kopya ölçeği); `sz` coin; `px` $/coin; kayma oran (pozitif = aleyhimize);

@@ -41,6 +41,7 @@ class Dolum:
     durum: str = "dolmadi"        # dolu | kismi | dolmadi | red | belirsiz (G-1: emir gönderildi, yanıt alınamadı; sonucu `orderStatus(cloid)` belirler)
     neden: str = ""
     ham: dict = field(default_factory=dict)
+    defter: dict | None = None    # S-12: gerçek kipte emir anı l2Book (ilk 10 seviye, {"levels": [bids, asks]}); gerçek ↔ sanal raporu aynı defterle sanal modeli koşar
 
     @property
     def dolu_mu(self) -> bool:
@@ -244,6 +245,7 @@ class GercekYurutucu:
             kitap = self.post({"type": "l2Book", "coin": coin})
             seviyeler = kitap["levels"][1 if yon == "B" else 0]
             en_iyi = float(seviyeler[0]["px"])
+            d.defter = {"levels": [list(kitap["levels"][0])[:10], list(kitap["levels"][1])[:10]]}
             bant = float(self.rules["canli_ioc_bant"]) if bant is None else float(bant)
             dec = self._sz_decimals(coin)
             limit = limit_yuvarla(en_iyi * (1 + bant) if yon == "B" else en_iyi * (1 - bant), dec, yon)
