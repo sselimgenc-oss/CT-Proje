@@ -59,3 +59,8 @@ def test_s10_agirlik_tablosu_hl_belgesi():
     for t in ("userRole", "clearinghouseState", "extraAgents", "userFunding"):
         post({"type": t})
     assert istekler == [("userRole", 60), ("clearinghouseState", 2), ("extraAgents", 20), ("userFunding", 20)]
+
+
+def test_s10_perpdexs_agirligi_20():
+    """HL belgesinde ağırlık 2 olanlar: l2Book, allMids, clearinghouseState, orderStatus, spotClearinghouseState, exchangeStatus; perpDexs 20 (güvenli taraf)."""
+    assert mt.AGIRLIK["perpDexs"] == 20

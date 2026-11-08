@@ -49,7 +49,7 @@ SNAP_SAKLA = 50_000          # adet (yalnız snapshot görülen dolum kimlikleri
 
 ADIM_ALARM_ARDISIK = 3                     # M-2: aynı dakikalık adım üst üste bu kadar hata verirse Telegram alarmı
 KUYRUK_GERI_DK = (1, 2, 4, 8, 16, 30)      # S-8: kapanış kuyruğu yeniden deneme aralıkları (dk; üstel, tavan 30)
-AGIRLIK = {"allMids": 2, "l2Book": 2, "clearinghouseState": 2, "perpDexs": 2, "orderStatus": 2, "meta": 20, "metaAndAssetCtxs": 20, "userFillsByTime": 20, "spotClearinghouseState": 2, "userRole": 60}          # HL info istek ağırlıkları (belge); bilinmeyen 20
+AGIRLIK = {"allMids": 2, "l2Book": 2, "clearinghouseState": 2, "perpDexs": 20, "orderStatus": 2, "meta": 20, "metaAndAssetCtxs": 20, "userFillsByTime": 20, "spotClearinghouseState": 2, "userRole": 60}          # HL info istek ağırlıkları (belge); bilinmeyen 20
 
 
 class GuvenliLimiter(RateLimiter):
@@ -828,7 +828,7 @@ class Motor:
                     "reduce_only": reduce_only, "pnl_usd": (round(pnl, 6) if pnl is not None else None), "durum": d.durum, "red_neden": d.neden, "boyut_neden": neden, "trader_px": o.px, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
                     "emir_ms": emir_ms, "dolum_ms": dolum_ms, "referans_px": d.referans_px, "dolum_px": d.px, "kayma_ref": d.kayma_oran, "kayma_trader": kayma_trader, "ucret": d.ucret,
                     "gec_goruldu": gec, "kaynak": o.kaynak, "bant": bant, "cloid": cloid, "funding_usd": round(self.hesap.funding.get(adres, 0.0), 6),
-                    **({"ham": maskele(json.dumps(d.ham, ensure_ascii=False, default=str))[:300]} if d.durum == "red" and d.ham else {}),       # G-19: red → HL ham yanıtı (300 karakter)
+                    **({"ham": maskele(json.dumps(d.ham, ensure_ascii=False, default=str))[:300]} if d.durum in ("red", "belirsiz") and d.ham else {}),       # G-19: red → HL ham yanıtı (300 karakter)
                     **{k: (round(v, 8) if isinstance(v, float) else v) for k, v in (self._boyut_girdi or {}).items()}})
         self._boyut_girdi = None
         self._ozet_emir += 1
