@@ -895,7 +895,8 @@ class Motor:
             return
         k = int(e.get("geri_sayac", 0)) + 1
         e["geri_sayac"] = k
-        e["sonraki_ms"] = simdi + KUYRUK_GERI_DK[min(k, len(KUYRUK_GERI_DK)) - 1] * DAKIKA
+        bekle_dk = 1 if (self.risk.dur or self.dur_bekliyor) else KUYRUK_GERI_DK[min(k, len(KUYRUK_GERI_DK)) - 1]     # DUR kapanışı sürerken geri çekilme yok: dakikada bir dene
+        e["sonraki_ms"] = simdi + bekle_dk * DAKIKA
         g = gun(simdi)
         if e.get("gun") != g:
             e["gun"], e["gun_deneme"] = g, 0

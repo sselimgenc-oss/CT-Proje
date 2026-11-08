@@ -365,3 +365,19 @@ def test_s8_tavan_alarmi_gunde_bir_kez(tmp_path, monkeypatch):
         saat.ms = max(saat(), int(m.kapanis_kuyrugu[anahtar].get("sonraki_ms", 0)))
         m._kuyruk_isle(saat())
     assert sum("ALARM: kapanış bugün de olmadı" in x for x in tgp.gonderilen) == 1 and m.kapanis_kuyrugu[anahtar]["gun_deneme"] == 5
+
+
+def test_s8_dur_sirasinda_geri_cekilme_yok_dakikada_bir_denenir(tmp_path, monkeypatch):
+    """DUR (risk.dur) sürerken kapanış kuyruğu geri çekilmez: her deneme 1 dk arayla (pozisyon DUR'da açıkta beklemez)."""
+    m, _, saat, _ = kur(tmp_path)
+    m.baslat()
+    m.risk.dur, m.risk.dur_neden = True, "test"
+    monkeypatch.setattr(m, "_kapat_coin", lambda *a, **k: (False, None))
+    anahtar = f"{adr(1)}|BTC"
+    m.kapanis_kuyrugu[anahtar] = {"tur": "kapat", "hedef_sz": 0.0, "neden": "test", "deneme": 5, "ms": saat(), "eksik": True}
+    araliklar = []
+    for _ in range(6):
+        saat.ms = max(saat(), int(m.kapanis_kuyrugu[anahtar].get("sonraki_ms", 0)))
+        m._kuyruk_isle(saat())
+        araliklar.append((m.kapanis_kuyrugu[anahtar]["sonraki_ms"] - saat()) // 60_000)
+    assert araliklar == [1, 1, 1, 1, 1, 1]
