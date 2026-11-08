@@ -488,3 +488,8 @@ Adresler trader'ların halka açık adresleridir; API anahtarı, hesap adresimiz
 - `hedef_usd`: hedef nosyonel = `min(slot_usd × |trader_poz_sonra| × trader_px / trader_hesap_usd, radar_slot_tavan_carpan × slot_usd)`, **$ (kopya ölçeği)**; hesap bilinmiyorsa `null`.
 Oranlar yoktur; hepsi mutlak sayıdır (adet ya da $). Zaman: UTC ms alanları değişmedi.
 - `kor_kirpildi` kaydı (K‑44 ile) yalnız durum DEĞİŞİNCE yazılır: imza = (aday, kadro `kosu_ms`, karar anındaki TAM saha) (B11; değiştirmede üye başına değişen `uyeler`/kalan imzaya girmez); aynı durumun 5 dk'lık tekrarı yazılmaz. `uyeler` alanı: kontrol edilen küme (değiştirmede çıkacak üye hariç).
+
+### G-13 / G-2 kayıt olayları (08.11)
+- `harici_kapanis` {adres, coin, yerel_sz, borsa_pay_sz, hl_sz, mark}: borsa payı yerel defterden toz (1 $) fazlası küçükse emir gönderilmez; yerel pozisyon mark ile kapatılır (realize'a), alarm. Sayaç `sayac.harici_kapanis`.
+- `borsa_yetim_kapat` {coin, sz, durum}, `borsa_yetim_kaldi` {coinler}, `borsa_yetim_okuma_hata`, `borsa_yetim_mark_yok`, `borsa_yetim_emir_hata`: gerçek kipte DUR / `/kapat` defterde olmayan borsa pozisyonlarını (clearinghouseState) reduce-only kapatır; bu emirler yerel defteri değiştirmez (dolum/ücret yalnız HL hesap değerinde görünür).
+- `dur` olayına `borsa_fazla` alanı: DUR anında defterin karşılamadığı borsa pozisyonları.
