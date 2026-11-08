@@ -2,8 +2,7 @@
 Yalnız ÖLÇER: eşik, ağırlık ve karar kodu değişmez; ek motor/emir yok.
 
 Kural 7 (tek yer): kopya getirisi `radar_tarama.Baglam.kopya_oynat` → `kopya_v5` ile hesaplanır (R1/6 ile AYNI oynatma: `radar_kopya_gecikme_dk` gecikme + maliyet, aynı slot,
-pencere başında BOŞ). **Trader hesap paydası (B8, 08.11):** R1 ile aynı `radar_tarama.payda_oku` — ölçüm penceresinin `portfolio` hesap değeri geçmişi (emir anındaki değer); okunamazsa
-havuz satırındaki `hesap_usd` (sabit, eski davranış; satırda `payda_kaynak`). Burada yeni getiri hesabı YOKTUR; yalnız gruplama, özet ve sıra korelasyonu.
+pencere başında BOŞ, `trader_hesap_usd` = havuz satırındaki hesap değeri). Burada yeni getiri hesabı YOKTUR; yalnız gruplama, özet ve sıra korelasyonu.
 
 **Gruplar:** (i) `ilk11` (o günün kadrosunda `katman == ilk11`); (ii) `havuz_geri` (R1 havuzunda `gecti` olup İlk 11 dışındakiler; Yedek dahil); (iii) `elenen` (kopya aşamasına varıp
 — `kopya_getiri_7g` dolu — R1'den elenenler; en çok `isabet_elenen_ust` = 30 kişi, SABİT TOHUMLA rastgele; tohum = YYYYMMDD sayısı, dosyaya yazılır).
@@ -112,8 +111,7 @@ def isabet_olustur(tarih: str, havuz: dict, kadro: dict, secim: dict, olcum: dic
         ozet[ad] = {**g, "secilen": len(adresler), "olculemeyen": len(adresler) - len(iyi), **{f"{k}_kotu": v for k, v in gk.items()}}
         for a in adresler:
             o = olcum.get(a) or {}
-            satirlar.append({"adres": a, "grup": ad, "form": form.get(a), "sonraki_7g": o.get("sonraki_7g"), "sonraki_7g_kotu": o.get("sonraki_7g_kotu"), "hata": o.get("hata"),
-                             "payda_kaynak": o.get("payda_kaynak")})
+            satirlar.append({"adres": a, "grup": ad, "form": form.get(a), "sonraki_7g": o.get("sonraki_7g"), "sonraki_7g_kotu": o.get("sonraki_7g_kotu"), "hata": o.get("hata")})
 
     def havuz_grubu(anahtar_getiri: str) -> dict:                       # R1 havuzunun tamamı = İlk 11 ∪ geri kalan
         return grup_ozeti([s[anahtar_getiri] for s in satirlar if s["grup"] in ("ilk11", "havuz_geri") and s[anahtar_getiri] is not None])
@@ -177,7 +175,7 @@ def olc(client: Any, havuz: dict, kadro: dict, secim: dict, rules: dict, bas_ms:
             eksik = True
             log(f"UYARI: isabet zaman bütçesi ({rules['isabet_butce_dk']} dk) aşıldı; kalan {len(adresler) - sira + 1} adres ölçülmedi")
             break
-        satir = {"sonraki_7g": None, "sonraki_7g_kotu": None, "hata": None, "payda_kaynak": None}
+        satir = {"sonraki_7g": None, "sonraki_7g_kotu": None, "hata": None}
         try:
             dolumlar = client.fills(adres, bas_ms, max_rows=int(rules["radar_dolum_tavan"]), end_ms=bit_ms)
             if len(dolumlar) >= int(rules["radar_dolum_tavan"]):
@@ -187,10 +185,8 @@ def olc(client: Any, havuz: dict, kadro: dict, secim: dict, rules: dict, bas_ms:
                 if not dolumlar:
                     satir["sonraki_7g"] = satir["sonraki_7g_kotu"] = 0.0          # pencerede işlem yok → kopya getirisi 0 (ölçüldü)
                 else:
-                    payda, bilgi = radar_tarama.payda_oku(client, adres, hesap[adres], bas_ms, bit_ms, rules)     # B8: R1 ile aynı zamana bağlı payda (okunamazsa sabit hesap_usd)
-                    satir["payda_kaynak"] = bilgi["payda_kaynak"]
-                    satir["sonraki_7g"] = getiri_al(iyi.kopya_oynat(dolumlar, payda))
-                    satir["sonraki_7g_kotu"] = getiri_al(kotu.kopya_oynat(dolumlar, payda))
+                    satir["sonraki_7g"] = getiri_al(iyi.kopya_oynat(dolumlar, hesap[adres]))
+                    satir["sonraki_7g_kotu"] = getiri_al(kotu.kopya_oynat(dolumlar, hesap[adres]))
                     if satir["sonraki_7g"] is None or satir["sonraki_7g_kotu"] is None:
                         satir["hata"] = "hesaplanamadi"
         except HATALAR as hata:

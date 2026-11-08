@@ -50,7 +50,7 @@ jobs:
             case "$sozcuk" in radar_*=*) kural+=(--kural-ust "$sozcuk") ;; esac
           done
           mkdir -p radar
-          python -u -m copytrade.radar_tarama --cikti radar --aday-sayisi "$aday" --v4-yan-yana --payda-yan-yana "${kural[@]}" --ozet-md radar/OZET.md
+          python -u -m copytrade.radar_tarama --cikti radar --aday-sayisi "$aday" --v4-yan-yana "${kural[@]}" --ozet-md radar/OZET.md
       - name: Özet
         if: ${{ always() && hashFiles('radar/OZET.md') != '' }}
         run: cat radar/OZET.md >> "$GITHUB_STEP_SUMMARY"
