@@ -535,3 +535,22 @@ Oranlar yoktur; hepsi mutlak sayıdır (adet ya da $). Zaman: UTC ms alanları d
 - `harici_kapanis` {adres, coin, yerel_sz, borsa_pay_sz, hl_sz, mark}: borsa payı yerel defterden toz (1 $) fazlası küçükse emir gönderilmez; yerel pozisyon mark ile kapatılır (realize'a), alarm. Sayaç `sayac.harici_kapanis`.
 - `borsa_yetim_kapat` {coin, sz, durum}, `borsa_yetim_kaldi` {coinler}, `borsa_yetim_okuma_hata`, `borsa_yetim_mark_yok`, `borsa_yetim_emir_hata`: gerçek kipte DUR / `/kapat` defterde olmayan borsa pozisyonlarını (clearinghouseState) reduce-only kapatır; bu emirler yerel defteri değiştirmez (dolum/ücret yalnız HL hesap değerinde görünür).
 - `dur` olayına `borsa_fazla` alanı: DUR anında defterin karşılamadığı borsa pozisyonları.
+
+## Gerçek ↔ sanal karşılaştırma raporu (S-12, 08.11; `copytrade/canli/gercek_sanal_karsilastir.py`)
+Çevrimdışı rapor; ağ ve emir yok, yeni kayıt yazmaz. Girdi: gerçek kip `kayit/*.jsonl` `emir` satırları (`kip` = `gercek`, `emir_ms` sırasıyla ilk `--n`, varsayılan 50), `ucret_tahmin` olayları (`cloid`), isteğe bağlı aynı pencerenin sanal `kayit` dizini, isteğe bağlı `--sz-decimals` JSON {coin: szDecimals (HL `meta`)}.
+Sanal taraf `SanalYurutucu.emir` ile hesaplanır (formül tekrar yazılmaz); `sanal_kaynak`:
+- `defter`: emir satırında `defter` / `l2Book` {`levels`: [bids, asks]} varsa o defter (motor bugün YAZMAZ; alan gelirse kullanılır).
+- `sanal_kayit`: sanal kayıtta aynı (`adres`, `coin`, `eylem`, `trader_dolum_ms`) emir → o satırın `durum`, `sz`, `usd_dolan`, `dolum_px`, `kayma_ref`, `ucret`'i.
+- `referans_tek_seviye`: yalnız `referans_px` → o fiyatta sınırsız derin tek seviye (iyimser üst sınır: kayma 0, sz yuvarlanmaz).
+- `veri_yok`: `referans_px` = null (emir öncesi hata) → sanal alanlar null.
+Reduce-only emirde `acik_sz` ≈ `biz_poz_usd` / `referans_px` (coin; yaklaşık, motor `acik_sz` yazmaz). Her emir taze yürütücüyle (önceki emirlerin defter tüketimi düşülmez).
+
+JSON üst düzey: `n_istenen` (adet), `kasa_usd` ($; `--kasa-usd`, yoksa `canli_kasa_usd`), `olcek_1000` (= 1.000 / `kasa_usd`), `satirlar`, `toplam`.
+`satirlar[]` (emir başına; $ kasa ölçeğinde, sz coin, px $/coin, kayma oran + = aleyhimize, fark = gerçek − sanal):
+- `zaman_ms` (UTC ms, `emir_ms`), `coin`, `yon`, `eylem`, `reduce_only`, `usd_istenen` ($), `referans_px`, `cloid`.
+- `gercek_durum` / `sanal_durum` (dolu | kismi | dolmadi | red | belirsiz), `gercek_neden` / `sanal_neden`, `durum_ayni` (bool).
+- `gercek_sz` / `sanal_sz`, `gercek_usd_dolan` / `sanal_usd_dolan` ($), `gercek_dolum_px` / `sanal_dolum_px`, `gercek_kayma` (= `kayma_ref`) / `sanal_kayma`.
+- `gercek_ucret` / `sanal_ucret` ($), `gercek_ucret_kesin` (bool; `ucret_tahmin` olayı yoksa true = HL `fee`; dolumsuz emirde null), `ucret_tahmini` ($ = `usd_dolan` × `maliyet_taker`).
+- `sz_fark` (coin), `sz_fark_usd` ($ = `sz_fark` × `referans_px`), `kayma_fark` (oran), `ucret_fark` ($).
+- `sz_decimals`, `yuvarlanmis_sz` (coin = round(`usd_istenen` / `referans_px`, szDecimals); gerçek yürütücünün yuvarlaması), `yuvarlama_kaynakli_kismi` (bool: gerçek `kismi`, dolan sz = yuvarlanmış sz ve yuvarlanmış sz × referans < %99,9 × istenen); szDecimals yoksa üçü null.
+`toplam`: `emir`, `sanal_verili`, `veri_yok` (adet), `sanal_kaynak` {kaynak: adet}, `gercek_red_orani` / `gercek_kismi_orani` / `gercek_dolmadi_orani` (oran, payda `emir`), `sanal_red_orani` / `sanal_kismi_orani` / `sanal_dolmadi_orani` ve `durum_ayni_orani` (oran, payda `sanal_verili`; payda 0 → null), `yuvarlama_kaynakli_kismi` (adet), `kayma_fark_n` (adet), `kayma_fark_medyan` / `kayma_fark_max` (oran; iki tarafı da dolu emirler), `ucret_fark_toplam_usd` ($, kasa ölçeği), `ucret_fark_toplam_1000` ($, 1.000 $ kopya ölçeği = × `olcek_1000`), `ucret_kesin_olmayan` (adet). Markdown aynı sayıları tablo olarak verir (oranlar %).
