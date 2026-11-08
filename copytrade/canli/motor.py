@@ -49,7 +49,7 @@ SNAP_SAKLA = 50_000          # adet (yalnız snapshot görülen dolum kimlikleri
 
 ADIM_ALARM_ARDISIK = 3                     # M-2: aynı dakikalık adım üst üste bu kadar hata verirse Telegram alarmı
 KUYRUK_GERI_DK = (1, 2, 4, 8, 16, 30)      # S-8: kapanış kuyruğu yeniden deneme aralıkları (dk; üstel, tavan 30)
-AGIRLIK = {"allMids": 2, "l2Book": 2, "clearinghouseState": 2, "perpDexs": 2, "orderStatus": 2, "meta": 20, "metaAndAssetCtxs": 20, "userFillsByTime": 20}          # HL info istek ağırlıkları (belge); bilinmeyen 20
+AGIRLIK = {"allMids": 2, "l2Book": 2, "clearinghouseState": 2, "perpDexs": 2, "orderStatus": 2, "meta": 20, "metaAndAssetCtxs": 20, "userFillsByTime": 20, "spotClearinghouseState": 2, "userRole": 60}          # HL info istek ağırlıkları (belge); bilinmeyen 20
 
 
 class GuvenliLimiter(RateLimiter):
@@ -1213,6 +1213,8 @@ class Motor:
             izlenen = self.poz_tr.get(adres, {})
             yeni_olay = {c for (a, c), ms in self._son_olay_coin.items() if a == adres and ms > self._senkron_okuma_ms}
             gercek = {**{c: v for c, v in gercek.items() if c not in yeni_olay}, **{c: izlenen[c] for c in yeni_olay if c in izlenen}}
+            spot = {c for c in {*izlenen, *gercek, *self.hesap.poz.get(adres, {})} if coin_sinifi(c) == "spot"}      # S-9: REST (clearinghouseState) spot bakiyesi okumaz → spot coin senkronda görünmez; izlenen değer korunur, kapanış/fark yok
+            gercek = {**{c: v for c, v in gercek.items() if c not in spot}, **{c: izlenen[c] for c in spot if c in izlenen}}
             fark = {c: (izlenen.get(c, 0.0), gercek.get(c, 0.0)) for c in {*izlenen, *gercek} if abs(izlenen.get(c, 0.0) - gercek.get(c, 0.0)) > 1e-9 * max(1.0, abs(gercek.get(c, 0.0)))}
             if fark:
                 self.kayit({"olay": "poz_senkron", "adres": adres, "fark": {c: list(v) for c, v in list(fark.items())[:10]}})
@@ -1220,7 +1222,7 @@ class Motor:
             self.poz_tr[adres] = dict(gercek)
             self._poz_tr_senk_isaretle(adres, self._senkron_okuma_ms)          # G-14: okumadan eski snapshot dolumu bu değeri artık ezemez
             for coin in list(self.hesap.poz.get(adres, {})):
-                if coin in yeni_olay:
+                if coin in yeni_olay or coin in spot:
                     continue
                 g, i = gercek.get(coin, 0.0), izlenen.get(coin, 0.0)
                 if abs(g) < EPS:
