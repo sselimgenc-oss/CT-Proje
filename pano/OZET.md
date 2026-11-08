@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-08 03:56 UTC
+# Canlı rapor — 2026-11-08 04:11 UTC
 
 **Kip** sanal · vardiya `42428402310` · saha 8/11 (inen 7)
 
@@ -6,31 +6,31 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 956,93 $ | −%0,19 | — (geçmiş < 7 gün) | −%4,31 | −%4,41 |
+| 1.000,00 $ | 958,00 $ | −%0,08 | — (geçmiş < 7 gün) | −%4,20 | −%4,30 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x323f5a… | xyz:GOLD | L | 262,02 $ | −4,02 $ |
-| 0xda9f35… | BTC | L | 177,15 $ | +2,12 $ |
-| 0x57da5c… | ZEC | S | 162,62 $ | +3,35 $ |
-| 0x4b9b60… | kPEPE | L | 149,77 $ | −3,32 $ |
-| 0x873015… | BTC | L | 123,17 $ | +0,13 $ |
-| 0x3da36d… | ETH | L | 99,87 $ | −0,32 $ |
-| 0x6015e6… | SOL | L | 48,40 $ | −0,59 $ |
-| 0x6015e6… | ETH | L | 36,61 $ | −0,28 $ |
-| 0x3da36d… | SOL | L | 35,03 $ | +0,01 $ |
-| 0x873015… | LINK | L | 25,79 $ | −0,26 $ |
-| 0x873015… | SOL | L | 25,76 $ | −0,26 $ |
-| 0x873015… | PENDLE | L | 22,20 $ | −0,67 $ |
-| 0xd5ac4f… | CASHCAT | L | 21,85 $ | −0,22 $ |
+| 0x323f5a… | xyz:GOLD | L | 261,93 $ | −4,11 $ |
+| 0xda9f35… | BTC | L | 177,24 $ | +2,22 $ |
+| 0x57da5c… | ZEC | S | 162,78 $ | +3,20 $ |
+| 0x4b9b60… | kPEPE | L | 150,76 $ | −2,34 $ |
+| 0x873015… | BTC | L | 123,24 $ | +0,19 $ |
+| 0x3da36d… | ETH | L | 99,88 $ | −0,30 $ |
+| 0x6015e6… | SOL | L | 48,43 $ | −0,57 $ |
+| 0x6015e6… | ETH | L | 36,61 $ | −0,27 $ |
+| 0x3da36d… | SOL | L | 35,05 $ | +0,03 $ |
+| 0x873015… | LINK | L | 25,81 $ | −0,24 $ |
+| 0x873015… | SOL | L | 25,77 $ | −0,24 $ |
+| 0x873015… | PENDLE | L | 22,29 $ | −0,58 $ |
+| 0xd5ac4f… | CASHCAT | L | 21,82 $ | −0,25 $ |
 | 0x873015… | AAVE | L | 10,98 $ | −0,02 $ |
 
 ## Son 24 saat
 
-- emir 52 · dolum 52 · kayma p50 +%0,00 / max +%0,22 (n=52)
-- funding −0,06 $ · ücret 0,34 $
+- emir 44 · dolum 44 · kayma p50 +%0,00 / max +%0,22 (n=44)
+- funding −0,07 $ · ücret 0,30 $
 
 ## Saha değişiklikleri (24 sa)
 
@@ -52,7 +52,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 227 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
+- süre 242 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
