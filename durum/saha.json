@@ -482,14 +482,14 @@
    "giris_sira": 8,
    "hesap_giris_usd": 79269.557931,
    "sira_ust": 0,
-   "son_islem_ms": 1794148839678
+   "son_islem_ms": 1794157107929
   },
   "0x9a0519e68974e99f0accbba8d19e1eca53e4d14a": {
    "giris_ms": 1794122693703,
    "giris_sira": 14,
    "hesap_giris_usd": 75646.83974217,
    "sira_ust": 0,
-   "son_islem_ms": 1794153233703
+   "son_islem_ms": 1794156764693
   },
   "0xd5ac4fa2cd568dd7573e081d405da541ff82cbec": {
    "disi_gunler": [],
