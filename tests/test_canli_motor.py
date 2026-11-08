@@ -249,6 +249,8 @@ class SahteHL:
         self.hesap, self.pozlar, self.rest, self.spot = hesap, pozlar or {}, rest_dolumlar or {}, spot
         self.istekler = []
         self.agent_sahibi = adr(7)
+        self.acik_emirler: list = []                       # G-20: openOrders (kendi hesabımız; --kontrol sayar)
+        self.hl_saat_ms = None                             # G-20: l2Book `time` (None: gerçek saat; --kontrol saat sapması)
 
     def __call__(self, y):
         self.istekler.append(y)
@@ -256,7 +258,9 @@ class SahteHL:
         if t == "allMids":
             return self.mids
         if t == "l2Book":
-            return self.kitaplar[y["coin"]]
+            return {**self.kitaplar[y["coin"]], "time": int(time.time() * 1000) if self.hl_saat_ms is None else self.hl_saat_ms}       # gerçek HL yanıtı `time` (ms) taşır
+        if t == "openOrders":
+            return list(self.acik_emirler)
         if t == "clearinghouseState":
             return {"marginSummary": {"accountValue": str(self.hesap)}, "assetPositions": [{"position": {"coin": c, "szi": str(sz)}} for c, sz in self.pozlar.get(y["user"], {}).items()]}
         if t == "spotClearinghouseState":

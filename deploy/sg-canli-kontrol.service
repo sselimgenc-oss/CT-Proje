@@ -1,0 +1,21 @@
+# Açılış kontrolü (G-9/G-20): EMİR GÖNDERMEZ. Anahtar komut satırına/sudo kaydına düşmez: ortam systemd tarafından dosyadan yüklenir.
+# Asıl durum dizinini (/var/lib/sg-canli/durum) SALT OKUNUR inceler (ProtectSystem=strict: /var/lib yazılamaz). Rapor (sırsız JSON) günlüğe: journalctl -u sg-canli-kontrol -o cat
+# Telefona gerçek bir deneme mesajı gönderir. `tamam` false ise birim "failed" görünür: motoru AÇMAYIN.
+[Unit]
+Description=sg-arge canli motor acilis kontrolu (emir gondermez)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=sgcanli
+Group=sgcanli
+WorkingDirectory=/opt/sg-arge
+EnvironmentFile=/etc/sg-canli.env
+EnvironmentFile=/etc/sg-canli-telegram.env
+ExecStart=/opt/sg-arge/.venv/bin/python -u -m copytrade.canli.motor --kontrol --durum-dizin /var/lib/sg-canli/durum
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=-/var/lib/sg-canli

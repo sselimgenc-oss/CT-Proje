@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# OnFailure alarmı: Telegram sendMessage (curl). TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID ortamdan (/etc/sg-canli.env). Token ASLA basılmaz (URL curl'e stdin ile verilir).
+# OnFailure alarmı: Telegram sendMessage (curl). TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID ortamdan (/etc/sg-canli-telegram.env; G-22: HL anahtarı bu birimde YOK). Token ASLA basılmaz (URL curl'e stdin ile verilir).
 # Kullanım: alarm.sh [birim-adı]. Token/chat yoksa "atlandı" yazıp 0 ile çıkar (alarm zinciri ikinci bir hata üretmesin). GITHUB_ACTIONS gerektirmez.
 set -u
 BIRIM="${1:-sg-canli}"

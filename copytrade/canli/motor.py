@@ -40,7 +40,7 @@ from copytrade.hl_ortak import spot_usdc
 from copytrade.izleme_liste import perp_dex_names
 from copytrade.kurallar import load_rules
 from copytrade.coin_sinif import asset_class
-from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter, ledger_sayfala
+from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter, RateLimitError, ledger_sayfala
 
 EPS = 1e-12
 DAKIKA = 60_000
@@ -90,6 +90,18 @@ class KipHatasi(RuntimeError):
     """Kip kuralı ihlali (gerçek kip Actions'ta / ayar yok): motor BAŞLAMAZ."""
 
 
+class HlOkunamadi(KipHatasi):
+    """G-15: açılışta HL okuması (ağ, zaman aşımı, 5xx, 429, bozuk yanıt) başarısız — GEÇİCİ neden. `main` artan beklemeyle yeniden dener, olmazsa `CIKIS_GECICI` (75) ile çıkar
+    (systemd `Restart=on-failure` yeniden başlatır). Kalıcı nedenler (DUR, kip uyumsuzluğu, ana anahtar, kasa sınırı, agent listede yok, çift süreç) `KipHatasi` → `CIKIS_KALICI` (3)."""
+
+
+CIKIS_KALICI = 3             # kalıcı neden: systemd yeniden BAŞLATMAZ (`RestartPreventExitStatus=3`) + OnFailure alarmı
+CIKIS_GECICI = 75            # EX_TEMPFAIL: geçici HL/ağ okuma hatası; systemd artan beklemeyle (30 sn → 10 dk) yeniden başlatır
+ACILIS_BEKLEME_SN: tuple[float, ...] = (15.0, 45.0, 120.0)     # sn: açılış HL okumasında yeniden denemeler arası bekleme (PublicClient'ın kendi 5/15/45 sn denemelerine EK)
+SAAT_SAPMA_SINIR_MS = 2000   # ms: `--kontrol` sunucu saati ile HL sunucu saati (l2Book `time`) farkı sınırı (gidiş-dönüş yarısı düşülerek)
+_GECICI_HATALAR: tuple[type[BaseException], ...] = (HlOkunamadi, OSError, RateLimitError)       # OSError: requests ağ/zaman aşımı istisnaları dahil
+
+
 def sanal_kasa_dogrula(rules: dict, kip: str, sanal_kasa: Any) -> float:
     """`--sanal-kasa-usd` ($): YALNIZ sanal kipte, sonlu ve 0 < kasa ≤ `canli_kasa_ust_usd` (K‑22). Gerçek kipte / sınır dışında KipHatasi (gerçek kip kasası yalnız sunucuda `CANLI_KASA_USD`)."""
     if kip != "sanal":
@@ -135,7 +147,7 @@ def etkin_kasa(rules: dict, kip: str, post: Callable[[dict], Any], ortam: dict |
         dexler = perp_dex_names(post({"type": "perpDexs"}))
         hl = hesap_degeri_oku(post, ortam["HL_HESAP_ADRESI"], dexler)
     except Exception as hata:                              # noqa: BLE001
-        raise KipHatasi(f"HL hesap değeri okunamadı ({type(hata).__name__}): gerçek kipte kasa belirlenemez") from hata
+        raise HlOkunamadi(f"HL hesap değeri okunamadı ({type(hata).__name__}): gerçek kipte kasa belirlenemez") from hata          # G-15: geçici (KipHatasi alt sınıfı)
     return min(kasa, hl), hl
 
 
@@ -164,7 +176,7 @@ def api_cuzdan_dogrula(post: Callable[[dict], Any], ortam: dict, turet: Callable
     (1) anahtardan türetilen adres == `HL_HESAP_ADRESI` → ana cüzdan anahtarı (para çekme yetkisi riski) → ret. Türetme yapılamazsa (eth_account yok/anahtar bozuk) → ret.
     (2) HL `userRole` (gerçek biçim: `{"role":"agent","data":{"user":<ana hesap>}}`) agent ve bağlı hesap == `HL_HESAP_ADRESI`; bulunamazsa ikinci yöntem `extraAgents` listesi (`[{"name","address","validUntil"}]`).
     Hiçbiri doğrulamazsa "agent doğrulanamadı" → ret."""
-    r: dict[str, Any] = {"ana_anahtar": False, "agent_dogrulandi": False, "tamam": False, "neden": None}
+    r: dict[str, Any] = {"ana_anahtar": False, "agent_dogrulandi": False, "tamam": False, "neden": None, "hl_okunamadi": False}       # G-15: hl_okunamadi = iki yöntem de HL'den yanıt alamadı (geçici)
     anahtar, hesap = str(ortam.get("HL_API_CUZDAN_ANAHTARI") or "").strip(), _kucuk(ortam.get("HL_HESAP_ADRESI"))
     if not anahtar or not hesap:
         r["neden"] = "anahtar veya hesap adresi yok"
@@ -183,9 +195,11 @@ def api_cuzdan_dogrula(post: Callable[[dict], Any], ortam: dict, turet: Callable
         r["ana_anahtar"] = True
         r["neden"] = "ana cüzdan anahtarı kullanılıyor (para çekme yetkisiz API cüzdanı gerekli)"
         return r
+    yanit_alindi = False                                   # G-15: HL'den en az bir geçerli biçimli yanıt geldi mi (gelmediyse "agent yok" DEĞİL, "HL okunamadı": geçici)
     try:
         rol = post({"type": "userRole", "user": agent})
         veri = rol.get("data") if isinstance(rol, dict) else None
+        yanit_alindi = isinstance(rol, dict) and "role" in rol
         if isinstance(rol, dict) and rol.get("role") == "agent" and isinstance(veri, dict) and _kucuk(veri.get("user")) == hesap:
             r["agent_dogrulandi"] = True
     except Exception:                                      # noqa: BLE001 - ikinci yönteme düş
@@ -194,12 +208,14 @@ def api_cuzdan_dogrula(post: Callable[[dict], Any], ortam: dict, turet: Callable
         try:
             liste = post({"type": "extraAgents", "user": str(ortam.get("HL_HESAP_ADRESI") or "").strip()})
             su_an = int(time.time() * 1000) if simdi_ms is None else simdi_ms
+            yanit_alindi = yanit_alindi or isinstance(liste, list)
             if isinstance(liste, list) and any(isinstance(a, dict) and _kucuk(a.get("address")) == agent and _gecerli_ms(a.get("validUntil"), su_an) for a in liste):
                 r["agent_dogrulandi"] = True
         except Exception:                                  # noqa: BLE001
             pass
     if not r["agent_dogrulandi"]:
-        r["neden"] = "agent doğrulanamadı"
+        r["hl_okunamadi"] = not yanit_alindi
+        r["neden"] = "agent doğrulanamadı" if yanit_alindi else "HL okunamadı (agent denetimi yapılamadı)"
         return r
     r["tamam"] = True
     return r
@@ -2234,10 +2250,124 @@ def http_kadro_oku(rules: dict, dal: str | None = None, deneme: int = 3, bekle_s
     return None
 
 
+# ---------------------------------------------------------------------------------------------------- açılış güvenceleri (G-15, G-20, G-21)
+def durum_dizin_dogrula(dizin: Path, kip: str) -> None:
+    """G-21: gerçek kipte durum dizini MUTLAK yol olmalı (çalışma dizinine göre göreli bir yol, aynı agent cüzdanla ayrı defterli ikinci bir süreç açtırabilir). Aksi halde KipHatasi (çıkış 3)."""
+    if kip == "gercek" and not Path(dizin).is_absolute():
+        raise KipHatasi(f"gercek kipte --durum-dizin mutlak yol olmalı (verilen: {str(dizin)[:80]})")
+
+
+def motor_kilidi_al(dizin: Path) -> int:
+    """G-21: `<durum-dizin>/motor.lock` üzerinde `fcntl.flock(LOCK_EX | LOCK_NB)`. Kilit, dönen dosya tanımlayıcısı açık kaldıkça sürer (süreç ölünce çekirdek bırakır: bayat kilit olmaz).
+    Başka bir süreç tutuyorsa ya da dosya açılamıyorsa KipHatasi (çıkış 3: ikinci motor AÇILMAZ)."""
+    import fcntl
+    dizin = Path(dizin)
+    try:
+        dizin.mkdir(parents=True, exist_ok=True)
+        fd = os.open(dizin / "motor.lock", os.O_RDWR | os.O_CREAT, 0o600)
+    except OSError as hata:
+        raise KipHatasi(f"motor.lock açılamadı ({type(hata).__name__}): durum dizini izinlerini kontrol edin") from hata
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError as hata:                                        # BlockingIOError: başka süreç tutuyor
+        os.close(fd)
+        raise KipHatasi("başka bir motor süreci bu durum dizinini kullanıyor (motor.lock kilitli): ikinci motor açılmaz") from hata
+    os.ftruncate(fd, 0)
+    os.write(fd, f"{os.getpid()}\n".encode())
+    return fd
+
+
+def motor_kilidi_tutuluyor(dizin: Path) -> bool | None:
+    """SALT OKUNUR: `<durum-dizin>/motor.lock` başka bir süreçte kilitli mi (çalışan motor var mı). Dosya yoksa False; açılamazsa None. Dosya/dizin OLUŞTURMAZ."""
+    import fcntl
+    yol = Path(dizin) / "motor.lock"
+    if not yol.is_file():
+        return False
+    try:
+        fd = os.open(yol, os.O_RDONLY)
+    except OSError:
+        return None
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        except OSError:
+            return None
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        return False
+    finally:
+        os.close(fd)
+
+
+def durum_incele(dizin: Path, kip: str, kasa_ayar: float | None = None) -> dict:
+    """G-20 `--kontrol`: ASIL durum dizinini SALT OKUNUR inceler (dosya yazmaz, dizin oluşturmaz). Kurallar `Motor.kip_uyumu_denetle` / `baslat` ile aynı: kayıtlı kip ≠ geçerli kip → uyumsuz;
+    gerçek kipte ayarlı kasa değişmiş ve yerel açık pozisyon var → uyumsuz. Ayrıca `DUR` dosyası, `risk.json` `acilis_durdu.mutabakat`, yerel açık pozisyon sayısı, `motor.lock` tutuluyor mu."""
+    dizin = Path(dizin)
+    m, h, rk = _oku(dizin / "motor.json"), _oku(dizin / "hesap.json"), _oku(dizin / "risk.json") or {}
+    durum_var = bool(m) or h is not None
+    kayitli_kip = str((m or {}).get("kip") or "sanal") if durum_var else None
+    acik = 0
+    for coinler in ((h or {}).get("poz") or {}).values():
+        for p in (coinler or {}).values() if isinstance(coinler, dict) else []:
+            try:
+                acik += abs(float((p or {}).get("sz") or 0.0)) > EPS
+            except (TypeError, ValueError, AttributeError):
+                acik += 1                                                   # okunamayan pozisyon kaydı: açık say (güvenli taraf)
+    neden = None
+    if durum_var and kayitli_kip != kip:
+        neden = "sanal durum dizininde gerçek kip açılmaz (dizini arşivleyin: deploy/kurulum.md)" if kip == "gercek" else "gerçek durum dizininde sanal kip açılmaz"
+    elif durum_var and kip == "gercek" and kasa_ayar is not None and (m or {}).get("kasa_ayar_usd") is not None and abs(float(m["kasa_ayar_usd"]) - float(kasa_ayar)) > 1e-9 and acik:
+        neden = f"kasa ayarı değişti ({float(m['kasa_ayar_usd']):g} → {float(kasa_ayar):g} $) ama açık pozisyon var"
+    return {"dizin": str(dizin), "dizin_var": dizin.is_dir(), "durum_var": durum_var, "kayitli_kip": kayitli_kip, "kip_uyumu": neden is None, "kip_neden": neden,
+            "dur": (dizin / "DUR").exists(), "mutabakat": bool((rk.get("acilis_durdu") or {}).get("mutabakat")), "risk_dur": bool(rk.get("dur")), "yerel_acik_poz": acik,
+            "motor_calisiyor": motor_kilidi_tutuluyor(dizin)}
+
+
+def hl_acik_say(post: Callable[[dict], Any], adres: str, dexler: list[str]) -> tuple[int, int]:
+    """G-20: kendi HL hesabımızda (tüm perp dex) açık pozisyon ve açık (bekleyen) emir SAYISI. Okuma ya da biçim hatası istisna yükseltir (kısmi sayı dönmez)."""
+    poz = emir = 0
+    for dex in ["", *dexler]:
+        poz += sum(1 for v in clearinghouse_ayristir(post(clearinghouse_yuk(adres, dex))).values() if abs(v) > EPS)
+        liste = post({"type": "openOrders", "user": adres, **({"dex": dex} if dex else {})})
+        if not isinstance(liste, list):
+            raise ValueError("openOrders yanıtı geçersiz")
+        emir += len(liste)
+    return poz, emir
+
+
+def saat_sapmasi(post: Callable[[dict], Any], saat_ms: Callable[[], int] | None = None, sinir_ms: float | None = None) -> dict:
+    """G-20: sunucu saati − HL sunucu saati (ms; `l2Book` yanıtındaki `time`, istek gidiş-dönüşünün ortası ile). + = sunucu ileride. `ok`: |sapma| − gidiş_dönüş/2 ≤ sınır."""
+    saat_ms = saat_ms or (lambda: int(time.time() * 1000))
+    sinir = SAAT_SAPMA_SINIR_MS if sinir_ms is None else sinir_ms
+    t0 = saat_ms()
+    kitap = post({"type": "l2Book", "coin": "BTC"})
+    t1 = saat_ms()
+    hl = kitap.get("time") if isinstance(kitap, dict) else None
+    if isinstance(hl, bool) or not isinstance(hl, (int, float)) or not math.isfinite(hl):
+        raise ValueError("l2Book yanıtında time yok")
+    sapma, gd = (t0 + t1) / 2 - float(hl), t1 - t0
+    return {"sapma_ms": int(round(sapma)), "gidis_donus_ms": int(gd), "sinir_ms": sinir, "ok": abs(sapma) - gd / 2 <= sinir}
+
+
+def telegram_deneme(tgram: tg.Telegram, kip: str) -> bool:
+    """G-20: gerçek bir `sendMessage` (deneme). Gönderildiyse True. Token yoksa False (gönderim denenmez)."""
+    if not tgram.acik:
+        return False
+    kip_metni = "GERÇEK PARA" if kip == "gercek" else "sanal"
+    try:
+        return bool(tgram.gonder(f"🚨 DENEME — açılış kontrolü ({kip_metni} kipi): bu mesaj geldiyse Telegram çalışıyor. Emir gönderilmedi."))
+    except Exception:                                      # noqa: BLE001 - hata metninde URL (token) olabilir: yazılmaz
+        return False
+
+
 def kontrol(rules: dict, kip: str, post: Callable[[dict], Any], kadro_oku: Callable[[], dict | None], tgram: tg.Telegram, ortam: dict | None = None, turet: Callable[[str], str] | None = None,
-            sanal_kasa: float | None = None) -> dict:
-    """`--kontrol` (T5 açılış kontrolü): anahtar, bakiye, HL bağlantısı, kadro okuma, Telegram — EMİR GÖNDERMEZ. Döner rapor; `tamam` hepsi geçtiyse True."""
+            sanal_kasa: float | None = None, durum_dizin: Path | None = None, saat_ms: Callable[[], int] | None = None) -> dict:
+    """`--kontrol` (T5 açılış kontrolü): anahtar, bakiye, HL bağlantısı, kadro okuma, Telegram — EMİR GÖNDERMEZ, durum dizinine YAZMAZ. Döner rapor; `tamam` zorunluların hepsi geçtiyse True.
+    G-20: `durum_dizin` verilirse ASIL durum dizini salt okunur incelenir (`durum`: kip uyumu, DUR, mutabakat, yerel açık pozisyon, çalışan motor). Gerçek kipte ek zorunlular:
+    kadro `taze`, HL hesabında açık emir 0 (IOC dışında bekleyen emir olmaz) ve durum dizini boşsa açık pozisyon 0, saat sapması ≤ `SAAT_SAPMA_SINIR_MS`, gerçek Telegram deneme mesajı gitti, mutabakat bayrağı kapalı."""
     ortam = os.environ if ortam is None else ortam
+    saat_ms = saat_ms or (lambda: int(time.time() * 1000))
     try:
         kasa, kaynak = kasa_belirle(rules, kip, ortam, **({} if sanal_kasa is None else {"sanal_kasa": sanal_kasa}))
         kasa_hata = None
@@ -2254,45 +2384,142 @@ def kontrol(rules: dict, kip: str, post: Callable[[dict], Any], kadro_oku: Calla
         r["hl_baglanti"], r["hl_hata"] = False, type(hata).__name__
     r["bakiye_usd"] = r["hl_hesap_degeri"] = None
     r["etkin_kasa_usd"] = r["kasa_usd"]
+    dexler: list[str] | None = None
     if r["anahtar"] and ortam.get("HL_HESAP_ADRESI"):
         try:
-            hl = hesap_degeri_oku(post, ortam["HL_HESAP_ADRESI"], perp_dex_names(post({"type": "perpDexs"})))
+            dexler = perp_dex_names(post({"type": "perpDexs"}))
+            hl = hesap_degeri_oku(post, ortam["HL_HESAP_ADRESI"], dexler)
             r["bakiye_usd"] = r["hl_hesap_degeri"] = hl                        # tüm perp dex + spot USDC (K‑35)
             r["etkin_kasa_usd"] = min(r["kasa_usd"], hl) if kip == "gercek" else r["kasa_usd"]      # gerçek kip: min(ayar, HL hesap değeri)
         except Exception as hata:                          # noqa: BLE001
             r["bakiye_hata"] = type(hata).__name__
     try:
         k = kadro_oku()
-        r["kadro"] = {"var": k is not None, "taze": bool(k) and kadro_taze_mi(k, int(time.time() * 1000), rules)[0], "satir": len((k or {}).get("satirlar", [])), "kosu_ms": (k or {}).get("kosu_ms")}
+        r["kadro"] = {"var": k is not None, "taze": bool(k) and kadro_taze_mi(k, saat_ms(), rules)[0], "satir": len((k or {}).get("satirlar", [])), "kosu_ms": (k or {}).get("kosu_ms")}
     except Exception as hata:                              # noqa: BLE001
-        r["kadro"] = {"var": False, "hata": type(hata).__name__}
+        r["kadro"] = {"var": False, "taze": False, "hata": type(hata).__name__}
     r["telegram"] = {"yapilandirildi": tgram.acik}
     r["emir_gonderildi"] = False
     zorunlu = [r["kasa_siniri_ok"], r["hl_baglanti"], r["kadro"].get("var")]
+    if durum_dizin is not None:
+        r["durum"] = durum_incele(Path(durum_dizin), kip, None if kasa_hata else kasa)
+        zorunlu += [r["durum"]["kip_uyumu"], not r["durum"]["dur"]]
     if kip == "gercek":
         ap = api_cuzdan_dogrula(post, ortam, turet) if r["anahtar"] else {"ana_anahtar": False, "agent_dogrulandi": False, "tamam": False, "neden": "anahtar yok"}
         r["ana_anahtar"], r["agent_dogrulandi"], r["api_cuzdan_tamam"], r["api_cuzdan_neden"] = ap["ana_anahtar"], ap["agent_dogrulandi"], ap["tamam"], ap["neden"]       # yalnız bool/sabit metin
         r["hl_deger_siniri_ok"] = r["hl_hesap_degeri"] is not None and r["hl_hesap_degeri"] <= float(rules["canli_kasa_ust_usd"]) + 1e-9          # K‑22: hesap değeri ≤ 1.000 $
-        zorunlu += [r["anahtar"], r["bakiye_usd"] is not None, tgram.acik, r["api_cuzdan_tamam"], r["hl_deger_siniri_ok"]]
+        r["hl_acik_poz"] = r["hl_acik_emir"] = None
+        if r["anahtar"] and dexler is not None:
+            try:
+                r["hl_acik_poz"], r["hl_acik_emir"] = hl_acik_say(post, ortam["HL_HESAP_ADRESI"], dexler)
+            except Exception as hata:                      # noqa: BLE001
+                r["hl_acik_hata"] = type(hata).__name__
+        durum_bos = not (r.get("durum") or {}).get("durum_var")
+        r["hl_acik_ok"] = r["hl_acik_emir"] == 0 and r["hl_acik_poz"] is not None and (r["hl_acik_poz"] == 0 or not durum_bos)      # boş durum dizini + HL'de pozisyon = motorun bilmediği yetim
+        try:
+            r["saat"] = saat_sapmasi(post, saat_ms)
+        except Exception as hata:                          # noqa: BLE001
+            r["saat"] = {"ok": False, "hata": type(hata).__name__}
+        r["telegram"]["deneme_gonderildi"] = telegram_deneme(tgram, kip)
+        zorunlu += [r["anahtar"], r["bakiye_usd"] is not None, tgram.acik, r["api_cuzdan_tamam"], r["hl_deger_siniri_ok"], r["kadro"].get("taze"), r["hl_acik_ok"], r["saat"]["ok"],
+                    r["telegram"]["deneme_gonderildi"]]
+        if "durum" in r:
+            zorunlu.append(not r["durum"]["mutabakat"])
     r["tamam"] = all(bool(x) for x in zorunlu)
     return r
 
 
-def baslamadi_alarmi(tgram: tg.Telegram, hata: object) -> None:
-    """Vardiya `kilit_al` öncesi başlayamadı: stderr'e ek olarak Telegram alarmı (kanal kapalıysa yalnız kayda yazılır)."""
+def baslamadi_alarmi(tgram: tg.Telegram, hata: object, kod: int = CIKIS_KALICI) -> None:
+    """Vardiya `kilit_al` öncesi başlayamadı: stderr'e ek olarak Telegram alarmı (kanal kapalıysa yalnız kayda yazılır). `kod` 75 = geçici (systemd yeniden dener)."""
     if any(str(hata) in m for m in tgram.gonderilen):             # kilit_al zaten alarm gönderdi: çift mesaj yok
         return
+    ek = " (geçici: HL/ağ okunamadı); systemd artan beklemeyle yeniden deneyecek. Motor şu an çalışmıyor." if kod == CIKIS_GECICI else "; motor çalışmıyor."
     try:
-        tgram.gonder(tg.alarm("Vardiya BAŞLAMADI", f"{str(hata)[:300]}\nÇıkış kodu 3; motor çalışmıyor."))
+        tgram.gonder(tg.alarm("Vardiya BAŞLAMADI", f"{str(hata)[:300]}\nÇıkış kodu {kod}{ek}"))
     except Exception as e:                                          # noqa: BLE001 - alarm hatası çıkış kodunu değiştirmez
         print(f"Telegram alarmı gönderilemedi: {type(e).__name__}", file=sys.stderr)
 
 
+def _baslamadi(tgram: tg.Telegram, hata: object, kod: int) -> int:
+    print(f"BAŞLAMADI{' (geçici)' if kod == CIKIS_GECICI else ''}: {hata}", file=sys.stderr)
+    baslamadi_alarmi(tgram, hata, kod)
+    return kod
+
+
+def acilis_yeniden_dene(is_: Callable[[], Any], bekle: tuple[float, ...] | None = None, uyu: Callable[[float], Any] = time.sleep, bildir: Callable[[str], Any] | None = None) -> Any:
+    """G-15: açılış HL okumaları. Geçici hata (`HlOkunamadi`, ağ `OSError`, 429 sonrası `RateLimitError`) → `bekle` (varsayılan `ACILIS_BEKLEME_SN`) sırasıyla bekleyip yeniden dener;
+    tükenirse `HlOkunamadi` yükselir (çıkış 75). Kalıcı `KipHatasi` ve diğer istisnalar HEMEN yükselir."""
+    bekle = ACILIS_BEKLEME_SN if bekle is None else bekle
+    son: HlOkunamadi | None = None
+    for i in range(len(bekle) + 1):
+        try:
+            return is_()
+        except _GECICI_HATALAR as hata:
+            son = hata if isinstance(hata, HlOkunamadi) else HlOkunamadi(f"HL okunamadı ({type(hata).__name__})")
+        if i < len(bekle):
+            if bildir:
+                bildir(f"{son} — {bekle[i]:g} sn sonra yeniden denenecek ({i + 1}/{len(bekle)})")
+            uyu(bekle[i])
+    assert son is not None
+    raise son
+
+
+def acilis_hl_denetle(rules: dict, kip: str, post: Callable[[dict], Any], sk: dict) -> tuple[float, float | None]:
+    """Açılışın HL'ye bağlı adımları (bir deneme): gerçek kipte API cüzdanı (G6) + etkin kasa + HL değer sınırı (K‑22). Kalıcı ret `KipHatasi`; HL okunamadı `HlOkunamadi` (G-15)."""
+    if kip == "gercek":                                    # G6: emirden önce API cüzdanı doğrulaması (ana anahtar / agent değil → başlamaz)
+        dogrulama = api_cuzdan_dogrula(post, os.environ)
+        if not dogrulama["tamam"]:
+            if dogrulama.get("hl_okunamadi"):
+                raise HlOkunamadi(f"API cüzdanı denetlenemedi: {dogrulama['neden']}")
+            raise KipHatasi(f"API cüzdanı doğrulanamadı: {dogrulama['neden']}")
+    kasa, hl_deger = etkin_kasa(rules, kip, post, **sk)
+    if kip == "gercek" and hl_deger is not None and hl_deger > float(rules["canli_kasa_ust_usd"]) + 1e-9:
+        raise KipHatasi(f"HL hesap değeri {hl_deger:.0f} $ > sınır {float(rules['canli_kasa_ust_usd']):g} $ (K‑22)")
+    return kasa, hl_deger
+
+
+def _motor_calistir(args: argparse.Namespace, rules: dict, kip: str, post: Callable[[dict], Any], kadro_oku: Callable[[], dict | None], tgram: tg.Telegram, sk: dict) -> int:
+    """Açılış + ana döngü. Çıkış kodları: 0 temiz; 1 beklenmedik (systemd yeniden başlatır); 3 kalıcı (yeniden başlatılmaz); 75 geçici HL/ağ (yeniden başlatılır) — G-15."""
+    def bildir(m: str) -> None:
+        print(f"açılış: {m}", file=sys.stderr)
+    try:
+        kasa, _ = acilis_yeniden_dene(lambda: acilis_hl_denetle(rules, kip, post, sk), bildir=bildir)
+        rules = {**rules, "canli_kasa_ayar_usd": kasa_belirle(rules, kip, **sk)[0], "canli_kasa_usd": kasa}
+        if sk:
+            rules["canli_kasa_kaynagi"] = "arg"                     # G5: Motor sanal kasa uyumunu denetler (bayraksız koşuda anahtar yok, davranış aynı)
+        boyut.saha_sayisi(kasa, rules)
+    except HlOkunamadi as hata:
+        return _baslamadi(tgram, hata, CIKIS_GECICI)
+    except (KipHatasi, ValueError) as hata:
+        return _baslamadi(tgram, hata, CIKIS_KALICI)
+    try:
+        yur: Yurutucu = acilis_yeniden_dene(lambda: gercek_yurutucu_olustur(post, rules), bildir=bildir) if kip == "gercek" else SanalYurutucu(post, rules)
+    except HlOkunamadi as hata:
+        return _baslamadi(tgram, hata, CIKIS_GECICI)
+    except AnahtarYok as hata:
+        return _baslamadi(tgram, hata, CIKIS_KALICI)
+    except (RuntimeError, ValueError) as hata:                     # SDK kurulu değil / anahtar biçimi bozuk: metin anahtar içerebilir, yalnız tür adı
+        return _baslamadi(tgram, KipHatasi(f"gerçek yürütücü kurulamadı ({type(hata).__name__})"), CIKIS_KALICI)
+    motor = Motor(rules, yur, post, tgram, args.durum_dizin, args.kayit_dizin or (args.durum_dizin / "kayit"), kadro_oku, vardiya_id=args.vardiya)
+    try:
+        motor.baslat()
+    except HlOkunamadi as hata:
+        return _baslamadi(tgram, hata, CIKIS_GECICI)
+    except KipHatasi as hata:
+        return _baslamadi(tgram, hata, CIKIS_KALICI)
+    except _GECICI_HATALAR as hata:                                 # açılış okumalarında ağ hatası: geçici (systemd yeniden başlatır)
+        return _baslamadi(tgram, HlOkunamadi(f"açılışta HL okunamadı ({type(hata).__name__})"), CIKIS_GECICI)
+    ozet = asyncio.run(calis(motor, args.sure_sn))
+    print(json.dumps(ozet, ensure_ascii=False, indent=1, default=str))
+    return int(getattr(motor, "cikis_kodu", 0))           # G-12b: görev beklenmedik bittiyse 1 (systemd yeniden başlatır)
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--kontrol", action="store_true", help="emir göndermeden anahtar/bakiye/HL/kadro/Telegram kontrolü; rapor yazar")
+    ap.add_argument("--kontrol", action="store_true", help="emir göndermeden anahtar/bakiye/HL/kadro/Telegram/durum dizini kontrolü (durum dizinine YAZMAZ); rapor stdout'a")
+    ap.add_argument("--rapor", type=Path, default=None, help="--kontrol raporunun yazılacağı dosya (gerçek kipte varsayılan: yazılmaz; sanal kipte <durum-dizin>/kontrol.json)")
     ap.add_argument("--kip", choices=["sanal", "gercek"], default=None, help="varsayılan kurallar.yaml canli_kip (sanal)")
-    ap.add_argument("--durum-dizin", type=Path, default=Path(os.environ.get("STATE_DIRECTORY", "durum")))
+    ap.add_argument("--durum-dizin", type=Path, default=Path(os.environ.get("STATE_DIRECTORY", "durum")), help="gerçek kipte MUTLAK yol zorunlu (G-21)")
     ap.add_argument("--kayit-dizin", type=Path, default=None)
     ap.add_argument("--sure-sn", type=float, default=None, help="vardiya süresi (sn); varsayılan sonsuz")
     ap.add_argument("--kadro-dali", default=None, help="kadro.json veri dalı (varsayılan canli_kadro_dali; dal doğrulamasında radar-deneme)")
@@ -2306,47 +2533,46 @@ def main(argv: list[str] | None = None) -> int:
         tgram.kip = kip                                    # S-22: açılış alarmlarında da kip etiketi
         if args.sanal_kasa_usd is not None:
             sanal_kasa_dogrula(rules, kip, args.sanal_kasa_usd)          # gerçek kipte / sınır dışında erken ret (kontrol dahil)
-    except KipHatasi as hata:
+        if not args.kontrol:
+            durum_dizin_dogrula(args.durum_dizin, kip)                   # G-21: gerçek kipte mutlak yol
+    except (KipHatasi, AnahtarYok) as hata:
         print(f"BAŞLAMADI: {hata}", file=sys.stderr)
         if not args.kontrol:
             baslamadi_alarmi(tgram, hata)
-        return 3
+        return CIKIS_KALICI
     sk = {} if args.sanal_kasa_usd is None else {"sanal_kasa": args.sanal_kasa_usd}      # bayrak yoksa çağrılar birebir eskisi (1.000 $ seri değişmez)
     post = rest_post_olustur(rules)
     kadro_oku = lambda: http_kadro_oku(rules, args.kadro_dali)          # noqa: E731
     if args.kontrol:
-        rapor = kontrol(rules, kip, post, kadro_oku, tgram, **sk)
-        args.durum_dizin.mkdir(parents=True, exist_ok=True)
-        _yaz(args.durum_dizin / "kontrol.json", rapor)
+        rapor = kontrol(rules, kip, post, kadro_oku, tgram, durum_dizin=args.durum_dizin, **sk)
+        hedef = args.rapor if args.rapor is not None else (None if kip == "gercek" else args.durum_dizin / "kontrol.json")     # G-20: gerçek kipte asıl durum dizinine YAZILMAZ
+        if hedef is not None:
+            try:
+                _yaz(hedef, rapor)
+            except OSError as hata:                                     # salt okunur birimde (sg-canli-kontrol) yazılamaz: rapor yine stdout'ta
+                print(f"kontrol raporu dosyaya yazılamadı ({type(hata).__name__}); stdout'a yazılıyor", file=sys.stderr)
         print(json.dumps(rapor, ensure_ascii=False, indent=1))
         return 0 if rapor["tamam"] else 1
+    kilit_fd: int | None = None
     try:
-        if kip == "gercek":                                # G6: emirden önce API cüzdanı doğrulaması (ana anahtar / agent değil → başlamaz)
-            dogrulama = api_cuzdan_dogrula(post, os.environ)
-            if not dogrulama["tamam"]:
-                raise KipHatasi(f"API cüzdanı doğrulanamadı: {dogrulama['neden']}")
-        kasa, hl_deger = etkin_kasa(rules, kip, post, **sk)
-        if kip == "gercek" and hl_deger is not None and hl_deger > float(rules["canli_kasa_ust_usd"]) + 1e-9:
-            raise KipHatasi(f"HL hesap değeri {hl_deger:.0f} $ > sınır {float(rules['canli_kasa_ust_usd']):g} $ (K‑22)")
-        rules = {**rules, "canli_kasa_ayar_usd": kasa_belirle(rules, kip, **sk)[0], "canli_kasa_usd": kasa}
-        if sk:
-            rules["canli_kasa_kaynagi"] = "arg"                     # G5: Motor sanal kasa uyumunu denetler (bayraksız koşuda anahtar yok, davranış aynı)
-        boyut.saha_sayisi(kasa, rules)
-    except (KipHatasi, ValueError) as hata:
-        print(f"BAŞLAMADI: {hata}", file=sys.stderr)
-        baslamadi_alarmi(tgram, hata)
-        return 3
-    yur: Yurutucu = gercek_yurutucu_olustur(post, rules) if kip == "gercek" else SanalYurutucu(post, rules)
-    motor = Motor(rules, yur, post, tgram, args.durum_dizin, args.kayit_dizin or (args.durum_dizin / "kayit"), kadro_oku, vardiya_id=args.vardiya)
-    try:
-        motor.baslat()
-    except KipHatasi as hata:
-        print(f"BAŞLAMADI: {hata}", file=sys.stderr)
-        baslamadi_alarmi(tgram, hata)
-        return 3
-    ozet = asyncio.run(calis(motor, args.sure_sn))
-    print(json.dumps(ozet, ensure_ascii=False, indent=1, default=str))
-    return int(getattr(motor, "cikis_kodu", 0))           # G-12b: görev beklenmedik bittiyse 1 (systemd yeniden başlatır)
+        if kip == "gercek":
+            try:
+                kilit_fd = motor_kilidi_al(args.durum_dizin)              # G-21: aynı durum dizininde ikinci gerçek süreç → 3
+            except KipHatasi as hata:
+                return _baslamadi(tgram, hata, CIKIS_KALICI)
+        try:
+            return _motor_calistir(args, rules, kip, post, kadro_oku, tgram, sk)
+        except Exception as hata:                                       # noqa: BLE001 - beklenmedik: iz günlüğe, kısa alarm (yalnız tür adı), 1 (systemd yeniden başlatır)
+            import traceback
+            traceback.print_exc()
+            try:
+                tgram.gonder(tg.alarm("ALARM: motor beklenmedik hatayla durdu", f"Hata türü {type(hata).__name__}. Çıkış kodu 1; systemd yeniden başlatacak.\njournalctl -u sg-canli"))
+            except Exception:                                           # noqa: BLE001
+                pass
+            return 1
+    finally:
+        if kilit_fd is not None:
+            os.close(kilit_fd)
 
 
 if __name__ == "__main__":
