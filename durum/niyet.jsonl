@@ -62,3 +62,11 @@
 {"t":"sonuc","cloid":"0xa094beda9103858f6f6ac347442b3ca5","durum":"dolu","ms":1794178457723,"sz":3.578540851821028,"px":3.0881,"ucret":0.004972901402028833}
 {"t":"niyet","kimlik":"0x9a0519e68974e99f0accbba8d19e1eca53e4d14a:837445474813997","eylem":"artir","adres":"0x9a0519e68974e99f0accbba8d19e1eca53e4d14a","coin":"LIT","yon":"B","usd":12.075692,"reduce_only":false,"cloid":"0x77a7ee4fa468c454c6d0ca65b3d6e1c4","ms":1794178457732}
 {"t":"sonuc","cloid":"0x77a7ee4fa468c454c6d0ca65b3d6e1c4","durum":"dolu","ms":1794178457890,"sz":3.9103952461771208,"px":3.0881,"ucret":0.005434061201873805}
+{"t":"niyet","kimlik":"kapat:0x6ba51c6b1c5fef215014e5e3ca22f333894a3759:BTC:1794179485598:0:tam_kapanis","eylem":"kapat","adres":"0x6ba51c6b1c5fef215014e5e3ca22f333894a3759","coin":"BTC","yon":"A","usd":72.880463,"reduce_only":true,"cloid":"0x0b5a6e00b83bf16f69602745b1ee2cc1","ms":1794179485598}
+{"t":"sonuc","cloid":"0x0b5a6e00b83bf16f69602745b1ee2cc1","durum":"dolu","ms":1794179485764,"sz":0.0009272031559286573,"px":75059.0,"ucret":0.03131772375638209}
+{"t":"niyet","kimlik":"0x9a0519e68974e99f0accbba8d19e1eca53e4d14a:1018324695422646","eylem":"ac","adres":"0x9a0519e68974e99f0accbba8d19e1eca53e4d14a","coin":"BTC","yon":"B","usd":11.0,"reduce_only":false,"cloid":"0xed8766cdde476f177e9e0508c98f6fc1","ms":1794179725652}
+{"t":"sonuc","cloid":"0xed8766cdde476f177e9e0508c98f6fc1","durum":"dolu","ms":1794179725803,"sz":0.00014607069821793748,"px":75306.0,"ucret":0.0049499999999999995}
+{"t":"niyet","kimlik":"0x9a0519e68974e99f0accbba8d19e1eca53e4d14a:373377410914993","eylem":"artir","adres":"0x9a0519e68974e99f0accbba8d19e1eca53e4d14a","coin":"BTC","yon":"B","usd":11.779866,"reduce_only":false,"cloid":"0xb00511b94d4c7056308321d07b54d487","ms":1794179725808}
+{"t":"sonuc","cloid":"0xb00511b94d4c7056308321d07b54d487","durum":"dolu","ms":1794179725970,"sz":0.00015642666503096284,"px":75306.0,"ucret":0.00530093989656976}
+{"t":"niyet","kimlik":"0x9a0519e68974e99f0accbba8d19e1eca53e4d14a:972922607821363","eylem":"artir","adres":"0x9a0519e68974e99f0accbba8d19e1eca53e4d14a","coin":"BTC","yon":"B","usd":14.385209,"reduce_only":false,"cloid":"0xa9fb8c07a921459942b7c0f8de4939a2","ms":1794179725975}
+{"t":"sonuc","cloid":"0xa9fb8c07a921459942b7c0f8de4939a2","durum":"dolu","ms":1794179726128,"sz":0.0001910234045888213,"px":75306.0,"ucret":0.0064733438276846}
