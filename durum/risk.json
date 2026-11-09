@@ -1,68 +1,10 @@
 {
- "acilis_durdu": {
-  "gunluk_kayip": false,
-  "kapanis_eksik": false,
-  "kasa_siniri": false,
-  "mutabakat": false
- },
+ "acilis_durdu": {},
  "dur": false,
  "dur_neden": null,
  "fren_bitis": {},
- "gun": "2026-11-09",
- "gun_basi": 1000.9588800605352,
- "yeni_coin": {
-  "0x11eee2e0a613af4f636e23ff295e2dac6a191d1d": [
-   [
-    1794223499855,
-    "ARB"
-   ]
-  ],
-  "0x1d5f8a36804df3c352ad3eac2737b0c642f0a849": [
-   [
-    1794239503088,
-    "SOL"
-   ],
-   [
-    1794239653536,
-    "XRP"
-   ],
-   [
-    1794239863034,
-    "AVAX"
-   ]
-  ],
-  "0x3da36da44a0e67e7f0273333ec870248aa38740f": [],
-  "0x558afca8d68f6a7335837b06ce218a234978225b": [
-   [
-    1794191217405,
-    "ETH"
-   ]
-  ],
-  "0x57da5ca2b92632426bedfe81671dd0c8c3111a50": [
-   [
-    1794246111841,
-    "kPEPE"
-   ]
-  ],
-  "0x5d908c88be270889c0953e7dff1c8e1d699ceea3": [
-   [
-    1794219367574,
-    "HYPE"
-   ]
-  ],
-  "0x6ba51c6b1c5fef215014e5e3ca22f333894a3759": [
-   [
-    1794177428590,
-    "BTC"
-   ]
-  ],
-  "0x92d8c46701a992e007849ab09d5cc578d5330cdf": [],
-  "0x9a0519e68974e99f0accbba8d19e1eca53e4d14a": [
-   [
-    1794214962875,
-    "BTC"
-   ]
-  ]
- },
- "zirve": 1012.2292673542427
+ "gun": null,
+ "gun_basi": 1000.0,
+ "yeni_coin": {},
+ "zirve": 1000.0
 }
