@@ -1,9 +1,14 @@
 {
- "acilis_durdu": {},
+ "acilis_durdu": {
+  "gunluk_kayip": false,
+  "kapanis_eksik": false,
+  "kasa_siniri": false,
+  "mutabakat": false
+ },
  "dur": false,
  "dur_neden": null,
  "fren_bitis": {},
- "gun": null,
+ "gun": "2026-11-09",
  "gun_basi": 1000.0,
  "yeni_coin": {},
  "zirve": 1000.0

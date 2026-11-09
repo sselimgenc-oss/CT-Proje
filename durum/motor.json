@@ -5,23 +5,23 @@
  "hesap_tr": {
   "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29": {
    "deger": 0.0,
-   "ms": 1794258555200
+   "ms": 1794259244432
   },
   "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": {
    "deger": 55334.93606021,
-   "ms": 1794258555200
+   "ms": 1794259244432
   },
   "0xde29121a6858d90ae486855b127f9d5ee4035232": {
    "deger": 20681.11830313,
-   "ms": 1794258555200
+   "ms": 1794259244432
   },
   "0xfb94d93d73b1a5398816c7d46e1590173371f82b": {
-   "deger": 74403.16748755,
-   "ms": 1794258555200
+   "deger": 73963.15748755,
+   "ms": 1794259244432
   },
   "0xfc76f730c3e2939825484e0a777368075d779ef9": {
    "deger": 227690.06585688,
-   "ms": 1794258555200
+   "ms": 1794259244432
   }
  },
  "hl_ofset": null,
@@ -32,8 +32,8 @@
  "kip": "sanal",
  "ledger_son_ms": null,
  "ozet_emir": 0,
- "ozet_gunu": null,
- "ozet_oz": null,
+ "ozet_gunu": "2026-11-09",
+ "ozet_oz": 1000.0,
  "poz_tr": {
   "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29": {},
   "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": {},
@@ -47,18 +47,18 @@
  },
  "poz_tr_ms": {},
  "poz_tr_senk_ms": {
-  "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29": 1794258555309,
-  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 1794258563225,
-  "0xde29121a6858d90ae486855b127f9d5ee4035232": 1794258559179,
-  "0xfb94d93d73b1a5398816c7d46e1590173371f82b": 1794258567719,
-  "0xfc76f730c3e2939825484e0a777368075d779ef9": 1794258571737
+  "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29": 1794259246685,
+  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 1794259246685,
+  "0xde29121a6858d90ae486855b127f9d5ee4035232": 1794259246685,
+  "0xfb94d93d73b1a5398816c7d46e1590173371f82b": 1794259246685,
+  "0xfc76f730c3e2939825484e0a777368075d779ef9": 1794259246685
  },
  "son_funding_ms": null,
- "son_funding_saat": null,
- "son_olay_ms": 0,
+ "son_funding_saat": 498405,
+ "son_olay_ms": 1794253157356,
  "tg_offset": 0,
  "ucret_gercek_usd": 0.0,
  "ucret_tahmin_say": 0,
- "vardiya": "42679711509",
- "yazildi_ms": 1794258575756
+ "vardiya": "42699857896",
+ "yazildi_ms": 1794259525306
 }
