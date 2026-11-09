@@ -6,6 +6,14 @@ set -euo pipefail
 [ "${GITHUB_ACTIONS:-}" = true ] || { echo 'Yalnız GitHub Actions için.' >&2; exit 1; }
 veri_dali="${VERI_DALI:-radar}"
 case "$veri_dali" in radar|radar-deneme) ;; *) echo "Geçersiz VERI_DALI: $veri_dali" >&2; exit 1 ;; esac
+# G-23: checkout `persist-credentials: false`; yazma kimliği yalnız BU betiğe `YAYIM_TOKEN` ile gelir. Diske (.git/config) yazılmaz, argv'ye konmaz, yazdırılmaz:
+# yalnız bu sürecin git komutları için GIT_CONFIG_* ortam değişkeniyle `http.extraheader` (actions/checkout ile aynı biçim; canli_yayimla.sh ile aynı).
+if [ -n "${YAYIM_TOKEN:-}" ]; then
+  export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.https://github.com/.extraheader"
+  GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$YAYIM_TOKEN" | base64 -w0)"
+  export GIT_CONFIG_VALUE_0
+  unset YAYIM_TOKEN
+fi
 tarih_klasoru="$(ls -d radar/????-??-?? | tail -n 1)"
 gun="$(basename "$tarih_klasoru")"
 [ -s "$tarih_klasoru/havuz.json" ] && [ -s "$tarih_klasoru/kadro.json" ]

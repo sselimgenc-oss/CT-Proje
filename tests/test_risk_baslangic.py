@@ -9,7 +9,7 @@ import pytest
 from copytrade import dinleyici as d
 from copytrade.risk_defter import KararGunlugu, RiskDefteri
 from tests.test_dinleyici import A, B, Saat, SahteWS
-from tests.test_risk_defter import GUN_MS, T, dolum, kurallar, yeni
+from tests.test_risk_defter import T, dolum, kurallar, yeni
 
 
 def durum(*pozlar):

@@ -13,6 +13,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
@@ -22,6 +24,10 @@ jobs:
           node-version: "22"            # G-10: tests/test_nabiz.py (sg-nabiz worker mantığı) node ile koşar; CI'da atlanamaz
       - name: Install pinned dependencies
         run: pip install -r requirements.txt
+      - name: Ruff check (yalnız F + E9; ruff.toml)
+        run: |
+          pip install ruff==0.17.0          # sürüm sabit; requirements.txt'e girmez (yalnız CI aracı)
+          ruff check .
       - name: Run unit and specification tests
         run: python -m pytest -q
 
@@ -31,6 +37,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"

@@ -5,8 +5,6 @@ Sentetik eşdeğer: perp (ana + HIP-3) 4.352 $, spot USDC 10.053 $ -> toplam 14.
 """
 from __future__ import annotations
 
-import pandas as pd
-import pytest
 
 from copytrade import izleme_motoru as m
 from copytrade import hl_ortak

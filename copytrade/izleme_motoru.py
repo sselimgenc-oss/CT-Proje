@@ -179,8 +179,6 @@ def health(history: pd.Series, t0: pd.Timestamp, now: pd.Timestamp, leverage: fl
     """Pilotta (``saglik_performans_konisi: false``) ışık yalnız veri bayatlığı ve kaldıraca bakar (K-6: performans sızmaz)."""
     if performans_konisi is None:
         performans_konisi = bool(load_rules()['saglik_performans_konisi'])
-    daily = history.diff().dropna()
-    before, live = daily[daily.index < t0], daily[daily.index >= t0]
     red, yellow = [], []
     if leverage > 10:
         red.append('gerçek kaldıraç > 10x')

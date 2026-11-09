@@ -1,0 +1,9 @@
+# Yalnız hata yakalayan kurallar (CI `ruff check`): F = pyflakes (tanımsız ad, kullanılmayan içe aktarma vb.), E9 = sözdizimi/çalışma hatası. Biçim kuralları bilerek yok.
+target-version = "py312"
+
+[lint]
+select = ["F", "E9"]
+
+[lint.per-file-ignores]
+# Canlı motor (üretim) bu temizlikte DEĞİŞTİRİLMEDİ: kullanılmayan tek içe aktarma (`rest_post_fabrikasi`) ayrı, onaylı bir işte kaldırılır.
+"copytrade/canli/motor.py" = ["F401"]

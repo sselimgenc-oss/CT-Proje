@@ -6,6 +6,8 @@ name: Radar (günlük tarama + kadro)
 # Eksik koşuda (zaman bütçesi aşıldı / satır eksik / `veri_hatasi` payı > `radar_veri_hatasi_pay_max`, R-2) `radar_kadro` çıkış kodu 2 verir → iş kırmızı biter ve `son/` GÜNCELLENMEZ. Hata örtülmez (başarısızlık gizlenmez).
 # `kural_ust` / `aday_sayisi` girdisi YOK (donmuş kurallar; deneme `radar_deneme.yml`'de).
 # Dal doğrulaması: `copytrade/radar/CALISTIR` dosyasına satır eklenen push (main dışı dal) AYNI iş akışını koşturur ama veri dalı `radar-deneme`'ye yazar (gerçek `radar` dalı yalnız main'den dokunulur).
+# G-23 (canli_vardiya.yml ile aynı desen): checkout'lar `persist-credentials: false` (token diske yazılmaz); yazma izni yalnız `radar` işinde; push kimliği yalnız
+# yayım adımına `YAYIM_TOKEN` ile (radar_yayimla.sh, GIT_CONFIG_* extraheader). Tarama/kadro/isabet (python) adımları token görmez.
 on:
   schedule:
     - cron: "37 0 * * *"
@@ -16,7 +18,7 @@ on:
       - copytrade/radar/CALISTIR
 
 permissions:
-  contents: write
+  contents: read                    # G-23: yazma yalnız `radar` işinde (iş düzeyinde)
 
 defaults:
   run:
@@ -31,10 +33,14 @@ jobs:
   kontrol:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read                # kontrol işi yazmaz (veri dalını yalnız okur)
     outputs:
       atla: ${{ steps.k.outputs.atla }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - id: k
         name: Zamanlama kontrolü (yedek cron)
         env:
@@ -47,10 +53,13 @@ jobs:
     if: ${{ needs.kontrol.outputs.atla != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 180
+    permissions:
+      contents: write               # veri dalı yayımı (yalnız radar_yayimla.sh, YAYIM_TOKEN ile)
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
+          persist-credentials: false  # G-23: yazma token'ı .git/config'e yazılmaz (kurulum/tarama/kadro/isabet adımları görmez)
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
@@ -93,4 +102,5 @@ jobs:
       - name: Veri dalına yaz (radar)
         env:
           VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
+          YAYIM_TOKEN: ${{ github.token }}  # G-23: push kimliği yalnız yayım betiğine
         run: bash .github/scripts/radar_yayimla.sh

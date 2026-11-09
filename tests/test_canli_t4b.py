@@ -12,7 +12,7 @@ from copytrade.canli import niyet as ny
 from copytrade.canli import telegram as tg
 from copytrade.canli import yurutucu as yu
 from copytrade.kurallar import load_rules
-from tests.test_canli_motor import CHAT, GUN, SAAT, TOKEN, SahteHL, SahteTG, Saat, T0, adr, kadro, kayitlar, kur, olay, satir, tg_mesaj
+from tests.test_canli_motor import CHAT, SAAT, TOKEN, SahteHL, SahteTG, Saat, adr, kadro, kayitlar, kur, olay, satir, tg_mesaj
 
 RULES = load_rules()
 HLADR = "0x" + "ab" * 20                       # kendi HL hesap adresimiz (gizli kalmalı)
@@ -136,7 +136,7 @@ def test_dur_pozisyon_duzlesmezse_motor_durmaz_dur_dosyasi_bekliyor_sonra_tamam(
     d = json.loads((tmp_path / "durum" / "DUR").read_text(encoding="utf-8"))
     assert m.dur_bekliyor and not m.dur_istendi and d["kapanis_bekliyor"] is True and m.risk.dur
     assert any("DÜZLEŞMEDİ" in x for x in tgp.gonderilen)
-    ok, izin = m.risk.acilis_izni(adr(1), "BTC", True, saat()), None
+    ok = m.risk.acilis_izni(adr(1), "BTC", True, saat())
     assert ok[0] is False                                                                      # yeni açılış yok
     saat.ms += 60_000
     m.dakika()
@@ -251,7 +251,7 @@ def test_emir_ile_durum_yazimi_arasinda_cokme_ayni_dolum_ikinci_emir_uretmez(tmp
     gercek_emir = m.yurutucu.emir
 
     def coktur(*a, **k):
-        d = gercek_emir(*a, **k)                                                               # emir borsaya GİTTİ
+        gercek_emir(*a, **k)                                                                   # emir borsaya GİTTİ
         if sim:
             sim.durumlar[k["cloid"]] = {"status": "order", "order": {"order": {"coin": "BTC", "side": "B", "limitPx": "100.5", "sz": "0.0", "origSz": str(sim.siparisler[-1]["dolan"]), "oid": 7}, "status": "filled"}}
         raise Cokus()

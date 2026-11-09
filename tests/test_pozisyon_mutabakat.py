@@ -4,7 +4,6 @@ from __future__ import annotations
 import math
 
 import pandas as pd
-import pytest
 
 from copytrade.pozisyon_mutabakat import borsa_pozisyonlari, mutabakat as _mutabakat, mutabakat_dataframe, ozet
 

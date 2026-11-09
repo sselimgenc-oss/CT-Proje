@@ -13,7 +13,6 @@ import argparse
 import re
 from collections import Counter
 import json
-import statistics
 import subprocess
 import sys
 import time

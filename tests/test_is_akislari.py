@@ -145,6 +145,15 @@ def test_eski_sistem_is_akislari_ve_betikleri_yok():
     assert (SCRIPTS / "izleme_yayimla.sh").exists() and not (WF / "izleme.yml").exists()      # S-21: izleme.yml (silinmiş copytrade-izleme dalına yazan) kaldırıldı; betik test_izleme.py testleriyle duruyor
 
 
+def test_silinen_deneme_is_akislarinin_olu_kodu_ve_tetik_dosyalari_yok():
+    """09.11 temizlik: 08.11'de silinen deneme iş akışlarının (izleme/dolgu/gecikme_kar/dinleyici_deneme) yalnız onlarca çağrılan modül, betik ve CALISTIR dosyaları kaldırıldı."""
+    for yol in ("copytrade/deneme_arac.py", "copytrade/dolgu_deneme.py", "copytrade/risk_deneme.py", ".github/scripts/h1_ozet.py",
+                "copytrade/izleme_deneme", "copytrade/dinleyici_deneme"):
+        assert not (ROOT / yol).exists(), yol
+    for yol in [*WF.glob("*.yml"), *(p for p in SCRIPTS.glob("*") if p.is_file()), *(ROOT / "copytrade").rglob("*.py")]:
+        assert not re.search(r"deneme_arac|dolgu_deneme|risk_deneme|h1_ozet", yol.read_text(encoding="utf-8")), yol
+
+
 def test_dal_sil_yalniz_eski_claude_dallari_elle_main():
     """Tek seferlik temizlik: veri dalları, main ve oturum dalı listede olamaz; yalnız elle (dispatch) ve yalnız main'de; yazma yalnız iş düzeyinde."""
     if not (WF / "dal_sil.yml").exists():
@@ -165,7 +174,7 @@ def test_radar_yml_gunluk_00_37_utc_kadro_ve_yayim_sirasi():
     assert wf["on"]["schedule"] == [{"cron": "37 0 * * *"}, {"cron": "17 2 * * *"}] and "workflow_dispatch" in wf["on"] and wf["on"]["push"] == {"paths": ["copytrade/radar/CALISTIR"]}
     assert adim(wf, "radar", "Veri dalına yaz")["env"]["VERI_DALI"] == "${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}"        # dal koşusu gerçek radar dalına yazmaz
     assert "inputs" not in (wf["on"]["workflow_dispatch"] or {})                              # donmuş kurallar: aday sayısı / kural_ust girdisi YOK
-    assert wf["permissions"] == {"contents": "write"} and wf["concurrency"]["cancel-in-progress"] is False
+    assert wf["permissions"] == {"contents": "read"} and wf["jobs"]["radar"]["permissions"] == {"contents": "write"} and wf["concurrency"]["cancel-in-progress"] is False   # G-23: yazma yalnız radar işinde
     ad = adimlar(wf, "radar")
     assert ad.index("Radar taraması (R0 + R1 + R2 girdileri)") < ad.index("Günlük kadro (R2 form puanı)") < ad.index("Veri dalına yaz (radar)")
     tarama, kadro = adim(wf, "radar", "Radar taraması")["run"], adim(wf, "radar", "Günlük kadro")["run"]
@@ -631,6 +640,106 @@ def test_g23_yayim_betigi_token_i_yalniz_git_ortamina_koyar_diske_ve_ciktiya_yaz
     assert "GIZLI123" not in r.stdout + r.stderr and "GIZLI123" not in (co / ".git" / "config").read_text()
     assert base64.b64encode(b"x-access-token:GIZLI123").decode() not in (co / ".git" / "config").read_text() + r.stdout + r.stderr
     assert _git(remote, "show", "canli-durum:durum/hesap.json") == "{}"
+
+
+def test_g23_radar_yazma_yalniz_radar_isinde_token_yalniz_yayim_adiminda():
+    """G-23 (canli_vardiya.yml deseni): iş akışı düzeyi okuma; kontrol işi okuma; yazma yalnız `radar` işinde. Actions token'ı yalnız `Veri dalına yaz` adımına
+    `YAYIM_TOKEN` olarak gider; tarama/kadro/isabet (python) adımları ve iş düzeyi ortam token görmez."""
+    wf = yukle("radar.yml")
+    assert wf["permissions"] == {"contents": "read"}
+    assert wf["jobs"]["kontrol"]["permissions"] == {"contents": "read"} and wf["jobs"]["radar"]["permissions"] == {"contents": "write"}
+    for is_adi, is_ in wf["jobs"].items():
+        assert "github.token" not in str(is_.get("env", {})) and "secrets." not in str(is_.get("env", {})), is_adi
+        for a in is_["steps"]:
+            tokenli = {k for k, v in a.get("env", {}).items() if "github.token" in str(v) or "secrets." in str(v)}
+            if a.get("name") == "Veri dalına yaz (radar)":
+                assert tokenli == {"YAYIM_TOKEN"} and a["run"] == "bash .github/scripts/radar_yayimla.sh"
+            else:
+                assert not tokenli and "github.token" not in str(a) and "YAYIM_TOKEN" not in str(a), (is_adi, a)
+    metin = (WF / "radar.yml").read_text(encoding="utf-8")
+    assert metin.count("github.token") == 1 and "secrets." not in metin
+
+
+@pytest.mark.parametrize("ad", sorted(p.name for p in WF.glob("*.yml")))
+def test_g23_tum_is_akislarinda_checkout_kimlik_birakmaz(ad):
+    """G-23: hiçbir iş akışının checkout'u token'ı .git/config'e yazmaz (`persist-credentials: false`); veri dalı push'u yalnız yayım betiğinin GIT_CONFIG_* ortamıyla."""
+    wf = yukle(ad)
+    sayi = 0
+    for is_adi, is_ in wf["jobs"].items():
+        for a in is_.get("steps", []):
+            if str(a.get("uses", "")).startswith("actions/checkout@"):
+                sayi += 1
+                assert (a.get("with") or {}).get("persist-credentials") is False, (ad, is_adi)
+    assert sayi == (WF / ad).read_text(encoding="utf-8").count("actions/checkout@")
+
+
+@pytest.mark.parametrize("ad", ("isabet_deneme.yml", "saglik.yml", "radar_deneme.yml", "ci.yml"))
+def test_g23_salt_okur_is_akislari_yazma_izni_almaz(ad):
+    """Deneme/sağlık/CI iş akışları yalnız okur: iş akışı düzeyi `contents: read`, hiçbir iş yazma izni almaz, push yok."""
+    wf = yukle(ad)
+    assert wf["permissions"] == {"contents": "read"}, ad
+    for is_adi, is_ in wf["jobs"].items():
+        assert "write" not in str(is_.get("permissions", {})), (ad, is_adi)
+    assert "git push" not in (WF / ad).read_text(encoding="utf-8") and "github.token" not in (WF / ad).read_text(encoding="utf-8")
+
+
+def test_g23_radar_yayim_betigi_token_i_yalniz_git_ortamina_koyar_diske_ve_ciktiya_yazmaz(tmp_path):
+    """radar_yayimla.sh: YAYIM_TOKEN → yalnız betiğin git süreçleri için GIT_CONFIG_* `http.https://github.com/.extraheader`; .git/config'e yazılmaz, çıktıya basılmaz,
+    betiğin kendisi python çalıştırmaz. Yayım davranışı (radar dalına havuz/kadro) aynı."""
+    import base64
+    import datetime as dt
+    remote = tmp_path / "remote.git"
+    remote.mkdir()
+    _git(remote, "init", "-q", "--bare")
+    gun = dt.datetime.now(dt.UTC).date().isoformat()
+    co = tmp_path / "co"
+    co.mkdir()
+    _git(co, "init", "-q")
+    _git(co, "config", "user.name", "Test")
+    _git(co, "config", "user.email", "test@example.com")
+    _git(co, "remote", "add", "origin", str(remote))
+    (co / "kaynak.py").write_text("kaynak")
+    _git(co, "add", ".")
+    _git(co, "commit", "-qm", "kaynak")
+    (co / "radar" / gun).mkdir(parents=True)
+    for ad in ("havuz", "kadro"):
+        (co / "radar" / gun / f"{ad}.json").write_text(json.dumps({"sema": f"radar-{ad}-v1", "kosu_ms": 1, "satirlar": []}))
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    gercek_git = subprocess.run(["bash", "-c", "command -v git"], capture_output=True, text=True).stdout.strip()
+    (bin_ / "git").write_text(f'#!/usr/bin/env bash\necho "${{GIT_CONFIG_KEY_0:-yok}}|${{GIT_CONFIG_VALUE_0:-yok}}|${{YAYIM_TOKEN:-yok}}" >> "{tmp_path}/git_env.txt"\nexec {gercek_git} "$@"\n', encoding="utf-8")
+    (bin_ / "python").write_text(f'#!/usr/bin/env bash\necho cagrildi >> "{tmp_path}/python.txt"\nexit 0\n', encoding="utf-8")
+    for b in ("git", "python"):
+        (bin_ / b).chmod(0o755)
+    env = {**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}", "GITHUB_ACTIONS": "true", "VERI_DALI": "radar", "YAYIM_TOKEN": "GIZLI456"}
+    r = subprocess.run(["bash", str(SCRIPTS / "radar_yayimla.sh")], cwd=co, env=env, capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    beklenen = "http.https://github.com/.extraheader|AUTHORIZATION: basic " + base64.b64encode(b"x-access-token:GIZLI456").decode() + "|yok"
+    git_env = (tmp_path / "git_env.txt").read_text().splitlines()
+    assert git_env and all(s == beklenen for s in git_env)                                        # her git çağrısı kimlikli; ham YAYIM_TOKEN alt süreçlere geçmez
+    assert not (tmp_path / "python.txt").exists()
+    gizli = ("GIZLI456", base64.b64encode(b"x-access-token:GIZLI456").decode())
+    assert not any(g in r.stdout + r.stderr + (co / ".git" / "config").read_text() for g in gizli)
+    assert _dal_json(remote, f"radar/{gun}/kadro.json")["kosu_ms"] == 1 and _dal_json(remote, "radar/son/kadro.json")["kosu_ms"] == 1
+
+
+def test_ci_ruff_sabit_surumle_yalniz_hata_kurallari_ve_testten_once():
+    """CI test işi `ruff check` koşar: sürüm sabit (==), requirements.txt'te değil; ruff.toml yalnız F + E9 seçer."""
+    ci = yukle("ci.yml")
+    ad = adimlar(ci, "test")
+    ruff = adim(ci, "test", "Ruff check")["run"]
+    assert re.search(r"pip install ruff==\d+\.\d+\.\d+\b", ruff) and "ruff check ." in ruff and "|| true" not in ruff
+    assert ad.index("Ruff check (yalnız F + E9; ruff.toml)") < ad.index("Run unit and specification tests")
+    assert "ruff" not in (ROOT / "requirements.txt").read_text(encoding="utf-8").lower()
+    import tomllib
+    ayar = tomllib.loads((ROOT / "ruff.toml").read_text(encoding="utf-8"))
+    assert ayar["lint"]["select"] == ["F", "E9"]
+
+
+def test_requirements_kullanilmayan_paketleri_icermez():
+    """09.11 temizlik: içe aktarılmayan paketler (yfinance, pynescript, antlr4, duckdb, pyarrow) requirements.txt'ten çıkarıldı; geri gelmez."""
+    paketler = {s.split("==")[0].strip().lower() for s in (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines() if s.strip() and not s.startswith("#")}
+    assert paketler == {"pandas", "pytest", "requests", "pyyaml", "websockets"}          # websockets önce yfinance üzerinden dolaylı geliyordu; dinleyici/hl_public_adapter kullanır, açıkça sabitlendi (requirements-canli ile aynı sürüm)
 
 
 def test_g23_ucuncu_taraf_eylemler_tam_commit_sha_ile_sabit():

@@ -8,7 +8,7 @@ import pytest
 
 from copytrade.canli import motor as mt
 from copytrade.canli import niyet as ny
-from tests.test_canli_motor import SAAT, adr, kayitlar, kur, olay
+from tests.test_canli_motor import adr, kayitlar, kur, olay
 from tests.test_canli_t4b import BorsaSim, Cokus, kur_gercek  # noqa: F401 (Cokus: BaseException çökme benzetimi)
 
 

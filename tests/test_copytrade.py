@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 
 
 from copytrade.olcut import calculate_metrics, closed_round_trips, martingale_ratio

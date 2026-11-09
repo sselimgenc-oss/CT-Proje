@@ -8,7 +8,6 @@ import time
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from copytrade.defter import DAY, HOUR
 from copytrade.golge import calistir
