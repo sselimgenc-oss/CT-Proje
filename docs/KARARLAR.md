@@ -249,3 +249,10 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - **Kullanıcıyla kapandı:** G-7 (Telegram açık, 08.11), G-8 (`main-koruma` ruleset, 08.11), G-10 (dış nabız `sg-nabiz`).
 - **Açık:** S-23 (gerçek HL yanıt kaydı → ilk gerçek deneme), S-24 dışı test hijyeni yok; A-1 (Cloudflare token kapsamı, kullanıcı); B1/B7/B10/B13/B16/B17 ve G t ≥ 2 v1.1 adayları → 28. gün, tek tek, kayıtlı havuzlarla çevrimdışı sınanarak (K-47).
 - **Doğrulama kanıtı:** B8 300 aday gerçek koşu (gecti 15 → 16, 3 açıklanabilir fark); G-23/S-20 dal vardiyası (dönem beklemesi → 74 dk, yayımlar sorunsuz); yeni dönem 21:01Z temiz başladı (donem.txt, eski dosyalar dal ucundan silindi, 347 coin maxLeverage).
+
+## K-52 — Dış denetim (3 tur, 09.11) ve temizlik (kullanıcı onayı 09.11)
+- **Tur 1 (#591):** radar.yml G-23 (yazma yalnız radar işinde, persist-credentials false, YAYIM_TOKEN yalnız yayım adımında; dal denemesi başarılı); kullanılmayan 5 paket çıkarıldı (websockets açıkça eklendi); ölü deneme kodu silindi; CI'da ruff (F + E9); README.
+- **Tur 2 (#591):** gerçek kipte HL değer tavanı kasa sınırından ayrı (`canli_hl_deger_ust_usd` 1.500 $; kasa ≤ 1.000 $ aynen); Telegram grup chat yetkisi; açıklanamayan HL sıçraması → mutabakat + alarm (DUR bir okuma ertelenir); bekçi nabzı kapanış döngüsünde; mutabakat yeniden okuma; `calis()` entegrasyon testi; `canli_kadro_repo` CT-Proje.
+- **Tur 3 (#592):** yarım DUR yeniden başlatmada kapanır + alarm (Y-1); belirsiz emirde bant merdiveni durur (Y-2); `sg-nabiz` kaynağı ayarlanabilir, gerçek kipte gerçek yayım hedefine bağlanması açılış ön koşulu (Y-3); hesap adresine bağlı kilit + yabancı açık emir denetimi (Y-5); yüksek fiyatlı coinlerde limit yuvarlama (Y-7); iki mutasyon boşluğu testlendi.
+- **Temizlik (#590, #593):** 40 eski `claude/*` dalı ve 5 eski deneme iş akışı silindi; FAZ3 kalıntı modülleri silindi; ana dal koruması (`main-koruma`); Pages kapalı; Cloudflare token yalnız Workers Scripts Edit + Account Settings Read; issue #1 kapatıldı. 300 $ arşiv dalları tek seferlik iş akışıyla silinecek.
+- **Ertelenen:** motor.py bölme (28. gün sonrası), v1.1 adayları (02–03.12), S-23 (ilk gerçek deneme).

@@ -1,6 +1,6 @@
 # DURUM (lider günceller; tek doğru kaynak)
 
-Son güncelleme: 2026-11-08 22:40Z, lider Claude (Opus). Sonnet emekli (06.11); kodu lider ve lidere bağlı ajanlar yazar, lider denetler ve birleştirir. Son karar: kullanıcı.
+Son güncelleme: 2026-11-09 10:00Z, lider Claude (Opus). Sonnet emekli (06.11); kodu lider ve lidere bağlı ajanlar yazar, lider denetler ve birleştirir. Son karar: kullanıcı.
 
 ## Hedef
 Form Radarı v1 (`docs/RADAR_V1.md`): her gün son 7 günde formu yüksek, kopyalanabilir trader'ları bul → İlk 11'i 1.000 $ kasayla kopyala.
@@ -12,9 +12,11 @@ Form Radarı v1 (`docs/RADAR_V1.md`): her gün son 7 günde formu yüksek, kopya
 - **Ana dal koruması** (`main-koruma` ruleset): PR zorunlu, `test` + `canli_sdk` yeşil olmadan birleşmez, silme/force push yok.
 - **Radar** B8 (zamana bağlı payda) ile 03:37 TSİ'de günlük kadro; isabet ek grupları ve `g_t_istat` yalnız bilgi.
 
-## Denetimler (Fable, 06–08.11) — kapanış: K‑51
+## Denetimler (Fable 06–08.11 + dış denetim 3 tur 09.11) — kapanış: K‑51, K‑52
 - `docs/DENETIM_DEVIR_2026-11-06.md` (G-1…G-11), `docs/DENETIM_SECIM_2026-11-08.md` (B1…B17), `docs/DENETIM_PROJE_2026-11-08.md` (G-12…G-24, S-1…S-24).
-- Kod maddelerinin tamamı main'de ve testli (#573–#587). Açık kalanlar: S-23 (gerçek HL yanıt kaydı; ilk gerçek deneme), A-1 (Cloudflare token kapsamı; kullanıcı), v1.1 adayları (28. gün kararı).
+- Kod maddelerinin tamamı main'de ve testli (#573–#593). Açık kalanlar: S-23 (gerçek HL yanıt kaydı; ilk gerçek deneme), A-1 (Cloudflare token kapsamı; kullanıcı), v1.1 adayları (28. gün kararı).
+
+- **Repo adı 08.11'den beri `sselimgenc-oss/CT-Proje`** (eski `sg-arge` adresleri GitHub yönlendirmesiyle çalışır; kod yeni adı kullanır).
 
 ## Takvim
 | Tarih | İş |
