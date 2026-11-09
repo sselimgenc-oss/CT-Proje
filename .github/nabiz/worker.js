@@ -4,15 +4,28 @@
 // Karar (saf, test edilir: tests/test_nabiz.py): yaş = şimdi − max(son nabız, dönem başı). yaş < ESIK_DK → sessiz.
 // Durum tutulmaz (KV yok): yaş [ESIK, ESIK+TIK) aralığındaki İLK tikte alarm, sonra her TEKRAR_DK'da bir (yaş − ESIK) mod TEKRAR < TIK.
 // Veri okunamazsa (3 deneme, ~80 sn) durum "bilinmiyor": alarm yalnız UTC 3 saatlik ızgaranın ilk tikinde (00:00, 03:00, … +10 dk) — tek kesintide en çok bir uyarı.
+// Y-3: kaynak ayarlanabilir — wrangler değişkeni `NABIZ_KAYNAK` (yayında `--var`, GitHub `vars.NABIZ_KAYNAK`): boş → `canli-durum` (sanal); dal adı (aynı depo) ya da
+// https ham kök adresi (ör. gerçek motorun `canli-gercek` dalı). Kökte `durum/kilit.json` + `durum/ozet.json` aranır. Gerçek paradan ÖNCE gerçek yayım hedefine çevrilmeli.
 
 const DAKIKA = 60000;
 const DEPO = "sselimgenc-oss/CT-Proje";
 const HAM = `https://raw.githubusercontent.com/${DEPO}`;
-export const KAYNAK = {
-  kilit: `${HAM}/canli-durum/durum/kilit.json`,
-  ozet: `${HAM}/canli-durum/durum/ozet.json`,
-  donem: `${HAM}/main/copytrade/canli/DONEM`,
-};
+export const VARSAYILAN_DAL = "canli-durum";
+// Y-3: veri kökü. Geçersiz değer (boşluk, http, garip karakter) → varsayılan (sessizce yanlış yere bakmasın diye `kaynak_ozel` yanıtta görünür).
+export function kaynak(env = {}) {
+  const v = String(env.NABIZ_KAYNAK ?? "").trim();
+  let kok = `${HAM}/${VARSAYILAN_DAL}`;
+  let ozel = false;
+  if (/^https:\/\/[^\s?#]+$/.test(v) && !/\/\.\.?(\/|$)/.test(v)) {
+    kok = v.replace(/\/+$/, "");
+    ozel = true;
+  } else if (/^[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/.test(v) && !v.split("/").some((p) => /^\.+$/.test(p)) && v !== VARSAYILAN_DAL) {
+    kok = `${HAM}/${v}`;
+    ozel = true;
+  }
+  return { kilit: `${kok}/durum/kilit.json`, ozet: `${kok}/durum/ozet.json`, donem: `${HAM}/main/copytrade/canli/DONEM`, ozel };
+}
+export const KAYNAK = (({ kilit, ozet, donem }) => ({ kilit, ozet, donem }))(kaynak({}));
 export const ACTIONS_URL = `https://github.com/${DEPO}/actions/workflows/canli_vardiya.yml`;
 export const VARSAYILAN = { esik_dk: 45, tekrar_dk: 180, tik_dk: 10 };
 
@@ -64,21 +77,32 @@ async function al(url, tur, bekleme_ms) {
 // Bir kontrol turu (gönderim yok). bekleme_ms: denemeler arası bekleme (zamanlı tik: [20 sn, 60 sn]; elle sorgu: []).
 export async function kontrol(env, simdi_ms, bekleme_ms = [20000, 60000]) {
   const a = ayarlar(env);
-  const [kilit, ozet, donem_metin] = await Promise.all([al(KAYNAK.kilit, "json", bekleme_ms), al(KAYNAK.ozet, "json", bekleme_ms), al(KAYNAK.donem, "text", [])]);
+  const kay = kaynak(env);
+  const [kilit, ozet, donem_metin] = await Promise.all([al(kay.kilit, "json", bekleme_ms), al(kay.ozet, "json", bekleme_ms), al(kay.donem, "text", [])]);
   const donem = donem_metin ? Date.parse(donem_metin.trim()) : NaN;
   const donem_ms = Number.isFinite(donem) ? donem : null;
   const son_ms = son_zaman(kilit, ozet);
   const k = karar(simdi_ms, son_ms, a.esik_dk, a.tekrar_dk, { donem_ms, tik_dk: a.tik_dk });
   return { ...k, simdi_ms, son_ms, donem_ms, birakildi: kilit ? Boolean(kilit.birakildi) : null, vardiya: kilit?.vardiya ?? null,
-    okundu: { kilit: kilit !== null, ozet: ozet !== null, donem: donem_ms !== null }, ...a };
+    okundu: { kilit: kilit !== null, ozet: ozet !== null, donem: donem_ms !== null }, kip: ozet?.kip ?? null, kaynak_ozel: kay.ozel, ...a };
+}
+
+// Mesaj etiketi: ozet.kip (gercek/sanal); okunamadıysa varsayılan kaynak → "Sanal motor", özel kaynak → "Motor" (kip bilinmiyor).
+function etiket(s) {
+  if (s.kip === "gercek") return "Gerçek motor";
+  if (s.kip === "sanal" || !s.kaynak_ozel) return "Sanal motor";
+  return "Motor";
 }
 
 export function mesaj(s) {
+  const ad = etiket(s);
+  const sunucu = ad !== "Sanal motor";
   if (s.durum === "bilinmiyor") {
-    return `⚠️ UYARI: Sanal motor nabzı okunamadı (GitHub ham veri 3 denemede erişilemedi). Elle bakın: ${ACTIONS_URL}`;
+    return `⚠️ UYARI: ${ad} nabzı okunamadı (GitHub ham veri 3 denemede erişilemedi). Elle bakın: ${sunucu ? "sunucuda systemctl status sg-canli" : ACTIONS_URL}`;
   }
   const ek = s.birakildi ? " (son vardiya kilidi bıraktı, yenisi başlamadı)" : "";
-  return `🚨 ALARM: Sanal motor nabzı yok — son yayım ${Math.round(s.yas_dk)} dk önce${ek}. Vardiya zinciri kopmuş olabilir: ${ACTIONS_URL}\n(sg-nabiz; sürerse ${Math.round(s.tekrar_dk / 60)} saatte bir yinelenir)`;
+  const neden = sunucu ? "Motor ya da yayım (sg-canli-yayim) durmuş olabilir: sunucuda systemctl status sg-canli sg-canli-yayim.timer" : `Vardiya zinciri kopmuş olabilir: ${ACTIONS_URL}`;
+  return `🚨 ALARM: ${ad} nabzı yok — son yayım ${Math.round(s.yas_dk)} dk önce${ek}. ${neden}\n(sg-nabiz; sürerse ${Math.round(s.tekrar_dk / 60)} saatte bir yinelenir)`;
 }
 
 export function telegram_acik(env) {
@@ -119,7 +143,8 @@ export default {
   // Elle kontrol: JSON durum (gönderim YOK; secret değeri dönmez). `alarm` = bu an bir tik olsaydı alarm verilir miydi.
   async fetch(_istek, env) {
     const s = await kontrol(env, Date.now(), []);
-    const govde = { ...s, telegram: telegram_acik(env) ? "acik" : "kapali", kaynak: KAYNAK };
+    const k = kaynak(env);
+    const govde = { ...s, telegram: telegram_acik(env) ? "acik" : "kapali", kaynak: { kilit: k.kilit, ozet: k.ozet, donem: k.donem } };
     return new Response(JSON.stringify(govde, null, 2), { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
   },
 };

@@ -7,6 +7,12 @@
   - `canli-durum:durum/ozet.json` (`yazildi_ms`)
   - `main:copytrade/canli/DONEM`
 - Okuma `raw.githubusercontent.com` üzerinden, önbelleği aşmak için `?t=` ekiyle yapılır.
+- **Kaynak ayarı (Y-3):** wrangler değişkeni `NABIZ_KAYNAK` (yayında GitHub `vars.NABIZ_KAYNAK`'tan `--var` ile; yoksa `canli-durum`).
+  - Değer: dal adı (aynı depo, ör. `canli-gercek`) ya da https ham kök (ör. `https://raw.githubusercontent.com/<sahip>/<depo>/canli-gercek`). Kökte `durum/kilit.json` ve `durum/ozet.json` aranır (`deploy/gercek_yayimla.sh` bu düzende iter).
+  - Geçersiz değer yok sayılır (varsayılan). Elle sorgu yanıtında `kaynak` ve `kaynak_ozel` görünür.
+  - Mesaj etiketi `ozet.kip`'ten: "Gerçek motor" / "Sanal motor" (özel kaynak okunamadıysa "Motor"); gerçek kipte bağlantı yerine sunucu komutu yazılır.
+  - **Gerçek paradan önce ön koşul:** worker gerçek yayım hedefine (`GERCEK_YAYIM_HEDEF`, `canli-gercek` dalı) çevrilmiş olmalı; hedef herkese açık okunabilir olmalı (worker'da token yok). Aksi hâlde worker yalnız sanal motoru izler. Bkz. `deploy/ACILIS_KONTROL.md` ön koşul.
+  - Tek worker tek kaynağa bakar: gerçek kipe geçince sanal seri bu alarmdan çıkar (yeni altyapı kurulmadı).
 - Yaş = şimdi − max(`nabiz_ms`, `yazildi_ms`, dönem başı). Birim dakika, zamanlar UTC ms.
 - Yaş ≥ `ESIK_DK` (45) ise alarm verilir. İlk mesaj, eşiği geçtikten sonraki ilk tiktedir: yaş [45, 55) dk.
 - Durum sürerse alarm `TEKRAR_DK`'da (180 dk) bir yinelenir: yaş 225, 405, … dk. KV yok, durum saklanmaz; "düzeldi" mesajı yok.
@@ -35,6 +41,6 @@
 - `TELEGRAM_ACIK` değişince iş akışı yeniden koşturulmalı. Secret'lar worker'da kalır; `TELEGRAM_ACIK=hayir` gönderimi kapatır.
 
 ## Ayar
-- `.github/nabiz/wrangler.toml` `[vars]`: `ESIK_DK`, `TEKRAR_DK`.
+- `.github/nabiz/wrangler.toml` `[vars]`: `ESIK_DK`, `TEKRAR_DK`. `NABIZ_KAYNAK` dosyada değil; GitHub Variables → yayında `--var`.
 - Cron 10 dk'dır; worker'daki `tik_dk` ile aynı olmalı.
 - Test: `tests/test_nabiz.py` (node ile; CI'da atlanmaz).
