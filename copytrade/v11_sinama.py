@@ -9,7 +9,7 @@ Kurallar DEĞİŞMEZ; motor, kadro ve kurallar.yaml'a dokunmaz; veri dallarına 
 4. İleri getiri: D koşusundan şimdiye kadar, R1 ile AYNI kopya oynatması (`radar_isabet.olc` ile aynı yol, 1 dk gecikme + maliyet, B8 payda).
 5. Nedene bağlı çıkış: D'de kadrodan çıkanlar neden grubuna göre (`r0_disi` = yalnız ilk 300'den düştü → v1.1'de kalırdı; `r1:*` = gerçek kötüleşme) ileri getirileri.
 
-Kasa getirisi = Σ seçilenlerin ileri getirisi / 11 (her koltuk kasanın 1/11'i; boş koltuk 0). Örneklem çok küçük: sonuç YÖN gösterir, karar vermez.
+Kasa getirisi = Σ seçilenlerin ileri getirisi (her getiri zaten 1.000 $ kasa ölçeğinde, slot = kasa / 11; boş koltuk 0). Örneklem çok küçük: sonuç YÖN gösterir, karar vermez.
 
     python -m copytrade.v11_sinama --veri-dali radar --tarih 2026-11-05 2026-11-06 2026-11-07 2026-11-08 --ozet-md v11.md
 """
@@ -51,12 +51,13 @@ def varyant_sec(kadro: dict, olcu: dict[str, dict], rules: dict, ilk: int = 11) 
 
 
 def kasa_getirisi(secilen: list[str], ileri: dict[str, float | None], ilk: int = 11) -> tuple[float | None, int, int]:
-    """(kasa getirisi = Σ ölçülen / ilk, ölçülen sayısı, ölçülemeyen sayısı). Ölçülemeyen varsa getiri yine yazılır (0 sayılmaz, atlanır) ama sayısı raporlanır; hiç seçilen yoksa 0."""
+    """(kasa getirisi = Σ ölçülen, ölçülen sayısı, ölçülemeyen sayısı). `kopya_v5` getirisi = net / KASA (slot = kasa / N), yani trader başına getiri zaten kasa ölçeğinde: toplanır, bölünmez
+    (`ilk` yalnız imza uyumu için). Ölçülemeyen varsa getiri yine yazılır (0 sayılmaz, atlanır) ama sayısı raporlanır; hiç seçilen yoksa 0."""
     olculen = [ileri[a] for a in secilen if ileri.get(a) is not None]
     eksik = len(secilen) - len(olculen)
     if secilen and not olculen:
         return None, 0, eksik
-    return sum(olculen) / ilk, len(olculen), eksik
+    return sum(olculen), len(olculen), eksik
 
 
 def ozet(gunler: list[dict]) -> dict:
@@ -82,7 +83,7 @@ def _yuzde(x: float | None, isaret: bool = False) -> str:
 
 def ozet_md(gunler: list[dict], oz: dict) -> str:
     s = ["## v1.1 aday sınaması (geriye dönük, yalnız bilgi)", "",
-         "Kasa getirisi = seçilenlerin kopya getirisi toplamı / 11 (boş koltuk nakit). Pencere: havuz koşusundan ölçüm anına.", "",
+         "Kasa getirisi = seçilenlerin kopya getirisi toplamı (1.000 $ kasa ölçeği; boş koltuk nakit). Pencere: havuz koşusundan ölçüm anına.", "",
          "| Gün | Pencere (gün) | " + " | ".join(VARYANTLAR) + " |", "|---|---|" + "---|" * len(VARYANTLAR)]
     for g in gunler:
         s.append(f"| {g['tarih']} | {g['pencere_gun']:.1f} | " + " | ".join(

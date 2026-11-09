@@ -28,7 +28,7 @@ def test_varyant_sec_v1_ve_filtreler():
 def test_kasa_getirisi_bos_koltuk_nakit():
     ileri = {"a": 0.11, "b": -0.022, "c": None}
     k, n, e = v.kasa_getirisi(["a", "b", "c"], ileri, 11)
-    assert abs(k - 0.088 / 11) < 1e-12 and (n, e) == (2, 1)
+    assert abs(k - 0.088) < 1e-12 and (n, e) == (2, 1)
     assert v.kasa_getirisi([], ileri, 11) == (0.0, 0, 0)
     assert v.kasa_getirisi(["c"], ileri, 11) == (None, 0, 1)
 
