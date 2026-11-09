@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-09 00:51 UTC
+# Canlı rapor — 2026-11-09 01:06 UTC
 
 **Kip** sanal · vardiya `42541071305` · saha 9/11 (inen 0)
 
@@ -6,29 +6,29 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 1.005,82 $ | +%0,49 | — (geçmiş < 7 gün) | +%0,58 | −%0,09 |
+| 1.000,00 $ | 1.007,57 $ | +%0,66 | — (geçmiş < 7 gün) | +%0,76 | −%0,03 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x3da36d… | BTC | L | 234,32 $ | +3,76 $ |
-| 0x5d908c… | SOL | S | 113,96 $ | −2,38 $ |
-| 0x9a0519… | AR | L | 101,39 $ | +3,59 $ |
-| 0x92d8c4… | ZEC | L | 97,43 $ | +0,45 $ |
-| 0x9a0519… | BTC | L | 67,73 $ | +0,14 $ |
-| 0x5d908c… | WLD | S | 48,38 $ | −1,14 $ |
-| 0x9a0519… | LIT | L | 46,08 $ | +0,50 $ |
-| 0x3da36d… | ETH | L | 42,72 $ | +0,42 $ |
-| 0x6ba51c… | ZEC | L | 40,49 $ | +0,58 $ |
-| 0x11eee2… | kPEPE | S | 13,07 $ | −0,33 $ |
-| 0x11eee2… | INJ | S | 11,13 $ | −0,13 $ |
-| 0x5d908c… | XPL | S | 11,03 $ | −0,03 $ |
+| 0x3da36d… | BTC | L | 234,66 $ | +4,11 $ |
+| 0x5d908c… | SOL | S | 114,55 $ | −2,98 $ |
+| 0x9a0519… | AR | L | 102,23 $ | +4,43 $ |
+| 0x92d8c4… | ZEC | L | 98,41 $ | +1,43 $ |
+| 0x9a0519… | BTC | L | 67,83 $ | +0,24 $ |
+| 0x5d908c… | WLD | S | 48,63 $ | −1,38 $ |
+| 0x9a0519… | LIT | L | 46,14 $ | +0,56 $ |
+| 0x3da36d… | ETH | L | 42,73 $ | +0,44 $ |
+| 0x6ba51c… | ZEC | L | 40,90 $ | +0,99 $ |
+| 0x11eee2… | kPEPE | S | 13,11 $ | −0,37 $ |
+| 0x11eee2… | INJ | S | 11,23 $ | −0,23 $ |
+| 0x5d908c… | XPL | S | 11,07 $ | −0,07 $ |
 
 ## Son 24 saat
 
 - emir 40 · dolum 40 · kayma p50 +%0,00 / max +%0,14 (n=40)
-- funding −0,00 $ · ücret 0,44 $
+- funding −0,01 $ · ücret 0,44 $
 
 _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun günlük kayıp tanımı); hafta/toplam kasaya göre; zirveden düşüş motorun zirvesine göre._
 
@@ -50,7 +50,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 15 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 30 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
