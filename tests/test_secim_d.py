@@ -122,3 +122,21 @@ def test_kos_motor_dusurdugu_uye_kadrodan_duser(tmp_path):
     c = SahteP([], {}, {}, lambda coin, ts: 100.0)
     _, k2 = s.kos(c, T, kadro, RULES, log=lambda *_: None, canli={"saha": {"bekleme": {A1: T + 31 * GUN}}})
     assert k2["satirlar"] == [] and k2["cikanlar"] == {A1: "motor_dustu"}
+
+
+def test_denetim_zirve_giristen_beri_ve_cezali_aday_olmaz(tmp_path):
+    """Denetim 1: zirve GİRİŞİMİZDEN beri (tüm-zaman tepesi değil) · denetim 4: süresi dolmamış ceza ve yakın zamanda çıkan aday olmaz, süresi dolan ceza sayılmaz."""
+    eski_buyuk = pf(lambda i: 2_000.0 if i < 30 else (-1_500.0 if i < 40 else 20.0 + (i % 5) * 3.0))      # eski tepe, sonra istikrar
+    o = s.portfolio_olculeri(eski_buyuk, T, RULES)
+    assert o["zirve_dusus"] > 0.25                                           # tüm-zaman ölçüsü yüksek…
+    kadro = {"radar_surum": "v2", "doldurma_ay": "1971-02", "satirlar": [{"adres": A1, "sira": 1, "form": 3.0, "giris_hesap_usd": 20_000.0, "giris_pnl_kum": o["pnl_kum"]}]}
+    c = SahteP([], {A1: _karli_dolumlar(T - 10 * GUN, adet=5)}, {A1: eski_buyuk}, lambda coin, ts: 100.0)
+    _, k2 = s.kos(c, T, kadro, RULES, log=lambda *_: None, canli={"saha": {"bekleme": {A2: T - GUN}}})        # A2'nin cezası bitmiş
+    assert [x["adres"] for x in k2["satirlar"]] == [A1] and k2["cikanlar"] == {}                              # …ama girişten beri düşüş yok → kalır
+    assert k2["satirlar"][0]["zirve_pnl"] == pytest.approx(o["pnl_kum"])
+    _, k3 = s.kos(c, T, kadro, RULES, log=lambda *_: None, canli={"saha": {"bekleme": {A1: T + 30 * GUN}}})
+    assert k3["cikanlar"] == {A1: "motor_dustu"} and A1 in k3["cikanlar_gecmis"]
+    k3["doldurma_ay"] = "1971-01"                                            # ay başı doldurma: yakın zamanda çıkan A1 aday olmaz
+    c.liderler = [lider_ay(A1, 20_000, 100, 5_000, 600)]
+    _, k4 = s.kos(c, T + GUN, k3, RULES, log=lambda *_: None)
+    assert k4["satirlar"] == [] and A1 in k4["cikanlar_gecmis"]

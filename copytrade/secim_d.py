@@ -2,7 +2,8 @@
 
 Ön kaydın "fark kanıtlanamazsa en sade" sırasında ilk sıradaki yapı teoride seçildi (kullanıcı geriye dönük sınamayı beklemek istemedi). Günlük koşu (`radar.yml`):
 1. **Üye denetimi (her gün):** önceki v2 kadrosunun üyeleri için `portfolio` + son `secim_islem_yok_gun` gün dolumu → çıkış yalnız risk nedeniyle:
-   hesap pnl'i zirveden ≥ `secim_cikis_zirve_dusus` × hesap; `secim_islem_yok_gun` gün işlem yok; aylık kontrolde 30 g pnl < 0 iki ay üst üste. (Slot stop %15 ve kaldıraç motorda: `canli_slot_dusus_oran`.)
+   pnl GİRİŞİMİZDEN beri zirvesinden ≥ `secim_cikis_zirve_dusus` × giriş hesabı; `secim_islem_yok_gun` gün işlem yok; aylık kontrolde iki ay üst üste zarar. (Slot stop ve kaldıraç motorda.)
+   Çıkan ve motorun cezalandırdığı adresler `canli_bekleme_gun` boyunca aday olmaz (`cikanlar_gecmis`). secim_d çıkışı motora K-39 ile (iki UTC günü) yansır; arada slot stop korur.
 2. **Doldurma (ilk koşu ve ayın ilk koşusu):** lider tablosunun tamamı → ucuz ön filtre (hesap ≥ `secim_min_hesap_usd`, ay pnl > 0, ay hacmi > 0) → `portfolio` (B evreni):
    son `secim_hafta_sayisi` haftanın ≥ `secim_pozitif_hafta_min`'i pnl > 0, 90 g pnl > 0, 90 g pnl düşüşü ≤ `secim_dusus_90g_max` × hesap → haftalık getiri t-istatistiğine göre
    azalan ilk `secim_aday_ust` kişi için son `secim_kopya_gun` günün dolumları (B kapıları): medyan tutma ≥ 1 sa, kaldıraç ≤ 20x, likit pay ≥ %80, haftalık devir ≤ 100,
@@ -162,6 +163,14 @@ def slot_net(hesap: dict | None, adres: str) -> float | None:
     return float(hesap["realize"].get(adres, 0.0)) - float((hesap.get("ucret") or {}).get(adres, 0.0)) + float((hesap.get("funding") or {}).get(adres, 0.0))
 
 
+def _sayi_mi(x: Any) -> bool:
+    try:
+        float(x)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
 def doldurma_mi(onceki: dict | None, simdi: int) -> bool:
     """İlk koşu (v2 kadro yok) ya da ayın ilk koşusu (önceki kadronun `doldurma_ay`'ı bu ay değil)."""
     ay = datetime.fromtimestamp(simdi / 1000, UTC).strftime("%Y-%m")
@@ -183,7 +192,7 @@ def kadro_yaz(uyeler: list[dict], simdi: int, rules: dict, doldurma_ay: str, cik
     kasa = float(rules["canli_kasa_usd"])
     satirlar = [{"adres": u["adres"], "sira": i, "katman": "ilk11", "form": u.get("t_istat") or 0.0, "bilesenler": {}, "kopya_getiri_7g": u.get("kopya_getiri"),
                  "max_kaldirac": u.get("max_kaldirac"), "giris_ms": u.get("giris_ms"), "ay_negatif": u.get("ay_negatif", 0), "giris_hesap_usd": u.get("giris_hesap_usd"),
-                 "giris_pnl_kum": u.get("giris_pnl_kum"), "sicil_onceki": u.get("sicil_onceki"), "kopya_gunluk": u.get("kopya_gunluk")} for i, u in enumerate(uyeler, 1)]
+                 "giris_pnl_kum": u.get("giris_pnl_kum"), "zirve_pnl": u.get("zirve_pnl"), "sicil_onceki": u.get("sicil_onceki"), "kopya_gunluk": u.get("kopya_gunluk")} for i, u in enumerate(uyeler, 1)]
     kor = radar_form.korelasyon([{"adres": u["adres"], "kopya_gunluk": u.get("kopya_gunluk")} for u in uyeler]) if uyeler else {"adresler": [], "gun_sayisi": 0, "matris": []}
     return {"sema": "radar-kadro-v1", "radar_surum": SURUM, "secim_yapi": "D", "kosu_ms": simdi, "kasa_usd": kasa, "slot_usd": boyut.slot_usd(kasa, rules),
             "saha_n": boyut.saha_sayisi(kasa, rules), "gecti_sayisi": len(uyeler), "soguyan": [], "satirlar": satirlar, "korelasyon": kor,
@@ -203,13 +212,15 @@ def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, sa
     doldur = doldurma_mi(onceki, simdi)
     ay_kontrol = doldur and bool(onceki) and onceki.get("radar_surum") == SURUM
     satirlar: list[dict] = []
-    uyeler, cikanlar = [], {}
+    uyeler, cikanlar, olcu = [], {}, []
     canli = canli or {}
-    bekleme = set(((canli.get("saha") or {}).get("bekleme") or {}).keys())
+    bekleme = {a for a, bit in ((canli.get("saha") or {}).get("bekleme") or {}).items() if _sayi_mi(bit) and float(bit) > simdi}   # denetim 4: süresi dolmuş ceza sayılmaz
+    gecmis = {a: int(t) for a, t in ((onceki or {}).get("cikanlar_gecmis") or {}).items() if simdi - int(t) < int(rules["canli_bekleme_gun"]) * GUN}
     for u in (onceki or {}).get("satirlar", []) if (onceki or {}).get("radar_surum") == SURUM else []:
         a = u["adres"]
         if a in bekleme:                                                    # D+: motor cezayla düşürdü → kadrodan da düşer (31 g sonra geri girme döngüsü yok)
             cikanlar[a] = "motor_dustu"
+            gecmis[a] = simdi
             satirlar.append({"adres": a, "tur": "uye", "neden": "motor_dustu"})
             log(f"çıkış {a[:10]}… motor_dustu")
             continue
@@ -220,8 +231,13 @@ def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, sa
             son = max((int(f["time"]) for f in d), default=None)
         except radar_tarama.HATALAR as h:
             log(f"UYARI: üye {a[:10]}… okunamadı ({type(h).__name__}); kadroda kalır")
-            uyeler.append(dict(u))
+            uyeler.append({**u, "t_istat": u.get("form"), "kopya_getiri": u.get("kopya_getiri_7g")})
             continue
+        if o.get("pnl_kum") is not None and u.get("giris_hesap_usd"):            # denetim 1: zirve GİRİŞİMİZDEN beri (tüm-zaman tepesi değil)
+            zp = max(float(u.get("zirve_pnl") if u.get("zirve_pnl") is not None else (u.get("giris_pnl_kum") or o["pnl_kum"])), float(o["pnl_kum"]))
+            o["zirve_pnl"], o["zirve_dusus"] = zp, (zp - float(o["pnl_kum"])) / float(u["giris_hesap_usd"])
+        else:
+            o["zirve_dusus"] = None
         sicil = slot_net(canli.get("hesap"), a)
         ay_net = None if sicil is None else sicil - float(u.get("sicil_onceki") or 0.0)
         giris = {"hesap_usd": u.get("giris_hesap_usd"), "pnl_kum": u.get("giris_pnl_kum")}
@@ -229,34 +245,41 @@ def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, sa
         satirlar.append({"adres": a, "tur": "uye", **o, "neden": neden})
         if neden:
             cikanlar[a] = neden
+            gecmis[a] = simdi
             log(f"çıkış {a[:10]}… {neden}")
         else:
             yeni_sicil = sicil if (ay_kontrol and sicil is not None) else u.get("sicil_onceki")
             uyeler.append({**u, **o, "t_istat": u.get("form"), "kopya_getiri": u.get("kopya_getiri_7g"), "ay_negatif": ayn, "sicil_onceki": yeni_sicil})
     if doldur and len(uyeler) < n:
         tablo = client.leaderboard()
-        aday = [x for x in on_filtre(tablo, rules) if x["adres"] not in {u["adres"] for u in uyeler} and x["adres"] not in cikanlar]
+        dislanan = {u["adres"] for u in uyeler} | set(cikanlar) | set(gecmis) | bekleme                  # denetim 4: cezalı / yakın zamanda çıkan aday olmaz
+        aday = [x for x in on_filtre(tablo, rules) if x["adres"] not in dislanan]
         log(f"doldurma: boş {n - len(uyeler)}, lider tablosu {len(tablo)}, ön filtre {len(aday)}")
         butce = float(rules["secim_butce_dk"]) * 60
-        olcu = []
         for i, x in enumerate(aday, 1):
             if saat() - t0_kos > butce:
                 log(f"UYARI: süre bütçesi doldu; {len(aday) - i + 1} adres ölçülmedi")
                 break
             try:
-                o = portfolio_olculeri(client.portfolio(x["adres"]), simdi, rules)
+                pf = client.portfolio(x["adres"])
+                o = portfolio_olculeri(pf, simdi, rules)
             except radar_tarama.HATALAR:
                 continue
             neden = evren_kapisi(o, rules)
             if neden is None:
-                olcu.append({"adres": x["adres"], **o})
+                olcu.append({"adres": x["adres"], **o, "_pf": pf})
             if i % 200 == 0:
                 log(f"[{i}/{len(aday)}] B evreni {len(olcu)}; {(saat() - t0_kos) / 60:.1f} dk")
         olcu.sort(key=lambda o: (-o["t_istat"], o["adres"]))
         log(f"B evreni: {len(olcu)} kişi; kopya kapısına ilk {rules['secim_aday_ust']}")
+        kopya_butce = butce + float(rules["secim_kopya_butce_dk"]) * 60          # denetim 2: kopya kapısı döngüsünün de süre sınırı var (iş zaman aşımı 180 dk)
         for o in olcu[: int(rules["secim_aday_ust"])]:
             if len(uyeler) >= n:
                 break
+            if saat() - t0_kos > kopya_butce:
+                log("UYARI: kopya kapısı süre bütçesi doldu; kalan adaylar ölçülmedi")
+                break
+            pf = o.pop("_pf", None)
             a = o["adres"]
             try:
                 d = client.fills(a, kopya_bas, max_rows=int(rules["radar_dolum_tavan"]) * 4, end_ms=simdi)
@@ -264,7 +287,7 @@ def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, sa
                     satirlar.append({"adres": a, "tur": "aday", **o, "neden": "dolum_fazla"})
                     continue
                 try:
-                    payda = kopya_v5.PaydaSerisi(radar_tarama.payda_noktalari(client.portfolio(a), simdi))
+                    payda = kopya_v5.PaydaSerisi(radar_tarama.payda_noktalari(pf, simdi))
                 except (*radar_tarama.HATALAR, AttributeError):
                     payda = o["hesap_usd"]
                 k = kopya_kapisi(d, o["hesap_usd"], payda, mum, kopya_bas, simdi, likit, b.azami_kaldirac, rules)
@@ -273,10 +296,23 @@ def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, sa
                 continue
             satirlar.append({"adres": a, "tur": "aday", **o, **k})
             if k["neden"] is None:
-                uyeler.append({"adres": a, **o, **k, "giris_ms": simdi, "ay_negatif": 0, "giris_hesap_usd": o["hesap_usd"], "giris_pnl_kum": o.get("pnl_kum"), "sicil_onceki": 0.0})
+                uyeler.append({"adres": a, **o, **k, "giris_ms": simdi, "ay_negatif": 0, "giris_hesap_usd": o["hesap_usd"], "giris_pnl_kum": o.get("pnl_kum"), "zirve_pnl": o.get("pnl_kum"), "sicil_onceki": 0.0})
                 log(f"giriş {a[:10]}… t {o['t_istat']:.2f}, kopya {k['kopya_getiri']:+.4f}")
+        for u in uyeler:                                                    # denetim 3: benzerlik matrisi aynı 28 g penceresiyle (kalan üyelerin serisi yenilenir)
+            if u.get("giris_ms") == simdi:
+                continue
+            try:
+                d = client.fills(u["adres"], kopya_bas, max_rows=int(rules["radar_dolum_tavan"]) * 4, end_ms=simdi)
+                u["kopya_gunluk"] = kopya_kapisi(d, float(u.get("hesap_usd") or u.get("giris_hesap_usd") or 0.0) or 1.0, float(u.get("hesap_usd") or 1.0), mum,
+                                                 kopya_bas, simdi, likit, b.azami_kaldirac, rules).get("kopya_gunluk")
+            except radar_tarama.HATALAR:
+                u["kopya_gunluk"] = None
+    for o in olcu:
+        o.pop("_pf", None)
     havuz = {"sema": HAVUZ_SEMA, "kosu_ms": simdi, "pencere_bas_ms": kopya_bas, "doldurma": doldur, "satirlar": satirlar}
-    return havuz, kadro_yaz(uyeler, simdi, rules, ay if doldur else (onceki or {}).get("doldurma_ay", ay), cikanlar)
+    kadro = kadro_yaz(uyeler, simdi, rules, ay if doldur else (onceki or {}).get("doldurma_ay", ay), cikanlar)
+    kadro["cikanlar_gecmis"] = gecmis
+    return havuz, kadro
 
 
 def main(argv: list[str] | None = None) -> int:

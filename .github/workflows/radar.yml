@@ -1,9 +1,9 @@
 name: Radar (günlük tarama + kadro)
 
-# T3 (docs/RADAR_V1.md §2, §4, §5): her gün 00:37 UTC (03:37 TSİ) T2 taraması (aday = radar_aday_tavan = 300, 7 gün getiriye göre; K-31) → R2 form puanı → kadro.
+# Her gün 00:37 UTC (03:37 TSİ) seçim yapısı D+ (K-56): üye denetimi her gün, doldurma ilk koşu + ayın ilk koşusu; motor son/kadro.json okur.
 # Salt okunur halka açık Hyperliquid verisi; secret YOK. Çıktı veri dalı `radar` (kök commit yalnız ilk koşuda; sonra tarihli klasör eklenir, 90 gün tutulur):
 #   radar/<tarih>/{havuz,kadro}.json  +  radar/son/kadro.json  (T4 motoru `son/kadro.json`'u okur).
-# Eksik koşuda (zaman bütçesi aşıldı / satır eksik / `veri_hatasi` payı > `radar_veri_hatasi_pay_max`, R-2) `radar_kadro` çıkış kodu 2 verir → iş kırmızı biter ve `son/` GÜNCELLENMEZ. Hata örtülmez (başarısızlık gizlenmez).
+# K-55/K-56 (09.11): tek adım copytrade.secim_d (seçim yapısı D+) havuz.json + kadro.json (radar_surum v2) yazar; süre bütçesi aşılırsa kısmi kadro yayımlanır (boş koltuk nakit).
 # `kural_ust` / `aday_sayisi` girdisi YOK (donmuş kurallar; deneme `radar_deneme.yml`'de).
 # Dal doğrulaması: `copytrade/radar/CALISTIR` dosyasına satır eklenen push (main dışı dal) AYNI iş akışını koşturur ama veri dalı `radar-deneme`'ye yazar (gerçek `radar` dalı yalnız main'den dokunulur).
 # G-23 (canli_vardiya.yml ile aynı desen): checkout'lar `persist-credentials: false` (token diske yazılmaz); yazma izni yalnız `radar` işinde; push kimliği yalnız
