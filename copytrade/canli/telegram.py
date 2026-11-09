@@ -1,6 +1,6 @@
 """Telegram bildirimi + komutlar (Bot API doğrudan; görev T4 §1). Token/chat YALNIZ ortamdan (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`); yoksa kanal KAPALI (mesajlar yalnız kayda yazılır, motor çökmez).
 
-`post(url, json) -> dict` enjekte edilir (testte sahte). K‑37: komut yalnız `chat.id == chat_id` VE `from.id == chat_id` (özel sohbet) ise kabul edilir; yetkisiz komut kayda alınır; motor başlangıcından ÖNCE tarihli mesajlar yok sayılır (eski /dur yeniden tetiklenmez); `offset` motor.json'da kalıcıdır. Komutlar: `/dur` (yeni giriş/artırma durur; çıkış serbest), `/devam` (= `/baslat`; duraklatmayı kaldırır), `/kapat` (tüm pozisyonları kapat, motoru durdur) ve `/durum`. Mesajlar kısa, adres kısaltılır (ilk 8 karakter).
+`post(url, json) -> dict` enjekte edilir (testte sahte). K‑37: komut yalnız `chat.id == chat_id` ise ve özel sohbette ayrıca `from.id == chat_id` ise kabul edilir (grup kimliği negatif: grup üyesi, bot değil; `yetkili_mi`); yetkisiz komut kayda alınır; motor başlangıcından ÖNCE tarihli mesajlar yok sayılır (eski /dur yeniden tetiklenmez); `offset` motor.json'da kalıcıdır. Komutlar: `/dur` (yeni giriş/artırma durur; çıkış serbest), `/devam` (= `/baslat`; duraklatmayı kaldırır), `/kapat` (tüm pozisyonları kapat, motoru durdur) ve `/durum`. Mesajlar kısa, adres kısaltılır (ilk 8 karakter).
 
 Denetim 2026-11-08: G-16 komut adı = ilk sözcük; bilinmeyen komuta yanıt; eski (motor kapalıyken ya da > 15 dk) komut yürütülmez, "İŞLENMEDİ" yanıtı alır; offset `_komutlar` bitince kalıcı.
 G-18 önemli mesajda 2/5/15 sn yeniden deneme + 429 `retry_after`; gerçek kipte dolu olmayan emir 🚨 (gece sesli), emir mesajları kısa tamponda birleşir. S-13 tek `ATLA_TR`. S-22 alarm başlığında kip.
@@ -209,6 +209,17 @@ class Telegram:
                     self.kayit({"olay": "telegram_yeniden", "tur": type(hata).__name__, "deneme": deneme, "bekle_sn": bekle})
                 self.uyku(bekle)
 
+    def yetkili_mi(self, m: dict) -> bool:
+        """Komut yetkisi: `chat.id == TELEGRAM_CHAT_ID` ZORUNLU. Özel sohbet (pozitif kimlik) → ek olarak `from.id == chat_id`. Grup / süper grup (kimlik '-' ile başlar; Telegram
+        grup kimlikleri negatiftir) → `from.id` kullanıcının kendi kimliğidir, chat kimliğine eşit OLAMAZ: grubun üyesinden gelen komut kabul edilir (grup üyeliğini kullanıcı yönetir),
+        bot hesaplarından gelen (`from.is_bot`) reddedilir. Diğer her sohbet reddedilir."""
+        if not self.chat_id or str((m.get("chat") or {}).get("id", "")) != self.chat_id:
+            return False
+        kimden = m.get("from") or {}
+        if self.chat_id.startswith("-"):
+            return not kimden.get("is_bot", False)
+        return str(kimden.get("id", "")) == self.chat_id
+
     def komutlari_al(self) -> list[str]:
         """Yeni komutları (`KOMUTLAR`; komut adı = İLK sözcük, '/kapat hemen' → '/kapat') döner; yalnız `chat_id`'den gelenler; offset ilerler.
         G-16: bilinmeyen komut → geçerli komutları listeleyen yanıt; motor başlamadan önce ya da `KACIRILAN_PENCERE_S`'den (15 dk) önce gelmiş komut YÜRÜTÜLMEZ, "İŞLENMEDİ" yanıtı
@@ -232,7 +243,7 @@ class Telegram:
             metin = komut_adi(m.get("text", ""))
             if not metin.startswith("/"):
                 continue
-            if str((m.get("chat") or {}).get("id", "")) != self.chat_id or str((m.get("from") or {}).get("id", "")) != self.chat_id:
+            if not self.yetkili_mi(m):
                 self.yetkisiz_sayisi += 1
                 if self.kayit:
                     self.kayit({"olay": "telegram_yetkisiz", "komut": metin[:20], "chat": str((m.get("chat") or {}).get("id", ""))[:3] + "…"})
