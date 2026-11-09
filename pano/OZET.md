@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-08 23:47 UTC
+# Canlı rapor — 2026-11-09 00:02 UTC
 
 **Kip** sanal · vardiya `42519882583` · saha 9/11 (inen 0)
 
@@ -6,28 +6,28 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 1.001,93 $ | +%0,19 | — (geçmiş < 7 gün) | +%0,19 | −%0,48 |
+| 1.000,00 $ | 1.000,57 $ | −%0,04 | — (geçmiş < 7 gün) | +%0,06 | −%0,62 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x3da36d… | BTC | L | 233,33 $ | +2,77 $ |
-| 0x5d908c… | SOL | S | 113,14 $ | −1,56 $ |
-| 0x9a0519… | AR | L | 99,86 $ | +2,06 $ |
-| 0x92d8c4… | ZEC | L | 95,87 $ | −1,11 $ |
-| 0x5d908c… | WLD | S | 47,47 $ | −0,23 $ |
-| 0x3da36d… | ETH | L | 42,48 $ | +0,18 $ |
-| 0x6ba51c… | ZEC | L | 39,85 $ | −0,06 $ |
-| 0x9a0519… | BTC | L | 36,96 $ | −0,20 $ |
-| 0x9a0519… | LIT | L | 33,91 $ | −0,22 $ |
-| 0x11eee2… | kPEPE | S | 12,80 $ | −0,06 $ |
-| 0x5d908c… | XPL | S | 11,05 $ | −0,05 $ |
+| 0x3da36d… | BTC | L | 232,65 $ | +2,09 $ |
+| 0x5d908c… | SOL | S | 112,63 $ | −1,05 $ |
+| 0x9a0519… | AR | L | 99,09 $ | +1,29 $ |
+| 0x92d8c4… | ZEC | L | 95,81 $ | −1,18 $ |
+| 0x9a0519… | BTC | L | 67,25 $ | −0,34 $ |
+| 0x5d908c… | WLD | S | 47,40 $ | −0,16 $ |
+| 0x9a0519… | LIT | L | 45,21 $ | −0,37 $ |
+| 0x3da36d… | ETH | L | 42,24 $ | −0,06 $ |
+| 0x6ba51c… | ZEC | L | 39,82 $ | −0,09 $ |
+| 0x11eee2… | kPEPE | S | 12,73 $ | +0,01 $ |
+| 0x5d908c… | XPL | S | 10,99 $ | +0,01 $ |
 
 ## Son 24 saat
 
-- emir 36 · dolum 36 · kayma p50 −%0,01 / max +%0,14 (n=36)
-- funding −0,00 $ · ücret 0,41 $
+- emir 39 · dolum 39 · kayma p50 −%0,00 / max +%0,14 (n=39)
+- funding −0,00 $ · ücret 0,43 $
 
 _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun günlük kayıp tanımı); hafta/toplam kasaya göre; zirveden düşüş motorun zirvesine göre._
 
@@ -49,7 +49,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 166 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 181 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
