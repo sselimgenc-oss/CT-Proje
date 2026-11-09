@@ -46,10 +46,11 @@ jobs:
       - name: Worker yayını (sg-nabiz, cron 10 dk)
         env:
           NABIZ_TG_ACIK: ${{ vars.TELEGRAM_ACIK == 'evet' && 'evet' || 'hayir' }}   # secret değil; TELEGRAM_* adı yalnız main'e kapılı secret'lara ayrılmış (B1 testi)
+          NABIZ_KAYNAK: ${{ vars.NABIZ_KAYNAK || 'canli-durum' }}   # Y-3: nabız veri kökü (dal adı ya da https ham kök); gerçek paradan önce gerçek yayım hedefi
         run: |
           if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then echo "::error::Cloudflare secret'ları yok: sg-nabiz yayımlanamadı"; exit 1; fi
-          .github/pano/node_modules/.bin/wrangler deploy --config .github/nabiz/wrangler.toml --var "TELEGRAM_ACIK:${NABIZ_TG_ACIK}"
-          echo "sg-nabiz yayımlandı (Telegram: ${NABIZ_TG_ACIK})" >> "$GITHUB_STEP_SUMMARY"
+          .github/pano/node_modules/.bin/wrangler deploy --config .github/nabiz/wrangler.toml --var "TELEGRAM_ACIK:${NABIZ_TG_ACIK}" --var "NABIZ_KAYNAK:${NABIZ_KAYNAK}"
+          echo "sg-nabiz yayımlandı (Telegram: ${NABIZ_TG_ACIK}, kaynak: ${NABIZ_KAYNAK})" >> "$GITHUB_STEP_SUMMARY"
       - name: Telegram secret'larını worker'a koy (yalnız TELEGRAM_ACIK=evet)
         if: ${{ vars.TELEGRAM_ACIK == 'evet' }}
         env:

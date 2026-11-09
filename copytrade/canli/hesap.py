@@ -38,7 +38,7 @@ class Hesap:
         self.funding: dict[str, float] = {}          # adres -> girişten beri funding ($, işaretli: + alınan / − ödenen; sanal kip)
         self.son_niyet_cloid: str | None = None      # son UYGULANAN niyetin cloid'i (t4b #3: yeniden başlatmada bundan sonraki sonuçlu niyetler oynatılır)
         self.kapanmis_net = 0.0                      # sahadan çıkıp kaydı silinen üyelerin net K/Z'si (özsermaye sürekliliği)
-        self.belirsiz: dict[str, dict] = {}         # G-1: cloid -> {ms, deneme}; emri gönderilip yanıtı alınamayan (sonucu BELİRSİZ) niyetler. `son_niyet_cloid` ile AYNI atomik
+        self.belirsiz: dict[str, dict] = {}         # G-1: cloid -> {ms, deneme, adres, coin} (Y-2: adres/coin yeni girdilerde); emri gönderilip yanıtı alınamayan (sonucu BELİRSİZ) niyetler. `son_niyet_cloid` ile AYNI atomik
                                                      # yazımda tutulur: çözülünce dolum deftere TEK kez uygulanır ve buradan silinir (oynatma bu niyetleri atlar: işaretçi zaten geçti)
 
     # ------------------------------------------------------------------ slot

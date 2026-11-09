@@ -8,6 +8,9 @@ Kural: bir adımda beklenen sonucu görmezseniz **DURUN** ve ekrandaki çıktıy
 - G-8 + G-23 tamam; G-10 Actions zamanlayıcısına dayanmadan çalışıyor.
 - 1.000 $ sanal seri (K-49 dönemi) en az 7 temiz gün koştu (K-50; 300 $ seri iptal).
 - 7 temiz sanal gün tamam.
+- **Y-3 (dış nabız, zorunlu):** `sg-nabiz` gerçek yayım hedefine bakıyor. Yani `GERCEK_YAYIM_HEDEF` (K2/K3) karara bağlandı, `canli-gercek` dalı worker'ın okuyabildiği (herkese açık) bir yerde ve
+  GitHub → Settings → Variables: `NABIZ_KAYNAK` = o dalın ham kökü (aynı depoda `canli-gercek`; başka depoda `https://raw.githubusercontent.com/<sahip>/<depo>/canli-gercek`), ardından "Nabız alarmı yayını" yeniden koşturuldu.
+  Worker adresi elle açılınca `kaynak.kilit` gerçek dala işaret etmeli ve `kip` `"gercek"` görünmeli. Bu yapılmadan gerçek para AÇILMAZ (worker yalnız sanal `canli-durum`'u izler: gerçek motor ölürse alarm gelmez).
 
 ## A) Bir gün önce
 1. **Hyperliquid ekranı:** açık pozisyon 0, açık emir 0, hesapta yalnız 1.000 $ USDC (fazlası yok).
@@ -90,6 +93,7 @@ Kural: bir adımda beklenen sonucu görmezseniz **DURUN** ve ekrandaki çıktıy
     "BAŞLAMADI" ya da "Traceback" görürseniz DURUN.
     - "BAŞLAMADI (geçici)" + çıkış 75 = HL'ye ulaşılamadı; motor kendisi yeniden dener (en çok 10 dk arayla). 15 dakikada düzelmezse lidere yazın.
     - Çıkış 3 = kalıcı neden (ör. DUR dosyası, yanlış anahtar, kasa sınırı, ikinci motor): motor yeniden denemez; lidere yazın.
+    - "HL hesabında motorun niyet kaydında olmayan N açık emir var" (Y-5): HL'de motorun vermediği açık emir var (ikinci motor ya da elle emir). Başka motor çalışmadığından emin olun, emirleri HL'den iptal edin, yeniden başlatın.
     - "HL hesap değeri … > sınır 1500 $": HL hesabında 1.500 $'dan fazla var. Kârı Arbitrum köprüsüyle çekin (kasa 1.000 $ kalır) ya da kullanıcı karar versin; sonra yeniden başlatın.
       1.000–1.500 $ arası sorun değildir (kârlı gün): motor başlar, kasa yine 1.000 $ kullanılır.
 13. **Telegram denemeleri:**

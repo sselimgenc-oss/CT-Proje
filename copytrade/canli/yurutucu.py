@@ -6,7 +6,7 @@
   Bu modül gerçek kipi KURAR ve testle (sahte `exchange`) sınar; ÇALIŞTIRMAZ (Actions'ta asla; T5'te sunucuda, kullanıcı onayıyla).
 
 T4b (K‑37): `emir(..., bant=None, cloid=None)` — `bant` çağıranın IOC bandı (kapanış yeniden denemesinde %0,5 → %1 → %2), `cloid` deterministik istemci kimliği (gerçek kip: SDK `Cloid`; çift emir koruması).
-Minimum emir değeri (`canli_min_nosyonel_usd`, HL: 10 $): yuvarlanmış `sz × en iyi fiyat` altındaysa emir VERİLMEZ (`min_nosyonel`); reduce‑only TAM kapanış istisnadır. Limit fiyat tick'e İÇE yuvarlanır (alış aşağı, satış yukarı: bant asla aşılmaz).
+Minimum emir değeri (`canli_min_nosyonel_usd`, HL: 10 $): yuvarlanmış `sz × en iyi fiyat` altındaysa emir VERİLMEZ (`min_nosyonel`); reduce‑only TAM kapanış istisnadır. Limit fiyat tick'e İÇE yuvarlanır (alış aşağı, satış yukarı); Y-7: yine de alış ≥ en iyi ask, satış ≤ en iyi bid (IOC dolabilsin; gerekirse bant bir tick aşılır).
 Sanal defter derinliği: aynı coin ve yönde `canli_sanal_derinlik_sn` (5 sn) içindeki ardışık emirler, öncekilerin tükettiği seviyeleri düşerek yürür.
 
 Birimler: `usd` kasa ölçeğinde $ (nosyonel), `sz` coin miktarı (işaretsiz; yön `yon`: `B` alış / `A` satış), `px` $/coin, `kayma_oran` = (dolum − referans) / referans, ALIŞTA pozitif = kötü (satışta işaret çevrilir).
@@ -169,13 +169,28 @@ def tick_yuvarla(px: float, sz_decimals: int) -> float:
     return round(float(f"{px:.5g}"), max(0, 6 - int(sz_decimals)))
 
 
-def limit_yuvarla(px: float, sz_decimals: int, yon: str) -> float:
-    """Limit fiyatı tick'e İÇE yuvarlar (alışta aşağı, satışta yukarı → bant hiç aşılmaz). Tick = max(5 anlamlı basamak adımı, 10^−(6 − szDecimals))."""
+def _izgara(px: float, sz_decimals: int, yukari: bool) -> float:
+    """HL perp fiyat ızgarasına yuvarlama (`yukari`: tavana, değilse tabana). Adım = max(5 anlamlı basamak adımı, 10^−(6 − szDecimals)); tam sayı fiyat her zaman geçerli
+    olduğundan 5 anlamlı basamak adımı en çok 1'dir (Y-7: 123.456 gibi ≥ 100.000 fiyatta adım 10 değil 1)."""
     x = Decimal(repr(round(float(px), 10)))              # 100,49999999999999 gibi kayan nokta artığı tick'i bir adım kaydırmasın
-    adim_anlamli = Decimal(10) ** (x.adjusted() - 4)
+    adim_anlamli = min(Decimal(10) ** (x.adjusted() - 4), Decimal(1))
     adim = max(adim_anlamli, Decimal(10) ** -max(0, 6 - int(sz_decimals)))
-    n = (x / adim).to_integral_value(rounding=ROUND_FLOOR if yon == "B" else ROUND_CEILING)
+    n = (x / adim).to_integral_value(rounding=ROUND_CEILING if yukari else ROUND_FLOOR)
     return float(n * adim)
+
+
+def limit_yuvarla(px: float, sz_decimals: int, yon: str, en_iyi: float | None = None) -> float:
+    """Limit fiyatı tick'e İÇE yuvarlar (alışta aşağı, satışta yukarı → bant hiç aşılmaz). Tick = max(5 anlamlı basamak adımı (≤ 1), 10^−(6 − szDecimals)).
+    Y-7: `en_iyi` (en iyi karşı fiyat) verilirse IOC'nin dolabilmesi için alış limiti ≥ en iyi ask, satış limiti ≤ en iyi bid tutulur: içe yuvarlama en iyi fiyatın
+    gerisine düşerse limit en iyi fiyatın ızgaradaki karşılığı olur (bant en çok bir tick aşılır; HL defter fiyatı zaten ızgaradadır)."""
+    alis = yon == "B"
+    limit = _izgara(px, sz_decimals, yukari=not alis)
+    if en_iyi is not None and en_iyi > 0:
+        if alis and limit < en_iyi:
+            limit = _izgara(en_iyi, sz_decimals, yukari=True)
+        elif not alis and limit > en_iyi:
+            limit = _izgara(en_iyi, sz_decimals, yukari=False)
+    return limit
 
 
 def cloid_nesne(c: str) -> Any:
@@ -248,7 +263,7 @@ class GercekYurutucu:
             d.defter = {"levels": [list(kitap["levels"][0])[:10], list(kitap["levels"][1])[:10]]}
             bant = float(self.rules["canli_ioc_bant"]) if bant is None else float(bant)
             dec = self._sz_decimals(coin)
-            limit = limit_yuvarla(en_iyi * (1 + bant) if yon == "B" else en_iyi * (1 - bant), dec, yon)
+            limit = limit_yuvarla(en_iyi * (1 + bant) if yon == "B" else en_iyi * (1 - bant), dec, yon, en_iyi)
             sz = round(float(usd) / en_iyi, dec)
             tavan_sz = round(abs(acik_sz), dec) if reduce_only and acik_sz is not None else None
             if tavan_sz is not None:

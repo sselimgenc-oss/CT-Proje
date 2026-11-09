@@ -243,3 +243,46 @@ def test_nabiz_yayim_telegram_secretlari_kapili_stdin_ile_yazdirilmaz():
 def test_ci_test_isi_node_kurar():
     ci = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
     assert any(str(a.get("uses", "")).startswith("actions/setup-node@") for a in ci["jobs"]["test"]["steps"])
+
+
+# ---------------------------------------------------------------------------------------------------- Y-3 (3. dış denetim): kaynak ayarı
+HAM = "https://raw.githubusercontent.com/sselimgenc-oss/CT-Proje"
+
+
+def test_y3_kaynak_varsayilan_canli_durum_dal_adi_ve_https_kok():
+    sonuc = _node("""console.log(JSON.stringify([w.kaynak({}), w.kaynak({NABIZ_KAYNAK: "  "}), w.kaynak({NABIZ_KAYNAK: "canli-durum"}), w.kaynak({NABIZ_KAYNAK: "canli-gercek"}),
+      w.kaynak({NABIZ_KAYNAK: "https://raw.githubusercontent.com/baska/depo/canli-gercek/"})]));""")
+    assert [s["kilit"] for s in sonuc] == [f"{HAM}/canli-durum/durum/kilit.json"] * 3 + [f"{HAM}/canli-gercek/durum/kilit.json",
+                                                                                     "https://raw.githubusercontent.com/baska/depo/canli-gercek/durum/kilit.json"]
+    assert [s["ozel"] for s in sonuc] == [False, False, False, True, True]
+    assert sonuc[3]["ozet"] == f"{HAM}/canli-gercek/durum/ozet.json" and sonuc[3]["donem"] == f"{HAM}/main/copytrade/canli/DONEM"
+
+
+@pytest.mark.parametrize("deger", ["http://ornek.com/x", "canli gercek", "../baska", "a/../b", "https://x.com/a/../b", "canli-gercek?x=1", "javascript:alert(1)"])
+def test_y3_kaynak_gecersiz_deger_varsayilana_duser(deger):
+    s = _node(f"console.log(JSON.stringify(w.kaynak({{NABIZ_KAYNAK: {json.dumps(deger)}}})));")
+    assert s["kilit"] == f"{HAM}/canli-durum/durum/kilit.json" and s["ozel"] is False
+
+
+def test_y3_tur_gercek_kaynakta_gercek_dali_okur_mesaj_gercek_motor_sunucu_komutu():
+    r = _tur(KILIT, {**OZET, "kip": "gercek"}, DONEM, T0 + 50 * DK, {**ACIK, "NABIZ_KAYNAK": "canli-gercek"})
+    s = r["sonuc"]
+    assert s["alarm"] is True and s["kip"] == "gercek" and s["kaynak_ozel"] is True
+    assert any("/canli-gercek/durum/kilit.json" in u for u in r["istek"]) and not any("/canli-durum/" in u for u in r["istek"])
+    metin = r["tg"][0]["govde"]["text"]
+    assert metin.startswith("🚨 ALARM: Gerçek motor nabzı yok — son yayım 50 dk önce.") and "systemctl status sg-canli" in metin and "actions/workflows" not in metin
+
+
+def test_y3_tur_ozel_kaynak_okunamazsa_motor_etiketi_ve_elle_sorgu_kaynagi():
+    gece = 1_794_182_400_000
+    r = _tur(None, None, DONEM, gece + 2 * DK, {**ACIK, "NABIZ_KAYNAK": "canli-gercek"})
+    assert r["tg"][0]["govde"]["text"].startswith("⚠️ UYARI: Motor nabzı okunamadı") and "systemctl status sg-canli" in r["tg"][0]["govde"]["text"]
+    r = _tur(KILIT, {**OZET, "kip": "gercek"}, DONEM, 0, {**ACIK, "NABIZ_KAYNAK": "canli-gercek"}, cagri="fetch")
+    assert r["sonuc"]["kaynak"]["kilit"] == f"{HAM}/canli-gercek/durum/kilit.json" and r["sonuc"]["kaynak_ozel"] is True and r["sonuc"]["kip"] == "gercek"
+
+
+def test_y3_yayin_kaynagi_github_degiskeninden_varsayilan_canli_durum():
+    yayin = next(a for a in _wf()["jobs"]["yayim"]["steps"] if "Worker yayını" in a.get("name", ""))
+    assert yayin["env"]["NABIZ_KAYNAK"] == "${{ vars.NABIZ_KAYNAK || 'canli-durum' }}" and '--var "NABIZ_KAYNAK:${NABIZ_KAYNAK}"' in yayin["run"]
+    belge = (ROOT / "docs/NABIZ_ALARMI.md").read_text(encoding="utf-8") + (ROOT / "deploy/ACILIS_KONTROL.md").read_text(encoding="utf-8")
+    assert belge.count("NABIZ_KAYNAK") >= 2 and "Gerçek paradan önce ön koşul" in belge and "Bu yapılmadan gerçek para AÇILMAZ" in belge

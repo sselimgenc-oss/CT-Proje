@@ -114,12 +114,12 @@ Telegram komutları: `/kapat` = tüm pozisyonları kapat + motor durur (`DUR`); 
 
 | Kod | Anlamı | systemd |
 |---|---|---|
-| 3 | Kalıcı neden: `DUR` dosyası, kip uyumsuzluğu, ana cüzdan anahtarı, kasa/HL değer sınırı, agent HL listesinde yok, ikinci motor (`motor.lock` dolu), göreli durum dizini | yeniden BAŞLATMAZ; alarm birimi Telegram'a yazar |
+| 3 | Kalıcı neden: `DUR` dosyası, kip uyumsuzluğu, ana cüzdan anahtarı, kasa/HL değer sınırı, agent HL listesinde yok, ikinci motor (`motor.lock` ya da hesap kilidi `motor-<adres>.lock` dolu), HL'de motorun bilmediği açık emir (Y-5), göreli durum dizini | yeniden BAŞLATMAZ; alarm birimi Telegram'a yazar |
 | 75 | Geçici: açılışta HL/ağ okunamadı (motor önce 15/45/120 sn bekleyerek yeniden dener) | 30 sn'den 10 dk'ya artan beklemeyle yeniden başlatır; her denemede Telegram'a "geçici" alarmı |
 | 1 | Beklenmedik hata / görev düştü | aynı artan beklemeyle yeniden başlatır |
 
 - `DUR` dosyası (`/var/lib/sg-canli/durum/DUR`) elle silinmeden motor yeniden **açılmaz**.
-- Gerçek kipte motor `/var/lib/sg-canli/durum/motor.lock` dosyasını kilitler (`flock`); aynı dizinde ikinci motor 3 ile çıkar. Gerçek kipte `--durum-dizin` mutlak yol olmak zorunda. Motoru elle (birim dışında) ÇALIŞTIRMAYIN.
+- Gerçek kipte motor `/var/lib/sg-canli/durum/motor.lock` dosyasını kilitler (`flock`); aynı dizinde ikinci motor 3 ile çıkar. Y-5: ayrıca `/var/lib/sg-canli/motor-<hesap adresi>.lock` (hesap başına; başka `--durum-dizin` ile aynı hesap da 3) ve açılışta HL'de niyet kaydında olmayan açık emir varsa 3 (başka sunucudaki motor/elle emir). Gerçek kipte `--durum-dizin` mutlak yol olmak zorunda. Motoru elle (birim dışında) ÇALIŞTIRMAYIN.
 
 ## 6. Güncelleme
 ```bash
