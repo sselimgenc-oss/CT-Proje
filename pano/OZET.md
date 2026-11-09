@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-09 14:43 UTC
+# Canlı rapor — 2026-11-09 14:58 UTC
 
 **Kip** sanal · vardiya `42625495946` · saha 9/11 (inen 0)
 
@@ -6,40 +6,31 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 1.003,98 $ | +%0,30 | — (geçmiş < 7 gün) | +%0,40 | −%0,56 |
+| 1.000,00 $ | 1.009,53 $ | +%0,86 | — (geçmiş < 7 gün) | +%0,95 | −%0,21 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x3da36d… | BTC | L | 231,84 $ | +1,28 $ |
-| 0x5d908c… | SOL | S | 113,51 $ | −1,93 $ |
-| 0x92d8c4… | ZEC | L | 96,02 $ | −0,96 $ |
-| 0x9a0519… | AR | L | 93,63 $ | +6,60 $ |
-| 0x9a0519… | BTC | L | 61,23 $ | −0,24 $ |
-| 0x57da5c… | ETH | L | 50,93 $ | −0,11 $ |
-| 0x5d908c… | WLD | S | 49,18 $ | −1,94 $ |
-| 0x9a0519… | LIT | L | 47,12 $ | +1,54 $ |
-| 0x57da5c… | ZEC | L | 46,97 $ | −0,39 $ |
-| 0x3da36d… | ETH | L | 42,26 $ | −0,04 $ |
-| 0x57da5c… | AVAX | L | 40,97 $ | +2,02 $ |
-| 0x6ba51c… | ZEC | L | 39,91 $ | −0,00 $ |
-| 0x57da5c… | ETHFI | L | 23,09 $ | +0,64 $ |
-| 0x57da5c… | NEAR | L | 22,84 $ | +0,11 $ |
-| 0x5d908c… | HYPE | S | 22,71 $ | −0,56 $ |
-| 0x57da5c… | ENA | L | 22,43 $ | +0,34 $ |
-| 0x57da5c… | PUMP | L | 22,09 $ | −0,01 $ |
-| 0x57da5c… | ZRO | L | 21,56 $ | −0,19 $ |
-| 0x11eee2… | kPEPE | S | 13,29 $ | −0,55 $ |
-| 0x5d908c… | XPL | S | 11,40 $ | −0,40 $ |
-| 0x11eee2… | ARB | S | 11,21 $ | −0,21 $ |
-| 0x57da5c… | GRAM | L | 11,05 $ | +0,05 $ |
-| 0x558afc… | ETH | L | 10,84 $ | −0,16 $ |
+| 0x3da36d… | BTC | L | 233,40 $ | +2,84 $ |
+| 0x5d908c… | SOL | S | 113,91 $ | −2,33 $ |
+| 0x92d8c4… | ZEC | L | 97,13 $ | +0,14 $ |
+| 0x9a0519… | AR | L | 94,02 $ | +6,99 $ |
+| 0x9a0519… | BTC | L | 61,65 $ | +0,17 $ |
+| 0x5d908c… | WLD | S | 49,27 $ | −2,03 $ |
+| 0x9a0519… | LIT | L | 48,01 $ | +2,43 $ |
+| 0x3da36d… | ETH | L | 42,43 $ | +0,14 $ |
+| 0x6ba51c… | ZEC | L | 40,37 $ | +0,46 $ |
+| 0x5d908c… | HYPE | S | 23,05 $ | −0,90 $ |
+| 0x11eee2… | kPEPE | S | 13,51 $ | −0,76 $ |
+| 0x5d908c… | XPL | S | 11,52 $ | −0,52 $ |
+| 0x11eee2… | ARB | S | 11,15 $ | −0,15 $ |
+| 0x558afc… | ETH | L | 10,88 $ | −0,12 $ |
 
 ## Son 24 saat
 
-- emir 86 · dolum 86 · kayma p50 +%0,00 / max +%0,15 (n=86)
-- funding −0,11 $ · ücret 0,71 $
+- emir 105 · dolum 105 · kayma p50 +%0,00 / max +%0,19 (n=105)
+- funding −0,11 $ · ücret 0,83 $
 
 _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun günlük kayıp tanımı); hafta/toplam kasaya göre; zirveden düşüş motorun zirvesine göre._
 
@@ -61,7 +52,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 75 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 90 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
