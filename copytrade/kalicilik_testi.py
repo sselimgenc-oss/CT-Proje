@@ -29,7 +29,7 @@ from typing import Any
 import pandas as pd
 
 from copytrade import izleme_motoru as im
-from copytrade import kopya_v2, kopya_v5, radar_isabet, radar_tarama
+from copytrade import kopya_v2, kopya_v5, radar_form, radar_isabet, radar_tarama
 from copytrade.defter import HOUR
 from copytrade.kurallar import load_rules
 from copytrade.olcut import perp_fills
@@ -90,8 +90,9 @@ def hafta_satiri(adres: str, dolumlar: list[dict] | None, hesap: float, payda: A
     satir["gecti_v11"], satir["neden_v11"] = radar_tarama.degerlendir(satir, rules)
     satir["dolum_gecti"] = radar_tarama.degerlendir(satir, v1, yalniz_dolum=True)[0]
     satir["getiri"] = satir["kopya_getiri_7g"] if sonuc.get("durum") != "hesaplanamadi" else None
+    satir["kopya_gunluk"] = radar_form.gunluk_getiriler(sonuc.get("egri") or [], float(sonuc.get("baslangic_usd") or rules["canli_kasa_usd"]))      # K-56 D+ benzerlik matrisi
     satir["durum"] = "olculdu"
-    return {k: satir.get(k) for k in ("durum", "getiri", "dolum_gecti", "gecti_v1", "neden_v1", "gecti_v11", "neden_v11", *OLCULER)}
+    return {k: satir.get(k) for k in ("durum", "getiri", "dolum_gecti", "gecti_v1", "neden_v1", "gecti_v11", "neden_v11", "kopya_koruma", "kopya_gunluk", *OLCULER)}
 
 
 def haftalar(bitis_ms: int, n: int = HAFTA_SAYISI) -> list[tuple[int, int]]:

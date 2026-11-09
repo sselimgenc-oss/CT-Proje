@@ -64,7 +64,7 @@ def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trad
             hedef, neden = kalan, "slot_tavani"
             return (hedef, neden) if hedef >= minimum - EPS else (0.0, "slot_tavani")
         if hedef < minimum - EPS:
-            if tavan < minimum - EPS:
+            if tavan < minimum - EPS or hedef < float(rules.get("radar_min_emir_yuvarla_alt", 0.0) or 0.0) - EPS:   # K-56 D+: çok küçük hedef açılmaz (şişme ≤ 2×)
                 return 0.0, "min_emir_atlandi"
             return (minimum, "min_emir_yuvarlandi") if kalan >= minimum - EPS else (0.0, "slot_tavani")
         return hedef, neden
