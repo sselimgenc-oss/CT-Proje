@@ -2318,11 +2318,42 @@ async def _periyodik(motor: Motor, durdur: asyncio.Event, dinleyici: CanliDinley
             pass
 
 
+async def bekleme_vardiyasi(motor: Motor, sure_sn: float | None, uyku: Callable[[float], Any] = asyncio.sleep) -> dict:
+    """K-54: yeni sürüm kadrosu (radar_surum_gerekli) henüz yok ve saha boş → izlenecek adres yoktur. Motor çökmez (09.11 18:01Z olayı: vardiya
+    zinciri koptu); vardiya boyunca kadroyu aralıkla yoklar, uygun kadro gelince erken ve temiz biter (sonraki vardiya adreslerle başlar)."""
+    motor.kayit({"olay": "bekleme_vardiyasi", "gerekli": str(motor.radar_surum_gerekli)})
+    bitis = motor.saat_ms() + int((sure_sn or 0) * 1000)
+    aralik = max(1.0, float(motor.rules["canli_kadro_aralik_sn"]))
+    kadro_geldi = False
+    while True:
+        simdi = motor.saat_ms()
+        try:
+            motor._kadro_uygula((True, motor.kadro_oku()), simdi)
+        except Exception as hata:                           # noqa: BLE001
+            motor.kayit({"olay": "kadro_okuma_hata", "tur": type(hata).__name__})
+        if motor.saha.uyeler or (motor._son_kadro or {}).get("satirlar"):
+            kadro_geldi = True
+            motor.kayit({"olay": "bekleme_bitti_kadro_geldi", "uye": len(motor.saha.uyeler)})
+            break
+        if simdi >= bitis:
+            break
+        await uyku(min(aralik, max(1.0, (bitis - simdi) / 1000)))
+    ozet = {**motor.ozet(), **motor.pano_ek(), "bekleme_vardiyasi": True, "kadro_geldi": kadro_geldi, "yazildi_ms": motor.saat_ms()}
+    motor.kayit({"olay": "kapanis", "ozet": ozet})
+    _yaz(motor.durum_dizin / "ozet.json", ozet)
+    motor.durum_yaz()
+    motor._kilit_birakildi = True
+    motor.kilit_yaz(True)
+    return ozet
+
+
 async def calis(motor: Motor, sure_sn: float | None = None, ws: Callable[[], Any] = ws_baglan, cikti: Path | None = None) -> dict:
     """Ana döngü: dinleyici + tüketici + periyodik görevler; `sure_sn` dolunca (vardiya) ya da DUR/SIGTERM ile biter. Son özet `kayit`'a ve `durum/ozet.json`'a yazılır."""
     oncelik = [*motor.saha.uyeler, *motor.saha.inen]                      # userFills aboneliği ilk `userfills_adet` adrese: önce saha/inen
     adaylar = [s["adres"] for s in ((motor._son_kadro or {}).get("satirlar") or [])]
     adresler = list(dict.fromkeys([*oncelik, *adaylar]))
+    if not adresler and motor.radar_surum_gerekli:
+        return await bekleme_vardiyasi(motor, sure_sn)
     if not adresler:
         raise KipHatasi("izlenecek adres yok (kadro okunamadı, saha boş)")
     liste = [Izlenen(a[:12], a) for a in adresler]

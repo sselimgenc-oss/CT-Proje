@@ -58,3 +58,24 @@ def test_v2_bes_satirli_kadro_ilk_gun_bes_giris_cikan_k39_ile_duser(tmp_path):
     assert len(m.saha.uyeler) == 5                                           # ilk gün: yalnız işaretlenir
     m._kadro_uygula((True, k3), k3["kosu_ms"] + SAAT)
     assert len(m.saha.uyeler) == 4                                           # ikinci UTC günü: kadro_disi düşme
+
+
+def test_bekleme_vardiyasi_cokmez_kadro_gelince_erken_biter(tmp_path):
+    """09.11 18:01Z olayı: v2 kadro yokken saha boş → `calis` KipHatasi ile çöktü, vardiya zinciri koptu. Artık bekleme vardiyası: kadroyu yoklar, temiz biter."""
+    import asyncio
+    m, _, saat, _ = kur(tmp_path)
+    m.radar_surum_gerekli = "v2"
+    eski = {**kadro([satir(1, 1)], saat() - SAAT), "radar_surum": "v1.1"}
+    m.kadro_oku = lambda: eski
+    uyunan = []
+
+    async def uyku(sn):
+        uyunan.append(sn)
+        if len(uyunan) == 2:
+            m.kadro_oku = lambda: {**eski, "radar_surum": "v2"}
+
+    ozet = asyncio.run(mt.calis(m, sure_sn=0))                               # süre 0: tek yoklama, gerçek uyku yok
+    assert ozet["bekleme_vardiyasi"] is True
+    ozet = asyncio.run(mt.bekleme_vardiyasi(m, 3600, uyku=uyku))
+    assert ozet["kadro_geldi"] is True and len(uyunan) == 2 and len(m.saha.uyeler) == 1
+    assert kayitlar(tmp_path, "bekleme_vardiyasi") and kayitlar(tmp_path, "bekleme_bitti_kadro_geldi")
