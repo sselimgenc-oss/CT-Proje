@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-09 02:21 UTC
+# Canlı rapor — 2026-11-09 02:36 UTC
 
 **Kip** sanal · vardiya `42541071305` · saha 9/11 (inen 0)
 
@@ -6,28 +6,29 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 1.008,18 $ | +%0,72 | — (geçmiş < 7 gün) | +%0,82 | −%0,03 |
+| 1.000,00 $ | 1.008,65 $ | +%0,77 | — (geçmiş < 7 gün) | +%0,87 | −%0,10 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x3da36d… | BTC | L | 234,62 $ | +4,06 $ |
-| 0x5d908c… | SOL | S | 114,78 $ | −3,20 $ |
-| 0x9a0519… | AR | L | 103,52 $ | +5,71 $ |
-| 0x92d8c4… | ZEC | L | 97,98 $ | +1,00 $ |
-| 0x9a0519… | BTC | L | 67,82 $ | +0,23 $ |
-| 0x5d908c… | WLD | S | 48,78 $ | −1,53 $ |
-| 0x9a0519… | LIT | L | 46,46 $ | +0,88 $ |
-| 0x3da36d… | ETH | L | 42,79 $ | +0,49 $ |
-| 0x6ba51c… | ZEC | L | 40,72 $ | +0,81 $ |
-| 0x11eee2… | kPEPE | S | 13,20 $ | −0,46 $ |
-| 0x11eee2… | INJ | S | 11,15 $ | −0,15 $ |
-| 0x5d908c… | XPL | S | 11,04 $ | −0,04 $ |
+| 0x3da36d… | BTC | L | 235,13 $ | +4,57 $ |
+| 0x5d908c… | SOL | S | 115,14 $ | −3,56 $ |
+| 0x9a0519… | AR | L | 103,91 $ | +6,11 $ |
+| 0x92d8c4… | ZEC | L | 98,02 $ | +1,03 $ |
+| 0x9a0519… | BTC | L | 67,97 $ | +0,38 $ |
+| 0x5d908c… | WLD | S | 49,07 $ | −1,83 $ |
+| 0x9a0519… | LIT | L | 46,44 $ | +0,86 $ |
+| 0x3da36d… | ETH | L | 42,93 $ | +0,64 $ |
+| 0x6ba51c… | ZEC | L | 40,74 $ | +0,83 $ |
+| 0x11eee2… | kPEPE | S | 13,10 $ | −0,36 $ |
+| 0x11eee2… | INJ | S | 11,25 $ | −0,25 $ |
+| 0x5d908c… | XPL | S | 11,16 $ | −0,16 $ |
+| 0x558afc… | ETH | L | 11,01 $ | +0,01 $ |
 
 ## Son 24 saat
 
-- emir 40 · dolum 40 · kayma p50 +%0,00 / max +%0,14 (n=40)
+- emir 41 · dolum 41 · kayma p50 +%0,00 / max +%0,14 (n=41)
 - funding −0,01 $ · ücret 0,44 $
 
 _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun günlük kayıp tanımı); hafta/toplam kasaya göre; zirveden düşüş motorun zirvesine göre._
@@ -50,7 +51,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 105 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 120 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
