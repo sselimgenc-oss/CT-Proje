@@ -1,3 +1,6 @@
 {"zaman_ms":1794247267537,"olay":"kadro_surum_bekleniyor","gerekli":"v2","gelen":null}
 {"zaman_ms":1794247267537,"olay":"telegram","metin":"ℹ️ BİLGİ: yeni seçim yapısı bekleniyor (sanal · deneme parası)\n━━━━━━━━━━━━━━\nGelen kadro sürümü yok, gereken v2. Trader alınmıyor; kasa nakitte.","acik":true}
 {"zaman_ms":1794247267545,"olay":"telegram","metin":"🚨 ALARM: motor beklenmedik hatayla durdu (sanal · deneme parası)\n━━━━━━━━━━━━━━\nHata türü KipHatasi. Çıkış kodu 1; systemd yeniden başlatacak.\njournalctl -u sg-canli","acik":true}
+{"zaman_ms":1794249688083,"olay":"vardiya_boslugu","dk":40.3,"onceki":"42667417747"}
+{"zaman_ms":1794249688083,"olay":"telegram","metin":"🚨 ALARM: kesinti oldu (sanal · deneme parası)\n━━━━━━━━━━━━━━\nTurlar arasında vardiya boşluğu 40 dk oldu (önceki vardiya 42667417747).\nKaçan işlemler geriye dönük tamamlanıyor.","acik":true}
+{"zaman_ms":1794249692265,"olay":"telegram","metin":"🚨 ALARM: motor beklenmedik hatayla durdu (sanal · deneme parası)\n━━━━━━━━━━━━━━\nHata türü KipHatasi. Çıkış kodu 1; systemd yeniden başlatacak.\njournalctl -u sg-canli","acik":true}
