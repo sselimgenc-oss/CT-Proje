@@ -1,0 +1,36 @@
+name: Eski dalları sil (tek seferlik)
+
+# Kullanıcı onayı 09.11: iptal edilen 300 $ serinin arşiv veri dalları silinir. Yalnız aşağıdaki sabit liste; canlı veri dalları, main, oturum dalı YOK.
+# Yalnız elle, yalnız main. İş bitince bu dosya silinir (yazma yetkili kalıntı iş akışı bırakılmaz).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sil:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Listedeki dalları sil
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -u
+          DALLAR="canli-durum-300 canli-durum-300-deneme"
+          hata=0
+          for dal in $DALLAR; do
+            if gh api -X DELETE "repos/${GH_REPO}/git/refs/heads/${dal}" >/dev/null 2>&1; then
+              echo "silindi: ${dal}"
+            elif ! gh api "repos/${GH_REPO}/git/ref/heads/${dal}" >/dev/null 2>&1; then
+              echo "zaten yok: ${dal}"
+            else
+              echo "::error::silinemedi: ${dal}"; hata=1
+            fi
+          done
+          exit "$hata"
