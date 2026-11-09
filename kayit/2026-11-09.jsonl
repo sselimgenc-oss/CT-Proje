@@ -235,3 +235,6 @@
 {"zaman_ms":1794193792132,"olay":"emir_yok","adres":"0x92d8c46701a992e007849ab09d5cc578d5330cdf","coin":"ZEC","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1794193791874,"gorme_ms":1794193792131,"yas_ms":258}
 {"zaman_ms":1794194150011,"olay":"tur","ozsermaye_usd":1004.8593}
 {"zaman_ms":1794194991325,"olay":"tur","ozsermaye_usd":1006.1857}
+{"zaman_ms":1794195444211,"olay":"telegram","metin":"🧾 Son 1 saat (05:37–06:37 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 26 (≈2 ayrı işlem)\n   • kural gereği 26: 26 çok küçük (< 11 $)\n   • kaçırılan 0 (geç görülen / veri yok)\n💰 Kasa: 1.006,01 $ · bugün 🟢 +5,05 $ (+%0,5) · başlangıçtan 🟢 +6,01 $ (+%0,6)","acik":true}
+{"zaman_ms":1794195456009,"olay":"emir_yok","adres":"0x6ba51c6b1c5fef215014e5e3ca22f333894a3759","coin":"xyz:BRENTOIL","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1794195455706,"gorme_ms":1794195456008,"yas_ms":303}
+{"zaman_ms":1794195834843,"olay":"tur","ozsermaye_usd":1006.7967}
