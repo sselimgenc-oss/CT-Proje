@@ -121,16 +121,19 @@ def kopya_kapisi(dolumlar: list[dict], hesap: float, payda: Any, mum: Any, t0: i
     hafta = (t1 - t0) / HAFTA
     o = radar_tarama.islem_olculeri(d, hesap, likit, rules)
     o["devir_hafta"] = sum(abs(float(f["px"]) * float(f["sz"])) for f in d) / hesap / hafta if hesap > 0 else None
+    o["aktif_coin"] = len({str(f["coin"]) for f in d})
+    ucuz = (("tutma_kisa", o.get("medyan_tutma_saat"), lambda v: v >= float(rules["radar_min_medyan_tutma_saat"])),
+            ("kisa_islem_fazla", o.get("kisa_islem_payi"), lambda v: v <= float(rules["radar_kisa_islem_payi_max"])),           # D+ (A)
+            ("coin_fazla", o.get("aktif_coin"), lambda v: v <= int(rules["secim_aktif_coin_max"])),                                # D+ (C)
+            ("kaldirac_yuksek", o.get("max_kaldirac"), lambda v: v <= float(rules["radar_max_kaldirac"])),
+            ("likidite_dusuk", o.get("likit_pay"), lambda v: v >= float(rules["radar_likit_pay_min"])),
+            ("devir_yuksek", o.get("devir_hafta"), lambda v: v <= float(rules["radar_max_devir_hafta"])))
+    o["neden"] = next((k for k, v, f in ucuz if v is None or not f(v)), None)
+    if o["neden"] is not None:                                              # ucuz kapı düştüyse pahalı kopya canlandırması yapılmaz (süre)
+        return o
     s = kalicilik_testi.hafta_satiri("0x" + "0" * 40, d, hesap, payda, mum, t0, t1, likit, azami, rules)
-    o.update({"kopya_getiri": s.get("kopya_getiri_7g"), "kopya_islem": s.get("kopya_islem_sayisi"), "kopya_koruma": s.get("kopya_koruma"), "kopya_gunluk": s.get("kopya_gunluk"),
-              "aktif_coin": len({str(f["coin"]) for f in d})})
-    kural = (("tutma_kisa", o.get("medyan_tutma_saat"), lambda v: v >= float(rules["radar_min_medyan_tutma_saat"])),
-             ("kisa_islem_fazla", o.get("kisa_islem_payi"), lambda v: v <= float(rules["radar_kisa_islem_payi_max"])),           # D+ (A)
-             ("coin_fazla", o.get("aktif_coin"), lambda v: v <= int(rules["secim_aktif_coin_max"])),                                # D+ (C)
-             ("kaldirac_yuksek", o.get("max_kaldirac"), lambda v: v <= float(rules["radar_max_kaldirac"])),
-             ("likidite_dusuk", o.get("likit_pay"), lambda v: v >= float(rules["radar_likit_pay_min"])),
-             ("devir_yuksek", o.get("devir_hafta"), lambda v: v <= float(rules["radar_max_devir_hafta"])),
-             ("kopya_zarar", o.get("kopya_getiri"), lambda v: v > 0),
+    o.update({"kopya_getiri": s.get("kopya_getiri_7g"), "kopya_islem": s.get("kopya_islem_sayisi"), "kopya_koruma": s.get("kopya_koruma"), "kopya_gunluk": s.get("kopya_gunluk")})
+    kural = (("kopya_zarar", o.get("kopya_getiri"), lambda v: v > 0),
              ("kopya_koruma_dusuk", o.get("kopya_koruma"), lambda v: v >= float(rules["radar_kopya_koruma_min"])),
              ("kopya_islem_az", o.get("kopya_islem"), lambda v: v >= int(rules["radar_min_kopya_islem"])))                           # D+ (A)
     o["neden"] = next((k for k, v, f in kural if v is None or not f(v)), None)
@@ -271,7 +274,7 @@ def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, sa
             if i % 200 == 0:
                 log(f"[{i}/{len(aday)}] B evreni {len(olcu)}; {(saat() - t0_kos) / 60:.1f} dk")
         olcu.sort(key=lambda o: (-o["t_istat"], o["adres"]))
-        log(f"B evreni: {len(olcu)} kişi; kopya kapısına ilk {rules['secim_aday_ust']}")
+        log(f"B evreni: {len(olcu)} kişi; kopya kapısı t sırasıyla, kadro dolana dek (en çok {rules['secim_aday_ust']})")
         kopya_butce = butce + float(rules["secim_kopya_butce_dk"]) * 60          # denetim 2: kopya kapısı döngüsünün de süre sınırı var (iş zaman aşımı 180 dk)
         for o in olcu[: int(rules["secim_aday_ust"])]:
             if len(uyeler) >= n:

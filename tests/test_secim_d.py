@@ -114,7 +114,9 @@ def test_dplus_kopya_kapisi_kisa_islem_coin_ve_islem_sayisi():
     assert k["neden"] is None and k["aktif_coin"] == 1 and k["kopya_islem"] == 20 and len(k["kopya_gunluk"]) >= 20
     az = s.kopya_kapisi(_karli_dolumlar(bas, adet=6), 20_000.0, 20_000.0, mum, bas, son, {"BTC"}, None, RULES)
     assert az["neden"] == "kopya_islem_az"                                   # A: < 10 kopya işlemi
-    assert s.kopya_kapisi(_karli_dolumlar(bas), 20_000.0, 20_000.0, mum, bas, son, {"BTC"}, None, {**RULES, "secim_aktif_coin_max": 0})["neden"] == "coin_fazla"
+    cf = s.kopya_kapisi(_karli_dolumlar(bas), 20_000.0, 20_000.0, mum, bas, son, {"BTC"}, None, {**RULES, "secim_aktif_coin_max": 0})
+    assert cf["neden"] == "coin_fazla" and "kopya_getiri" not in cf             # ucuz kapı düşünce kopya canlandırması yapılmaz (süre)
+    assert RULES["secim_aday_ust"] >= 200                                    # 09.11 dal denemesi: ilk 40'ın tümü düştü; kadro dolana dek ilerler
 
 
 def test_kos_motor_dusurdugu_uye_kadrodan_duser(tmp_path):
