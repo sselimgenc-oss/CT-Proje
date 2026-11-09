@@ -1,33 +1,34 @@
-# Canlı rapor — 2026-11-09 09:08 UTC
+# Canlı rapor — 2026-11-09 09:25 UTC
 
-**Kip** sanal · vardiya `42564127083` · saha 9/11 (inen 0)
+**Kip** sanal · vardiya `42591178491` · saha 9/11 (inen 0)
 
 ## Kasa
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 1.004,13 $ | +%0,32 | — (geçmiş < 7 gün) | +%0,41 | −%0,55 |
+| 1.000,00 $ | 1.001,27 $ | +%0,03 | — (geçmiş < 7 gün) | +%0,13 | −%0,83 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x3da36d… | BTC | L | 232,44 $ | +1,88 $ |
-| 0x5d908c… | SOL | S | 113,46 $ | −1,88 $ |
-| 0x9a0519… | AR | L | 103,51 $ | +5,70 $ |
-| 0x92d8c4… | ZEC | L | 97,12 $ | +0,13 $ |
-| 0x9a0519… | BTC | L | 61,39 $ | −0,08 $ |
-| 0x5d908c… | WLD | S | 48,47 $ | −1,22 $ |
-| 0x9a0519… | LIT | L | 46,26 $ | +0,68 $ |
-| 0x3da36d… | ETH | L | 42,30 $ | +0,01 $ |
-| 0x6ba51c… | ZEC | L | 40,36 $ | +0,45 $ |
-| 0x11eee2… | kPEPE | S | 13,32 $ | −0,58 $ |
-| 0x5d908c… | XPL | S | 11,12 $ | −0,12 $ |
-| 0x558afc… | ETH | L | 10,85 $ | −0,15 $ |
+| 0x3da36d… | BTC | L | 231,05 $ | +0,49 $ |
+| 0x5d908c… | SOL | S | 112,80 $ | −1,22 $ |
+| 0x9a0519… | AR | L | 103,44 $ | +5,64 $ |
+| 0x92d8c4… | ZEC | L | 96,03 $ | −0,95 $ |
+| 0x9a0519… | BTC | L | 61,03 $ | −0,45 $ |
+| 0x5d908c… | WLD | S | 48,14 $ | −0,90 $ |
+| 0x9a0519… | LIT | L | 45,88 $ | +0,30 $ |
+| 0x3da36d… | ETH | L | 41,97 $ | −0,32 $ |
+| 0x6ba51c… | ZEC | L | 39,91 $ | +0,00 $ |
+| 0x11eee2… | kPEPE | S | 13,17 $ | −0,42 $ |
+| 0x5d908c… | XPL | S | 11,07 $ | −0,07 $ |
+| 0x11eee2… | NEAR | S | 10,91 $ | +0,09 $ |
+| 0x558afc… | ETH | L | 10,76 $ | −0,24 $ |
 
 ## Son 24 saat
 
-- emir 49 · dolum 49 · kayma p50 −%0,00 / max +%0,15 (n=49)
+- emir 50 · dolum 50 · kayma p50 −%0,00 / max +%0,15 (n=50)
 - funding −0,06 $ · ücret 0,51 $
 
 _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun günlük kayıp tanımı); hafta/toplam kasaya göre; zirveden düşüş motorun zirvesine göre._
@@ -50,7 +51,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 255 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
+- süre 14 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
