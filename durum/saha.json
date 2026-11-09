@@ -529,7 +529,7 @@
    "giris_sira": 4,
    "hesap_giris_usd": 227279.118531,
    "sira_ust": 0,
-   "son_islem_ms": 1794199902095
+   "son_islem_ms": 1794227631994
   },
   "0x3da36da44a0e67e7f0273333ec870248aa38740f": {
    "disi_gunler": [],
@@ -553,7 +553,7 @@
    "giris_sira": 1,
    "hesap_giris_usd": 161920.272541,
    "sira_ust": 0,
-   "son_islem_ms": 1794226872104
+   "son_islem_ms": 1794227520987
   },
   "0x5d908c88be270889c0953e7dff1c8e1d699ceea3": {
    "disi_gunler": [
@@ -563,7 +563,7 @@
    "giris_sira": 2,
    "hesap_giris_usd": 214807.66785926,
    "sira_ust": 0,
-   "son_islem_ms": 1794226701732
+   "son_islem_ms": 1794227902305
   },
   "0x6ba51c6b1c5fef215014e5e3ca22f333894a3759": {
    "disi_gunler": [],
