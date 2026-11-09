@@ -9,7 +9,7 @@ from copytrade.canli import motor as mt
 from copytrade.canli import telegram as tg
 from copytrade.kurallar import load_rules
 from tests.test_canli_motor import CHAT, TOKEN, SahteHL, SahteTG, SahteWS, adr, kayitlar, kur, olay, tg_mesaj, userfills
-from tests.test_canli_t4b import HLADR, BorsaSim, kur_gercek
+from tests.test_canli_t4b import BorsaSim, kur_gercek
 
 RULES = load_rules()
 
