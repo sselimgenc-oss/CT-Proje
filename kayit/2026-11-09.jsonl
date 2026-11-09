@@ -195,3 +195,5 @@
 {"zaman_ms":1794188022736,"olay":"tur","ozsermaye_usd":1004.0416}
 {"zaman_ms":1794188215531,"olay":"telegram","metin":"🧾 Son 1 saat (03:36–04:36 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 78 (≈6 ayrı işlem)\n   • kural gereği 78: 58 çok küçük (< 11 $) · 14 ters netleşme (K‑41) · 6 coin tavanı\n   • kaçırılan 0 (geç görülen / veri yok)\n💰 Kasa: 1.003,55 $ · bugün 🟢 +2,59 $ (+%0,3) · başlangıçtan 🟢","acik":true}
 {"zaman_ms":1794188894206,"olay":"tur","ozsermaye_usd":1005.0289}
+{"zaman_ms":1794189604754,"olay":"funding","saat":498386,"saat_adet":1,"funding_usd":-0.005988204253425467,"toplam_funding_usd":-0.014953618525156538}
+{"zaman_ms":1794189765280,"olay":"tur","ozsermaye_usd":1006.7357}
