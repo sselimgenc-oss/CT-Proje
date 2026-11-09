@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-09 15:58 UTC
+# Canlı rapor — 2026-11-09 16:13 UTC
 
 **Kip** sanal · vardiya `42625495946` · saha 9/11 (inen 0)
 
@@ -6,33 +6,33 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 1.010,80 $ | +%0,98 | — (geçmiş < 7 gün) | +%1,08 | −%0,14 |
+| 1.000,00 $ | 1.009,28 $ | +%0,83 | — (geçmiş < 7 gün) | +%0,93 | −%0,29 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x3da36d… | BTC | L | 235,19 $ | +4,63 $ |
-| 0x5d908c… | SOL | S | 114,49 $ | −2,91 $ |
-| 0x92d8c4… | ZEC | L | 96,78 $ | −0,21 $ |
-| 0x1d5f8a… | XRP | S | 85,30 $ | −0,14 $ |
-| 0x1d5f8a… | SOL | S | 81,87 $ | −0,06 $ |
-| 0x9a0519… | AR | L | 66,41 $ | +6,04 $ |
-| 0x9a0519… | BTC | L | 62,12 $ | +0,64 $ |
-| 0x5d908c… | WLD | S | 49,70 $ | −2,46 $ |
-| 0x1d5f8a… | AVAX | S | 44,62 $ | +0,03 $ |
-| 0x3da36d… | ETH | L | 42,75 $ | +0,46 $ |
-| 0x6ba51c… | ZEC | L | 40,22 $ | +0,31 $ |
-| 0x9a0519… | LIT | L | 35,85 $ | +1,73 $ |
-| 0x11eee2… | kPEPE | S | 13,74 $ | −1,00 $ |
-| 0x5d908c… | XPL | S | 11,50 $ | −0,50 $ |
-| 0x11eee2… | ARB | S | 11,34 $ | −0,34 $ |
-| 0x558afc… | ETH | L | 10,96 $ | −0,04 $ |
+| 0x3da36d… | BTC | L | 234,06 $ | +3,51 $ |
+| 0x5d908c… | SOL | S | 113,79 $ | −2,21 $ |
+| 0x92d8c4… | ZEC | L | 95,64 $ | −1,34 $ |
+| 0x1d5f8a… | XRP | S | 84,91 $ | +0,26 $ |
+| 0x1d5f8a… | SOL | S | 81,37 $ | +0,44 $ |
+| 0x9a0519… | AR | L | 66,13 $ | +5,76 $ |
+| 0x9a0519… | BTC | L | 61,82 $ | +0,35 $ |
+| 0x5d908c… | WLD | S | 49,12 $ | −1,88 $ |
+| 0x1d5f8a… | AVAX | S | 44,32 $ | +0,33 $ |
+| 0x3da36d… | ETH | L | 42,55 $ | +0,25 $ |
+| 0x6ba51c… | ZEC | L | 39,75 $ | −0,16 $ |
+| 0x9a0519… | LIT | L | 35,18 $ | +1,06 $ |
+| 0x11eee2… | kPEPE | S | 13,70 $ | −0,96 $ |
+| 0x5d908c… | XPL | S | 11,35 $ | −0,35 $ |
+| 0x11eee2… | ARB | S | 11,26 $ | −0,26 $ |
+| 0x558afc… | ETH | L | 10,91 $ | −0,09 $ |
 
 ## Son 24 saat
 
 - emir 125 · dolum 125 · kayma p50 +%0,00 / max +%0,19 (n=125)
-- funding −0,12 $ · ücret 0,96 $
+- funding −0,14 $ · ücret 0,96 $
 
 _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun günlük kayıp tanımı); hafta/toplam kasaya göre; zirveden düşüş motorun zirvesine göre._
 
@@ -54,7 +54,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 150 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 165 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
