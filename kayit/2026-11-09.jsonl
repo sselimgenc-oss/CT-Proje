@@ -484,3 +484,5 @@
 {"zaman_ms":1794217159928,"olay":"tur","ozsermaye_usd":1001.866}
 {"zaman_ms":1794217588741,"olay":"emir_yok","adres":"0x11eee2e0a613af4f636e23ff295e2dac6a191d1d","coin":"xyz:NVDA","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1794217588418,"gorme_ms":1794217588740,"yas_ms":323}
 {"zaman_ms":1794218013215,"olay":"tur","ozsermaye_usd":1002.1556}
+{"zaman_ms":1794218435065,"olay":"funding","saat":498394,"saat_adet":1,"funding_usd":-0.009840404150819411,"toplam_funding_usd":-0.0736545741249722}
+{"zaman_ms":1794218860005,"olay":"tur","ozsermaye_usd":1000.4239}
