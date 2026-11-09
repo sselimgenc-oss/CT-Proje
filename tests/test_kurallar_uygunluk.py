@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import ast
 from collections import Counter
-import re
 from pathlib import Path
 
 import pytest

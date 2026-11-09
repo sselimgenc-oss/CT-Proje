@@ -216,7 +216,6 @@ class TestMumSaglik(unittest.TestCase):
 
 
 # ---------------------------------------------------------------- A15 düzeltmeleri
-import pytest
 
 
 def _mum(t, o, h=None, l=None, c=None):

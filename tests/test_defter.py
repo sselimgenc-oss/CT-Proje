@@ -150,7 +150,6 @@ def test_golden_9_copy_capital_is_time_matched_not_todays_account_value():
     5. saatten sonra 0,01 $ (para çekilmiş). 1. saatte 10 BTC @100 alır (ölçek 1/1000 → kopya 0,01 birim), 5. saatte @110 satar (kopya pozisyonunun tamamını kapatır).
     Kâr 0,01·10 = 0,1; maliyet 0,01·100·0,00095 + 0,01·110·0,00095 = 0,001995 → net 0,098005 (kopya sermayesinin %9,8'i).
     Bugünkü değer (0,01 $) paydaysa net 100/0,01 − … = ~10.000 olurdu."""
-    import pandas as pd
     history = pd.Series([1000.0, 0.01], index=pd.to_datetime([T0, T0 + 5 * HOUR + 1], unit="ms", utc=True))
     fills = [fill(60, "B", 10, 0, 100), fill(300, "A", 10, 10, 110)]
     out = copy_ledger(fills, Market(candles({h: 100 for h in range(0, 8)})), history, 0, T0 - DAY, T0 + 7 * HOUR, None, RULES)

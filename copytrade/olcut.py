@@ -275,7 +275,6 @@ def calculate_metrics(fills: list[dict[str, Any]], funding: list[dict[str, Any]]
     rounds = closed_round_trips(fills)
     trade_pnl = [x["net_pnl"] for x in rounds]
     wins = [x for x in trade_pnl if x > 0]
-    losses = [x for x in trade_pnl if x < 0]
     without_best = list(trade_pnl)
     if without_best:
         without_best.remove(max(without_best))   # yalnız BİR en iyi işlem çıkarılır (eşit kârlı diğerleri kalır)

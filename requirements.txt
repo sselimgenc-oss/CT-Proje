@@ -1,9 +1,5 @@
 pandas==2.3.3
-pyarrow==26.0.0
 pytest==9.1.1
 requests==2.34.2
-yfinance==1.7.0
 PyYAML==6.0.3
-pynescript==0.3.0
-antlr4-python3-runtime==4.13.2
-duckdb==1.3.2
+websockets==15.0.1

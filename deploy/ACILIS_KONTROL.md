@@ -13,8 +13,10 @@ Kural: bir adımda beklenen sonucu görmezseniz **DURUN** ve ekrandaki çıktıy
 1. **Hyperliquid ekranı:** açık pozisyon 0, açık emir 0, hesapta yalnız 1.000 $ USDC (fazlası yok).
    Para yalnız Arbitrum köprüsüyle girip çıkar. Vault, "send" ya da alt hesap transferi YAPMAYIN.
 2. **Yeni API cüzdanı** açın (adı: `sg-canli`). Bitiş tarihini takvime yazın. Anahtar yalnız şifre yöneticisinde.
-3. **GitHub → Settings → Variables:** `TELEGRAM_ACIK` "evet" OLMASIN (Actions sessiz kalsın).
-   "evet" ise `TELEGRAM_KOMUT` = `kapali` olmalı (noktasız i).
+3. **Ayrı Telegram botu (gerçek kip için):** Telegram komutlarını (getUpdates) tek bir süreç okuyabilir; sanal motor (Actions) aynı botu kullanırsa `/kapat` gerçek sunucuya ULAŞMAYABİLİR.
+   - Telegram'da @BotFather → `/newbot` → yeni bot (ör. `sg-gercek`). Token yalnız şifre yöneticisine ve adım 9'daki `/etc/sg-canli-telegram.env` dosyasına yazılır; başka hiçbir yere (GitHub Secrets dahil) yazılmaz.
+   - Yeni bota telefondan bir mesaj atın (özel sohbet). `TELEGRAM_CHAT_ID` = sizin kullanıcı kimliğiniz. Grup kullanacaksanız grup kimliği ("-" ile başlar): o grubun her üyesi komut verebilir; grupta yalnız siz olun.
+   - **GitHub → Settings → Variables:** `TELEGRAM_KOMUT` = `kapali` (noktasız i) — gerçek motoru açmadan ÖNCE. `TELEGRAM_ACIK` "evet" olmasa da bu değişken ayarlanır (Actions sanal motoru komut okumasın).
 4. Sunucuda `timedatectl` → "System clock synchronized: yes" yazmalı.
 5. Sunucuda `df -h /var` → en az 5 GB boş olmalı.
 6. **Sanal denemenin dizinini arşivleyin** (sunucuda daha önce sanal deneme yaptıysanız; silmeyin):
@@ -88,6 +90,8 @@ Kural: bir adımda beklenen sonucu görmezseniz **DURUN** ve ekrandaki çıktıy
     "BAŞLAMADI" ya da "Traceback" görürseniz DURUN.
     - "BAŞLAMADI (geçici)" + çıkış 75 = HL'ye ulaşılamadı; motor kendisi yeniden dener (en çok 10 dk arayla). 15 dakikada düzelmezse lidere yazın.
     - Çıkış 3 = kalıcı neden (ör. DUR dosyası, yanlış anahtar, kasa sınırı, ikinci motor): motor yeniden denemez; lidere yazın.
+    - "HL hesap değeri … > sınır 1500 $": HL hesabında 1.500 $'dan fazla var. Kârı Arbitrum köprüsüyle çekin (kasa 1.000 $ kalır) ya da kullanıcı karar versin; sonra yeniden başlatın.
+      1.000–1.500 $ arası sorun değildir (kârlı gün): motor başlar, kasa yine 1.000 $ kullanılır.
 13. **Telegram denemeleri:**
     - `/durum` → TEK yanıt gelmeli ve "GERÇEK PARA" yazmalı.
     - `/yardim` → "Bilinmeyen komut" yanıtı gelmeli (G-16 doğrulaması).
@@ -127,5 +131,7 @@ Kural: bir adımda beklenen sonucu görmezseniz **DURUN** ve ekrandaki çıktıy
 - **ASLA:**
   - Anahtarı sohbete, ekrana ya da komut satırına yapıştırmayın.
   - `CANLI_KASA_USD` 1.000'i aşmasın; kasayı değiştirmeyin (S-3 düzelene kadar).
+  - HL hesap değeri 1.500 $'ı aşarsa motor (yeniden) başlamaz: kârı çekin ya da kullanıcı kararı.
+  - HL'de "send", alt hesap ya da vault transferi yapmayın: motor bunu açıklanamayan sıçrama sayar (alarm + yeni açılış durur).
   - Motoru elle ya da ikinci kez başlatmayın (yalnız `systemctl`; ikinci motor çıkış 3 ile reddedilir).
   - `/etc/sg-canli.env` içindeki satırları başka birim dosyasına ya da Telegram dosyasına kopyalamayın.

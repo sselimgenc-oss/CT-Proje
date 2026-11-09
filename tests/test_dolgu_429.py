@@ -7,7 +7,6 @@ import threading
 import time
 import urllib.error
 
-import pytest
 
 from copytrade import dinleyici as d
 from tests.test_dinleyici import A, B, IZ, Saat, SahteWS, calistir, trades

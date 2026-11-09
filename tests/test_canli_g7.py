@@ -4,7 +4,6 @@ import json
 
 import pytest
 
-from copytrade.canli import motor as mt
 from tests.test_canli_motor import adr, olay
 from tests.test_canli_t4b import BorsaSim, _maske_temizle, kur_gercek  # noqa: F401 (autouse fixture)
 

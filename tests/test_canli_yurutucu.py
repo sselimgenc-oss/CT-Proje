@@ -297,7 +297,6 @@ def test_gunluk_kayip_tam_sinirda_tetiklenir_ve_utc_gunu_sifirlar():
 
 
 def test_zirveden_yuzde_20_dusus_dur_tetikler():
-    r = rk.Risk(RULES, 1000.0)
     r2 = rk.Risk(RULES, 1000.0)
     r2.ozsermaye_isle(1100.0, T0)
     assert "zirve_dusus" not in r2.ozsermaye_isle(881.0, T0)                                       # 1.100 × 0,8 = 880: 881 sınırın üstü

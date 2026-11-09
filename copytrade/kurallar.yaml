@@ -105,6 +105,7 @@ radar_veri_hatasi_pay_max: 0.10         # oran, R-2: `veri_hatasi` satırı bu p
 # ---- Canlı boyut (K-28, K-30; RADAR_V1.md §5/§5b): tek yer copytrade/boyut.py. Birim: $ (kasa = sanal/gerçek kopya kasası, kopya_$) ----
 canli_kasa_usd: 1000                    # $ (kullanıcı ayarı; üst sınır 1.000, AGENTS.md)
 canli_kasa_ust_usd: 1000                # $ (güvenlik üst sınırı; aşan kasa ValueError)
+canli_hl_deger_ust_usd: 1500            # $ (gerçek kip AÇILIŞ / --kontrol: HL hesap değeri tavanı; kârlı günden sonra yeniden başlatma takılmasın. Kasa yine min(CANLI_KASA_USD, HL) ≤ canli_kasa_ust_usd; K‑22)
 radar_canli_slot_min_usd: 25            # $ (N = min(radar_saha_max, taban(kasa / bu)))
 radar_saha_max: 11                      # kişi (İlk 11)
 radar_min_emir_usd: 11                  # $ (HL alt emir sınırı 10 $ + pay)
@@ -163,7 +164,7 @@ canli_ajan_kontrol_sn: 86400          # sn (G-19, GERÇEK kip: API cüzdanı `ex
 canli_ajan_uyari_gun: 7               # gün (G-19: API cüzdanı bitişine bu kadar ya da daha az kaldıysa Telegram alarmı)
 canli_olay_stale_sn: 120                # sn (trader dolumu bundan eskiyse "geç görüldü" işareti; emir yine mevcut defterle)
 canli_mark_stale_sn: 300                # sn (mark fiyatı bundan eskiyse sanal tutarlılık alarmı)
-canli_kadro_repo: sselimgenc-oss/sg-arge    # kadro.json'un okunduğu halka açık repo (raw.githubusercontent.com/<repo>/<dal>/radar/son/kadro.json)
+canli_kadro_repo: sselimgenc-oss/CT-Proje   # kadro.json'un okunduğu halka açık repo (raw.githubusercontent.com/<repo>/<dal>/radar/son/kadro.json)
 canli_kacan_pencere_dk: 60              # dakika (açılışta/kopmada REST ile tamamlanan dolum penceresi; daha eskisi yalnız trader pozisyonunu günceller, emir üretmez)
 canli_islenen_sakla: 5000               # adet (niyet.jsonl sıkıştırmasında saklanan son niyet sayısı)
 canli_islenen_adres_sakla: 2000         # adet, ADRES BAŞINA (işlenen dolum kimlikleri `{adres}:{tid}`; yeniden başlatmada çift emir yok; G-14: yoğun adres diğerlerinin kaydını düşürmez)
@@ -177,6 +178,7 @@ canli_kapanis_toz_usd: 1.0              # $ (borsa pozisyonu bu nosyonelin altı
 canli_bosluk_dk: 30                     # dakika (açılışta önceki kilit nabzı bundan eskiyse "vardiya boşluğu" alarmı)
 canli_kuyruk_max: 10000                 # olay (motor olay kuyruğu sınırı; taşarsa açılışlar düşer, kapanışlar kalır)
 canli_emir_zaman_asimi_sn: 10          # sn (G-12a: gerçek kip SDK `Exchange` HTTP zaman aşımı; aşılırsa emir "belirsiz" sayılır ve orderStatus(cloid) ile çözülür, G-1)
+canli_hl_sicrama_oran: 0.10            # oran (gerçek kip S-6: iki HL okuması arasında yerel defterle açıklanmayan özsermaye değişimi > kasa x bu → mutabakat bayrağı + alarm; o okumada risk/DUR bir okuma ertelenir)
 canli_bekci_sn: 180                     # sn (G-12: dakikalık bakım bu süre boyunca tamamlanmazsa bekçi alarm verir ve süreç çıkış kodu 1 ile biter; systemd yeniden başlatır)
 
 # T6 (K-37): seçim isabeti ölçümü (docs/RADAR_V1.md §7b; yalnız ölçer, radar_* eşiklerine dokunmaz)

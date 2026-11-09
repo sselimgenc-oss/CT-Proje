@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 from copytrade import radar_tarama as r
-from copytrade.defter import HOUR, sabit_tutar_egrisi
+from copytrade.defter import HOUR
 from copytrade.kurallar import load_rules
 from copytrade.tarama import RateLimitError
 

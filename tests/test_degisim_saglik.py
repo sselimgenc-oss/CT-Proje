@@ -1,10 +1,6 @@
-import json
 
-import pytest
-import yaml
 
 from copytrade.izleme_motoru import mutabakat_raporu, timestamp
-from copytrade.kurallar import load_rules
 
 
 def addr(char):

@@ -151,6 +151,12 @@ def etkin_kasa(rules: dict, kip: str, post: Callable[[dict], Any], ortam: dict |
     return min(kasa, hl), hl
 
 
+def hl_deger_ust(rules: dict) -> float:
+    """K‑22 (09.11): gerçek kip AÇILIŞ ve `--kontrol` HL hesap değeri tavanı ($) = `canli_hl_deger_ust_usd` (1.500). Kasa sınırı (`canli_kasa_ust_usd` = 1.000) AYRI ve değişmez: etkin kasa = min(CANLI_KASA_USD, HL) ≤ 1.000.
+    Ayrım nedeni: kârlı günden sonra (HL 1.012 $) yeniden başlatma çıkış 3 ile kalıcı reddedilir ve açık pozisyonlar yönetimsiz kalırdı. Anahtar yoksa eski davranış (kasa sınırı)."""
+    return float(rules.get("canli_hl_deger_ust_usd", rules["canli_kasa_ust_usd"]))
+
+
 def anahtardan_adres(anahtar: str) -> str:
     """API cüzdan anahtarından adres türetir (`eth_account`; tembel içe aktarma). Yoksa ImportError. Anahtar/adres hiçbir yere yazılmaz."""
     from eth_account import Account
@@ -901,6 +907,8 @@ class Motor:
         toz = float(self.rules["canli_kapanis_toz_usd"])
         son: Sonuc | None = None
         for i in range(baslangic, len(bantlar) + 1):
+            if self.bekci_nabiz is not None:               # bekçi: uzun kapanış döngüsü (DUR, çok coin, yavaş HL) ilerlediği sürece süreç öldürülmez; tek deneme asılırsa yine tetiklenir
+                self.bekci_nabiz()
             kalan, borsadan = self._kalan_sz(adres, coin)
             mk = self._mark_kapanis(adres, coin) or (o.px if o else 0.0) or 0.0
             if abs(kalan) < EPS or (mk and abs(kalan) * mk <= toz):
@@ -1426,7 +1434,9 @@ class Motor:
         senkron = self.senkron_oku() if yenile else None
         hesaplar = self.hesap_oku() if yenile else {}
         komutlar = self.tg.komutlari_al()                      # ağ: kilitsiz
-        hl = self.hl_oku() if (self.kip == "gercek" and simdi - self._son.get("mutabakat", 0) >= float(self.rules["canli_mutabakat_sn"]) * 1000) else None
+        hl_zamani = self.kip == "gercek" and simdi - self._son.get("mutabakat", 0) >= float(self.rules["canli_mutabakat_sn"]) * 1000
+        self._hl_okuma_imza = self._poz_imza() if hl_zamani else None          # mutabakat yarışı: HL okumasından ÖNCEKİ yerel pozisyonlar
+        hl = self.hl_oku() if hl_zamani else None
         oranlar = self.funding_oku() if self.funding_bekliyor(simdi) else None
         fgercek = self.funding_gercek_oku(simdi)                                # G7: gerçek kip, saatte bir; sanalda None
         ledger = self.ledger_oku(simdi) if hl else None                          # gerçek kip: yatırma/çekme kaydı (#5)
@@ -1438,7 +1448,8 @@ class Motor:
             adimlar: list[tuple[str, Callable[[], None]]] = [
                 ("belirsiz", lambda: self.belirsiz_coz(simdi)),                    # G-1: sonucu belirsiz emirler risk/mutabakattan ÖNCE deftere
                 ("tasfiye", lambda: self._tasfiye(simdi)), ("funding", lambda: self.funding_uygula(oranlar, simdi)), ("funding_gercek", lambda: self.funding_gercek_uygula(fgercek, simdi)),
-                ("hl_ozsermaye", lambda: self.hl_uygula(hl[1], simdi) if hl else None), ("ofset", lambda: self.ofset_yenile(ledger, simdi)), ("risk", lambda: self._risk(simdi)), ("anlik_saha", lambda: self._anlik(simdi)),
+                ("hl_ozsermaye", lambda: self.hl_uygula(hl[1], simdi) if hl else None), ("ofset", lambda: self.ofset_yenile(ledger, simdi)),
+                ("hl_sicrama", lambda: self._hl_sicrama_denetle(simdi) if hl else None), ("risk", lambda: self._risk(simdi)), ("anlik_saha", lambda: self._anlik(simdi)),
                 ("inen", lambda: self.karar_uygula(self.saha.inenleri_kapat(simdi), simdi)), ("mutabakat", lambda: self._mutabakat(simdi, hl)), ("kapanis_kuyrugu", lambda: self._kuyruk_isle(simdi)),
                 ("kadro", lambda: self._kadro_uygula(kadro, simdi)), ("senkron", lambda: (self.senkron_uygula(senkron), self.hesap_uygula(hesaplar, simdi)) if senkron is not None else None),
                 ("telegram", lambda: self._komutlar(komutlar)), ("ajan_suresi", lambda: self.ajan_suresi_uygula(ajan, simdi)), ("ozet", lambda: self._gunluk_ozet(simdi)),
@@ -1508,6 +1519,38 @@ class Motor:
             self.tg.gonder(tg.alarm("TASFİYE (sanal)", f"{e['coin']} pozisyonu (trader {tg.kisa(e['adres'])}) {e['tasfiye_px']:.6g} fiyatında tasfiye oldu (piyasa {e['mark']:.6g}).", "💥"))
 
     _zirve_yenile = False
+    bekci_nabiz: Callable[[], None] | None = None          # `calis` bekçinin `nabiz`ını bağlar (kapanış döngüsü her denemede besler)
+    _hl_sicrama = False                                     # S-6: son HL okumasında açıklanmayan özsermaye sıçraması var mı
+    _hl_sicrama_ms = 0
+    _hl_onceki: tuple[float, float] | None = None           # S-6: önceki HL okumasında (HL − ofset, yerel özsermaye) $
+    _hl_okuma_imza: tuple | None = None                     # `dakika`: HL kilit dışında okunmadan hemen önceki yerel pozisyon imzası (`_mutabakat` tüketir)
+
+    def _poz_imza(self) -> tuple:
+        """Yerel defter pozisyon imzası (adres, coin, sz): HL kilit dışında okunurken defter değişti mi (mutabakat yarışı)."""
+        with self._lock:
+            return tuple(sorted((a, c, p.sz) for a, cs in self.hesap.poz.items() for c, p in cs.items()))
+
+    def _hl_sicrama_denetle(self, simdi: int) -> None:
+        """S-6 (yalnız gerçek kip; her yeni HL okumasından sonra, ofset adımından SONRA, risk adımından ÖNCE): açıklanmayan = Δ(HL − ofset) − Δ(yerel özsermaye) ($, iki ardışık okuma arası).
+        Yerel defter dolum/mark/funding değişimini içerir; köprü yatırma/çekme ofsette. Geriye kalan büyük fark ledger'da sayılmayan transfer (internalTransfer/send/subAccountTransfer),
+        HL tasfiyesi vb. |açıklanmayan| > kasa × `canli_hl_sicrama_oran` (0,10) → mutabakat bayrağı + alarm ve BU okumada özsermaye riski (günlük/zirve → DUR) ertelenir. Sonraki okuma
+        sıçramasızsa erteleme kalkar: düşüş gerçekse DUR o adımda olur."""
+        if self.kip != "gercek" or self.hl_oz is None or self.hl_ofset is None:
+            return
+        net, yerel = self.hl_oz - self.hl_ofset, self.yerel_ozsermaye()
+        onceki, self._hl_onceki = self._hl_onceki, (net, yerel)
+        self._hl_sicrama = False
+        if onceki is None:
+            return
+        aciklanmayan = (net - onceki[0]) - (yerel - onceki[1])
+        esik = self.kasa * float(self.rules.get("canli_hl_sicrama_oran", 0.10))
+        if abs(aciklanmayan) <= esik:
+            return
+        self._hl_sicrama, self._hl_sicrama_ms = True, simdi
+        self.risk.bayrak("mutabakat", True)
+        self.kayit({"olay": "hl_sicrama", "aciklanmayan_usd": round(aciklanmayan, 4), "esik_usd": round(esik, 4), "hl_net_usd": round(net, 4), "yerel_usd": round(yerel, 4)})
+        self.tg.gonder(tg.alarm("ALARM: HL özsermayesinde açıklanamayan sıçrama", f"İki okuma arasında {tg.tr_sayi(aciklanmayan)} $ (sınır {tg.tr_sayi(esik)} $); dolum/yatırma/çekme açıklamıyor.\n"
+                                "Transfer (send/alt hesap) ya da HL tasfiyesi olabilir. Yeni pozisyon açılmıyor; risk freni bir okuma ertelendi. HL ekranını kontrol edin."))
 
     def _risk(self, simdi: int) -> None:
         oz = self.ozsermaye()
@@ -1519,6 +1562,9 @@ class Motor:
         if self.risk.kasa_siniri_asildi(self.kasa):
             if self._aralik_mi("kasa_alarm", simdi, 3600):
                 self.tg.gonder(tg.alarm("ALARM: kasa sınırı aşıldı", f"Kasa {tg.tr_sayi(self.kasa, 0)} $ > sınır {tg.tr_sayi(float(self.rules['canli_kasa_ust_usd']), 0)} $.\nYeni pozisyon açılmıyor."))
+        if self._hl_sicrama and simdi - self._hl_sicrama_ms <= 3 * float(self.rules["canli_mutabakat_sn"]) * 1000:      # S-6: açıklanmayan sıçrama → bu okumada DUR yok (bayrak + alarm verildi)
+            self.kayit({"olay": "risk_ertelendi", "neden": "hl_sicrama", "ozsermaye": oz})
+            return
         for ev in self.risk.ozsermaye_isle(oz, simdi):
             self.kayit({"olay": "risk", "tur": ev, "ozsermaye": oz})
             if ev == "zirve_dusus":
@@ -1532,9 +1578,17 @@ class Motor:
     _son_kadro: dict | None = None
 
     def _mutabakat(self, simdi: int, hl: tuple[dict[str, float], float] | None = None) -> None:
+        """Gerçek kip: HL ↔ yerel defter. `hl` kilit DIŞINDA okunduysa `_hl_okuma_imza` (`dakika`) o andaki yerel pozisyonlardır; kilit altında defter farklıysa (arada dolum / kapanış) HL kilit altında
+        YENİDEN okunur (aksi hâlde eski HL anlık görüntüsü yeni defterle karşılaştırılıp sahte mutabakat alarmı + açılış durması olurdu)."""
         if not self._aralik_mi("mutabakat", simdi, float(self.rules["canli_mutabakat_sn"])):
             return
+        imza, self._hl_okuma_imza = self._hl_okuma_imza, None
         if self.kip == "gercek":
+            if hl is not None and imza is not None and imza != self._poz_imza():
+                self.kayit({"olay": "mutabakat_yeniden_okuma"})
+                hl = self.hl_oku()
+                if hl is None:
+                    return
             hl = hl or self.hl_oku()
             if hl is None:
                 return
@@ -1548,6 +1602,8 @@ class Motor:
             fark = abs((hl_deger - (self.hl_ofset or 0.0)) - self.yerel_ozsermaye())          # yerel defter ↔ HL özsermaye farkı (K‑37 §2)
             if fark > self.kasa * float(self.rules["canli_mutabakat_oran"]):
                 sorunlar = [*sorunlar, {"neden": "ozsermaye_farki", "fark_usd": fark}]
+            if self._hl_sicrama:
+                sorunlar = [*sorunlar, {"neden": "hl_sicrama"}]
         else:
             sorunlar = sanal_tutarlilik(self.hesap, self.marks, self.mark_ms, simdi, float(self.rules["canli_mark_stale_sn"]))
         onceki = bool(self.risk.acilis_durdu.get("mutabakat"))
@@ -2209,6 +2265,7 @@ async def calis(motor: Motor, sure_sn: float | None = None, ws: Callable[[], Any
         pass
     motor.kacanlari_tamamla()
     bekci = Bekci(motor, float(motor.rules.get("canli_bekci_sn", 180)))
+    motor.bekci_nabiz = bekci.nabiz                       # kapanış döngüsü (DUR / kuyruk) her denemede besler
     bekci_dur = threading.Event()
     threading.Thread(target=bekci.calistir, args=(bekci_dur,), daemon=True, name="bekci").start()
     gorevler = [asyncio.create_task(_tuketici(motor, kuyruk, durdur)), asyncio.create_task(_periyodik(motor, durdur, din, bekci=bekci))]
@@ -2410,7 +2467,7 @@ def kontrol(rules: dict, kip: str, post: Callable[[dict], Any], kadro_oku: Calla
     if kip == "gercek":
         ap = api_cuzdan_dogrula(post, ortam, turet) if r["anahtar"] else {"ana_anahtar": False, "agent_dogrulandi": False, "tamam": False, "neden": "anahtar yok"}
         r["ana_anahtar"], r["agent_dogrulandi"], r["api_cuzdan_tamam"], r["api_cuzdan_neden"] = ap["ana_anahtar"], ap["agent_dogrulandi"], ap["tamam"], ap["neden"]       # yalnız bool/sabit metin
-        r["hl_deger_siniri_ok"] = r["hl_hesap_degeri"] is not None and r["hl_hesap_degeri"] <= float(rules["canli_kasa_ust_usd"]) + 1e-9          # K‑22: hesap değeri ≤ 1.000 $
+        r["hl_deger_siniri_ok"] = r["hl_hesap_degeri"] is not None and r["hl_hesap_degeri"] <= hl_deger_ust(rules) + 1e-9          # K‑22: hesap değeri ≤ `canli_hl_deger_ust_usd` (1.500 $); kasa ayrıca ≤ 1.000 $
         r["hl_acik_poz"] = r["hl_acik_emir"] = None
         if r["anahtar"] and dexler is not None:
             try:
@@ -2476,8 +2533,8 @@ def acilis_hl_denetle(rules: dict, kip: str, post: Callable[[dict], Any], sk: di
                 raise HlOkunamadi(f"API cüzdanı denetlenemedi: {dogrulama['neden']}")
             raise KipHatasi(f"API cüzdanı doğrulanamadı: {dogrulama['neden']}")
     kasa, hl_deger = etkin_kasa(rules, kip, post, **sk)
-    if kip == "gercek" and hl_deger is not None and hl_deger > float(rules["canli_kasa_ust_usd"]) + 1e-9:
-        raise KipHatasi(f"HL hesap değeri {hl_deger:.0f} $ > sınır {float(rules['canli_kasa_ust_usd']):g} $ (K‑22)")
+    if kip == "gercek" and hl_deger is not None and hl_deger > hl_deger_ust(rules) + 1e-9:          # HL tavanı 1.500 $ (kasa yine ≤ 1.000 $: min(ayar, HL))
+        raise KipHatasi(f"HL hesap değeri {hl_deger:.0f} $ > sınır {hl_deger_ust(rules):g} $ (K‑22): kârı çekin ya da kullanıcı kararı")
     return kasa, hl_deger
 
 

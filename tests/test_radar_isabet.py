@@ -161,7 +161,6 @@ def test_main_hata_olursa_tarama_bozulmaz_eksik_dosyaya_yazilir(monkeypatch, tmp
 def test_varsayilan_tarih_gec_baslayan_havuzu_ertesi_gun_yakalar(monkeypatch):
     from copytrade import radar_isabet as ri
     gun = ri.GUN_MS
-    t0 = 1_793_000_000_000                                           # sabit an
     d = {"2026-11-05": {"kosu_ms": 1793860000000}}                   # havuz 11-05 07:19 UTC'de koşmuş (geç başlayan koşu)
     monkeypatch.setattr(ri, "git_oku", lambda dal, yol: d.get(yol.split("/")[1]) if yol.endswith("havuz.json") else None)
     kural = {"isabet_pencere_gun": 7}

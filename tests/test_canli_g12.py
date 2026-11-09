@@ -7,7 +7,6 @@ Ağsız; gerçek kip YALNIZ sahte borsa (`BorsaSim`) ile sınanır, ÇALIŞTIRIL
 import asyncio
 import errno
 import threading
-import time
 import types
 
 import pytest
@@ -15,7 +14,7 @@ import requests
 
 from copytrade.canli import motor as mt
 from copytrade.canli import yurutucu as yu
-from tests.test_canli_motor import RULES, Saat, kayitlar, kur, olay, adr
+from tests.test_canli_motor import RULES, kayitlar, kur, olay, adr
 from tests.test_canli_t4b import BorsaSim, Cokus, kur_gercek
 
 SZ = 0.27273

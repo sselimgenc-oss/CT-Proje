@@ -12,7 +12,7 @@ from copytrade.canli import niyet as ny
 from copytrade.canli import telegram as tg
 from copytrade.canli import yurutucu as yu
 from copytrade.kurallar import load_rules
-from tests.test_canli_motor import CHAT, GUN, SAAT, TOKEN, SahteHL, SahteTG, Saat, T0, adr, kadro, kayitlar, kur, olay, satir, tg_mesaj
+from tests.test_canli_motor import CHAT, SAAT, TOKEN, SahteHL, SahteTG, Saat, adr, kadro, kayitlar, kur, olay, satir, tg_mesaj
 
 RULES = load_rules()
 HLADR = "0x" + "ab" * 20                       # kendi HL hesap adresimiz (gizli kalmalı)
@@ -136,7 +136,7 @@ def test_dur_pozisyon_duzlesmezse_motor_durmaz_dur_dosyasi_bekliyor_sonra_tamam(
     d = json.loads((tmp_path / "durum" / "DUR").read_text(encoding="utf-8"))
     assert m.dur_bekliyor and not m.dur_istendi and d["kapanis_bekliyor"] is True and m.risk.dur
     assert any("DÜZLEŞMEDİ" in x for x in tgp.gonderilen)
-    ok, izin = m.risk.acilis_izni(adr(1), "BTC", True, saat()), None
+    ok = m.risk.acilis_izni(adr(1), "BTC", True, saat())
     assert ok[0] is False                                                                      # yeni açılış yok
     saat.ms += 60_000
     m.dakika()
@@ -251,7 +251,7 @@ def test_emir_ile_durum_yazimi_arasinda_cokme_ayni_dolum_ikinci_emir_uretmez(tmp
     gercek_emir = m.yurutucu.emir
 
     def coktur(*a, **k):
-        d = gercek_emir(*a, **k)                                                               # emir borsaya GİTTİ
+        gercek_emir(*a, **k)                                                                   # emir borsaya GİTTİ
         if sim:
             sim.durumlar[k["cloid"]] = {"status": "order", "order": {"order": {"coin": "BTC", "side": "B", "limitPx": "100.5", "sz": "0.0", "origSz": str(sim.siparisler[-1]["dolan"]), "oid": 7}, "status": "filled"}}
         raise Cokus()
@@ -289,7 +289,9 @@ def test_gercek_orderstatus_emir_yoksa_niyet_iptal(tmp_path, monkeypatch):
 # ================================================================================================ 2. özsermaye + funding
 def test_gercek_risk_temeli_hl_ozsermayesi_gunluk_kayip_fark_alarmi_ve_zirve_dur(tmp_path, monkeypatch):
     """Kasa 1.000, HL hesabı 1.000 (ofset 0). Yerel defter 1.000 kalırken HL 949'a düşer: özsermaye 949 → gün başı 1.000'e göre −%5,1 ≥ %5 → günlük kayıp bayrağı; yerel ↔ HL farkı 51 $ > kasa × %1
-    = 10 $ → `ozsermaye_farki` mutabakat alarmı + yeni açılış yok. HL 790'a düşünce zirveden −%21 ≥ %20 → DUR."""
+    = 10 $ → `ozsermaye_farki` mutabakat alarmı + yeni açılış yok. HL 790'a düşünce zirveden −%21 ≥ %20 → DUR.
+    S-6 (09.11): 949 → 790 adımında açıklanmayan değişim −159 $ (yerel defter sabit) > kasa × %10 = 100 $ → `hl_sicrama` (bayrak + alarm), DUR bu okumada ERTELENİR;
+    sonraki okuma (HL yine 790, sıçrama 0) → DUR."""
     sim = BorsaSim(deger=1000.0)
     m, sim, saat, tgp = kur_gercek(tmp_path, monkeypatch, sim)
     m.baslat()
@@ -301,6 +303,9 @@ def test_gercek_risk_temeli_hl_ozsermayesi_gunluk_kayip_fark_alarmi_ve_zirve_dur
     assert m.ozsermaye() == pytest.approx(949.0) and m.yerel_ozsermaye() == pytest.approx(1000.0)
     assert m.risk.acilis_durdu["gunluk_kayip"] and m.risk.acilis_durdu["mutabakat"] and any("ozsermaye_farki" in str(x) for x in kayitlar(tmp_path, "mutabakat_alarm"))
     sim.deger = 790.0
+    saat.ms += 60_000
+    m.dakika()
+    assert not m.risk.dur and kayitlar(tmp_path, "hl_sicrama")[0]["aciklanmayan_usd"] == pytest.approx(-159.0) and kayitlar(tmp_path, "risk_ertelendi")
     saat.ms += 60_000
     m.dakika()
     assert m.dur_istendi and m.risk.dur

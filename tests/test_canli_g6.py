@@ -95,9 +95,12 @@ def test_userrole_hata_atarsa_ret_istisna_sizmaz():
     assert r["tamam"] is False and r["agent_dogrulandi"] is False
 
 
-def test_hl_degeri_1200_usd_ret_k22():
+def test_hl_degeri_1501_usd_ret_k22_1200_usd_gecer():
+    """K‑22 (09.11): HL değer tavanı `canli_hl_deger_ust_usd` = 1.500 $ (kasa sınırı 1.000 $ ayrı). 1.501 $ → ret; 1.200 $ → geçer (eskiden ret: kârlı günden sonra kontrol takılırdı)."""
+    r = kont(SahteHL(hesap=1501.0))
+    assert r["hl_hesap_degeri"] == 1501.0 and r["hl_deger_siniri_ok"] is False and r["tamam"] is False and r["agent_dogrulandi"] is True
     r = kont(SahteHL(hesap=1200.0))
-    assert r["hl_hesap_degeri"] == 1200.0 and r["hl_deger_siniri_ok"] is False and r["tamam"] is False and r["agent_dogrulandi"] is True
+    assert r["hl_hesap_degeri"] == 1200.0 and r["hl_deger_siniri_ok"] is True and r["etkin_kasa_usd"] == 300.0
 
 
 def test_turetme_basarisiz_veya_eth_account_yok_tamam_false_neden():
@@ -153,6 +156,6 @@ def test_main_agent_degil_cikis_3(monkeypatch, tmp_path):
     assert mt.main(["--kip", "gercek", "--durum-dizin", str(tmp_path / "durum")]) == 3 and not olustu
 
 
-def test_main_hl_degeri_1200_cikis_3(monkeypatch, tmp_path):
-    _, olustu = _main_kur(monkeypatch, SahteHL(hesap=1200.0), lambda k: AGENT)
+def test_main_hl_degeri_1501_cikis_3(monkeypatch, tmp_path):
+    _, olustu = _main_kur(monkeypatch, SahteHL(hesap=1501.0), lambda k: AGENT)
     assert mt.main(["--kip", "gercek", "--durum-dizin", str(tmp_path / "durum")]) == 3 and not olustu

@@ -194,7 +194,7 @@ def _y(v: float | None) -> str:
 
 def markdown(r: dict) -> str:
     t = r["toplam"]
-    m = [f"# Gerçek ↔ sanal dolum karşılaştırması (S-12)", "",
+    m = ["# Gerçek ↔ sanal dolum karşılaştırması (S-12)", "",
          f"İlk {t['emir']} gerçek emir (istenen {r['n_istenen']}); kasa {r['kasa_usd']:g} $; 1.000 $ ölçek çarpanı {r['olcek_1000']:g}. Fark = gerçek − sanal; kayma oran, + = aleyhimize.", "",
          "## Özet", "", "| Ölçü | Gerçek | Sanal |", "|---|---|---|",
          f"| Emir (sanal verili / veri_yok) | {t['emir']} | {t['sanal_verili']} / {t['veri_yok']} |",
