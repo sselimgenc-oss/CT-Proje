@@ -370,6 +370,7 @@ class Motor:
         self.kayit = Kayit(kayit_dizin, self.saat_ms)
         self.tg.kayit = self.kayit
         self.kip = yurutucu.kip
+        self.radar_surum_gerekli: str | None = None                # K-54: `copytrade/canli/RADAR_SURUM` (main() okur); None = her kadro uygulanır
         self.tg.kip = self.kip                                                      # S-22: alarm başlıklarına kip etiketi
         self.tg.tampon_sn = float(rules.get("canli_telegram_gercek_tampon_sn", 0) or 0) if self.kip == "gercek" else 0.0      # G-18: gerçek kip emir mesajı birleştirme
         self.vardiya_id = vardiya_id
@@ -1682,6 +1683,18 @@ class Motor:
         okundu, kadro = okuma
         if not okundu:
             return
+        gerekli = self.radar_surum_gerekli
+        if gerekli and kadro is not None and str(kadro.get("radar_surum")) != str(gerekli):
+            # K-54 (kullanıcı kararı 09.11): yeni seçim yapısı (radar_surum = gerekli) yayımlanana kadar eski yapının kadrosu UYGULANMAZ: saha boş, kasa nakitte, günde bir kayıt + bilgi
+            if self.saha.alarm_gunu != gun(simdi):
+                self.saha.alarm_gunu = gun(simdi)
+                self.kayit({"olay": "kadro_surum_bekleniyor", "gerekli": str(gerekli), "gelen": kadro.get("radar_surum")})
+                self.tg.gonder(tg.alarm("BİLGİ: yeni seçim yapısı bekleniyor", f"Gelen kadro sürümü {kadro.get('radar_surum') or 'yok'}, gereken {gerekli}. Trader alınmıyor; kasa nakitte.", "ℹ️"))
+            kadro = None
+            if self._son_kadro is not None and str(self._son_kadro.get("radar_surum")) != str(gerekli):
+                self._son_kadro = None
+            if self._son_kadro is None:
+                return
         if kadro is not None:
             self._son_kadro = kadro
         kararlar, durum = self.saha.degerlendir(self._son_kadro, simdi)
@@ -2595,6 +2608,18 @@ def baslamadi_alarmi(tgram: tg.Telegram, hata: object, kod: int = CIKIS_KALICI) 
         print(f"Telegram alarmı gönderilemedi: {type(e).__name__}", file=sys.stderr)
 
 
+RADAR_SURUM_DOSYA = Path(__file__).with_name("RADAR_SURUM")
+
+
+def radar_surum_oku(yol: Path = RADAR_SURUM_DOSYA) -> str | None:
+    """K-54: motorun uygulayacağı kadronun `radar_surum`'u (dosyanın ilk boş olmayan, `#` ile başlamayan satırı). Dosya yok / boş → None (her kadro)."""
+    try:
+        satirlar = [x.strip() for x in yol.read_text(encoding="utf-8").splitlines()]
+    except OSError:
+        return None
+    return next((x for x in satirlar if x and not x.startswith("#")), None)
+
+
 def _baslamadi(tgram: tg.Telegram, hata: object, kod: int) -> int:
     print(f"BAŞLAMADI{' (geçici)' if kod == CIKIS_GECICI else ''}: {hata}", file=sys.stderr)
     baslamadi_alarmi(tgram, hata, kod)
@@ -2659,6 +2684,7 @@ def _motor_calistir(args: argparse.Namespace, rules: dict, kip: str, post: Calla
     except (RuntimeError, ValueError) as hata:                     # SDK kurulu değil / anahtar biçimi bozuk: metin anahtar içerebilir, yalnız tür adı
         return _baslamadi(tgram, KipHatasi(f"gerçek yürütücü kurulamadı ({type(hata).__name__})"), CIKIS_KALICI)
     motor = Motor(rules, yur, post, tgram, args.durum_dizin, args.kayit_dizin or (args.durum_dizin / "kayit"), kadro_oku, vardiya_id=args.vardiya)
+    motor.radar_surum_gerekli = radar_surum_oku()
     try:
         motor.baslat()
     except HlOkunamadi as hata:

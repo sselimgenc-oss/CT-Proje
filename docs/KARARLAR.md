@@ -266,3 +266,10 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - **Yeni dönem yok:** saha K-39 ile 1–2 günde v1.1 kadrosuna uyar; 7 temiz gün sayacı (yürütme sağlamlığı) sıfırlanmaz. Doğrulama: geriye dönük 8 haftalık kalıcılık testi (ayrı iş, salt okur) + K-46 isabet serisi.
 - Kanıt: `copytrade/v11_sinama.py` koşusu 42626202353 (4 kadro günü); testler `tests/test_v11_kurallar.py`.
 
+## K-54 — Yeni seçim yapısı Fable ön kaydıyla; eski yapı verisi panodan kalkar (kullanıcı kararı 09.11)
+- Kullanıcı: "Fable'a göre en doğru yapı nasıl kurulacaksa kuralım; elimizdeki trader'ların önemi yok; yeni yapıya göre trader'ları bulalım; acelemiz yok, yapı sağlam ve sürdürülebilir olsun" ve "eski yapıya göre bulunan trader'ları ve işlemlerini panodan kaldıralım".
+- **Yeni dönem** `copytrade/canli/DONEM` = 2026-11-09T18:01Z (21:01 TSİ): durum/kayıt/pano sıfır; eski veri `canli-durum` dal geçmişinde arşivli (K-49 düzeneği).
+- **Bekleme:** `copytrade/canli/RADAR_SURUM` = `v2` → motor yalnız `radar_surum: v2` kadroyu uygular; o gelene kadar saha boş, kasa nakitte; günde bir kayıt (`kadro_surum_bekleniyor`) + Telegram bilgisi. Motor vardiyası ve yayım sürer (dış nabız alarmı çalmaz).
+- **Yöntem (ön kayıt `docs/ONKAYIT_SECIM_2026-11-09.md`):** Fable aday yapıları sonuç görülmeden ön kayda alır (3–5 aday, her biri kendi evrenini lider tablosunun tamamından kurar, eski radar havuzuna bağlı değil); adaylar 8 haftalık geriye dönük çerçevede önceden kayıtlı karar kuralıyla sınanır; kazanan `radar_surum: v2` olarak kurulur. Hiçbiri geçmezse gerçek paraya geçilmez.
+- 8 haftalık kalıcılık testi (`kalicilik.yml`) yalnız eski yapının teşhisidir; aday seçimi ona dayanmaz.
+
