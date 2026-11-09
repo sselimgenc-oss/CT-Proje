@@ -9,9 +9,13 @@ RULES = load_rules()
 HOUR = 3_600_000
 
 
+V1 = {**RULES, "radar_agirlik_g": 0.35, "radar_agirlik_k": 0.15, "radar_agirlik_i1": 0.10, "radar_agirlik_i2": 0.10, "radar_agirlik_y": 0.10, "radar_agirlik_h": 0.20}   # v1 ağırlıkları (altın örnek korunur)
+
+
 def test_agirliklar_toplami_bir_ve_rules_den():
     assert sum(float(RULES[f.AGIRLIK_ANAHTARI[b]]) for b in f.BILESENLER) == pytest.approx(1.0)
-    assert [float(RULES[f.AGIRLIK_ANAHTARI[b]]) for b in f.BILESENLER] == [0.35, 0.15, 0.10, 0.10, 0.10, 0.20]
+    # v1.1 (K-53) S4: H = 0, diğer dördü v1 değerleri / 0,80 (oranlar aynı; form 0–100)
+    assert [float(RULES[f.AGIRLIK_ANAHTARI[b]]) for b in f.BILESENLER] == pytest.approx([0.35 / 0.8, 0.15 / 0.8, 0.10 / 0.8, 0.10 / 0.8, 0.10 / 0.8, 0.0])
 
 
 def test_yuzdelik_altin_ornekler():
@@ -34,10 +38,13 @@ def test_agirlikli_form_elle():
     A = satir("0xA", 0.03, 0.02, 1.0, 0.01, 0.5, 0.5)
     B = satir("0xB", 0.02, 0.03, 0.5, 0.02, 0.8, 0.0)
     C = satir("0xC", 0.01, 0.01, 0.0, 0.03, 0.2, 1.0)
-    puanli, soguyan = f.form_puanla([C, A, B, satir("0xD", 9, 9, 9, 0, 9, 9, gecti=False)], RULES)          # gecti=False girmez
+    puanli, soguyan = f.form_puanla([C, A, B, satir("0xD", 9, 9, 9, 0, 9, 9, gecti=False)], V1)          # gecti=False girmez
     assert [p["adres"] for p in puanli] == ["0xA", "0xB", "0xC"] and soguyan == []
     assert [p["form"] for p in puanli] == pytest.approx([77.5, 52.5, 20.0])
     assert puanli[0]["bilesenler"] == {"G": 100.0, "K": 50.0, "I1": 100.0, "I2": 100.0, "Y": 50.0, "H": 50.0}
+    # v1.1 (H = 0): A 0,4375×100 + 0,1875×50 + 0,125×(100 + 100 + 50) = 84,375; B 21,875 + 18,75 + 6,25 + 6,25 + 12,5 = 65,625; C (yalnız H) = 0
+    puanli, _ = f.form_puanla([C, A, B], RULES)
+    assert [p["adres"] for p in puanli] == ["0xA", "0xB", "0xC"] and [p["form"] for p in puanli] == pytest.approx([84.375, 65.625, 0.0])
 
 
 def test_soguyor_siniri_tam_eksi_yuzde_2_gecer():

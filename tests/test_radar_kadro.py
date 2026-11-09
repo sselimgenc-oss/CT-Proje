@@ -7,6 +7,7 @@ from copytrade import radar_kadro as k
 from copytrade.kurallar import load_rules
 
 RULES = load_rules()
+V1 = {**RULES, "radar_agirlik_g": 0.35, "radar_agirlik_k": 0.15, "radar_agirlik_i1": 0.10, "radar_agirlik_i2": 0.10, "radar_agirlik_y": 0.10, "radar_agirlik_h": 0.20}   # v1 ağırlıkları (altın örnek korunur)
 
 
 def gecen(adres, g, kopya, i1=0.5, i2=0.01, y=0.5, h=0.5, gun=(0.0, 0.01), s72=0.0):
@@ -26,12 +27,15 @@ def test_kadro_altin_ornek_3_kisi_elle():
     """3 aday: yalnız G ve K değişir (diğer bileşenler eşit → hepsi %50): G/K sırası A (0,03/0,02) en iyi G; B en iyi K; C en kötü. Yüzdelik: A G100 K50, B G50 K100, C 0/0; eşit bileşenler (İ1, İ2, Y, H) üçü de %50.
     form A = 0,35×100 + 0,15×50 + (0,10 + 0,10 + 0,10 + 0,20) × 50 = 35 + 7,5 + 25 = 67,5; B = 17,5 + 15 + 25 = 57,5; C = 25. Slot (kasa 1.000) = 90,909 $, N = 11."""
     h = havuz([gecen("0xB", 0.02, 0.03), gecen("0xC", 0.01, 0.01), gecen("0xA", 0.03, 0.02), elenen("0xD")])
-    kd = k.kadro_olustur(h, RULES)
-    assert kd["sema"] == "radar-kadro-v1" and kd["kasa_usd"] == 1000.0 and kd["slot_usd"] == pytest.approx(1000 / 11) and kd["saha_n"] == 11 and kd["gecti_sayisi"] == 3
+    kd = k.kadro_olustur(h, V1)
+    assert kd["sema"] == "radar-kadro-v1" and kd["radar_surum"] == "v1.1" and kd["kasa_usd"] == 1000.0 and kd["slot_usd"] == pytest.approx(1000 / 11) and kd["saha_n"] == 11 and kd["gecti_sayisi"] == 3
     assert [s["adres"] for s in kd["satirlar"]] == ["0xA", "0xB", "0xC"] and [s["sira"] for s in kd["satirlar"]] == [1, 2, 3]
     assert [s["form"] for s in kd["satirlar"]] == pytest.approx([67.5, 57.5, 25.0]) and {s["katman"] for s in kd["satirlar"]} == {"ilk11"}
-    assert set(kd["satirlar"][0]) == {"adres", "sira", "katman", "form", "bilesenler", "kopya_getiri_7g", "max_kaldirac", "form_h_siz", "sira_h_siz"}
+    assert set(kd["satirlar"][0]) == {"adres", "sira", "katman", "form", "bilesenler", "kopya_getiri_7g", "max_kaldirac", "form_h_siz", "sira_h_siz", "g_t_istat", "tutma"}
     assert kd["korelasyon"]["adresler"] == ["0xA", "0xB", "0xC"]
+    # v1.1 (H = 0, dördü /0,80): A 43,75 + 9,375 + 0,375×50 = 71,875; B 21,875 + 18,75 + 18,75 = 59,375; C 18,75 — sıra aynı
+    kd11 = k.kadro_olustur(h, RULES)
+    assert [s["adres"] for s in kd11["satirlar"]] == ["0xA", "0xB", "0xC"] and [s["form"] for s in kd11["satirlar"]] == pytest.approx([71.875, 59.375, 18.75])
 
 
 def test_ilk11_yedek_19_ve_30_siniri():
@@ -95,10 +99,10 @@ def test_h_sirayi_ceviriyor_bilgi_alani_secimi_degistirmez():
     form X = 35 + 0,20×50 = 45; Y = 15 + 10 + 10 + 20 = 55 → karar sırası Y, X (DEĞİŞMEZ).
     H'siz: X = 45 / 0,80 = 56,25; Y = (15 + 10 + 10) / 0,80 = 43,75 → sira_h_siz X 1, Y 2. Kadro tavanı 1 iken H'siz giren = X."""
     h = havuz([gecen("0xX", 0.03, 0.01, i1=0.4, h=0.0), gecen("0xY", 0.02, 0.02, i1=0.6, h=0.5)])
-    kd = k.kadro_olustur(h, RULES)
+    kd = k.kadro_olustur(h, V1)
     assert [s["adres"] for s in kd["satirlar"]] == ["0xY", "0xX"] and [s["form"] for s in kd["satirlar"]] == pytest.approx([55.0, 45.0])
     assert [s["form_h_siz"] for s in kd["satirlar"]] == pytest.approx([43.75, 56.25]) and [s["sira_h_siz"] for s in kd["satirlar"]] == [2, 1]
-    tek = k.kadro_olustur(h, {**RULES, "radar_kadro_toplam": 1})
+    tek = k.kadro_olustur(h, {**V1, "radar_kadro_toplam": 1})
     assert [s["adres"] for s in tek["satirlar"]] == ["0xY"]
     assert tek["h_siz_girenler"] == [{"adres": "0xX", "sira_h_siz": 1, "form_h_siz": pytest.approx(56.25)}]
 

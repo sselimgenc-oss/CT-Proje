@@ -39,7 +39,7 @@ def test_evren_filtre_siniri_dahil_siralama_ve_kesilen():
     assert [a["adres"] for a in adaylar] == ["0xa", "0xe", "0xf"] and (toplam, kesilen) == (3, 0)
     adaylar, toplam, kesilen = r.evren(satirlar, RULES, aday_tavan=2)
     assert [a["adres"] for a in adaylar] == ["0xa", "0xe"] and (toplam, kesilen) == (3, 1)
-    assert adaylar[0] == {"adres": "0xa", "hesap_usd": 10_005.0, "hafta_pnl_usd": 5.0, "hafta_vlm_usd": 1.0}
+    assert adaylar[0] == {"adres": "0xa", "hesap_usd": 10_005.0, "hafta_pnl_usd": 5.0, "hafta_vlm_usd": 1.0, "ay_pnl_usd": None}     # `month` penceresi yok → None (S1 kapısı uygulanmaz)
 
 
 def test_evren_siralama_getiriye_gore_altin_ornek_k31():
@@ -89,7 +89,7 @@ def test_adres_tohumu_sabit():
 def iyi():
     """Tüm R1 kurallarını sınırın TAM üstünde (geçecek biçimde) geçen satır."""
     return {"hesap_usd": 20_000.0, "islem_sayisi": 10, "medyan_tutma_saat": 1.0, "kisa_islem_payi": 0.25, "max_kaldirac": 20.0, "likit_pay": 0.80,
-            "kopya_getiri_7g": 0.05, "kopya_koruma": 0.50, "devir_hafta": 100.0, "kopya_alt20": 0.001, "hata": None}
+            "kopya_getiri_7g": 0.05, "kopya_koruma": 0.50, "devir_hafta": 100.0, "kopya_alt20": 0.001, "kopya_islem_sayisi": 10, "hata": None}
 
 
 @pytest.mark.parametrize("alan,gecen,elenen,neden", [
@@ -101,6 +101,7 @@ def iyi():
     ("kopya_getiri_7g", 0.0001, 0.0, "kopya_zarar"),                      # > 0 gerekir: tam 0 elenir
     ("kopya_koruma", 0.50, 0.4999, "kopya_koruma_dusuk"),
     ("devir_hafta", 100.0, 100.01, "devir_yuksek"),
+    ("kopya_islem_sayisi", 10, 9, "kopya_islem_az"),                       # v1.1 (K-53) S2: ≥ 10 (sınır dahil)
     ("kopya_alt20", 1e-9, 0.0, "sans_riski"),                              # alt yüzdelik tam 0 ELENİR
     ("kopya_getiri_7g", 3.0, 3.0001, "akil_sagligi"),                      # +%300 dahil geçer
 ])
@@ -111,7 +112,7 @@ def test_r1_kurali_sinirin_tam_ustu_gecer_tam_alti_elenir(alan, gecen, elenen, n
 
 
 def test_r1_eksik_olcu_basarisizdir_hata_veri_hatasi_ve_siralama_ilk_basarisiz():
-    for alan in ("islem_sayisi", "medyan_tutma_saat", "kisa_islem_payi", "max_kaldirac", "likit_pay", "kopya_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20"):
+    for alan in ("islem_sayisi", "medyan_tutma_saat", "kisa_islem_payi", "max_kaldirac", "likit_pay", "kopya_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "kopya_islem_sayisi"):
         assert r.degerlendir({**iyi(), alan: None}, RULES)[0] is False, alan
     assert r.degerlendir({**iyi(), "hata": "429"}, RULES) == (False, "veri_hatasi")
     assert r.degerlendir({**iyi(), "islem_sayisi": 3, "likit_pay": 0.1}, RULES) == (False, "islem_az")                          # sırada ilk başarısız
@@ -221,7 +222,7 @@ class Sahte:
         raise AssertionError(payload)
 
 
-RULES1 = {**RULES, "radar_min_islem": 1}          # tek işlemli senaryolarda dolum tabanlı kurallar geçsin (kopya oynatma çalışsın); eşik testleri RULES ile ayrıca
+RULES1 = {**RULES, "radar_min_islem": 1, "radar_min_kopya_islem": 1}          # tek işlemli senaryolarda dolum tabanlı kurallar ve v1.1 kopya işlem kapısı (S2) geçsin (kopya oynatma çalışsın); eşik testleri RULES ile ayrıca
 
 
 def kos(istemci, tmp_path, adet=None, rules=RULES, **kw):
@@ -314,7 +315,8 @@ def test_koşu_sozlesme_alanlari_vault_payda_hesap_ve_429(tmp_path):
     assert yazilan == sonuc
     anahtarlar = {"adres", "hesap_usd", "hafta_pnl_usd", "trader_getiri_7g", "islem_sayisi", "medyan_tutma_saat", "kisa_islem_payi", "max_kaldirac", "likit_pay",
                   "kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "v4_kopya_getiri_7g", "v5_onceki_kopya_getiri_7g", "kopya_gunluk", "kopya_kazanc_gun_orani", "kopya_dusus", "yayilma", "kopya_getiri_72s", "hype_payi", "hip3_nosyonel_pay", "net_yatirma_usd", "yatirma_payi", "gecti", "neden", "hata",
-                  "payda_kaynak", "payda_nokta", "payda_bas_usd", "payda_son_oran", "kopya_islem_sayisi", "yuvarlanan_pay", "oransal_ayna", "koruma_boyut", "g_t_istat"}      # T6 §2: iki yeni bilgi alanı; K‑43 adayı: hip3_nosyonel_pay; 08.11: B8 payda + B3/B12 + B14 bilgi alanları
+                  "payda_kaynak", "payda_nokta", "payda_bas_usd", "payda_son_oran", "kopya_islem_sayisi", "yuvarlanan_pay", "oransal_ayna", "koruma_boyut", "g_t_istat",
+                  "ay_pnl_usd", "tutma"}      # v1.1 (K-53): 30 g pnl + tutma işareti; T6 §2: iki yeni bilgi alanı; K‑43 adayı: hip3_nosyonel_pay; 08.11: B8 payda + B3/B12 + B14 bilgi alanları
     assert all(set(s) == anahtarlar for s in sonuc["satirlar"])
     assert all(c_[3] == KOSU for c_ in c.cagrilar) and all(c_[2] == BAS for c_ in c.cagrilar)         # pencere [kosu − 168 sa, kosu)
 
@@ -403,7 +405,7 @@ def test_zaman_butcesi_asilinca_kalan_adaylar_zaman_yok(tmp_path):
 
 def test_yeni_kodlar_sirasi_ve_kurallar_anahtarlari():
     assert r.NEDENLER == ("veri_hatasi", "payda_yok", "devir_yuksek", "vault", "dolum_fazla", "islem_az", "tutma_kisa", "kisa_islem_fazla", "kaldirac_yuksek",
-                          "likidite_dusuk", "kopya_zarar", "kopya_koruma_dusuk", "sans_riski", "akil_sagligi", "zaman_yok")
+                          "likidite_dusuk", "kopya_zarar", "kopya_koruma_dusuk", "kopya_islem_az", "sans_riski", "akil_sagligi", "zaman_yok")
     assert (RULES["radar_dolum_tavan"], RULES["radar_api_agirlik_dk"], RULES["radar_zaman_butcesi_dk"]) == (5000, 1100, 120)
 
 

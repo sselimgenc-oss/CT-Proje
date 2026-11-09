@@ -358,7 +358,9 @@ daha eskisi için (Hyperliquid `candleSnapshot` yalnız son 5.000 dakikalık mum
 | `payda_nokta` | adet | seri nokta sayısı (`week` noktalarının tamamı + yalnız ondan eski `month` / `allTime` noktaları; bitiş = `kosu_ms`); seri yoksa `null` |
 | `payda_bas_usd` | trader_$ | serinin pencere başındaki (`pencere_bas_ms`) değeri (o an ya da öncesindeki son nokta; yoksa ilk nokta) |
 | `payda_son_oran` | oran | serinin `kosu_ms` değeri / `hesap_usd` — portfolio ile lider tablosu tanımlarının akıl sağlığı kontrolü (≈ 1 beklenir; yalnız bilgi) |
-| `kopya_islem_sayisi` | adet | **B12, YALNIZ bilgi:** kopya oynatmasında kapanan, bootstrap'a giren (geçerli) kopya işlemi sayısı (`kopya_alt20` bu kadar işlemden); kapıya girmez |
+| `kopya_islem_sayisi` | adet | **B12; v1.1 (K-53) KAPI:** kopya oynatmasında kapanan, bootstrap'a giren (geçerli) kopya işlemi sayısı (`kopya_alt20` bu kadar işlemden); `radar_min_kopya_islem` (10) altı → `kopya_islem_az` |
+| `ay_pnl_usd` | $ | **v1.1 (K-53) S1:** lider tablosu 30 g pnl; R0/tutma için > 0 gerekir (`radar_ay_pnl_pozitif`); pencere yoksa `null` (kapı uygulanmaz) |
+| `tutma` | bool | **v1.1 (K-53) D1:** satır R0 ilk N dışından, önceki kadro üyesi olduğu için ölçüldü (`--onceki-kadro`); R1 aynen uygulanır |
 | `yuvarlanan_pay` | oran 0–1 | **B3, YALNIZ bilgi:** kopya açılışlarından (boyut kararı `ac`, emir > 0) `radar_min_emir_usd`'ye (11 $) YUKARI yuvarlananların payı; açılış yoksa `null` |
 | `oransal_ayna` | oran, kopya_$ ölçeği | **B3, YALNIZ bilgi:** ayna (gecikmesiz, maliyetsiz) oynatması `radar_min_emir_usd` = 0 ile — asgari emre yuvarlama/atlama YOK (saf oransal; slot ve 3× tavanlar aynen, aynı payda) |
 | `koruma_boyut` | oran | **B3, YALNIZ bilgi:** `ayna_getiri_7g / oransal_ayna` (asgari emir tanecik bozulmasının aynaya etkisi; 1 = etkisiz); `oransal_ayna` ≤ 0 ya da yok → `null` |
@@ -366,7 +368,7 @@ daha eskisi için (Hyperliquid `candleSnapshot` yalnız son 5.000 dakikalık mum
 | `kopya_getiri_7g_eski`, `ayna_getiri_7g_eski`, `kopya_koruma_eski`, `kopya_alt20_eski` | yukarıdaki eşleriyle aynı | **B8 yan yana (YALNIZ `--payda-yan-yana` koşusunda; günlük `radar.yml` ve `radar_deneme.yml` açık):** aynı oynatma SABİT payda `hesap_usd` ile (eski hesap); kopya oynatmasına varmayan satırda yenisiyle aynı |
 | `gecti_eski`, `neden_eski` | bool, kod | B8 yan yana: R1 kuralları `_eski` kopya alanlarıyla (diğer ölçüler aynı) — "eski hesapla geçer miydi"; KARAR `gecti`'dedir. Üst düzeyde `payda_yan_yana: true` |
 | `gecti` | bool | R1'in tüm kuralları geçildi mi (radar havuzu) |
-| `neden` | kod \| `null` | ilk başarısız kuralın kodu; sıra: `veri_hatasi` (istek hatası), `payda_yok`, `devir_yuksek`, `vault`, `dolum_fazla`, `islem_az`, `tutma_kisa`, `kisa_islem_fazla`, `kaldirac_yuksek`, `likidite_dusuk`, `kopya_zarar`, `kopya_koruma_dusuk`, `sans_riski`, `akil_sagligi`, `zaman_yok` |
+| `neden` | kod \| `null` | ilk başarısız kuralın kodu; sıra: `veri_hatasi` (istek hatası), `payda_yok`, `devir_yuksek`, `vault`, `dolum_fazla`, `islem_az`, `tutma_kisa`, `kisa_islem_fazla`, `kaldirac_yuksek`, `likidite_dusuk`, `kopya_zarar`, `kopya_koruma_dusuk`, `kopya_islem_az` (v1.1), `sans_riski`, `akil_sagligi`, `zaman_yok` |
 | `hata` | metin \| `null` | `veri_hatasi` ise ilk satır hata iletisi (uydurma yok) |
 
 Eşikler `kurallar.yaml` `radar_*` anahtarlarındadır; sınırlar DAHİLDİR (tam 10 işlem, 1,0 sa, %25, 20x, %80, %50, 100 kat geçer; `kopya_alt20` için tam 0 ELENİR, `kopya_getiri_7g` tam +%300 geçer, tam 0 elenir).
@@ -393,6 +395,7 @@ erken giriş = açılışı bilinen kârlı işlem, trend coin, coinin hareketi 
 | `onceki_kosu_ms` | UTC ms | karşılaştırılan önceki kadronun `kosu_ms`'i (koşu başlangıcı); önceki kadro verilmediyse `null` |
 | `elenenler` | — | [{adres, onceki_sira, neden}]: önceki kadroda olup **bugünkü havuzda** R1'i geçemeyenler; `neden` = bugünkü havuz satırının `neden`'i; önceki sıra artan |
 | `eski_uye_neden` | {adres: kod} | önceki kadroda olup bugünkü kadroda olmayan her adres: `r1:<neden>` (havuzda, `gecti` false) · `r0_disi` (havuzda yok: 7 g getiride ilk `radar_aday_tavan` dışı) · `soguyan` · `sira_disi` (puanlandı, form sırası > `radar_kadro_toplam`) |
+**v1.1 (K-53):** kadro üst düzeyinde `radar_surum` ("v1.1"); satırlarda bilgi alanları `g_t_istat` (havuzdan) ve `tutma` (bool). Form ağırlıkları H = 0, diğer dördü v1 / 0,80.
 Önceki kadro = `--onceki-kadro` (radar.yml: veri dalındaki `radar/son/kadro.json`, bugünkü yayından önce — son TAM koşunun kadrosu; bir gün eksikse daha eskidir, `onceki_kosu_ms`'e bakın). Verilmezse `elenenler` = [], `eski_uye_neden` = {}.
 Havuzda olmadığı için **yazılmayanlar:** G'nin işlem başı kopya getirileri — `havuz.json` yalnız özetlerini tutar: `kopya_alt20`, `kopya_islem_sayisi` ve (08.11'den beri, B14) t istatistiği `g_t_istat` (§12).
 **Saha kararları (slot −%10, bekleme, günde 2 değişiklik, benzer trader ≥ 0,7) kadroda DEĞİL:** T4 motoru okuyup §5/§6 kurallarını uygular.

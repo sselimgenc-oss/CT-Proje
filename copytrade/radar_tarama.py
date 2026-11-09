@@ -41,9 +41,9 @@ MINUTE = 60_000
 SEMA = "radar-havuz-v1"
 KOPYA_TARZ = "intraday"                 # kopya_v3 çıkış kuralları (E3) için tarz; radar henüz tarz sınıflamaz (kurallar.yaml golge_v2.intraday)
 NEDENLER = ("veri_hatasi", "payda_yok", "devir_yuksek", "vault", "dolum_fazla", "islem_az", "tutma_kisa", "kisa_islem_fazla", "kaldirac_yuksek",
-            "likidite_dusuk", "kopya_zarar", "kopya_koruma_dusuk", "sans_riski", "akil_sagligi", "zaman_yok")        # ucuzdan pahalıya ölçüm sırası (lider kararı 2026-11-04)
+            "likidite_dusuk", "kopya_zarar", "kopya_koruma_dusuk", "kopya_islem_az", "sans_riski", "akil_sagligi", "zaman_yok")        # ucuzdan pahalıya ölçüm sırası (lider kararı 2026-11-04)
 DOLUM_KURALI = 5                  # NEDENLER içinde dolum tabanlı kurallar (islem_az … likidite_dusuk): bunlardan biri başarısızsa kopya oynatılmaz
-SAYISAL = ("hesap_usd", "hafta_pnl_usd", "trader_getiri_7g", "islem_sayisi", "medyan_tutma_saat", "kisa_islem_payi", "max_kaldirac", "likit_pay",
+SAYISAL = ("hesap_usd", "hafta_pnl_usd", "ay_pnl_usd", "trader_getiri_7g", "islem_sayisi", "medyan_tutma_saat", "kisa_islem_payi", "max_kaldirac", "likit_pay",
            "kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "v4_kopya_getiri_7g", "v5_onceki_kopya_getiri_7g",
            "kopya_kazanc_gun_orani", "kopya_dusus", "yayilma", "kopya_getiri_72s", "hype_payi",
            "net_yatirma_usd", "yatirma_payi",        # `kopya_kazanc_gun_orani` … `hype_payi` yalnız `gecti` satırlarında (R2 girdisi); son ikisi T6 §2 (bilgi; kapıyı değiştirmez)
@@ -65,6 +65,26 @@ def _sayi(deger: Any) -> float | None:
     return sayi if math.isfinite(sayi) else None
 
 
+def ay_pnl(satir: dict) -> float | None:
+    """Lider tablosu satırının 30 günlük (`month`) pnl'i ($); pencere satırda HİÇ yoksa None (kapı uygulanmaz, ölçülemez ≠ başarısız)."""
+    for item in satir.get("windowPerformances", []) or []:
+        pencere, degerler = (item if isinstance(item, (list, tuple)) and len(item) == 2 else (item.get("window") if isinstance(item, dict) else None, item))
+        if isinstance(degerler, dict) and str(pencere).lower() in ("month", "30d"):
+            return _sayi(degerler.get("pnl"))
+    for k, v in satir.items():
+        if str(k).lower().replace("_", "") in ("monthpnl", "30dpnl"):
+            return _sayi(v)
+    return None
+
+
+def ay_kapisi(satir: dict, rules: dict) -> bool:
+    """v1.1 (K-53) S1: `radar_ay_pnl_pozitif` açıksa 30 günlük pnl > 0 gerekir (tek haftada parlayanı ayıklar); pencere yoksa geçer. Kapalıysa her zaman geçer."""
+    if not bool(rules.get("radar_ay_pnl_pozitif", False)):
+        return True
+    a = ay_pnl(satir)
+    return a is None or a > 0
+
+
 def evren(satirlar: list[dict], rules: dict | None = None, aday_tavan: int | None = None) -> tuple[list[dict], int, int]:
     """R0 (K‑31): lider tablosu satırlarından aday listesi. Ön filtre: hafta başı sermaye `accountValue − hafta pnl ≥ radar_min_hesap_usd` (trader_$; yatırma şişirmesini önler),
     hafta `pnl > 0`, hafta `vlm > 0`; sıra `trader_getiri_7g` (= pnl / (accountValue − pnl)) AZALAN (eşitlikte adres), ilk `aday_tavan` (varsayılan `radar_aday_tavan`) alınır.
@@ -77,8 +97,8 @@ def evren(satirlar: list[dict], rules: dict | None = None, aday_tavan: int | Non
         adres = _address(satir)
         hesap = _sayi(satir.get("accountValue", satir.get("account_value")))
         pnl, vlm = _sayi(_window(satir, "week", "pnl")), _sayi(_window(satir, "week", "vlm"))
-        if adres and hesap is not None and pnl is not None and vlm is not None and hesap - pnl >= esik and pnl > 0 and vlm > 0:
-            gecenler.append({"adres": adres, "hesap_usd": hesap, "hafta_pnl_usd": pnl, "hafta_vlm_usd": vlm})
+        if adres and hesap is not None and pnl is not None and vlm is not None and hesap - pnl >= esik and pnl > 0 and vlm > 0 and ay_kapisi(satir, rules):
+            gecenler.append({"adres": adres, "hesap_usd": hesap, "hafta_pnl_usd": pnl, "hafta_vlm_usd": vlm, "ay_pnl_usd": ay_pnl(satir)})
     gecenler.sort(key=lambda a: (-(a["hafta_pnl_usd"] / (a["hesap_usd"] - a["hafta_pnl_usd"])), a["adres"]))
     return gecenler[:tavan], len(gecenler), max(0, len(gecenler) - tavan)
 
@@ -86,7 +106,8 @@ def evren(satirlar: list[dict], rules: dict | None = None, aday_tavan: int | Non
 def tutma_adaylari(satirlar: list[dict], onceki_adresler: list[str], secilen: set[str], rules: dict | None = None) -> list[dict]:
     """v1.1 (K-53, kullanıcı kararı 09.11) nedene bağlı çıkış: önceki kadronun bugün R0 ilk `radar_aday_tavan` DIŞINDA kalan üyeleri de R1'den geçirilir; geçen kadroda kalır,
     yalnız gerçekten kötüleşen (R1'den kalan) düşer. `radar_tutma_onceki_kadro` false → []. Lider tablosunda olmayan ya da hafta başı sermayesi `radar_min_hesap_usd` altında /
-    hafta hacmi 0 olan adres alınmaz (ölçülemez → eskisi gibi kadro dışı). Hafta pnl > 0 şartı ARANMAZ (sonuç R1 kopya oynatmasıyla belli olur). Sıra = `onceki_adresler` sırası."""
+    hafta hacmi 0 olan adres alınmaz (ölçülemez → eskisi gibi kadro dışı). Hafta pnl > 0 şartı ARANMAZ (sonuç R1 kopya oynatmasıyla belli olur); 30 g pnl > 0 (S1, `ay_kapisi`) ARANIR.
+    Sıra = `onceki_adresler` sırası."""
     rules = rules or load_rules()
     if not bool(rules.get("radar_tutma_onceki_kadro", False)):
         return []
@@ -96,8 +117,8 @@ def tutma_adaylari(satirlar: list[dict], onceki_adresler: list[str], secilen: se
         adres = _address(satir)
         hesap = _sayi(satir.get("accountValue", satir.get("account_value")))
         pnl, vlm = _sayi(_window(satir, "week", "pnl")), _sayi(_window(satir, "week", "vlm"))
-        if adres and hesap is not None and pnl is not None and vlm is not None and hesap - pnl >= esik and vlm > 0:
-            tablo[adres.lower()] = {"adres": adres, "hesap_usd": hesap, "hafta_pnl_usd": pnl, "hafta_vlm_usd": vlm, "tutma": True}
+        if adres and hesap is not None and pnl is not None and vlm is not None and hesap - pnl >= esik and vlm > 0 and ay_kapisi(satir, rules):
+            tablo[adres.lower()] = {"adres": adres, "hesap_usd": hesap, "hafta_pnl_usd": pnl, "hafta_vlm_usd": vlm, "ay_pnl_usd": ay_pnl(satir), "tutma": True}
     cikti, gorulen = [], {x.lower() for x in secilen}
     for a in onceki_adresler:
         a = str(a).lower()
@@ -274,6 +295,8 @@ def degerlendir(satir: dict, rules: dict | None = None, yalniz_dolum: bool = Fal
         ("likidite_dusuk", basarisiz(satir.get("likit_pay"), lambda v: v >= float(rules["radar_likit_pay_min"]))),
         ("kopya_zarar", basarisiz(satir.get("kopya_getiri_7g"), lambda v: v > 0)),
         ("kopya_koruma_dusuk", basarisiz(satir.get("kopya_koruma"), lambda v: v >= float(rules["radar_kopya_koruma_min"]))),
+        ("kopya_islem_az", int(rules.get("radar_min_kopya_islem", 0) or 0) > 0                            # v1.1 (K-53) S2: kopya kapanan işlem ≥ N (bootstrap 2–4 işlemle anlamsız)
+         and basarisiz(satir.get("kopya_islem_sayisi"), lambda v: v >= int(rules["radar_min_kopya_islem"]))),
         ("sans_riski", basarisiz(satir.get("kopya_alt20"), lambda v: v > 0)),
         ("akil_sagligi", basarisiz(satir.get("kopya_getiri_7g"), lambda v: v <= float(rules["radar_akil_sagligi_getiri_max"]))
          or not (satir.get("hesap_usd") or 0) > 0),
@@ -455,7 +478,7 @@ class Baglam:
 # ------------------------------------------------------------------------------------------------------------------------------ koşu
 def _bos_satir(aday: dict, vlm: float, rules: dict) -> dict:
     getiri = trader_getiri_7g(aday["hesap_usd"], aday["hafta_pnl_usd"])
-    return {"adres": aday["adres"], "hesap_usd": aday["hesap_usd"], "hafta_pnl_usd": aday["hafta_pnl_usd"], "trader_getiri_7g": getiri,
+    return {"adres": aday["adres"], "hesap_usd": aday["hesap_usd"], "hafta_pnl_usd": aday["hafta_pnl_usd"], "ay_pnl_usd": aday.get("ay_pnl_usd"), "trader_getiri_7g": getiri,
             "islem_sayisi": None, "medyan_tutma_saat": None, "kisa_islem_payi": None, "max_kaldirac": None, "likit_pay": None,
             "kopya_getiri_7g": None, "ayna_getiri_7g": None, "kopya_koruma": None,
             "devir_hafta": vlm / aday["hesap_usd"] if aday["hesap_usd"] > 0 else None,
