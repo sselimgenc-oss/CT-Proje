@@ -254,3 +254,11 @@
 {"t":"sonuc","cloid":"0x68d1a80afb87c205e495a7ca51f3f479","durum":"dolu","ms":1794241060908,"sz":0.011536839004166547,"px":1205.5,"ucret":0.006258446738785247}
 {"t":"niyet","kimlik":"0x92d8c46701a992e007849ab09d5cc578d5330cdf:839622090349635","eylem":"artir","adres":"0x92d8c46701a992e007849ab09d5cc578d5330cdf","coin":"ZEC","yon":"B","usd":14.098237,"reduce_only":false,"cloid":"0x899ce310273c63db055467b41eea4d69","ms":1794241085958}
 {"t":"sonuc","cloid":"0x899ce310273c63db055467b41eea4d69","durum":"dolu","ms":1794241086072,"sz":0.011768144059408394,"px":1198.0,"ucret":0.006344206462427065}
+{"t":"niyet","kimlik":"0x57da5ca2b92632426bedfe81671dd0c8c3111a50:244141822601005","eylem":"ac","adres":"0x57da5ca2b92632426bedfe81671dd0c8c3111a50","coin":"kPEPE","yon":"A","usd":11.0,"reduce_only":false,"cloid":"0xcd67d47148d56322d4c94e711b55822e","ms":1794246111841}
+{"t":"sonuc","cloid":"0xcd67d47148d56322d4c94e711b55822e","durum":"dolu","ms":1794246111960,"sz":2103.6527060623444,"px":0.005229,"ucret":0.004949999999999999}
+{"t":"niyet","kimlik":"0x57da5ca2b92632426bedfe81671dd0c8c3111a50:769019044792739","eylem":"artir","adres":"0x57da5ca2b92632426bedfe81671dd0c8c3111a50","coin":"kPEPE","yon":"A","usd":11.51323,"reduce_only":false,"cloid":"0x63686ab911daef33a013ca7cf0d9548f","ms":1794246133507}
+{"t":"sonuc","cloid":"0x63686ab911daef33a013ca7cf0d9548f","durum":"dolu","ms":1794246133690,"sz":2202.645825841995,"px":0.005227,"ucret":0.005180953379254248}
+{"t":"niyet","kimlik":"0x57da5ca2b92632426bedfe81671dd0c8c3111a50:616620176447620","eylem":"artir","adres":"0x57da5ca2b92632426bedfe81671dd0c8c3111a50","coin":"kPEPE","yon":"A","usd":11.829237,"reduce_only":false,"cloid":"0x8901c380829594b9442fd5f3d9f5b96f","ms":1794246134669}
+{"t":"sonuc","cloid":"0x8901c380829594b9442fd5f3d9f5b96f","durum":"dolu","ms":1794246134780,"sz":2263.102588241282,"px":0.005227,"ucret":0.005323156752931731}
+{"t":"niyet","kimlik":"0x57da5ca2b92632426bedfe81671dd0c8c3111a50:717672111371349","eylem":"artir","adres":"0x57da5ca2b92632426bedfe81671dd0c8c3111a50","coin":"kPEPE","yon":"A","usd":12.106126,"reduce_only":false,"cloid":"0xabf73c924738e9f8549fb9fced4d324e","ms":1794246135106}
+{"t":"sonuc","cloid":"0xabf73c924738e9f8549fb9fced4d324e","durum":"dolu","ms":1794246135234,"sz":2316.075324073992,"px":0.005227,"ucret":0.00544775657352064}
