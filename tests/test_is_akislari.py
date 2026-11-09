@@ -137,7 +137,7 @@ def test_s21_izleme_yayimla_betigini_hicbir_is_akisi_cagirmaz():
 
 # ---------------------------------------------------------------------------------------------------- artık dosya temizliği
 def test_eski_sistem_is_akislari_ve_betikleri_yok():
-    kalanlar = {"canli_vardiya.yml", "ci.yml", "isabet_deneme.yml", "radar.yml", "radar_deneme.yml", "saglik.yml", "nabiz_yayim.yml", "v11_sinama.yml"} | ({"dal_sil.yml"} if (WF / "dal_sil.yml").exists() else set())   # 08.11 kullanıcı: eski deneme iş akışları ve tek seferlik dal_sil.yml (40 dal silindi) kaldırıldı   # dal_sil.yml: tek seferlik eski dal temizliği (kullanıcı onayı 08.11; iş bitince silinir)  # canli_vardiya_300.yml kaldırıldı (kullanıcı 08.11: tek sanal motor 1.000 $); sonnet_isci.yml kaldırıldı (devir denetimi G-11, 06.11); saglik.yml: sağlık kontrolü (kullanıcı kararı 2026-11-05; salt okur, testi test_saglik.py); nabiz_yayim.yml: G-10 dış ölü adam alarmı yayını (testi test_nabiz.py)  # v11_sinama.yml: v1.1 aday sınaması, salt okur (kullanıcı onayı 09.11, A seçeneği; K-47)
+    kalanlar = {"canli_vardiya.yml", "ci.yml", "isabet_deneme.yml", "radar.yml", "radar_deneme.yml", "saglik.yml", "nabiz_yayim.yml", "v11_sinama.yml", "kalicilik.yml"} | ({"dal_sil.yml"} if (WF / "dal_sil.yml").exists() else set())   # 08.11 kullanıcı: eski deneme iş akışları ve tek seferlik dal_sil.yml (40 dal silindi) kaldırıldı   # dal_sil.yml: tek seferlik eski dal temizliği (kullanıcı onayı 08.11; iş bitince silinir)  # canli_vardiya_300.yml kaldırıldı (kullanıcı 08.11: tek sanal motor 1.000 $); sonnet_isci.yml kaldırıldı (devir denetimi G-11, 06.11); saglik.yml: sağlık kontrolü (kullanıcı kararı 2026-11-05; salt okur, testi test_saglik.py); nabiz_yayim.yml: G-10 dış ölü adam alarmı yayını (testi test_nabiz.py)  # v11_sinama.yml: v1.1 aday sınaması, salt okur (kullanıcı onayı 09.11, A seçeneği; K-47)
     assert {p.name for p in WF.glob("*.yml")} == kalanlar          # eski sistem iş akışları (kapı, Pazar kadrosu, İlk 11 denemesi, v3 yan yana) geri gelmedi
     assert not (WF / "pano.yml").exists() and not (ROOT / "copytrade" / "pano_veri.py").exists() and not (ROOT / "pano").exists()     # eski GitHub Pages panosu (copytrade-izleme'ye bağlı) kaldırıldı; yeni pano `copytrade/canli/pano.py`
     assert not (SCRIPTS / "kapi_yayimla.sh").exists()
@@ -745,7 +745,8 @@ def test_requirements_kullanilmayan_paketleri_icermez():
 def test_g23_ucuncu_taraf_eylemler_tam_commit_sha_ile_sabit():
     """G-23: tüm iş akışlarında `uses:` tam 40 haneli commit SHA + sürüm yorumu (git ls-remote ile çözüldü, 08.11)."""
     bilinen = {"actions/checkout": ("11d5960a326750d5838078e36cf38b85af677262", "v4.4.0"), "actions/setup-python": ("a26af69be951a213d495a4c3e4e4022e16d87065", "v5.6.0"),
-               "actions/upload-artifact": ("ea165f8d65b6e75b540449e92b4886f43607fa02", "v4.6.2"), "actions/setup-node": ("49933ea5288caeca8642d1e84afbd3f7d6820020", "v4.4.0")}
+               "actions/upload-artifact": ("ea165f8d65b6e75b540449e92b4886f43607fa02", "v4.6.2"), "actions/setup-node": ("49933ea5288caeca8642d1e84afbd3f7d6820020", "v4.4.0"),
+               "actions/download-artifact": ("d3f86a106a0bac45b974a628896c90dbdf5c8093", "v4.3.0")}     # kalicilik.yml (09.11, git ls-remote refs/tags/v4.3.0)
     sayi = 0
     for yol in WF.glob("*.yml"):
         for satir in yol.read_text(encoding="utf-8").splitlines():
