@@ -175,9 +175,10 @@ def _sayi_mi(x: Any) -> bool:
 
 
 def doldurma_mi(onceki: dict | None, simdi: int) -> bool:
-    """İlk koşu (v2 kadro yok) ya da ayın ilk koşusu (önceki kadronun `doldurma_ay`'ı bu ay değil)."""
+    """İlk koşu (v2 kadro yok), ayın ilk koşusu (önceki kadronun `doldurma_ay`'ı bu ay değil) ya da kadro tamamen boş
+    (09.11 dal denemesi: ilk doldurma 0/5 kaldı → ay sonuna dek boş beklenmez; kısmen dolu kadroda boş slot ay başına dek nakit, K-33)."""
     ay = datetime.fromtimestamp(simdi / 1000, UTC).strftime("%Y-%m")
-    return not onceki or onceki.get("radar_surum") != SURUM or onceki.get("doldurma_ay") != ay
+    return not onceki or onceki.get("radar_surum") != SURUM or onceki.get("doldurma_ay") != ay or not onceki.get("satirlar")
 
 
 def on_filtre(satirlar: list[dict], rules: dict) -> list[dict]:

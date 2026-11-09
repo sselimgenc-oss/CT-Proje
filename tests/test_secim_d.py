@@ -48,7 +48,8 @@ def test_uye_cikis_yalniz_risk_nedenleri():
 def test_doldurma_ve_on_filtre():
     ay = "1971-02"                                                          # T = 400. gün
     assert s.doldurma_mi(None, T) and s.doldurma_mi({"radar_surum": "v1.1"}, T)
-    assert not s.doldurma_mi({"radar_surum": "v2", "doldurma_ay": ay}, T) and s.doldurma_mi({"radar_surum": "v2", "doldurma_ay": "1971-01"}, T)
+    assert not s.doldurma_mi({"radar_surum": "v2", "doldurma_ay": ay, "satirlar": [{"adres": A1}]}, T) and s.doldurma_mi({"radar_surum": "v2", "doldurma_ay": "1971-01"}, T)
+    assert s.doldurma_mi({"radar_surum": "v2", "doldurma_ay": ay, "satirlar": []}, T)          # kadro tamamen boşsa ay içinde de doldurulur
     rows = [lider_ay(A1, 50_000, 10, 5, 100), lider_ay(A2, 50_000, 10, 5, -1), lider_ay("0x" + "4" * 40, 9_000, 10, 5, 100)]
     assert [x["adres"] for x in s.on_filtre(rows, RULES)] == [A1]
 
