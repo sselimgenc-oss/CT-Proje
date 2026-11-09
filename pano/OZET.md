@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-09 00:02 UTC
+# Canlı rapor — 2026-11-09 00:17 UTC
 
 **Kip** sanal · vardiya `42519882583` · saha 9/11 (inen 0)
 
@@ -6,23 +6,23 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 1.000,57 $ | −%0,04 | — (geçmiş < 7 gün) | +%0,06 | −%0,62 |
+| 1.000,00 $ | 1.004,70 $ | +%0,37 | — (geçmiş < 7 gün) | +%0,47 | −%0,21 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x3da36d… | BTC | L | 232,65 $ | +2,09 $ |
-| 0x5d908c… | SOL | S | 112,63 $ | −1,05 $ |
-| 0x9a0519… | AR | L | 99,09 $ | +1,29 $ |
-| 0x92d8c4… | ZEC | L | 95,81 $ | −1,18 $ |
-| 0x9a0519… | BTC | L | 67,25 $ | −0,34 $ |
-| 0x5d908c… | WLD | S | 47,40 $ | −0,16 $ |
-| 0x9a0519… | LIT | L | 45,21 $ | −0,37 $ |
-| 0x3da36d… | ETH | L | 42,24 $ | −0,06 $ |
-| 0x6ba51c… | ZEC | L | 39,82 $ | −0,09 $ |
-| 0x11eee2… | kPEPE | S | 12,73 $ | +0,01 $ |
-| 0x5d908c… | XPL | S | 10,99 $ | +0,01 $ |
+| 0x3da36d… | BTC | L | 234,05 $ | +3,50 $ |
+| 0x5d908c… | SOL | S | 113,83 $ | −2,25 $ |
+| 0x9a0519… | AR | L | 100,68 $ | +2,88 $ |
+| 0x92d8c4… | ZEC | L | 97,42 $ | +0,43 $ |
+| 0x9a0519… | BTC | L | 67,66 $ | +0,07 $ |
+| 0x5d908c… | WLD | S | 48,01 $ | −0,77 $ |
+| 0x9a0519… | LIT | L | 45,38 $ | −0,20 $ |
+| 0x3da36d… | ETH | L | 42,63 $ | +0,34 $ |
+| 0x6ba51c… | ZEC | L | 40,49 $ | +0,58 $ |
+| 0x11eee2… | kPEPE | S | 13,01 $ | −0,27 $ |
+| 0x5d908c… | XPL | S | 11,01 $ | −0,01 $ |
 
 ## Son 24 saat
 
@@ -49,7 +49,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 181 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
+- süre 196 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
