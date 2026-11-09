@@ -1,6 +1,12 @@
 {
  "belirsiz": {},
- "funding": {},
+ "funding": {
+  "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29": 0.0,
+  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 0.0,
+  "0xde29121a6858d90ae486855b127f9d5ee4035232": 0.0,
+  "0xfb94d93d73b1a5398816c7d46e1590173371f82b": 0.0,
+  "0xfc76f730c3e2939825484e0a777368075d779ef9": 0.0
+ },
  "kaldirac": 3.0,
  "kapanmis_net": 0.0,
  "kasa_usd": 1000.0,
@@ -355,10 +361,34 @@
   "xyz:ZHIPU": 10.0,
   "xyz:ZM": 10.0
  },
- "poz": {},
- "realize": {},
- "slot_bas": {},
+ "poz": {
+  "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29": {},
+  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": {},
+  "0xde29121a6858d90ae486855b127f9d5ee4035232": {},
+  "0xfb94d93d73b1a5398816c7d46e1590173371f82b": {},
+  "0xfc76f730c3e2939825484e0a777368075d779ef9": {}
+ },
+ "realize": {
+  "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29": 0.0,
+  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 0.0,
+  "0xde29121a6858d90ae486855b127f9d5ee4035232": 0.0,
+  "0xfb94d93d73b1a5398816c7d46e1590173371f82b": 0.0,
+  "0xfc76f730c3e2939825484e0a777368075d779ef9": 0.0
+ },
+ "slot_bas": {
+  "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29": 200.0,
+  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 200.0,
+  "0xde29121a6858d90ae486855b127f9d5ee4035232": 200.0,
+  "0xfb94d93d73b1a5398816c7d46e1590173371f82b": 200.0,
+  "0xfc76f730c3e2939825484e0a777368075d779ef9": 200.0
+ },
  "son_niyet_cloid": null,
  "tasfiyeler": [],
- "ucret": {}
+ "ucret": {
+  "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29": 0.0,
+  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 0.0,
+  "0xde29121a6858d90ae486855b127f9d5ee4035232": 0.0,
+  "0xfb94d93d73b1a5398816c7d46e1590173371f82b": 0.0,
+  "0xfc76f730c3e2939825484e0a777368075d779ef9": 0.0
+ }
 }

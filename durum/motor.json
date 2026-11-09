@@ -2,7 +2,28 @@
  "dur_bekliyor": false,
  "funding_gercek_usd": 0.0,
  "funding_kimlik": [],
- "hesap_tr": {},
+ "hesap_tr": {
+  "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29": {
+   "deger": 0.0,
+   "ms": 1794258555200
+  },
+  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": {
+   "deger": 55334.93606021,
+   "ms": 1794258555200
+  },
+  "0xde29121a6858d90ae486855b127f9d5ee4035232": {
+   "deger": 20681.11830313,
+   "ms": 1794258555200
+  },
+  "0xfb94d93d73b1a5398816c7d46e1590173371f82b": {
+   "deger": 74403.16748755,
+   "ms": 1794258555200
+  },
+  "0xfc76f730c3e2939825484e0a777368075d779ef9": {
+   "deger": 227690.06585688,
+   "ms": 1794258555200
+  }
+ },
  "hl_ofset": null,
  "islenen": [],
  "kapanis_kuyrugu": {},
@@ -13,9 +34,25 @@
  "ozet_emir": 0,
  "ozet_gunu": null,
  "ozet_oz": null,
- "poz_tr": {},
+ "poz_tr": {
+  "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29": {},
+  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": {},
+  "0xde29121a6858d90ae486855b127f9d5ee4035232": {},
+  "0xfb94d93d73b1a5398816c7d46e1590173371f82b": {
+   "BTC": 1.25,
+   "HYPE": 1150.0,
+   "ZEC": 25.0
+  },
+  "0xfc76f730c3e2939825484e0a777368075d779ef9": {}
+ },
  "poz_tr_ms": {},
- "poz_tr_senk_ms": {},
+ "poz_tr_senk_ms": {
+  "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29": 1794258555309,
+  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 1794258563225,
+  "0xde29121a6858d90ae486855b127f9d5ee4035232": 1794258559179,
+  "0xfb94d93d73b1a5398816c7d46e1590173371f82b": 1794258567719,
+  "0xfc76f730c3e2939825484e0a777368075d779ef9": 1794258571737
+ },
  "son_funding_ms": null,
  "son_funding_saat": null,
  "son_olay_ms": 0,
@@ -23,5 +60,5 @@
  "ucret_gercek_usd": 0.0,
  "ucret_tahmin_say": 0,
  "vardiya": "42679711509",
- "yazildi_ms": 1794251051412
+ "yazildi_ms": 1794258575756
 }
