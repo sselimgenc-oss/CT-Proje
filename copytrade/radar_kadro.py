@@ -77,19 +77,21 @@ def kadro_olustur(havuz: dict, rules: dict | None = None, kasa_usd: float | None
     kasa = float(rules["canli_kasa_usd"] if kasa_usd is None else kasa_usd)
     n = boyut.saha_sayisi(kasa, rules)
     puanli, soguyan = form_puanla(havuz["satirlar"], rules)
+    havuz_satiri = {h["adres"]: h for h in havuz["satirlar"]}
     toplam, ilk = int(rules["radar_kadro_toplam"]), int(rules["radar_kadro_ilk"])
     secilen = puanli[:toplam]
     # Bilgi: H'siz form ve tüm puanlı havuzdaki sırası (eşitlikte adres; karar sırası `form`'dur)
     hsiz = {p["adres"]: form_h_siz(p["bilesenler"], rules) for p in puanli}
     hsiz_sira = {a: i for i, a in enumerate(sorted(hsiz, key=lambda a: (-hsiz[a], a)), 1)}
     satirlar = [{"adres": p["adres"], "sira": i, "katman": "ilk11" if i <= ilk else "yedek", "form": p["form"], "bilesenler": p["bilesenler"],
-                 "kopya_getiri_7g": p["kopya_getiri_7g"], "max_kaldirac": p["max_kaldirac"], "form_h_siz": hsiz[p["adres"]], "sira_h_siz": hsiz_sira[p["adres"]]}
+                 "kopya_getiri_7g": p["kopya_getiri_7g"], "max_kaldirac": p["max_kaldirac"], "form_h_siz": hsiz[p["adres"]], "sira_h_siz": hsiz_sira[p["adres"]],
+                 "g_t_istat": havuz_satiri[p["adres"]].get("g_t_istat"), "tutma": bool(havuz_satiri[p["adres"]].get("tutma"))}
                 for i, p in enumerate(secilen, 1)]
     secilen_adres = {p["adres"] for p in secilen}
     h_siz_girenler = [{"adres": a, "sira_h_siz": hsiz_sira[a], "form_h_siz": hsiz[a]} for a in sorted(hsiz_sira, key=hsiz_sira.get)
                       if hsiz_sira[a] <= toplam and a not in secilen_adres]
     elenenler, eski_uye_neden = onceki_karsilastir(onceki, havuz, satirlar, soguyan)
-    return {"sema": SEMA, "kosu_ms": havuz["kosu_ms"], "kasa_usd": kasa, "slot_usd": boyut.slot_usd(kasa, rules), "saha_n": n,
+    return {"sema": SEMA, "radar_surum": str(rules.get("radar_surum", "v1")), "kosu_ms": havuz["kosu_ms"], "kasa_usd": kasa, "slot_usd": boyut.slot_usd(kasa, rules), "saha_n": n,
             "gecti_sayisi": sum(1 for s in havuz["satirlar"] if s.get("gecti")), "soguyan": soguyan, "satirlar": satirlar,
             "korelasyon": korelasyon([{"adres": p["adres"], "kopya_gunluk": p["kopya_gunluk"]} for p in secilen]),          # K-45 eki (08.11): tüm kadro (İlk 11 + Yedek); Yedek boş slota girebildiği için benzerlik denetimi onları da kapsar
             "h_siz_girenler": h_siz_girenler, "onceki_kosu_ms": (onceki or {}).get("kosu_ms"), "elenenler": elenenler, "eski_uye_neden": eski_uye_neden}

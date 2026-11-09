@@ -72,13 +72,14 @@ def test_kos_g_t_istat_altin_ornek_ve_karar_degismez(tmp_path, monkeypatch):
     assert [(s["gecti"], s["neden"]) for s in sonuc["satirlar"]] == [(s["gecti"], s["neden"]) for s in sonuc0["satirlar"]]
     assert any(s["gecti"] for s in sonuc["satirlar"])
     alansiz = {**sonuc, "satirlar": cikar(sonuc)}
-    assert json.dumps(rk.kadro_olustur(sonuc, RULES), sort_keys=True) == json.dumps(rk.kadro_olustur(alansiz, RULES), sort_keys=True)
+    kadro_cikar = lambda kd: {**kd, "satirlar": [{k: v for k, v in s.items() if k != "g_t_istat"} for s in kd["satirlar"]]}     # noqa: E731 — v1.1: kadro satırı t'yi yalnız BİLGİ olarak taşır
+    assert json.dumps(kadro_cikar(rk.kadro_olustur(sonuc, RULES)), sort_keys=True) == json.dumps(kadro_cikar(rk.kadro_olustur(alansiz, RULES)), sort_keys=True)
 
 
 def test_degerlendir_g_t_istat_degerinden_bagimsiz():
     """Aynı satır: `g_t_istat` −10 / 0 / +10 / yok → `degerlendir` aynı (gecti, neden). `sans_riski` yalnız `kopya_alt20`'ye bakar (alt20 0 → elenir, t = 10 olsa bile)."""
     satir = {"hata": None, "devir_hafta": 1.0, "islem_sayisi": 20, "medyan_tutma_saat": 5.0, "kisa_islem_payi": 0.0, "max_kaldirac": 2.0, "likit_pay": 1.0,
-             "kopya_getiri_7g": 0.05, "kopya_koruma": 0.9, "kopya_alt20": 0.01, "trader_getiri_7g": 0.05, "hesap_usd": 20_000.0}
+             "kopya_getiri_7g": 0.05, "kopya_koruma": 0.9, "kopya_alt20": 0.01, "kopya_islem_sayisi": 12, "trader_getiri_7g": 0.05, "hesap_usd": 20_000.0}
     taban = r.degerlendir(satir, RULES)
     assert taban == (True, None)
     for t in (-10.0, 0.0, 10.0, None):

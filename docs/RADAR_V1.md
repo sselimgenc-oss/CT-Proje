@@ -126,6 +126,7 @@ Kasa 1.000 $'da kalır; artırım ancak hepsi sağlanırsa **önerilir**:
   yalnız "üst sınır < 0" ise durulur. IC ve (b) yalnız bilgi. 12.11 ilk ölçümü boru hattı kontrolüdür, karar verisi değildir.
 
 ## 8. Kilit ve değişiklik
+- **v1.1 (K-53, 09.11, kullanıcı kararı):** R0'a 30 g pnl > 0 kapısı; R1'e kopya kapanan işlem ≥ 10 (`kopya_islem_az`); R2'de H ağırlığı 0 (diğerleri /0,80); önceki kadro üyeleri R0 dışına düşse de R1'den geçirilir (nedene bağlı çıkış). Bu sürüm kurulduktan sonra kurallar yine kilitlidir.
 - Tüm eşik ve ağırlıklar **v1'de donar**, `kurallar.yaml` `radar_*` anahtarlarında tek yerde (kodda sayı sabiti yok).
 - 28 günlük canlı değerlendirme bitmeden ayar değişmez (aşırı uydurma koruması). Değişiklik yeni sürüm olur (v1.1), eski seri silinmez.
 - Veri/kod hatası düzeltmesi serbesttir; sonuç sayılarını değiştiriyorsa PR'da eski ↔ yeni yan yana.

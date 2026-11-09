@@ -41,9 +41,9 @@ MINUTE = 60_000
 SEMA = "radar-havuz-v1"
 KOPYA_TARZ = "intraday"                 # kopya_v3 çıkış kuralları (E3) için tarz; radar henüz tarz sınıflamaz (kurallar.yaml golge_v2.intraday)
 NEDENLER = ("veri_hatasi", "payda_yok", "devir_yuksek", "vault", "dolum_fazla", "islem_az", "tutma_kisa", "kisa_islem_fazla", "kaldirac_yuksek",
-            "likidite_dusuk", "kopya_zarar", "kopya_koruma_dusuk", "sans_riski", "akil_sagligi", "zaman_yok")        # ucuzdan pahalıya ölçüm sırası (lider kararı 2026-11-04)
+            "likidite_dusuk", "kopya_zarar", "kopya_koruma_dusuk", "kopya_islem_az", "sans_riski", "akil_sagligi", "zaman_yok")        # ucuzdan pahalıya ölçüm sırası (lider kararı 2026-11-04)
 DOLUM_KURALI = 5                  # NEDENLER içinde dolum tabanlı kurallar (islem_az … likidite_dusuk): bunlardan biri başarısızsa kopya oynatılmaz
-SAYISAL = ("hesap_usd", "hafta_pnl_usd", "trader_getiri_7g", "islem_sayisi", "medyan_tutma_saat", "kisa_islem_payi", "max_kaldirac", "likit_pay",
+SAYISAL = ("hesap_usd", "hafta_pnl_usd", "ay_pnl_usd", "trader_getiri_7g", "islem_sayisi", "medyan_tutma_saat", "kisa_islem_payi", "max_kaldirac", "likit_pay",
            "kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "v4_kopya_getiri_7g", "v5_onceki_kopya_getiri_7g",
            "kopya_kazanc_gun_orani", "kopya_dusus", "yayilma", "kopya_getiri_72s", "hype_payi",
            "net_yatirma_usd", "yatirma_payi",        # `kopya_kazanc_gun_orani` … `hype_payi` yalnız `gecti` satırlarında (R2 girdisi); son ikisi T6 §2 (bilgi; kapıyı değiştirmez)
@@ -65,6 +65,26 @@ def _sayi(deger: Any) -> float | None:
     return sayi if math.isfinite(sayi) else None
 
 
+def ay_pnl(satir: dict) -> float | None:
+    """Lider tablosu satırının 30 günlük (`month`) pnl'i ($); pencere satırda HİÇ yoksa None (kapı uygulanmaz, ölçülemez ≠ başarısız)."""
+    for item in satir.get("windowPerformances", []) or []:
+        pencere, degerler = (item if isinstance(item, (list, tuple)) and len(item) == 2 else (item.get("window") if isinstance(item, dict) else None, item))
+        if isinstance(degerler, dict) and str(pencere).lower() in ("month", "30d"):
+            return _sayi(degerler.get("pnl"))
+    for k, v in satir.items():
+        if str(k).lower().replace("_", "") in ("monthpnl", "30dpnl"):
+            return _sayi(v)
+    return None
+
+
+def ay_kapisi(satir: dict, rules: dict) -> bool:
+    """v1.1 (K-53) S1: `radar_ay_pnl_pozitif` açıksa 30 günlük pnl > 0 gerekir (tek haftada parlayanı ayıklar); pencere yoksa geçer. Kapalıysa her zaman geçer."""
+    if not bool(rules.get("radar_ay_pnl_pozitif", False)):
+        return True
+    a = ay_pnl(satir)
+    return a is None or a > 0
+
+
 def evren(satirlar: list[dict], rules: dict | None = None, aday_tavan: int | None = None) -> tuple[list[dict], int, int]:
     """R0 (K‑31): lider tablosu satırlarından aday listesi. Ön filtre: hafta başı sermaye `accountValue − hafta pnl ≥ radar_min_hesap_usd` (trader_$; yatırma şişirmesini önler),
     hafta `pnl > 0`, hafta `vlm > 0`; sıra `trader_getiri_7g` (= pnl / (accountValue − pnl)) AZALAN (eşitlikte adres), ilk `aday_tavan` (varsayılan `radar_aday_tavan`) alınır.
@@ -77,10 +97,35 @@ def evren(satirlar: list[dict], rules: dict | None = None, aday_tavan: int | Non
         adres = _address(satir)
         hesap = _sayi(satir.get("accountValue", satir.get("account_value")))
         pnl, vlm = _sayi(_window(satir, "week", "pnl")), _sayi(_window(satir, "week", "vlm"))
-        if adres and hesap is not None and pnl is not None and vlm is not None and hesap - pnl >= esik and pnl > 0 and vlm > 0:
-            gecenler.append({"adres": adres, "hesap_usd": hesap, "hafta_pnl_usd": pnl, "hafta_vlm_usd": vlm})
+        if adres and hesap is not None and pnl is not None and vlm is not None and hesap - pnl >= esik and pnl > 0 and vlm > 0 and ay_kapisi(satir, rules):
+            gecenler.append({"adres": adres, "hesap_usd": hesap, "hafta_pnl_usd": pnl, "hafta_vlm_usd": vlm, "ay_pnl_usd": ay_pnl(satir)})
     gecenler.sort(key=lambda a: (-(a["hafta_pnl_usd"] / (a["hesap_usd"] - a["hafta_pnl_usd"])), a["adres"]))
     return gecenler[:tavan], len(gecenler), max(0, len(gecenler) - tavan)
+
+
+def tutma_adaylari(satirlar: list[dict], onceki_adresler: list[str], secilen: set[str], rules: dict | None = None) -> list[dict]:
+    """v1.1 (K-53, kullanıcı kararı 09.11) nedene bağlı çıkış: önceki kadronun bugün R0 ilk `radar_aday_tavan` DIŞINDA kalan üyeleri de R1'den geçirilir; geçen kadroda kalır,
+    yalnız gerçekten kötüleşen (R1'den kalan) düşer. `radar_tutma_onceki_kadro` false → []. Lider tablosunda olmayan ya da hafta başı sermayesi `radar_min_hesap_usd` altında /
+    hafta hacmi 0 olan adres alınmaz (ölçülemez → eskisi gibi kadro dışı). Hafta pnl > 0 şartı ARANMAZ (sonuç R1 kopya oynatmasıyla belli olur); 30 g pnl > 0 (S1, `ay_kapisi`) ARANIR.
+    Sıra = `onceki_adresler` sırası."""
+    rules = rules or load_rules()
+    if not bool(rules.get("radar_tutma_onceki_kadro", False)):
+        return []
+    esik = float(rules["radar_min_hesap_usd"])
+    tablo: dict[str, dict] = {}
+    for satir in satirlar:
+        adres = _address(satir)
+        hesap = _sayi(satir.get("accountValue", satir.get("account_value")))
+        pnl, vlm = _sayi(_window(satir, "week", "pnl")), _sayi(_window(satir, "week", "vlm"))
+        if adres and hesap is not None and pnl is not None and vlm is not None and hesap - pnl >= esik and vlm > 0 and ay_kapisi(satir, rules):
+            tablo[adres.lower()] = {"adres": adres, "hesap_usd": hesap, "hafta_pnl_usd": pnl, "hafta_vlm_usd": vlm, "ay_pnl_usd": ay_pnl(satir), "tutma": True}
+    cikti, gorulen = [], {x.lower() for x in secilen}
+    for a in onceki_adresler:
+        a = str(a).lower()
+        if a in tablo and a not in gorulen:
+            cikti.append(tablo[a])
+            gorulen.add(a)
+    return cikti
 
 
 # ------------------------------------------------------------------------------------------------------------------------------ B8: zamana bağlı trader hesap paydası
@@ -250,6 +295,8 @@ def degerlendir(satir: dict, rules: dict | None = None, yalniz_dolum: bool = Fal
         ("likidite_dusuk", basarisiz(satir.get("likit_pay"), lambda v: v >= float(rules["radar_likit_pay_min"]))),
         ("kopya_zarar", basarisiz(satir.get("kopya_getiri_7g"), lambda v: v > 0)),
         ("kopya_koruma_dusuk", basarisiz(satir.get("kopya_koruma"), lambda v: v >= float(rules["radar_kopya_koruma_min"]))),
+        ("kopya_islem_az", int(rules.get("radar_min_kopya_islem", 0) or 0) > 0                            # v1.1 (K-53) S2: kopya kapanan işlem ≥ N (bootstrap 2–4 işlemle anlamsız)
+         and basarisiz(satir.get("kopya_islem_sayisi"), lambda v: v >= int(rules["radar_min_kopya_islem"]))),
         ("sans_riski", basarisiz(satir.get("kopya_alt20"), lambda v: v > 0)),
         ("akil_sagligi", basarisiz(satir.get("kopya_getiri_7g"), lambda v: v <= float(rules["radar_akil_sagligi_getiri_max"]))
          or not (satir.get("hesap_usd") or 0) > 0),
@@ -431,7 +478,7 @@ class Baglam:
 # ------------------------------------------------------------------------------------------------------------------------------ koşu
 def _bos_satir(aday: dict, vlm: float, rules: dict) -> dict:
     getiri = trader_getiri_7g(aday["hesap_usd"], aday["hafta_pnl_usd"])
-    return {"adres": aday["adres"], "hesap_usd": aday["hesap_usd"], "hafta_pnl_usd": aday["hafta_pnl_usd"], "trader_getiri_7g": getiri,
+    return {"adres": aday["adres"], "hesap_usd": aday["hesap_usd"], "hafta_pnl_usd": aday["hafta_pnl_usd"], "ay_pnl_usd": aday.get("ay_pnl_usd"), "trader_getiri_7g": getiri,
             "islem_sayisi": None, "medyan_tutma_saat": None, "kisa_islem_payi": None, "max_kaldirac": None, "likit_pay": None,
             "kopya_getiri_7g": None, "ayna_getiri_7g": None, "kopya_koruma": None,
             "devir_hafta": vlm / aday["hesap_usd"] if aday["hesap_usd"] > 0 else None,
@@ -480,17 +527,21 @@ def kopyalanabilirlik(aday: dict, dolumlar: list[dict] | None, hata: str | None,
 
 
 def kos(client: Any, kosu_ms: int, cikti: Path, aday_sayisi: int | None = None, rules: dict | None = None, log=print, saat=time.monotonic, v4_yan_yana: bool = False,
-        kural_ust: dict | None = None, payda_yan_yana: bool = False) -> dict:
+        kural_ust: dict | None = None, payda_yan_yana: bool = False, onceki_adresler: list[str] | None = None) -> dict:
     """R0 + R1 + yazım. `aday_sayisi` verilirse `radar_aday_tavan` yerine o (küçük deneme). Ucuzdan pahalıya: lider tablosundan elemeler (`payda_yok`, `devir_yuksek`) dolum
     ÇEKİLMEDEN; sonra `vault`; sonra dolum (en çok `radar_dolum_tavan`). Süre `radar_zaman_butcesi_dk`'yı aşınca kalan adaylar `zaman_yok`. Döner: havuz.json sözlüğü."""
     rules = rules or load_rules()
     baslangic = saat()
     butce_sn = float(rules["radar_zaman_butcesi_dk"]) * 60.0
     pencere_bas = kosu_ms - int(rules["radar_pencere_saat"]) * HOUR
-    adaylar, toplam, kesilen = evren(client.leaderboard(), rules, aday_sayisi)
+    tablo = client.leaderboard()
+    adaylar, toplam, kesilen = evren(tablo, rules, aday_sayisi)
+    tutma = tutma_adaylari(tablo, onceki_adresler or [], {a["adres"] for a in adaylar}, rules)   # v1.1 (K-53): önce ölçülür (zaman bütçesi bunları kesmesin)
+    adaylar = [*tutma, *adaylar]
+    tutma_adres = {a["adres"] for a in tutma}
     baglam = Baglam(client, kosu_ms, pencere_bas, rules, v4_yan_yana, payda_yan_yana)
     baglam.piyasa_oku()
-    log(f"R0: evren {toplam} kişi, aday {len(adaylar)}, kesilen {kesilen}; likit coin {len(baglam.likit_coinler())}/{len(baglam.hacim)}")
+    log(f"R0: evren {toplam} kişi, aday {len(adaylar)} (tutma {len(tutma)}), kesilen {kesilen}; likit coin {len(baglam.likit_coinler())}/{len(baglam.hacim)}")
     satirlar = []
     for sira, aday in enumerate(adaylar, 1):
         adres, etiket = aday["adres"], f"[{sira}/{len(adaylar)}] {aday['adres'][:10]}…"
@@ -515,6 +566,8 @@ def kos(client: Any, kosu_ms: int, cikti: Path, aday_sayisi: int | None = None, 
         satir = kopyalanabilirlik(aday, dolumlar, hata, baglam)
         satirlar.append(satir)
         log(f"{etiket} dolum {len(dolumlar or [])}, işlem {satir['islem_sayisi']}, gecti {satir['gecti']} ({satir['neden']}{': ' + satir['hata'] if satir.get('hata') else ''}); {saat() - t_aday:.0f} sn (toplam {(saat() - baslangic) / 60:.1f} dk)")
+    for x in satirlar:                                                     # v1.1 (K-53) bilgi: R0 ilk N dışından, önceki kadro üyesi olduğu için ölçüldü
+        x["tutma"] = x["adres"] in tutma_adres
     okunan = para_hareketi_ekle(client, satirlar, pencere_bas, kosu_ms, rules, log, saat, baslangic)
     log(f"para hareketi: {okunan}/{len(satirlar)} adres okundu; yatırma payı > {rules['para_hareketi_isaret_payi']}: {len(yatirma_isaretli(satirlar, float(rules['para_hareketi_isaret_payi'])))} kişi")
     if payda_yan_yana:                                                     # kopya oynatmasına varmayan satırda payda karara girmez: eski = yeni
@@ -618,13 +671,15 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--ozet-md", type=Path, default=None, help="özet tabloyu bu dosyaya da yaz (iş özeti için)")
     ap.add_argument("--v4-yan-yana", action="store_true", help="bilgi: kopya oynatmayı kopya_v4 (sabit tutar) ile de yap, `v4_kopya_getiri_7g` alanına yaz")
     ap.add_argument("--payda-yan-yana", action="store_true", help="bilgi (B8): kopya + ayna SABİT paydayla da oynatılır; `*_eski`, `gecti_eski`, `neden_eski` alanları ve özette eski ↔ yeni")
+    ap.add_argument("--onceki-kadro", type=Path, default=None, help="v1.1 (K-53): önceki kadro.json; üyeleri R0 dışına düşse de R1'den geçirilir (`radar_tutma_onceki_kadro`)")
     ap.add_argument("--kural-ust", action="append", default=[], metavar="radar_x=deger", help="YALNIZ deneme: radar_* kuralının üstüne yaz (havuz.json `kural_ust` alanında görünür)")
     args = ap.parse_args(argv)
     rules, kural_ust = kural_ust_uygula(load_rules(), args.kural_ust)
     if kural_ust:
         print(f"UYARI: deneme koşusu, kural üstüne yazma: {kural_ust}")
+    onceki = [str(x["adres"]) for x in json.loads(args.onceki_kadro.read_text(encoding="utf-8")).get("satirlar", [])] if args.onceki_kadro else None
     sonuc = kos(radar_istemcisi(rules=rules), int(time.time() * 1000), args.cikti, args.aday_sayisi, rules, v4_yan_yana=args.v4_yan_yana, kural_ust=kural_ust,
-               payda_yan_yana=args.payda_yan_yana)
+               payda_yan_yana=args.payda_yan_yana, onceki_adresler=onceki)
     ozet = ozet_md(sonuc)
     print(ozet)
     if args.ozet_md:

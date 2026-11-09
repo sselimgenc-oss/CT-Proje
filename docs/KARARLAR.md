@@ -256,3 +256,13 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - **Tur 3 (#592):** yarım DUR yeniden başlatmada kapanır + alarm (Y-1); belirsiz emirde bant merdiveni durur (Y-2); `sg-nabiz` kaynağı ayarlanabilir, gerçek kipte gerçek yayım hedefine bağlanması açılış ön koşulu (Y-3); hesap adresine bağlı kilit + yabancı açık emir denetimi (Y-5); yüksek fiyatlı coinlerde limit yuvarlama (Y-7); iki mutasyon boşluğu testlendi.
 - **Temizlik (#590, #593):** 40 eski `claude/*` dalı ve 5 eski deneme iş akışı silindi; FAZ3 kalıntı modülleri silindi; ana dal koruması (`main-koruma`); Pages kapalı; Cloudflare token yalnız Workers Scripts Edit + Account Settings Read; issue #1 kapatıldı. 300 $ arşiv dalları tek seferlik iş akışıyla silinecek.
 - **Ertelenen:** motor.py bölme (28. gün sonrası), v1.1 adayları (02–03.12), S-23 (ilk gerçek deneme).
+
+## K-53 — Seçim kuralları v1.1: tek seferde, kalıcı (kullanıcı kararı 09.11; Fable 5.1 yüksek görüşü)
+- Kullanıcı: "bu trader seçimi ve değiştirilmesini düşünelim ve bir kez yapalım, 14/28 günle uğraşamayız". RADAR §8 28 gün kilidi kullanıcı kararıyla bu sürüm için kaldırıldı; v1.1 kurulduktan sonra yeniden kilitli (yalnız hata düzeltmesi serbest).
+- **Teşhis (Fable, 49 kişi-gün):** geçmiş getiri/form ileri getiriyi tahmin etmiyor (Spearman −0,10…−0,17; seçilenler önce +2,26 $/gün → sonra −0,07 $/gün). İlke: sıralama ağırlıklarıyla uğraşma; kuralları geç/kal kapısı yap; boş koltuk nakitte kalabilir.
+- **Kurulan (`radar_surum: v1.1`, kadro.json'a yazılır):** S1 `radar_ay_pnl_pozitif` (lider tablosu 30 g pnl > 0; pencere yoksa geçer) · S2 `radar_min_kopya_islem: 10` (`kopya_islem_az`, `sans_riski`'den önce; ≥10 +0,1 $ / <10 −1,6 $) · S4 `radar_agirlik_h: 0` (diğer dördü /0,80) · D1 `radar_tutma_onceki_kadro` (önceki kadro üyesi R0 dışına düşse de R1'den geçer; geçen kalır — R0 dışı çıkanlar +1,7 $, R1'den kalanlar −2,5 $). radar.yml tarama adımına `--onceki-kadro`.
+- **Reddedilen:** t ≥ 2 önceliği (taslak; kişi başı −1,2 $, avantaj boş koltuktan), 14–28 g sıralama, ≥3 kârlı gün, net yön tavanı, N=6/2×, Yedek form tabanı. Yuvarlama (B3) ayrı karar: kalıcılık testinden sonra.
+- **Aynen:** K-39 kadro dışı 2 gün, histerezis, K-45 boş slot → nakit, benzerlik, slot stop, 72 sa, inen 24 sa.
+- **Yeni dönem yok:** saha K-39 ile 1–2 günde v1.1 kadrosuna uyar; 7 temiz gün sayacı (yürütme sağlamlığı) sıfırlanmaz. Doğrulama: geriye dönük 8 haftalık kalıcılık testi (ayrı iş, salt okur) + K-46 isabet serisi.
+- Kanıt: `copytrade/v11_sinama.py` koşusu 42626202353 (4 kadro günü); testler `tests/test_v11_kurallar.py`.
+

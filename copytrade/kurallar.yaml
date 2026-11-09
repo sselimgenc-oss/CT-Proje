@@ -111,12 +111,12 @@ radar_saha_max: 11                      # kişi (İlk 11)
 radar_min_emir_usd: 11                  # $ (HL alt emir sınırı 10 $ + pay)
 radar_slot_tavan_carpan: 3.0            # x (slot kasası başına pozisyon tavanı = çarpan x slot)
 # ---- R2 form puanı + günlük kadro (RADAR_V1.md §4, §5; v1'de donar). Ağırlıklar toplamı 1,0; oranlar kesir ----
-radar_agirlik_g: 0.35                   # G güven ayarlı getiri (bootstrap alt yüzdelik)
-radar_agirlik_k: 0.15                   # K kopya getirisi
-radar_agirlik_i1: 0.10                  # İ1 kârlı gün oranı
-radar_agirlik_i2: 0.10                  # İ2 düşüş (az = iyi)
-radar_agirlik_y: 0.10                   # Y yayılma
-radar_agirlik_h: 0.20                   # H hype yakalama
+radar_agirlik_g: 0.4375                  # G güven ayarlı getiri (bootstrap alt yüzdelik)
+radar_agirlik_k: 0.1875                  # K kopya getirisi
+radar_agirlik_i1: 0.125                 # İ1 kârlı gün oranı
+radar_agirlik_i2: 0.125                 # İ2 düşüş (az = iyi)
+radar_agirlik_y: 0.125                  # Y yayılma
+radar_agirlik_h: 0.0                    # H hype yakalama — v1.1 (K-53) S4: 0 (B10: %71–86 sıfır); diğer dördü /0,80 ölçeklendi (toplam 1, form 0–100 kalır)
 radar_hype_trend_oran: 0.25             # oran (|7 g getiri| HL perp coinleri içinde üst %25 = trend coin)
 radar_hype_yeni_gun: 30                 # gün (listelenme <= bu kadar gün = trend coin)
 radar_hype_erken_pay: 0.5               # oran (coinin 7 g hareketinin bu payı gerçekleşmeden açılmış = erken giriş)
@@ -125,6 +125,10 @@ radar_soguyor_min_getiri: -0.02         # oran (son 72 sa kopya getirisi bunun A
 radar_kadro_toplam: 30                  # kişi (İlk 11 + Yedek 19)
 radar_kadro_ilk: 11                     # kişi (İlk katman)
 radar_hip3_kopya: false                 # bool, K‑43: motorla aynı davranış (K‑28 tutarlılık düzeltmesi); true = eski v1 davranışı; kullanıcı onayına sunuldu. false = R1 kopya oynatmasında HIP‑3 (dex:COIN) dolumlarının TAMAMI atlanır (motor K‑42 gibi); eşik/ağırlık/yöntem DEĞİL
+radar_surum: "v1.1"                     # K-53 (kullanıcı kararı 09.11, Fable 5.1 görüşü): v1.1 seçim kuralları; kadro.json `radar_surum` alanına yazılır
+radar_tutma_onceki_kadro: true          # bool, v1.1 nedene bağlı çıkış: önceki kadro üyeleri R0 ilk N dışına düşse de R1'den geçirilir (geçen kalır); false = v1
+radar_ay_pnl_pozitif: true              # bool, v1.1 S1: R0 (ve tutma) için lider tablosu 30 g pnl > 0 (pencere yoksa geçer); false = v1
+radar_min_kopya_islem: 10               # işlem, v1.1 S2: R1 kopya kapanan işlem sayısı >= bu (`kopya_islem_az`; sınır dahil); 0 = kapalı (v1). t önceliği (taslak) Fable denetimiyle REDDEDİLDİ
 # ---- Canlı motor (T4; RADAR_V1.md §5, §5b, §6; K-29, K-30, K-33). Oranlar kesir; süre adıyla; $ = kasa ölçeği (kopya_$) ----
 canli_kip: sanal                        # yalnız sanal (G4: gercek yazılırsa motor KipHatasi; gerçek kip YALNIZ sunucuda CANLI_KIP=gercek + CANLI_KASA_USD ortamıyla, Actions'ta ASLA)
 canli_hip3_kopya: false                # K‑42: false = HIP‑3 (dex:COIN) yeni açılış/artırma iki kipte de atlanır (hip3_atlandi); kapanış/azaltma hep serbest. Gerçek kipte SDK perp_dexs gelmeden true YAPMA

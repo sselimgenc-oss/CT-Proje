@@ -66,10 +66,18 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - name: Radar taraması (R0 + R1 + R2 girdileri)
+        env:
+          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
         run: |
           mkdir -p radar
+          # v1.1 (K-53) nedene bağlı çıkış: önceki kadro (veri dalı son/kadro.json) üyeleri R0 dışına düşse de R1'den geçirilir. Yoksa (ilk koşu) argümansız.
+          tutma=()
+          if git cat-file -e "origin/$VERI_DALI:radar/son/kadro.json" 2>/dev/null; then
+            git show "origin/$VERI_DALI:radar/son/kadro.json" > "$RUNNER_TEMP/onceki_kadro_tarama.json"
+            tutma=(--onceki-kadro "$RUNNER_TEMP/onceki_kadro_tarama.json")
+          fi
           # B8 (08.11): zamana bağlı payda karar sayısıdır; `--payda-yan-yana` eski (sabit payda) sayıları `*_eski` alanlarına ve özete yazar (yalnız bilgi, kural 6: eski seri yan yana)
-          python -u -m copytrade.radar_tarama --cikti radar --payda-yan-yana --ozet-md radar/OZET.md
+          python -u -m copytrade.radar_tarama --cikti radar --payda-yan-yana "${tutma[@]}" --ozet-md radar/OZET.md
       - name: Günlük kadro (R2 form puanı)
         env:
           VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
