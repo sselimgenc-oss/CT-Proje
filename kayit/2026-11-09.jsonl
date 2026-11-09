@@ -277,3 +277,8 @@
 {"zaman_ms":1794204012025,"olay":"funding","saat":498390,"saat_adet":1,"funding_usd":-0.007074030349607411,"toplam_funding_usd":-0.045049809603608645}
 {"zaman_ms":1794204012026,"olay":"telegram","metin":"☀️ Günaydın! Dünün sonucu (sanal · deneme parası)\n━━━━━━━━━━━━━━\n📈 Son 24 saat: +2,39 $ (+%0,24)\n💰 Kasa şimdi: 1.002,39 $ (başlangıç 1.000 $)\n🏁 Başlangıçtan beri: +%0,24\n━━━━━━━━━━━━━━\n🧾 Dün 41 emir verildi · 👥 takipte 9/11 trader\n💸 Funding (sanal): −0,05 $\n📌 Açık pozisyonlar (13):\n🟩 BTC · 232 $ · u","acik":true}
 {"zaman_ms":1794204325889,"olay":"tur","ozsermaye_usd":1002.0982}
+{"zaman_ms":1794205135887,"olay":"emir_yok","adres":"0x6ba51c6b1c5fef215014e5e3ca22f333894a3759","coin":"xyz:BRENTOIL","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1794205135598,"gorme_ms":1794205135886,"yas_ms":289}
+{"zaman_ms":1794205136300,"olay":"emir_yok","adres":"0x6ba51c6b1c5fef215014e5e3ca22f333894a3759","coin":"xyz:BRENTOIL","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1794205135990,"gorme_ms":1794205136299,"yas_ms":310}
+{"zaman_ms":1794205136428,"olay":"emir_yok","adres":"0x6ba51c6b1c5fef215014e5e3ca22f333894a3759","coin":"xyz:BRENTOIL","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1794205136055,"gorme_ms":1794205136428,"yas_ms":373}
+{"zaman_ms":1794205136429,"olay":"emir_yok","adres":"0x6ba51c6b1c5fef215014e5e3ca22f333894a3759","coin":"xyz:BRENTOIL","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1794205136055,"gorme_ms":1794205136428,"yas_ms":374}
+{"zaman_ms":1794205184470,"olay":"tur","ozsermaye_usd":1000.3272}
