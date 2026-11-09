@@ -4,3 +4,4 @@
 {"zaman_ms":1794249688083,"olay":"vardiya_boslugu","dk":40.3,"onceki":"42667417747"}
 {"zaman_ms":1794249688083,"olay":"telegram","metin":"🚨 ALARM: kesinti oldu (sanal · deneme parası)\n━━━━━━━━━━━━━━\nTurlar arasında vardiya boşluğu 40 dk oldu (önceki vardiya 42667417747).\nKaçan işlemler geriye dönük tamamlanıyor.","acik":true}
 {"zaman_ms":1794249692265,"olay":"telegram","metin":"🚨 ALARM: motor beklenmedik hatayla durdu (sanal · deneme parası)\n━━━━━━━━━━━━━━\nHata türü KipHatasi. Çıkış kodu 1; systemd yeniden başlatacak.\njournalctl -u sg-canli","acik":true}
+{"zaman_ms":1794251051413,"olay":"bekleme_vardiyasi","gerekli":"v2"}
