@@ -168,3 +168,5 @@
 {"t":"sonuc","cloid":"0x3d94fedd6830689945787931a3208416","durum":"dolu","ms":1794227521704,"sz":1.3210099155457224,"px":8.4067,"ucret":0.004997400325658202}
 {"t":"niyet","kimlik":"0x57da5ca2b92632426bedfe81671dd0c8c3111a50:632804464241317","eylem":"artir","adres":"0x57da5ca2b92632426bedfe81671dd0c8c3111a50","coin":"AVAX","yon":"B","usd":16.851781,"reduce_only":false,"cloid":"0x7a322936fcc278f0ae9c907bb4b60c6d","ms":1794227521709}
 {"t":"sonuc","cloid":"0x7a322936fcc278f0ae9c907bb4b60c6d","durum":"dolu","ms":1794227521871,"sz":2.0048039874614614,"px":8.4057,"ucret":0.007583301394832162}
+{"t":"niyet","kimlik":"0x57da5ca2b92632426bedfe81671dd0c8c3111a50:112085322451081","eylem":"azalt","adres":"0x57da5ca2b92632426bedfe81671dd0c8c3111a50","coin":"ZRO","yon":"A","usd":11.484933,"reduce_only":true,"cloid":"0x7d617eea2b49b74edbf177532965ba4d","ms":1794234815333}
+{"t":"sonuc","cloid":"0x7d617eea2b49b74edbf177532965ba4d","durum":"dolu","ms":1794234815543,"sz":7.4577487172627634,"px":1.54,"ucret":0.005168219861063095}
