@@ -365,6 +365,12 @@
  },
  "poz": {
   "0x11eee2e0a613af4f636e23ff295e2dac6a191d1d": {
+   "INJ": {
+    "acilis_ms": 1794183728248,
+    "giris": 8.0642,
+    "kaldirac": 3.0,
+    "sz": -1.3640534708960592
+   },
    "kPEPE": {
     "acilis_ms": 1794176394476,
     "giris": 0.004951,
@@ -468,10 +474,10 @@
   "0x92d8c46701a992e007849ab09d5cc578d5330cdf": 90.9090909090909,
   "0x9a0519e68974e99f0accbba8d19e1eca53e4d14a": 90.9090909090909
  },
- "son_niyet_cloid": "0x504ce0bb9445c8c4937d6b68d8ea58b7",
+ "son_niyet_cloid": "0xc18a538b217db2d24e970a9da12b453e",
  "tasfiyeler": [],
  "ucret": {
-  "0x11eee2e0a613af4f636e23ff295e2dac6a191d1d": 0.015617937337765451,
+  "0x11eee2e0a613af4f636e23ff295e2dac6a191d1d": 0.02056793733776545,
   "0x1d5f8a36804df3c352ad3eac2737b0c642f0a849": 0.0,
   "0x3da36da44a0e67e7f0273333ec870248aa38740f": 0.12278299514530289,
   "0x558afca8d68f6a7335837b06ce218a234978225b": 0.0,
