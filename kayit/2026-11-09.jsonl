@@ -238,3 +238,5 @@
 {"zaman_ms":1794195444211,"olay":"telegram","metin":"🧾 Son 1 saat (05:37–06:37 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 26 (≈2 ayrı işlem)\n   • kural gereği 26: 26 çok küçük (< 11 $)\n   • kaçırılan 0 (geç görülen / veri yok)\n💰 Kasa: 1.006,01 $ · bugün 🟢 +5,05 $ (+%0,5) · başlangıçtan 🟢 +6,01 $ (+%0,6)","acik":true}
 {"zaman_ms":1794195456009,"olay":"emir_yok","adres":"0x6ba51c6b1c5fef215014e5e3ca22f333894a3759","coin":"xyz:BRENTOIL","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1794195455706,"gorme_ms":1794195456008,"yas_ms":303}
 {"zaman_ms":1794195834843,"olay":"tur","ozsermaye_usd":1006.7967}
+{"zaman_ms":1794196705111,"olay":"tur","ozsermaye_usd":1005.7106}
+{"zaman_ms":1794196835709,"olay":"funding","saat":498388,"saat_adet":1,"funding_usd":-0.006097221312085324,"toplam_funding_usd":-0.028718334052141553}
