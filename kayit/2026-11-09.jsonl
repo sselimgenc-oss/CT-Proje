@@ -297,3 +297,6 @@
 {"zaman_ms":1794206456003,"olay":"emir_yok","adres":"0x92d8c46701a992e007849ab09d5cc578d5330cdf","coin":"BTC","eylem":"ac","karar":"engel","neden":"coin_tavani","trader_dolum_ms":1794206455699,"gorme_ms":1794206456002,"yas_ms":304}
 {"zaman_ms":1794206456003,"olay":"emir_yok","adres":"0x92d8c46701a992e007849ab09d5cc578d5330cdf","coin":"BTC","eylem":"ac","karar":"engel","neden":"coin_tavani","trader_dolum_ms":1794206455699,"gorme_ms":1794206456002,"yas_ms":304}
 {"zaman_ms":1794206900115,"olay":"tur","ozsermaye_usd":1000.6197}
+{"zaman_ms":1794207251514,"olay":"telegram","metin":"🧾 Son 1 saat (08:53–09:54 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 10 (≈5 ayrı işlem)\n   • kural gereği 10: 5 coin tavanı · 5 HIP-3 coin\n   • kaçırılan 0 (geç görülen / veri yok)\n💰 Kasa: 1.001,01 $ · bugün 🟢 +0,05 $ (%0,0) · başlangıçtan 🟢 +1,01 $ (+%0,1)","acik":true}
+{"zaman_ms":1794207631145,"olay":"funding","saat":498391,"saat_adet":1,"funding_usd":-0.004479422899473079,"toplam_funding_usd":-0.04952923250308172}
+{"zaman_ms":1794207758958,"olay":"tur","ozsermaye_usd":999.0325}
