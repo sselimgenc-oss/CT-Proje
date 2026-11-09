@@ -96,7 +96,7 @@ def test_is_akislari_kontrol_isi_isabet_adimi_ve_zaman_butcesi():
     assert radar["on"]["schedule"][1] == {"cron": "17 2 * * *"} and radar["jobs"]["kontrol"]["steps"][1]["env"]["YEDEK_CRON"] == "17 2 * * *"
     assert canli["jobs"]["kontrol"]["steps"][1]["env"]["YEDEK_CRON"] == canli["on"]["schedule"][1]["cron"]
     adimlar = [a.get("name", a.get("uses", "")) for a in radar["jobs"]["radar"]["steps"]]
-    secim = next(a for a in adimlar if a.startswith("Seçim yapısı D"))         # K-55: isabet adımı çıkarıldı
+    secim = next(a for a in adimlar if a.startswith("Seçim yapısı D+"))         # K-55: isabet adımı çıkarıldı
     assert adimlar.index(secim) < adimlar.index("Veri dalına yaz (radar)") and radar["jobs"]["radar"]["timeout-minutes"] >= 180     # secim_butce_dk 120 sığar
 
 

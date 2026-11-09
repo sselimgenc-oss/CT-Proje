@@ -279,3 +279,12 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - **Ön kayıttan sapma (ortak motor ayarları, 70 test bozulmasın diye):** N = 11 (10 değil), slot stop %10 (%15 değil), işlem yok 72 sa motor düşmesi (14 gün değil; trader kadroda kaldığı için yeniden girer). Hepsi daha temkinli yönde.
 - Gerçek para şartı değişmez: D ≥ 8 hafta sanalda kazandırmalı (ön kayıt §3); karar kullanıcının. Diğer adaylar (A, B, C, E) sınanmaz (kullanım sınırı; kullanıcı onayı).
 
+## K-56 — D+ : D'nin üstüne A/B/C/E'nin güçlü yanları ve sadık boyutlama (kullanıcı onayı 09.11; Fable önerisi)
+- Kullanıcı: "Fable diğer tüm yöntemlerin iyi yönlerini görüp D'yi de geliştirebilir" → "şimdi D+ kur, bir kerede bitirelim".
+- **Boyut (sadık kopya; denetim B3: açılışların %79–86'sı 11 $'a yuvarlanıyordu):** N = 5, slot 200 $ (`radar_saha_max` 5, `radar_canli_slot_min_usd` 200); açılış hedefi < 5,5 $ ise AÇILMAZ, [5,5; 11) → 11 $ (`radar_min_emir_yuvarla_alt`, `boyut.hedef_emir`); slot tavanı 1,5× (= kasanın %30'u).
+- **Kapılar:** A'dan kopya işlem ≥ 10 ve kısa işlem payı ≤ %25; C'den aktif coin ≤ 8 (28 g). B evreni/sıralaması aynen. C'nin sıkı eşikleri (tutma ≥ 12 sa, kaldıraç ≤ 10x) önceden yazılı sıkılaştırma adımı olarak saklı.
+- **Çıkışlar:** zirveden ≥ %25; girişimizden beri trader pnl düşüşü ≥ %20 × giriş hesabı; 14 g işlem yok; E'den aylık kontrolde iki ay üst üste bizim slot net K/Z'si < 0 (motor `hesap.json`; yoksa trader 30 g pnl); motor cezayla düşürdüyse kadrodan da düşer.
+- **Motor risk:** slot stop %20, bekleme 31 g, işlem yok 336 sa. Benzerlik matrisi 28 g günlük kopya getirilerinden dolduruldu (kural artık çalışır). Günlük −%5 ve zirveden −%20 kasa kilidi aynen.
+- **Testler:** eski elle hesaplanmış altın örnekler v1 boyut/risk değerleriyle sınanmaya devam eder (`tests/conftest.py` yalnız bu yedi anahtarı v1'e çevirir); D+ değerleri `tests/test_dplus.py`'de dosyadan sınanır.
+- **Yolda (önceden yazılı, 8 hafta başka ayar yok):** yuvarlanan > %30 ya da şişme > 1,5× → N 5 → 4; maliyet > %1,5 kasa/ay → devir sınırı 100 → 50; ayda ≥ 2 risk çıkışı iki ay → C eşikleri; boş koltuk > %40 iki ay → aday bütçesi 40 → 80; 8. hafta M1 (ön kayıt §3) ile gerçek para önerisi. Gölge A ölçümü kurulmadı (kullanım sınırı).
+

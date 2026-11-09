@@ -3,3 +3,4 @@ H ana dex düzeltmesi sonrası radar.yml yeniden koşusu
 gunluk radar manuel tetik (cron 06.11 kacirdi) 2026-11-06T05:00:54Z
 09.11 G-23 radar.yml dal denemesi (persist-credentials false, YAYIM_TOKEN)
 2026-11-09 K-55 seçim D dal denemesi (radar-deneme)
+2026-11-09 K-56 D+ dal denemesi (radar-deneme)

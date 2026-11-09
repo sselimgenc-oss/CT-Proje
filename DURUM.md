@@ -10,7 +10,7 @@ Form Radarı v1 (`docs/RADAR_V1.md`): her gün son 7 günde formu yüksek, kopya
 - **Yeni dönem (K‑49):** 09.11 00:01 TSİ (2026-11-08T21:01Z) sıfırdan başladı; eski veri dal geçmişinde arşivli. Yalnız `canli-durum` (1.000 $); 300 $ seri iptal.
 - **Telegram açık** (repo değişkeni `TELEGRAM_ACIK=evet`, kullanıcı 08.11). **Dış nabız alarmı** `sg-nabiz` (Cloudflare cron, 10 dk; son yayım > 45 dk → Telegram; `docs/NABIZ_ALARMI.md`).
 - **Ana dal koruması** (`main-koruma` ruleset): PR zorunlu, `test` + `canli_sdk` yeşil olmadan birleşmez, silme/force push yok.
-- **K-55 (09.11): seçim yapısı D** (sabit kadro, yalnız risk çıkışı; `copytrade/secim_d.py`): ilk doldurma bu gece radar koşusunda, motor `radar_surum: v2` kadroyu uygular.
+- **K-55/K-56 (09.11): seçim yapısı D+** (sabit kadro, yalnız risk çıkışı; 5 trader × 200 $; `copytrade/secim_d.py`): ilk doldurma bu gece radar koşusunda (03:37 TSİ), motor `radar_surum: v2` kadroyu uygular.
 - **K-54 (09.11):** eski yapının trader'ları panodan kalkar: yeni dönem 21:01 TSİ; motor `radar_surum: v2` kadrosu gelene kadar trader almaz (kasa nakitte). Yeni yapı Fable ön kaydıyla tasarlanıp geriye dönük sınanıyor.
 - **Radar v1.1 (K-53, 09.11):** 30 g kârda olmayan alınmaz, kopya işlem ≥ 10, H = 0, önceki kadro üyesi yalnız gerçekten kötüleşirse düşer. İlk v1.1 kadrosu 10.11 radar koşusunda. Doğrulama: 8 haftalık geriye dönük kalıcılık testi (sıradaki iş).
 

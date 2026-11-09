@@ -40,7 +40,7 @@ def test_uye_cikis_yalniz_risk_nedenleri():
     assert s.uye_cikis(iyi, T - 14 * GUN, T, False, 0, RULES) == ("islem_yok", 0)
     assert s.uye_cikis(iyi, None, T, False, 0, RULES) == ("islem_yok", 0)
     assert s.uye_cikis({**iyi, "pnl_30g": -1.0}, T - GUN, T, True, 0, RULES) == (None, 1)        # ilk negatif ay: uyarı
-    assert s.uye_cikis({**iyi, "pnl_30g": -1.0}, T - GUN, T, True, 1, RULES) == ("ay_pnl_negatif", 2)
+    assert s.uye_cikis({**iyi, "pnl_30g": -1.0}, T - GUN, T, True, 1, RULES) == ("ay_negatif", 2)
     assert s.uye_cikis({**iyi, "pnl_30g": -1.0}, T - GUN, T, False, 1, RULES) == (None, 1)       # aylık kontrol dışı: sayaç değişmez
     assert s.uye_cikis(iyi, T - GUN, T, True, 1, RULES) == (None, 0)
 
@@ -80,7 +80,7 @@ def test_kos_ilk_doldurma_sonra_ayni_ay_yalniz_uye_denetimi(tmp_path):
     havuz, kadro = s.kos(c, T, None, RULES, log=lambda *_: None)
     assert havuz["doldurma"] is True and kadro["radar_surum"] == "v2" and kadro["secim_yapi"] == "D"
     assert [x["adres"] for x in kadro["satirlar"]] == [A1] and kadro["satirlar"][0]["katman"] == "ilk11" and kadro["saha_n"] == 11
-    assert kadro["doldurma_ay"] == "1971-02" and kadro["korelasyon"]["adresler"] == []
+    assert kadro["doldurma_ay"] == "1971-02" and kadro["korelasyon"]["adresler"] == [A1]                     # D+: benzerlik matrisi dolu
     aday = next(x for x in havuz["satirlar"] if x["adres"] == A1)
     assert aday["neden"] is None and aday["kopya_getiri"] > 0 and aday["kopya_islem"] == 20
     # aynı ay ikinci koşu: doldurma yok, üye denetlenir, kalır
@@ -91,3 +91,34 @@ def test_kos_ilk_doldurma_sonra_ayni_ay_yalniz_uye_denetimi(tmp_path):
     c.dolumlar = {A1: []}
     _, kadro3 = s.kos(c, T + 2 * GUN, kadro2, RULES, log=lambda *_: None)
     assert kadro3["satirlar"] == [] and kadro3["cikanlar"] == {A1: "islem_yok"}
+
+
+def test_dplus_cikislari_giris_dususu_slot_sicili_motor_dusurmesi():
+    iyi = {"zirve_dusus": 0.0, "pnl_30g": 50.0, "pnl_kum": 1000.0}
+    giris = {"hesap_usd": 20_000.0, "pnl_kum": 5_000.0}                    # girişten beri −4.000 $ = %20
+    assert s.uye_cikis(iyi, T - GUN, T, False, 0, RULES, giris) == ("giris_dusus", 0)
+    assert s.uye_cikis({**iyi, "pnl_kum": 1_001.0}, T - GUN, T, False, 0, RULES, giris) == (None, 0)
+    assert s.uye_cikis(iyi, T - GUN, T, True, 1, RULES, None, slot_ay_net=-0.5) == ("ay_negatif", 2)     # E: bizim slot iki ay üst üste zararda
+    assert s.uye_cikis({**iyi, "pnl_30g": -9.0}, T - GUN, T, True, 1, RULES, None, slot_ay_net=0.3) == (None, 0)   # slot sicili trader pnl'inin önünde
+    h = {"realize": {A1: 3.0}, "ucret": {A1: 0.5}, "funding": {A1: -0.25}}
+    assert s.slot_net(h, A1) == pytest.approx(2.25) and s.slot_net(h, A2) is None and s.slot_net(None, A1) is None
+
+
+def test_dplus_kopya_kapisi_kisa_islem_coin_ve_islem_sayisi():
+    bas, son = T - 28 * GUN, T
+    fiyat = lambda coin, ts: 110.0 if (ts - bas - HOUR) % (24 * HOUR) >= 90 * MIN else 100.0     # noqa: E731
+    c = Sahte([], {}, fiyat)
+    from copytrade.kalicilik_testi import SaatlikMum
+    mum = SaatlikMum(c, bas, son)
+    k = s.kopya_kapisi(_karli_dolumlar(bas), 20_000.0, 20_000.0, mum, bas, son, {"BTC"}, None, RULES)
+    assert k["neden"] is None and k["aktif_coin"] == 1 and k["kopya_islem"] == 20 and len(k["kopya_gunluk"]) >= 20
+    az = s.kopya_kapisi(_karli_dolumlar(bas, adet=6), 20_000.0, 20_000.0, mum, bas, son, {"BTC"}, None, RULES)
+    assert az["neden"] == "kopya_islem_az"                                   # A: < 10 kopya işlemi
+    assert s.kopya_kapisi(_karli_dolumlar(bas), 20_000.0, 20_000.0, mum, bas, son, {"BTC"}, None, {**RULES, "secim_aktif_coin_max": 0})["neden"] == "coin_fazla"
+
+
+def test_kos_motor_dusurdugu_uye_kadrodan_duser(tmp_path):
+    kadro = {"radar_surum": "v2", "doldurma_ay": "1971-02", "satirlar": [{"adres": A1, "sira": 1, "form": 3.0}]}
+    c = SahteP([], {}, {}, lambda coin, ts: 100.0)
+    _, k2 = s.kos(c, T, kadro, RULES, log=lambda *_: None, canli={"saha": {"bekleme": {A1: T + 31 * GUN}}})
+    assert k2["satirlar"] == [] and k2["cikanlar"] == {A1: "motor_dustu"}

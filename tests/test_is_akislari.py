@@ -177,10 +177,10 @@ def test_radar_yml_gunluk_00_37_utc_kadro_ve_yayim_sirasi():
     assert wf["permissions"] == {"contents": "read"} and wf["jobs"]["radar"]["permissions"] == {"contents": "write"} and wf["concurrency"]["cancel-in-progress"] is False   # G-23: yazma yalnız radar işinde
     ad = adimlar(wf, "radar")
     # K-55 (09.11): tarama + kadro + isabet adımları yerine tek "Seçim yapısı D" adımı (havuz.json + kadro.json yazar); eski modüller testleriyle durur
-    secim = next(a for a in ad if a.startswith("Seçim yapısı D"))
+    secim = next(a for a in ad if a.startswith("Seçim yapısı D+"))
     assert ad.index(secim) < ad.index("Veri dalına yaz (radar)") and "Radar taraması (R0 + R1 + R2 girdileri)" not in ad and "Seçim isabeti (§7b)" not in ad
-    run = adim(wf, "radar", "Seçim yapısı D")["run"]
-    assert "python -u -m copytrade.secim_d --cikti radar" in run and '"${onceki[@]}"' in run and "kural_ust" not in (WF / "radar.yml").read_text(encoding="utf-8").replace("`kural_ust`", "")
+    run = adim(wf, "radar", "Seçim yapısı D+")["run"]
+    assert "python -u -m copytrade.secim_d --cikti radar" in run and '"${onceki[@]}" "${canli[@]}"' in run and "kural_ust" not in (WF / "radar.yml").read_text(encoding="utf-8").replace("`kural_ust`", "")
     assert adim(wf, "radar", "Veri dalına yaz")["run"] == "bash .github/scripts/radar_yayimla.sh" and "if" not in adim(wf, "radar", "Veri dalına yaz")      # yalnız başarıda (varsayılan success())
     artifact = next(a for a in wf["jobs"]["radar"]["steps"] if str(a.get("uses", "")).startswith("actions/upload-artifact"))
     assert artifact["if"] == "always()"                                                       # eksik koşuda da havuz.json artifact'ı kalır
