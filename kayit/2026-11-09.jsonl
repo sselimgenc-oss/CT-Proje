@@ -232,3 +232,5 @@
 {"zaman_ms":1794192372818,"olay":"tur","ozsermaye_usd":1008.1598}
 {"zaman_ms":1794193246464,"olay":"funding","saat":498387,"saat_adet":1,"funding_usd":-0.0076674942148996904,"toplam_funding_usd":-0.02262111274005623}
 {"zaman_ms":1794193278812,"olay":"tur","ozsermaye_usd":1006.8125}
+{"zaman_ms":1794193792132,"olay":"emir_yok","adres":"0x92d8c46701a992e007849ab09d5cc578d5330cdf","coin":"ZEC","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1794193791874,"gorme_ms":1794193792131,"yas_ms":258}
+{"zaman_ms":1794194150011,"olay":"tur","ozsermaye_usd":1004.8593}
