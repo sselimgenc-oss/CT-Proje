@@ -68,6 +68,20 @@ def onceki_karsilastir(onceki: dict | None, havuz: dict, satirlar: list[dict], s
     return elenenler, neden
 
 
+def sirala_v11(puanli: list[dict], havuz_satiri: dict[str, dict], rules: dict) -> list[dict]:
+    """v1.1 (K-53, kullanıcı kararı 09.11) t önceliği: `g_t_istat` ≥ `radar_t_oncelik` olanlar ÖNCE (kendi içinde form sırası), kalan koltuklar form sırasıyla dolar (kasa boş kalmaz).
+    `radar_t_oncelik` ≤ 0 → v1 (yalnız form sırası). Her satıra `t_oncelik` (bool) eklenir; eşitlikte adres."""
+    esik = float(rules.get("radar_t_oncelik", 0) or 0)
+
+    def oncelikli(p: dict) -> bool:
+        t = havuz_satiri.get(p["adres"], {}).get("g_t_istat")
+        return esik > 0 and t is not None and float(t) >= esik - 1e-12
+
+    cikti = [{**p, "t_oncelik": oncelikli(p)} for p in puanli]
+    cikti.sort(key=lambda p: (not p["t_oncelik"], -p["form"], p["adres"]))
+    return cikti
+
+
 def kadro_olustur(havuz: dict, rules: dict | None = None, kasa_usd: float | None = None, onceki: dict | None = None) -> dict:
     """Havuz → kadro (saf fonksiyon). `kasa_usd` verilmezse `canli_kasa_usd`; slot = kasa / N (`boyut`, K‑28). Havuzda 30'dan az `gecti` varsa kadro o kadardır.
     `onceki` (önceki günün kadrosu, isteğe bağlı) yalnız bilgi alanları `elenenler`/`eski_uye_neden` içindir; seçimi etkilemez."""
@@ -77,13 +91,16 @@ def kadro_olustur(havuz: dict, rules: dict | None = None, kasa_usd: float | None
     kasa = float(rules["canli_kasa_usd"] if kasa_usd is None else kasa_usd)
     n = boyut.saha_sayisi(kasa, rules)
     puanli, soguyan = form_puanla(havuz["satirlar"], rules)
+    havuz_satiri = {h["adres"]: h for h in havuz["satirlar"]}
+    puanli = sirala_v11(puanli, havuz_satiri, rules)
     toplam, ilk = int(rules["radar_kadro_toplam"]), int(rules["radar_kadro_ilk"])
     secilen = puanli[:toplam]
     # Bilgi: H'siz form ve tüm puanlı havuzdaki sırası (eşitlikte adres; karar sırası `form`'dur)
     hsiz = {p["adres"]: form_h_siz(p["bilesenler"], rules) for p in puanli}
     hsiz_sira = {a: i for i, a in enumerate(sorted(hsiz, key=lambda a: (-hsiz[a], a)), 1)}
     satirlar = [{"adres": p["adres"], "sira": i, "katman": "ilk11" if i <= ilk else "yedek", "form": p["form"], "bilesenler": p["bilesenler"],
-                 "kopya_getiri_7g": p["kopya_getiri_7g"], "max_kaldirac": p["max_kaldirac"], "form_h_siz": hsiz[p["adres"]], "sira_h_siz": hsiz_sira[p["adres"]]}
+                 "kopya_getiri_7g": p["kopya_getiri_7g"], "max_kaldirac": p["max_kaldirac"], "form_h_siz": hsiz[p["adres"]], "sira_h_siz": hsiz_sira[p["adres"]],
+                 "g_t_istat": havuz_satiri[p["adres"]].get("g_t_istat"), "t_oncelik": p["t_oncelik"], "tutma": bool(havuz_satiri[p["adres"]].get("tutma"))}
                 for i, p in enumerate(secilen, 1)]
     secilen_adres = {p["adres"] for p in secilen}
     h_siz_girenler = [{"adres": a, "sira_h_siz": hsiz_sira[a], "form_h_siz": hsiz[a]} for a in sorted(hsiz_sira, key=hsiz_sira.get)
