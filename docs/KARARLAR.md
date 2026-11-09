@@ -273,3 +273,9 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - **Yöntem (ön kayıt `docs/ONKAYIT_SECIM_2026-11-09.md`):** Fable aday yapıları sonuç görülmeden ön kayda alır (3–5 aday, her biri kendi evrenini lider tablosunun tamamından kurar, eski radar havuzuna bağlı değil); adaylar 8 haftalık geriye dönük çerçevede önceden kayıtlı karar kuralıyla sınanır; kazanan `radar_surum: v2` olarak kurulur. Hiçbiri geçmezse gerçek paraya geçilmez.
 - 8 haftalık kalıcılık testi (`kalicilik.yml`) yalnız eski yapının teşhisidir; aday seçimi ona dayanmaz.
 
+## K-55 — Seçim yapısı D teoride seçildi ve kuruldu (kullanıcı kararı 09.11)
+- Kullanıcı: "teoride belirlemek ve hemen trader seçmek istiyordum"; geriye dönük/ileri sınama beklenmez. Ön kaydın (§3 m.3) "fark kanıtlanamazsa en sade" sırasında ilk sıradaki **D** seçildi: B evreni + sabit kadro, yalnız risk çıkışı.
+- `copytrade/secim_d.py` (radar.yml günlük; tarama/kadro/isabet adımlarının yerine): **doldurma** ilk koşu + ayın ilk koşusu (lider tablosu → ön filtre hesap ≥ 10 k, 30 g pnl > 0 → portfolio: son 12 haftanın ≥ 8'i kârlı, 90 g pnl > 0, 90 g düşüş ≤ %20 → haftalık getiri t'sine göre ilk 40 → son 28 gün dolumlarıyla kopya kapısı: tutma ≥ 1 sa, kaldıraç ≤ 20x, likit ≥ %80, devir ≤ 100/hf, gecikmesiz + tam maliyetli kopya > 0, koruma ≥ 0,5) · **üye denetimi** her gün: çıkış yalnız zirveden ≥ %25 pnl düşüşü, 14 gün işlem yok, aylık kontrolde iki ay üst üste 30 g pnl < 0. Değiştirme yok; boş koltuk ayda bir dolar, arada nakit. Kadro `radar_surum: v2` (K-54 motoru bekliyordu).
+- **Ön kayıttan sapma (ortak motor ayarları, 70 test bozulmasın diye):** N = 11 (10 değil), slot stop %10 (%15 değil), işlem yok 72 sa motor düşmesi (14 gün değil; trader kadroda kaldığı için yeniden girer). Hepsi daha temkinli yönde.
+- Gerçek para şartı değişmez: D ≥ 8 hafta sanalda kazandırmalı (ön kayıt §3); karar kullanıcının. Diğer adaylar (A, B, C, E) sınanmaz (kullanım sınırı; kullanıcı onayı).
+

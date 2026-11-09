@@ -107,7 +107,7 @@ canli_kasa_usd: 1000                    # $ (kullanıcı ayarı; üst sınır 1.
 canli_kasa_ust_usd: 1000                # $ (güvenlik üst sınırı; aşan kasa ValueError)
 canli_hl_deger_ust_usd: 1500            # $ (gerçek kip AÇILIŞ / --kontrol: HL hesap değeri tavanı; kârlı günden sonra yeniden başlatma takılmasın. Kasa yine min(CANLI_KASA_USD, HL) ≤ canli_kasa_ust_usd; K‑22)
 radar_canli_slot_min_usd: 25            # $ (N = min(radar_saha_max, taban(kasa / bu)))
-radar_saha_max: 11                      # kişi (İlk 11)
+radar_saha_max: 11                      # kişi (İlk 11; K-55 D da 11 kullanır — ön kayıttaki 10 yerine, motor ayarları ortak)
 radar_min_emir_usd: 11                  # $ (HL alt emir sınırı 10 $ + pay)
 radar_slot_tavan_carpan: 3.0            # x (slot kasası başına pozisyon tavanı = çarpan x slot)
 # ---- R2 form puanı + günlük kadro (RADAR_V1.md §4, §5; v1'de donar). Ağırlıklar toplamı 1,0; oranlar kesir ----
@@ -143,11 +143,11 @@ canli_patlama_pencere_dk: 10            # dakika
 canli_patlama_ara_dk: 30                # dakika (fren süresi: yeni açılış kopyalanmaz, kapanışlar izlenir)
 canli_gunluk_kayip_oran: 0.05           # oran (gün başı özsermayeden kayıp >= bu: o gün yeni açılış yok)
 canli_zirve_dusus_oran: 0.20            # oran (zirveden düşüş >= bu: hepsini kapat, motor durur, DUR yazılır)
-canli_slot_dusus_oran: 0.10             # oran (girişten beri slot düşüşü >= bu: anında sahadan düş)
+canli_slot_dusus_oran: 0.10             # oran (K-55 D: ön kayıttaki %15 yerine ortak %10 korunur) (girişten beri slot düşüşü >= bu: anında sahadan düş)
 canli_sira_dus: 22                      # sıra (form sırası bundan KÖTÜ (>) ise sayaç artar)
 canli_sira_dus_gun: 2                   # gün üst üste
 canli_kadro_disi_sira: 30               # sıra (kadroda yok / sıra bundan kötü = kadro dışı: 1 gün)
-canli_islem_yok_saat: 72                # saat (trader'ın yeni işlemi yoksa düş; sonuç dışı)
+canli_islem_yok_saat: 72                # saat (K-55 D: ön kayıttaki 14 gün yerine ortak 72 sa korunur) (trader'ın yeni işlemi yoksa düş; sonuç dışı)
 canli_bekleme_gun: 14                   # gün (sonuçla düşen sahaya dönemez)
 canli_histerezis_puan: 10               # puan (aday formu üyeninkinden en az bu kadar yüksek)
 canli_gunde_degisiklik: 2               # adet (günde en çok saha girişi/değişikliği; ilk gün hariç)
@@ -192,3 +192,15 @@ isabet_butce_dk: 30                     # dakika (isabet adımı süre bütçesi
 isabet_kotu_gecikme_dk: 3               # dakika (kötü senaryo gecikmesi)
 isabet_kotu_kayma_carpan: 2             # kat (kötü senaryo: maliyet_kayma bu kadar katı)
 para_hareketi_isaret_payi: 0.2          # oran (T6 §2, bilgi: net yatırma / hafta başı sermaye bunun üstündeyse raporda işaretlenir; kapıyı DEĞİŞTİRMEZ)
+
+# ---- Seçim yapısı D (K-55, kullanıcı kararı 09.11; ön kayıt docs/ONKAYIT_SECIM_2026-11-09.md §1 D + B evreni; copytrade/secim_d.py) ----
+secim_min_hesap_usd: 10000              # $ (hesap değeri ≥; lider tablosu ön filtresi ve portfolio)
+secim_hafta_sayisi: 12                  # hafta (istikrar penceresi; portfolio allTime pnl)
+secim_pozitif_hafta_min: 8              # hafta (son 12 haftanın en az bu kadarı pnl > 0)
+secim_dusus_90g_max: 0.20               # oran (90 g kümülatif pnl düşüşü / hesap ≤; sınır dahil)
+secim_kopya_gun: 28                     # gün (kopya kapısı penceresi: son 4 hafta dolumları)
+secim_aday_ust: 40                      # kişi (B evreninden t sırasıyla kopya kapısına en çok bu kadar; API bütçesi)
+secim_butce_dk: 120                     # dakika (doldurma koşusu süre bütçesi)
+secim_cikis_zirve_dusus: 0.25           # oran (kümülatif pnl zirvesinden düşüş / hesap ≥ → çıkış)
+secim_islem_yok_gun: 14                 # gün (bu kadar gün işlem yok → çıkış)
+

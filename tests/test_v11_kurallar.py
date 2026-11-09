@@ -77,6 +77,7 @@ def test_kos_tutma_once_olculur_isaretlenir_ve_kadroya_girer(tmp_path):
     assert kd["radar_surum"] == "v1.1" and {s["adres"]: s["tutma"] for s in kd["satirlar"]} == {A1: False, A2: True}
 
 
-def test_radar_yml_tarama_onceki_kadroyu_gecirir():
+def test_radar_yml_artik_secim_d_calistirir():
+    """K-55 (09.11): radar.yml v1.1 taramasını değil seçim yapısı D'yi çalıştırır; v1.1 kodu (tutma, kapılar) testleriyle durur."""
     wf = (ROOT / ".github/workflows/radar.yml").read_text(encoding="utf-8")
-    assert '--payda-yan-yana "${tutma[@]}"' in wf and 'tutma=(--onceki-kadro "$RUNNER_TEMP/onceki_kadro_tarama.json")' in wf
+    assert "copytrade.secim_d" in wf and "copytrade.radar_tarama" not in wf

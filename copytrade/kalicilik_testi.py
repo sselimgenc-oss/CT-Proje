@@ -91,7 +91,7 @@ def hafta_satiri(adres: str, dolumlar: list[dict] | None, hesap: float, payda: A
     satir["dolum_gecti"] = radar_tarama.degerlendir(satir, v1, yalniz_dolum=True)[0]
     satir["getiri"] = satir["kopya_getiri_7g"] if sonuc.get("durum") != "hesaplanamadi" else None
     satir["durum"] = "olculdu"
-    return {k: satir.get(k) for k in ("durum", "getiri", "dolum_gecti", "gecti_v1", "neden_v1", "gecti_v11", "neden_v11", *OLCULER)}
+    return {k: satir.get(k) for k in ("durum", "getiri", "dolum_gecti", "gecti_v1", "neden_v1", "gecti_v11", "neden_v11", "kopya_koruma", *OLCULER)}
 
 
 def haftalar(bitis_ms: int, n: int = HAFTA_SAYISI) -> list[tuple[int, int]]:
