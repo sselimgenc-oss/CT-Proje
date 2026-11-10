@@ -23,8 +23,9 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-from copytrade import radar_form, radar_isabet, radar_kadro, radar_tarama
+from copytrade import kalicilik_testi, radar_form, radar_isabet, radar_kadro, radar_tarama
 from copytrade.kurallar import load_rules
+from copytrade.gecmis_funding import FundingOnbellegi
 from copytrade.olcut import perp_fills
 
 VARYANTLAR = ("v1", "h_siz", "kopya_islem_5", "t_2", "karli_gun_3")
@@ -107,7 +108,7 @@ def _dolumlar(client: Any, adres: str, bas: int, bit: int, rules: dict) -> list[
     return [f for f in perp_fills(d) if bas <= int(f["time"]) < bit]
 
 
-def gecmis_olcu(client: Any, havuz: dict, adresler: list[str], rules: dict, log: Callable[[str], None]) -> dict[str, dict]:
+def gecmis_olcu(client: Any, havuz: dict, adresler: list[str], rules: dict, log: Callable[[str], None], funding: FundingOnbellegi | None = None) -> dict[str, dict]:
     """D penceresi için {adres: {kis, t, karli}}. Havuzda dolu ise oradan (09.11+); değilse pencere yeniden oynatılır."""
     satir = {r["adres"]: r for r in havuz["satirlar"]}
     olcu: dict[str, dict] = {}
@@ -120,11 +121,15 @@ def gecmis_olcu(client: Any, havuz: dict, adresler: list[str], rules: dict, log:
     bas, bit = int(havuz["pencere_bas_ms"]), int(havuz["kosu_ms"])
     b = radar_tarama.Baglam(client, bit, bas, rules)
     b.piyasa_oku()
+    b.funding_kaynagi = funding or FundingOnbellegi(client)
+    tarihsel_mum = kalicilik_testi.SaatlikMum(client, bas, bit)
     for a in gerek:
         try:
             d = _dolumlar(client, a, bas, bit, rules)
             if d is None:
                 continue
+            likit = tarihsel_mum.likit_coinler({str(f["coin"]) for f in d}, bas, bit, rules)
+            olcu[a]["likit_pay_tarihsel"] = radar_tarama.islem_olculeri(d, float(satir[a]["hesap_usd"]), likit, rules)["likit_pay"]
             payda, _ = radar_tarama.payda_oku(client, a, float(satir[a]["hesap_usd"]), bas, bit, rules)
             m = radar_tarama.kopya_olculeri(b.kopya_oynat(d, payda), a, rules)
             olcu[a].update({"kis": m["kopya_islem_sayisi"], "t": m["g_t_istat"], "kaynak": "yeniden", "kopya_getiri_yeniden": m["kopya_getiri_7g"],
@@ -135,11 +140,12 @@ def gecmis_olcu(client: Any, havuz: dict, adresler: list[str], rules: dict, log:
     return olcu
 
 
-def ileri_getiri(client: Any, havuz: dict, adresler: list[str], bit: int, rules: dict, log: Callable[[str], None]) -> dict[str, float | None]:
+def ileri_getiri(client: Any, havuz: dict, adresler: list[str], bit: int, rules: dict, log: Callable[[str], None], funding: FundingOnbellegi | None = None) -> dict[str, float | None]:
     """D koşusundan `bit`'e kopya getirisi (radar_isabet.olc ile aynı yol: pencerede dolum yok → 0; dolum_fazla / payda yok → None)."""
     bas = int(havuz["kosu_ms"])
     b = radar_tarama.Baglam(client, bit, bas, rules)
     b.piyasa_oku()
+    b.funding_kaynagi = funding or FundingOnbellegi(client)
     hesap = {r["adres"]: float(r["hesap_usd"]) for r in havuz["satirlar"]}
     sonuc: dict[str, float | None] = {}
     for a in adresler:
@@ -176,9 +182,10 @@ def gun_sina(client: Any, dal: str, tarih: str, simdi: int, rules: dict, log: Ca
         puanli, soguyan = radar_form.form_puanla(havuz["satirlar"], rules)
         _, neden = radar_kadro.onceki_karsilastir(onceki, havuz, kadro["satirlar"], soguyan)
     cikan = {a: n for a, n in (neden or {}).items() if a not in set(adresler)}
-    olcu = gecmis_olcu(client, havuz, adresler, rules, log)
+    funding = FundingOnbellegi(client)
+    olcu = gecmis_olcu(client, havuz, adresler, rules, log, funding)
     secim = varyant_sec(kadro, olcu, rules, int(rules["radar_kadro_ilk"]))
-    ileri = ileri_getiri(client, havuz, adresler + sorted(cikan), simdi, rules, log)
+    ileri = ileri_getiri(client, havuz, adresler + sorted(cikan), simdi, rules, log, funding)
     ilk = int(rules["radar_kadro_ilk"])
     varyant = {}
     for v, sec in secim.items():

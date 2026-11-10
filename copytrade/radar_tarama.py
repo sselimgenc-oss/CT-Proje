@@ -399,6 +399,7 @@ class Baglam:
         self.azami_kaldirac: dict[str, float] | None = None
         self.son_girdi: dict | None = None            # son kopya_oynat'ın mum girdileri (R2 72 sa oynatması yeniden kullanır)
         self._hareket: dict[str, dict] | None = None   # H için coin hareketleri (koşu başına en çok bir kez, yalnız `gecti` aday çıkarsa)
+        self.funding_kaynagi = None                    # yalnız geçmiş sınama: FundingOnbellegi; olağan radar akışı değişmez
 
     def piyasa_oku(self) -> None:
         """Perp dex listesi, coin başına 24 sa hacim (`metaAndAssetCtxs.dayNtlVlm`) ve HL azami kaldıracı (v4 sınırı)."""
@@ -433,10 +434,11 @@ class Baglam:
         saatlik = kopya_v2.saatlik_mumlar(self.mum, {}, dolumlar, im.open_copy_coins(eylemler), self.kosu_ms)
         yurutme = {coin: {int(c["t"]): float(c["o"]) for c in rows} for coin, rows in mum.items()}
         kayit: list | None = [] if ek else None
-        sonuc = kopya_v5.hesapla(dolumlar, saatlik, isaret, yurutme, [], t0, simdi, self.gecikme_dk, KOPYA_TARZ, self.rules,
+        oranlar = self.funding_kaynagi.oku({str(f["coin"]) for f in dolumlar}, self.pencere_bas_ms, self.kosu_ms) if self.funding_kaynagi else []
+        sonuc = kopya_v5.hesapla(dolumlar, saatlik, isaret, yurutme, oranlar, t0, simdi, self.gecikme_dk, KOPYA_TARZ, self.rules,
                                  azami_kaldirac=self.azami_kaldirac, trader_hesap_usd=trader_hesap_usd, kayit=kayit)
         sifir = {**self.rules, "maliyet_taker": 0.0, "maliyet_kayma": 0.0}
-        sonuc["ayna"] = kopya_v5.hesapla(dolumlar, saatlik, isaret, {}, [], t0, simdi, 0, KOPYA_TARZ, sifir, azami_kaldirac=self.azami_kaldirac, trader_hesap_usd=trader_hesap_usd)
+        sonuc["ayna"] = kopya_v5.hesapla(dolumlar, saatlik, isaret, {}, oranlar, t0, simdi, 0, KOPYA_TARZ, sifir, azami_kaldirac=self.azami_kaldirac, trader_hesap_usd=trader_hesap_usd)
         if ek:
             sonuc["yuvarlanan_pay"] = yuvarlanan_pay(kayit or [])
             sonuc["oransal_ayna"] = kopya_v5.hesapla(dolumlar, saatlik, isaret, {}, [], t0, simdi, 0, KOPYA_TARZ, {**sifir, "radar_min_emir_usd": 0.0},
