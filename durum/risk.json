@@ -10,6 +10,13 @@
  "fren_bitis": {},
  "gun": "2026-11-10",
  "gun_basi": 1000.0,
- "yeni_coin": {},
- "zirve": 1000.0
+ "yeni_coin": {
+  "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29": [
+   [
+    1794270678590,
+    "BTC"
+   ]
+  ]
+ },
+ "zirve": 1000.0003996955404
 }
