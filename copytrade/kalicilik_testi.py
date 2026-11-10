@@ -9,7 +9,7 @@ Kurallar, motor, kadro ve veri dalları DEĞİŞMEZ. Önceden kayıtlı ölçül
 Evren: kayıtlı radar havuzlarının (origin/radar) tüm adresleri — bugünün kazananları (SURVIVORSHIP: sonuç iyimser okunur; burada bile kalıcılık yoksa yöntemde yok).
 Ölçek: 1.000 $ kasa, slot = kasa / 11 (kopya_v5, R1 ile aynı boyut). **Yaklaşık kopya:** eski haftalarda 1/5 dk mum yok; kopya = trader'ın dolum fiyatıyla (gecikmesiz)
 + tam maliyet (taker + kayma); hafta sonu işaret fiyatı ve tasfiye denetimi saatlik mumdan (hafta sonundan önceki son saat açılışı). Aynı yaklaşım tüm haftalara ve tüm gruplara
-uygulanır (karşılaştırma adil; mutlak seviye gerçek 1 dk gecikmeli kopyadan biraz iyimser). Likit coin listesi ve azami kaldıraç bugünün değerleri (küçük yanlılık).
+uygulanır (karşılaştırma adil; mutlak seviye gerçek 1 dk gecikmeli kopyadan biraz iyimser). Likidite her haftanın saatlik mum hacminden hesaplanır; azami kaldıraç API'nin güncel değeridir.
 
     python -m copytrade.kalicilik_testi olc --parca 1/4 --cikti k1.json      # Actions matris işi
     python -m copytrade.kalicilik_testi analiz k1.json k2.json …             # birleştir + özet
@@ -31,6 +31,7 @@ import pandas as pd
 from copytrade import izleme_motoru as im
 from copytrade import kopya_v2, kopya_v5, radar_form, radar_isabet, radar_tarama
 from copytrade.defter import HOUR
+from copytrade.gecmis_funding import FundingOnbellegi
 from copytrade.kurallar import load_rules
 from copytrade.olcut import perp_fills
 
@@ -48,31 +49,41 @@ class SaatlikMum:
 
     def __init__(self, client: Any, bas_ms: int, bit_ms: int):
         self.client, self.bas, self.bit = client, bas_ms // HOUR * HOUR, bit_ms
-        self.seri: dict[str, list[tuple[int, float, float | None]]] = {}
+        self.seri: dict[str, list[tuple[int, float, float | None, float]]] = {}
 
-    def _s(self, coin: str) -> list[tuple[int, float, float | None]]:
+    def _s(self, coin: str) -> list[tuple[int, float, float | None, float]]:
         if coin not in self.seri:
             rows = self.client.candles(coin, self.bas, self.bit, interval="1h")
-            self.seri[coin] = sorted((int(c["t"]), float(c["o"]), radar_tarama._sayi(c.get("c"))) for c in rows if radar_tarama._sayi(c.get("o")) is not None)
+            self.seri[coin] = sorted((int(c["t"]), float(c["o"]), radar_tarama._sayi(c.get("c")), float(c.get("v") or 0)) for c in rows if radar_tarama._sayi(c.get("o")) is not None)
         return self.seri[coin]
+
+    def likit_coinler(self, coinler: set[str], bas: int, bit: int, rules: dict) -> set[str]:
+        """Haftanın saatlik mumlarından günlük ortalama $ hacim; radarın 24 saatlik eşiği."""
+        esik = float(rules["radar_likit_coin_hacim_usd"])
+        gun = (bit - bas) / (24 * HOUR)
+        return {coin for coin in coinler if sum(o * v for t, o, _, v in self._s(coin) if bas <= t < bit) / gun >= esik}
 
     def candles(self, coin: str, start_ms: int, end_ms: int, interval: str = "1h") -> list[dict]:
         s = self._s(coin)
-        aralik = [(t, o, k) for t, o, k in s if start_ms <= t <= end_ms]
+        aralik = [(t, o, k) for t, o, k, _ in s if start_ms <= t <= end_ms]
         if not aralik and interval in ("1m", "5m"):
-            once = [x for x in s if x[0] <= end_ms]
+            once = [(t, o, k) for t, o, k, _ in s if t <= end_ms]
             aralik = once[-1:]
         return [{"t": t, "o": o, **({"c": k} if k is not None else {})} for t, o, k in aralik]
 
 
 # ------------------------------------------------------------------------------------------------------------------------------ bir adres, bir hafta
-def hafta_satiri(adres: str, dolumlar: list[dict] | None, hesap: float, payda: Any, mum: SaatlikMum, t0: int, t1: int, likit: set[str], azami: dict | None, rules: dict) -> dict:
+def hafta_satiri(adres: str, dolumlar: list[dict] | None, hesap: float, payda: Any, mum: SaatlikMum, t0: int, t1: int, likit: set[str], azami: dict | None, rules: dict,
+                funding: FundingOnbellegi | None = None) -> dict:
     """Bir haftanın R1 ölçüleri + kararı (v1 ve v1.1) + o haftanın yaklaşık kopya getirisi (`getiri`). Dolum yok → getiri 0 (ölçüldü), kopya ölçüleri yok."""
     if dolumlar is None:
         return {"durum": "dolum_fazla", "getiri": None}
     dolumlar = [f for f in perp_fills(dolumlar) if t0 <= int(f["time"]) < t1]
     if not dolumlar:
         return {"durum": "islem_yok", "getiri": 0.0}
+    if funding is not None:
+        likit = mum.likit_coinler({str(f["coin"]) for f in dolumlar}, t0, t1, rules)
+    oranlar = funding.oku({str(f["coin"]) for f in dolumlar}, t0, t1) if funding is not None else []
     vlm = sum(abs(float(f["px"]) * float(f["sz"])) for f in dolumlar)
     satir: dict = {"hesap_usd": hesap, "devir_hafta": vlm / hesap if hesap > 0 else None, "hata": None}
     satir.update(radar_tarama.islem_olculeri(dolumlar, hesap, likit, rules))
@@ -81,9 +92,9 @@ def hafta_satiri(adres: str, dolumlar: list[dict] | None, hesap: float, payda: A
     isaret = im.mark_candles(mum, eylemler, t1)
     saatlik = kopya_v2.saatlik_mumlar(mum, {}, dolumlar, im.open_copy_coins(eylemler), t1)
     a, b = pd.Timestamp(t0, unit="ms", tz="UTC"), pd.Timestamp(t1, unit="ms", tz="UTC")
-    sonuc = kopya_v5.hesapla(dolumlar, saatlik, isaret, {}, [], a, b, 0, radar_tarama.KOPYA_TARZ, rules, azami_kaldirac=azami, trader_hesap_usd=payda)
+    sonuc = kopya_v5.hesapla(dolumlar, saatlik, isaret, {}, oranlar, a, b, 0, radar_tarama.KOPYA_TARZ, rules, azami_kaldirac=azami, trader_hesap_usd=payda)
     sifir = {**rules, "maliyet_taker": 0.0, "maliyet_kayma": 0.0}
-    sonuc["ayna"] = kopya_v5.hesapla(dolumlar, saatlik, isaret, {}, [], a, b, 0, radar_tarama.KOPYA_TARZ, sifir, azami_kaldirac=azami, trader_hesap_usd=payda)
+    sonuc["ayna"] = kopya_v5.hesapla(dolumlar, saatlik, isaret, {}, oranlar, a, b, 0, radar_tarama.KOPYA_TARZ, sifir, azami_kaldirac=azami, trader_hesap_usd=payda)
     satir.update(radar_tarama.kopya_olculeri(sonuc, adres, rules))
     v1 = {**rules, "radar_min_kopya_islem": 0}
     satir["gecti_v1"], satir["neden_v1"] = radar_tarama.degerlendir(satir, v1)
@@ -101,7 +112,8 @@ def haftalar(bitis_ms: int, n: int = HAFTA_SAYISI) -> list[tuple[int, int]]:
     return [(son - (n - i) * HAFTA, son - (n - i - 1) * HAFTA) for i in range(n)]
 
 
-def adres_olc(client: Any, adres: str, hesap_simdi: float, hf: list[tuple[int, int]], mum: SaatlikMum, likit: set[str], azami: dict | None, rules: dict) -> list[dict]:
+def adres_olc(client: Any, adres: str, hesap_simdi: float, hf: list[tuple[int, int]], mum: SaatlikMum, likit: set[str], azami: dict | None, rules: dict,
+              funding: FundingOnbellegi | None = None) -> list[dict]:
     try:
         seri = kopya_v5.PaydaSerisi(radar_tarama.payda_noktalari(client.portfolio(adres), hf[-1][1]))
     except (*radar_tarama.HATALAR, AttributeError):
@@ -113,7 +125,7 @@ def adres_olc(client: Any, adres: str, hesap_simdi: float, hf: list[tuple[int, i
         try:
             d = client.fills(adres, t0, max_rows=int(rules["radar_dolum_tavan"]), end_ms=t1)
             d = None if len(d) >= int(rules["radar_dolum_tavan"]) else d
-            s = hafta_satiri(adres, d, hesap, payda, mum, t0, t1, likit, azami, rules)
+            s = hafta_satiri(adres, d, hesap, payda, mum, t0, t1, likit, azami, rules, funding)
         except radar_tarama.HATALAR as h:
             s = {"durum": "hata", "hata": type(h).__name__, "getiri": None}
         cikti.append({"hafta_bas": t0, **s})
@@ -247,14 +259,14 @@ def main(argv: list[str] | None = None) -> int:
         client = radar_tarama.radar_istemcisi(rules=rules)
         b = radar_tarama.Baglam(client, bitis, hf[0][0], rules)
         b.piyasa_oku()
-        likit, mum = b.likit_coinler(), SaatlikMum(client, hf[0][0], hf[-1][1])
+        likit, mum, funding = set(), SaatlikMum(client, hf[0][0], hf[-1][1]), FundingOnbellegi(client)
         print(f"kalıcılık: parça {i}/{k}, {len(adresler)}/{len(evren)} adres, haftalar {[pd.Timestamp(x, unit='ms').date().isoformat() for x, _ in hf]}")
         kayit, t0 = {}, time.monotonic()
         for j, adres in enumerate(adresler, 1):
             if time.monotonic() - t0 > a.butce_dk * 60:
                 print(f"UYARI: süre bütçesi doldu; {len(adresler) - j + 1} adres ölçülmedi")
                 break
-            kayit[adres] = adres_olc(client, adres, evren[adres], hf, mum, likit, b.azami_kaldirac, rules)
+            kayit[adres] = adres_olc(client, adres, evren[adres], hf, mum, likit, b.azami_kaldirac, rules, funding)
             if j % 10 == 0:
                 print(f"[{j}/{len(adresler)}] {(time.monotonic() - t0) / 60:.1f} dk")
         a.cikti.write_text(json.dumps({"parca": a.parca, "bitis_ms": bitis, "kayit": kayit}, ensure_ascii=False), encoding="utf-8")
