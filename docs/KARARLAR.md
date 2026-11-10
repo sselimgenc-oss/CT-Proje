@@ -314,3 +314,7 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - `copytrade/radar/HARIC`: elle çıkarma listesi. `secim_d` üyeyi `elle_cikarildi` ile çıkarır (yakın çıkan sayılır, 31 g aday olmaz), boşalan yer ay başını beklemeden AYNI koşuda doldurulur. Motor üyeyi kadrodan çıkışla K-39 ile düşürür (iki UTC günü).
 - D+'nın "değişim yok" ilkesi yalnız otomatik çıkışlar içindir; elle çıkarma kullanıcı kararıdır ve kayıtlıdır.
 - Not (yolda): seçim oynatması bu trader'ı +%1,3 ve 10 kopya işlemiyle geçirmişti; canlıdaki parça dolum/ücret yükü oynatmada görünmedi. F05 mutabakat raporu bir hafta sonra bu farkı ölçecek; gerekirse kapıya "kopya emir sayısı / maliyet payı" ölçüsü eklenir.
+
+## K-60 — Sağlık: eski 8–20 radar beklentisi D+ kadrosuna uygulanmaz (10.11)
+- Sağlık denetimi "radarı geçen 8–20 kişi" ve "11'den az" uyarılarını eski radar (v1) için verir. D+ (radar_surum v2) bilerek `saha_n` (şu an 5) kişi seçtiği için bu uyarı yanlış alarmdı (10.11 18:02 TSİ).
+- v2 kadroda bu iki uyarı atlanır; eksik kadro yine `kadro_eksik` ile yakalanır. Test: `test_v2_kadro_gecti_araligi_uygulanmaz`.

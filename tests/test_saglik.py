@@ -240,3 +240,10 @@ def test_vardiya_boslugu_sonrasi_vardiya_surerken_uyari_yoksa_kritik():
     assert [(x.kod, x.seviye) for x in b] == [("vardiya_boslugu", "UYARI")]
     assert s.durum(s.kontrol(SIMDI, ozet(yazildi_ms=SIMDI - 50 * DK), kadro(), olaylar=ol, veri_dali_commit_ms=SIMDI - 5 * DK)) == "KRITIK"      # olaydan sonra yazım yok
     assert s.durum(s.kontrol(SIMDI, ozet(yazildi_ms=SIMDI - 5 * DK), kadro(), olaylar=ol, veri_dali_commit_ms=SIMDI - 60 * DK)) == "KRITIK"      # veri bayat
+
+
+def test_v2_kadro_gecti_araligi_uygulanmaz():                                                 # K-60: D+ 5 kişi seçer; 8–20 uyarısı yanlış alarm olurdu
+    d = kadro(gecti_sayisi=5, saha_n=5, satirlar=[{"katman": "ilk11"}] * 5, radar_surum="v2")
+    assert s.kontrol(SIMDI, ozet(), d) == []
+    eksik = kadro(gecti_sayisi=4, saha_n=5, satirlar=[{"katman": "ilk11"}] * 4, radar_surum="v2")
+    assert kodlar(s.kontrol(SIMDI, ozet(), eksik)) == {"kadro_eksik"}
