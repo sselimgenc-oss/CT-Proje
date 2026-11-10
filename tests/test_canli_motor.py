@@ -145,6 +145,19 @@ def test_k39_ayni_utc_gununde_ikinci_kadro_saha_kararini_tetiklemez_ilk_kadro_sa
     assert kd.Saha(RULES, 1000.0, eski.to_json()).gecis_silinen == []                                         # ikinci yüklemede tekrar silinmez
 
 
+def test_k61_elle_cikarma_ayni_gun_ikinci_kadroda_hemen_uygulanir_slot_yeni_kadrodan_dolar():
+    s = hazir_11()
+    ilk = [satir(i, i, 90 - i) for i in range(1, 12)]
+    s.degerlendir(kadro(ilk, T0 + GUN + SAAT), T0 + GUN + 2 * SAAT)                                             # günün ilk kadrosu
+    ikinci = kadro([satir(i, i, 90 - i) for i in range(1, 11)] + [satir(12, 11)], T0 + GUN + 7 * SAAT)        # 11 elle çıkarıldı, yerine 12
+    ikinci["cikanlar"] = {adr(11): "elle_cikarildi"}
+    karar, _ = s.degerlendir(ikinci, T0 + GUN + 8 * SAAT)
+    assert [(k.tur, k.adres, k.neden) for k in karar] == [("dus", adr(11), "elle_cikarildi"), ("giris", adr(12), "bos_slot")]
+    assert adr(11) not in s.uyeler and s.bekleme[adr(11)] > T0 + GUN + 8 * SAAT and s.gun_kadro["kadro"]["kosu_ms"] == T0 + GUN + 7 * SAAT
+    assert all(not u.get("disi_gunler") for u in s.uyeler.values())                                         # günlük kurallar ikinci kez çalışmadı
+    assert s.degerlendir(ikinci, T0 + GUN + 9 * SAAT)[0] == []                                                 # aynı kadro tekrar okununca yeni karar yok
+
+
 def test_bekleme_suresince_sahaya_donemez_bitince_girer():
     kosu = T0 + 14 * GUN - 2 * SAAT
     s1 = kd.Saha(RULES, 1000.0, {"bekleme": {adr(1): T0 + 14 * GUN}, "kurulu": True})
