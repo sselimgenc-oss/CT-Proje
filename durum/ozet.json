@@ -4,23 +4,23 @@
    "adres": "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29",
    "coin": "BTC",
    "giris": 74603.49875986202,
-   "kz_usd": 0.1929859030525949,
-   "mark": 74651.5,
+   "kz_usd": 0.6794586317204573,
+   "mark": 74772.5,
    "sz": 0.004020435774114565,
-   "usd": 300.13156119131344
+   "usd": 300.6180339199813
   },
   {
    "adres": "0xde29121a6858d90ae486855b127f9d5ee4035232",
    "coin": "HYPE",
    "giris": 74.599,
-   "kz_usd": 0.0031702837839654016,
-   "mark": 74.6205,
+   "kz_usd": 0.011132857008805763,
+   "mark": 74.6745,
    "sz": 0.14745505971929918,
-   "usd": 11.003170283783966
+   "usd": 11.011132857008805
   }
  ],
  "acik_pozisyon": 2,
- "brut_usd": 311.1347314750974,
+ "brut_usd": 311.62916677699013,
  "dinleyici": {
   "abonelik_oncesi_snapshot_gibi": 0,
   "dolgu_bekleyen": 0,
@@ -33,12 +33,12 @@
   "hakem_yeniden_deneme": 0,
   "kapanis_atlanan": 0,
   "kopma": 0,
-  "ping": 214,
+  "ping": 250,
   "rest_abonelik_oncesi_atlanan": 0,
   "rest_tur_atlanan": 0,
   "subscription_response": 354,
   "tekrar": 1,
-  "trades_mesaj": 135764,
+  "trades_mesaj": 156605,
   "userfills_mesaj": 6,
   "yeniden_baglanma": 0,
   "yeniden_baslama": 0
@@ -69,7 +69,7 @@
  "funding_oran_yok": 0,
  "funding_usd": -0.025970962531525543,
  "gec_acilis": 0,
- "getiri": -0.0019561717484400942,
+ "getiri": -0.001461736446547346,
  "hip3_atlandi": 0,
  "inen": 0,
  "kapanis_eksik": 0,
@@ -80,7 +80,7 @@
   "funding": 2,
   "kacan_tamamlandi": 1,
   "telegram": 2,
-  "tur": 7
+  "tur": 8
  },
  "kayma_n": 1,
  "kip": "sanal",
@@ -100,15 +100,15 @@
  },
  "ortalama_kayma_ref": 0.0,
  "ortalama_kayma_trader": 0.0,
- "ozsermaye_usd": 998.04382825156,
+ "ozsermaye_usd": 998.5382635534527,
  "rest_429": 0,
- "rest_istek": 2920,
+ "rest_istek": 3457,
  "saha": 5,
  "saha_n": 5,
  "slot_tavani": 0,
  "slot_usd": 200.0,
  "spot_atlandi": 0,
- "sure_dk": 89.97138333333334,
+ "sure_dk": 105.0824,
  "tasfiye": 0,
  "telegram_hata": 0,
  "ters_netlesme": 0,
@@ -126,5 +126,5 @@
   "0xfc76f730c3e2939825484e0a777368075d779ef9"
  ],
  "vardiya": "42763843699",
- "yazildi_ms": 1794294837964
+ "yazildi_ms": 1794295744625
 }
