@@ -828,3 +828,8 @@
 {"zaman_ms":1794329121576,"olay":"emir_yok","adres":"0xfb94d93d73b1a5398816c7d46e1590173371f82b","coin":"ZEC","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1794329121257,"gorme_ms":1794329121576,"yas_ms":319}
 {"zaman_ms":1794329121577,"olay":"emir_yok","adres":"0xfb94d93d73b1a5398816c7d46e1590173371f82b","coin":"ZEC","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1794329121257,"gorme_ms":1794329121576,"yas_ms":320}
 {"zaman_ms":1794329121577,"olay":"emir_yok","adres":"0xfb94d93d73b1a5398816c7d46e1590173371f82b","coin":"ZEC","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1794329121257,"gorme_ms":1794329121576,"yas_ms":320}
+{"zaman_ms":1794329465188,"olay":"emir_yok","adres":"0xfb94d93d73b1a5398816c7d46e1590173371f82b","coin":"ZEC","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1794329464843,"gorme_ms":1794329465188,"yas_ms":345}
+{"zaman_ms":1794329465189,"olay":"emir_yok","adres":"0xfb94d93d73b1a5398816c7d46e1590173371f82b","coin":"ZEC","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1794329464843,"gorme_ms":1794329465188,"yas_ms":346}
+{"zaman_ms":1794329465189,"olay":"emir_yok","adres":"0xfb94d93d73b1a5398816c7d46e1590173371f82b","coin":"ZEC","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1794329464843,"gorme_ms":1794329465188,"yas_ms":346}
+{"zaman_ms":1794329582875,"olay":"tur","ozsermaye_usd":974.925}
+{"zaman_ms":1794330035570,"olay":"funding","saat":498425,"saat_adet":1,"funding_usd":-0.00361457840223103,"toplam_funding_usd":-0.04000176129104877}
