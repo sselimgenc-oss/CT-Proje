@@ -20,7 +20,7 @@ from copytrade.kurallar import load_rules
 
 def _oynat(uyeler: list[dict], olaylar: list[tuple[int, int, int, dict]], rules: dict, ortak: bool, son_fiyatlar: dict) -> dict:
     kasa = float(rules["canli_kasa_usd"])
-    slot = kasa / 5
+    slot = boyut.slot_usd(kasa, rules)                    # denetim: N kurallardan (D+ 5 → 200 $)
     hesap = Hesap(kasa, float(rules["canli_marj_kaldirac"]))
     for uye in uyeler:
         hesap.slot_ac(uye["adres"], slot)
