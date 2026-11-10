@@ -4,23 +4,23 @@
    "adres": "0xfb94d93d73b1a5398816c7d46e1590173371f82b",
    "coin": "HYPE",
    "giris": 71.791,
-   "kz_usd": -0.3249855177756072,
-   "mark": 71.6635,
+   "kz_usd": -0.5926206500614162,
+   "mark": 71.5585,
    "sz": 2.5489060217695134,
-   "usd": 182.6635266910795
+   "usd": 182.39589155879372
   },
   {
    "adres": "0xfb94d93d73b1a5398816c7d46e1590173371f82b",
    "coin": "ZEC",
    "giris": 1150.5506878232588,
-   "kz_usd": -11.832515443430491,
-   "mark": 1040.15,
+   "kz_usd": -12.41127617992895,
+   "mark": 1034.75,
    "sz": 0.10717791416637956,
-   "usd": 111.48110742015972
+   "usd": 110.90234668366125
   }
  ],
  "acik_pozisyon": 2,
- "brut_usd": 294.1446341112392,
+ "brut_usd": 293.298238242455,
  "dinleyici": {
   "abonelik_oncesi_snapshot_gibi": 0,
   "dolgu_bekleyen": 0,
@@ -33,13 +33,13 @@
   "hakem_yeniden_deneme": 0,
   "kapanis_atlanan": 0,
   "kopma": 0,
-  "ping": 34,
+  "ping": 71,
   "rest_abonelik_oncesi_atlanan": 0,
   "rest_tur_atlanan": 0,
   "subscription_response": 355,
-  "tekrar": 0,
-  "trades_mesaj": 30898,
-  "userfills_mesaj": 6,
+  "tekrar": 4,
+  "trades_mesaj": 59494,
+  "userfills_mesaj": 7,
   "yeniden_baglanma": 0,
   "yeniden_baslama": 0
  },
@@ -61,27 +61,28 @@
  "en_buyuk_emir": {},
  "funding_gercek_usd": 0.0,
  "funding_oran_yok": 0,
- "funding_usd": -0.03851545164192806,
+ "funding_usd": -0.042185928348108505,
  "gec_acilis": 0,
- "getiri": -0.021520000245192072,
+ "getiri": -0.022370066590682414,
  "hip3_atlandi": 0,
  "inen": 1,
  "kapanis_eksik": 0,
  "kapanis_kuyrugu": 0,
  "kasa_usd": 1000.0,
  "kayit_sayac": {
+  "funding": 1,
   "kacan_tamamlandi": 1,
   "saha_dus": 1,
   "saha_giris": 1,
   "telegram": 2,
-  "tur": 2
+  "tur": 3
  },
  "kayma_n": 0,
  "kip": "sanal",
  "kor_kirpildi": 0,
  "kuyruk_gecikme_ms": {
   "max": 26,
-  "n": 180,
+  "n": 184,
   "p50": 15
  },
  "marj_yok": 0,
@@ -90,15 +91,15 @@
  "neden_say": {},
  "ortalama_kayma_ref": null,
  "ortalama_kayma_trader": null,
- "ozsermaye_usd": 978.479999754808,
+ "ozsermaye_usd": 977.6299334093176,
  "rest_429": 0,
- "rest_istek": 622,
+ "rest_istek": 1085,
  "saha": 5,
  "saha_n": 5,
  "slot_tavani": 0,
  "slot_usd": 200.0,
  "spot_atlandi": 0,
- "sure_dk": 14.5516,
+ "sure_dk": 29.966816666666666,
  "tasfiye": 0,
  "telegram_hata": 0,
  "ters_netlesme": 0,
@@ -116,5 +117,5 @@
   "0xfc76f730c3e2939825484e0a777368075d779ef9"
  ],
  "vardiya": "42876194277",
- "yazildi_ms": 1794336485216
+ "yazildi_ms": 1794337410129
 }
