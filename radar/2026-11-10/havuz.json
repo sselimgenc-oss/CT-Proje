@@ -1,0 +1,83 @@
+{
+ "sema": "secim-d-havuz-v1",
+ "kosu_ms": 1794296508152,
+ "pencere_bas_ms": 1791877308152,
+ "doldurma": false,
+ "satirlar": [
+  {
+   "adres": "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29",
+   "tur": "uye",
+   "hesap_usd": 322041.452659,
+   "pnl_kum": 163372.052659,
+   "hafta_sayisi": 12,
+   "pozitif_hafta": 11,
+   "pnl_90g": 175172.624419,
+   "pnl_30g": 70740.898973,
+   "dusus_90g": 0.08631363773045998,
+   "zirve_dusus": 0.0,
+   "t_istat": 3.865461356791148,
+   "zirve_pnl": 163372.052659,
+   "neden": null
+  },
+  {
+   "adres": "0xde29121a6858d90ae486855b127f9d5ee4035232",
+   "tur": "uye",
+   "hesap_usd": 20391.743457,
+   "pnl_kum": -1268.646543,
+   "hafta_sayisi": 12,
+   "pozitif_hafta": 11,
+   "pnl_90g": 6087.89775,
+   "pnl_30g": 608.323543,
+   "dusus_90g": 0.008268382708694835,
+   "zirve_dusus": 0.0,
+   "t_istat": 3.121318921257328,
+   "zirve_pnl": -1268.646543,
+   "neden": null
+  },
+  {
+   "adres": "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad",
+   "tur": "uye",
+   "hesap_usd": 51219.223054,
+   "pnl_kum": 49094.613054,
+   "hafta_sayisi": 12,
+   "pozitif_hafta": 10,
+   "pnl_90g": 30095.185548,
+   "pnl_30g": 21030.99135,
+   "dusus_90g": 0.08086948379972589,
+   "zirve_dusus": 0.0,
+   "t_istat": 2.679844391013172,
+   "zirve_pnl": 49094.613054,
+   "neden": null
+  },
+  {
+   "adres": "0xfb94d93d73b1a5398816c7d46e1590173371f82b",
+   "tur": "uye",
+   "hesap_usd": 138337.873587,
+   "pnl_kum": -76912.156413,
+   "hafta_sayisi": 12,
+   "pozitif_hafta": 8,
+   "pnl_90g": 61009.249892999986,
+   "pnl_30g": 2464.1487259999994,
+   "dusus_90g": 0.04874214038543419,
+   "zirve_dusus": 0.0,
+   "t_istat": 2.3610095981962953,
+   "zirve_pnl": -76912.156413,
+   "neden": null
+  },
+  {
+   "adres": "0xfc76f730c3e2939825484e0a777368075d779ef9",
+   "tur": "uye",
+   "hesap_usd": 221956.546809,
+   "pnl_kum": 229943.216809,
+   "hafta_sayisi": 12,
+   "pozitif_hafta": 9,
+   "pnl_90g": 167927.886284,
+   "pnl_30g": 76039.23223600001,
+   "dusus_90g": 0.10726954723479491,
+   "zirve_dusus": 0.0,
+   "t_istat": 1.749141359552028,
+   "zirve_pnl": 229943.216809,
+   "neden": null
+  }
+ ]
+}

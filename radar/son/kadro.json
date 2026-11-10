@@ -2,7 +2,7 @@
  "sema": "radar-kadro-v1",
  "radar_surum": "v2",
  "secim_yapi": "D",
- "kosu_ms": 1794250725900,
+ "kosu_ms": 1794296508152,
  "kasa_usd": 1000.0,
  "slot_usd": 200.0,
  "saha_n": 5,
@@ -21,7 +21,7 @@
    "ay_negatif": 0,
    "giris_hesap_usd": 316232.060273,
    "giris_pnl_kum": 157562.660273,
-   "zirve_pnl": 157562.660273,
+   "zirve_pnl": 163372.052659,
    "sicil_onceki": 0.0,
    "kopya_gunluk": [
     0.0,
