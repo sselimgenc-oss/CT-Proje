@@ -39,6 +39,14 @@ GUN = 24 * HOUR
 HAFTA = 7 * GUN
 SURUM = "v2"
 HAVUZ_SEMA = "secim-d-havuz-v1"
+HARIC_YOL = Path(__file__).resolve().parent / "radar" / "HARIC"     # elle çıkarma listesi (kullanıcı kararı; satır: adres  # neden, tarih)
+
+
+def haric_oku(yol: Path = HARIC_YOL) -> set[str]:
+    """Kullanıcının elle çıkardığı adresler (küçük harf). Dosya yoksa boş. `#` sonrası açıklama."""
+    if not yol.exists():
+        return set()
+    return {x.split("#", 1)[0].strip().lower() for x in yol.read_text(encoding="utf-8").splitlines() if x.split("#", 1)[0].strip()}
 
 
 # ------------------------------------------------------------------------------------------------------------------------------ saf ölçüler
@@ -204,8 +212,11 @@ def kadro_yaz(uyeler: list[dict], simdi: int, rules: dict, doldurma_ay: str, cik
 
 
 # ------------------------------------------------------------------------------------------------------------------------------ koşu (ağ)
-def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, saat=time.monotonic, canli: dict | None = None) -> tuple[dict, dict]:
-    """Döner (havuz, kadro). `canli` = {"hesap": motor durum/hesap.json, "saha": durum/saha.json} (D+ slot sicili ve motor düşürmesi; yoksa yedekler)."""
+def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, saat=time.monotonic, canli: dict | None = None,
+        haric: set[str] | None = None) -> tuple[dict, dict]:
+    """Döner (havuz, kadro). `canli` = {"hesap": motor durum/hesap.json, "saha": durum/saha.json} (D+ slot sicili ve motor düşürmesi; yoksa yedekler).
+    `haric` = kullanıcının elle çıkardığı adresler (`copytrade/radar/HARIC`): üyeyse `elle_cikarildi` ile çıkar, aday olmaz; boşalan yer AYNI koşuda doldurulur."""
+    haric = {x.lower() for x in (haric or set())}
     t0_kos = saat()
     n = boyut.saha_sayisi(float(rules["canli_kasa_usd"]), rules)
     kopya_bas = simdi - int(rules["secim_kopya_gun"]) * GUN
@@ -223,6 +234,12 @@ def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, sa
     gecmis = {a: int(t) for a, t in ((onceki or {}).get("cikanlar_gecmis") or {}).items() if simdi - int(t) < int(rules["canli_bekleme_gun"]) * GUN}
     for u in (onceki or {}).get("satirlar", []) if (onceki or {}).get("radar_surum") == SURUM else []:
         a = u["adres"]
+        if a.lower() in haric:                                              # kullanıcı kararı (10.11): elle çıkarma; yakın çıkan sayılır, geri girmez
+            cikanlar[a] = "elle_cikarildi"
+            gecmis[a] = simdi
+            satirlar.append({"adres": a, "tur": "uye", "neden": "elle_cikarildi"})
+            log(f"çıkış {a[:10]}… elle_cikarildi")
+            continue
         if a in bekleme:                                                    # D+: motor cezayla düşürdü → kadrodan da düşer (31 g sonra geri girme döngüsü yok)
             cikanlar[a] = "motor_dustu"
             gecmis[a] = simdi
@@ -255,9 +272,11 @@ def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, sa
         else:
             yeni_sicil = sicil if (ay_kontrol and sicil is not None) else u.get("sicil_onceki")
             uyeler.append({**u, **o, "t_istat": u.get("form"), "kopya_getiri": u.get("kopya_getiri_7g"), "ay_negatif": ayn, "sicil_onceki": yeni_sicil})
+    if "elle_cikarildi" in cikanlar.values():                                # elle çıkarılan yer ay başını beklemez
+        doldur = True
     if doldur and len(uyeler) < n:
         tablo = client.leaderboard()
-        dislanan = {u["adres"] for u in uyeler} | set(cikanlar) | set(gecmis) | bekleme                  # denetim 4: cezalı / yakın zamanda çıkan aday olmaz
+        dislanan = {u["adres"] for u in uyeler} | set(cikanlar) | set(gecmis) | bekleme | haric                  # denetim 4: cezalı / yakın zamanda çıkan aday olmaz
         aday = [x for x in on_filtre(tablo, rules) if x["adres"] not in dislanan]
         log(f"doldurma: boş {n - len(uyeler)}, lider tablosu {len(tablo)}, ön filtre {len(aday)}")
         butce = float(rules["secim_butce_dk"]) * 60
@@ -336,7 +355,7 @@ def main(argv: list[str] | None = None) -> int:
     onceki = json.loads(a.onceki_kadro.read_text(encoding="utf-8")) if a.onceki_kadro else None
     simdi = int(time.time() * 1000)
     canli = {k: json.loads(p.read_text(encoding="utf-8")) for k, p in (("hesap", a.canli_hesap), ("saha", a.canli_saha)) if p and p.exists()}
-    havuz, kadro = kos(radar_tarama.radar_istemcisi(rules=rules), simdi, onceki, rules, canli=canli)
+    havuz, kadro = kos(radar_tarama.radar_istemcisi(rules=rules), simdi, onceki, rules, canli=canli, haric=haric_oku())
     klasor = a.cikti / datetime.fromtimestamp(simdi / 1000, UTC).date().isoformat()
     klasor.mkdir(parents=True, exist_ok=True)
     for ad, veri in (("havuz.json", havuz), ("kadro.json", kadro)):

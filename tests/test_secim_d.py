@@ -144,3 +144,25 @@ def test_denetim_zirve_giristen_beri_ve_cezali_aday_olmaz(tmp_path):
     c.liderler = [lider_ay(A1, 20_000, 100, 5_000, 600)]
     _, k4 = s.kos(c, T + GUN, k3, RULES, log=lambda *_: None)
     assert k4["satirlar"] == [] and A1 in k4["cikanlar_gecmis"]
+
+
+def test_elle_cikarilan_uye_ayni_kosuda_yerine_aday_alinir(tmp_path):
+    """Kullanıcı kararı (10.11): HARIC listesindeki üye `elle_cikarildi` ile çıkar; ay içinde de olsa aynı koşuda doldurma yapılır, çıkarılan aday olmaz."""
+    bas = T - int(RULES["secim_kopya_gun"]) * GUN
+    fiyat = lambda coin, ts: 110.0 if (ts - bas - HOUR) % (24 * HOUR) >= 90 * MIN else 100.0     # noqa: E731
+    istikrarli = pf(lambda i: 20.0 + (i % 5) * 3.0)
+    c = SahteP([lider_ay(A1, 20_000, 100, 5_000, 600), lider_ay(A2, 20_000, 100, 5_000, 600)], {A1: _karli_dolumlar(bas), A2: _karli_dolumlar(bas)},
+               {A1: istikrarli, A2: istikrarli}, fiyat)
+    _, kadro = s.kos(c, T, None, RULES, log=lambda *_: None)
+    assert {x["adres"] for x in kadro["satirlar"]} == {A1, A2}
+    havuz2, kadro2 = s.kos(c, T + GUN, kadro, RULES, log=lambda *_: None, haric={A1.upper()})          # aynı ay; büyük/küçük harf fark etmez
+    assert havuz2["doldurma"] is True and kadro2["cikanlar"] == {A1: "elle_cikarildi"} and [x["adres"] for x in kadro2["satirlar"]] == [A2]
+    assert A1 in kadro2["cikanlar_gecmis"]
+
+
+def test_haric_dosyasi_okunur(tmp_path):
+    p = tmp_path / "HARIC"
+    assert s.haric_oku(p) == set()
+    p.write_text("# açıklama\n0xAbC  # neden\n\n", encoding="utf-8")
+    assert s.haric_oku(p) == {"0xabc"}
+    assert "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29" in s.haric_oku()                             # 10.11 kullanıcı kararı
