@@ -138,3 +138,7 @@
 {"t":"sonuc","cloid":"0x0a984faaf77712ead47b93b3d266181a","durum":"dolu","ms":1794311309089,"sz":0.00045394343661004944,"px":74399.0,"ucret":0.01519782198315798}
 {"t":"niyet","kimlik":"0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29:395010439265207","eylem":"artir","adres":"0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29","coin":"BTC","yon":"A","usd":90.30482,"reduce_only":false,"cloid":"0x23384f77805157d32f38bdce18ca4de5","ms":1794311311143}
 {"t":"sonuc","cloid":"0x23384f77805157d32f38bdce18ca4de5","durum":"dolu","ms":1794311311317,"sz":0.0012137907781000008,"px":74399.0,"ucret":0.04063716904493788}
+{"t":"niyet","kimlik":"0xfb94d93d73b1a5398816c7d46e1590173371f82b:585220152553759","eylem":"ac","adres":"0xfb94d93d73b1a5398816c7d46e1590173371f82b","coin":"ZEC","yon":"B","usd":83.352617,"reduce_only":false,"cloid":"0xbef5e3ffa97d198ec583a6c69a8e3ee6","ms":1794312700713}
+{"t":"sonuc","cloid":"0xbef5e3ffa97d198ec583a6c69a8e3ee6","durum":"dolu","ms":1794312700828,"sz":0.07274621865076789,"px":1145.8,"ucret":0.037508677798522426}
+{"t":"niyet","kimlik":"0xfb94d93d73b1a5398816c7d46e1590173371f82b:713990108878359","eylem":"artir","adres":"0xfb94d93d73b1a5398816c7d46e1590173371f82b","coin":"ZEC","yon":"B","usd":16.30082,"reduce_only":false,"cloid":"0x1c4cba2e75013c614c9c00a795a16d82","ms":1794312700832}
+{"t":"sonuc","cloid":"0x1c4cba2e75013c614c9c00a795a16d82","durum":"dolu","ms":1794312700945,"sz":0.014226583938131768,"px":1145.8,"ucret":0.007335368944340121}
