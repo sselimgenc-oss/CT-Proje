@@ -21,7 +21,8 @@ EPS = 1e-12
 
 class PaydaSerisi:
     """Zamana bağlı trader hesap değeri (trader_$; B8). `noktalar` = [(UTC ms, $)]; değeri ≤ 0 / sayı olmayan nokta atılır. `deger(t)` = t anında ya da öncesindeki SON nokta
-    (nedensel: canlı motor da önbellekteki son okumayı kullanır); t ilk noktadan önceyse ilk nokta. Boş seri kurulamaz (ValueError) — çağıran sabit paydaya düşer."""
+    (nedensel: canlı motor da önbellekteki son okumayı kullanır); t ilk noktadan önceyse 0,0 = ölçülemez (F02, denetim 10.11: gelecekteki değer kullanılmaz; `boyut.hedef_emir`
+    açılış/artırmayı `hesap_yok` ile atlar). Boş seri kurulamaz (ValueError) — çağıran sabit paydaya düşer."""
 
     def __init__(self, noktalar: list[tuple[int, float]]):
         temiz = sorted((int(t), float(v)) for t, v in noktalar if v is not None and math.isfinite(float(v)) and float(v) > 0)
@@ -32,7 +33,7 @@ class PaydaSerisi:
 
     def __call__(self, t: int) -> float:
         i = bisect.bisect_right(self.zaman, int(t)) - 1
-        return self.deger_[max(i, 0)]
+        return self.deger_[i] if i >= 0 else 0.0
 
     def __len__(self) -> int:
         return len(self.zaman)

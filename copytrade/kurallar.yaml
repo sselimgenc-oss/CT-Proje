@@ -158,6 +158,7 @@ canli_inen_saat: 24                     # saat (sahadan inenin açık pozisyonu 
 canli_mutabakat_sn: 60                  # sn
 canli_mutabakat_oran: 0.01              # oran (fark_usd > kasa x bu => alarm + yeni açılış dur)
 canli_hesap_okuma_sn: 600               # sn (trader hesap değeri / pozisyon senkron okuma sıklığı)
+canli_hesap_azami_yas_sn: 1800          # sn (F10 denetim 10.11: açılış/artırmada trader hesap önbelleği bundan eskiyse yeniden okunur; okunamazsa açılmaz)
 canli_ozet_saat_utc: 6                  # UTC saati (09:00 TR günlük özet)
 canli_telegram_emir_ozet_sn: 900     # sn (Telegram, SANAL kip: emirler bu aralıkta TEK özet mesajında toplanır; gerçek kipte her emir anında gider)
 canli_telegram_sanal_bos_mesaj: true    # SANAL kip: pencerede emir yoksa da tek kısa "emir yok · sistem çalışıyor" + kasa satırı (kullanıcı kararı 06.11); false = emir yoksa sessiz

@@ -448,6 +448,7 @@ class Motor:
         self.hl_oz: float | None = None
         self.hl_oz_ms: int = 0
         self.son_funding_saat: int | None = m.get("son_funding_saat")
+        self._funding_bekleyen: list[tuple[int, int, list]] = []       # F07: oran okunamayan saatlerin pozisyon görüntüleri (saat, kapsanan saat sayısı, [(adres, coin, sz, mark)])
         self.son_funding_ms: int | None = m.get("son_funding_ms")                  # G7 gerçek kip: işlenen en son `userFunding` satırının zamanı (ms, UTC); alan yoksa ilk bakımda "şimdi" (geçmiş okunmaz)
         self.funding_kimlik: list[str] = list(m.get("funding_kimlik") or [])       # G7: son işlenen satırların "time:coin" anahtarları (çift sayım yok)
         self.funding_gercek_usd = float(m.get("funding_gercek_usd", 0.0))          # G7: HL'den işlenen gerçek funding toplamı ($, HL hesabı = kasa ölçeği; + alınan / − ödenen)
@@ -536,18 +537,22 @@ class Motor:
     def mark(self, coin: str, yedek: float | None = None) -> float | None:
         return self.marks.get(coin) or yedek
 
-    def trader_hesap_usd(self, adres: str, simdi_ms: int, zorla: bool = False) -> float | None:
+    def trader_hesap_usd(self, adres: str, simdi_ms: int, zorla: bool = False, taze_sart: bool = False) -> float | None:
         """Trader hesap değeri (oran paydası, K‑35): tüm perp dex `accountValue` toplamı + spot USDC (`hesap_degeri_oku`). Önbellekteki değer kullanılır (yenileme `dakika()` içinde kilit dışında,
-        `canli_hesap_okuma_sn`); önbellek yoksa ya da `zorla` ise burada okunur. Okunamazsa önceki değer; hiç yoksa None (açılış atlanır)."""
+        `canli_hesap_okuma_sn`); önbellek yoksa ya da `zorla` ise burada okunur. Okunamazsa önceki değer; hiç yoksa None (açılış atlanır).
+        F10 (denetim 10.11): `taze_sart` (açılış/artırma) iken önbellek `canli_hesap_azami_yas_sn`'den eskiyse burada yeniden okunur; okunamazsa None (bayat paydayla büyük emir açılmaz)."""
         c = self.hesap_tr.get(adres)
-        if c and not zorla:
+        bayat = bool(c) and simdi_ms - int(c.get("ms") or 0) > float(self.rules.get("canli_hesap_azami_yas_sn", 1800)) * 1000
+        if c and not zorla and not (taze_sart and bayat):
             return float(c["deger"])
         try:
             deger = hesap_degeri_oku(self.post, adres, self._dexler())
             self.hesap_tr[adres] = {"deger": deger, "ms": simdi_ms}
             return deger
         except Exception as hata:                          # noqa: BLE001
-            self.kayit({"olay": "hesap_okuma_hata", "adres": adres, "tur": type(hata).__name__})
+            self.kayit({"olay": "hesap_okuma_hata", "adres": adres, "tur": type(hata).__name__, "bayat": bayat})
+            if taze_sart and bayat:
+                return None
             return float(c["deger"]) if c else None
 
     def hesap_oku(self) -> dict[str, float]:
@@ -730,7 +735,7 @@ class Motor:
         slot = self.hesap.slot_bas.get(adres, self.saha.slot)
         mk = self.mark(o.coin, o.px)
         biz_usd = abs(biz_sz) * (mk or o.px)
-        hesap_usd = self.trader_hesap_usd(adres, simdi) if eylem in ("ac", "artir", "azalt") else 0.0
+        hesap_usd = self.trader_hesap_usd(adres, simdi, taze_sart=eylem in ("ac", "artir")) if eylem in ("ac", "artir", "azalt") else 0.0
         if eylem in ("ac", "artir") and not hesap_usd:
             return self._atla(o, adres, eylem, "atlandi", "trader_hesap_yok")
         trader_once, trader_sonra = (0.0, sonra) if eylem == "ac" else ((once, 0.0) if eylem == "kapat" else (once, sonra))
@@ -1401,22 +1406,35 @@ class Motor:
             return 0.0
         if self.son_funding_saat is None or not any(self.hesap.poz.values()):          # pozisyon yokken geçen saatlerde funding yok
             self.son_funding_saat = saat
+            self._funding_bekleyen = []
             return 0.0
-        n = min(24, saat - self.son_funding_saat)
+        bekleyen = self._funding_bekleyen
+        son_kapsanan = bekleyen[-1][0] if bekleyen else self.son_funding_saat
+        if saat > son_kapsanan:
+            # F07 (denetim 10.11): saat sınırını geçen ilk bakımda pozisyonun anlık görüntüsü alınır (oran okunamasa da). Oran sonra gelince her saat KENDİ
+            # görüntüsüyle hesaplanır; arada değişen pozisyon (ör. 1 → 10 BTC) geçmiş saatlere uygulanmaz.
+            goruntu = [(a, c, p.sz, self.marks.get(c) or p.giris) for a, cs in self.hesap.poz.items() for c, p in cs.items()]
+            bekleyen.append((saat, saat - son_kapsanan, goruntu))
+        self._funding_bekleyen = bekleyen
+        n = min(24, sum(k for _, k, _ in bekleyen))
         if n <= 0 or oranlar is None:
             return 0.0
         toplam = 0.0
-        for adres, coinler in self.hesap.poz.items():
-            for coin, p in coinler.items():
+        kalan = 24
+        for _, k, goruntu in bekleyen:
+            k = min(k, kalan)
+            kalan -= k
+            for adres, coin, sz, mk in goruntu:
                 oran = oranlar.get(coin)
                 if oran is None:                               # t4b #7: sessiz atlama yok; sayaç + kayıt
                     self.sayac["funding_oran_yok"] += 1
                     self.kayit({"olay": "funding_oran_yok", "coin": coin, "adres": adres, "saat": saat})
                     continue
-                f = -p.sz * (self.marks.get(coin) or p.giris) * oran * n
+                f = -sz * mk * oran * k
                 self.hesap.funding_isle(adres, f)
                 toplam += f
         self.son_funding_saat = saat
+        self._funding_bekleyen = []
         self.kayit({"olay": "funding", "saat": saat, "saat_adet": n, "funding_usd": toplam, "toplam_funding_usd": self.hesap.funding_toplam()})
         return toplam
 

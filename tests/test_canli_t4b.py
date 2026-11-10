@@ -368,6 +368,37 @@ def test_sanal_funding_altin_ornek_isaret_ve_birim(tmp_path):
     assert m.hesap.funding_toplam() == pytest.approx(-0.36)                                    # pozisyon yok: funding yok
 
 
+def test_f07_oran_okunamayan_saat_kendi_pozisyon_goruntusuyle(tmp_path):
+    """F07 (denetim 10.11): saat sınırında long 1 BTC (mark 100), oran okunamıyor; aynı saat içinde pozisyon 10 BTC'ye çıkıyor, sonra oran (+0,0001) okunuyor.
+    Geçen saat 1 BTC ile hesaplanır: −1 × 100 × 0,0001 = −0,01 $ (eski davranış güncel 10 BTC ile −0,10 $ yazardı)."""
+    class FHL(SahteHL):
+        bozuk = False
+
+        def __call__(self, y):
+            if y["type"] == "metaAndAssetCtxs":
+                if self.bozuk:
+                    raise ConnectionError("meta")
+                return [{"universe": [{"name": "BTC"}]}, [{"funding": "0.0001"}]]
+            return super().__call__(y)
+    hl = FHL(pozlar={adr(1): {"BTC": 50.0}})
+    m, _, saat, _ = kur(tmp_path, hl=hl)
+    m.baslat()
+    m.dakika()
+    m.hesap.uygula(adr(1), "BTC", "B", 1.0, 100.0, 0.0, saat())
+    m.piyasa_oku(saat())
+    hl.bozuk = True
+    saat.ms += SAAT + 60_000
+    m.dakika()                                                                                  # sınır geçildi, oran yok: görüntü (1 BTC) alınır, funding yok
+    assert m.hesap.funding_toplam() == pytest.approx(0.0)
+    m.hesap.uygula(adr(1), "BTC", "B", 9.0, 100.0, 0.0, saat())                                # pozisyon 10 BTC
+    hl.bozuk = False
+    saat.ms += 60_000
+    m.dakika()
+    assert m.hesap.funding_toplam() == pytest.approx(-0.01)
+    m.dakika()
+    assert m.hesap.funding_toplam() == pytest.approx(-0.01)                                    # aynı saat ikinci kez uygulanmaz
+
+
 def test_funding_hesap_kaydi_kalici_ve_slot_ozsermayesine_girer():
     from copytrade.canli.hesap import Hesap
     h = Hesap(1000.0)

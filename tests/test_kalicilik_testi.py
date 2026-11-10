@@ -31,8 +31,8 @@ def test_haftalik_fark_ve_bootstrap_deterministik():
 
 
 def test_hukum_kurali():
-    assert k.hukum(0.001, 0.01).startswith("devam")
-    assert k.hukum(-0.01, -0.001).startswith("evren")
+    assert k.hukum(0.001, 0.01) == "pozitif fark (teşhis, kanıt değil)"
+    assert k.hukum(-0.01, -0.001) == "negatif fark (teşhis, kanıt değil)"
     assert k.hukum(-0.01, 0.01) == "belirsiz" and k.hukum(None, None) == "veri yetersiz"
 
 
@@ -45,7 +45,7 @@ def test_analiz_ve_ozet_md():
                        "g_t_istat": float(i), "kopya_islem_sayisi": 5 * i, "sonraki": 0.01 if gecti else -0.01})
     a = k.analiz(cs)
     assert a["cift"] == 24 and a["hafta"] == 4
-    assert a["test"]["b_v1_gecen_eksi_gecmeyen"]["ort"] == pytest.approx(0.02) and a["test"]["b_v1_gecen_eksi_gecmeyen"]["hukum"].startswith("devam")
+    assert a["test"]["b_v1_gecen_eksi_gecmeyen"]["ort"] == pytest.approx(0.02) and a["test"]["b_v1_gecen_eksi_gecmeyen"]["hukum"].startswith("pozitif fark")
     assert a["spearman"]["kopya_getiri_7g"]["ort"] < 0                       # geçenler düşük kopya getirili → ters sıra
     assert a["grup_ort"]["v1_gecen"]["n"] == 12 and round(a["grup_ort"]["v1_gecen"]["ort_usd"], 6) == 10.0
     md = k.ozet_md(a)
@@ -73,3 +73,10 @@ def test_saatlik_mum_dakika_istegine_son_saat():
     mum = k.SaatlikMum(c, 0, 10 * HOUR)
     assert [x["t"] for x in mum.candles("BTC", 5 * HOUR + MIN, 5 * HOUR + 20 * MIN, "1m")] == [5 * HOUR]      # aralıkta saat yok → önceki son saat
     assert [x["t"] for x in mum.candles("BTC", 2 * HOUR, 4 * HOUR, "1h")] == [2 * HOUR, 3 * HOUR, 4 * HOUR]
+
+
+def test_f15_bootstrap_altin_ornek_yuzdelik_konumu():
+    """F15 (denetim 10.11): x = [0, 1, 2], 10 tekrar, tohum 7. random.Random(7) ile 10 yeniden örneklemin ortalamaları sıralı:
+    [0, 1/3, 1/3, 1/3, 2/3, 2/3, 1, 1, 1, 4/3]. %10 → sıra int(0,10 × 10) = 1 → 1/3; %90 → sıra int(0,90 × 10) − 1 = 8 → 1. Aralık (1/3, 1)."""
+    alt, ust = k.bootstrap_aralik([0.0, 1.0, 2.0], tekrar=10, tohum=7)
+    assert alt == pytest.approx(1 / 3) and ust == pytest.approx(1.0)

@@ -217,6 +217,7 @@ def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, sa
     ay_kontrol = doldur and bool(onceki) and onceki.get("radar_surum") == SURUM
     satirlar: list[dict] = []
     uyeler, cikanlar, olcu = [], {}, []
+    tarama: dict = {"on_filtre": 0, "olculen": 0, "portfolio_hata": 0, "hata_tur": {}, "butce_disi": 0}        # F14: denenen / hata / bütçe dışı sayaçları
     canli = canli or {}
     bekleme = {a for a, bit in ((canli.get("saha") or {}).get("bekleme") or {}).items() if _sayi_mi(bit) and float(bit) > simdi}   # denetim 4: süresi dolmuş ceza sayılmaz
     gecmis = {a: int(t) for a, t in ((onceki or {}).get("cikanlar_gecmis") or {}).items() if simdi - int(t) < int(rules["canli_bekleme_gun"]) * GUN}
@@ -260,15 +261,20 @@ def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, sa
         aday = [x for x in on_filtre(tablo, rules) if x["adres"] not in dislanan]
         log(f"doldurma: boş {n - len(uyeler)}, lider tablosu {len(tablo)}, ön filtre {len(aday)}")
         butce = float(rules["secim_butce_dk"]) * 60
+        tarama.update({"on_filtre": len(aday)})
         for i, x in enumerate(aday, 1):
             if saat() - t0_kos > butce:
                 log(f"UYARI: süre bütçesi doldu; {len(aday) - i + 1} adres ölçülmedi")
+                tarama["butce_disi"] = len(aday) - i + 1
                 break
             try:
                 pf = client.portfolio(x["adres"])
                 o = portfolio_olculeri(pf, simdi, rules)
-            except radar_tarama.HATALAR:
+            except radar_tarama.HATALAR as h:                               # F14 (denetim 10.11): okuma hatası sayılır (havuz.json `tarama`)
+                tarama["portfolio_hata"] += 1
+                tarama["hata_tur"][type(h).__name__] = tarama["hata_tur"].get(type(h).__name__, 0) + 1
                 continue
+            tarama["olculen"] += 1
             neden = evren_kapisi(o, rules)
             if neden is None:
                 olcu.append({"adres": x["adres"], **o, "_pf": pf})
@@ -313,7 +319,7 @@ def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, sa
                 u["kopya_gunluk"] = None
     for o in olcu:
         o.pop("_pf", None)
-    havuz = {"sema": HAVUZ_SEMA, "kosu_ms": simdi, "pencere_bas_ms": kopya_bas, "doldurma": doldur, "satirlar": satirlar}
+    havuz = {"sema": HAVUZ_SEMA, "kosu_ms": simdi, "pencere_bas_ms": kopya_bas, "doldurma": doldur, "satirlar": satirlar, "tarama": tarama}
     kadro = kadro_yaz(uyeler, simdi, rules, ay if doldur else (onceki or {}).get("doldurma_ay", ay), cikanlar)
     kadro["cikanlar_gecmis"] = gecmis
     return havuz, kadro

@@ -64,7 +64,7 @@ def kor_bilesen_boyutu(adresler: list[str], kor: dict | None, esik: float) -> in
         for b in adresler[i + 1:]:
             if a in idx and b in idx:
                 r = m[idx[a]][idx[b]]
-                if r is not None and r >= esik:
+                if r is None or r >= esik:                     # F11 (denetim 10.11, B4): ikisi de matriste ama r ölçülemedi → benzer sayılır (temkinli)
                     ana[bul(a)] = bul(b)
     sayi: dict[str, int] = {}
     for a in adresler:
