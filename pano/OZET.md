@@ -1,18 +1,18 @@
-# Canlı rapor — 2026-11-10 01:25 UTC
+# Canlı rapor — 2026-11-10 01:42 UTC
 
-**Kip** sanal · vardiya `42699857896` · saha 5/5 (inen 0)
+**Kip** sanal · vardiya `42735744294` · saha 5/5 (inen 0)
 
 ## Kasa
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 999,96 $ | −%0,00 | — (geçmiş < 7 gün) | −%0,00 | −%0,07 |
+| 1.000,00 $ | 999,69 $ | −%0,03 | — (geçmiş < 7 gün) | −%0,03 | −%0,10 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x701adb… | BTC | L | 293,00 $ | +0,09 $ |
+| 0x701adb… | BTC | L | 292,73 $ | −0,18 $ |
 
 ## Son 24 saat
 
@@ -35,7 +35,7 @@ _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun gü
 
 ## Vardiya sağlığı
 
-- süre 255 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk 40.3 dk · REST 429 0
+- süre 15 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk 40.3 dk · REST 429 0
 
 ## Seçim isabeti (son 7)
 
