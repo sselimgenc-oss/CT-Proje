@@ -307,3 +307,10 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - **Küçük beşli (yapıldı, kullanıcı: "sonraya bırakmak için geçerli mazeretin var mı" → başla):** F09 yeni UTC gününün tabanı önceki günün son gözlenen özsermayesi (`son_oz`, kalıcı); F02 payda serisi ilk noktadan önce 0 = ölçülemez (açılış atlanır, gelecek değer yok); F07 sanal funding'de oran okunamayan saat, sınırdaki pozisyon görüntüsüyle hesaplanır; F12 v1.1 sınamasında eksik trader'lı gün kıyas dışı ve özette görünür; F15 bootstrap altın örnek.
 - **Büyük üçlü (Codex'e verilecek, lider denetler):** F08 (D+ kadrosunu tek portföy olarak oynatma; coin/marj/slot tavanı), F04 + F06 (oynatmada haftalık likidite ve fundingHistory), F05 (oynatma ↔ sanal kip mutabakat raporu). Canlı motor ve eşikler dokunulmaz.
 - Gerekmeyen: F03 (bilerek kötümser), F13/F16 (şüphe; somut etki yok). Codex'in 10 geliştirme önerisi doğrulanmadı; bilgi olarak.
+
+## K-59 — Elle çıkarma listesi; 0x701a… çıkarıldı (kullanıcı kararı 10.11)
+- Kullanıcı: "5 ile devam, ama 1. trader'ın işlem sayısı saçma; saçma hareket varsa yerine başkasını alalım".
+- İnceleme (17 saat): 0x701a… yalnız BTC'de 615 olay (71 trader emri; tek emir 125 parça dolum), bizde 84 emir, 3.275 $ hacim (200 $ slotun ~16 katı), ücret 1,47 $ + gerçekleşen −4,47 $. Kopya maliyeti bu tempoda ~%30/ay slot — sürdürülemez. Diğer 4 üye: 0–2 emir (beklenen tempo).
+- `copytrade/radar/HARIC`: elle çıkarma listesi. `secim_d` üyeyi `elle_cikarildi` ile çıkarır (yakın çıkan sayılır, 31 g aday olmaz), boşalan yer ay başını beklemeden AYNI koşuda doldurulur. Motor üyeyi kadrodan çıkışla K-39 ile düşürür (iki UTC günü).
+- D+'nın "değişim yok" ilkesi yalnız otomatik çıkışlar içindir; elle çıkarma kullanıcı kararıdır ve kayıtlıdır.
+- Not (yolda): seçim oynatması bu trader'ı +%1,3 ve 10 kopya işlemiyle geçirmişti; canlıdaki parça dolum/ücret yükü oynatmada görünmedi. F05 mutabakat raporu bir hafta sonra bu farkı ölçecek; gerekirse kapıya "kopya emir sayısı / maliyet payı" ölçüsü eklenir.
