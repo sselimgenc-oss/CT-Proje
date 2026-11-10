@@ -82,7 +82,8 @@ def raporla(kayitlar: list[dict], oynatmalar: dict[str, dict], bas: int, bit: in
                 fiyatlar.append((canli_px - px) / px * (1 if k.get("yon") == "B" else -1))
         canli_ucret = sum(_sayi(k.get("ucret")) or 0 for k in dolan)
         canli_kayma = sum((_sayi(k.get("kayma_trader")) or 0) * (_sayi(k.get("usd_dolan")) or 0) for k in dolan)
-        pnl_tam = all(k.get("pnl_usd") is not None for k in dolan)
+        # inceleme: `emir.pnl_usd` açılışta tanımı gereği null (VERI_SOZLESMESI §C); yalnız azaltma/kapanış dolumlarında eksikse ölçülemez
+        pnl_tam = all(k.get("pnl_usd") is not None for k in dolan if k.get("eylem") in ("azalt", "kapat"))
         canli_net = sum((_sayi(k.get("pnl_usd")) or 0) for k in dolan) - canli_ucret if pnl_tam else None
         sonuc = oynatma.get("sonuc") or {}
         maliyet = _sayi(sonuc.get("maliyet"))

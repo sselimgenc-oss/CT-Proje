@@ -29,8 +29,17 @@ def test_bir_trader_elle_mutabakat():
 
 def test_fiyat_eslesmeyince_uydurulmaz_ve_eksik_pnl_net_olmaz():
     rules = {"canli_kasa_usd": 1000, "maliyet_taker": 0.0004, "maliyet_kayma": 0.0006, "radar_kopya_gecikme_dk": 1}
-    kayit = [{"olay": "emir", "kip": "sanal", "adres": "T", "coin": "BTC", "trader_dolum_ms": 1,
+    kayit = [{"olay": "emir", "kip": "sanal", "adres": "T", "coin": "BTC", "eylem": "kapat", "trader_dolum_ms": 1,
               "durum": "dolu", "usd_dolan": 100, "dolum_px": 100, "pnl_usd": None, "ucret": 0.04}]
     out = raporla(kayit, {"T": {"sonuc": {"maliyet": 0, "gerceklesen": 0, "funding": 0}}}, 0, 10, rules)["uyeler"]["T"]
     assert out["fiyat_fark_oran_ort"] is None and out["fiyat_eslesme"] == 0
     assert out["canli_net_kz_usd"] is None and out["net_kz_farki_usd"] is None
+
+
+def test_acilisin_null_pnl_i_neti_bozmaz():
+    """İnceleme: `emir.pnl_usd` açılışta tanımı gereği null. Açılış (ücret 0,04) + kapanış (pnl +3, ücret 0,04) → net 3 − 0,08 = 2,92 $."""
+    rules = {"canli_kasa_usd": 1000, "maliyet_taker": 0.0004, "maliyet_kayma": 0.0006, "radar_kopya_gecikme_dk": 1}
+    kayit = [{"olay": "emir", "kip": "sanal", "adres": "T", "coin": "BTC", "eylem": "ac", "trader_dolum_ms": 1, "durum": "dolu", "usd_dolan": 100, "dolum_px": 100, "pnl_usd": None, "ucret": 0.04},
+             {"olay": "emir", "kip": "sanal", "adres": "T", "coin": "BTC", "eylem": "kapat", "trader_dolum_ms": 5, "durum": "dolu", "usd_dolan": 103, "dolum_px": 103, "pnl_usd": 3, "ucret": 0.04}]
+    out = raporla(kayit, {"T": {"sonuc": {"maliyet": 0, "gerceklesen": 0, "funding": 0}}}, 0, 10, rules)["uyeler"]["T"]
+    assert out["canli_net_kz_usd"] == pytest.approx(2.92)
