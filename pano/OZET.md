@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-10 21:04 UTC
+# Canlı rapor — 2026-11-10 21:19 UTC
 
 **Kip** sanal · vardiya `42876194277` · saha 5/5 (inen 1)
 
@@ -6,14 +6,14 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 981,84 $ | −%1,82 | — (geçmiş < 7 gün) | −%1,82 | −%1,88 |
+| 1.000,00 $ | 982,14 $ | −%1,79 | — (geçmiş < 7 gün) | −%1,79 | −%1,85 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0xfb94d9… | HYPE | L | 184,53 $ | +1,55 $ |
-| 0xfb94d9… | ZEC | L | 112,97 $ | −10,34 $ |
+| 0xfb94d9… | HYPE | L | 184,29 $ | +1,30 $ |
+| 0xfb94d9… | ZEC | L | 113,52 $ | −9,79 $ |
 
 ## Son 24 saat
 
@@ -24,11 +24,6 @@ _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun gü
 
 ## Saha değişiklikleri (24 sa)
 
-- 2026-11-09 21:09 giriş 0x701adb… — ilk_gun
-- 2026-11-09 21:09 giriş 0xde2912… — ilk_gun
-- 2026-11-09 21:09 giriş 0x8abc3b… — ilk_gun
-- 2026-11-09 21:09 giriş 0xfb94d9… — ilk_gun
-- 2026-11-09 21:09 giriş 0xfc76f7… — ilk_gun
 - 2026-11-10 18:33 çıkış 0x701adb… — elle_cikarildi
 - 2026-11-10 18:33 giriş 0x424d75… — bos_slot
 
@@ -38,7 +33,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 150 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 166 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
