@@ -448,6 +448,7 @@ class Motor:
         self.hl_oz: float | None = None
         self.hl_oz_ms: int = 0
         self.son_funding_saat: int | None = m.get("son_funding_saat")
+        self._funding_bekleyen: list[tuple[int, int, list]] = []       # F07: oran okunamayan saatlerin pozisyon görüntüleri (saat, kapsanan saat sayısı, [(adres, coin, sz, mark)])
         self.son_funding_ms: int | None = m.get("son_funding_ms")                  # G7 gerçek kip: işlenen en son `userFunding` satırının zamanı (ms, UTC); alan yoksa ilk bakımda "şimdi" (geçmiş okunmaz)
         self.funding_kimlik: list[str] = list(m.get("funding_kimlik") or [])       # G7: son işlenen satırların "time:coin" anahtarları (çift sayım yok)
         self.funding_gercek_usd = float(m.get("funding_gercek_usd", 0.0))          # G7: HL'den işlenen gerçek funding toplamı ($, HL hesabı = kasa ölçeği; + alınan / − ödenen)
@@ -1405,22 +1406,35 @@ class Motor:
             return 0.0
         if self.son_funding_saat is None or not any(self.hesap.poz.values()):          # pozisyon yokken geçen saatlerde funding yok
             self.son_funding_saat = saat
+            self._funding_bekleyen = []
             return 0.0
-        n = min(24, saat - self.son_funding_saat)
+        bekleyen = self._funding_bekleyen
+        son_kapsanan = bekleyen[-1][0] if bekleyen else self.son_funding_saat
+        if saat > son_kapsanan:
+            # F07 (denetim 10.11): saat sınırını geçen ilk bakımda pozisyonun anlık görüntüsü alınır (oran okunamasa da). Oran sonra gelince her saat KENDİ
+            # görüntüsüyle hesaplanır; arada değişen pozisyon (ör. 1 → 10 BTC) geçmiş saatlere uygulanmaz.
+            goruntu = [(a, c, p.sz, self.marks.get(c) or p.giris) for a, cs in self.hesap.poz.items() for c, p in cs.items()]
+            bekleyen.append((saat, saat - son_kapsanan, goruntu))
+        self._funding_bekleyen = bekleyen
+        n = min(24, sum(k for _, k, _ in bekleyen))
         if n <= 0 or oranlar is None:
             return 0.0
         toplam = 0.0
-        for adres, coinler in self.hesap.poz.items():
-            for coin, p in coinler.items():
+        kalan = 24
+        for _, k, goruntu in bekleyen:
+            k = min(k, kalan)
+            kalan -= k
+            for adres, coin, sz, mk in goruntu:
                 oran = oranlar.get(coin)
                 if oran is None:                               # t4b #7: sessiz atlama yok; sayaç + kayıt
                     self.sayac["funding_oran_yok"] += 1
                     self.kayit({"olay": "funding_oran_yok", "coin": coin, "adres": adres, "saat": saat})
                     continue
-                f = -p.sz * (self.marks.get(coin) or p.giris) * oran * n
+                f = -sz * mk * oran * k
                 self.hesap.funding_isle(adres, f)
                 toplam += f
         self.son_funding_saat = saat
+        self._funding_bekleyen = []
         self.kayit({"olay": "funding", "saat": saat, "saat_adet": n, "funding_usd": toplam, "toplam_funding_usd": self.hesap.funding_toplam()})
         return toplam
 

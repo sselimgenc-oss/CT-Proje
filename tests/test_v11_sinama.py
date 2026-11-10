@@ -1,4 +1,5 @@
 """v1.1 aday sınaması (yalnız bilgi): saf seçim/özet fonksiyonları."""
+import pytest
 from copytrade import v11_sinama as v
 from copytrade.kurallar import load_rules
 
@@ -51,3 +52,17 @@ def test_cikis_grubu():
     assert v.cikis_grubu("r0_disi").startswith("r0_disi")
     assert v.cikis_grubu("r1:sans_riski").startswith("r1")
     assert v.cikis_grubu("soguyan") == "soguyan"
+
+
+def test_f12_eksik_trader_gunu_kiyas_disi():
+    """F12 (denetim 10.11): 06.11'de t_2'nin 1 trader'ı ölçülemedi (kısmi getiri −%5) → eşli kıyasa girmez; yalnız 05.11 (t_2 +%1, v1 0) sayılır."""
+    def gun(t, kv1, kt2, eksik_t2):
+        var = {x: {"secilen": ["a"], "kasa": kv1, "eksik": 0} for x in v.VARYANTLAR}
+        var["t_2"] = {"secilen": ["a", "b"], "kasa": kt2, "eksik": eksik_t2}
+        return {"tarih": t, "pencere_gun": 1.0, "varyant": var, "cikanlar": []}
+    gunler = [gun("2026-11-05", 0.0, 0.01, 0), gun("2026-11-06", 0.0, -0.05, 1)]
+    oz = v.ozet(gunler)
+    t2 = oz["varyant"]["t_2"]
+    assert t2["gun"] == 1 and t2["eksik_gun"] == 1 and t2["ort_fark_v1"] == pytest.approx(0.01) and t2["kotu_gun"] == 0
+    md = v.ozet_md(gunler, oz)
+    assert "EKSİK 1" in md and "Kıyas dışı (eksik) gün" in md

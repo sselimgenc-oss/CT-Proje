@@ -64,9 +64,11 @@ def ozet(gunler: list[dict]) -> dict:
     """Günlük sonuçlardan varyant başına: ortalama kasa getirisi, v1'e fark (gün gün eşli), v1'den iyi gün sayısı; çıkış nedeni grupları."""
     var = {}
     for v in VARYANTLAR:
-        degerler = [(g["varyant"][v]["kasa"], g["varyant"]["v1"]["kasa"]) for g in gunler if g["varyant"][v]["kasa"] is not None and g["varyant"]["v1"]["kasa"] is not None]
+        # F12 (denetim 10.11): ölçülemeyen (eksik) trader'ı olan gün kısmi getiridir; tam günle kıyaslanmaz (eşli farktan çıkarılır, sayısı raporlanır)
+        tam = lambda g, x: g["varyant"][x]["kasa"] is not None and not g["varyant"][x].get("eksik")     # noqa: E731
+        degerler = [(g["varyant"][v]["kasa"], g["varyant"]["v1"]["kasa"]) for g in gunler if tam(g, v) and tam(g, "v1")]
         farklar = [a - b for a, b in degerler]
-        var[v] = {"gun": len(degerler), "ort_kasa": statistics.fmean(a for a, _ in degerler) if degerler else None,
+        var[v] = {"gun": len(degerler), "eksik_gun": sum(1 for g in gunler if g["varyant"][v].get("eksik") or g["varyant"]["v1"].get("eksik")), "ort_kasa": statistics.fmean(a for a, _ in degerler) if degerler else None,
                   "ort_fark_v1": statistics.fmean(farklar) if farklar else None, "iyi_gun": sum(1 for f in farklar if f > 1e-12),
                   "kotu_gun": sum(1 for f in farklar if f < -1e-12), "ort_koltuk": statistics.fmean(len(g["varyant"][v]["secilen"]) for g in gunler) if gunler else None}
     cikis: dict[str, list[float]] = {}
@@ -87,12 +89,13 @@ def ozet_md(gunler: list[dict], oz: dict) -> str:
          "| Gün | Pencere (gün) | " + " | ".join(VARYANTLAR) + " |", "|---|---|" + "---|" * len(VARYANTLAR)]
     for g in gunler:
         s.append(f"| {g['tarih']} | {g['pencere_gun']:.1f} | " + " | ".join(
-            f"{_yuzde(g['varyant'][v]['kasa'], True)} ({len(g['varyant'][v]['secilen'])})" for v in VARYANTLAR) + " |")
-    s += ["", "| Varyant | Açıklama | Ort. kasa | v1'e fark | v1'den iyi / kötü gün | Ort. koltuk |", "|---|---|---|---|---|---|"]
+            f"{_yuzde(g['varyant'][v]['kasa'], True)} ({len(g['varyant'][v]['secilen'])}{', EKSİK ' + str(g['varyant'][v]['eksik']) if g['varyant'][v].get('eksik') else ''})" for v in VARYANTLAR) + " |")
+    s += ["", "EKSİK = ölçülemeyen trader sayısı; o günler kıyas sütunlarına girmez (F12).", "",
+          "| Varyant | Açıklama | Ort. kasa | v1'e fark | v1'den iyi / kötü gün | Ort. koltuk | Kıyas dışı (eksik) gün |", "|---|---|---|---|---|---|---|"]
     for v in VARYANTLAR:
         o = oz["varyant"][v]
         s.append(f"| {v} | {ACIKLAMA[v]} | {_yuzde(o['ort_kasa'], True)} | {_yuzde(o['ort_fark_v1'], True)} | {o['iyi_gun']} / {o['kotu_gun']} | "
-                 f"{'—' if o['ort_koltuk'] is None else f'{o['ort_koltuk']:.1f}'} |")
+                 f"{'—' if o['ort_koltuk'] is None else f'{o['ort_koltuk']:.1f}'} | {o['eksik_gun']} |")
     s += ["", "**Kadrodan çıkanlar — ileri kopya getirisi (nedene göre):**", "", "| Neden | n | Ortalama | Pozitif |", "|---|---|---|---|"]
     for k, o in oz["cikis"].items():
         s.append(f"| {k} | {o['n']} | {_yuzde(o['ort'], True)} | {o['pozitif']}/{o['n']} |")

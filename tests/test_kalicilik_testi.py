@@ -73,3 +73,10 @@ def test_saatlik_mum_dakika_istegine_son_saat():
     mum = k.SaatlikMum(c, 0, 10 * HOUR)
     assert [x["t"] for x in mum.candles("BTC", 5 * HOUR + MIN, 5 * HOUR + 20 * MIN, "1m")] == [5 * HOUR]      # aralıkta saat yok → önceki son saat
     assert [x["t"] for x in mum.candles("BTC", 2 * HOUR, 4 * HOUR, "1h")] == [2 * HOUR, 3 * HOUR, 4 * HOUR]
+
+
+def test_f15_bootstrap_altin_ornek_yuzdelik_konumu():
+    """F15 (denetim 10.11): x = [0, 1, 2], 10 tekrar, tohum 7. random.Random(7) ile 10 yeniden örneklemin ortalamaları sıralı:
+    [0, 1/3, 1/3, 1/3, 2/3, 2/3, 1, 1, 1, 4/3]. %10 → sıra int(0,10 × 10) = 1 → 1/3; %90 → sıra int(0,90 × 10) − 1 = 8 → 1. Aralık (1/3, 1)."""
+    alt, ust = k.bootstrap_aralik([0.0, 1.0, 2.0], tekrar=10, tohum=7)
+    assert alt == pytest.approx(1 / 3) and ust == pytest.approx(1.0)

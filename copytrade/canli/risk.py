@@ -26,6 +26,7 @@ class Risk:
         self.zirve: float = float(d.get("zirve", kasa_usd))
         self.gun: str | None = d.get("gun")
         self.gun_basi: float = float(d.get("gun_basi", kasa_usd))
+        self.son_oz: float | None = float(d["son_oz"]) if d.get("son_oz") is not None else None     # F09: son gözlenen özsermaye (gün sınırı tabanı)
         self.dur: bool = bool(d.get("dur", False))
         self.dur_neden: str | None = d.get("dur_neden")
         self.fren_bitis: dict[str, int] = {k: int(v) for k, v in (d.get("fren_bitis") or {}).items()}
@@ -38,8 +39,11 @@ class Risk:
         olaylar: list[str] = []
         g = gun(simdi_ms)
         if g != self.gun:
-            self.gun, self.gun_basi = g, float(ozsermaye)
+            # F09 (denetim 10.11): yeni günün tabanı önceki günün SON gözlenen özsermayesi (gün sınırındaki boşlukta oluşan zarar yeni güne sayılır, silinmez); ilk çalıştırmada güncel değer
+            taban = self.son_oz if (self.gun is not None and self.son_oz is not None) else float(ozsermaye)
+            self.gun, self.gun_basi = g, float(taban)
             self.acilis_durdu["gunluk_kayip"] = False
+        self.son_oz = float(ozsermaye)
         self.zirve = max(self.zirve, float(ozsermaye))
         kayip = (self.gun_basi - ozsermaye) / self.gun_basi if self.gun_basi > 0 else 0.0
         if kayip >= float(self.rules["canli_gunluk_kayip_oran"]) - 1e-12 and not self.acilis_durdu.get("gunluk_kayip"):
@@ -59,7 +63,7 @@ class Risk:
 
     def donem_yenile(self, ozsermaye: float) -> None:
         """S-3: kasa değişikliği (yeni dönem): zirve ve gün başı yeni özsermayeye kurulur, günlük kayıp bayrağı iner (500 → 300 geçişi kayıp/DUR sayılmaz)."""
-        self.zirve = self.gun_basi = float(ozsermaye)
+        self.zirve = self.gun_basi = self.son_oz = float(ozsermaye)
         self.acilis_durdu["gunluk_kayip"] = False
 
     def dur_ver(self, neden: str) -> None:
@@ -133,5 +137,5 @@ class Risk:
 
     # ------------------------------------------------------------------ kalıcılık
     def to_json(self) -> dict[str, Any]:
-        return {"zirve": self.zirve, "gun": self.gun, "gun_basi": self.gun_basi, "dur": self.dur, "dur_neden": self.dur_neden, "fren_bitis": self.fren_bitis,
+        return {"zirve": self.zirve, "gun": self.gun, "gun_basi": self.gun_basi, "son_oz": self.son_oz, "dur": self.dur, "dur_neden": self.dur_neden, "fren_bitis": self.fren_bitis,
                 "yeni_coin": {a: list(v) for a, v in self.yeni_coin.items()}, "acilis_durdu": self.acilis_durdu}

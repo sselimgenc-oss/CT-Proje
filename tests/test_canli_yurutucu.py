@@ -296,6 +296,17 @@ def test_gunluk_kayip_tam_sinirda_tetiklenir_ve_utc_gunu_sifirlar():
     assert r.acilis_izni("a", "BTC", True, ertesi)[0] is True and r.gun_basi == 940.0               # gün başı özsermaye yenilendi
 
 
+def test_f09_gun_siniri_boslugundaki_zarar_yeni_gune_sayilir():
+    """F09 (denetim 10.11): 23:59 UTC'de 1.000 $; motor 00:02'de 960 $ görüyor (aradaki boşlukta −40 $). Yeni günün tabanı son gözlenen 1.000 $ olur
+    (eski davranış 960 $ yazıp −%4'ü silerdi). Sonra 950 $ → −%5 → günlük kayıp tetiklenir. Yeniden başlatmada `son_oz` kalıcı."""
+    gun0 = (T0 // (24 * HOUR) + 1) * 24 * HOUR                                                      # sonraki UTC gece yarısı
+    r = rk.Risk(RULES, 1000.0)
+    r.ozsermaye_isle(1000.0, gun0 - 60_000)
+    assert r.ozsermaye_isle(960.0, gun0 + 2 * 60_000) == [] and r.gun_basi == 1000.0
+    r2 = rk.Risk(RULES, 1000.0, r.to_json())
+    assert r2.son_oz == 960.0 and r2.ozsermaye_isle(950.0, gun0 + 3 * 60_000) == ["gunluk_kayip"]
+
+
 def test_zirveden_yuzde_20_dusus_dur_tetikler():
     r2 = rk.Risk(RULES, 1000.0)
     r2.ozsermaye_isle(1100.0, T0)

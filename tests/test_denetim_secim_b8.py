@@ -21,10 +21,10 @@ GUN = 24 * HOUR
 
 
 # ================================================================================================ B8: payda serisi
-def test_payda_serisi_adim_fonksiyonu_nedensel_ve_ilk_noktadan_once_ilk_deger():
-    """Noktalar (1.000 ms → 10.000 $), (5.000 ms → 20.000 $); ≤ 0 ve NaN atılır. t < 1.000 → ilk değer; 1.000…4.999 → 10.000; ≥ 5.000 → 20.000 (o ana kadarki SON değer)."""
+def test_payda_serisi_adim_fonksiyonu_nedensel_ve_ilk_noktadan_once_olculemez():
+    """Noktalar (1.000 ms → 10.000 $), (5.000 ms → 20.000 $); ≤ 0 ve NaN atılır. t < 1.000 → 0,0 (F02: ölçülemez, gelecek değer yok); 1.000…4.999 → 10.000; ≥ 5.000 → 20.000."""
     p = kopya_v5.PaydaSerisi([(5_000, 20_000.0), (1_000, 10_000.0), (3_000, 0.0), (4_000, float("nan"))])
-    assert [p(t) for t in (0, 999, 1_000, 4_999, 5_000, 10**13)] == [10_000.0, 10_000.0, 10_000.0, 10_000.0, 20_000.0, 20_000.0] and len(p) == 2
+    assert [p(t) for t in (0, 999, 1_000, 4_999, 5_000, 10**13)] == [0.0, 0.0, 10_000.0, 10_000.0, 20_000.0, 20_000.0] and len(p) == 2
     with pytest.raises(ValueError):
         kopya_v5.PaydaSerisi([(1, 0.0), (2, -5.0)])
     assert kopya_v5.payda_fonk(20_000)(123) == 20_000.0 and kopya_v5.payda_fonk(p) is p              # sabit sayı = eski davranış
