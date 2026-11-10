@@ -172,3 +172,5 @@
 {"zaman_ms":1794284926329,"olay":"telegram","metin":"🧾 Son 1 saat (06:28–07:28 TSİ): 20 emir · sanal\n➕ açılış 1 · ⬆️ artırma 7 · ⬇️ azaltma 11 · ✖️ kapanış 1\n🏆 En büyük: 53,5 $ (BTC, AL) · 0x701adb…\n⏭️ Kopyalanmayan trader dolumu: 79 (≈2 ayrı işlem)\n   • kural gereği 79: 79 çok küçük (< 11 $)\n   • kaçırılan 0 (geç görülen / veri yok)\n💵 Tutar toplamı: ","acik":true}
 {"zaman_ms":1794285216835,"olay":"tur","ozsermaye_usd":998.4148}
 {"zaman_ms":1794286075644,"olay":"tur","ozsermaye_usd":998.0892}
+{"zaman_ms":1794286831182,"olay":"funding","saat":498413,"saat_adet":1,"funding_usd":-0.0037549111189578866,"toplam_funding_usd":-0.018323772570933913}
+{"zaman_ms":1794286928266,"olay":"tur","ozsermaye_usd":998.6804}
