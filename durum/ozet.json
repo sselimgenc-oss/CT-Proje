@@ -4,23 +4,23 @@
    "adres": "0xfb94d93d73b1a5398816c7d46e1590173371f82b",
    "coin": "ZEC",
    "giris": 1150.5506878232588,
-   "kz_usd": -14.104687223757743,
-   "mark": 1018.95,
+   "kz_usd": -12.51845409409533,
+   "mark": 1033.75,
    "sz": 0.10717791416637956,
-   "usd": 109.20893563983246
+   "usd": 110.79516876949488
   },
   {
    "adres": "0xfb94d93d73b1a5398816c7d46e1590173371f82b",
    "coin": "HYPE",
    "giris": 71.791,
-   "kz_usd": -1.4949333817678219,
-   "mark": 71.2045,
+   "kz_usd": -1.9435408415992612,
+   "mark": 71.0285,
    "sz": 2.5489060217695134,
-   "usd": 181.4935788270873
+   "usd": 181.04497136725587
   }
  ],
  "acik_pozisyon": 2,
- "brut_usd": 290.70251446691975,
+ "brut_usd": 291.84014013675073,
  "dinleyici": {
   "abonelik_oncesi_snapshot_gibi": 0,
   "dolgu": 0,
@@ -34,12 +34,12 @@
   "hakem_yeniden_deneme": 0,
   "kapanis_atlanan": 0,
   "kopma": 1,
-  "ping": 430,
+  "ping": 466,
   "rest_abonelik_oncesi_atlanan": 0,
   "rest_tur_atlanan": 0,
   "subscription_response": 708,
   "tekrar": 161,
-  "trades_mesaj": 797790,
+  "trades_mesaj": 840145,
   "userfills_mesaj": 19,
   "yeniden_baglanma": 1,
   "yeniden_baslama": 0
@@ -70,7 +70,7 @@
  "funding_oran_yok": 0,
  "funding_usd": -0.04000176129104877,
  "gec_acilis": 0,
- "getiri": -0.024963606199160604,
+ "getiri": -0.023825980529329605,
  "hip3_atlandi": 0,
  "inen": 0,
  "kapanis_eksik": 0,
@@ -81,8 +81,8 @@
   "emir_yok": 92,
   "funding": 3,
   "kacan_tamamlandi": 1,
-  "telegram": 2,
-  "tur": 13
+  "telegram": 3,
+  "tur": 14
  },
  "kayma_n": 9,
  "kip": "sanal",
@@ -103,15 +103,15 @@
  },
  "ortalama_kayma_ref": 0.0,
  "ortalama_kayma_trader": -4.2120963964852924e-05,
- "ozsermaye_usd": 975.0363938008394,
+ "ozsermaye_usd": 976.1740194706704,
  "rest_429": 0,
- "rest_istek": 5817,
+ "rest_istek": 6245,
  "saha": 5,
  "saha_n": 5,
  "slot_tavani": 31,
  "slot_usd": 200.0,
  "spot_atlandi": 0,
- "sure_dk": 180.46415,
+ "sure_dk": 195.79588333333334,
  "tasfiye": 0,
  "telegram_hata": 0,
  "ters_netlesme": 0,
@@ -129,5 +129,5 @@
   "0xfc76f730c3e2939825484e0a777368075d779ef9"
  ],
  "vardiya": "42832254498",
- "yazildi_ms": 1794331037464
+ "yazildi_ms": 1794331957368
 }
