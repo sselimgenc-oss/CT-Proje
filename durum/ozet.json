@@ -4,14 +4,14 @@
    "adres": "0xfb94d93d73b1a5398816c7d46e1590173371f82b",
    "coin": "ZEC",
    "giris": 1145.8,
-   "kz_usd": 4.20513500517331,
-   "mark": 1194.15,
+   "kz_usd": 2.752689201938682,
+   "mark": 1177.45,
    "sz": 0.08697280258889965,
-   "usd": 103.85857221153452
+   "usd": 102.4061264082999
   }
  ],
  "acik_pozisyon": 1,
- "brut_usd": 103.85857221153452,
+ "brut_usd": 102.4061264082999,
  "dinleyici": {
   "abonelik_oncesi_snapshot_gibi": 0,
   "dolgu_bekleyen": 0,
@@ -24,19 +24,19 @@
   "hakem_yeniden_deneme": 0,
   "kapanis_atlanan": 0,
   "kopma": 0,
-  "ping": 106,
+  "ping": 142,
   "rest_abonelik_oncesi_atlanan": 0,
   "rest_tur_atlanan": 0,
   "subscription_response": 354,
-  "tekrar": 61,
-  "trades_mesaj": 241066,
-  "userfills_mesaj": 6,
+  "tekrar": 66,
+  "trades_mesaj": 310837,
+  "userfills_mesaj": 7,
   "yeniden_baglanma": 0,
   "yeniden_baslama": 0
  },
  "dur": false,
  "emir": {
-  "atlandi": 55,
+  "atlandi": 60,
   "dolmadi": 0,
   "dolu": 6,
   "emir": 6,
@@ -60,7 +60,7 @@
  "funding_oran_yok": 0,
  "funding_usd": -0.03262726052237107,
  "gec_acilis": 0,
- "getiri": -0.005058484173653288,
+ "getiri": -0.006510929976887958,
  "hip3_atlandi": 0,
  "inen": 0,
  "kapanis_eksik": 0,
@@ -68,38 +68,38 @@
  "kasa_usd": 1000.0,
  "kayit_sayac": {
   "emir": 6,
-  "emir_yok": 55,
+  "emir_yok": 60,
   "funding": 1,
   "kacan_tamamlandi": 1,
-  "tur": 4
+  "tur": 5
  },
  "kayma_n": 6,
  "kip": "sanal",
  "kor_kirpildi": 0,
  "kuyruk_gecikme_ms": {
   "max": 1041,
-  "n": 211,
+  "n": 216,
   "p50": 7
  },
  "marj_yok": 0,
  "min_emir_say": {
-  "min_emir_atlandi": 55
+  "min_emir_atlandi": 60
  },
  "min_nosyonel": 0,
  "neden_say": {
-  "min_emir_atlandi": 55
+  "min_emir_atlandi": 60
  },
  "ortalama_kayma_ref": 0.0,
  "ortalama_kayma_trader": -6.318144594727938e-05,
- "ozsermaye_usd": 994.9415158263467,
+ "ozsermaye_usd": 993.489070023112,
  "rest_429": 0,
- "rest_istek": 1532,
+ "rest_istek": 1949,
  "saha": 5,
  "saha_n": 5,
  "slot_tavani": 0,
  "slot_usd": 200.0,
  "spot_atlandi": 0,
- "sure_dk": 44.875166666666665,
+ "sure_dk": 59.68875,
  "tasfiye": 0,
  "telegram_hata": 0,
  "ters_netlesme": 0,
@@ -117,5 +117,5 @@
   "0xfc76f730c3e2939825484e0a777368075d779ef9"
  ],
  "vardiya": "42832254498",
- "yazildi_ms": 1794322902126
+ "yazildi_ms": 1794323790941
 }
