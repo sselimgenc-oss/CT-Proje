@@ -536,18 +536,22 @@ class Motor:
     def mark(self, coin: str, yedek: float | None = None) -> float | None:
         return self.marks.get(coin) or yedek
 
-    def trader_hesap_usd(self, adres: str, simdi_ms: int, zorla: bool = False) -> float | None:
+    def trader_hesap_usd(self, adres: str, simdi_ms: int, zorla: bool = False, taze_sart: bool = False) -> float | None:
         """Trader hesap değeri (oran paydası, K‑35): tüm perp dex `accountValue` toplamı + spot USDC (`hesap_degeri_oku`). Önbellekteki değer kullanılır (yenileme `dakika()` içinde kilit dışında,
-        `canli_hesap_okuma_sn`); önbellek yoksa ya da `zorla` ise burada okunur. Okunamazsa önceki değer; hiç yoksa None (açılış atlanır)."""
+        `canli_hesap_okuma_sn`); önbellek yoksa ya da `zorla` ise burada okunur. Okunamazsa önceki değer; hiç yoksa None (açılış atlanır).
+        F10 (denetim 10.11): `taze_sart` (açılış/artırma) iken önbellek `canli_hesap_azami_yas_sn`'den eskiyse burada yeniden okunur; okunamazsa None (bayat paydayla büyük emir açılmaz)."""
         c = self.hesap_tr.get(adres)
-        if c and not zorla:
+        bayat = bool(c) and simdi_ms - int(c.get("ms") or 0) > float(self.rules.get("canli_hesap_azami_yas_sn", 1800)) * 1000
+        if c and not zorla and not (taze_sart and bayat):
             return float(c["deger"])
         try:
             deger = hesap_degeri_oku(self.post, adres, self._dexler())
             self.hesap_tr[adres] = {"deger": deger, "ms": simdi_ms}
             return deger
         except Exception as hata:                          # noqa: BLE001
-            self.kayit({"olay": "hesap_okuma_hata", "adres": adres, "tur": type(hata).__name__})
+            self.kayit({"olay": "hesap_okuma_hata", "adres": adres, "tur": type(hata).__name__, "bayat": bayat})
+            if taze_sart and bayat:
+                return None
             return float(c["deger"]) if c else None
 
     def hesap_oku(self) -> dict[str, float]:
@@ -730,7 +734,7 @@ class Motor:
         slot = self.hesap.slot_bas.get(adres, self.saha.slot)
         mk = self.mark(o.coin, o.px)
         biz_usd = abs(biz_sz) * (mk or o.px)
-        hesap_usd = self.trader_hesap_usd(adres, simdi) if eylem in ("ac", "artir", "azalt") else 0.0
+        hesap_usd = self.trader_hesap_usd(adres, simdi, taze_sart=eylem in ("ac", "artir")) if eylem in ("ac", "artir", "azalt") else 0.0
         if eylem in ("ac", "artir") and not hesap_usd:
             return self._atla(o, adres, eylem, "atlandi", "trader_hesap_yok")
         trader_once, trader_sonra = (0.0, sonra) if eylem == "ac" else ((once, 0.0) if eylem == "kapat" else (once, sonra))

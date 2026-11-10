@@ -31,8 +31,8 @@ def test_haftalik_fark_ve_bootstrap_deterministik():
 
 
 def test_hukum_kurali():
-    assert k.hukum(0.001, 0.01).startswith("devam")
-    assert k.hukum(-0.01, -0.001).startswith("evren")
+    assert k.hukum(0.001, 0.01) == "pozitif fark (teşhis, kanıt değil)"
+    assert k.hukum(-0.01, -0.001) == "negatif fark (teşhis, kanıt değil)"
     assert k.hukum(-0.01, 0.01) == "belirsiz" and k.hukum(None, None) == "veri yetersiz"
 
 
@@ -45,7 +45,7 @@ def test_analiz_ve_ozet_md():
                        "g_t_istat": float(i), "kopya_islem_sayisi": 5 * i, "sonraki": 0.01 if gecti else -0.01})
     a = k.analiz(cs)
     assert a["cift"] == 24 and a["hafta"] == 4
-    assert a["test"]["b_v1_gecen_eksi_gecmeyen"]["ort"] == pytest.approx(0.02) and a["test"]["b_v1_gecen_eksi_gecmeyen"]["hukum"].startswith("devam")
+    assert a["test"]["b_v1_gecen_eksi_gecmeyen"]["ort"] == pytest.approx(0.02) and a["test"]["b_v1_gecen_eksi_gecmeyen"]["hukum"].startswith("pozitif fark")
     assert a["spearman"]["kopya_getiri_7g"]["ort"] < 0                       # geçenler düşük kopya getirili → ters sıra
     assert a["grup_ort"]["v1_gecen"]["n"] == 12 and round(a["grup_ort"]["v1_gecen"]["ort_usd"], 6) == 10.0
     md = k.ozet_md(a)

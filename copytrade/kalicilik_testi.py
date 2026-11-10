@@ -4,7 +4,7 @@ Kurallar, motor, kadro ve veri dalları DEĞİŞMEZ. Önceden kayıtlı ölçül
   (a) her ölçünün (kopya getirisi, bootstrap alt %20, t, kopya işlem sayısı) sonraki hafta getirisiyle Spearman'ı (hafta başına, sonra ortalama);
   (b) R1'i geçen − geçemeyen (dolum kurallarını geçip kopyası oynatılanlar arasında) sonraki hafta ortalama getiri farkı; v1 (kopya işlem kapısı yok) ve v1.1 (≥ 10);
   (c) v1 geçenler içinde kopya işlem ≥ 10 ile < 10 farkı.
-  Haftalık farkların ortalaması + hafta bloklu bootstrap %80 aralık. Karar: alt sınır > 0 → "devam"; üst sınır < 0 → evren tasarımı değişmeli; arada → belirsiz.
+  Haftalık farkların ortalaması + hafta bloklu bootstrap %80 aralık. Hüküm yalnız teşhis (F01, denetim 10.11): aday evreni bugünden geriye kurulduğu için ileri bakış yanlılığı vardır; alt > 0 → "pozitif fark", üst < 0 → "negatif fark", arada → belirsiz. Karar kanıtı sayılmaz.
 
 Evren: kayıtlı radar havuzlarının (origin/radar) tüm adresleri — bugünün kazananları (SURVIVORSHIP: sonuç iyimser okunur; burada bile kalıcılık yoksa yöntemde yok).
 Ölçek: 1.000 $ kasa, slot = kasa / 11 (kopya_v5, R1 ile aynı boyut). **Yaklaşık kopya:** eski haftalarda 1/5 dk mum yok; kopya = trader'ın dolum fiyatıyla (gecikmesiz)
@@ -180,7 +180,9 @@ def spearman_haftalik(cs: list[dict], olcu: str) -> list[float]:
 def hukum(alt: float | None, ust: float | None) -> str:
     if alt is None:
         return "veri yetersiz"
-    return "devam (kalıcılık var)" if alt > 0 else ("evren tasarımı değişmeli (ters)" if ust < 0 else "belirsiz")
+    # F01 (denetim 10.11): aday evreni bugünkü lider tablosundan geriye kurulur (geçmiş havuz arşivi yok) → hayatta kalma/ileri bakış yanlılığı.
+    # Çıktı karar ("devam") değil, yalnız yön gösteren teşhistir.
+    return "pozitif fark (teşhis, kanıt değil)" if alt > 0 else ("negatif fark (teşhis, kanıt değil)" if ust < 0 else "belirsiz")
 
 
 def analiz(cs: list[dict]) -> dict:
@@ -208,7 +210,7 @@ def analiz(cs: list[dict]) -> dict:
 
 def ozet_md(a: dict) -> str:
     y = lambda v: "—" if v is None else f"{v * 1000:+.2f} $"     # noqa: E731  (getiri oranı → 1.000 $ kasada $, trader başına bir hafta)
-    s = ["## Kalıcılık testi (8 hafta, yalnız bilgi)", "", f"Çift (trader-hafta): {a['cift']}, hafta: {a['hafta']}", "",
+    s = ["## Kalıcılık testi (8 hafta, yalnız bilgi)", "", "> Uyarı (F01): aday evreni bugünkü lider tablosundan geriye kuruldu (geçmiş havuz arşivi yok); sonuçlar iyimser olabilir, karar kanıtı değildir.", "", f"Çift (trader-hafta): {a['cift']}, hafta: {a['hafta']}", "",
          "| Test | Hafta | Ortalama fark | %80 aralık | Hüküm |", "|---|---|---|---|---|"]
     for k, t in a["test"].items():
         s.append(f"| {k} | {t['hafta']} | {y(t['ort'])} | {y(t['alt80'])} … {y(t['ust80'])} | {t['hukum']} |")

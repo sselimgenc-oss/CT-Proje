@@ -296,3 +296,12 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - **Neden 5 şimdilik yeterli:** tek trader en kötü ≈40–60 $ (slot stop %20, tavan 1,5×) = kasanın %4–6'sı; kasa kilitleri üstte. Zayıf sinyalde koruma N'den değil kurallardan.
 - **Kademeli artış (önceden yazılı):** 4 hafta sonra slot başına yuvarlanan + atlanan açılış payı < %20 **ve** kopya kapısını geçen aday ≥ 8 → 6 × 165 $; bir ay daha aynı koşul → 7 × 140 $. Yuvarlanan > %30 → 4 × 250 $ (K-56). Kasa 1.500 $'ı geçerse N yeniden ele alınır.
 - **İlk haftalarda tek ölçü:** slot başına yuvarlanan + atlanan açılış payı (kopya sadakati). Getiriye 6–8 haftadan önce bakılmaz.
+
+## K-58 — Codex denetimi (F01–F16), Fable doğrulaması: öncelikli düzeltmeler (kullanıcı: "Fable'ın dediklerini yap", 10.11)
+- Fable: 16 bulgunun 14'ü gerçek, 2'si şüphe, yanlış yok; Codex'in "yüksek" derecelerinin 10'u orta/düşüğe indi.
+- **F10 (yapıldı):** açılış/artırmada trader hesap önbelleği `canli_hesap_azami_yas_sn` (1.800 sn = 3 × okuma aralığı) eskiyse yeniden okunur; okunamazsa açılmaz (bayat paydayla büyük emir yok). Azaltma eski değerle sürer.
+- **F01 (yapıldı):** kalıcılık testinin hükmü "devam" yerine "pozitif/negatif fark (teşhis, kanıt değil)"; özete ileri bakış yanlılığı uyarısı (aday evreni bugünden geriye kurulu).
+- **F11 (yapıldı, B4):** iki adres de benzerlik matrisinde ama r ölçülemedi (None) → benzer sayılır (temkinli).
+- **F14 (yapıldı):** seçim taramasında ön filtre / ölçülen / portfolio hatası (türüne göre) / bütçe dışı sayaçları `havuz.json` `tarama`'ya yazılır.
+- **Fable ek gözlemi (yapıldı):** motorun üretim D+ boyutuyla (5 × 200 $, 5,5 $ eşiği, tavan 1,5×) uçtan uca altın örnek testi (`tests/test_dplus.py`).
+- **Ertelenen (gerçek para öncesi listesine):** F08 (seçim oynatması tek portföy değil; coin/marj tavanı toplamı kırpar), F02 (payda ilk nokta öncesi), F04/F06/F07 (oynatmada likidite/funding), F05 (oynatma–sanal mutabakat raporu), F09 (UTC gün değişiminde günlük taban), F12 (eksik trader kıyas), F15 (bootstrap altın örnek), F03 kasıtlı (kötümser), F13/F16 şüphe. Codex'in 10 geliştirme önerisi doğrulanmadı; bilgi olarak.

@@ -84,6 +84,7 @@ def test_kos_ilk_doldurma_sonra_ayni_ay_yalniz_uye_denetimi(tmp_path):
     assert kadro["doldurma_ay"] == "1971-02" and kadro["korelasyon"]["adresler"] == [A1]                     # D+: benzerlik matrisi dolu
     aday = next(x for x in havuz["satirlar"] if x["adres"] == A1)
     assert aday["neden"] is None and aday["kopya_getiri"] > 0 and aday["kopya_islem"] == 20
+    assert havuz["tarama"]["on_filtre"] == 2 and havuz["tarama"]["olculen"] == 2 and havuz["tarama"]["portfolio_hata"] == 0     # F14: sayaçlar
     # aynı ay ikinci koşu: doldurma yok, üye denetlenir, kalır
     c.liderler = []
     havuz2, kadro2 = s.kos(c, T + GUN, kadro, RULES, log=lambda *_: None)

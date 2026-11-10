@@ -228,6 +228,8 @@ def test_korelasyon_en_fazla_2_kisi_bagli_bilesen_kor_kirpildi():
     assert [(k.tur, k.adres, k.neden) for k in karar if k.tur == "giris_atlandi"] == [("giris_atlandi", adr(3), "kor_kirpildi")]
     assert kd.kor_bilesen_boyutu(adresler[:3], {"adresler": adresler, "matris": m}, 0.7) == 3 and kd.kor_bilesen_boyutu(adresler[:2], {"adresler": adresler, "matris": m}, 0.7) == 2
     assert kd.kor_bilesen_boyutu(adresler, None, 0.7) == 1 and kd.kor_bilesen_boyutu([adr(9), adr(1)], {"adresler": adresler, "matris": m}, 0.7) == 1       # bilinmeyen çift ilişkisiz
+    m_bos = [[1.0, None], [None, 1.0]]
+    assert kd.kor_bilesen_boyutu(adresler[:2], {"adresler": adresler[:2], "matris": m_bos}, 0.7) == 2                        # F11: ikisi matriste, r ölçülemedi → benzer (temkinli)
 
 
 # ================================================================================================ motor uçtan uca
@@ -1528,3 +1530,28 @@ def test_main_bayraksiz_cagri_eskisiyle_ayni(monkeypatch, tmp_path):
     assert mt.main(["--kip", "sanal", "--durum-dizin", str(tmp_path / "durum")]) == 0
     m = yakalanan["m"]
     assert m.kasa == 1000.0 and m.kasa_ayar == 1000.0 and m.saha.slot == pytest.approx(1000 / 11) and "canli_kasa_kaynagi" not in m.rules
+
+
+def test_f10_bayat_hesap_onbellegi_acilista_kullanilmaz(tmp_path):
+    """F10 (denetim 10.11): önbellek 10.000 $ ve 2 saat eski, gerçek 100.000 $. Taze okuma başarılıysa emir 100.000 $ paydayla (27,27 $);
+    okunamıyorsa bayat paydayla (272,7 $ → tavanla kırpılmış büyük emir) AÇILMAZ (`trader_hesap_yok`). Taze önbellek yeniden okunmaz."""
+    class Bozuk(BirlesikHL):
+        bozuk = False
+
+        def __call__(self, y):
+            if self.bozuk and y["type"] in ("clearinghouseState", "spotClearinghouseState"):
+                raise ConnectionError("hl")
+            return super().__call__(y)
+    hl = Bozuk(spot=10_000.0)
+    m, _, saat, _ = kur(tmp_path, hl=hl)
+    m.baslat()
+    m.hesap_tr[adr(1)] = {"deger": 10_000.0, "ms": saat() - 2 * SAAT}
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    assert kayitlar(tmp_path, "emir")[0]["usd_istenen"] == pytest.approx(27.2727, abs=1e-4)          # bayat → yeniden okundu
+    m.hesap_tr[adr(1)] = {"deger": 10_000.0, "ms": saat() - 2 * SAAT}
+    hl.bozuk = True
+    s = m.olay_isle(olay("a:2", adr(1), "ETH", "B", 3000, 10.0, 0.0, saat))
+    assert [(x.karar, x.neden) for x in s] == [("atlandi", "trader_hesap_yok")] and len(kayitlar(tmp_path, "emir")) == 1
+    m.hesap_tr[adr(1)] = {"deger": 100_000.0, "ms": saat() - 60_000}                                # taze (1 dk): ağ bozukken de kullanılır
+    s = m.olay_isle(olay("a:3", adr(1), "ETH", "B", 3000, 10.0, 0.0, saat))
+    assert [x.karar for x in s] == ["emir"]
