@@ -318,3 +318,8 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 ## K-60 — Sağlık: eski 8–20 radar beklentisi D+ kadrosuna uygulanmaz (10.11)
 - Sağlık denetimi "radarı geçen 8–20 kişi" ve "11'den az" uyarılarını eski radar (v1) için verir. D+ (radar_surum v2) bilerek `saha_n` (şu an 5) kişi seçtiği için bu uyarı yanlış alarmdı (10.11 18:02 TSİ).
 - v2 kadroda bu iki uyarı atlanır; eksik kadro yine `kadro_eksik` ile yakalanır. Test: `test_v2_kadro_gecti_araligi_uygulanmaz`.
+
+## K-61 — Elle çıkarma motorda hemen uygulanır (10.11)
+- K-39 gereği motor günde yalnız İLK kadroyu uygular. K-59 elle çıkarmasını taşıyan kadro aynı UTC gününün ikinci kadrosuydu (14:51Z); bu yüzden 0x701a yaklaşık 2 gün daha kopyalanacak, yeni üye yarın girecekti.
+- Kadronun `cikanlar`ında `elle_cikarildi` olan saha üyesi artık hemen düşer (bekleme ile geri dönemez; pozisyonu inen kuralıyla kapanır). O kadro aynı günün daha yeni kadrosuysa günün kadrosu olur ve boş slot ondan dolar; günlük kurallar ikinci kez çalışmaz.
+- Test: `test_k61_elle_cikarma_ayni_gun_ikinci_kadroda_hemen_uygulanir_slot_yeni_kadrodan_dolar`.
