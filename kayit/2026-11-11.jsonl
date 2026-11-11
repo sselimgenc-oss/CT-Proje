@@ -104,3 +104,5 @@
 {"zaman_ms":1794385248925,"olay":"emir_yok","adres":"0xfc76f730c3e2939825484e0a777368075d779ef9","coin":"BTC","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1794385246949,"gorme_ms":1794385247247,"yas_ms":1976}
 {"zaman_ms":1794385248925,"olay":"emir_yok","adres":"0xfc76f730c3e2939825484e0a777368075d779ef9","coin":"BTC","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1794385246949,"gorme_ms":1794385247247,"yas_ms":1976}
 {"zaman_ms":1794385248925,"olay":"emir_yok","adres":"0xfc76f730c3e2939825484e0a777368075d779ef9","coin":"BTC","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1794385246949,"gorme_ms":1794385247247,"yas_ms":1976}
+{"zaman_ms":1794385391679,"olay":"telegram","metin":"🧾 Son 1 saat (10:22–11:23 TSİ): 13 emir · sanal\n➕ açılış 1 · ⬆️ artırma 12 · ⬇️ azaltma 0 · ✖️ kapanış 0\n🏆 En büyük: 40,4 $ (BTC, AL) · 0xfc76f7…\n⏭️ Kopyalanmayan trader dolumu: 12 (≈1 ayrı işlem)\n   • kural gereği 12: 12 çok küçük (< 11 $)\n   • kaçırılan 0 (geç görülen / veri yok)\n💵 Tutar toplamı: ","acik":true}
+{"zaman_ms":1794386018361,"olay":"tur","ozsermaye_usd":970.1212}
