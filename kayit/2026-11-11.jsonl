@@ -260,3 +260,6 @@
 {"zaman_ms":1794419097945,"olay":"emir_yok","adres":"0x424d756e19469ddb13c753b280cc0e9d8c95420e","coin":"HYPE","eylem":"azalt","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1794419097350,"gorme_ms":1794419097723,"yas_ms":595}
 {"zaman_ms":1794419097945,"olay":"kapanis_duzeltme","adres":"0x424d756e19469ddb13c753b280cc0e9d8c95420e","coin":"HYPE","sz":4.015912337840266e-06,"neden":"tam_kapanis"}
 {"zaman_ms":1794419379622,"olay":"tur","ozsermaye_usd":981.2531}
+{"zaman_ms":1794419768131,"olay":"telegram","metin":"🧾 Son 1 saat (19:55–20:56 TSİ): 2 emir · sanal\n➕ açılış 1 · ⬆️ artırma 0 · ⬇️ azaltma 1 · ✖️ kapanış 0\n🏆 En büyük: 11,0 $ (HYPE, SAT) · 0x424d75…\n⏭️ Kopyalanmayan trader dolumu: 21 (≈2 ayrı işlem)\n   • kural gereği 21: 21 çok küçük (< 11 $)\n   • kaçırılan 0 (geç görülen / veri yok)\n💵 Tutar toplamı: ","acik":true}
+{"zaman_ms":1794420019041,"olay":"funding","saat":498450,"saat_adet":1,"funding_usd":-0.003701078530724231,"toplam_funding_usd":-0.13249180665643584}
+{"zaman_ms":1794420244331,"olay":"tur","ozsermaye_usd":981.1504}
