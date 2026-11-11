@@ -8,11 +8,9 @@
   "gun": null
  },
  "gun_kadro": {
-  "gun": "2026-11-10",
+  "gun": "2026-11-11",
   "kadro": {
-   "cikanlar": {
-    "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29": "elle_cikarildi"
-   },
+   "cikanlar": {},
    "cikanlar_gecmis": {
     "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29": 1794322315164
    },
@@ -66,7 +64,7 @@
      ]
     ]
    },
-   "kosu_ms": 1794322315164,
+   "kosu_ms": 1794380431250,
    "radar_surum": "v2",
    "saha_n": 5,
    "satirlar": [
@@ -252,7 +250,7 @@
      "max_kaldirac": 4.966207875582718,
      "sicil_onceki": 0.0,
      "sira": 4,
-     "zirve_pnl": 229943.216809
+     "zirve_pnl": 231942.738436
     },
     {
      "adres": "0x424d756e19469ddb13c753b280cc0e9d8c95420e",
@@ -315,9 +313,10 @@
  },
  "k39_gecis": true,
  "kurulu": true,
- "son_kosu_ms": 1794322315164,
+ "son_kosu_ms": 1794380431250,
  "uyeler": {
   "0x424d756e19469ddb13c753b280cc0e9d8c95420e": {
+   "disi_gunler": [],
    "giris_ms": 1794335612122,
    "giris_sira": 5,
    "hesap_giris_usd": -31711.169088379997,
