@@ -128,7 +128,7 @@ jobs:
             done ) &
           yayim=$!
           set +e
-          env -u YAYIM_TOKEN python -u -m copytrade.canli.motor --kip sanal --kadro-dali "$KADRO_DALI" --durum-dizin durum --kayit-dizin kayit --sure-sn "$((sure_dk * 60))" --vardiya "${GITHUB_RUN_ID}"
+          env -u YAYIM_TOKEN python -u -m copytrade.canli.motor --kip sanal --sanal-kasa-usd 600 --kadro-dali "$KADRO_DALI" --durum-dizin durum --kayit-dizin kayit --sure-sn "$((sure_dk * 60))" --vardiya "${GITHUB_RUN_ID}"
           cikis=$?
           # S-18: arka plan döngüsü durdurulur ama ÇALIŞAN yayım KESİLMEZ: dur dosyası + döngünün uyuyan `sleep` çocuğu öldürülür, çalışan yayım biter, sonra `wait` (en çok 15 dk).
           # Son yayım (sonraki adım) canli_yayimla.sh içindeki flock ile ayrıca sıraya girer (aynı anda iki yazar yok).
