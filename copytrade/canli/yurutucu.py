@@ -317,6 +317,45 @@ class GercekYurutucu:
         return d
 
 
+    def stop_koy(self, coin: str, long: bool, sz: float, tetik: float, cloid: str) -> tuple[Any, str, float]:
+        """K-64: borsada duran felaket stopu. Reduce-only, piyasa tetikli (`tpsl: sl`): long için satış (tetik altta), short için alış (tetik üstte).
+        Miktar szDecimals'e AŞAĞI, tetik ızgaraya pozisyondan UZAĞA yuvarlanır. Döner (oid | None, neden, yuvarlanmış tetik)."""
+        try:
+            dec = self._sz_decimals(coin)
+            adim = 10 ** -dec
+            sz_y = math.floor(float(sz) / adim + 1e-9) * adim
+            sz_y = round(sz_y, dec)
+            if sz_y <= 0:
+                return None, "sz_sifir", tetik
+            tetik_y = _izgara(tetik, dec, yukari=not long)
+            limit = _izgara(tetik_y * (0.9 if long else 1.1), dec, yukari=not long)          # piyasa tetiğinde kayma sınırı (%10)
+            tur = {"trigger": {"triggerPx": tetik_y, "isMarket": True, "tpsl": "sl"}}
+            yanit = self.exchange.order(coin, not long, sz_y, limit, tur, True, cloid=cloid_nesne(cloid))
+        except Exception as hata:                      # noqa: BLE001 - stop hatası motoru durdurmaz; motor alarm verir ve sonraki dakika yeniden dener
+            return None, f"sdk_hatasi: {type(hata).__name__}: {str(hata)[:120]}", tetik
+        if not isinstance(yanit, dict) or yanit.get("status") != "ok":
+            return None, f"hl_err: {str((yanit or {}).get('response') if isinstance(yanit, dict) else yanit)[:160]}", tetik_y
+        try:
+            durum = yanit["response"]["data"]["statuses"][0]
+        except (KeyError, IndexError, TypeError):
+            return None, "yanit_bicimi", tetik_y
+        if isinstance(durum, dict) and "error" in durum:
+            return None, str(durum["error"])[:160], tetik_y
+        for v in (durum.values() if isinstance(durum, dict) else []):
+            if isinstance(v, dict) and v.get("oid") is not None:
+                return v["oid"], "", tetik_y
+        return None, f"oid_yok: {str(durum)[:120]}", tetik_y
+
+    def stop_iptal(self, coin: str, oid: Any) -> bool:
+        """K-64: stop emrini iptal eder. Başarı: True. Hata / ret: False (motor sonraki eşitlemede yeniden dener)."""
+        try:
+            yanit = self.exchange.cancel(coin, int(oid))
+            durum = yanit["response"]["data"]["statuses"][0]
+            return yanit.get("status") == "ok" and durum == "success"
+        except Exception:                              # noqa: BLE001
+            return False
+
+
 def gercek_yurutucu_olustur(post: Callable[[dict], Any], rules: dict | None = None, ortam: dict | None = None) -> GercekYurutucu:
     """Anahtarları ortamdan okur (`HL_API_CUZDAN_ANAHTARI` = para çekme yetkisiz API cüzdanı, `HL_HESAP_ADRESI` = ana hesap, açık). Biri yoksa `AnahtarYok`. SDK içe aktarması burada (tembel):
     testte kullanılmaz. ANAHTAR ASLA günlüğe/ayrıntıya yazılmaz."""
@@ -336,4 +375,5 @@ def gercek_yurutucu_olustur(post: Callable[[dict], Any], rules: dict | None = No
     if bool(rules.get("canli_hip3_kopya", False)):                       # S-11 / K-42: HIP-3 (`dex:COIN`) SDK varlık tablosu YALNIZ HIP-3 kopyası açıkken (okunamazsa motor başlamaz)
         from copytrade.izleme_liste import perp_dex_names
         ek["perp_dexs"] = ["", *perp_dex_names(post({"type": "perpDexs"}))]
-    return GercekYurutucu(Exchange(Account.from_key(anahtar), constants.MAINNET_API_URL, account_address=hesap, timeout=zaman_asimi, **ek), post, rules)
+    url = constants.TESTNET_API_URL if (ortam.get("HL_AG") or "").strip().lower() == "testnet" else constants.MAINNET_API_URL      # K-64: yalnız deneme betiği testnet kullanır
+    return GercekYurutucu(Exchange(Account.from_key(anahtar), url, account_address=hesap, timeout=zaman_asimi, **ek), post, rules)

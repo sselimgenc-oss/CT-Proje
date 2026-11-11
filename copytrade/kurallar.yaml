@@ -145,6 +145,8 @@ canli_patlama_ara_dk: 30                # dakika (fren süresi: yeni açılış 
 canli_gunluk_kayip_oran: 0.05           # oran (gün başı özsermayeden kayıp >= bu: o gün yeni açılış yok)
 canli_gunluk_kapat_oran: 0.10            # oran (K-62 günlük sert fren: gün başı özsermayeden kayıp >= bu: TÜM pozisyonlar kapanır, o gün açılış yok, motor ertesi gün sürer; DUR değil)
 canli_felaket_stop_oran: 0.20            # oran (K-62 felaket stopu: pozisyon ortalama girişten bu kadar aleyhe giderse o pozisyon kapanır; normalde slot kuralı daha önce keser)
+canli_borsa_stop_oran: 0.22             # oran (K-64 borsada duran felaket stopu; yazılım stopundan (%20) biraz uzak: motor ayaktayken önce yazılım keser, borsa stopu çökmeye karşı yedek)
+canli_borsa_stop_sn: 60                 # sn (gerçek kip: açık emir okuma + stop eşitleme aralığı)
 canli_sig_hacim_usd: 20000000            # $ (K-62: 24 sa nosyonel hacmi bunun altındaki coin "sığ"; hacim okunamayan / listede olmayan coin de sığ sayılır)
 canli_sig_coin_tavan_usd: 150            # $ (K-62: sığ coinde trader başına kopya pozisyon tavanı; majörde slot tavanı 1,5 × slot geçerli)
 canli_zirve_dusus_oran: 0.20            # oran (zirveden düşüş >= bu: hepsini kapat, motor durur, DUR yazılır)

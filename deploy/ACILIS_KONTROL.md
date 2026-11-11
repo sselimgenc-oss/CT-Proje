@@ -4,11 +4,12 @@ Kaynak: `docs/DENETIM_PROJE_2026-11-08.md` §4; G-9, G-15, G-20, G-21, G-22 düz
 Kural: bir adımda beklenen sonucu görmezseniz **DURUN** ve ekrandaki çıktıyı lidere gönderin. Anahtarı hiçbir yere (sohbet, ekran görüntüsü, e-posta, komut satırı) yapıştırmayın.
 
 ## Ön koşul (lider onaylar; size yalnız "hazır" denir)
+- **K-63 başlangıç boyutu:** ilk dönem kasa **400 $** (`CANLI_KASA_USD=400` → 2 trader × 200 $); 1.000 $ / 5 trader'a çıkış K-63 şartlarıyla (≥ 50 emir ve ≥ 5–7 gün temiz, gerçek kapanış ve borsa stopu görüldü, S-3 kasa değişimi doğrulandı) ve kullanıcı kararıyla. Aşağıdaki "1.000 $" geçen adımlarda ilk dönem için 400 $ okuyun.
 - Denetim düzeltmeleri (G-1…G-6, G-9, G-12…G-23) main'de ve testli.
 - G-8 + G-23 tamam; G-10 Actions zamanlayıcısına dayanmadan çalışıyor.
 - 1.000 $ sanal seri (K-49 dönemi) en az 7 temiz gün koştu (K-50; 300 $ seri iptal).
 - 7 temiz sanal gün tamam.
-- **K-62 borsada duran felaket stopu (zorunlu):** her pozisyona HL'de duran reduce-only tetik emri (girişten %20 aleyhe; bot/bağlantı çökse de çalışır). Motor içi yazılım stopu (K-62) var; borsa tarafı HL testnet'te denenip main'e girmeden gerçek para AÇILMAZ.
+- **K-64 borsada duran felaket stopu (zorunlu):** kod main'de (coin başına net pozisyona, girişten %22 aleyhe reduce-only tetik emri; motor ayaktayken K-62 yazılım stopu %20'de önce keser). Gerçek paradan ÖNCE testnet denemesi `HL_AG=testnet … python -m copytrade.canli.stop_deneme` → "HEPSİ GEÇTİ" görülmeli (testnet cüzdanı + testnet API cüzdanı; gerçek anahtar KULLANILMAZ). Gerçek sunucu ortamında `HL_AG` satırı OLMAMALI (varsa motor başlamaz).
 - **Y-3 (dış nabız, zorunlu):** `sg-nabiz` gerçek yayım hedefine bakıyor. Yani `GERCEK_YAYIM_HEDEF` (K2/K3) karara bağlandı, `canli-gercek` dalı worker'ın okuyabildiği (herkese açık) bir yerde ve
   GitHub → Settings → Variables: `NABIZ_KAYNAK` = o dalın ham kökü (aynı depoda `canli-gercek`; başka depoda `https://raw.githubusercontent.com/<sahip>/<depo>/canli-gercek`), ardından "Nabız alarmı yayını" yeniden koşturuldu.
   Worker adresi elle açılınca `kaynak.kilit` gerçek dala işaret etmeli ve `kip` `"gercek"` görünmeli. Bu yapılmadan gerçek para AÇILMAZ (worker yalnız sanal `canli-durum`'u izler: gerçek motor ölürse alarm gelmez).

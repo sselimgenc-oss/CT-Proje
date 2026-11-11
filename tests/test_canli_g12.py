@@ -37,7 +37,7 @@ class ZamanAsimiBorsa(BorsaSim):
         self.ulasti, self.asili = ulasti, asili
 
     def order(self, coin, is_buy, sz, px, tif, reduce_only, cloid=None):
-        if self.asili <= 0:
+        if self.asili <= 0 or (isinstance(tif, dict) and "trigger" in tif):          # K-64: borsa stopu (tetik emri) zaman aşımı senaryosunun parçası değil
             return super().order(coin, is_buy, sz, px, tif, reduce_only, cloid=cloid)
         self.asili -= 1
         if self.ulasti:
