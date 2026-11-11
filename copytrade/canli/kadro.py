@@ -7,7 +7,7 @@ Kararlar `Karar` olarak döner (giriş / düş / değiştir / inen_kapat) — uy
 - Değiştirme (histerezis): aday sıra ≤ N **ve** üye sıra > İlk 11 sınırı **ve** aday formu ≥ üye formu + `canli_histerezis_puan` → üye "daha_iyisi_geldi" (sonuç dışı) ile iner.
 - Düşme — anında: slot düşüşü ≥ `canli_slot_dusus_oran`, kaldıraç > `radar_max_kaldirac` (R1/4); günlük (yeni `kosu_ms`): sıra 2 gün üst üste > `canli_sira_dus`, `canli_islem_yok_saat` saat işlem yok (sonuç dışı);
   **kadro dışı (K‑39):** kadroda yok / sıra > `canli_kadro_disi_sira` durumu İKİ FARKLI UTC GÜNÜNÜN kadrosunda üst üste görülürse düşer (`kadro_disi`); düşme SONUÇ DIŞIDIR, bekleme yok. **Gün başına yalnız İLK kadro uygulanır (K‑39):** aynı `kosu_ms` UTC gününde gelen ikinci kadro
-  saha kararlarını tetiklemez — İSTİSNA K-61: kadronun `cikanlar`ında `elle_cikarildi` olan üye hemen düşer ve o kadro günün kadrosu olur (boş slot dolar) — (ilk kadro `gun_kadro`da saklanır; yeniden başlatmada da ilki kullanılır). SONUÇLA düşen (slot, sıra, kadro dışı, kaldıraç/R1) `canli_bekleme_gun` gün sahaya dönemez; sonuç dışı düşenin bekleme cezası yok.
+  saha kararlarını tetiklemez — İSTİSNA K-61/K-65: kadronun `cikanlar`ında `elle_cikarildi` ya da veto (`veto_omur_zarar`, `veto_zarara_ekleme`) olan üye hemen düşer ve o kadro günün kadrosu olur (boş slot dolar) — (ilk kadro `gun_kadro`da saklanır; yeniden başlatmada da ilki kullanılır). SONUÇLA düşen (slot, sıra, kadro dışı, kaldıraç/R1) `canli_bekleme_gun` gün sahaya dönemez; sonuç dışı düşenin bekleme cezası yok.
 - Korelasyon: sahada birbirine ≥ `canli_kor_esik` benzeyen (bağlı bileşen) en çok `canli_kor_max` kişi; ihlal eden aday atlanır (`kor_kirpildi`).
 - Kadro bayat / yok (`kosu_ms` > `canli_kadro_eski_saat` saat): yeni giriş yok, düşme kuralları çalışır (günlük sıra kuralları kadro verisi gerektirdiğinden yeni kosu_ms olmadan işlemez;
   R-6: kadro verisi gerektirmeyen `canli_islem_yok_saat` (72 sa) işlem yok düşmesi bayat/yok kadroda da HER çağrıda denetlenir).
@@ -23,6 +23,7 @@ from copytrade.kurallar import load_rules
 
 SAAT = 3_600_000
 GUN = 24 * SAAT
+ANINDA_CIKIS = ("elle_cikarildi", "veto_omur_zarar", "veto_zarara_ekleme")   # K-61 / K-65: kadro `cikanlar`ında bu nedenle çıkan saha üyesi K-39 beklemeden hemen düşer
 K39_BEKLEME_SIL = ("0xf90c9e", "0xc32f19", "0x62edf4")        # K‑39 geçişi: 2026-11-05'te aynı UTC günündeki ikinci kadro yüzünden bekleme alan üyeler (adres önekleri); tek seferlik silinir
 
 
@@ -163,9 +164,9 @@ class Saha:
             for adres in list(self.uyeler):                         # R-6 (06.11 denetimi): kadro bayatken de işlem yok (72 sa) düşmesi çalışır (kadro verisi gerektirmez; sonuç dışı)
                 self._islem_yok_dus(adres, simdi_ms, kararlar)
             return kararlar, neden
-        elle = [a for a, n in (kadro.get("cikanlar") or {}).items() if n == "elle_cikarildi" and a in self.uyeler]
-        for a in elle:                                              # K-61: elle çıkarma (radar/HARIC, K-59) aynı gün ikinci kadroda gelse de HEMEN uygulanır; bekleme ile geri dönemez
-            self._dus(a, "elle_cikarildi", True, simdi_ms, kararlar)
+        elle = [(a, n) for a, n in (kadro.get("cikanlar") or {}).items() if n in ANINDA_CIKIS and a in self.uyeler]
+        for a, n in elle:                                           # K-61: elle çıkarma (radar/HARIC, K-59) ve K-65 veto çıkışı aynı gün ikinci kadroda gelse de HEMEN uygulanır; bekleme ile geri dönemez
+            self._dus(a, n, True, simdi_ms, kararlar)
         if (elle and self.gun_kadro and self.gun_kadro.get("gun") == self._gun(int(kadro["kosu_ms"]))
                 and int(kadro["kosu_ms"]) > int(self.gun_kadro["kadro"]["kosu_ms"])):
             self.gun_kadro["kadro"] = kadro                         # K-61: boşalan slot bu kadroyla dolar; günlük kurallar bugün zaten çalıştığı için yeniden çalışmaz

@@ -14,6 +14,11 @@ Değiştirme YOK (sıra değişimi çıkış nedeni değil). Eşikler `kurallar.
 ≤ `secim_aktif_coin_max`; çıkışa girişimizden beri trader pnl düşüşü ≥ `secim_cikis_giris_dusus` × giriş hesabı, E'den aylık kontrolde iki ay üst üste BİZİM slot net K/Z'si < 0
 (motor `durum/hesap.json`: realize − ücret + funding; okunamazsa trader 30 g pnl yedeği), motor sahadan cezayla düşürdüyse (`saha.json` bekleme) kadrodan da düşer (döngü yok);
 kadro `korelasyon` matrisi 28 g günlük kopya getirilerinden (benzerlik kuralı motorda çalışır). Boyut (N 5, 200 $, tavan 1,5×, 5,5 $ altı açılmaz) `kurallar.yaml`/`boyut.py`.
+**K-65 (veri_surum 2):** pnl serisi yalnız PERP (`perpAllTime` + `perpMonth` + `perpWeek` birleşik, taze kuyruk; hesap değeri toplam seriden); en yeni pnl noktası
+`secim_veri_azami_yas_saat`'ten eski aday `veri_bayat`. Kopya kapısına gelen aday ve üyede hesap değeri motor tanımıyla da okunur (tüm perp dex + spot USDC); seri
+`secim_payda_azami_fark`'tan fazla saparsa motor değeri kullanılır (`payda_duzeltildi`). Geçici güvenlik vetoları (kapılardan sonra): ömür perp pnl ≤ 0 (`veto_omur_zarar`),
+zarara ekleme payı ≥ `secim_veto_zarara_ekleme_oran` (`veto_zarara_ekleme`); kapı + veto geçen aday < `secim_veto_min_aday` ise o koşu askıda (`veto_askida`). Vetolu üye çıkar,
+yeri aynı koşuda dolar; motor bu çıkışları K-61 gibi hemen uygular.
 
     python -m copytrade.secim_d --cikti radar --onceki-kadro onceki.json
 """
@@ -32,13 +37,18 @@ from typing import Any
 from copytrade import boyut, kalicilik_testi, kopya_v5, radar_form, radar_tarama
 from copytrade.defter import HOUR
 from copytrade.kurallar import load_rules
-from copytrade.olcut import perp_fills
+from copytrade.olcut import martingale_ratio, perp_fills
 from copytrade.tarama import _address, _window
 
 GUN = 24 * HOUR
 HAFTA = 7 * GUN
 SURUM = "v2"
 HAVUZ_SEMA = "secim-d-havuz-v1"
+VERI_SURUM = 2                                                              # K-65: perp pnl + taze birleşik seri + motor paydası (1 = toplam allTime pnl)
+PNL_PERP = ("perpAllTime", "perpMonth", "perpWeek")                        # kabadan inceye (yalnız perp pnl: spot pnl kopyalanamaz)
+PNL_TOPLAM = ("allTime", "month", "week")                                   # perp dönemleri yoksa (eski biçim) yedek
+HESAP_DONEM = ("allTime", "month", "week")                                  # hesap değeri TOPLAM seriden (perp* accountValueHistory birleşik hesapta 0 olabilir)
+ANINDA_VETO = ("veto_omur_zarar", "veto_zarara_ekleme")                     # K-65 veto çıkışları (motor K-61 gibi hemen uygular)
 HARIC_YOL = Path(__file__).resolve().parent / "radar" / "HARIC"     # elle çıkarma listesi (kullanıcı kararı; satır: adres  # neden, tarih)
 
 
@@ -73,10 +83,46 @@ def deger(seri: list[tuple[int, float]], t: int) -> float | None:
     return once[-1] if once else None
 
 
+def seri_birlestir(portfolio: Any, donemler: tuple[str, ...], alan: str, goreli: bool) -> list[tuple[int, float]]:
+    """K-65 tazelik: dönemleri kabadan inceye tek seride birleştirir; ince dönemin noktaları kendi ilk noktasından itibaren kaba serinin yerini alır (allTime seyrek, son noktası günler eski olabilir).
+    `goreli` (pnlHistory): her dönem kendi başından sayar → ince dönem, birleşik serinin EN YENİ noktasında (ortak zaman) ona oturtulur (fark eklenir; seviye allTime'dan gelir);
+    ince dönem o zamandan sonra başlıyorsa ilk noktası birleşik serinin o andaki değerine oturtulur. Hesap değeri (mutlak) aynen alınır."""
+    birlesik: list[tuple[int, float]] = []
+    for donem in donemler:
+        ince = portfolio_serisi(portfolio, alan, donem)
+        if not ince:
+            continue
+        if not birlesik:
+            birlesik = ince
+            continue
+        fark = 0.0
+        if goreli:
+            ta, kv = birlesik[-1]
+            iv = deger(ince, ta)
+            if iv is not None:
+                fark = kv - iv
+            else:
+                kv0 = deger(birlesik, ince[0][0])
+                fark = (kv0 if kv0 is not None else 0.0) - ince[0][1]
+        bas = ince[0][0]
+        birlesik = [p for p in birlesik if p[0] < bas] + [(t, v + fark) for t, v in ince]
+    return birlesik
+
+
+def pnl_serisi(portfolio: Any) -> tuple[list[tuple[int, float]], str]:
+    """K-65: kümülatif PERP pnl serisi (perpAllTime + perpMonth + perpWeek birleşik). Perp dönemleri yoksa (eski biçim) toplam seri; döner (seri, kaynak "perp" | "toplam")."""
+    perp = seri_birlestir(portfolio, PNL_PERP, "pnlHistory", True)
+    if perp:
+        return perp, "perp"
+    return seri_birlestir(portfolio, PNL_TOPLAM, "pnlHistory", True), "toplam"
+
+
 def portfolio_olculeri(portfolio: Any, t_ms: int, rules: dict) -> dict:
     """B evreni ölçüleri (t'ye kadar): hesap, haftalık pnl/hesap dizisi (son `secim_hafta_sayisi`), pozitif hafta, 90 g pnl, 90 g pnl düşüşü/hesap, t-istatistiği, 30 g pnl,
-    zirve düşüşü (kümülatif pnl zirvesinden bugüne / hesap). Veri yetersizse ilgili alan None."""
-    pnl, hesap_s = portfolio_serisi(portfolio, "pnlHistory"), portfolio_serisi(portfolio, "accountValueHistory")
+    zirve düşüşü (kümülatif pnl zirvesinden bugüne / hesap). Veri yetersizse ilgili alan None.
+    K-65: pnl yalnız perp (`pnl_serisi`), hesap toplam seriden (allTime + month + week birleşik); `omur_perp_pnl` = t'deki ömür boyu perp pnl, `veri_yas_saat` = t − en yeni pnl noktası (saat)."""
+    pnl, kaynak = pnl_serisi(portfolio)
+    hesap_s = seri_birlestir(portfolio, HESAP_DONEM, "accountValueHistory", False)
     hesap = deger(hesap_s, t_ms)
     n = int(rules["secim_hafta_sayisi"])
     haftalik = []
@@ -100,14 +146,18 @@ def portfolio_olculeri(portfolio: Any, t_ms: int, rules: dict) -> dict:
     t_ist = None
     if len(haftalik) >= 2 and statistics.stdev(haftalik) > 0:
         t_ist = statistics.fmean(haftalik) / (statistics.stdev(haftalik) / math.sqrt(len(haftalik)))
+    son_ms = max((z for z, _ in pnl if z <= t_ms), default=None)
     return {"hesap_usd": hesap, "pnl_kum": p_t, "hafta_sayisi": len(haftalik), "pozitif_hafta": sum(1 for x in haftalik if x > 0), "pnl_90g": None if p_t is None or p_90 is None else p_t - p_90,
-            "pnl_30g": None if p_t is None or p_30 is None else p_t - p_30, "dusus_90g": dusus90, "zirve_dusus": zirve, "t_istat": t_ist}
+            "pnl_30g": None if p_t is None or p_30 is None else p_t - p_30, "dusus_90g": dusus90, "zirve_dusus": zirve, "t_istat": t_ist,
+            "pnl_kaynak": kaynak, "omur_perp_pnl": p_t, "veri_son_ms": son_ms, "veri_yas_saat": None if son_ms is None else (t_ms - son_ms) / HOUR}
 
 
 def evren_kapisi(o: dict, rules: dict) -> str | None:
     """B evreni: ilk başarısız kuralın kodu ya da None (geçti)."""
     if not o.get("hesap_usd") or o["hesap_usd"] < float(rules["secim_min_hesap_usd"]):
         return "hesap_az"
+    if o.get("veri_yas_saat") is None or o["veri_yas_saat"] > float(rules["secim_veri_azami_yas_saat"]) + 1e-12:      # K-65: en yeni pnl noktası eski → ölçüler bugünü göstermez
+        return "veri_bayat"
     if o["hafta_sayisi"] < int(rules["secim_hafta_sayisi"]):
         return "gecmis_kisa"
     if o["pozitif_hafta"] < int(rules["secim_pozitif_hafta_min"]):
@@ -146,6 +196,52 @@ def kopya_kapisi(dolumlar: list[dict], hesap: float, payda: Any, mum: Any, t0: i
              ("kopya_islem_az", o.get("kopya_islem"), lambda v: v >= int(rules["radar_min_kopya_islem"])))                           # D+ (A)
     o["neden"] = next((k for k, v, f in kural if v is None or not f(v)), None)
     return o
+
+
+def motor_hesap_oku(client: Any, adres: str, dexler: list[str] | None) -> float | None:
+    """K-65 ortak payda: canlı motorun trader hesap değeri TANIMI (`canli/motor.py` `hesap_degeri_oku`, K-35) — tüm perp dex `marginSummary.accountValue` + spot USDC.
+    Aynı fonksiyon çağrılır (kural 7: hesap tek yerde). Dex listesi bilinmiyorsa None."""
+    from copytrade.canli.motor import hesap_degeri_oku                     # tembel içe aktarma: motor modülü ağırdır
+    return hesap_degeri_oku(lambda yuk: client.info(yuk, weight=2), adres, dexler)
+
+
+def payda_karar(seri: float | None, motor: float | None, rules: dict) -> dict:
+    """K-65: portfolio serisinin hesap değeri ↔ motor tanımı. |seri / motor − 1| > `secim_payda_azami_fark` (ya da seri yok) → motor değeri kullanılır (`payda_duzeltildi`); aday REDDEDİLMEZ.
+    Motor okunamadıysa seri aynen (`payda_duzeltildi` false, oran None)."""
+    if motor is None or not math.isfinite(float(motor)) or motor <= 0:
+        return {"seri_hesap_usd": seri, "motor_hesap_usd": motor, "payda_oran": None, "payda_duzeltildi": False}
+    oran = seri / motor if seri is not None and seri > 0 else None
+    duz = oran is None or abs(oran - 1.0) > float(rules["secim_payda_azami_fark"]) + 1e-12
+    return {"seri_hesap_usd": seri, "motor_hesap_usd": motor, "payda_oran": oran, "payda_duzeltildi": duz}
+
+
+def payda_uygula(o: dict, karar: dict) -> dict:
+    """Düzeltme varsa ölçüleri yerinde motor paydasına çevirir: `hesap_usd` = motor; hesaba bölünmüş düşüşler (90 g, zirve) seri/motor ile ölçeklenir. Karar alanları `o`ya yazılır."""
+    o.update(karar)
+    if karar["payda_duzeltildi"]:
+        seri, motor = karar["seri_hesap_usd"], float(karar["motor_hesap_usd"])
+        if seri is not None and seri > 0:
+            for alan in ("dusus_90g", "zirve_dusus"):
+                if o.get(alan) is not None:
+                    o[alan] = o[alan] * float(seri) / motor
+        o["hesap_usd"] = motor
+    return o
+
+
+def zarara_ekleme(dolumlar: list[dict], t0: int, t1: int, rules: dict) -> tuple[float, int]:
+    """K-65 veto (b) ölçüsü: [t0, t1) perp dolumlarında zarardaki pozisyona aynı yönde ekleme payı ve ekleme sayısı (`olcut.martingale_ratio`, `martingale_min_adverse`)."""
+    d = [f for f in perp_fills(dolumlar) if t0 <= int(f["time"]) < t1]
+    return martingale_ratio(d, float(rules["martingale_min_adverse"]))
+
+
+def veto_kodu(omur_pnl: float | None, oran: float | None, sayi: int | None, rules: dict) -> str | None:
+    """K-65 geçici güvenlik kuralı: (a) ömür boyu perp pnl ≤ 0 → `veto_omur_zarar`; (b) ekleme ≥ `martingale_min_additions` VE pay ≥ `secim_veto_zarara_ekleme_oran` → `veto_zarara_ekleme`.
+    Ölçülemeyen ölçü vetolamaz (None)."""
+    if omur_pnl is not None and omur_pnl <= 0:
+        return "veto_omur_zarar"
+    if sayi is not None and oran is not None and sayi >= int(rules["martingale_min_additions"]) and oran >= float(rules["secim_veto_zarara_ekleme_oran"]) - 1e-12:
+        return "veto_zarara_ekleme"
+    return None
 
 
 def uye_cikis(o: dict, son_islem_ms: int | None, simdi: int, ay_kontrol: bool, ay_negatif: int, rules: dict, giris: dict | None = None,
@@ -212,10 +308,30 @@ def kadro_yaz(uyeler: list[dict], simdi: int, rules: dict, doldurma_ay: str, cik
 
 
 # ------------------------------------------------------------------------------------------------------------------------------ koşu (ağ)
+def _motor_payda(client: Any, adres: str, dexler: list[str] | None, o: dict, rules: dict) -> dict:
+    """Motor tanımıyla hesap değerini okur (yalnız kopya kapısına gelen aday ve üye: istek sayısı) ve `payda_uygula` ile `o`ya işler. Okuma hatası seçimi bozmaz (seri kullanılır)."""
+    try:
+        motor = motor_hesap_oku(client, adres, dexler)
+        hata = None
+    except Exception as h:                                                  # noqa: BLE001 — yalnız payda düzeltmesi; okunamazsa seri değeri (eski davranış), hata türü kaydedilir
+        motor, hata = None, type(h).__name__
+    payda_uygula(o, payda_karar(o.get("hesap_usd"), motor, rules))
+    if hata:
+        o["motor_hesap_hata"] = hata
+    return o
+
+
+def _bos_veto(o: dict | None = None, rules: dict | None = None) -> dict:
+    omur = (o or {}).get("omur_perp_pnl")
+    return {"omur_perp_pnl": omur, "zarara_ekleme_oran": None, "zarara_ekleme_sayi": None, "veto": veto_kodu(omur, None, None, rules) if rules else None}
+
+
 def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, saat=time.monotonic, canli: dict | None = None,
         haric: set[str] | None = None) -> tuple[dict, dict]:
     """Döner (havuz, kadro). `canli` = {"hesap": motor durum/hesap.json, "saha": durum/saha.json} (D+ slot sicili ve motor düşürmesi; yoksa yedekler).
-    `haric` = kullanıcının elle çıkardığı adresler (`copytrade/radar/HARIC`): üyeyse `elle_cikarildi` ile çıkar, aday olmaz; boşalan yer AYNI koşuda doldurulur."""
+    `haric` = kullanıcının elle çıkardığı adresler (`copytrade/radar/HARIC`): üyeyse `elle_cikarildi` ile çıkar, aday olmaz; boşalan yer AYNI koşuda doldurulur.
+    K-65 vetoları (kapılardan sonra): bu koşuda kapıları + iki vetoyu geçen aday < `secim_veto_min_aday` ise vetolar askıya alınır (eski davranış). Üye vetosu: doldurma koşusunda bu koşunun
+    sayısıyla, değilse önceki kadronun `veto_havuz` sayısıyla (bilinmiyorsa uygulanır) karar verilir; vetoyla çıkan üyenin yeri elle çıkarma gibi AYNI koşuda doldurulur."""
     haric = {x.lower() for x in (haric or set())}
     t0_kos = saat()
     n = boyut.saha_sayisi(float(rules["canli_kasa_usd"]), rules)
@@ -226,8 +342,14 @@ def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, sa
     ay = datetime.fromtimestamp(simdi / 1000, UTC).strftime("%Y-%m")
     doldur = doldurma_mi(onceki, simdi)
     ay_kontrol = doldur and bool(onceki) and onceki.get("radar_surum") == SURUM
+    veto_acik, veto_min = bool(rules["secim_veto_acik"]), int(rules["secim_veto_min_aday"])
+    onceki_veto = (onceki or {}).get("veto_havuz") or {}
+    goc = int((onceki or {}).get("veri_surum") or 1) < VERI_SURUM           # K-65: önceki kadro TOPLAM pnl ile yazıldı → üyenin giriş/zirve pnl'i perp seriden yeniden kurulur
+    tavan = int(rules["radar_dolum_tavan"])
     satirlar: list[dict] = []
     uyeler, cikanlar, olcu = [], {}, []
+    bekleyen: dict[str, str] = {}                                           # risk çıkışı olmayan ama veto kodu taşıyan üyeler (adres → kod); karar aşağıda
+    uye_satir: dict[str, dict] = {}
     tarama: dict = {"on_filtre": 0, "olculen": 0, "portfolio_hata": 0, "hata_tur": {}, "butce_disi": 0}        # F14: denenen / hata / bütçe dışı sayaçları
     canli = canli or {}
     bekleme = {a for a, bit in ((canli.get("saha") or {}).get("bekleme") or {}).items() if _sayi_mi(bit) and float(bit) > simdi}   # denetim 4: süresi dolmuş ceza sayılmaz
@@ -249,22 +371,38 @@ def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, sa
         try:
             pf = client.portfolio(a)
             o = portfolio_olculeri(pf, simdi, rules)
-            d = perp_fills(client.fills(a, simdi - int(rules["secim_islem_yok_gun"]) * GUN, max_rows=int(rules["radar_dolum_tavan"]), end_ms=simdi))
+            d = perp_fills(client.fills(a, simdi - int(rules["secim_islem_yok_gun"]) * GUN, max_rows=tavan, end_ms=simdi))
             son = max((int(f["time"]) for f in d), default=None)
         except radar_tarama.HATALAR as h:
             log(f"UYARI: üye {a[:10]}… okunamadı ({type(h).__name__}); kadroda kalır")
             uyeler.append({**u, "t_istat": u.get("form"), "kopya_getiri": u.get("kopya_getiri_7g")})
+            satirlar.append({"adres": a, "tur": "uye", **_bos_veto(), "neden": None, "hata": type(h).__name__})
             continue
+        _motor_payda(client, a, b.dexler, o, rules)
+        if goc and u.get("giris_ms") is not None:                          # K-65 göç: giriş ve zirve pnl'i perp seriden (çıkış ölçüsü aynı tabanda kalsın)
+            seri, _ = pnl_serisi(pf)
+            gp = deger(seri, int(u["giris_ms"]))
+            if gp is not None:
+                zp = max([v for z, v in seri if int(u["giris_ms"]) <= z <= simdi] + [gp])
+                u = {**u, "giris_pnl_kum": gp, "zirve_pnl": zp}
+                o["veri_gocu"] = True
         if o.get("pnl_kum") is not None and u.get("giris_hesap_usd"):            # denetim 1: zirve GİRİŞİMİZDEN beri (tüm-zaman tepesi değil)
             zp = max(float(u.get("zirve_pnl") if u.get("zirve_pnl") is not None else (u.get("giris_pnl_kum") or o["pnl_kum"])), float(o["pnl_kum"]))
             o["zirve_pnl"], o["zirve_dusus"] = zp, (zp - float(o["pnl_kum"])) / float(u["giris_hesap_usd"])
         else:
             o["zirve_dusus"] = None
+        vo = _bos_veto(o, rules)
+        try:                                                                # veto (b): kopya kapısıyla aynı pencere (son `secim_kopya_gun` gün)
+            z_oran, z_sayi = zarara_ekleme(client.fills(a, kopya_bas, max_rows=tavan * 4, end_ms=simdi), kopya_bas, simdi, rules)
+            vo.update({"zarara_ekleme_oran": z_oran, "zarara_ekleme_sayi": z_sayi, "veto": veto_kodu(o.get("omur_perp_pnl"), z_oran, z_sayi, rules)})
+        except radar_tarama.HATALAR as h:
+            vo["zarara_ekleme_hata"] = type(h).__name__
         sicil = slot_net(canli.get("hesap"), a)
         ay_net = None if sicil is None else sicil - float(u.get("sicil_onceki") or 0.0)
         giris = {"hesap_usd": u.get("giris_hesap_usd"), "pnl_kum": u.get("giris_pnl_kum")}
         neden, ayn = uye_cikis(o, son, simdi, ay_kontrol, int(u.get("ay_negatif") or 0), rules, giris, ay_net)
-        satirlar.append({"adres": a, "tur": "uye", **o, "neden": neden})
+        satir = {"adres": a, "tur": "uye", **o, **vo, "neden": neden}
+        satirlar.append(satir)
         if neden:
             cikanlar[a] = neden
             gecmis[a] = simdi
@@ -272,9 +410,31 @@ def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, sa
         else:
             yeni_sicil = sicil if (ay_kontrol and sicil is not None) else u.get("sicil_onceki")
             uyeler.append({**u, **o, "t_istat": u.get("form"), "kopya_getiri": u.get("kopya_getiri_7g"), "ay_negatif": ayn, "sicil_onceki": yeni_sicil})
+            if vo["veto"]:
+                bekleyen[a], uye_satir[a] = vo["veto"], satir
+
+    veto: dict = {"acik": veto_acik, "min_aday": veto_min, "sayi": None, "askida": None, "kaynak": None, "uye_kaynak": None, "uye_sayi": None}
+
+    def veto_cikar(kodlar: dict[str, str]) -> None:
+        """Vetolu üyeleri çıkarır (yakın çıkan sayılır; yer aynı koşuda dolar)."""
+        for a, kod in kodlar.items():
+            cikanlar[a] = kod
+            gecmis[a] = simdi
+            uye_satir[a]["neden"] = kod
+            log(f"çıkış {a[:10]}… {kod}")
+        uyeler[:] = [x for x in uyeler if x["adres"] not in kodlar]
+
     if "elle_cikarildi" in cikanlar.values():                                # elle çıkarılan yer ay başını beklemez
         doldur = True
-    if doldur and len(uyeler) < n:
+    if veto_acik and bekleyen and not doldur:                               # doldurmasız gün: en son bilinen havuz sayısı (yoksa veto yine uygulanır, kaydedilir)
+        onceki_sayi = onceki_veto.get("sayi")
+        veto.update({"uye_kaynak": "onceki" if onceki_sayi is not None else "bilinmiyor", "uye_sayi": onceki_sayi})
+        if onceki_sayi is None or int(onceki_sayi) >= veto_min:
+            veto_cikar(bekleyen)
+            doldur = True                                                   # vetoyla boşalan yer elle çıkarma gibi AYNI koşuda dolar
+        bekleyen = {}
+    ertelenen = dict(bekleyen) if veto_acik else {}                         # doldurma koşusu: üye vetosu bu koşunun aday sayısıyla verilir
+    if doldur and (len(uyeler) < n or ertelenen):
         tablo = client.leaderboard()
         dislanan = {u["adres"] for u in uyeler} | set(cikanlar) | set(gecmis) | bekleme | haric                  # denetim 4: cezalı / yakın zamanda çıkan aday olmaz
         aday = [x for x in on_filtre(tablo, rules) if x["adres"] not in dislanan]
@@ -300,47 +460,89 @@ def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, sa
             if i % 200 == 0:
                 log(f"[{i}/{len(aday)}] B evreni {len(olcu)}; {(saat() - t0_kos) / 60:.1f} dk")
         olcu.sort(key=lambda o: (-o["t_istat"], o["adres"]))
-        log(f"B evreni: {len(olcu)} kişi; kopya kapısı t sırasıyla, kadro dolana dek (en çok {rules['secim_aday_ust']})")
+        bos_eski = n - len(uyeler)                                          # vetosuz (askıda) senaryo: bekleyen üyeler kalır
+        bos_yeni = bos_eski + len(ertelenen)
+        log(f"B evreni: {len(olcu)} kişi; kopya kapısı t sırasıyla, boş {bos_eski}" + (f" (vetoyla {bos_yeni}; veto havuzu ≥ {veto_min} aranır)" if veto_acik else "")
+            + f" (en çok {rules['secim_aday_ust']})")
+        gecen: list[tuple[dict, dict]] = []                                 # kapıları geçenler (havuz satırı, üye kaydı), t sırasıyla
+
+        def yeter() -> bool:
+            if len(gecen) < bos_eski:
+                return False
+            return not veto_acik or sum(1 for s_, _ in gecen if s_["veto"] is None) >= max(bos_yeni, veto_min)
+
         kopya_butce = butce + float(rules["secim_kopya_butce_dk"]) * 60          # denetim 2: kopya kapısı döngüsünün de süre sınırı var (iş zaman aşımı 180 dk)
         for o in olcu[: int(rules["secim_aday_ust"])]:
-            if len(uyeler) >= n:
+            if yeter():
                 break
             if saat() - t0_kos > kopya_butce:
                 log("UYARI: kopya kapısı süre bütçesi doldu; kalan adaylar ölçülmedi")
                 break
             pf = o.pop("_pf", None)
             a = o["adres"]
+            vo = _bos_veto(o, rules)
             try:
-                d = client.fills(a, kopya_bas, max_rows=int(rules["radar_dolum_tavan"]) * 4, end_ms=simdi)
-                if len(d) >= int(rules["radar_dolum_tavan"]) * 4:
-                    satirlar.append({"adres": a, "tur": "aday", **o, "neden": "dolum_fazla"})
+                d = client.fills(a, kopya_bas, max_rows=tavan * 4, end_ms=simdi)
+                if len(d) >= tavan * 4:
+                    satirlar.append({"adres": a, "tur": "aday", **o, **vo, "neden": "dolum_fazla"})
+                    continue
+                _motor_payda(client, a, b.dexler, o, rules)                 # K-65: yalnız kopya kapısına gelen aday için durum okuması
+                if o["payda_duzeltildi"] and (ne := evren_kapisi(o, rules)):  # motor paydasıyla evren kapısı yeniden (hesap / düşüş oranları)
+                    satirlar.append({"adres": a, "tur": "aday", **o, **vo, "neden": ne})
                     continue
                 try:
-                    payda = kopya_v5.PaydaSerisi(radar_tarama.payda_noktalari(pf, simdi))
+                    noktalar = radar_tarama.payda_noktalari(pf, simdi)
+                    if o["payda_duzeltildi"] and o.get("seri_hesap_usd"):    # seri motor tanımından saptı: seri şekli korunur, seviye motor değerine ölçeklenir
+                        k_ = float(o["motor_hesap_usd"]) / float(o["seri_hesap_usd"])
+                        noktalar = [(t_, v_ * k_) for t_, v_ in noktalar]
+                    payda = kopya_v5.PaydaSerisi(noktalar)
                 except (*radar_tarama.HATALAR, AttributeError):
                     payda = o["hesap_usd"]
                 k = kopya_kapisi(d, o["hesap_usd"], payda, mum, kopya_bas, simdi, likit, b.azami_kaldirac, rules)
+                z_oran, z_sayi = zarara_ekleme(d, kopya_bas, simdi, rules)
             except radar_tarama.HATALAR as h:
-                satirlar.append({"adres": a, "tur": "aday", **o, "neden": "veri_hatasi", "hata": type(h).__name__})
+                satirlar.append({"adres": a, "tur": "aday", **o, **vo, "neden": "veri_hatasi", "hata": type(h).__name__})
                 continue
-            satirlar.append({"adres": a, "tur": "aday", **o, **k})
+            vo.update({"zarara_ekleme_oran": z_oran, "zarara_ekleme_sayi": z_sayi, "veto": veto_kodu(o.get("omur_perp_pnl"), z_oran, z_sayi, rules)})
+            satir = {"adres": a, "tur": "aday", **o, **k, **vo}
+            satirlar.append(satir)
             if k["neden"] is None:
-                uyeler.append({"adres": a, **o, **k, "giris_ms": simdi, "ay_negatif": 0, "giris_hesap_usd": o["hesap_usd"], "giris_pnl_kum": o.get("pnl_kum"), "zirve_pnl": o.get("pnl_kum"), "sicil_onceki": 0.0})
-                log(f"giriş {a[:10]}… t {o['t_istat']:.2f}, kopya {k['kopya_getiri']:+.4f}")
+                gecen.append((satir, {"adres": a, **o, **k, "giris_ms": simdi, "ay_negatif": 0, "giris_hesap_usd": o["hesap_usd"], "giris_pnl_kum": o.get("pnl_kum"),
+                                      "zirve_pnl": o.get("pnl_kum"), "sicil_onceki": 0.0}))
+        sayi = sum(1 for s_, _ in gecen if s_["veto"] is None)
+        aktif = veto_acik and sayi >= veto_min
+        veto.update({"sayi": sayi, "askida": veto_acik and not aktif, "kaynak": "bu_kosu"})
+        if veto_acik and not aktif:
+            log(f"UYARI: veto havuzu {sayi} < {veto_min}: vetolar bu koşu askıda (eski davranış)")
+        if ertelenen:
+            veto.update({"uye_kaynak": "bu_kosu", "uye_sayi": sayi})
+            if aktif:
+                veto_cikar(ertelenen)
+        for satir, yeni in gecen:
+            if aktif and satir["veto"]:
+                satir["neden"], satir["secildi"] = satir["veto"], False
+                continue
+            satir["secildi"] = len(uyeler) < n
+            if satir["secildi"]:
+                uyeler.append(yeni)
+                log(f"giriş {yeni['adres'][:10]}… t {yeni['t_istat']:.2f}, kopya {yeni['kopya_getiri']:+.4f}")
         for u in uyeler:                                                    # denetim 3: benzerlik matrisi aynı 28 g penceresiyle (kalan üyelerin serisi yenilenir)
             if u.get("giris_ms") == simdi:
                 continue
             try:
-                d = client.fills(u["adres"], kopya_bas, max_rows=int(rules["radar_dolum_tavan"]) * 4, end_ms=simdi)
+                d = client.fills(u["adres"], kopya_bas, max_rows=tavan * 4, end_ms=simdi)
                 u["kopya_gunluk"] = kopya_kapisi(d, float(u.get("hesap_usd") or u.get("giris_hesap_usd") or 0.0) or 1.0, float(u.get("hesap_usd") or 1.0), mum,
                                                  kopya_bas, simdi, likit, b.azami_kaldirac, rules).get("kopya_gunluk")
             except radar_tarama.HATALAR:
                 u["kopya_gunluk"] = None
     for o in olcu:
         o.pop("_pf", None)
-    havuz = {"sema": HAVUZ_SEMA, "kosu_ms": simdi, "pencere_bas_ms": kopya_bas, "doldurma": doldur, "satirlar": satirlar, "tarama": tarama}
+    havuz = {"sema": HAVUZ_SEMA, "veri_surum": VERI_SURUM, "kosu_ms": simdi, "pencere_bas_ms": kopya_bas, "doldurma": doldur, "satirlar": satirlar, "tarama": tarama,
+             "veto": veto, "veto_askida": veto["askida"] is True, "veto_sayi": veto["sayi"]}
     kadro = kadro_yaz(uyeler, simdi, rules, ay if doldur else (onceki or {}).get("doldurma_ay", ay), cikanlar)
     kadro["cikanlar_gecmis"] = gecmis
+    kadro["veri_surum"] = VERI_SURUM
+    kadro["veto_havuz"] = ({"sayi": veto["sayi"], "askida": veto["askida"], "kosu_ms": simdi} if veto["kaynak"] == "bu_kosu" else onceki_veto) or None
     return havuz, kadro
 
 
