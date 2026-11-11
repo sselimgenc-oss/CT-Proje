@@ -751,6 +751,10 @@ class Motor:
             if emir_usd <= 0:
                 return self._atla(o, adres, eylem, "engel", kn)
             neden = kn or neden
+            emir_usd, sn = self.risk.sig_coin_kirp(emir_usd, biz_usd, self.coin_hacmi(o.coin))                          # K-62 sığ coin tavanı (trader başına)
+            if emir_usd <= 0:
+                return self._atla(o, adres, eylem, "engel", sn)
+            neden = sn or neden
             emir_usd, mn = self.risk.marj_kirp(emir_usd, self.hesap.marj_toplam(), self.ozsermaye())                      # K‑35 toplam marj tavanı
             if emir_usd <= 0:
                 return self._atla(o, adres, eylem, "engel", mn)
@@ -1510,18 +1514,21 @@ class Motor:
         self._hl_okuma_imza = self._poz_imza() if hl_zamani else None          # mutabakat yarışı: HL okumasından ÖNCEKİ yerel pozisyonlar
         hl = self.hl_oku() if hl_zamani else None
         oranlar = self.funding_oku() if self.funding_bekliyor(simdi) else None
+        hacimler = self.hacim_oku() if self._aralik_mi("hacim", simdi, 3600 if self._coin_hacim else 300) else None     # K-62: saatte bir (veri yoksa 5 dk'da bir dene)
         fgercek = self.funding_gercek_oku(simdi)                                # G7: gerçek kip, saatte bir; sanalda None
         ledger = self.ledger_oku(simdi) if hl else None                          # gerçek kip: yatırma/çekme kaydı (#5)
         ajan = self.ajan_suresi_oku(simdi)                                       # G-19: gerçek kip, günde bir: API cüzdanı `validUntil`
         with self._lock:
             self.mids_uygula(mids, simdi)
+            if hacimler:
+                self._coin_hacim = hacimler
             if self.son_funding_saat is None:
                 self.son_funding_saat = simdi // 3_600_000
             adimlar: list[tuple[str, Callable[[], None]]] = [
                 ("belirsiz", lambda: self.belirsiz_coz(simdi)),                    # G-1: sonucu belirsiz emirler risk/mutabakattan ÖNCE deftere
                 ("tasfiye", lambda: self._tasfiye(simdi)), ("funding", lambda: self.funding_uygula(oranlar, simdi)), ("funding_gercek", lambda: self.funding_gercek_uygula(fgercek, simdi)),
                 ("hl_ozsermaye", lambda: self.hl_uygula(hl[1], simdi) if hl else None), ("ofset", lambda: self.ofset_yenile(ledger, simdi)),
-                ("hl_sicrama", lambda: self._hl_sicrama_denetle(simdi) if hl else None), ("risk", lambda: self._risk(simdi)), ("anlik_saha", lambda: self._anlik(simdi)),
+                ("hl_sicrama", lambda: self._hl_sicrama_denetle(simdi) if hl else None), ("risk", lambda: self._risk(simdi)), ("felaket_stop", lambda: self._felaket_stop(simdi)), ("anlik_saha", lambda: self._anlik(simdi)),
                 ("inen", lambda: self.karar_uygula(self.saha.inenleri_kapat(simdi), simdi)), ("mutabakat", lambda: self._mutabakat(simdi, hl)), ("kapanis_kuyrugu", lambda: self._kuyruk_isle(simdi)),
                 ("kadro", lambda: self._kadro_uygula(kadro, simdi)), ("senkron", lambda: (self.senkron_uygula(senkron), self.hesap_uygula(hesaplar, simdi)) if senkron is not None else None),
                 ("telegram", lambda: self._komutlar(komutlar)), ("ajan_suresi", lambda: self.ajan_suresi_uygula(ajan, simdi)), ("ozet", lambda: self._gunluk_ozet(simdi)),
@@ -1641,13 +1648,59 @@ class Motor:
             self.kayit({"olay": "risk", "tur": ev, "ozsermaye": oz})
             if ev == "zirve_dusus":
                 self.dur_tetikle("zirve_dusus")
+            elif ev == "gunluk_kapat":                                                          # K-62: günlük sert fren — hepsi kapanır, DUR değil (ertesi gün sürer)
+                self.risk.bayrak("gunluk_kayip", True)
+                kapanan = sum(self._adres_kapat(a, "gunluk_kapat", simdi) for a in list(self.hesap.poz))
+                kalan = sum(len(c) for c in self.hesap.poz.values())
+                self.kayit({"olay": "gunluk_kapat", "kapanan": kapanan, "kalan": kalan, "ozsermaye": oz})
+                self.tg.gonder(tg.alarm("ALARM: günlük sert fren", f"Bugünkü kayıp %{float(self.rules['canli_gunluk_kapat_oran']) * 100:.0f} sınırına ulaştı (özsermaye {tg.tr_sayi(oz)} $).\n"
+                                        f"{kapanan} pozisyon kapatıldı{f', {kalan} kapanmadı (yeniden denenecek)' if kalan else ''}. Bugün yeni pozisyon açılmıyor; yarın (UTC) normal devam.", "🛑"))
             else:
                 self.tg.gonder(tg.alarm("ALARM: günlük kayıp sınırı", f"Bugünkü kayıp %{float(self.rules['canli_gunluk_kayip_oran']) * 100:.0f} sınırına ulaştı (özsermaye {tg.tr_sayi(oz)} $).\nBugün yeni pozisyon açılmıyor."))
+
+    def _felaket_stop(self, simdi: int) -> None:
+        """K-62 felaket stopu: pozisyon ortalama girişten `canli_felaket_stop_oran` kadar aleyhe gittiyse (mark ile) o pozisyon kapanır. Trader sahada kalır (slot kuralı ayrıca işler).
+        Gerçek kipte borsada duran tetik emri ayrıca gerekir (bot çökmesine karşı); bu, motor ayaktayken çalışan yazılım katmanıdır."""
+        oran = float(self.rules.get("canli_felaket_stop_oran", 0) or 0)
+        if oran <= 0:
+            return
+        for adres in list(self.hesap.poz):
+            for coin, p in list(self.hesap.poz.get(adres, {}).items()):
+                mk = self.marks.get(coin)
+                if not mk or not p.giris or not p.sz:
+                    continue
+                aleyhe = (p.giris - mk) / p.giris if p.sz > 0 else (mk - p.giris) / p.giris
+                if aleyhe >= oran - 1e-12:
+                    ok, _ = self._kapat_coin(adres, coin, "felaket_stop", simdi)
+                    self.kayit({"olay": "felaket_stop", "adres": adres, "coin": coin, "giris": p.giris, "mark": mk, "aleyhe": aleyhe, "kapandi": bool(ok)})
+                    self.tg.gonder(tg.alarm("ALARM: felaket stopu", f"{tg.kisa(adres)} {coin} pozisyonu girişten %{aleyhe * 100:.0f} aleyhe gitti, "
+                                            f"{'kapatıldı' if ok else 'kapatılamadı (yeniden denenecek)'}.", "🛑"))
+
+    def hacim_oku(self) -> dict[str, float] | None:
+        """K-62 (ağ; kilitsiz): `metaAndAssetCtxs` (ana dex + HIP-3 dex) coin başına 24 sa nosyonel hacim (`dayNtlVlm`, $). Hata: None (önceki değer kalır)."""
+        hacim: dict[str, float] = {}
+        try:
+            for dex in ["", *self._dexler()]:
+                meta, ctxs = self.post({"type": "metaAndAssetCtxs", **({"dex": dex} if dex else {})})[:2]
+                for u, c in zip(meta["universe"], ctxs):
+                    try:
+                        hacim[str(u["name"])] = float(c["dayNtlVlm"])
+                    except (KeyError, TypeError, ValueError):
+                        continue
+            return hacim
+        except Exception as hata:                          # noqa: BLE001
+            self.kayit({"olay": "hacim_okuma_hata", "tur": type(hata).__name__})
+            return None
+
+    def coin_hacmi(self, coin: str) -> float | None:
+        """K-62: hacim verisi hiç yoksa None (sığ sınırı uygulanmaz); veri var ama coin yoksa 0 (sığ sayılır)."""
+        return None if not self._coin_hacim else float(self._coin_hacim.get(coin, 0.0))
 
     def _anlik(self, simdi: int) -> None:
         self.karar_uygula(self.saha.anlik(simdi, lambda a: self.hesap.slot_ozsermaye(a, self.marks), self._son_kadro, slot_bas=self.hesap.slot_bas.get), simdi)
 
     _son_kadro: dict | None = None
+    _coin_hacim: dict[str, float] = {}                    # K-62: coin → 24 sa nosyonel hacim ($); `dakika` saatte bir yeniler (örnek başına atanır)
 
     def _mutabakat(self, simdi: int, hl: tuple[dict[str, float], float] | None = None) -> None:
         """Gerçek kip: HL ↔ yerel defter. `hl` kilit DIŞINDA okunduysa `_hl_okuma_imza` (`dakika`) o andaki yerel pozisyonlardır; kilit altında defter farklıysa (arada dolum / kapanış) HL kilit altında
