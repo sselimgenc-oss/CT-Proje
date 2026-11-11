@@ -214,4 +214,10 @@ secim_cikis_zirve_dusus: 0.25           # oran (kümülatif pnl zirvesinden dü�
 secim_islem_yok_gun: 14                 # gün (bu kadar gün işlem yok → çıkış)
 secim_aktif_coin_max: 8                 # coin (K-56 D+, C'den: son 28 g en çok bu kadar farklı coin)
 secim_cikis_giris_dusus: 0.20           # oran (K-56 D+: girişimizden beri trader hesap değeri düşüşü ≥ → çıkış; döngüyü keser)
+secim_veri_azami_yas_saat: 24           # saat (K-65 veri düzeltmesi: perp pnl serisinin en yeni noktası seçim anından bu kadar eskiyse aday `veri_bayat`; sınır dahil geçer)
+secim_payda_azami_fark: 0.02            # oran (K-65: |portfolio serisi hesap / motor tanımı hesap − 1| bunu aşarsa motor değeri kullanılır, `payda_duzeltildi`; motor = tüm perp dex accountValue + spot USDC)
+# ---- K-65 geçici güvenlik kuralı: iki veto (aday ve üye; kapılardan SONRA uygulanır) ----
+secim_veto_acik: true                   # bool (false = vetolar hiç uygulanmaz, yalnız ölçü yazılır)
+secim_veto_zarara_ekleme_oran: 0.40     # oran (zarardaki pozisyona ekleme payı ≥ ve ekleme sayısı ≥ martingale_min_additions → `veto_zarara_ekleme`; olcut.martingale_ratio, martingale_min_adverse ile)
+secim_veto_min_aday: 10                 # kişi (bu koşuda tüm kapıları VE iki vetoyu geçen aday sayısı bundan azsa vetolar bu koşu askıya alınır: `veto_askida`)
 

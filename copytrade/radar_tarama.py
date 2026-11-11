@@ -400,10 +400,12 @@ class Baglam:
         self.son_girdi: dict | None = None            # son kopya_oynat'ın mum girdileri (R2 72 sa oynatması yeniden kullanır)
         self._hareket: dict[str, dict] | None = None   # H için coin hareketleri (koşu başına en çok bir kez, yalnız `gecti` aday çıkarsa)
         self.funding_kaynagi = None                    # yalnız geçmiş sınama: FundingOnbellegi; olağan radar akışı değişmez
+        self.dexler: list[str] | None = None           # perp dex adları (piyasa_oku; K-65: seçimde motor tanımıyla trader hesap değeri okuması)
 
     def piyasa_oku(self) -> None:
         """Perp dex listesi, coin başına 24 sa hacim (`metaAndAssetCtxs.dayNtlVlm`) ve HL azami kaldıracı (v4 sınırı)."""
         dexler = perp_dex_names(self.client.info({"type": "perpDexs"}, weight=2))
+        self.dexler = dexler
         for dex in ["", *dexler]:
             veri = self.client.info({"type": "metaAndAssetCtxs", **({"dex": dex} if dex else {})}, weight=20)
             meta, ctx = veri[0], veri[1]
