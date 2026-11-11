@@ -4,6 +4,7 @@ Kaynak: `docs/DENETIM_PROJE_2026-11-08.md` §4; G-9, G-15, G-20, G-21, G-22 düz
 Kural: bir adımda beklenen sonucu görmezseniz **DURUN** ve ekrandaki çıktıyı lidere gönderin. Anahtarı hiçbir yere (sohbet, ekran görüntüsü, e-posta, komut satırı) yapıştırmayın.
 
 ## Ön koşul (lider onaylar; size yalnız "hazır" denir)
+- **K-63 başlangıç boyutu:** ilk dönem kasa **400 $** (`CANLI_KASA_USD=400` → 2 trader × 200 $); 1.000 $ / 5 trader'a çıkış K-63 şartlarıyla (≥ 50 emir ve ≥ 5–7 gün temiz, gerçek kapanış ve borsa stopu görüldü, S-3 kasa değişimi doğrulandı) ve kullanıcı kararıyla. Aşağıdaki "1.000 $" geçen adımlarda ilk dönem için 400 $ okuyun.
 - Denetim düzeltmeleri (G-1…G-6, G-9, G-12…G-23) main'de ve testli.
 - G-8 + G-23 tamam; G-10 Actions zamanlayıcısına dayanmadan çalışıyor.
 - 1.000 $ sanal seri (K-49 dönemi) en az 7 temiz gün koştu (K-50; 300 $ seri iptal).

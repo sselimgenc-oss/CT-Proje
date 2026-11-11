@@ -314,6 +314,7 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - `copytrade/radar/HARIC`: elle çıkarma listesi. `secim_d` üyeyi `elle_cikarildi` ile çıkarır (yakın çıkan sayılır, 31 g aday olmaz), boşalan yer ay başını beklemeden AYNI koşuda doldurulur. Motor üyeyi kadrodan çıkışla K-39 ile düşürür (iki UTC günü).
 - D+'nın "değişim yok" ilkesi yalnız otomatik çıkışlar içindir; elle çıkarma kullanıcı kararıdır ve kayıtlıdır.
 - Not (yolda): seçim oynatması bu trader'ı +%1,3 ve 10 kopya işlemiyle geçirmişti; canlıdaki parça dolum/ücret yükü oynatmada görünmedi. F05 mutabakat raporu bir hafta sonra bu farkı ölçecek; gerekirse kapıya "kopya emir sayısı / maliyet payı" ölçüsü eklenir.
+- **DÜZELTME (11.11, K-63):** "kopya maliyeti sürdürülemez" teşhisi veriyle DESTEKLENMEDİ. 9–11.11 kaydında 0x701a: 90 emir, 3.578 $ hacim, ücret 1,61 $, kayma (trader dolum fiyatına göre, gecikme dahil) ort. 0,3 bps ≈ 0,40 $, gerçekleşen −7,60 $. Maliyet ≈ 2 $; kalan ≈ −5,6 $ trader'ın aynı işlemlerdeki kötü dönemi. Oynatma zaten her dolumda %0,045 + %0,05 uygular (ölçülenden kötümser); ücret nosyonele orantılı olduğundan parça dolum ek maliyet yaratmaz. Açık soru: 586 atlanan küçük artırmanın pozisyon sapması (K-63 haftalık değerlendirme). Elle çıkarma kararı kullanıcınındır ve geçerli kalır.
 
 ## K-60 — Sağlık: eski 8–20 radar beklentisi D+ kadrosuna uygulanmaz (10.11)
 - Sağlık denetimi "radarı geçen 8–20 kişi" ve "11'den az" uyarılarını eski radar (v1) için verir. D+ (radar_surum v2) bilerek `saha_n` (şu an 5) kişi seçtiği için bu uyarı yanlış alarmdı (10.11 18:02 TSİ).
@@ -332,3 +333,12 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
   3. **Sığ coin tavanı** (`canli_sig_hacim_usd` 20 M $ 24 sa hacim; `canli_sig_coin_tavan_usd` 150 $): sığ coinde trader başına kopya pozisyonu ≤ 150 $; majörde 1,5 × slot (300 $). Hacim `metaAndAssetCtxs` `dayNtlVlm`, saatte bir; hiç okunamazsa sınır uygulanmaz, listede olmayan coin sığ sayılır.
 - Değişmeyen: zirveden −%20 DUR, slot −%20 düşme, coin %30 tavanı, brüt 1.500 $, kasa ≤ 1.000 $. Yarım boyutla başlama kullanıcı kararına bırakıldı (Fable: isteğe bağlı, 1 hafta yeter).
 - Test: `tests/test_k62_risk.py`.
+
+## K-63 — Nihai yol haritası: kural değişikliği yok, erken canlı 400 $ / 2 trader, önceden yazılı değerlendirme ve büyütme ölçütü (kullanıcı: "hepsine kabul", 11.11)
+- Lider + Fable ortak önerisi; kullanıcı tümünü kabul etti.
+- **Strateji kuralları:** değişiklik yok. Fable'ın "kopya kapısına gerçek maliyet + güvenlik payı" önerisi veriyle desteklenmediği için geri alındı (K-59 DÜZELTME). Güvenlik payı (≥ %1) 0x701a'yı elemezdi, mevcut 3 üyeyi elerdi.
+- **1 haftalık değerlendirme (~17.11), maddeler önceden:** (1) her trader için kendi sonucu ↔ kopya sonucumuz (aynı işlemler; F05 mutabakat raporu); (2) atlanan emir oranı ve pozisyon büyüklüğü sapması (bizim/trader'ın hedef oranı); (3) düşük kopya getirili üç üye (0xde29, 0xfb94, 0x424d) ayrıca.
+- **Canlıya geçiş (kullanıcı kararı: istatistik beklemeden, testler canlıda):** ön koşullar yalnız güvenlik: borsada duran felaket stopu (HL tetik emri, testnet'te denenmiş), sunucu, para çekme yetkisiz API cüzdanı, ayrı Telegram botu, dış nabız (Y-3), 10–20 $ para yolu denemesi. Başlangıç **400 $ → 2 trader × 200 $** (`boyut.saha_sayisi` kasadan otomatik).
+- **1.000 $ / 5 trader'a çıkış (hepsi):** ≥ 50 gerçek emir **ve** ≥ 5–7 gün; çift emir yok, mutabakat farkı yok, kayma makul; en az bir gerçek pozisyon kapanışı sorunsuz; felaket stopu emirlerinin borsada doğru durduğu görüldü; kasa değişimi (S-3) gerçek kipte doğrulandı. Kasa artırımı yine yalnız kullanıcı kararıyla.
+- **Büyütme ölçütü (1.000 $ üstü):** 6–8 hafta ve 100+ kopya işlem (en az 3 farklı trader'dan) sonunda maliyet sonrası getiri pozitif değilse kasa 1.000 $'ı aşmaz. Pozitif sonuç büyütme izni değil, yalnız yeniden değerlendirme hakkı; karar kullanıcının. (Gerçek kasa üst sınırı K-22/K-26 ≤ 1.000 $ ayrıca geçerli.)
+- **Beklenti (Fable tahmini, ölçüm değil):** teknik başarı %60–80; 3–6 ayda maliyet sonrası kâr %20–35. Dönem "öğrenme bedeli" olarak görülür.
