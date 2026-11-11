@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-11 10:08 UTC
+# Canlı rapor — 2026-11-11 10:23 UTC
 
 **Kip** sanal · vardiya `42979010117` · saha 5/5 (inen 1)
 
@@ -6,17 +6,17 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 971,48 $ | −%0,92 | — (geçmiş < 7 gün) | −%2,85 | −%2,92 |
+| 1.000,00 $ | 974,77 $ | −%0,58 | — (geçmiş < 7 gün) | −%2,52 | −%2,59 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0xfc76f7… | BTC | L | 299,00 $ | −0,98 $ |
-| 0xfb94d9… | HYPE | L | 183,31 $ | +0,32 $ |
-| 0xfb94d9… | ZEC | L | 105,06 $ | −18,25 $ |
-| 0x424d75… | HYPE | L | 11,01 $ | +0,01 $ |
-| 0xde2912… | HYPE | L | 10,94 $ | −0,06 $ |
+| 0xfc76f7… | BTC | L | 299,62 $ | −0,35 $ |
+| 0xfb94d9… | HYPE | L | 184,22 $ | +1,23 $ |
+| 0xfb94d9… | ZEC | L | 106,71 $ | −16,60 $ |
+| 0x424d75… | HYPE | L | 11,07 $ | +0,07 $ |
+| 0xde2912… | HYPE | L | 10,99 $ | −0,01 $ |
 
 ## Son 24 saat
 
@@ -36,7 +36,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 166 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 181 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
