@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_radar_surum_dosyasi_v2_ve_donem_yeni():
     assert mt.radar_surum_oku() == "v2"
-    assert (ROOT / "copytrade/canli/DONEM").read_text(encoding="utf-8").strip() == "2026-11-09T18:01:00Z"     # 21:01 TSİ: eski yapı verisi panodan kalkar (git geçmişinde arşivli)
+    assert (ROOT / "copytrade/canli/DONEM").read_text(encoding="utf-8").strip() == "2026-11-12T06:01:00Z"     # K-65 (09:01 TSİ): proje v2 sanal dönemi 600 $ / 3; eski dönem verisi git geçmişinde arşivli
 
 
 def test_radar_surum_oku_yorum_bos_yok(tmp_path):
