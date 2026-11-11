@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-11 09:08 UTC
+# Canlı rapor — 2026-11-11 09:23 UTC
 
 **Kip** sanal · vardiya `42979010117` · saha 5/5 (inen 1)
 
@@ -6,22 +6,22 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 969,95 $ | −%1,07 | — (geçmiş < 7 gün) | −%3,00 | −%3,07 |
+| 1.000,00 $ | 970,72 $ | −%0,99 | — (geçmiş < 7 gün) | −%2,93 | −%2,99 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0xfc76f7… | BTC | L | 299,15 $ | −0,82 $ |
-| 0xfb94d9… | HYPE | L | 182,84 $ | −0,15 $ |
-| 0xfb94d9… | ZEC | L | 103,91 $ | −19,40 $ |
-| 0x424d75… | HYPE | L | 10,98 $ | −0,02 $ |
-| 0xde2912… | HYPE | L | 10,91 $ | −0,09 $ |
+| 0xfc76f7… | BTC | L | 298,92 $ | −1,05 $ |
+| 0xfb94d9… | HYPE | L | 183,13 $ | +0,14 $ |
+| 0xfb94d9… | ZEC | L | 104,57 $ | −18,74 $ |
+| 0x424d75… | HYPE | L | 11,00 $ | +0,00 $ |
+| 0xde2912… | HYPE | L | 10,92 $ | −0,08 $ |
 
 ## Son 24 saat
 
-- emir 61 · dolum 61 · kayma p50 −%0,00 / max +%0,16 (n=61)
-- funding −0,06 $ · ücret 1,23 $
+- emir 50 · dolum 50 · kayma p50 +%0,00 / max +%0,15 (n=50)
+- funding −0,06 $ · ücret 1,09 $
 
 _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun günlük kayıp tanımı); hafta/toplam kasaya göre; zirveden düşüş motorun zirvesine göre._
 
@@ -36,7 +36,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 105 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 121 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
