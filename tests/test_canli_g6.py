@@ -159,3 +159,10 @@ def test_main_agent_degil_cikis_3(monkeypatch, tmp_path):
 def test_main_hl_degeri_1501_cikis_3(monkeypatch, tmp_path):
     _, olustu = _main_kur(monkeypatch, SahteHL(hesap=1501.0), lambda k: AGENT)
     assert mt.main(["--kip", "gercek", "--durum-dizin", str(tmp_path / "durum")]) == 3 and not olustu
+
+
+def test_k64_main_hl_ag_ayarliysa_gercek_motor_baslamaz(monkeypatch, tmp_path):
+    TabanTg, olustu = _main_kur(monkeypatch, hl_300(), lambda k: AGENT)
+    monkeypatch.setenv("HL_AG", "testnet")                                                          # testnet yalnız stop_deneme içindir
+    assert mt.main(["--kip", "gercek", "--durum-dizin", str(tmp_path / "durum")]) == 3 and not olustu
+    assert "HL_AG" in TabanTg.ornekler[0].gonderilen[0]

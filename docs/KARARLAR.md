@@ -342,3 +342,11 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - **1.000 $ / 5 trader'a çıkış (hepsi):** ≥ 50 gerçek emir **ve** ≥ 5–7 gün; çift emir yok, mutabakat farkı yok, kayma makul; en az bir gerçek pozisyon kapanışı sorunsuz; felaket stopu emirlerinin borsada doğru durduğu görüldü; kasa değişimi (S-3) gerçek kipte doğrulandı. Kasa artırımı yine yalnız kullanıcı kararıyla.
 - **Büyütme ölçütü (1.000 $ üstü):** 6–8 hafta ve 100+ kopya işlem (en az 3 farklı trader'dan) sonunda maliyet sonrası getiri pozitif değilse kasa 1.000 $'ı aşmaz. Pozitif sonuç büyütme izni değil, yalnız yeniden değerlendirme hakkı; karar kullanıcının. (Gerçek kasa üst sınırı K-22/K-26 ≤ 1.000 $ ayrıca geçerli.)
 - **Beklenti (Fable tahmini, ölçüm değil):** teknik başarı %60–80; 3–6 ayda maliyet sonrası kâr %20–35. Dönem "öğrenme bedeli" olarak görülür.
+
+## K-64 — Borsada duran felaket stopu (gerçek kip; K-62'nin borsa tarafı, 11.11)
+- Hyperliquid hesabında coin başına tek net pozisyon olduğundan stop coin'in NET pozisyonuna konur: baskın yöndeki yerel pozisyonların ağırlıklı girişinden `canli_borsa_stop_oran` (0,22) aleyhe, reduce-only, piyasa tetikli (`tpsl: sl`), cloid öneki `0x5354`.
+- Motor ayaktayken K-62 yazılım stopu (%20) önce keser; borsa stopu süreç/bağlantı/sunucu çökmesine karşı yedek. Eşitleme dakikalık (`canli_borsa_stop_sn` 60): miktar > %2 / tetik > %0,5 / yön değişince ÖNCE yeni stop, SONRA eski iptal; pozisyon yoksa iptal; net < 10 $ ise stop yok; iptali başarısız stop kalıcı listede yeniden denenir; süreç başında önekli ama bilinmeyen (yetim) stop iptal edilir.
+- Açık emirlerde kaybolan stop (tetiklendi) + yerel pozisyon varsa: alarm + `_kapat_coin` (borsa 0 → G-13 harici kapanış ile defter düzeltmesi). Y-5 yabancı emir denetimi önekli stopları bizim sayar. DUR sonrası stoplar iptal edilir.
+- `copytrade/canli/stop_deneme.py`: yalnız `HL_AG=testnet` ile çalışan 7 adımlı deneme (aç → stop → görüldü → yenile → iptal → kapat → borsa 0). Gerçek motor `HL_AG` ayarlıysa başlamaz.
+- Testler: `tests/test_k64_borsa_stop.py`, `tests/test_canli_g6.py::test_k64_main_hl_ag_ayarliysa_gercek_motor_baslamaz`; test borsası (`BorsaSim`) tetik emri/iptal/openOrders destekler.
+- Gerçek paradan önce kalan: testnet denemesinin "HEPSİ GEÇTİ" çıktısı (kullanıcının testnet cüzdanı ile).

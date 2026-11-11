@@ -9,7 +9,7 @@ Kural: bir adımda beklenen sonucu görmezseniz **DURUN** ve ekrandaki çıktıy
 - G-8 + G-23 tamam; G-10 Actions zamanlayıcısına dayanmadan çalışıyor.
 - 1.000 $ sanal seri (K-49 dönemi) en az 7 temiz gün koştu (K-50; 300 $ seri iptal).
 - 7 temiz sanal gün tamam.
-- **K-62 borsada duran felaket stopu (zorunlu):** her pozisyona HL'de duran reduce-only tetik emri (girişten %20 aleyhe; bot/bağlantı çökse de çalışır). Motor içi yazılım stopu (K-62) var; borsa tarafı HL testnet'te denenip main'e girmeden gerçek para AÇILMAZ.
+- **K-64 borsada duran felaket stopu (zorunlu):** kod main'de (coin başına net pozisyona, girişten %22 aleyhe reduce-only tetik emri; motor ayaktayken K-62 yazılım stopu %20'de önce keser). Gerçek paradan ÖNCE testnet denemesi `HL_AG=testnet … python -m copytrade.canli.stop_deneme` → "HEPSİ GEÇTİ" görülmeli (testnet cüzdanı + testnet API cüzdanı; gerçek anahtar KULLANILMAZ). Gerçek sunucu ortamında `HL_AG` satırı OLMAMALI (varsa motor başlamaz).
 - **Y-3 (dış nabız, zorunlu):** `sg-nabiz` gerçek yayım hedefine bakıyor. Yani `GERCEK_YAYIM_HEDEF` (K2/K3) karara bağlandı, `canli-gercek` dalı worker'ın okuyabildiği (herkese açık) bir yerde ve
   GitHub → Settings → Variables: `NABIZ_KAYNAK` = o dalın ham kökü (aynı depoda `canli-gercek`; başka depoda `https://raw.githubusercontent.com/<sahip>/<depo>/canli-gercek`), ardından "Nabız alarmı yayını" yeniden koşturuldu.
   Worker adresi elle açılınca `kaynak.kilit` gerçek dala işaret etmeli ve `kip` `"gercek"` görünmeli. Bu yapılmadan gerçek para AÇILMAZ (worker yalnız sanal `canli-durum`'u izler: gerçek motor ölürse alarm gelmez).

@@ -29,6 +29,8 @@ class BorsaSim:
         self.durumlar: dict[str, dict] = {}
         self.istekler: list[dict] = []
         self.funding = {"BTC": "0.0001", "ETH": "-0.00005"}
+        self.acik: list[dict] = []                         # K-64: borsada bekleyen tetik (stop) emirleri
+        self._oid = 1000
 
     def post(self, y):
         self.istekler.append(y)
@@ -53,7 +55,24 @@ class BorsaSim:
             return [{"universe": [{"name": c} for c in self.funding]}, [{"funding": v} for v in self.funding.values()]]
         if t == "orderStatus":
             return self.durumlar.get(y["oid"], {"status": "unknownOid"})
+        if t == "openOrders":
+            return [dict(e) for e in self.acik]
         raise AssertionError(y)
+
+    def cancel(self, coin, oid):
+        """K-64: bekleyen emri iptal (yoksa HL hatası)."""
+        once = len(self.acik)
+        self.acik = [e for e in self.acik if not (e["coin"] == coin and int(e["oid"]) == int(oid))]
+        durum = "success" if len(self.acik) < once else {"error": "Order was never placed, already canceled, or filled."}
+        return {"status": "ok", "response": {"type": "cancel", "data": {"statuses": [durum]}}}
+
+    def stop_tetikle(self, coin):
+        """K-64 test yardımcısı: bekleyen stop tetiklenir → reduce-only piyasa kapanışı (pozisyon kadar), emir açık listeden düşer."""
+        for e in [e for e in self.acik if e["coin"] == coin]:
+            self.acik.remove(e)
+            cur = self.poz.get(coin, 0.0)
+            if abs(cur) > 1e-12 and (cur > 0) != (e["side"] == "B"):
+                self.poz[coin] = round(cur + (min(e["sz"], abs(cur)) * (1 if e["side"] == "B" else -1)), 5)
 
     def update_leverage(self, lev, coin, is_cross):
         return {"status": "ok"}
@@ -61,6 +80,12 @@ class BorsaSim:
     def order(self, coin, is_buy, sz, px, tif, reduce_only, cloid=None):
         """HL reduce-only kuralı (G-13): pozisyon yoksa ya da emir pozisyonla AYNI yöndeyse RED (eşleşmeden önce; `doluluk` tüketilmez);
         aksi hâlde dolan miktar |pozisyon| ile kırpılır (reduce-only pozisyonu asla ters çeviremez)."""
+        if isinstance(tif, dict) and "trigger" in tif:                                     # K-64: tetik (stop) emri borsada bekler, hemen dolmaz
+            self._oid += 1
+            c = cloid.to_raw() if hasattr(cloid, "to_raw") else cloid
+            self.acik.append({"coin": coin, "oid": self._oid, "cloid": c, "side": "B" if is_buy else "A", "sz": float(sz), "limitPx": str(px),
+                              "triggerPx": tif["trigger"]["triggerPx"], "reduceOnly": reduce_only})
+            return {"status": "ok", "response": {"type": "order", "data": {"statuses": [{"resting": {"oid": self._oid}}]}}}
         cur = self.poz.get(coin, 0.0)
         if reduce_only and (abs(cur) < 1e-12 or (cur > 0) == is_buy):
             self.siparisler.append({"coin": coin, "is_buy": is_buy, "sz": sz, "px": px, "reduce_only": True, "cloid": cloid, "dolan": 0.0, "red": True})

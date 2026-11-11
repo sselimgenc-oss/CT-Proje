@@ -33,6 +33,8 @@ from copytrade.canli.hesap import Hesap
 from copytrade.canli.kadro import Karar, Saha, kadro_taze_mi
 from copytrade.canli.mutabakat import poz_farki, sanal_tutarlilik
 from copytrade.canli.niyet import Niyet, cloid_uret
+from copytrade.canli import borsa_stop
+from copytrade.canli.borsa_stop import BorsaStop
 from copytrade.canli.risk import Risk, gun
 from copytrade.canli.yurutucu import AnahtarYok, Dolum, SanalYurutucu, Yurutucu, gercek_yurutucu_olustur
 from copytrade.dinleyici import Ayar, Dinleyici, Izlenen, Olay, clearinghouse_ayristir, clearinghouse_pozisyonlari, clearinghouse_yuk, coin_listesi, rest_dolumlar, rest_post_fabrikasi, ws_baglan
@@ -395,6 +397,7 @@ class Motor:
             self.hesap.kasa_usd = self.kasa                      # boş dizin / sanal kip (kasa sabit) / açık pozisyonla kasa değişikliği (baslat reddeder): eski davranış
         self.saha = Saha(rules, self.kasa, _oku(durum_dizin / "saha.json"))
         self.risk = Risk(rules, self.kasa, _oku(durum_dizin / "risk.json"))
+        self.borsa_stop = BorsaStop(_oku(durum_dizin / "borsa_stop.json"))             # K-64: borsada duran felaket stopları (yalnız gerçek kip kullanır)
         if self._donem_eski is not None:
             self.risk.donem_yenile(self.hesap.ozsermaye({}))     # S-3: zirve / gün başı yeni dönem özsermayesine (500 → 300 geçişi zirve düşüşü sayılmaz)
         self._islenen: dict[str, None] = {}                     # işlenen (canlı) dolum kimlikleri, ekleme sırasıyla; G-14: sınır ADRES BAŞINA (`canli_islenen_adres_sakla`), tek yoğun adres diğerlerini düşürmez
@@ -495,6 +498,8 @@ class Motor:
         _yaz(d / "hesap.json", self.hesap.to_json())
         _yaz(d / "saha.json", self.saha.to_json())
         _yaz(d / "risk.json", self.risk.to_json())
+        if self.kip == "gercek":
+            _yaz(d / "borsa_stop.json", self.borsa_stop.to_json())
         _yaz(d / "motor.json", self._motor_json())
         self.niyet.sikistir(int(self.rules["canli_islenen_sakla"]))
 
@@ -1205,6 +1210,11 @@ class Motor:
                 self.kayit({"olay": "dur_kapanis_hata", "adres": "borsa", "tur": type(hata).__name__})
                 fazla = None
         duz = kalan == 0 and fazla == {}
+        if duz and self.kip == "gercek":
+            try:
+                self.borsa_stop_esitle(self.acik_emir_oku(), simdi)                              # K-64: pozisyon kalmadı → borsa stopları iptal
+            except Exception as hata:                                                           # noqa: BLE001
+                self.kayit({"olay": "borsa_stop_hata", "hatalar": [{"islem": "dur_iptal", "tur": type(hata).__name__}]})
         if duz:
             self._dur_yaz_atomik(neden, simdi, False)
         self.kayit({"olay": "dur", "neden": neden, "kapatilan": kapatilan, "kalan": kalan, "borsa_fazla": fazla})
@@ -1514,6 +1524,7 @@ class Motor:
         self._hl_okuma_imza = self._poz_imza() if hl_zamani else None          # mutabakat yarışı: HL okumasından ÖNCEKİ yerel pozisyonlar
         hl = self.hl_oku() if hl_zamani else None
         oranlar = self.funding_oku() if self.funding_bekliyor(simdi) else None
+        stop_acik = self.acik_emir_oku() if self.kip == "gercek" and self._aralik_mi("borsa_stop", simdi, float(self.rules["canli_borsa_stop_sn"])) else False     # K-64
         hacimler = self.hacim_oku() if self._aralik_mi("hacim", simdi, 3600 if self._coin_hacim else 300) else None     # K-62: saatte bir (veri yoksa 5 dk'da bir dene)
         fgercek = self.funding_gercek_oku(simdi)                                # G7: gerçek kip, saatte bir; sanalda None
         ledger = self.ledger_oku(simdi) if hl else None                          # gerçek kip: yatırma/çekme kaydı (#5)
@@ -1528,7 +1539,8 @@ class Motor:
                 ("belirsiz", lambda: self.belirsiz_coz(simdi)),                    # G-1: sonucu belirsiz emirler risk/mutabakattan ÖNCE deftere
                 ("tasfiye", lambda: self._tasfiye(simdi)), ("funding", lambda: self.funding_uygula(oranlar, simdi)), ("funding_gercek", lambda: self.funding_gercek_uygula(fgercek, simdi)),
                 ("hl_ozsermaye", lambda: self.hl_uygula(hl[1], simdi) if hl else None), ("ofset", lambda: self.ofset_yenile(ledger, simdi)),
-                ("hl_sicrama", lambda: self._hl_sicrama_denetle(simdi) if hl else None), ("risk", lambda: self._risk(simdi)), ("felaket_stop", lambda: self._felaket_stop(simdi)), ("anlik_saha", lambda: self._anlik(simdi)),
+                ("hl_sicrama", lambda: self._hl_sicrama_denetle(simdi) if hl else None), ("risk", lambda: self._risk(simdi)), ("felaket_stop", lambda: self._felaket_stop(simdi)),
+                ("borsa_stop", lambda: self.borsa_stop_esitle(stop_acik, simdi) if stop_acik is not False else None), ("anlik_saha", lambda: self._anlik(simdi)),
                 ("inen", lambda: self.karar_uygula(self.saha.inenleri_kapat(simdi), simdi)), ("mutabakat", lambda: self._mutabakat(simdi, hl)), ("kapanis_kuyrugu", lambda: self._kuyruk_isle(simdi)),
                 ("kadro", lambda: self._kadro_uygula(kadro, simdi)), ("senkron", lambda: (self.senkron_uygula(senkron), self.hesap_uygula(hesaplar, simdi)) if senkron is not None else None),
                 ("telegram", lambda: self._komutlar(komutlar)), ("ajan_suresi", lambda: self.ajan_suresi_uygula(ajan, simdi)), ("ozet", lambda: self._gunluk_ozet(simdi)),
@@ -1675,6 +1687,46 @@ class Motor:
                     self.kayit({"olay": "felaket_stop", "adres": adres, "coin": coin, "giris": p.giris, "mark": mk, "aleyhe": aleyhe, "kapandi": bool(ok)})
                     self.tg.gonder(tg.alarm("ALARM: felaket stopu", f"{tg.kisa(adres)} {coin} pozisyonu girişten %{aleyhe * 100:.0f} aleyhe gitti, "
                                             f"{'kapatıldı' if ok else 'kapatılamadı (yeniden denenecek)'}.", "🛑"))
+
+    def acik_emir_oku(self) -> list[dict] | None:
+        """K-64 (ağ; kilitsiz): kendi HL hesabımızın tüm perp dex'lerdeki açık emirleri (`openOrders`). Hata: None (eşitleme kayıp/yetim taraması yapmaz)."""
+        adres = os.environ.get("HL_HESAP_ADRESI", "")
+        try:
+            liste: list[dict] = []
+            for dex in ["", *self._dexler()]:
+                r = self.post({"type": "openOrders", "user": adres, **({"dex": dex} if dex else {})})
+                if not isinstance(r, list):
+                    raise ValueError("openOrders yanıtı geçersiz")
+                liste += r
+            return liste
+        except Exception as hata:                          # noqa: BLE001
+            self.kayit({"olay": "acik_emir_okuma_hata", "tur": type(hata).__name__})
+            return None
+
+    def borsa_stop_esitle(self, acik: list[dict] | None, simdi: int) -> None:
+        """K-64: gerçek kipte borsada duran felaket stoplarını net pozisyonlarla eşitler. Kaybolan (tetiklenmiş) stopun coinindeki yerel pozisyonlar borsa teyitli
+        kapanış yoluyla temizlenir (`_kapat_coin` → borsa 0 ise G-13 harici kapanış + defter düzeltmesi). Hata → kayıt + saatte bir alarm; motor durmaz."""
+        if self.kip != "gercek" or not hasattr(self.yurutucu, "stop_koy"):
+            return
+        hedef = borsa_stop.hedefler(self.hesap.poz, self.marks, float(self.rules["canli_borsa_stop_oran"]), float(self.rules.get("canli_min_nosyonel_usd", 10)))
+        olay = self.borsa_stop.esitle(hedef, acik, self.yurutucu)
+        for c in olay["kayip"]:
+            adresler = [a for a, cs in self.hesap.poz.items() if c in cs]
+            self.kayit({"olay": "borsa_stop_kayip", "coin": c, "yerel_acik": bool(adresler)})
+            if not adresler:                                      # pozisyon zaten kapalı: HL reduce-only stopu kendisi düşürmüş olabilir; alarm yok
+                continue
+            self.tg.gonder(tg.alarm("ALARM: borsa stopu tetiklendi / kayboldu", f"{c} için borsadaki felaket stopu açık emirlerde yok (tetiklenmiş olabilir).\n"
+                                    "Pozisyon borsadan teyitle temizleniyor; stop yeniden kurulacak.", "🛑"))
+            for adres in adresler:
+                self._kapat_coin(adres, c, "borsa_stop", simdi)
+        for ad in ("konan", "iptal", "yetim"):
+            for x in olay[ad]:
+                self.kayit({"olay": f"borsa_stop_{ad}", **x})
+        if olay["hata"]:
+            self.kayit({"olay": "borsa_stop_hata", "hatalar": olay["hata"][:10]})
+            if self._aralik_mi("borsa_stop_alarm", simdi, 3600):
+                self.tg.gonder(tg.alarm("ALARM: borsa stopu kurulamadı", f"{len(olay['hata'])} stop işlemi başarısız ({olay['hata'][0].get('coin')}: {olay['hata'][0].get('neden') or olay['hata'][0].get('islem')}).\n"
+                                        "Her dakika yeniden deneniyor; motor ayaktayken yazılım stopu (%20) çalışıyor."))
 
     def hacim_oku(self) -> dict[str, float] | None:
         """K-62 (ağ; kilitsiz): `metaAndAssetCtxs` (ana dex + HIP-3 dex) coin başına 24 sa nosyonel hacim (`dayNtlVlm`, $). Hata: None (önceki değer kalır)."""
@@ -2540,7 +2592,7 @@ def yabanci_emir_denetle(post: Callable[[dict], Any], adres: str, niyet_yolu: Pa
         liste = post({"type": "openOrders", "user": adres, **({"dex": dex} if dex else {})})
         if not isinstance(liste, list):
             raise HlOkunamadi("openOrders yanıtı geçersiz")
-        yabanci += [e for e in liste if not isinstance(e, dict) or str(e.get("cloid") or "").lower() not in bilinen or not e.get("cloid")]
+        yabanci += [e for e in liste if not isinstance(e, dict) or not e.get("cloid") or (str(e.get("cloid")).lower() not in bilinen and not borsa_stop.bizim_mi(e.get("cloid")))]      # K-64: borsa stopu önekli emirler bizim
     if yabanci:
         ornek = ", ".join(str((e or {}).get("coin", "?")) for e in yabanci[:3] if isinstance(e, dict))
         raise KipHatasi(f"HL hesabında motorun niyet kaydında olmayan {len(yabanci)} açık emir var ({ornek}): ikinci motor ya da elle emir olabilir. "
@@ -2768,6 +2820,8 @@ def _motor_calistir(args: argparse.Namespace, rules: dict, kip: str, post: Calla
     def bildir(m: str) -> None:
         print(f"açılış: {m}", file=sys.stderr)
     try:
+        if kip == "gercek" and (os.environ.get("HL_AG") or "").strip():
+            raise KipHatasi("HL_AG ayarlı: motor yalnız ana ağda çalışır (testnet yalnız `copytrade.canli.stop_deneme` içindir); HL_AG satırını ortamdan kaldırın")      # K-64
         kasa, _ = acilis_yeniden_dene(lambda: acilis_hl_denetle(rules, kip, post, sk, Path(args.durum_dizin) / "niyet.jsonl"), bildir=bildir)
         rules = {**rules, "canli_kasa_ayar_usd": kasa_belirle(rules, kip, **sk)[0], "canli_kasa_usd": kasa}
         if sk:
