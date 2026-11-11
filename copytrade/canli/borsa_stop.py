@@ -61,9 +61,12 @@ class BorsaStop:
         self.stoplar: dict[str, dict] = {k: dict(v) for k, v in ((durum or {}).get("stoplar") or {}).items()}     # coin → {oid, cloid, long, sz, tetik}
         self.silinecek: list[dict] = [dict(x) for x in ((durum or {}).get("silinecek") or [])]                     # iptali başarısız eski stoplar (yeniden denenir)
         self.ilk = True                                                                                         # süreç başına ilk eşitlemede yetim taraması
+        self.korumasiz: dict[str, int] = {k: int(v) for k, v in ((durum or {}).get("korumasiz") or {}).items()}  # K-65: coin → stopsuz kalmaya başladığı an (ms)
+        ceza = (durum or {}).get("ceza_ms")
+        self.ceza_ms: int | None = int(ceza) if ceza is not None else None                                      # K-65: son zorunlu kapatma anı (yeni açılış cezası)
 
     def to_json(self) -> dict:
-        return {"stoplar": self.stoplar, "silinecek": self.silinecek}
+        return {"stoplar": self.stoplar, "silinecek": self.silinecek, "korumasiz": self.korumasiz, "ceza_ms": self.ceza_ms}
 
     def esitle(self, hedef: dict[str, dict], acik: list[dict] | None, yurutucu: Any) -> dict[str, list]:
         """`acik`: hesabın açık emirleri (openOrders; None = okunamadı → yalnız koy/iptal, kayıp/yetim tespiti yok).

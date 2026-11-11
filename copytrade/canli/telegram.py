@@ -393,7 +393,7 @@ def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_s
 
 BAYRAK_TR = {"gunluk_kayip": "🔻 Günlük kayıp freni: bugün yeni işlem yok", "mutabakat": "🧮 Mutabakat farkı: yeni işlem kapalı", "elle_dur": "⏸️ Yeni işlem duraklatıldı (/devam ile açılır)",
              "fren": "🧯 Patlama freni: bir trader'dan yeni açılış beklemede", "kasa_siniri": "🔒 Kasa sınırı aşıldı: yeni işlem kapalı",
-             "belirsiz": "❓ Sonucu belirsiz emir borsadan sorgulanıyor: yeni işlem kapalı"}
+             "belirsiz": "❓ Sonucu belirsiz emir borsadan sorgulanıyor: yeni işlem kapalı", "stop_korumasiz": "🛑 Borsa stopu kurulamadığı için pozisyon kapatıldı: yeni işlem geçici kapalı"}
 
 
 def msg_durum(kip: str, ozsermaye: float, kasa: float, saha: int, n: int, inen: int, acik_poz: int, emir: int, dur: bool, duraklat: bool = False, bayraklar: list[str] | None = None) -> str:
@@ -435,7 +435,7 @@ TSI = timezone(timedelta(hours=3))
 ATLA_TR = {"gec_acilis": "geç görülen açılış", "spot_atlandi": "spot coin", "hip3_atlandi": "HIP-3 coin", "ters_netlesme": "ters netleşme (K‑41)", "trader_hesap_yok": "trader hesabı okunamadı",
            "hesap_yok": "trader hesap değeri kullanılamadı", "slot_tavani": "slot tavanı", "marj_yok": "marj yok", "coin_tavani": "coin tavanı", "min_nosyonel": "çok küçük emir",
            "min_emir_atlandi": "çok küçük (< 11 $)", "inen_trader": "ayrılan trader (yeni alım yok)", "patlama_freni": "patlama freni", "dur": "motor durdu",
-           "gunluk_kayip": "günlük kayıp freni", "mutabakat": "mutabakat farkı", "elle_dur": "elle duraklatma", "kasa_siniri": "kasa sınırı", "belirsiz": "belirsiz emir bekleniyor",
+           "gunluk_kayip": "günlük kayıp freni", "mutabakat": "mutabakat farkı", "elle_dur": "elle duraklatma", "kasa_siniri": "kasa sınırı", "belirsiz": "belirsiz emir bekleniyor", "stop_korumasiz": "stopsuz pozisyon kapatıldı (geçici)",
            "kapanis_eksik": "kapanış eksik"}
 KACIRILAN_NEDENLER = ("gec_acilis", "trader_hesap_yok", "hesap_yok")      # S-13: "kaçırılan" (geç görülen / veri yok); geri kalanı "kural gereği"
 

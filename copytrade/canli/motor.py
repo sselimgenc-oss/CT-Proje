@@ -1727,6 +1727,31 @@ class Motor:
             if self._aralik_mi("borsa_stop_alarm", simdi, 3600):
                 self.tg.gonder(tg.alarm("ALARM: borsa stopu kurulamadı", f"{len(olay['hata'])} stop işlemi başarısız ({olay['hata'][0].get('coin')}: {olay['hata'][0].get('neden') or olay['hata'][0].get('islem')}).\n"
                                         "Her dakika yeniden deneniyor; motor ayaktayken yazılım stopu (%20) çalışıyor."))
+        self._stopsuz_denetle(hedef, simdi)
+
+    def _stopsuz_denetle(self, hedef: dict[str, dict], simdi: int) -> None:
+        """K-65 (kullanıcı kararı 11.11: acil durumda kapatma sistemde): stop beklenen coin `canli_borsa_stop_korumasiz_sn` boyunca borsada stopsuz kaldıysa
+        o coindeki pozisyonlar kapatılır (`borsa_stop_korumasiz`) ve `canli_borsa_stop_ceza_sn` boyunca yeni açılış/artırma durur (`stop_korumasiz` bayrağı). Kapanış serbest."""
+        bs_ = self.borsa_stop
+        sinir_ms = float(self.rules["canli_borsa_stop_korumasiz_sn"]) * 1000
+        stopsuz = {c for c in hedef if c not in bs_.stoplar}
+        bs_.korumasiz = {c: t for c, t in bs_.korumasiz.items() if c in stopsuz}
+        for c in stopsuz:
+            bs_.korumasiz.setdefault(c, simdi)
+        for c, ilk in sorted(bs_.korumasiz.items()):
+            if simdi - ilk < sinir_ms:
+                continue
+            adresler = [a for a, cs in self.hesap.poz.items() if c in cs]
+            dk = int((simdi - ilk) / 60000)
+            self.kayit({"olay": "borsa_stop_korumasiz_kapat", "coin": c, "sure_dk": dk, "adres_sayisi": len(adresler)})
+            self.tg.gonder(tg.alarm("ALARM: stopsuz pozisyon kapatıldı", f"{c} için borsa stopu {dk} dk kurulamadı; pozisyon otomatik kapatılıyor.\n"
+                                    f"Yeni açılış {float(self.rules['canli_borsa_stop_ceza_sn']) / 3600:g} saat durduruldu (kapanışlar serbest).", "🛑"))
+            del bs_.korumasiz[c]
+            bs_.ceza_ms = simdi
+            for adres in adresler:
+                self._kapat_coin(adres, c, "borsa_stop_korumasiz", simdi)
+        ceza = bs_.ceza_ms is not None and simdi - bs_.ceza_ms < float(self.rules["canli_borsa_stop_ceza_sn"]) * 1000
+        self.risk.bayrak("stop_korumasiz", ceza)
 
     def hacim_oku(self) -> dict[str, float] | None:
         """K-62 (ağ; kilitsiz): `metaAndAssetCtxs` (ana dex + HIP-3 dex) coin başına 24 sa nosyonel hacim (`dayNtlVlm`, $). Hata: None (önceki değer kalır)."""
