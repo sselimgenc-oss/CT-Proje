@@ -323,3 +323,12 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - K-39 gereği motor günde yalnız İLK kadroyu uygular. K-59 elle çıkarmasını taşıyan kadro aynı UTC gününün ikinci kadrosuydu (14:51Z); bu yüzden 0x701a yaklaşık 2 gün daha kopyalanacak, yeni üye yarın girecekti.
 - Kadronun `cikanlar`ında `elle_cikarildi` olan saha üyesi artık hemen düşer (bekleme ile geri dönemez; pozisyonu inen kuralıyla kapanır). O kadro aynı günün daha yeni kadrosuysa günün kadrosu olur ve boş slot ondan dolar; günlük kurallar ikinci kez çalışmaz.
 - Test: `test_k61_elle_cikarma_ayni_gun_ikinci_kadroda_hemen_uygulanir_slot_yeni_kadrodan_dolar`.
+
+## K-62 — Dengeli risk eki: günlük sert fren, felaket stopu, sığ coin tavanı (kullanıcı: "dengeli olsun, çok temkinli değil", 11.11)
+- Kullanıcı kararı (11.11): canlıya geçiş istatistiksel kanıt beklemez, 2027'den önce küçük kasayla canlı; riskler biliniyor. Risk tarafı "dengeli": yalnız felaket senaryoları kapatılır, getiriyi kısan ek temkin yok.
+- Fable (iki tur; ikinci turda yön tavanı, −%3/−%6 kademesi ve yarım boyut "fazla temkin" diye geri çekildi). Uygulanan:
+  1. **Günlük sert fren** (`canli_gunluk_kapat_oran` 0,10): gün başından −%10 → tüm pozisyonlar kapanır, o gün açılış yok; DUR değil, ertesi UTC günü normal. −%5 açılış durdurma (`canli_gunluk_kayip_oran`) aynen.
+  2. **Felaket stopu** (`canli_felaket_stop_oran` 0,20): pozisyon ortalama girişten %20 aleyhe → o pozisyon kapanır, trader sahada kalır. Şimdilik motor içi (yazılım); **borsada duran tetik emri gerçek para ön koşulu** (`deploy/ACILIS_KONTROL.md`), HL testnet'te denenecek.
+  3. **Sığ coin tavanı** (`canli_sig_hacim_usd` 20 M $ 24 sa hacim; `canli_sig_coin_tavan_usd` 150 $): sığ coinde trader başına kopya pozisyonu ≤ 150 $; majörde 1,5 × slot (300 $). Hacim `metaAndAssetCtxs` `dayNtlVlm`, saatte bir; hiç okunamazsa sınır uygulanmaz, listede olmayan coin sığ sayılır.
+- Değişmeyen: zirveden −%20 DUR, slot −%20 düşme, coin %30 tavanı, brüt 1.500 $, kasa ≤ 1.000 $. Yarım boyutla başlama kullanıcı kararına bırakıldı (Fable: isteğe bağlı, 1 hafta yeter).
+- Test: `tests/test_k62_risk.py`.

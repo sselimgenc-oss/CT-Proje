@@ -3,6 +3,8 @@
 - Coin yoğunlaşması: aynı coinde TÜM slotların brüt nosyoneli ≤ kasa × `canli_coin_tavan_oran`; aşan açılış KIRPILIR (kırpılan < `radar_min_emir_usd` ise 0).
 - Patlama freni: bir trader `canli_patlama_pencere_dk` dk içinde ≥ `canli_patlama_coin` YENİ coin açarsa (o sekizinci açılış dahil) `canli_patlama_ara_dk` dk ondan yeni açılış kopyalanmaz (kapanışlar izlenir).
 - Günlük kayıp: UTC gün başı özsermayeden kayıp ≥ `canli_gunluk_kayip_oran` → o gün yeni açılış yok.
+- K-62 günlük sert fren: gün başından kayıp ≥ `canli_gunluk_kapat_oran` → `gunluk_kapat` olayı (motor tüm pozisyonları kapatır; o gün açılış yok; DUR değil, ertesi gün sürer).
+- K-62 sığ coin: 24 sa hacmi < `canli_sig_hacim_usd` olan coinde trader başına kopya pozisyonu ≤ `canli_sig_coin_tavan_usd`.
 - Zirveden düşüş ≥ `canli_zirve_dusus_oran` → `DUR`: tüm pozisyonlar reduce‑only kapatılır, motor durur, `durum/DUR` yazılır (elle silinmeden yeniden açılmaz; S-2: silinip yeniden başlatılınca zirve güncel özsermayeye kurulur). `/kapat` aynı (yeni `/dur` yalnız yeni girişi durdurur).
 - Kasa > `canli_kasa_ust_usd` (AGENTS.md sınırı): yeni açılış yok + alarm.
 """
@@ -32,6 +34,7 @@ class Risk:
         self.fren_bitis: dict[str, int] = {k: int(v) for k, v in (d.get("fren_bitis") or {}).items()}
         self.yeni_coin: dict[str, deque[tuple[int, str]]] = {a: deque((int(x[0]), str(x[1])) if isinstance(x, (list, tuple)) else (int(x), "") for x in v) for a, v in (d.get("yeni_coin") or {}).items()}      # (ms, coin); eski biçim (yalnız ms) okunur
         self.acilis_durdu: dict[str, bool] = dict(d.get("acilis_durdu") or {})        # neden -> aktif mi (gunluk_kayip, mutabakat, kasa_siniri, kadro)
+        self.kapat_gunu: str | None = d.get("kapat_gunu")                                  # K-62: günlük sert frenin tetiklendiği UTC günü (günde bir kez)
 
     # ------------------------------------------------------------------ özsermaye izleme
     def ozsermaye_isle(self, ozsermaye: float, simdi_ms: int) -> list[str]:
@@ -49,6 +52,9 @@ class Risk:
         if kayip >= float(self.rules["canli_gunluk_kayip_oran"]) - 1e-12 and not self.acilis_durdu.get("gunluk_kayip"):
             self.acilis_durdu["gunluk_kayip"] = True
             olaylar.append("gunluk_kayip")
+        if kayip >= float(self.rules.get("canli_gunluk_kapat_oran", 1.0)) - 1e-12 and self.kapat_gunu != g:
+            self.kapat_gunu = g                                                           # K-62: günlük sert fren (günde bir kez)
+            olaylar.append("gunluk_kapat")
         dusus = (self.zirve - ozsermaye) / self.zirve if self.zirve > 0 else 0.0
         if dusus >= float(self.rules["canli_zirve_dusus_oran"]) - 1e-12 and not self.dur:
             self.dur, self.dur_neden = True, "zirve_dusus"
@@ -126,6 +132,17 @@ class Risk:
         kirpilan = max(0.0, izin)
         return (kirpilan, "coin_tavani_kirpildi") if kirpilan >= float(self.rules["radar_min_emir_usd"]) else (0.0, "coin_tavani")
 
+    def sig_coin_kirp(self, emir_usd: float, mevcut_usd: float, hacim_usd: float | None) -> tuple[float, str]:
+        """K-62: sığ coinde (24 sa hacim < `canli_sig_hacim_usd`) trader başına kopya pozisyonu ≤ `canli_sig_coin_tavan_usd`. `hacim_usd` None = hacim verisi hiç yok (sınır uygulanmaz).
+        Döner (uygulanan $, neden): '' | 'sig_coin_kirpildi' | 'sig_coin_tavani' (kırpılan < min emir)."""
+        if hacim_usd is None or float(hacim_usd) >= float(self.rules["canli_sig_hacim_usd"]):
+            return emir_usd, ""
+        izin = float(self.rules["canli_sig_coin_tavan_usd"]) - float(mevcut_usd)
+        if emir_usd <= izin + 1e-9:
+            return emir_usd, ""
+        kirpilan = max(0.0, izin)
+        return (kirpilan, "sig_coin_kirpildi") if kirpilan >= float(self.rules["radar_min_emir_usd"]) else (0.0, "sig_coin_tavani")
+
     def marj_kirp(self, emir_usd: float, marj_kullanilan_usd: float, ozsermaye_usd: float, kaldirac: float | None = None) -> tuple[float, str]:
         """K‑35 toplam marj tavanı: açık pozisyonların başlangıç marjı toplamı (nosyonel / kaldıraç) + yeni emrin marjı ≤ özsermaye (serbest kasa). Aşan kısım KIRPILIR (`marj_yok`);
         kırpılan < `radar_min_emir_usd` ise 0. Gerçek kipte HL zaten reddeder; sanal kipte bu olmadan getiri şişerdi. Döner (uygulanan $, neden: '' | 'marj_yok')."""
@@ -138,4 +155,4 @@ class Risk:
     # ------------------------------------------------------------------ kalıcılık
     def to_json(self) -> dict[str, Any]:
         return {"zirve": self.zirve, "gun": self.gun, "gun_basi": self.gun_basi, "son_oz": self.son_oz, "dur": self.dur, "dur_neden": self.dur_neden, "fren_bitis": self.fren_bitis,
-                "yeni_coin": {a: list(v) for a, v in self.yeni_coin.items()}, "acilis_durdu": self.acilis_durdu}
+                "yeni_coin": {a: list(v) for a, v in self.yeni_coin.items()}, "acilis_durdu": self.acilis_durdu, "kapat_gunu": self.kapat_gunu}
