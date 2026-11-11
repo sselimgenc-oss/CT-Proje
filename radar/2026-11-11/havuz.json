@@ -1,0 +1,90 @@
+{
+ "sema": "secim-d-havuz-v1",
+ "kosu_ms": 1794380431250,
+ "pencere_bas_ms": 1791961231250,
+ "doldurma": false,
+ "satirlar": [
+  {
+   "adres": "0xde29121a6858d90ae486855b127f9d5ee4035232",
+   "tur": "uye",
+   "hesap_usd": 20391.743457,
+   "pnl_kum": -1268.646543,
+   "hafta_sayisi": 12,
+   "pozitif_hafta": 11,
+   "pnl_90g": 5980.913171,
+   "pnl_30g": 608.323543,
+   "dusus_90g": 0.008268382708694835,
+   "zirve_dusus": 0.0,
+   "t_istat": 3.120736255734481,
+   "zirve_pnl": -1268.646543,
+   "neden": null
+  },
+  {
+   "adres": "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad",
+   "tur": "uye",
+   "hesap_usd": 55334.93606,
+   "pnl_kum": 53210.32606,
+   "hafta_sayisi": 12,
+   "pozitif_hafta": 11,
+   "pnl_90g": 34996.075595999995,
+   "pnl_30g": 25146.704356,
+   "dusus_90g": 0.07485455706515548,
+   "zirve_dusus": 0.0,
+   "t_istat": 3.1155440636161567,
+   "zirve_pnl": 53210.32606,
+   "neden": null
+  },
+  {
+   "adres": "0xfb94d93d73b1a5398816c7d46e1590173371f82b",
+   "tur": "uye",
+   "hesap_usd": 138337.873587,
+   "pnl_kum": -76912.156413,
+   "hafta_sayisi": 12,
+   "pozitif_hafta": 8,
+   "pnl_90g": 59311.798590999984,
+   "pnl_30g": 2464.1487259999994,
+   "dusus_90g": 0.04874214038543419,
+   "zirve_dusus": 0.0,
+   "t_istat": 2.3610095981962953,
+   "zirve_pnl": -76912.156413,
+   "neden": null
+  },
+  {
+   "adres": "0xfc76f730c3e2939825484e0a777368075d779ef9",
+   "tur": "uye",
+   "hesap_usd": 223956.068436,
+   "pnl_kum": 231942.738436,
+   "hafta_sayisi": 12,
+   "pozitif_hafta": 10,
+   "pnl_90g": 165705.734438,
+   "pnl_30g": 78038.739539,
+   "dusus_90g": 0.10631182467289986,
+   "zirve_dusus": 0.0,
+   "t_istat": 1.8615002835745893,
+   "zirve_pnl": 231942.738436,
+   "neden": null
+  },
+  {
+   "adres": "0x424d756e19469ddb13c753b280cc0e9d8c95420e",
+   "tur": "uye",
+   "hesap_usd": 51234.464923,
+   "pnl_kum": 27508.024923,
+   "hafta_sayisi": 12,
+   "pozitif_hafta": 9,
+   "pnl_90g": 13723.811902000001,
+   "pnl_30g": -2381.4375839999993,
+   "dusus_90g": 0.125123312825351,
+   "zirve_dusus": 0.09728524173802298,
+   "t_istat": 1.327863422067079,
+   "zirve_pnl": 33033.556869,
+   "neden": null
+  }
+ ],
+ "tarama": {
+  "on_filtre": 0,
+  "olculen": 0,
+  "portfolio_hata": 0,
+  "hata_tur": {},
+  "butce_disi": 0
+ }
+}
