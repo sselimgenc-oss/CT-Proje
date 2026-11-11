@@ -166,3 +166,5 @@
 {"zaman_ms":1794404886826,"olay":"tur","ozsermaye_usd":974.8078}
 {"zaman_ms":1794405648100,"olay":"funding","saat":498446,"saat_adet":1,"funding_usd":-0.007403094718248421,"toplam_funding_usd":-0.12262074524497804}
 {"zaman_ms":1794405744462,"olay":"tur","ozsermaye_usd":977.6343}
+{"zaman_ms":1794406606035,"olay":"tur","ozsermaye_usd":974.6299}
+{"zaman_ms":1794406982757,"olay":"telegram_hata","tur":"ConnectionError"}
