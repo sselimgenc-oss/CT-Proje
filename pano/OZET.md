@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-11 14:54 UTC
+# Canlı rapor — 2026-11-11 15:09 UTC
 
 **Kip** sanal · vardiya `43013589177` · saha 5/5 (inen 1)
 
@@ -6,20 +6,20 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 1.000,00 $ | 972,36 $ | −%0,83 | — (geçmiş < 7 gün) | −%2,76 | −%2,83 |
+| 1.000,00 $ | 972,08 $ | −%0,86 | — (geçmiş < 7 gün) | −%2,79 | −%2,86 |
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0xfc76f7… | BTC | L | 298,38 $ | −1,59 $ |
-| 0xfb94d9… | HYPE | L | 185,11 $ | +2,12 $ |
-| 0xfb94d9… | ZEC | L | 104,45 $ | −18,87 $ |
+| 0xfc76f7… | BTC | L | 298,28 $ | −1,69 $ |
+| 0xfb94d9… | HYPE | L | 185,30 $ | +2,31 $ |
+| 0xfb94d9… | ZEC | L | 104,07 $ | −19,24 $ |
 
 ## Son 24 saat
 
-- emir 29 · dolum 29 · kayma p50 −%0,03 / max +%0,15 (n=29)
-- funding −0,09 $ · ücret 0,41 $
+- emir 23 · dolum 23 · kayma p50 −%0,01 / max +%0,15 (n=23)
+- funding −0,09 $ · ücret 0,27 $
 
 _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun günlük kayıp tanımı); hafta/toplam kasaya göre; zirveden düşüş motorun zirvesine göre._
 
@@ -34,7 +34,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 196 dk · WS kopma 3 / yeniden bağlanma 3 · boşluk yok · REST 429 0
+- süre 210 dk · WS kopma 3 / yeniden bağlanma 3 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
