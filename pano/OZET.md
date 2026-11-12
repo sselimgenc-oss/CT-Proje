@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-12 11:48 UTC
+# Canlı rapor — 2026-11-12 12:03 UTC
 
 **Kip** sanal · vardiya `43205684073` · saha 3/3 (inen 2)
 
@@ -17,7 +17,7 @@
 ## Son 24 saat
 
 - emir 1 · dolum 1 · kayma p50 +%0,05 / max +%0,05 (n=1)
-- funding +0,00 $ · ücret 0,01 $
+- funding −0,00 $ · ücret 0,01 $
 
 _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun günlük kayıp tanımı); hafta/toplam kasaya göre; zirveden düşüş motorun zirvesine göre._
 
@@ -37,7 +37,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 45 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 60 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
