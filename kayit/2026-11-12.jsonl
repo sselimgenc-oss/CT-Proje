@@ -21,3 +21,14 @@
 {"zaman_ms":1794474657153,"olay":"tur","ozsermaye_usd":600.0}
 {"zaman_ms":1794475492962,"olay":"tur","ozsermaye_usd":600.0}
 {"zaman_ms":1794476361417,"olay":"tur","ozsermaye_usd":600.0}
+{"zaman_ms":1794476846564,"olay":"telegram","metin":"🧾 Son 1 saat (11:47–12:47 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 600,00 $ · bugün 🟢 +0,00 $ (%0,0) · başlangıçtan 🟢 +0,00 $ (%0,0)","acik":true}
+{"zaman_ms":1794477206715,"olay":"tur","ozsermaye_usd":600.0}
+{"zaman_ms":1794477302032,"olay":"saha_dus","adres":"0xde29121a6858d90ae486855b127f9d5ee4035232","neden":"veto_omur_zarar","sonuc":true}
+{"zaman_ms":1794477302032,"olay":"telegram","metin":"➖ Trader takipten çıktı: 0xde2912…\n↳ Neden: veto_omur_zarar (sonuçla, 14 gün bekleme)","acik":true}
+{"zaman_ms":1794477302032,"olay":"saha_dus","adres":"0xfb94d93d73b1a5398816c7d46e1590173371f82b","neden":"veto_omur_zarar","sonuc":true}
+{"zaman_ms":1794477302032,"olay":"telegram","metin":"➖ Trader takipten çıktı: 0xfb94d9…\n↳ Neden: veto_omur_zarar (sonuçla, 14 gün bekleme)","acik":true}
+{"zaman_ms":1794477305744,"olay":"saha_giris","adres":"0xfc76f730c3e2939825484e0a777368075d779ef9","neden":"bos_slot","yerine":null,"slot_usd":200.0}
+{"zaman_ms":1794477305745,"olay":"telegram","metin":"➕ Yeni trader takibe alındı: 0xfc76f7…\n↳ Neden: boş yer açıldı","acik":true}
+{"zaman_ms":1794477305745,"olay":"kor_kirpildi","adres":"0x424d756e19469ddb13c753b280cc0e9d8c95420e","uyeler":["0x8abc3b8b07082cc8752a1342ece30b9798aac9ad","0xfc76f730c3e2939825484e0a777368075d779ef9"]}
+{"zaman_ms":1794477309370,"olay":"saha_giris","adres":"0xc22db2c04e054786426671cec0b766c07304fb20","neden":"bos_slot","yerine":null,"slot_usd":200.0}
+{"zaman_ms":1794477309370,"olay":"telegram","metin":"➕ Yeni trader takibe alındı: 0xc22db2…\n↳ Neden: boş yer açıldı","acik":true}
