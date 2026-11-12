@@ -1,0 +1,127 @@
+# Walk-forward seçim doğrulaması (K-65 Faz 4 kapısı; yalnız bilgi, SALT OKUR: HL info + lider tablosu; anahtar / emir YOK).
+# Kod: arastirma/secim_dogrulama/ (kurallar test başlamadan donduruldu: KURALLAR_DONDURULDU.md). Uzun iş (~35 sa) 5 saatlik dilimlerle koşar:
+# - Durum (önbellek + ara dosyalar) dilimden dilime `secim-dogrulama-durum` artifact'i (tar.gz) ile taşınır; kalınan yerden devam eder (adres başına gzip önbellek).
+#   Donmuş girdiler depoda: ayar.json (çapa + 12 tarih), evren.json (11.11 lider tablosundan evren), donmus_meta.json.gz (dex + azami kaldıraç).
+# - Dilim bitince iş bitmediyse `zincir` işi sonrakini `workflow_dispatch` ile tetikler (yedek: 6 saatte bir cron). Bitince (DURUM.md "BİTTİ") hiçbir şey yapmaz.
+# - DURUM.md, RAPOR.md ve özet dosyaları `secim-dogrulama` veri dalına yazılır (yalnız yayım adımı token görür).
+name: Seçim doğrulaması (walk-forward, yalnız bilgi)
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"          # YEDEK: zincir koparsa
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: secim-dogrulama
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+jobs:
+  dilim:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    permissions:
+      contents: write                 # yalnız veri dalı yayımı (token yalnız o adımda)
+      actions: read                   # önceki dilimin artifact'ini indirmek için
+    outputs:
+      bitti: ${{ steps.son.outputs.bitti }}
+      sure_dk: ${{ steps.son.outputs.sure_dk }}
+    env:
+      WF_VERI: ${{ github.workspace }}/veri
+      WF_REPO: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Durumu geri yükle (son artifact; yoksa baştan)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "BAS_S=$(date -u +%s)" >> "$GITHUB_ENV"
+          mkdir -p veri
+          kosu="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=secim-dogrulama-durum&per_page=1" --jq '[.artifacts[] | select(.expired == false)][0].workflow_run.id // empty')"
+          if [ -n "$kosu" ]; then
+            echo "önceki dilim: $kosu"
+            gh run download "$kosu" -R "$GITHUB_REPOSITORY" -n secim-dogrulama-durum -D /tmp/durum
+            tar -xzf /tmp/durum/durum.tar.gz -C veri
+          else
+            echo "artifact yok: ilk dilim, donmuş girdilerle baştan (önbellek boş)"
+          fi
+          cp arastirma/secim_dogrulama/ayar.json arastirma/secim_dogrulama/evren.json veri/     # donmuş çapa/evren (depodaki sürüm esas)
+          mkdir -p veri/cache/tek
+          cp arastirma/secim_dogrulama/donmus_meta.json.gz veri/cache/tek/meta.json.gz          # donmuş dex listesi + azami kaldıraç (11.11)
+          du -sh veri; find veri -type f | wc -l
+      - name: Dilim (en çok 320 dk; kalınan yerden)
+        run: |
+          if grep -q "BİTTİ" veri/DURUM.md 2>/dev/null; then echo "iş daha önce bitti"; exit 0; fi
+          set +e
+          timeout -s TERM 320m python -u arastirma/secim_dogrulama/calistir.py > veri/calistir.log 2>&1
+          rc=$?
+          set -e
+          tail -n 20 veri/calistir.log || true
+          echo "çıkış kodu: $rc"
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; then echo "::warning::calistir.py $rc ile bitti (durum yine saklanır; sonraki dilim kalınan yerden dener)"; fi
+          cat veri/DURUM.md >> "$GITHUB_STEP_SUMMARY" || true
+      - id: son
+        if: always()
+        run: |
+          if grep -q "BİTTİ" veri/DURUM.md 2>/dev/null; then echo "bitti=true" >> "$GITHUB_OUTPUT"; else echo "bitti=false" >> "$GITHUB_OUTPUT"; fi
+          echo "sure_dk=$(( ($(date -u +%s) - ${BAS_S:-$(date -u +%s)}) / 60 ))" >> "$GITHUB_OUTPUT"
+          find veri -name '*.tmp' -delete || true
+          tar -czf /tmp/durum.tar.gz -C veri .
+          ls -la /tmp/durum.tar.gz
+      - name: Durumu sakla
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: secim-dogrulama-durum
+          path: /tmp/durum.tar.gz
+          retention-days: 7
+          compression-level: 0
+      - name: Veri dalına yaz (secim-dogrulama)
+        if: always()
+        env:
+          YAYIM_TOKEN: ${{ github.token }}
+        run: |
+          rm -rf /tmp/yayim && mkdir -p /tmp/yayim && cd /tmp/yayim
+          git init -q && git checkout -q -b secim-dogrulama
+          for f in DURUM.md RAPOR.md KURALLAR_DONDURULDU.md boyutlar.json ozet_tur1.json ozet_son.json ham_sonuclar.csv t12_acik.json; do
+            [ -f "$WF_VERI/$f" ] && cp "$WF_VERI/$f" . || true
+          done
+          cp "$WF_REPO/arastirma/secim_dogrulama/KURALLAR_DONDURULDU.md" .
+          cp "$WF_VERI"/bugun_havuzu_*.csv . 2>/dev/null || true
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "seçim doğrulaması: durum $(date -u +%Y-%m-%dT%H:%MZ)"
+          auth="$(printf 'x-access-token:%s' "$YAYIM_TOKEN" | base64 -w0)"
+          git -c http.extraheader="AUTHORIZATION: basic ${auth}" push -q -f "https://github.com/${GITHUB_REPOSITORY}.git" secim-dogrulama
+
+  zincir:
+    # İş bitmediyse sonraki dilimi tetikler. Hata döngüsü koruması: dilim 20 dk'dan kısa sürdüyse tetik YOK (yedek cron sürer).
+    needs: dilim
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && needs.dilim.outputs.bitti == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SURE_DK: ${{ needs.dilim.outputs.sure_dk }}
+    steps:
+      - name: Sonraki dilimi tetikle
+        run: |
+          if [ "${SURE_DK:-0}" -lt 20 ]; then echo "::warning::dilim ${SURE_DK:-?} dk sürdü (< 20): zincir tetiklenmedi, yedek cron bekleniyor"; exit 0; fi
+          gh workflow run secim_dogrulama.yml --ref main
+          echo "sonraki dilim tetiklendi"
