@@ -10,6 +10,10 @@ on:
   schedule:
     - cron: "23 */6 * * *"          # YEDEK: zincir koparsa
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - arastirma/secim_dogrulama/CALISTIR   # elle başlatma: bu dosyaya satır eklenen main push'u (yeni cron'lar GitHub'da geç devreye giriyor; 12.11)
 
 permissions:
   contents: read
