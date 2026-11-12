@@ -43,3 +43,5 @@
 {"zaman_ms":1794481462199,"olay":"tur","ozsermaye_usd":600.0}
 {"zaman_ms":1794482250910,"olay":"tur","ozsermaye_usd":600.0}
 {"zaman_ms":1794483098535,"olay":"tur","ozsermaye_usd":600.0}
+{"zaman_ms":1794483732781,"olay":"emir","kip":"sanal","adres":"0xc22db2c04e054786426671cec0b766c07304fb20","coin":"HYPE","eylem":"ac","yon":"B","usd_istenen":15.782190444342035,"usd_dolan":15.782190444342035,"sz":0.22304776127227036,"reduce_only":false,"pnl_usd":0.0,"durum":"dolu","red_neden":"","boyut_neden":"tamam","trader_px":70.719,"trader_dolum_ms":1794483732134,"gorme_ms":1794483732575,"emir_ms":1794483732575,"dolum_ms":1794483732696,"referans_px":70.757,"dolum_px":70.757,"kayma_ref":0.0,"kayma_trader":0.0005373379148462354,"ucret":0.007101985699953916,"gec_goruldu":false,"kaynak":"userFills","bant":null,"cloid":"0x550b457835dcdf570d1cb8f84472d34a","funding_usd":0.0,"trader_poz_once":0.0,"trader_poz_sonra":20.03,"trader_hesap_usd":17950.633342,"slot_usd":200.0,"biz_poz_usd":0.0,"biz_slot_toplam_usd":0,"hedef_usd":15.78219044}
+{"zaman_ms":1794483965505,"olay":"tur","ozsermaye_usd":599.9977}
