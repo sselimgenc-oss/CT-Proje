@@ -32,3 +32,4 @@
 {"zaman_ms":1794477305745,"olay":"kor_kirpildi","adres":"0x424d756e19469ddb13c753b280cc0e9d8c95420e","uyeler":["0x8abc3b8b07082cc8752a1342ece30b9798aac9ad","0xfc76f730c3e2939825484e0a777368075d779ef9"]}
 {"zaman_ms":1794477309370,"olay":"saha_giris","adres":"0xc22db2c04e054786426671cec0b766c07304fb20","neden":"bos_slot","yerine":null,"slot_usd":200.0}
 {"zaman_ms":1794477309370,"olay":"telegram","metin":"➕ Yeni trader takibe alındı: 0xc22db2…\n↳ Neden: boş yer açıldı","acik":true}
+{"zaman_ms":1794478056133,"olay":"tur","ozsermaye_usd":600.0}

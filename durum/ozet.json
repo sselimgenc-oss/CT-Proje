@@ -15,12 +15,12 @@
   "hakem_yeniden_deneme": 0,
   "kapanis_atlanan": 0,
   "kopma": 2,
-  "ping": 461,
+  "ping": 498,
   "rest_abonelik_oncesi_atlanan": 1,
   "rest_tur_atlanan": 0,
   "subscription_response": 1065,
   "tekrar": 8,
-  "trades_mesaj": 297482,
+  "trades_mesaj": 324664,
   "userfills_mesaj": 16,
   "yeniden_baglanma": 2,
   "yeniden_baslama": 0
@@ -57,7 +57,7 @@
   "saha_dus": 2,
   "saha_giris": 5,
   "telegram": 11,
-  "tur": 14
+  "tur": 15
  },
  "kayma_n": 0,
  "kip": "sanal",
@@ -75,13 +75,13 @@
  "ortalama_kayma_trader": null,
  "ozsermaye_usd": 600.0,
  "rest_429": 0,
- "rest_istek": 5585,
+ "rest_istek": 6135,
  "saha": 3,
  "saha_n": 3,
  "slot_tavani": 0,
  "slot_usd": 200.0,
  "spot_atlandi": 0,
- "sure_dk": 195.12085,
+ "sure_dk": 210.47351666666665,
  "tasfiye": 0,
  "telegram_hata": 0,
  "ters_netlesme": 0,
@@ -97,5 +97,5 @@
   "0xfc76f730c3e2939825484e0a777368075d779ef9"
  ],
  "vardiya": "43170435744",
- "yazildi_ms": 1794477690939
+ "yazildi_ms": 1794478612099
 }
