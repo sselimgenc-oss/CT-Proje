@@ -221,5 +221,5 @@ secim_payda_azami_fark: 0.02            # oran (K-65: |portfolio serisi hesap / 
 # ---- K-65 geçici güvenlik kuralı: iki veto (aday ve üye; kapılardan SONRA uygulanır) ----
 secim_veto_acik: true                   # bool (false = vetolar hiç uygulanmaz, yalnız ölçü yazılır)
 secim_veto_zarara_ekleme_oran: 0.40     # oran (zarardaki pozisyona ekleme payı ≥ ve ekleme sayısı ≥ martingale_min_additions → `veto_zarara_ekleme`; olcut.martingale_ratio, martingale_min_adverse ile)
-secim_veto_min_aday: 10                 # kişi (bu koşuda tüm kapıları VE iki vetoyu geçen aday sayısı bundan azsa vetolar bu koşu askıya alınır: `veto_askida`)
+secim_veto_min_aday: 0                  # kişi (K-65 eki 12.11 kullanıcı kararı "veto kesin": 0 = vetolar hiç askıya alınmaz, temiz aday yoksa yer boş kalır; >0 ise: bu koşuda tüm kapıları VE iki vetoyu geçen aday sayısı bundan azsa vetolar bu koşu askıya alınır: `veto_askida`)
 

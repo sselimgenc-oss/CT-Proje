@@ -154,6 +154,9 @@ def test_veto_omur_zarar_ve_zarara_ekleme_esikleri():
     assert s.veto_kodu(1.0, *s.zarara_ekleme(_ekleme_dolumlari(t), T - 28 * GUN, T, RULES), RULES) == "veto_zarara_ekleme"
 
 
+M10 = {**RULES, "secim_veto_min_aday": 10}                                                               # askıya alma düzeneği (min > 0) ayrıca sınanır; varsayılan 0 (K-65 eki "veto kesin")
+
+
 def _iki_aday(rules):
     """A1 temiz; A2 kapıları geçer ama ömür perp pnl'i −10.000 + 2.300 < 0 (eski büyük zarar; toplam pnl spot kârıyla pozitif)."""
     bas, fiyat = _kopya_ortami()
@@ -163,7 +166,7 @@ def _iki_aday(rules):
 
 
 def test_veto_askida_havuz_min_adaydan_azsa_eski_davranis():
-    havuz, kadro_ = _iki_aday(RULES)                                                                       # temiz havuz 1 < 10 → askıda
+    havuz, kadro_ = _iki_aday(M10)                                                                         # temiz havuz 1 < 10 → askıda
     a2 = next(x for x in havuz["satirlar"] if x["adres"] == A2)
     assert a2["veto"] == "veto_omur_zarar" and a2["neden"] is None and a2["omur_perp_pnl"] < 0 and a2["zarara_ekleme_oran"] == 0.0 and a2["zarara_ekleme_sayi"] == 0
     assert havuz["veto_askida"] is True and havuz["veto_sayi"] == 1 and havuz["veto"]["kaynak"] == "bu_kosu"
@@ -202,7 +205,7 @@ def test_vetolu_uye_cikar_yeri_ayni_kosuda_dolar():
     u = next(x for x in havuz["satirlar"] if x["adres"] == A1)
     assert u["tur"] == "uye" and u["neden"] == "veto_omur_zarar" and u["veto"] == "veto_omur_zarar" and u["zarara_ekleme_sayi"] == 0
     # önceki havuz askıda (3 < 10): üye kalır, doldurma yok
-    havuz2, k2 = s.kos(_uye_istemci(), T, _uye_kadrosu({"sayi": 3, "askida": True}), RULES, log=lambda *_: None)
+    havuz2, k2 = s.kos(_uye_istemci(), T, _uye_kadrosu({"sayi": 3, "askida": True}), M10, log=lambda *_: None)
     assert k2["cikanlar"] == {} and [x["adres"] for x in k2["satirlar"]] == [A1] and havuz2["doldurma"] is False and havuz2["veto"]["uye_kaynak"] == "onceki"
     assert k2["veto_havuz"] == {"sayi": 3, "askida": True}                                                # bilinen son sayı taşınır
     # sayı bilinmiyor: veto yine uygulanır ve kaydedilir
@@ -214,7 +217,7 @@ def test_doldurma_gununde_uye_vetosu_bu_kosunun_sayisiyla():
     """Ay başı doldurma: üye kararı ertelenir; bu koşunun temiz havuzu (A2 → 1) min 1 ile etkin → A1 çıkar, A2 girer. Min 10 ile askıda → A1 kalır."""
     havuz, k = s.kos(_uye_istemci(), T, _uye_kadrosu({"sayi": 50}, doldurma_ay="1971-01"), {**RULES, "secim_veto_min_aday": 1}, log=lambda *_: None)
     assert k["cikanlar"] == {A1: "veto_omur_zarar"} and [x["adres"] for x in k["satirlar"]] == [A2] and havuz["veto"]["uye_kaynak"] == "bu_kosu"
-    havuz2, k2 = s.kos(_uye_istemci(), T, _uye_kadrosu({"sayi": 50}, doldurma_ay="1971-01"), RULES, log=lambda *_: None)
+    havuz2, k2 = s.kos(_uye_istemci(), T, _uye_kadrosu({"sayi": 50}, doldurma_ay="1971-01"), M10, log=lambda *_: None)
     assert k2["cikanlar"] == {} and {x["adres"] for x in k2["satirlar"]} == {A1, A2} and havuz2["veto_askida"] is True and k2["veto_havuz"]["sayi"] == 1
 
 
@@ -246,3 +249,18 @@ def test_motor_veto_cikisini_k61_gibi_hemen_uygular():
     sb.degerlendir(kadro(ilk, T0 + MGUN + MSAAT), T0 + MGUN + 2 * MSAAT)
     ikinci["cikanlar"] = {adr(11): "giris_dusus"}
     assert sb.degerlendir(ikinci, T0 + MGUN + 8 * MSAAT)[0] == []
+
+
+def test_k65_veto_kesin_varsayilan_hic_askiya_alinmaz_yer_bos_kalir():
+    """K-65 eki (12.11 kullanıcı kararı): kurallar.yaml `secim_veto_min_aday` 0 → temiz havuz ne kadar küçük olursa olsun veto uygulanır.
+    12.11 olayı: boş yere kapıyı geçen tek aday vetoluydu (temiz havuz 0) ve askıda kuralıyla girmişti; artık girmez, yer boş kalır."""
+    assert RULES["secim_veto_min_aday"] == 0
+    bas, fiyat = _kopya_ortami()
+    c = SahteP([lider_ay(A2, 20_000, 100, 5_000, 600)], {A2: _karli_dolumlar(bas)}, {A2: pf2(ISTIKRAR, lambda i: 200.0, perp_bas=-10_000.0)}, fiyat)
+    havuz, k = s.kos(c, T, None, RULES, log=lambda *_: None)
+    a2 = next(x for x in havuz["satirlar"] if x["adres"] == A2)
+    assert a2["neden"] == "veto_omur_zarar" and a2["secildi"] is False and havuz["veto_askida"] is False and havuz["veto_sayi"] == 0
+    assert k["satirlar"] == [] and k["veto_havuz"]["askida"] is False
+    # vetolu üye: önceki havuz askıda/küçük olsa da çıkar (yer aynı koşuda temiz adayla dolar)
+    havuz2, k2 = s.kos(_uye_istemci(), T, _uye_kadrosu({"sayi": 0, "askida": True}), RULES, log=lambda *_: None)
+    assert k2["cikanlar"] == {A1: "veto_omur_zarar"} and [x["adres"] for x in k2["satirlar"]] == [A2]
