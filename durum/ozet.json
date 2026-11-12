@@ -4,14 +4,14 @@
    "adres": "0xc22db2c04e054786426671cec0b766c07304fb20",
    "coin": "HYPE",
    "giris": 70.33079126650237,
-   "kz_usd": -0.1106860322771815,
-   "mark": 70.0825,
+   "kz_usd": -0.2867735095588989,
+   "mark": 69.6875,
    "sz": 0.4457910817258714,
-   "usd": 31.24215348505338
+   "usd": 31.066066007771663
   }
  ],
  "acik_pozisyon": 1,
- "brut_usd": 31.24215348505338,
+ "brut_usd": 31.066066007771663,
  "dinleyici": {
   "abonelik_oncesi_snapshot_gibi": 0,
   "dolgu": 0,
@@ -25,13 +25,13 @@
   "hakem_yeniden_deneme": 0,
   "kapanis_atlanan": 0,
   "kopma": 1,
-  "ping": 429,
+  "ping": 466,
   "rest_abonelik_oncesi_atlanan": 0,
   "rest_tur_atlanan": 0,
   "subscription_response": 712,
-  "tekrar": 71,
-  "trades_mesaj": 470148,
-  "userfills_mesaj": 20,
+  "tekrar": 79,
+  "trades_mesaj": 520568,
+  "userfills_mesaj": 21,
   "yeniden_baglanma": 1,
   "yeniden_baslama": 0
  },
@@ -61,7 +61,7 @@
  "funding_oran_yok": 0,
  "funding_usd": -0.000784582128908827,
  "gec_acilis": 0,
- "getiri": -0.0002092989869812989,
+ "getiri": -0.0005027781157842526,
  "hip3_atlandi": 0,
  "inen": 2,
  "kapanis_eksik": 0,
@@ -72,15 +72,15 @@
   "emir_yok": 1,
   "funding": 3,
   "kacan_tamamlandi": 1,
-  "telegram": 2,
-  "tur": 13
+  "telegram": 3,
+  "tur": 14
  },
  "kayma_n": 2,
  "kip": "sanal",
  "kor_kirpildi": 0,
  "kuyruk_gecikme_ms": {
   "max": 159,
-  "n": 375,
+  "n": 383,
   "p50": 5
  },
  "marj_yok": 0,
@@ -91,15 +91,15 @@
  },
  "ortalama_kayma_ref": 0.0,
  "ortalama_kayma_trader": 0.0007268591063348657,
- "ozsermaye_usd": 599.8744206078112,
+ "ozsermaye_usd": 599.6983331305295,
  "rest_429": 0,
- "rest_istek": 5872,
+ "rest_istek": 6318,
  "saha": 3,
  "saha_n": 3,
  "slot_tavani": 0,
  "slot_usd": 200.0,
  "spot_atlandi": 0,
- "sure_dk": 180.21435,
+ "sure_dk": 195.61085,
  "tasfiye": 0,
  "telegram_hata": 0,
  "ters_netlesme": 0,
@@ -115,5 +115,5 @@
   "0xfc76f730c3e2939825484e0a777368075d779ef9"
  ],
  "vardiya": "43205684073",
- "yazildi_ms": 1794492208878
+ "yazildi_ms": 1794493132668
 }
