@@ -1,12 +1,12 @@
-# Canlı rapor — 2026-11-13 16:57 UTC
+# Canlı rapor — 2026-11-13 17:12 UTC
 
-**Kip** sanal · vardiya `43427211839` · saha 2/3 (inen 1)
+**Kip** sanal · vardiya `43467925560` · saha 2/3 (inen 0)
 
 ## Kasa
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 600,00 $ | 602,01 $ | +%0,24 | — (geçmiş < 7 gün) | +%0,33 | −%0,09 |
+| 600,00 $ | 600,00 $ | +%0,00 | — (geçmiş < 7 gün) | +%0,00 | +%0,00 |
 
 ## Açık pozisyonlar
 
@@ -14,14 +14,15 @@ açık pozisyon yok
 
 ## Son 24 saat
 
-- emir 32 · dolum 32 · kayma p50 −%0,01 / max +%0,04 (n=32)
-- funding −0,00 $ · ücret 0,34 $
+- emir 0 · dolum 0 · kayma p50 — / max — (n=0)
+- funding +0,00 $ · ücret 0,00 $
 
 _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun günlük kayıp tanımı); hafta/toplam kasaya göre; zirveden düşüş motorun zirvesine göre._
 
 ## Saha değişiklikleri (24 sa)
 
-- 2026-11-13 09:43 çıkış 0xc22db2… — veto_omur_zarar
+- 2026-11-13 16:58 giriş 0x8abc3b… — ilk_gun
+- 2026-11-13 16:58 giriş 0xfc76f7… — ilk_gun
 
 ## Risk olayları (24 sa)
 
@@ -29,7 +30,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 255 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
+- süre 15 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 

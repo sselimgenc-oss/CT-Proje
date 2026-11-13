@@ -1,10 +1,6 @@
 {
  "alarm_gunu": null,
- "bekleme": {
-  "0xc22db2c04e054786426671cec0b766c07304fb20": 1797241434280,
-  "0xde29121a6858d90ae486855b127f9d5ee4035232": 1797155700131,
-  "0xfb94d93d73b1a5398816c7d46e1590173371f82b": 1797155700131
- },
+ "bekleme": {},
  "degisiklik": {
   "adet": 0,
   "gun": null
@@ -174,29 +170,22 @@
    }
   }
  },
- "inen": {
-  "0xc22db2c04e054786426671cec0b766c07304fb20": {
-   "inis_ms": 1794563034280,
-   "neden": "veto_omur_zarar"
-  }
- },
+ "inen": {},
  "k39_gecis": true,
  "kurulu": true,
  "son_kosu_ms": 1794553813144,
  "uyeler": {
   "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": {
-   "disi_gunler": [],
-   "giris_ms": 1794465983690,
-   "giris_sira": 2,
-   "hesap_giris_usd": 55334.93606021,
+   "giris_ms": 1794589078130,
+   "giris_sira": 1,
+   "hesap_giris_usd": 48251.50847821,
    "sira_ust": 0,
    "son_islem_ms": 1794499443895
   },
   "0xfc76f730c3e2939825484e0a777368075d779ef9": {
-   "disi_gunler": [],
-   "giris_ms": 1794477300131,
+   "giris_ms": 1794589078130,
    "giris_sira": 2,
-   "hesap_giris_usd": 219824.39341288,
+   "hesap_giris_usd": 213155.47758588,
    "sira_ust": 0,
    "son_islem_ms": 1794577034334
   }
