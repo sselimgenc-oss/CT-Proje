@@ -14,13 +14,13 @@
   "hakem_yeniden_deneme": 0,
   "kapanis_atlanan": 0,
   "kopma": 0,
-  "ping": 358,
+  "ping": 394,
   "rest_abonelik_oncesi_atlanan": 0,
   "rest_tur_atlanan": 0,
   "subscription_response": 356,
   "tekrar": 0,
-  "trades_mesaj": 297936,
-  "userfills_mesaj": 8,
+  "trades_mesaj": 325939,
+  "userfills_mesaj": 9,
   "yeniden_baglanma": 0,
   "yeniden_baslama": 0
  },
@@ -53,14 +53,14 @@
  "kayit_sayac": {
   "kacan_tamamlandi": 1,
   "telegram": 2,
-  "tur": 11
+  "tur": 12
  },
  "kayma_n": 0,
  "kip": "sanal",
  "kor_kirpildi": 0,
  "kuyruk_gecikme_ms": {
   "max": 20,
-  "n": 189,
+  "n": 192,
   "p50": 13
  },
  "marj_yok": 0,
@@ -71,13 +71,13 @@
  "ortalama_kayma_trader": null,
  "ozsermaye_usd": 600.5480523503833,
  "rest_429": 0,
- "rest_istek": 4844,
+ "rest_istek": 5380,
  "saha": 3,
  "saha_n": 3,
  "slot_tavani": 0,
  "slot_usd": 200.0,
  "spot_atlandi": 0,
- "sure_dk": 150.20898333333332,
+ "sure_dk": 165.3892,
  "tasfiye": 0,
  "telegram_hata": 0,
  "ters_netlesme": 0,
@@ -93,5 +93,5 @@
   "0xfc76f730c3e2939825484e0a777368075d779ef9"
  ],
  "vardiya": "43332278746",
- "yazildi_ms": 1794536530250
+ "yazildi_ms": 1794537441063
 }
