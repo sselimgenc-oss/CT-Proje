@@ -312,3 +312,5 @@
 {"zaman_ms":1794582333017,"olay":"tur","ozsermaye_usd":602.0078}
 {"zaman_ms":1794583034805,"olay":"emir_yok","adres":"0xc22db2c04e054786426671cec0b766c07304fb20","coin":"HYPE","eylem":"ac","karar":"engel","neden":"inen_trader","trader_dolum_ms":1794583034154,"gorme_ms":1794583034805,"yas_ms":651}
 {"zaman_ms":1794583196427,"olay":"tur","ozsermaye_usd":602.0078}
+{"zaman_ms":1794584048232,"olay":"tur","ozsermaye_usd":602.0078}
+{"zaman_ms":1794584389041,"olay":"emir_yok","adres":"0xc22db2c04e054786426671cec0b766c07304fb20","coin":"HYPE","eylem":"ac","karar":"engel","neden":"inen_trader","trader_dolum_ms":1794584388445,"gorme_ms":1794584389040,"yas_ms":596}

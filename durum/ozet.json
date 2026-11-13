@@ -4,6 +4,7 @@
  "brut_usd": 0,
  "dinleyici": {
   "abonelik_oncesi_snapshot_gibi": 0,
+  "dolgu": 0,
   "dolgu_bekleyen": 0,
   "dolgu_hata_tur": {},
   "dolgu_yeniden_deneme": 0,
@@ -13,15 +14,15 @@
   "hakem_hata_tur": {},
   "hakem_yeniden_deneme": 0,
   "kapanis_atlanan": 0,
-  "kopma": 0,
-  "ping": 394,
+  "kopma": 1,
+  "ping": 429,
   "rest_abonelik_oncesi_atlanan": 0,
   "rest_tur_atlanan": 0,
-  "subscription_response": 354,
-  "tekrar": 187,
-  "trades_mesaj": 504881,
-  "userfills_mesaj": 9,
-  "yeniden_baglanma": 0,
+  "subscription_response": 708,
+  "tekrar": 219,
+  "trades_mesaj": 570737,
+  "userfills_mesaj": 14,
+  "yeniden_baglanma": 1,
   "yeniden_baslama": 0
  },
  "dur": false,
@@ -30,7 +31,7 @@
   "dolmadi": 0,
   "dolu": 25,
   "emir": 25,
-  "engel": 1,
+  "engel": 2,
   "funding_oran_yok": 0,
   "gec_acilis": 0,
   "gec_goruldu": 0,
@@ -58,22 +59,22 @@
  "kasa_usd": 600.0,
  "kayit_sayac": {
   "emir": 25,
-  "emir_yok": 160,
+  "emir_yok": 161,
   "funding": 1,
   "kacan_tamamlandi": 1,
   "kapanis_duzeltme": 2,
   "kor_kirpildi": 1,
   "telegram": 2,
   "telegram_hata": 4,
-  "tur": 12
+  "tur": 13
  },
  "kayma_n": 25,
  "kip": "sanal",
  "kor_kirpildi": 1,
  "kuyruk_gecikme_ms": {
   "max": 1646,
-  "n": 307,
-  "p50": 155
+  "n": 397,
+  "p50": 6
  },
  "marj_yok": 0,
  "min_emir_say": {
@@ -82,7 +83,7 @@
  },
  "min_nosyonel": 0,
  "neden_say": {
-  "inen_trader": 1,
+  "inen_trader": 2,
   "kucuk_kalan_kapat": 2,
   "min_emir_atlandi": 159,
   "min_emir_yuvarlandi": 1
@@ -91,13 +92,13 @@
  "ortalama_kayma_trader": -8.67135897921404e-05,
  "ozsermaye_usd": 602.0077792864142,
  "rest_429": 0,
- "rest_istek": 4575,
+ "rest_istek": 5018,
  "saha": 2,
  "saha_n": 3,
  "slot_tavani": 0,
  "slot_usd": 200.0,
  "spot_atlandi": 0,
- "sure_dk": 165.31178333333332,
+ "sure_dk": 180.2187,
  "tasfiye": 0,
  "telegram_hata": 4,
  "ters_netlesme": 0,
@@ -112,5 +113,5 @@
   "0xfc76f730c3e2939825484e0a777368075d779ef9"
  ],
  "vardiya": "43427211839",
- "yazildi_ms": 1794583650434
+ "yazildi_ms": 1794584544850
 }
