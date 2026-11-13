@@ -316,3 +316,5 @@
 {"zaman_ms":1794584389041,"olay":"emir_yok","adres":"0xc22db2c04e054786426671cec0b766c07304fb20","coin":"HYPE","eylem":"ac","karar":"engel","neden":"inen_trader","trader_dolum_ms":1794584388445,"gorme_ms":1794584389040,"yas_ms":596}
 {"zaman_ms":1794584579766,"olay":"telegram","metin":"🧾 Son 1 saat (17:42–18:42 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 2 (≈2 ayrı işlem)\n   • kural gereği 2: 2 ayrılan trader 0xc22db2… (yeni alım yok)\n   • kaçırılan 0 (geç görülen / veri yok)\n💰 Kasa: 602,01 $ · bugün 🟢 +1,46 $ (+%0,2) · başlangıçtan 🟢 +2,01 $ (+%0,3)","acik":true}
 {"zaman_ms":1794584901227,"olay":"tur","ozsermaye_usd":602.0078}
+{"zaman_ms":1794585765805,"olay":"tur","ozsermaye_usd":602.0078}
+{"zaman_ms":1794585832288,"olay":"telegram_hata","tur":"ConnectionError"}
