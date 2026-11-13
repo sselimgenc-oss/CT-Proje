@@ -16,3 +16,5 @@
 {"t":"sonuc","cloid":"0xd559268ad53e28959d3fdff2fc78455c","durum":"dolu","ms":1794543944419,"sz":0.22957532012133636,"px":70.06,"ucret":0.007237821117465371}
 {"t":"niyet","kimlik":"kapat:0xc22db2c04e054786426671cec0b766c07304fb20:HYPE:1794553863049:0:tam_kapanis","eylem":"kapat","adres":"0xc22db2c04e054786426671cec0b766c07304fb20","coin":"HYPE","yon":"A","usd":17.334079,"reduce_only":true,"cloid":"0x929592e07a31f1ea076f82455748c304","ms":1794553863049}
 {"t":"sonuc","cloid":"0x929592e07a31f1ea076f82455748c304","durum":"dolu","ms":1794553863189,"sz":0.22957532012133636,"px":71.904,"ucret":0.007428322718102056}
+{"t":"niyet","kimlik":"kapat:0xfc76f730c3e2939825484e0a777368075d779ef9:BTC:1794567766866:0:tam_kapanis","eylem":"kapat","adres":"0xfc76f730c3e2939825484e0a777368075d779ef9","coin":"BTC","yon":"A","usd":190.438312,"reduce_only":true,"cloid":"0xb99234ebc888c3cc71f5f95d0d169191","ms":1794567766866}
+{"t":"sonuc","cloid":"0xb99234ebc888c3cc71f5f95d0d169191","durum":"dolu","ms":1794567767005,"sz":0.002615150222055769,"px":69365.0,"ucret":0.08162995281880428}
