@@ -249,6 +249,17 @@ def test_coin_tavani_kirpma_ve_sifir():
     assert r.coin_tavani(100.0, 100.0) == (100.0, "") and r.coin_tavani(100.0, 400.0) == (0.0, "coin_tavani")
 
 
+def test_k65_coin_tavani_kucuk_kasada_tek_slot_tavanindan_dusuk_olmaz():
+    """K-65 eki (13.11): 1.000 $ / 5 slot → oran 300 $ = 1,5 × 200 $ (değişmez); 600 $ / 3 slot → oran 180 $ < 1,5 × 200 $ = 300 $ → tavan 300 $."""
+    from copytrade import kurallar
+    from copytrade.canli import risk as rk
+    RULES = kurallar.load_rules_asil()                                                             # üretim D+ değerleri (conftest v1 boyut değerlerini değil)
+    assert rk.coin_tavan_usd(RULES, 1000.0) == pytest.approx(300.0) and rk.coin_tavan_usd(RULES, 600.0) == pytest.approx(300.0)
+    r6 = rk.Risk(RULES, 600.0)
+    assert r6.coin_tavani(150.0, 181.0) == (pytest.approx(119.0), "coin_tavani_kirpildi")          # 12.11 olayı: BTC 181 $'da takılmıştı
+    assert rk.coin_tavan_usd({"canli_coin_tavan_oran": 0.30}, 600.0) == pytest.approx(180.0)      # slot kuralı yoksa yalnız oran
+
+
 def test_patlama_freni_zamanlamasi_8_yeni_coin_10_dk_30_dk_ara():
     """10 dk içinde 8. yeni coin → fren (o açılış dahil); 30 dk boyunca yeni açılış yok; 30 dk sonra serbest. 9 dk aralıklı açılışlar fren tetiklemez."""
     r = rk.Risk(RULES, 1000.0)

@@ -77,15 +77,40 @@ def rest_post_olustur(rules: dict, istemci: PublicClient | None = None) -> Calla
     return post
 
 
+def hesap_soyutlama(post: Callable[[dict], Any], adres: str) -> str:
+    """HL hesap tipi (`userAbstraction`): "unifiedAccount" | "portfolioMargin" | klasik ("default", "disabled", "dexAbstraction", None …). Okuma hatası istisna (kısmi payda yok)."""
+    r = post({"type": "userAbstraction", "user": adres})
+    return str(r) if r is not None else ""
+
+
+def portfolio_son_deger(post: Callable[[dict], Any], adres: str) -> float:
+    """HL `portfolio` gün serisinin son `accountValue` noktası (HL'nin kendi özsermaye tanımı). Yoksa ValueError."""
+    for pencere, veri in post({"type": "portfolio", "user": adres}) or []:
+        if pencere == "day" and (veri or {}).get("accountValueHistory"):
+            return float(veri["accountValueHistory"][-1][1])
+    raise ValueError("portfolio: gün serisi yok")
+
+
 def hesap_degeri_oku(post: Callable[[dict], Any], adres: str, dexler: list[str] | None) -> float | None:
-    """G-6: `dexler` None (dex listesi bilinmiyor) → None (kısmi toplam YOK; çağıran hesabı bilinmiyor sayar). Hesap değeri ($) = TÜM perp dex'lerin `marginSummary.accountValue` toplamı + spot USDC (`hl_ortak.spot_usdc`; K‑35 tek payda). Radar lider tablosu `accountValue` ile aynı tanım. Herhangi bir okuma
-    başarısızsa istisna (kısmi toplam dönmez: oran paydası eksik olursa emirler şişer)."""
+    """G-6: `dexler` None (dex listesi bilinmiyor) → None (kısmi toplam YOK; çağıran hesabı bilinmiyor sayar). Hesap değeri ($), hesap tipine göre (K-65 eki 13.11, Fable denetimi):
+    - klasik: TÜM perp dex'lerin `marginSummary.accountValue` toplamı + spot USDC `total` (K‑35 tek payda; radar lider tablosu `accountValue` ile aynı tanım);
+    - birleşik (`unifiedAccount`): perp marjı spot USDC'nin içinde (`hold`) — iki kez sayılmaz: perp toplamı + USDC `total` − USDC `hold` (HL `portfolio` değeriyle aynı);
+    - portföy marjı (`portfolioMargin`; teminat USDC dışı, USDC borçlu olabilir): HL `portfolio` gün serisinin son değeri.
+    Herhangi bir okuma başarısızsa istisna (kısmi toplam dönmez: oran paydası eksik olursa emirler şişer)."""
     if dexler is None:
         return None
+    soyut = hesap_soyutlama(post, adres)
+    if soyut == "portfolioMargin":
+        return portfolio_son_deger(post, adres)
     toplam = 0.0
     for dex in ["", *dexler]:
         toplam += float(post(clearinghouse_yuk(adres, dex))["marginSummary"]["accountValue"])
-    return toplam + spot_usdc(type("_Istemci", (), {"info": staticmethod(lambda yuk, weight=2: post(yuk))})(), adres)
+    durum = post({"type": "spotClearinghouseState", "user": adres}) or {}
+    usdc = [b for b in durum.get("balances", []) if str(b.get("coin")) == "USDC"]
+    spot = sum(float(b.get("total", 0) or 0) for b in usdc)
+    if soyut == "unifiedAccount":
+        spot -= sum(float(b.get("hold", 0) or 0) for b in usdc)
+    return toplam + spot
 
 
 class KipHatasi(RuntimeError):

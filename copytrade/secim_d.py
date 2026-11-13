@@ -171,8 +171,10 @@ def evren_kapisi(o: dict, rules: dict) -> str | None:
     return None
 
 
-def kopya_kapisi(dolumlar: list[dict], hesap: float, payda: Any, mum: Any, t0: int, t1: int, likit: set[str], azami: dict | None, rules: dict) -> dict:
-    """B kapıları (son `secim_kopya_gun` gün): R1 dolum ölçüleri + gecikmesiz/tam maliyetli kopya (kalicilik_testi.hafta_satiri ile aynı yaklaşım). Döner ölçüler + `neden` (None = geçti)."""
+def kopya_kapisi(dolumlar: list[dict], hesap: float, payda: Any, mum: Any, t0: int, t1: int, likit: set[str], azami: dict | None, rules: dict,
+                 seri_zorla: bool = False) -> dict:
+    """B kapıları (son `secim_kopya_gun` gün): R1 dolum ölçüleri + gecikmesiz/tam maliyetli kopya (kalicilik_testi.hafta_satiri ile aynı yaklaşım). Döner ölçüler + `neden` (None = geçti).
+    `seri_zorla` (K-65 eki 13.11): ucuz kapı düşse de kopya canlandırması yapılır (üyenin benzerlik serisi `kopya_gunluk` için; `neden` yine ucuz kapının nedenidir)."""
     d = [f for f in perp_fills(dolumlar) if t0 <= int(f["time"]) < t1]
     if not d:
         return {"neden": "islem_yok"}
@@ -187,14 +189,15 @@ def kopya_kapisi(dolumlar: list[dict], hesap: float, payda: Any, mum: Any, t0: i
             ("likidite_dusuk", o.get("likit_pay"), lambda v: v >= float(rules["radar_likit_pay_min"])),
             ("devir_yuksek", o.get("devir_hafta"), lambda v: v <= float(rules["radar_max_devir_hafta"])))
     o["neden"] = next((k for k, v, f in ucuz if v is None or not f(v)), None)
-    if o["neden"] is not None:                                              # ucuz kapı düştüyse pahalı kopya canlandırması yapılmaz (süre)
+    if o["neden"] is not None and not seri_zorla:                           # ucuz kapı düştüyse pahalı kopya canlandırması yapılmaz (süre)
         return o
+    ucuz_neden = o["neden"]
     s = kalicilik_testi.hafta_satiri("0x" + "0" * 40, d, hesap, payda, mum, t0, t1, likit, azami, rules)
     o.update({"kopya_getiri": s.get("kopya_getiri_7g"), "kopya_islem": s.get("kopya_islem_sayisi"), "kopya_koruma": s.get("kopya_koruma"), "kopya_gunluk": s.get("kopya_gunluk")})
     kural = (("kopya_zarar", o.get("kopya_getiri"), lambda v: v > 0),
              ("kopya_koruma_dusuk", o.get("kopya_koruma"), lambda v: v >= float(rules["radar_kopya_koruma_min"])),
              ("kopya_islem_az", o.get("kopya_islem"), lambda v: v >= int(rules["radar_min_kopya_islem"])))                           # D+ (A)
-    o["neden"] = next((k for k, v, f in kural if v is None or not f(v)), None)
+    o["neden"] = ucuz_neden or next((k for k, v, f in kural if v is None or not f(v)), None)
     return o
 
 
@@ -529,12 +532,12 @@ def kos(client: Any, simdi: int, onceki: dict | None, rules: dict, log=print, sa
         for u in uyeler:                                                    # denetim 3: benzerlik matrisi aynı 28 g penceresiyle (kalan üyelerin serisi yenilenir)
             if u.get("giris_ms") == simdi:
                 continue
-            try:
+            try:                                                            # K-65 eki (13.11): seri ucuz kapıdan bağımsız (üye kapıya takılsa da ölçülür); okunamazsa önceki seri korunur
                 d = client.fills(u["adres"], kopya_bas, max_rows=tavan * 4, end_ms=simdi)
                 u["kopya_gunluk"] = kopya_kapisi(d, float(u.get("hesap_usd") or u.get("giris_hesap_usd") or 0.0) or 1.0, float(u.get("hesap_usd") or 1.0), mum,
-                                                 kopya_bas, simdi, likit, b.azami_kaldirac, rules).get("kopya_gunluk")
+                                                 kopya_bas, simdi, likit, b.azami_kaldirac, rules, seri_zorla=True).get("kopya_gunluk")
             except radar_tarama.HATALAR:
-                u["kopya_gunluk"] = None
+                pass
     for o in olcu:
         o.pop("_pf", None)
     havuz = {"sema": HAVUZ_SEMA, "veri_surum": VERI_SURUM, "kosu_ms": simdi, "pencere_bas_ms": kopya_bas, "doldurma": doldur, "satirlar": satirlar, "tarama": tarama,

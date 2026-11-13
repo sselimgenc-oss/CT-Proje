@@ -255,8 +255,8 @@ def _maliyet_html(kayitlar: list[dict], oz: float, kasa: float, gecmis: list[dic
             + f'</table></div><div class="ha" style="padding:6px 11px">Toplam maliyet {esc(tl2(maliyet))} · {oran_txt}. Kayıt penceresi: {esc(donem_etiketi(donem))} (UTC; en çok {KAYIT_GUN} gün).</div>')
 
 
-def _maruziyet_html(acik: list[dict], kasa: float, oz: float, kaldirac: float, coin_tavan_oran: float) -> str:
-    """C5: maruziyet — net uzun/kısa, brüt/kasa, teminat/özsermaye (izole kaldıraç), coin başına doluluk (kasanın %30'u tavan)."""
+def _maruziyet_html(acik: list[dict], kasa: float, oz: float, kaldirac: float, coin_tavan_oran: float, tavan_usd: float | None = None) -> str:
+    """C5: maruziyet — net uzun/kısa, brüt/kasa, teminat/özsermaye (izole kaldıraç), coin başına doluluk (tavan `risk.coin_tavan_usd`; verilmezse kasa × oran)."""
     uzun = sum(q.get("usd") or 0 for q in acik if q["sz"] > 0)
     kisa_ = sum(q.get("usd") or 0 for q in acik if q["sz"] < 0)
     brut = uzun + kisa_
@@ -264,12 +264,12 @@ def _maruziyet_html(acik: list[dict], kasa: float, oz: float, kaldirac: float, c
     coin: dict[str, float] = {}
     for q in acik:
         coin[q["coin"]] = coin.get(q["coin"], 0.0) + (q.get("usd") or 0)
-    tavan = coin_tavan_oran * kasa
+    tavan = coin_tavan_oran * kasa if tavan_usd is None else float(tavan_usd)
     cubuk = "".join(f'<div class="s"><span>{esc(c)} · {esc(tl2(u))} / {esc(tl2(tavan))}</span><div class="ol"><i style="width:{min(u / tavan * 100, 100):.0f}%;background:{"#ff5d5d" if u > tavan else "var(--tu)"}"></i></div></div>' for c, u in sorted(coin.items(), key=lambda x: -x[1]) if tavan > 0)
     return (f'<div class="iz2"><div class="h"><div class="hb">Net uzun / kısa</div><div class="hd">{esc(tl2(uzun - kisa_, True))}</div><div class="ha">uzun {esc(tl2(uzun))} · kısa {esc(tl2(kisa_))}</div></div>'
             f'<div class="h"><div class="hb">Brüt / kasa</div><div class="hd">%{tr_sayi(brut / kasa * 100, 0) if kasa > 0 else "—"}</div><div class="ha">brüt {esc(tl2(brut))}</div></div>'
             f'<div class="h"><div class="hb">Teminat / özsermaye</div><div class="hd">%{tr_sayi(teminat / oz * 100, 0) if oz > 0 else "—"}</div><div class="ha">teminat ~{esc(tl2(teminat))} ({tr_sayi(kaldirac, 0)}x)</div></div></div>'
-            f'<div class="pi"><div class="ha">Coin başına doluluk (tavan: kasanın %{tr_sayi(coin_tavan_oran * 100, 0)}\'u)</div>{cubuk}</div>')
+            f'<div class="pi"><div class="ha">Coin başına doluluk (tavan: kasanın %{tr_sayi(tavan / kasa * 100 if kasa > 0 else coin_tavan_oran * 100, 0)}\'u)</div>{cubuk}</div>')
 
 
 def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecmis: list[dict], simdi_ms: int, kadro: dict | None = None, saha_durum: dict | None = None, hesap_tr: dict | None = None, havuz: dict | None = None, kurallar: dict | None = None) -> str:
@@ -470,7 +470,9 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     mut = (f'<div class="mt">Kartların toplamı <b class="{renk(toplam_net)}">{esc(tl(toplam_net, True))}</b> + kapanmış slotlar <b>{esc(tl(float(hesap.get("kapanmis_net") or 0.0), True))}</b> = '
            f'<b>{esc(tl(toplam_net + float(hesap.get("kapanmis_net") or 0.0), True))}</b> (başlangıçtan beri özsermaye farkı {esc(tl(oz - kasa, True))}){" · bazı K/Z bilinmiyor, toplam eksik" if net_eksik else ""}</div>') if slot_bas else ""
     atlanan_html, kapanan_html, maliyet_html = _atlanan_html(k24), _kapanan_html(kayitlar), _maliyet_html(kayitlar, oz, kasa, gecmis, kip)
-    maruziyet_html = _maruziyet_html(acik, kasa, oz, float(hesap.get("kaldirac") or 3.0), float(kurallar["canli_coin_tavan_oran"]))
+    from copytrade.canli.risk import coin_tavan_usd
+    maruziyet_html = _maruziyet_html(acik, kasa, oz, float(hesap.get("kaldirac") or 3.0), float(kurallar["canli_coin_tavan_oran"]),
+                                     coin_tavan_usd(kurallar, kasa) if kasa > 0 else None)
     gk = (saha_durum or {}).get("gun_kadro") or {}
     gk_ms = int(((gk.get("kadro") or {}).get("kosu_ms")) or 0)
     if gk_ms and kadro and kadro.get("kosu_ms"):               # K‑39: motor gün başına İLK kadroyu uygular; pano EN SON kadroyu gösterir — karışmasın

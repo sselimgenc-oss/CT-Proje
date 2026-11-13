@@ -76,6 +76,8 @@ class Durum:
         self.cagri.append(yuk["type"])
         if yuk["type"] == "clearinghouseState":
             return {"marginSummary": {"accountValue": str(self.perp[yuk.get("dex", "")])}}
+        if yuk["type"] == "userAbstraction":
+            return "default"
         if yuk["type"] == "spotClearinghouseState":
             return {"balances": [{"coin": c, "total": str(v)} for c, v in self.spot.items()]}
         raise AssertionError(yuk)
@@ -104,6 +106,8 @@ class SahteD(SahteP):
     def info(self, payload, weight=20):
         if payload["type"] == "clearinghouseState":
             return {"marginSummary": {"accountValue": str(self.durum[payload["user"]][0])}}
+        if payload["type"] == "userAbstraction":
+            return "default"
         if payload["type"] == "spotClearinghouseState":
             return {"balances": [{"coin": "USDC", "total": str(self.durum[payload["user"]][1])}]}
         return super().info(payload, weight)

@@ -118,6 +118,8 @@ def test_dplus_kopya_kapisi_kisa_islem_coin_ve_islem_sayisi():
     assert az["neden"] == "kopya_islem_az"                                   # A: < 10 kopya işlemi
     cf = s.kopya_kapisi(_karli_dolumlar(bas), 20_000.0, 20_000.0, mum, bas, son, {"BTC"}, None, {**RULES, "secim_aktif_coin_max": 0})
     assert cf["neden"] == "coin_fazla" and "kopya_getiri" not in cf             # ucuz kapı düşünce kopya canlandırması yapılmaz (süre)
+    cz = s.kopya_kapisi(_karli_dolumlar(bas), 20_000.0, 20_000.0, mum, bas, son, {"BTC"}, None, {**RULES, "secim_aktif_coin_max": 0}, seri_zorla=True)
+    assert cz["neden"] == "coin_fazla" and cz["kopya_gunluk"] == k["kopya_gunluk"]      # K-65 eki: üye serisi ucuz kapıdan bağımsız (benzerlik matrisi "ölçülemedi" olmaz)
     assert RULES["secim_aday_ust"] >= 200                                    # 09.11 dal denemesi: ilk 40'ın tümü düştü; kadro dolana dek ilerler
 
 
