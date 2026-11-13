@@ -84,3 +84,5 @@
 {"zaman_ms":1794563036390,"olay":"telegram","metin":"➖ Trader takipten çıktı: 0xc22db2…\n↳ Neden: veto_omur_zarar (sonuçla, 14 gün bekleme)","acik":true}
 {"zaman_ms":1794563036391,"olay":"kor_kirpildi","adres":"0x424d756e19469ddb13c753b280cc0e9d8c95420e","uyeler":["0x8abc3b8b07082cc8752a1342ece30b9798aac9ad","0xfc76f730c3e2939825484e0a777368075d779ef9"]}
 {"zaman_ms":1794563464074,"olay":"tur","ozsermaye_usd":601.1569}
+{"zaman_ms":1794564016208,"olay":"funding","saat":498490,"saat_adet":1,"funding_usd":-0.002258133182678493,"toplam_funding_usd":0.000368099155544631}
+{"zaman_ms":1794564334160,"olay":"tur","ozsermaye_usd":601.8895}
