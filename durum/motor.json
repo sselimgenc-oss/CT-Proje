@@ -4,12 +4,12 @@
  "funding_kimlik": [],
  "hesap_tr": {
   "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": {
-   "deger": 47483.37932421,
-   "ms": 1794601552970
+   "deger": 47668.09080921001,
+   "ms": 1794602173035
   },
   "0xfc76f730c3e2939825484e0a777368075d779ef9": {
    "deger": 213155.47758588,
-   "ms": 1794601552970
+   "ms": 1794602173035
   }
  },
  "hl_ofset": null,
@@ -44,8 +44,8 @@
   "0x424d756e19469ddb13c753b280cc0e9d8c95420e|xyz:MSTR": 1794598010511
  },
  "poz_tr_senk_ms": {
-  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 1794601554826,
-  "0xfc76f730c3e2939825484e0a777368075d779ef9": 1794601554826
+  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 1794602175190,
+  "0xfc76f730c3e2939825484e0a777368075d779ef9": 1794602175190
  },
  "son_funding_ms": null,
  "son_funding_saat": 498500,
@@ -54,5 +54,5 @@
  "ucret_gercek_usd": 0.0,
  "ucret_tahmin_say": 0,
  "vardiya": "43467925560",
- "yazildi_ms": 1794601692723
+ "yazildi_ms": 1794602603164
 }
