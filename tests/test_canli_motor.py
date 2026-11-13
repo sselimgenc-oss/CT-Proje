@@ -278,6 +278,8 @@ class SahteHL:
             return list(self.acik_emirler)
         if t == "clearinghouseState":
             return {"marginSummary": {"accountValue": str(self.hesap)}, "assetPositions": [{"position": {"coin": c, "szi": str(sz)}} for c, sz in self.pozlar.get(y["user"], {}).items()]}
+        if t == "userAbstraction":                         # K-65 eki: hesap tipi (klasik varsayılan)
+            return getattr(self, "soyut", "default")
         if t == "spotClearinghouseState":
             return {"balances": [{"coin": "USDC", "total": str(self.spot)}, {"coin": "PURR", "total": "999"}]}
         if t == "meta":
@@ -936,6 +938,35 @@ def test_k35_trader_hesap_paydasi_tum_perp_dex_ve_spot_usdc():
             return super().__call__(y)
     with pytest.raises(ConnectionError):
         mt.hesap_degeri_oku(SpotHatali(), adr(1), ["xyz"])                                          # kısmi toplam dönmez
+
+
+class TipliHL(SahteHL):
+    """K-65 eki (13.11 Fable denetimi): HL hesap tipleri. Gerçek değerler (13.11, 0x8abc… birleşik hesap): perp 43.311,15; USDC total 43.351,32, hold 43.311,15;
+    HL portfolio 43.351,32. Portföy marjı (0x424d…): USDC total −63.715,67 (borç), hold −76.912,22; portfolio 62.164,79."""
+    def __init__(self, soyut, perp, usdc_total, usdc_hold, portfolio=None):
+        super().__init__(hesap=perp)
+        self.soyut, self.usdc_total, self.usdc_hold, self.pf = soyut, usdc_total, usdc_hold, portfolio
+
+    def __call__(self, y):
+        if y["type"] == "spotClearinghouseState":
+            return {"balances": [{"coin": "USDC", "total": str(self.usdc_total), "hold": str(self.usdc_hold)}, {"coin": "HYPE", "total": "50", "hold": "0"}]}
+        if y["type"] == "portfolio":
+            if self.pf is None:
+                return []
+            return [["day", {"accountValueHistory": [[1, "1.0"], [2, str(self.pf)]], "pnlHistory": []}], ["week", {"accountValueHistory": [[2, "9.9"]]}]]
+        return super().__call__(y)
+
+
+def test_k65_payda_birlesik_hesapta_marj_iki_kez_sayilmaz_portfoy_marjinda_hl_degeri():
+    birlesik = TipliHL("unifiedAccount", 43_311.149608, 43_351.31518421, 43_311.149608, 43_351.315184)
+    assert mt.hesap_degeri_oku(birlesik, adr(1), []) == pytest.approx(43_351.315184, abs=0.01)                 # eski formül 86.662 $ (iki kat) verirdi
+    assert mt.hesap_degeri_oku(TipliHL("unifiedAccount", 0.0, 213_155.48, 0.0), adr(1), []) == pytest.approx(213_155.48)     # pozisyonsuz birleşik hesap
+    assert mt.hesap_degeri_oku(TipliHL("default", 60_000.0, 10_000.0, 2_000.0), adr(1), []) == pytest.approx(70_000.0)    # klasik: K-35 tanımı aynen (hold düşülmez)
+    pm = TipliHL("portfolioMargin", 0.0, -63_715.67, -76_912.22, 62_164.79)
+    assert mt.hesap_degeri_oku(pm, adr(1), []) == pytest.approx(62_164.79)                                        # perp + spot formülü 13.196 $ / −63.716 $ verirdi
+    with pytest.raises(ValueError):
+        mt.hesap_degeri_oku(TipliHL("portfolioMargin", 0.0, 0.0, 0.0, None), adr(1), [])                          # HL değeri yoksa kısmi payda yok
+    assert mt.hesap_degeri_oku(birlesik, adr(1), None) is None
 
 
 def test_k35_motor_emir_boyutu_birlesik_hesap_paydasiyla(tmp_path):

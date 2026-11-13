@@ -43,6 +43,8 @@ class BorsaSim:
             if y["user"] == HLADR:
                 return {"marginSummary": {"accountValue": str(self.deger)}, "assetPositions": [{"position": {"coin": c, "szi": str(v)}} for c, v in self.poz.items() if v]}
             return {"marginSummary": {"accountValue": str(self.trader_hesap)}, "assetPositions": [{"position": {"coin": c, "szi": str(v)}} for c, v in self.trader_poz.get(y["user"], {}).items()]}
+        if t == "userAbstraction":
+            return "default"
         if t == "spotClearinghouseState":
             return {"balances": [{"coin": "USDC", "total": "0"}]}
         if t == "meta":

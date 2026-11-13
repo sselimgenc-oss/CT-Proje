@@ -1,6 +1,7 @@
 """Portföy riski (docs/RADAR_V1.md §6; görev T4 §1). SAF durum makinesi: saat ve özsermaye dışarıdan verilir.
 
-- Coin yoğunlaşması: aynı coinde TÜM slotların brüt nosyoneli ≤ kasa × `canli_coin_tavan_oran`; aşan açılış KIRPILIR (kırpılan < `radar_min_emir_usd` ise 0).
+- Coin yoğunlaşması: aynı coinde TÜM slotların brüt nosyoneli ≤ `coin_tavan_usd` = max(kasa × `canli_coin_tavan_oran`, tek slot tavanı `radar_slot_tavan_carpan` × slot) (K-65 eki 13.11:
+  1.000 $ / 5 slotta ikisi eşit 300 $; 600 $ / 3 slotta oran 180 $ verip tek trader'ın slotunu kırpıyordu); aşan açılış KIRPILIR (kırpılan < `radar_min_emir_usd` ise 0).
 - Patlama freni: bir trader `canli_patlama_pencere_dk` dk içinde ≥ `canli_patlama_coin` YENİ coin açarsa (o sekizinci açılış dahil) `canli_patlama_ara_dk` dk ondan yeni açılış kopyalanmaz (kapanışlar izlenir).
 - Günlük kayıp: UTC gün başı özsermayeden kayıp ≥ `canli_gunluk_kayip_oran` → o gün yeni açılış yok.
 - K-62 günlük sert fren: gün başından kayıp ≥ `canli_gunluk_kapat_oran` → `gunluk_kapat` olayı (motor tüm pozisyonları kapatır; o gün açılış yok; DUR değil, ertesi gün sürer).
@@ -19,6 +20,17 @@ DAKIKA = 60_000
 
 def gun(ms: int) -> str:
     return datetime.fromtimestamp(ms / 1000, UTC).date().isoformat()
+
+
+def coin_tavan_usd(rules: dict, kasa_usd: float) -> float:
+    """Aynı coinde tüm slotların brüt tavanı ($): max(kasa × `canli_coin_tavan_oran`, `radar_slot_tavan_carpan` × slot). Slot kurulamıyorsa / kural yoksa yalnız oran."""
+    oran = float(rules["canli_coin_tavan_oran"]) * float(kasa_usd)
+    try:
+        from copytrade import boyut
+        slot_tavan = float(rules["radar_slot_tavan_carpan"]) * boyut.slot_usd(float(kasa_usd), rules)
+    except (KeyError, ValueError):
+        slot_tavan = 0.0
+    return max(oran, slot_tavan)
 
 
 class Risk:
@@ -125,8 +137,8 @@ class Risk:
             kuyruk.append((simdi_ms, coin))
 
     def coin_tavani(self, emir_usd: float, coin_brut_usd: float) -> tuple[float, str]:
-        """Aynı coindeki toplam brüt ≤ kasa × oran. Döner (uygulanan $, neden): kırpılmadıysa neden ''; kırpılan < min emir ise 0 ('coin_tavani')."""
-        izin = float(self.rules["canli_coin_tavan_oran"]) * self.kasa - coin_brut_usd
+        """Aynı coindeki toplam brüt ≤ `coin_tavan_usd`. Döner (uygulanan $, neden): kırpılmadıysa neden ''; kırpılan < min emir ise 0 ('coin_tavani')."""
+        izin = coin_tavan_usd(self.rules, self.kasa) - coin_brut_usd
         if emir_usd <= izin + 1e-9:
             return emir_usd, ""
         kirpilan = max(0.0, izin)
