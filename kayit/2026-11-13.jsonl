@@ -97,3 +97,6 @@
 {"zaman_ms":1794569142177,"olay":"telegram","metin":"🧾 Son 1 saat (13:25–14:25 TSİ): 1 emir · sanal\n➕ açılış 0 · ⬆️ artırma 0 · ⬇️ azaltma 0 · ✖️ kapanış 1\n🏆 En büyük: 181 $ (BTC, SAT) · 0xfc76f7…\n💵 Tutar toplamı: 181 $ · kayma ort. %0,017\n💰 Kasa: 602,19 $ · bugün 🟢 +1,64 $ (+%0,3) · başlangıçtan 🟢 +2,19 $ (+%0,4)","acik":true}
 {"zaman_ms":1794569430152,"olay":"tur","ozsermaye_usd":602.1887}
 {"zaman_ms":1794570277689,"olay":"tur","ozsermaye_usd":602.1887}
+{"zaman_ms":1794571148167,"olay":"tur","ozsermaye_usd":602.1887}
+{"zaman_ms":1794571709115,"olay":"telegram_hata","tur":"ConnectionError"}
+{"zaman_ms":1794571776347,"olay":"telegram_hata","tur":"ConnectionError"}
