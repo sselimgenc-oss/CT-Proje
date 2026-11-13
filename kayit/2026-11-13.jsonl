@@ -301,3 +301,6 @@
 {"zaman_ms":1794577183935,"olay":"tur","ozsermaye_usd":602.0078}
 {"zaman_ms":1794577347542,"olay":"telegram","metin":"🧾 Son 1 saat (15:42–16:42 TSİ): 25 emir · sanal\n➕ açılış 2 · ⬆️ artırma 12 · ⬇️ azaltma 11 · ✖️ kapanış 0\n🏆 En büyük: 24,3 $ (HYPE, AL) · 0xfc76f7…\n⏭️ Kopyalanmayan trader dolumu: 159 (≈4 ayrı işlem)\n   • kural gereği 159: 159 çok küçük (< 11 $)\n   • kaçırılan 0 (geç görülen / veri yok)\n💵 Tutar topl","acik":true}
 {"zaman_ms":1794578038964,"olay":"tur","ozsermaye_usd":602.0078}
+{"zaman_ms":1794578901110,"olay":"tur","ozsermaye_usd":602.0078}
+{"zaman_ms":1794578998824,"olay":"telegram_hata","tur":"ConnectionError"}
+{"zaman_ms":1794579127208,"olay":"telegram_hata","tur":"ConnectionError"}
