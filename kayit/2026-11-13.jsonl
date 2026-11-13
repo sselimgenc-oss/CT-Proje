@@ -80,3 +80,7 @@
 {"zaman_ms":1794561760190,"olay":"tur","ozsermaye_usd":600.7986}
 {"zaman_ms":1794561921314,"olay":"telegram","metin":"🧾 Son 1 saat (11:25–12:25 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 600,89 $ · bugün 🟢 +0,34 $ (+%0,1) · başlangıçtan 🟢 +0,89 $ (+%0,1)","acik":true}
 {"zaman_ms":1794562607157,"olay":"tur","ozsermaye_usd":601.5753}
+{"zaman_ms":1794563036390,"olay":"saha_dus","adres":"0xc22db2c04e054786426671cec0b766c07304fb20","neden":"veto_omur_zarar","sonuc":true}
+{"zaman_ms":1794563036390,"olay":"telegram","metin":"➖ Trader takipten çıktı: 0xc22db2…\n↳ Neden: veto_omur_zarar (sonuçla, 14 gün bekleme)","acik":true}
+{"zaman_ms":1794563036391,"olay":"kor_kirpildi","adres":"0x424d756e19469ddb13c753b280cc0e9d8c95420e","uyeler":["0x8abc3b8b07082cc8752a1342ece30b9798aac9ad","0xfc76f730c3e2939825484e0a777368075d779ef9"]}
+{"zaman_ms":1794563464074,"olay":"tur","ozsermaye_usd":601.1569}
