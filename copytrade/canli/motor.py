@@ -823,6 +823,7 @@ class Motor:
         self._boyut_girdi = None
         self.sayac[karar] += 1
         self._say_neden(neden)
+        self.donem_emir_say("atlanan", neden)
         if self.kip == "sanal":
             self._atla_tampon[neden] = self._atla_tampon.get(neden, 0) + 1
             self._atla_islem.add((adres, o.coin, int(o.zaman_ms) // 1000))
@@ -835,6 +836,9 @@ class Motor:
     def _yurut(self, o: Olay, adres: str, eylem: str, yon: str, usd: float, reduce_only: bool, acik_sz: float | None, neden: str, gec: bool, simdi: int,
                bant: float | None = None, kimlik: str | None = None) -> Sonuc:
         self._say_neden(neden)
+        self.donem_emir_say("emir")
+        if neden == "min_emir_yuvarlandi":
+            self.donem_emir_say("yuvarlanan")
         kimlik = kimlik if kimlik is not None else (o.kimlik or f"x:{adres}:{o.coin}:{simdi}")
         cloid = cloid_uret(kimlik, eylem)
         emir_ms = self.saat_ms()
@@ -1158,7 +1162,9 @@ class Motor:
         for k in kararlar:
             if k.tur == "giris":
                 self._kor_imza.pop(k.adres, None)
+                self._slot_net_guncelle(k.adres)                                   # pano (14.11): eski slot kaydı (yeniden giriş) son netini alır
                 self.hesap.slot_ac(k.adres, self.saha.slot)
+                self.donem_slot_giris(k.adres, k.neden, simdi)
                 self.trader_pozlari_oku(k.adres)
                 self.trader_son_islem_oku(k.adres, simdi)
                 self.trader_hesap_usd(k.adres, simdi, zorla=True)
@@ -1169,9 +1175,11 @@ class Motor:
                 self.tg.gonder(tg.msg_saha("giriş", k.adres, k.neden + (f" (yerine {tg.kisa(k.yerine)})" if k.yerine else "")))
             elif k.tur == "dus":
                 self.kayit({"olay": "saha_dus", "adres": k.adres, "neden": k.neden, "sonuc": k.sonuc})
+                self.donem_slot_cikis(k.adres, k.neden, k.sonuc, simdi)
                 self.tg.gonder(tg.msg_saha("çıkış", k.adres, f"{k.neden}{' (sonuçla, 14 gün bekleme)' if k.sonuc else ' (sonuç dışı)'}"))
             elif k.tur == "inen_kapat":
                 self._adres_kapat(k.adres, "inen_24sa", simdi)
+                self._slot_net_guncelle(k.adres)                                   # pano (14.11): slot silinmeden son net
                 self.hesap.slot_kapat(k.adres)
             elif k.tur == "giris_atlandi":
                 imza = (self.saha.son_kosu_ms, tuple(sorted(k.saha if k.saha is not None else (k.kor_kirpildi or []))))
@@ -1640,13 +1648,82 @@ class Motor:
         self.btc_donem = okuma
         self.kayit({"olay": "btc_donem", **okuma})
 
-    def donem_seri_guncelle(self, simdi: int) -> None:
-        """F-06 (14.11 denetim): `durum/donem_seri.json` = {donem, bas_ms, kasa_usd, btc_donem_fiyat, gunler: [{gun (UTC), ozsermaye_usd, btc}]}. Her dakika o UTC gününün kaydı
-        güncellenir: gün bitince son değer = gün sonu. Dönem değişince seri sıfırdan başlar. Dönem yoksa yazılmaz."""
+    DOLULUK_ADIM_MAX_MS = 5 * DAKIKA            # doluluk birikiminde iki güncelleme arası en çok bu kadar sayılır (vardiya boşluğu sayılmaz)
+
+    def _ds(self) -> dict | None:
+        """Bu dönemin `donem_seri` sözlüğü (dönem değiştiyse sıfırdan); dönem yoksa None."""
         if not self.donem:
-            return
+            return None
         if self.donem_seri.get("donem") != self.donem:
             self.donem_seri = {"donem": self.donem, "bas_ms": None, "kasa_usd": self.kasa, "btc_donem_fiyat": None, "gunler": []}
+        return self.donem_seri
+
+    def _katman(self, adres: str) -> str | None:
+        for r in (self._son_kadro or {}).get("satirlar") or []:
+            if r.get("adres") == adres:
+                return r.get("katman")
+        return None
+
+    def _slot_kaydi(self, adres: str) -> dict | None:
+        """Adresin dönemdeki SON slot kaydı (pano: trader katkısı / giriş-çıkış geçmişi)."""
+        ds = self._ds()
+        for r in reversed((ds or {}).get("slotlar") or []):
+            if r.get("adres") == adres:
+                return r
+        return None
+
+    def _slot_net_guncelle(self, adres: str) -> None:
+        """Slot kaydının net K/Z'si ($) = slot özsermayesi − slot tabanı (realize − ücret + funding + açık K/Z). Slot defterde yoksa dokunulmaz (son değer kalır)."""
+        r = self._slot_kaydi(adres)
+        oz = self.hesap.slot_ozsermaye(adres, self.marks)
+        if r is not None and oz is not None and adres in self.hesap.slot_bas:
+            r["net_usd"] = round(oz - float(self.hesap.slot_bas[adres]), 4)
+
+    def donem_slot_giris(self, adres: str, neden: str, simdi: int) -> None:
+        """Pano (14.11): dönem boyu slot kaydı [{adres, katman (ilk11/yedek/None), giris_ms, giris_neden, cikis_ms, cikis_neden, sonuc, net_usd}] — kalıcı (`donem_seri.json`), 14 günlük kayıt penceresinden bağımsız."""
+        ds = self._ds()
+        if ds is None:
+            return
+        ds.setdefault("slotlar", []).append({"adres": adres, "katman": self._katman(adres), "giris_ms": simdi, "giris_neden": neden, "cikis_ms": None, "cikis_neden": None,
+                                            "sonuc": None, "net_usd": 0.0})
+
+    def donem_slot_cikis(self, adres: str, neden: str, sonuc: bool, simdi: int) -> None:
+        r = self._slot_kaydi(adres)
+        if r is not None and r.get("cikis_ms") is None:
+            self._slot_net_guncelle(adres)
+            r["cikis_ms"], r["cikis_neden"], r["sonuc"] = simdi, neden, bool(sonuc)
+
+    def donem_emir_say(self, tur: str, neden: str | None = None) -> None:
+        """Pano (14.11) dönem boyu emir sayacı: `emir` (gönderilen), `atlanan` (`emir_yok`), `yuvarlanan` (min emre yuvarlanan gönderilen), `atlama_neden` {neden: adet}."""
+        ds = self._ds()
+        if ds is None:
+            return
+        sy = ds.setdefault("emir_sayac", {"emir": 0, "atlanan": 0, "yuvarlanan": 0, "atlama_neden": {}})
+        sy[tur] = int(sy.get(tur, 0)) + 1
+        if tur == "atlanan" and neden:
+            sy["atlama_neden"][neden] = int(sy["atlama_neden"].get(neden, 0)) + 1
+
+    def donem_seri_guncelle(self, simdi: int) -> None:
+        """F-06 (14.11 denetim): `durum/donem_seri.json` = {donem, bas_ms, kasa_usd, btc_donem_fiyat, gunler: [{gun (UTC), ozsermaye_usd, btc}]}. Her dakika o UTC gününün kaydı
+        güncellenir: gün bitince son değer = gün sonu. Dönem değişince seri sıfırdan başlar. Dönem yoksa yazılmaz.
+        Pano 14.11 ekleri: `slotlar` (açık slotların net K/Z'si her güncellemede; dönem başında sahada olan üye `giris_neden` "donem_basi" ile eklenir), `doluluk` {sure_ms, slot_ms
+        (Σ sahadaki üye × süre), kapasite_ms (Σ saha_n × süre), nakit_ms (Σ nakit payı × süre; nakit payı = 1 − min(1, brüt pozisyon / özsermaye)), son_ms}; adım ≤ 5 dk sayılır."""
+        if self._ds() is None:
+            return
+        for adres in self.hesap.slot_bas:
+            if self._slot_kaydi(adres) is None:
+                self.donem_slot_giris(adres, "donem_basi", simdi)
+            self._slot_net_guncelle(adres)
+        dl = self.donem_seri.setdefault("doluluk", {"sure_ms": 0, "slot_ms": 0.0, "kapasite_ms": 0.0, "nakit_ms": 0.0, "son_ms": None})
+        if dl.get("son_ms") is not None and 0 < simdi - int(dl["son_ms"]) <= self.DOLULUK_ADIM_MAX_MS:
+            dt = simdi - int(dl["son_ms"])
+            oz = self.ozsermaye()
+            nakit = 1.0 - min(1.0, max(0.0, self.hesap.brut_toplam(self.marks) / oz)) if oz > 0 else 0.0
+            dl["sure_ms"] = int(dl["sure_ms"]) + dt
+            dl["slot_ms"] = float(dl["slot_ms"]) + len(self.saha.uyeler) * dt
+            dl["kapasite_ms"] = float(dl["kapasite_ms"]) + int(self.saha.n) * dt
+            dl["nakit_ms"] = float(dl["nakit_ms"]) + nakit * dt
+        dl["son_ms"] = simdi
         b = self._btc_donem_gecerli()
         if b:
             self.donem_seri["bas_ms"], self.donem_seri["btc_donem_fiyat"] = b["bas_ms"], b["fiyat"]
@@ -1960,7 +2037,7 @@ class Motor:
                 return
         if kadro is not None:
             self._son_kadro = kadro
-            self._kadro_kasa_denetle(kadro)
+            self._kadro_kasa_denetle(kadro, simdi)
         kararlar, durum = self.saha.degerlendir(self._son_kadro, simdi)
         eksik = self.saha.eksik if durum == "ok" else None
         imza = (self.saha.son_kosu_ms, eksik["saha"]) if eksik else None
@@ -1974,9 +2051,14 @@ class Motor:
                 self.tg.gonder(tg.alarm(f"ALARM: {durum}", "Takip edilen trader listesi olduğu gibi kalır, yeni trader girmez."))
         self.karar_uygula(kararlar, simdi)
 
-    def _kadro_kasa_denetle(self, kadro: dict) -> None:
+    def _kadro_kasa_denetle(self, kadro: dict, simdi: int | None = None) -> None:
         """D-01 (14.11 denetim): kadro.json `kasa_usd` (radar oynatma kasası, `radar_kasa_usd`) motorun kasasından farklıysa seçim başka ölçekte yapılmıştır (ör. 1.000 $'da küçük
-        açılışlar atlanır, 10.000 $'da açılır). YALNIZ bilgi: farklı her kasa değeri için bir kez kayıt + uyarı; motor durmaz, kadro yine uygulanır."""
+        açılışlar atlanır, 10.000 $'da açılır). YALNIZ bilgi: farklı her kasa değeri için bir kez kayıt + uyarı; motor durmaz, kadro yine uygulanır.
+        Pano 14.11: yalnız GÜNCEL kadro için (taze: `canli_kadro_eski_saat` içinde VE koşusu dönem başından sonra); dönem öncesi / bayat kadro uyarı üretmez (yeni radar koşusu beklenir)."""
+        simdi = self.saat_ms() if simdi is None else simdi
+        bas = donem_ms(self.donem)
+        if not kadro_taze_mi(kadro, simdi, self.rules)[0] or (bas is not None and int(kadro.get("kosu_ms") or 0) < bas):
+            return
         k = kadro.get("kasa_usd")
         try:
             k = float(k) if k is not None else None
@@ -2604,9 +2686,28 @@ async def _periyodik(motor: Motor, durdur: asyncio.Event, dinleyici: CanliDinley
             pass
 
 
+def bekleme_yaz(motor: Motor, simdi: int, kadro_geldi: bool = False) -> None:
+    """Pano 14.11: bekleme vardiyasında da (saha boş / kadro bekleniyor) her yoklamada (`canli_kadro_aralik_sn` ≤ 15 dk'lık yayım aralığı) dönem bakımı ve `ozet.json`:
+    BTC dönem başı fiyatı (`btc_donem_oku`), mark (BTC al-tut kıyası), `donem_seri_guncelle` (eğri + boş saha doluluğu), `tur` kaydı ve durum dosyaları; yayım betiği panoyu bundan üretir.
+    Hata vardiyayı durdurmaz (kayıt)."""
+    try:
+        mids = motor.mids_al() if motor._aralik_mi("bekleme_mids", simdi, 60) else None
+        btc = motor.btc_donem_oku(simdi)
+        with motor._lock:
+            motor.mids_uygula(mids, simdi)
+            motor.btc_donem_uygula(btc)
+            motor.donem_seri_guncelle(simdi)
+            motor._tur_kaydi(simdi)
+            motor.durum_yaz()
+        _yaz(motor.durum_dizin / "ozet.json", {**motor.ozet(), **motor.pano_ek(), "bekleme_vardiyasi": True, "kadro_geldi": kadro_geldi, "yazildi_ms": motor.saat_ms()})
+    except Exception as hata:                               # noqa: BLE001
+        motor.kayit({"olay": "ozet_yazma_hata", "tur": type(hata).__name__, "mesaj": str(hata)[:120]})
+
+
 async def bekleme_vardiyasi(motor: Motor, sure_sn: float | None, uyku: Callable[[float], Any] = asyncio.sleep) -> dict:
     """K-54: yeni sürüm kadrosu (radar_surum_gerekli) henüz yok ve saha boş → izlenecek adres yoktur. Motor çökmez (09.11 18:01Z olayı: vardiya
-    zinciri koptu); vardiya boyunca kadroyu aralıkla yoklar, uygun kadro gelince erken ve temiz biter (sonraki vardiya adreslerle başlar)."""
+    zinciri koptu); vardiya boyunca kadroyu aralıkla yoklar, uygun kadro gelince erken ve temiz biter (sonraki vardiya adreslerle başlar). 14.11: her yoklamada `bekleme_yaz`
+    (ozet.json + dönem serisi + BTC dönem fiyatı) — pano vardiya sonunu beklemez."""
     motor.kayit({"olay": "bekleme_vardiyasi", "gerekli": str(motor.radar_surum_gerekli)})
     bitis = motor.saat_ms() + int((sure_sn or 0) * 1000)
     aralik = max(1.0, float(motor.rules["canli_kadro_aralik_sn"]))
@@ -2617,6 +2718,7 @@ async def bekleme_vardiyasi(motor: Motor, sure_sn: float | None, uyku: Callable[
             motor._kadro_uygula((True, motor.kadro_oku()), simdi)
         except Exception as hata:                           # noqa: BLE001
             motor.kayit({"olay": "kadro_okuma_hata", "tur": type(hata).__name__})
+        bekleme_yaz(motor, simdi, kadro_geldi)
         if motor.saha.uyeler or (motor._son_kadro or {}).get("satirlar"):
             kadro_geldi = True
             motor.kayit({"olay": "bekleme_bitti_kadro_geldi", "uye": len(motor.saha.uyeler)})
