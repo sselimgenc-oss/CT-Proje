@@ -108,9 +108,6 @@ eden hakemli makale, çalışma kâğıdı ya da yöntemi açık bir veri analiz
       Kripto borsa copy trade, 90 gün (Binance/Bybit/MEXC) [blog, ikincil aktarım]. Liderlerin
       ~%97'si kendisi kârlıyken takipçiye kâr ettirenlerin oranı Bybit'te %40, Binance'te %72. Kalıcılık
       testi değil; birincil çalışma bulunamadı.
-      ETRE raporundan (depomuz) [ikincil, iç]. İzlenen HL trader'larının izlemeye alınmadan önceki
-      pozisyonları +%0,34; sonrakiler −%0,02 (n = 12.053). Listeye giriş anındaki hayatta kalma
-      yanlılığının doğrudan örneği.
       Dune, Kaiko, Glassnode, Messari, Galaxy, Delphi: taranmadı; "hiç yok" denemez.
 
 
@@ -271,6 +268,6 @@ tps://www.coingecko.com/learn/hyperliquid-hlp-vault-analysis
 POPCAT: https://cointelegraph.com/news/hyperliquid-hlp-popcat-attack-3m-wipeout
 HLP ücretsizliği (blog): https://eco.com/support/en/articles/15197987-hyperliquid-vault-strategies
 -2026-hlp-and-user-vaults-explained
-Dahili: arastirma/dis_inceleme/dunya/RAPOR.md , arastirma/dis_inceleme/etre/RAPOR.md ,
+Dahili: arastirma/dis_inceleme/dunya/RAPOR.md ,
 docs/KARARLAR.md K-65
 ```
