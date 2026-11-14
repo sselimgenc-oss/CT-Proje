@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-14 21:43 UTC
+# Canlı rapor — 2026-11-14 21:58 UTC
 
 **Kip** sanal · vardiya `43638869277` · saha 11/11 (inen 0)
 
@@ -8,15 +8,15 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 10.000,00 $ | 10.005,08 $ | +%0,05 | — (geçmiş < 7 gün) | +%0,05 | +%0,00 |
+| 10.000,00 $ | 9.995,59 $ | −%0,04 | — (geçmiş < 7 gün) | −%0,04 | −%0,09 |
 
-Başarı kıyası (aynı dönemde): toplam +%0,05 · BTC al-tut: −%1,0 · fark: +%1,0 · aylık eşdeğer: — · hedef %4/ay: —
+Başarı kıyası (aynı dönemde): toplam −%0,04 · BTC al-tut: −%1,6 · fark: +%1,6 · aylık eşdeğer: — · hedef %4/ay: —
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x5d908c… | HYPE | L | 1.029,72 $ | +5,54 $ |
+| 0x5d908c… | HYPE | L | 1.020,23 $ | −3,95 $ |
 
 ## Son 24 saat
 
@@ -45,7 +45,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 60 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 75 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
@@ -57,16 +57,15 @@ olay yok
 
 ## Dönem (kalıcı seri)
 
-- motor 10.005,08 $ · BTC al-tut 9.903,80 $ · %4/ay hedef çizgisi 10.002,45 $
-- katkı: İlk 11 6 slot +0,00 $ · Yedek 5 slot +5,08 $
-- saha doluluğu %100,00 · nakitte kalan %99,47 (0,0 gün ölçüldü)
-- kullanılan sermaye getirisi +%9,63 · ort. brüt maruziyet 52,74 $ · ort. net 52,74 $ · risk kilidi olayı 0 (gölge eğri yok)
+- motor 9.995,59 $ · BTC al-tut 9.839,25 $ · %4/ay hedef çizgisi 10.002,45 $
+- katkı: İlk 11 6 slot +0,00 $ · Yedek 5 slot −4,41 $
+- saha doluluğu %100,00 · nakitte kalan %97,57 (0,1 gün ölçüldü)
+- kullanılan sermaye getirisi −%1,82 · ort. brüt maruziyet 242,52 $ · ort. net 242,52 $ · risk kilidi olayı 0 (gölge eğri yok)
 - atlanan sinyal %76,58 · yuvarlanan emir %0,00 (emir 26, atlanan 85)
 - radar hunisi: evren 2458 → aday 900 → ≥10 işlem 109 → geçen 21
 
 | trader | katman | giriş | çıkış | net $ |
 |---|---|---|---|---|
-| 0x5d908c… | yedek | 14.11 23:40 | sahada | +5,08 $ |
 | 0x428cbb… | ilk11 | 14.11 23:40 | sahada | +0,00 $ |
 | 0x6834b2… | ilk11 | 14.11 23:40 | sahada | +0,00 $ |
 | 0x557beb… | ilk11 | 14.11 23:40 | sahada | +0,00 $ |
@@ -77,3 +76,4 @@ olay yok
 | 0xf1881e… | yedek | 14.11 23:40 | sahada | +0,00 $ |
 | 0x3d21e3… | yedek | 14.11 23:40 | sahada | +0,00 $ |
 | 0x298830… | yedek | 14.11 23:40 | sahada | +0,00 $ |
+| 0x5d908c… | yedek | 14.11 23:40 | sahada | −4,41 $ |
