@@ -1,6 +1,6 @@
-# Canlı rapor — 2026-11-14 20:41 UTC
+# Canlı rapor — 2026-11-14 20:58 UTC
 
-**Kip** sanal · vardiya `43629614248` · saha 11/11 (inen 0) · **bekleme vardiyası** (saha boş / kadro bekleniyor)
+**Kip** sanal · vardiya `43638869277` · saha 11/11 (inen 0)
 
 **Saha doluluğu** saha 11/11 · bugün R1'i geçen trader: 21
 
@@ -10,7 +10,7 @@
 |---|---|---|---|---|---|
 | 10.000,00 $ | 10.000,00 $ | +%0,00 | — (geçmiş < 7 gün) | +%0,00 | +%0,00 |
 
-Başarı kıyası (aynı dönemde): toplam +%0,00 · BTC al-tut: −%0,1 · fark: +%0,1 · aylık eşdeğer: — · hedef %4/ay: —
+Başarı kıyası (aynı dönemde): toplam +%0,00 · BTC al-tut: −%1,0 · fark: +%1,0 · aylık eşdeğer: — · hedef %4/ay: —
 
 ## Açık pozisyonlar
 
@@ -43,7 +43,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 72 dk · WS kopma — / yeniden bağlanma — · boşluk yok · REST 429 0
+- süre 15 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
@@ -51,15 +51,16 @@ olay yok
 |---|---|---|---|---|---|
 | 2026-11-05 | 7.0 gün ⚠eksik | -0.06 | −%0,25 | +%0,05 | 11/1/16 |
 | 2026-11-06 | 7.0 gün | -0.44 | +%0,05 | −%0,32 | 11/4/17 |
+| 2026-11-07 | 7.0 gün ⚠eksik | -0.59 | +%0,00 | −%0,13 | 10/0/22 |
 
 ## Dönem (kalıcı seri)
 
-- motor 10.000,00 $ · BTC al-tut 9.993,67 $ · %4/ay hedef çizgisi 10.002,45 $
+- motor 10.000,00 $ · BTC al-tut 9.899,37 $ · %4/ay hedef çizgisi 10.002,45 $
 - katkı: İlk 11 6 slot +0,00 $ · Yedek 5 slot +0,00 $
-- saha doluluğu — · nakitte kalan — (0,0 gün ölçüldü)
-- kullanılan sermaye getirisi — · ort. brüt maruziyet — · ort. net — · risk kilidi olayı 0 (gölge eğri yok)
+- saha doluluğu %100,00 · nakitte kalan %100,00 (0,0 gün ölçüldü)
+- kullanılan sermaye getirisi — · ort. brüt maruziyet 0,00 $ · ort. net 0,00 $ · risk kilidi olayı 0 (gölge eğri yok)
 - atlanan sinyal — · yuvarlanan emir — (emir 0, atlanan 0)
-- radar hunisi: — (kadroda `huni` yok)
+- radar hunisi: evren 2458 → aday 900 → ≥10 işlem 109 → geçen 21
 
 | trader | katman | giriş | çıkış | net $ |
 |---|---|---|---|---|
