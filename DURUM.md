@@ -1,32 +1,22 @@
 # DURUM (lider günceller; tek doğru kaynak)
 
-Son güncelleme: 2026-11-09 16:00Z, lider Claude (Opus). Sonnet emekli (06.11); kodu lider ve lidere bağlı ajanlar yazar, lider denetler ve birleştirir. Son karar: kullanıcı.
+Son güncelleme: 2026-11-14, lider Claude. Son karar: kullanıcı.
 
-## Hedef
-Form Radarı v1 (`docs/RADAR_V1.md`): her gün son 7 günde formu yüksek, kopyalanabilir trader'ları bul → İlk 11'i 1.000 $ kasayla kopyala.
-Şu an **sanal** (GitHub Actions vardiyası); gerçek para da **1.000 $** ile başlar (K‑50), geçiş kararı kullanıcının.
+## Hedef (K-66, kullanıcı kararı 14.11)
+Kullanıcının asıl modeli: **Form Radarı** (`docs/RADAR_V1.md`, v1.1 kuralları K-53). Her gün son 7 günün formuna göre kadro:
+**İlk 11 sahada, 19 yedek** (toplam 30). Form düşen çıkar, yükselen girer. "Geçmiş değil, şimdi + gelecek."
+- Şu an yalnız **sanal** (GitHub Actions vardiyası). Gerçek para yok; geçiş yalnız kullanıcı kararıyla.
+- Değerlendirme: **31.12.2026**. Başarı: ayda ≥ %4 **ve** aynı dönemde "BTC al-tut"tan iyi. Kayıp tahammülü: kasa zirveden %20 (kilit sistemde).
+- Kapanan yollar: D+ (sabit kadro, `secim_d`), walk-forward seçim doğrulaması, Revizyon 1. Sebep: geçmiş performansa göre seçim rastgeleden iyi çıkmadı (K-65 sonu).
 
 ## Şu an
-- **Yeni dönem (K‑49):** 09.11 00:01 TSİ (2026-11-08T21:01Z) sıfırdan başladı; eski veri dal geçmişinde arşivli. Yalnız `canli-durum` (1.000 $); 300 $ seri iptal.
-- **Telegram açık** (repo değişkeni `TELEGRAM_ACIK=evet`, kullanıcı 08.11). **Dış nabız alarmı** `sg-nabiz` (Cloudflare cron, 10 dk; son yayım > 45 dk → Telegram; `docs/NABIZ_ALARMI.md`).
-- **Ana dal koruması** (`main-koruma` ruleset): PR zorunlu, `test` + `canli_sdk` yeşil olmadan birleşmez, silme/force push yok.
-- **K-55/K-56 (09.11): seçim yapısı D+** (sabit kadro, yalnız risk çıkışı; 5 trader × 200 $; `copytrade/secim_d.py`): ilk doldurma bu gece radar koşusunda (03:37 TSİ), motor `radar_surum: v2` kadroyu uygular.
-- **K-54 (09.11):** eski yapının trader'ları panodan kalkar: yeni dönem 21:01 TSİ; motor `radar_surum: v2` kadrosu gelene kadar trader almaz (kasa nakitte). Yeni yapı Fable ön kaydıyla tasarlanıp geriye dönük sınanıyor.
-- **Radar v1.1 (K-53, 09.11):** 30 g kârda olmayan alınmaz, kopya işlem ≥ 10, H = 0, önceki kadro üyesi yalnız gerçekten kötüleşirse düşer. İlk v1.1 kadrosu 10.11 radar koşusunda. Doğrulama: 8 haftalık geriye dönük kalıcılık testi (sıradaki iş).
+- Geçiş işi sürüyor: radar iş akışı D+ yerine Form Radarı adımlarına döner; saha 11 × 200 $ (sanal kasa 2.200 $; küçük slotta emir yuvarlaması nedeniyle); yeni sanal dönem. Ayrıntı K-66.
+- **Ana dal koruması** (`main-koruma`): PR zorunlu, `test` + `canli_sdk` yeşil olmadan birleşmez.
+- Telegram açık; dış nabız alarmı `sg-nabiz` (`docs/NABIZ_ALARMI.md`).
+- Repo adı `sselimgenc-oss/CT-Proje`.
 
-## Denetimler (Fable 06–08.11 + dış denetim 3 tur 09.11) — kapanış: K‑51, K‑52
-- `docs/DENETIM_DEVIR_2026-11-06.md` (G-1…G-11), `docs/DENETIM_SECIM_2026-11-08.md` (B1…B17), `docs/DENETIM_PROJE_2026-11-08.md` (G-12…G-24, S-1…S-24).
-- Kod maddelerinin tamamı main'de ve testli (#573–#593). Açık kalanlar: S-23 (gerçek HL yanıt kaydı; ilk gerçek deneme), v1.1 adayları (28. gün kararı). A-1 kapandı (token daraltıldı, 09.11).
-
-- **Repo adı 08.11'den beri `sselimgenc-oss/CT-Proje`** (eski `sg-arge` adresleri GitHub yönlendirmesiyle çalışır; kod yeni adı kullanır).
-
-## Takvim
-| Tarih | İş |
-|---|---|
-| 12.11 | İlk isabet ölçümü: yalnız boru hattı kontrolü (K‑46), karar değil |
-| 15–16.11 | 1.000 $ sanal 7 temiz gün (K‑50) → gerçek para geçişi kullanıcıyla konuşulur (`deploy/ACILIS_KONTROL.md`) |
-| 19.11 | 7 ölçülmüş gün: yalnız "üst sınır < 0" ise dur |
-| 02–03.12 | 28 gün / 21 ölçülmüş gün: K‑46 kararı + v1.1 adayları (Fable yeniden denetim) |
+## Araştırma (yalnız bilgi)
+`arastirma/dis_inceleme/` (dünya, risk_secim, hl_ozel, codex_tasarim), `arastirma/futbol_sinama/RAPOR.md`.
 
 ## Belgeler
-`AGENTS.md` (kurallar) · `docs/KARARLAR.md` · `docs/RADAR_V1.md` (strateji) · `docs/VERI_SOZLESMESI.md` · `deploy/ACILIS_KONTROL.md` · denetim belgeleri (yukarıda)
+`AGENTS.md` (kurallar) · `docs/KARARLAR.md` · `docs/RADAR_V1.md` (strateji) · `docs/VERI_SOZLESMESI.md` · `deploy/ACILIS_KONTROL.md`
