@@ -83,7 +83,7 @@ def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str,
                          'sonuc_usd': t['sonuc_usd'], 'getiri': t['sonuc_usd'] / t['acilan_usd'] if t['acilan_usd'] else None,
                          'neden': t['neden'], 'gecerli': t['gecerli']} for t in ledger['islemler']]
     # M-02 (14.11): pencere sonunda açık kalan kopya işlemleri, son işaret fiyatıyla SANAL kapanış (radar G/Y dizisi; yalnız raporlama, bakiye/getiri değişmez)
-    acik_islemler = [{'coin': t['coin'], 'acilis': iso_ms(t['acilis_ms']), 'kapanis': iso_ms(t['kapanis_ms']), 'sonuc_usd': t['sonuc_usd'],
+    acik_islemler = [{'coin': t['coin'], 'acilis': iso_ms(t['acilis_ms']), 'kapanis': None, 'sonuc_usd': t['sonuc_usd'],      # kapanış yok: pencere sonu (koşu anı) sanal
                       'getiri': t['sonuc_usd'] / t['acilan_usd'] if t['acilan_usd'] else None, 'neden': t['neden'], 'gecerli': t['gecerli']}
                      for t in ledger.get('acik_islemler') or []]
     liquidations = [e['zaman_ms'] for e in ledger['olaylar'] if e.get('neden') == 'likidasyon']
