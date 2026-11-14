@@ -10,7 +10,7 @@ Kullanıcının asıl modeli: **Form Radarı** (`docs/RADAR_V1.md`, v1.1 kuralla
 - Kapanan yollar (kodları repodan silindi): D+ (sabit kadro), K-65 seçim vetoları, elle çıkarma listesi, walk-forward seçim doğrulaması, Revizyon 1. Sebep: geçmiş performansa göre seçim rastgeleden iyi çıkmadı (K-65 sonu); kullanıcı özgün Form Radarı'na döndü.
 
 ## Şu an
-- Form Radarı yürürlükte (kadro `radar_surum` v3): radar iş akışı tarama → kadro → isabet; saha 11 kişi (sanal kasa 10.000 $ → slot ≈ 909 $, `canli_sanal_kasa_ust_usd`; gerçek para sınırı 1.000 $ değişmez); yeni sanal dönem 14.11 18:00Z. Ayrıntı K-66.
+- Form Radarı yürürlükte (kadro `radar_surum` v3): radar iş akışı tarama → kadro → isabet; saha 11 kişi (sanal kasa 10.000 $ → slot ≈ 909 $, `canli_sanal_kasa_ust_usd`; gerçek para sınırı 1.000 $ değişmez); yeni sanal dönem 14.11 15:15Z (18:15 TSİ). Ayrıntı K-66.
 - **Ana dal koruması** (`main-koruma`): PR zorunlu, `test` + `canli_sdk` yeşil olmadan birleşmez.
 - Telegram açık; dış nabız alarmı `sg-nabiz` (`docs/NABIZ_ALARMI.md`).
 - Repo adı `sselimgenc-oss/CT-Proje`.
