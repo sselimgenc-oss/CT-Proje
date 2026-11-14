@@ -1,10 +1,10 @@
 {
  "sema": "radar-kadro-v1",
  "radar_surum": "v3",
- "kosu_ms": 1794667566706,
- "kasa_usd": 1000.0,
- "slot_usd": 200.0,
- "saha_n": 5,
+ "kosu_ms": 1794672262671,
+ "kasa_usd": 10000.0,
+ "slot_usd": 909.0909090909091,
+ "saha_n": 11,
  "gecti_sayisi": 0,
  "soguyan": [],
  "satirlar": [],
@@ -14,27 +14,7 @@
   "matris": []
  },
  "h_siz_girenler": [],
- "onceki_kosu_ms": 1794639432898,
- "elenenler": [
-  {
-   "adres": "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad",
-   "onceki_sira": 1,
-   "neden": "islem_az"
-  },
-  {
-   "adres": "0xfc76f730c3e2939825484e0a777368075d779ef9",
-   "onceki_sira": 2,
-   "neden": "islem_az"
-  },
-  {
-   "adres": "0x424d756e19469ddb13c753b280cc0e9d8c95420e",
-   "onceki_sira": 3,
-   "neden": "tutma_kisa"
-  }
- ],
- "eski_uye_neden": {
-  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": "r1:islem_az",
-  "0xfc76f730c3e2939825484e0a777368075d779ef9": "r1:islem_az",
-  "0x424d756e19469ddb13c753b280cc0e9d8c95420e": "r1:tutma_kisa"
- }
+ "onceki_kosu_ms": 1794667566706,
+ "elenenler": [],
+ "eski_uye_neden": {}
 }
