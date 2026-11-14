@@ -1,24 +1,12 @@
 {
- "acilis_durdu": {
-  "gunluk_kayip": false,
-  "kapanis_eksik": false,
-  "kasa_siniri": false,
-  "mutabakat": false
- },
+ "acilis_durdu": {},
  "dur": false,
  "dur_neden": null,
  "fren_bitis": {},
- "gun": "2026-11-14",
- "gun_basi": 600.0,
+ "gun": null,
+ "gun_basi": 10000.0,
  "kapat_gunu": null,
- "son_oz": 595.7187672687508,
- "yeni_coin": {
-  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": [
-   [
-    1794660364567,
-    "HYPE"
-   ]
-  ]
- },
- "zirve": 601.7711736154365
+ "son_oz": null,
+ "yeni_coin": {},
+ "zirve": 10000.0
 }

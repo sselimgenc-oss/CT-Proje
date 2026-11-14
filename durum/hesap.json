@@ -1,12 +1,9 @@
 {
  "belirsiz": {},
- "funding": {
-  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": -0.0009279754065305611,
-  "0xfc76f730c3e2939825484e0a777368075d779ef9": 0.0
- },
+ "funding": {},
  "kaldirac": 3.0,
  "kapanmis_net": 0.0,
- "kasa_usd": 600.0,
+ "kasa_usd": 10000.0,
  "maks_kaldirac": {
   "0G": 3.0,
   "2Z": 3.0,
@@ -359,29 +356,10 @@
   "xyz:ZHIPU": 10.0,
   "xyz:ZM": 10.0
  },
- "poz": {
-  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": {
-   "HYPE": {
-    "acilis_ms": 1794660364674,
-    "giris": 67.91737411700647,
-    "kaldirac": 3.0,
-    "sz": 4.410698521340608
-   }
-  },
-  "0xfc76f730c3e2939825484e0a777368075d779ef9": {}
- },
- "realize": {
-  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 0.0,
-  "0xfc76f730c3e2939825484e0a777368075d779ef9": 0.0
- },
- "slot_bas": {
-  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 200.0,
-  "0xfc76f730c3e2939825484e0a777368075d779ef9": 200.0
- },
- "son_niyet_cloid": "0x8228710d7ededdd41f4225196a96ec53",
+ "poz": {},
+ "realize": {},
+ "slot_bas": {},
+ "son_niyet_cloid": null,
  "tasfiyeler": [],
- "ucret": {
-  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 0.1348033777160478,
-  "0xfc76f730c3e2939825484e0a777368075d779ef9": 0.0
- }
+ "ucret": {}
 }
