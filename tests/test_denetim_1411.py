@@ -222,3 +222,55 @@ def test_donem_oku(tmp_path):
 
 def test_yaml_okunur():
     assert yaml.safe_load((ROOT / "copytrade/kurallar.yaml").read_text(encoding="utf-8"))["radar_kasa_usd"] == 10000
+
+
+# ================================================================================================ F-03 / F-08 / F-09: radar R2 girdileri
+GUN0 = 1_793_404_800_000                      # 2026-10-31 00:00 UTC
+EGRI = [["2026-10-31", 10_000.0], ["2026-11-01", 10_000.0], ["2026-11-02", 10_100.0], ["2026-11-03", 10_300.0], ["2026-11-04", 10_200.0], ["2026-11-05", 10_120.0],
+        ["2026-11-06", 10_110.0], ["2026-11-07", 10_100.0]]
+KOSU7 = GUN0 + 7 * GUN + 37 * 60_000          # 2026-11-07 00:37 UTC
+
+
+def test_f03_son_72_saat_egriden_slot_olceginde_eriyen_pozisyon_sayilir():
+    """Kasa 10.000, slot 909,09. t = KOSU − 72 sa = 04.11 00:37 → başlangıç = 03.11 gün sonu 10.300 $ (03.11'de açılıp sonra eriyen pozisyon).
+    Getiri = (10.100 − 10.300) / 909,09 = −0,22 (slot) → soğuyor (< −0,02). Eski ayrı boş başlayan oynatma 72 sa içinde işlem yoksa 0 görürdü (geçerdi)."""
+    g, durum = r.son_saat_getirisi(EGRI, KOSU7, 72, 10_000.0, 10_000 / 11)
+    assert durum == "egri" and g == pytest.approx(-200 / (10_000 / 11))
+    from copytrade import radar_form
+    assert radar_form.soguyor({"kopya_getiri_72s": g}, load_rules()) is True
+    assert r.son_saat_getirisi(EGRI[:2], GUN0 + 36 * SAAT, 72, 10_000.0, 1_000.0) == (pytest.approx(0.0), "egri")    # gün sonu yok: başlangıç = kasa
+    assert r.son_saat_getirisi([], KOSU7, 72, 10_000.0, 909.0) == (0.0, "hesaplanamadi")                               # eski davranış (0 = geçer), ama işaretli
+
+
+def test_f08_kismi_son_gun_seriden_atilir():
+    assert len(r.tam_gunler(EGRI, KOSU7)) == 7 and r.tam_gunler(EGRI, KOSU7)[-1][0] == "2026-11-06"           # 07.11 yalnız 37 dk
+    assert r.tam_gunler(EGRI, GUN0 + 8 * GUN) == EGRI                                                       # 08.11 00:00: 07.11 tam gün
+
+
+def test_f03_akil_sagligi_slot_getirisine_gore():
+    kurallar = load_rules()
+    temel = {"devir_hafta": 1.0, "islem_sayisi": 50, "medyan_tutma_saat": 5.0, "kisa_islem_payi": 0.0, "max_kaldirac": 3.0, "likit_pay": 1.0, "kopya_getiri_7g": 0.30,
+             "kopya_koruma": 0.9, "kopya_islem_sayisi": 50, "kopya_alt20": 0.1, "hesap_usd": 10_000.0}
+    assert r.degerlendir({**temel, "kopya_slot_kat": 1.0}, kurallar) == (True, None)                         # kasa %30 (kat yok) geçer
+    assert r.degerlendir({**temel, "kopya_slot_kat": 11.0}, kurallar) == (False, "akil_sagligi")             # slot %330 > %300
+    assert r.degerlendir({**temel, "kopya_getiri_7g": 0.25, "kopya_slot_kat": 11.0}, kurallar) == (True, None)   # slot %275
+
+
+def test_f09_h_agirligi_sifirsa_hype_mumu_cekilmez(tmp_path):
+    kurallar = {**URETIM, "radar_min_islem": 1, "radar_min_kopya_islem": 1}
+    assert kurallar["radar_agirlik_h"] == 0
+    istemci = _senaryo()
+    mum_cagrilari: list = []
+    asil = istemci.candles
+    istemci.candles = lambda coin, bas, son, interval="1m": (mum_cagrilari.append(coin), asil(coin, bas, son, interval))[1]
+    s = satir_al(r.kos(istemci, KOSU, tmp_path / "radar", None, kurallar, log=lambda *_: None), A1)
+    assert s["gecti"] is True and s["hype_payi"] is None and set(mum_cagrilari) == {"BTC"}                 # H olsaydı tüm ana coinler (ETH, ALT) okunurdu
+    mum_cagrilari.clear()
+    s2 = satir_al(r.kos(istemci, KOSU, tmp_path / "radar2", None, {**kurallar, "radar_agirlik_h": 0.1}, log=lambda *_: None), A1)
+    assert s2["hype_payi"] is not None and {"ETH", "ALT"} <= set(mum_cagrilari)
+
+
+def test_f10_kontrol_adimi_da_sanal_kasa_10000():
+    wf = (ROOT / ".github/workflows/canli_vardiya.yml").read_text(encoding="utf-8")
+    satirlar = [s for s in wf.splitlines() if "copytrade.canli.motor" in s and "python" in s]
+    assert any("--kontrol" in s for s in satirlar) and all("--sanal-kasa-usd 10000" in s for s in satirlar)

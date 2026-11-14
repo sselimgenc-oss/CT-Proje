@@ -99,7 +99,7 @@ jobs:
         run: bash .github/scripts/donem_geri.sh
       - id: acilis
         name: Açılış kontrolü (anahtarsız, emir göndermez)
-        run: python -u -m copytrade.canli.motor --kontrol --kadro-dali "$KADRO_DALI" --durum-dizin kontrol
+        run: python -u -m copytrade.canli.motor --kontrol --sanal-kasa-usd 10000 --kadro-dali "$KADRO_DALI" --durum-dizin kontrol
       - id: sure
         name: Vardiya süresi (sınırlı)
         run: |

@@ -247,10 +247,15 @@ def test_kopya_oynatma_altin_ornek_tek_coin_100_den_110a(tmp_path):
     assert s["islem_sayisi"] == 1 and s["fiyatsiz_eylem"] == 0 and s["yaklasik_fiyat_eylem"] == 0
     assert s["gecti"] is True and s["neden"] is None and s["hata"] is None and s["v4_kopya_getiri_7g"] is None
     # R2 ham girdileri (yalnız gecti satırı): işlem 27 Eki'de → günlük getiri serisi 8 gün (20–27 Eki), yalnız son gün 0,001078055 (= kopya net / kasa)
-    assert len(s["kopya_gunluk"]) == 8 and s["kopya_gunluk"][-1] == pytest.approx(0.001078055, abs=1e-9) and all(g == 0.0 for g in s["kopya_gunluk"][:-1])
-    assert s["kopya_kazanc_gun_orani"] == 1.0 and s["kopya_dusus"] == 0.0 and s["yayilma"] == 0.0        # 1 aktif gün, kazançlı; düşüş yok; tek işlem → 1 − 1/1
-    assert s["kopya_getiri_72s"] == pytest.approx(0.001078055, abs=1e-9)                                  # işlem son 72 sa içinde
-    assert s["hype_payi"] == 1.0         # tüm coinler +%10 (trend) ve long 100'den (hareketin %0'ı gerçekleşmeden = erken) açıldı: kârın tamamı erken-trend
+    # F-08 (14.11): son gün (27 Eki, koşu 12:00 → 12 sa) kısmi → İ1/korelasyon serisinden atılır: 7 tam gün (20–26 Eki), hepsi 0; aktif gün yok → İ1 0
+    assert len(s["kopya_gunluk"]) == 7 and all(g == 0.0 for g in s["kopya_gunluk"])
+    assert s["kopya_kazanc_gun_orani"] == 0.0 and s["kopya_dusus"] == 0.0 and s["yayilma"] == 0.0        # düşüş yok; tek işlem → 1 − 1/1
+    # F-03 (14.11): son 72 sa = 7 günlük oynatmanın eğrisinden, SLOT ölçeğinde: net 1,078055 $ / slot 90,909 $ = 0,011858605
+    assert s["kopya_getiri_72s"] == pytest.approx(1.078055 / (1000 / 11), abs=1e-8) and s["kopya_getiri_72s_durum"] == "egri"
+    assert s["kopya_slot_kat"] == pytest.approx(11.0)
+    assert s["hype_payi"] is None        # F-09: radar_agirlik_h = 0 → H için mum çekilmez
+    sh = satir_al(kos(Sahte([lider(A1, 20_000, 100, 5_000)], dolumlar, fiyat), tmp_path / "h", rules={**RULES1, "radar_agirlik_h": 0.1}), A1)
+    assert sh["hype_payi"] == 1.0        # tüm coinler +%10 (trend) ve long 100'den (hareketin %0'ı gerçekleşmeden = erken) açıldı: kârın tamamı erken-trend
 
 
 def test_v4_yan_yana_bilgi_alani_hesabi_degistirmez(tmp_path):
@@ -284,7 +289,7 @@ def test_eksik_mum_koşuyu_dusurmez_fiyat_uydurulmaz(tmp_path):
 def test_kopya_olculeri_hesaplanamadi_ve_bos_sonuc():
     bos = {"kopya_getiri_7g": None, "ayna_getiri_7g": None, "kopya_koruma": None, "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None, "v4_kopya_getiri_7g": None, "v5_onceki_kopya_getiri_7g": None,
            "kopya_islem_sayisi": None, "yuvarlanan_pay": None, "oransal_ayna": None, "koruma_boyut": None,          # B3/B12 bilgi alanları (08.11)
-           "g_t_istat": None}                                                                                     # B14 bilgi alanı (08.11)
+           "g_t_istat": None, "kopya_slot_kat": None}                                                             # B14 bilgi alanı (08.11); F-03 slot katı (14.11)
     assert r.kopya_olculeri(None, A1, RULES) == bos
     yok = r.kopya_olculeri({"durum": "hesaplanamadi", "neden": "yürütülebilir dolum yok"}, A1, RULES)
     assert yok["kopya_getiri_7g"] is None and yok["kopya_alt20"] is None
@@ -316,7 +321,7 @@ def test_koşu_sozlesme_alanlari_vault_payda_hesap_ve_429(tmp_path):
     anahtarlar = {"adres", "hesap_usd", "hafta_pnl_usd", "trader_getiri_7g", "islem_sayisi", "medyan_tutma_saat", "kisa_islem_payi", "max_kaldirac", "likit_pay",
                   "kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "v4_kopya_getiri_7g", "v5_onceki_kopya_getiri_7g", "kopya_gunluk", "kopya_kazanc_gun_orani", "kopya_dusus", "yayilma", "kopya_getiri_72s", "hype_payi", "hip3_nosyonel_pay", "net_yatirma_usd", "yatirma_payi", "gecti", "neden", "hata",
                   "payda_kaynak", "payda_nokta", "payda_bas_usd", "payda_son_oran", "kopya_islem_sayisi", "yuvarlanan_pay", "oransal_ayna", "koruma_boyut", "g_t_istat",
-                  "ay_pnl_usd", "tutma"}      # v1.1 (K-53): 30 g pnl + tutma işareti; T6 §2: iki yeni bilgi alanı; K‑43 adayı: hip3_nosyonel_pay; 08.11: B8 payda + B3/B12 + B14 bilgi alanları
+                  "ay_pnl_usd", "tutma", "kopya_slot_kat", "kopya_getiri_72s_durum"}      # 14.11 F-03: slot katı + 72 sa durum kaydı; v1.1 (K-53): 30 g pnl + tutma işareti; T6 §2: iki yeni bilgi alanı; K‑43 adayı: hip3_nosyonel_pay; 08.11: B8 payda + B3/B12 + B14 bilgi alanları
     assert all(set(s) == anahtarlar for s in sonuc["satirlar"])
     assert all(c_[3] == KOSU for c_ in c.cagrilar) and all(c_[2] == BAS for c_ in c.cagrilar)         # pencere [kosu − 168 sa, kosu)
 

@@ -249,7 +249,7 @@ def kopya_olculeri(sonuc: dict | None, adres: str, rules: dict | None = None) ->
     rules = rules or load_rules()
     bos = {"kopya_getiri_7g": None, "ayna_getiri_7g": None, "kopya_koruma": None, "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None,
            "v4_kopya_getiri_7g": None, "v5_onceki_kopya_getiri_7g": None, "kopya_islem_sayisi": None, "yuvarlanan_pay": None, "oransal_ayna": None, "koruma_boyut": None,
-           "g_t_istat": None}
+           "g_t_istat": None, "kopya_slot_kat": None}
     if not sonuc:
         return bos
     v4 = _sayi((sonuc.get("v4") or {}).get("getiri"))
@@ -261,7 +261,8 @@ def kopya_olculeri(sonuc: dict | None, adres: str, rules: dict | None = None) ->
     kasa = _sayi(sonuc.get("baslangic_usd")) or radar_kasa(rules)
     islem = [t["sonuc_usd"] / kasa for t in sonuc.get("kapanan_islemler") or [] if t.get("gecerli") is not False and _sayi(t.get("sonuc_usd")) is not None]
     oransal = _sayi((sonuc.get("oransal_ayna") or {}).get("getiri"))
-    return {"kopya_getiri_7g": getiri, "ayna_getiri_7g": ayna,
+    slot = _sayi(sonuc.get("slot_usd"))
+    return {"kopya_getiri_7g": getiri, "ayna_getiri_7g": ayna, "kopya_slot_kat": kasa / slot if slot else None,       # F-03: kasa / slot (= N); slot getirisi = kasa getirisi × bu
             "kopya_koruma": None if getiri is None or ayna is None or ayna <= 0 else getiri / ayna,
             "kopya_islem_sayisi": len(islem), "yuvarlanan_pay": sonuc.get("yuvarlanan_pay"), "oransal_ayna": oransal,
             "koruma_boyut": None if ayna is None or oransal is None or oransal <= 0 else ayna / oransal,
@@ -301,7 +302,7 @@ def degerlendir(satir: dict, rules: dict | None = None, yalniz_dolum: bool = Fal
         ("kopya_islem_az", int(rules.get("radar_min_kopya_islem", 0) or 0) > 0                            # v1.1 (K-53) S2: kopya kapanan işlem ≥ N (bootstrap 2–4 işlemle anlamsız)
          and basarisiz(satir.get("kopya_islem_sayisi"), lambda v: v >= int(rules["radar_min_kopya_islem"]))),
         ("sans_riski", basarisiz(satir.get("kopya_alt20"), lambda v: v > 0)),
-        ("akil_sagligi", basarisiz(satir.get("kopya_getiri_7g"), lambda v: v <= float(rules["radar_akil_sagligi_getiri_max"]))
+        ("akil_sagligi", basarisiz(satir.get("kopya_getiri_7g"), lambda v: v * float(satir.get("kopya_slot_kat") or 1.0) <= float(rules["radar_akil_sagligi_getiri_max"]))   # F-03: SLOT getirisi (kat yoksa kasa)
          or not (satir.get("hesap_usd") or 0) > 0),
     )
     if satir.get("hata"):
@@ -467,18 +468,41 @@ class Baglam:
         return self._hareket
 
     def form_girdileri(self, dolumlar: list[dict], sonuc: dict, trader_hesap_usd: Any, log=print) -> dict:
-        """R2 ham girdileri (yalnız `gecti` adaylar için; docs/VERI_SOZLESMESI.md "Radar havuzu"): günlük kopya getirisi serisi → İ1; kopya düşüşü → İ2; yayılma → Y; son 72 sa kopya getirisi
-        (aynı dolumlar, kopya_v5, pencere = son `radar_soguyor_saat` saat, başlangıçta BOŞ); hype payı → H."""
+        """R2 ham girdileri (yalnız `gecti` adaylar için; docs/VERI_SOZLESMESI.md "Radar havuzu"): günlük kopya getirisi serisi → İ1 ve korelasyon (F-08: 24 sa'den kısa SON gün
+        atılır); kopya düşüşü → İ2; yayılma → Y; son 72 sa kopya getirisi (F-03: 7 günlük oynatmanın özsermaye eğrisinden, SLOT ölçeğinde; `son_saat_getirisi`); hype payı → H
+        (F-09: `radar_agirlik_h` = 0 ise mum çekilmez, `hype_payi` None)."""
         kasa = float(sonuc.get("baslangic_usd") or self.kasa_usd)
-        gunluk = radar_form.gunluk_getiriler(sonuc.get("egri") or [], kasa)
-        t72 = pd.Timestamp(self.kosu_ms - int(self.rules["radar_soguyor_saat"]) * HOUR, unit="ms", tz="UTC")
-        g = self.son_girdi or {}
-        son72 = kopya_v5.hesapla(dolumlar, g.get("saatlik", {}), g.get("isaret", {}), g.get("yurutme", {}), [], t72, pd.Timestamp(self.kosu_ms, unit="ms", tz="UTC"),
-                                 self.gecikme_dk, KOPYA_TARZ, self.rules, azami_kaldirac=self.azami_kaldirac, trader_hesap_usd=trader_hesap_usd, kasa_usd=self.kasa_usd)
+        egri = sonuc.get("egri") or []
+        gunluk = radar_form.gunluk_getiriler(tam_gunler(egri, self.kosu_ms), kasa)
+        g72, durum72 = son_saat_getirisi(egri, self.kosu_ms, int(self.rules["radar_soguyor_saat"]), kasa, _sayi(sonuc.get("slot_usd")) or kasa)
+        if durum72 == "hesaplanamadi":
+            log(f"UYARI: son {self.rules['radar_soguyor_saat']} sa kopya getirisi hesaplanamadı (eğri yok); 0,0 sayıldı (F-03 kaydı)")
+        h_acik = float(self.rules.get("radar_agirlik_h", 1.0) or 0.0) != 0.0
         return {"kopya_gunluk": gunluk, "kopya_kazanc_gun_orani": radar_form.kazanc_gun_orani(gunluk), "kopya_dusus": _sayi(sonuc.get("dusus")),
                 "yayilma": radar_form.yayilma(sonuc.get("kapanan_islemler") or []),
-                "kopya_getiri_72s": 0.0 if son72.get("durum") == "hesaplanamadi" else _sayi(son72.get("getiri")),
-                "hype_payi": radar_form.hype_payi(closed_round_trips(perp_fills(dolumlar)), self.hareket(log), self.rules)}
+                "kopya_getiri_72s": g72, "kopya_getiri_72s_durum": durum72,
+                "hype_payi": radar_form.hype_payi(closed_round_trips(perp_fills(dolumlar)), self.hareket(log), self.rules) if h_acik else None}
+
+
+def tam_gunler(egri: list[list], kosu_ms: int) -> list[list]:
+    """F-08 (14.11 denetim): kopya eğrisinin SON günü koşu anında bitmemişse (gün başı + 24 sa > `kosu_ms`; 00:37 koşusunda 37 dk'lık gün) İ1 ve korelasyon serisinden atılır."""
+    if egri and pd.Timestamp(egri[-1][0], tz="UTC").value // 1_000_000 + 24 * HOUR > kosu_ms:
+        return list(egri[:-1])
+    return list(egri)
+
+
+def son_saat_getirisi(egri: list[list], kosu_ms: int, saat: int, kasa: float, slot: float) -> tuple[float, str]:
+    """F-03 (14.11 denetim): son `saat` saatin kopya getirisi, 7 günlük oynatmanın (pencere başında BOŞ) özsermaye eğrisinden: (eğri sonu − `kosu_ms − saat`'ten önceki son gün sonu
+    özsermayesi) / SLOT. Gün sonu yoksa başlangıç = kasa. Böylece 72 sa önce açılıp eriyen pozisyon da sayılır (eski ayrı, boş başlayan oynatma saymıyordu). Eğri gün çözünürlüğündedir:
+    başlangıç `kosu_ms − saat`'e en yakın ÖNCEKİ UTC gün sınırıdır (00:37 koşusunda ≈ 72,6 sa). Döner (oran, durum): durum `egri` | `hesaplanamadi` (eğri yok → 0,0; eski davranış, yalnız kayıt)."""
+    if not egri:
+        return 0.0, "hesaplanamadi"
+    t = kosu_ms - saat * HOUR
+    bas = float(kasa)
+    for gun, deger in egri:
+        if pd.Timestamp(gun, tz="UTC").value // 1_000_000 + 24 * HOUR <= t:
+            bas = float(deger)
+    return (float(egri[-1][1]) - bas) / float(slot), "egri"
 
 
 # ------------------------------------------------------------------------------------------------------------------------------ koşu
@@ -491,7 +515,7 @@ def _bos_satir(aday: dict, vlm: float, rules: dict) -> dict:
             "kopya_alt20": None, "fiyatsiz_eylem": None, "yaklasik_fiyat_eylem": None, "v4_kopya_getiri_7g": None, "v5_onceki_kopya_getiri_7g": None, "kopya_gunluk": None, "kopya_kazanc_gun_orani": None, "kopya_dusus": None, "yayilma": None,
             "kopya_getiri_72s": None, "hype_payi": None, "hip3_nosyonel_pay": None, "net_yatirma_usd": None, "yatirma_payi": None,
             "payda_kaynak": None, "payda_nokta": None, "payda_bas_usd": None, "payda_son_oran": None, "kopya_islem_sayisi": None, "yuvarlanan_pay": None, "oransal_ayna": None, "koruma_boyut": None,
-            "g_t_istat": None, "gecti": False, "neden": None, "hata": None}
+            "g_t_istat": None, "kopya_slot_kat": None, "kopya_getiri_72s_durum": None, "gecti": False, "neden": None, "hata": None}
 
 
 def kopyalanabilirlik(aday: dict, dolumlar: list[dict] | None, hata: str | None, baglam: Baglam) -> dict:
