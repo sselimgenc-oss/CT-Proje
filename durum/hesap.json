@@ -360,7 +360,14 @@
   "xyz:ZM": 10.0
  },
  "poz": {
-  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": {},
+  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": {
+   "HYPE": {
+    "acilis_ms": 1794660364674,
+    "giris": 67.91737411700647,
+    "kaldirac": 3.0,
+    "sz": 4.410698521340608
+   }
+  },
   "0xfc76f730c3e2939825484e0a777368075d779ef9": {}
  },
  "realize": {
@@ -371,10 +378,10 @@
   "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 200.0,
   "0xfc76f730c3e2939825484e0a777368075d779ef9": 200.0
  },
- "son_niyet_cloid": null,
+ "son_niyet_cloid": "0x8228710d7ededdd41f4225196a96ec53",
  "tasfiyeler": [],
  "ucret": {
-  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 0.0,
+  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 0.1348033777160478,
   "0xfc76f730c3e2939825484e0a777368075d779ef9": 0.0
  }
 }

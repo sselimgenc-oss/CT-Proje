@@ -11,7 +11,14 @@
  "gun": "2026-11-14",
  "gun_basi": 600.0,
  "kapat_gunu": null,
- "son_oz": 600.0,
- "yeni_coin": {},
- "zirve": 600.0
+ "son_oz": 600.2318398314886,
+ "yeni_coin": {
+  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": [
+   [
+    1794660364567,
+    "HYPE"
+   ]
+  ]
+ },
+ "zirve": 600.5229459338972
 }
