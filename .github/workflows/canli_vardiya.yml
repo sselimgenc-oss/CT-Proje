@@ -5,7 +5,8 @@ name: Canlı vardiya (sanal kip)
 # Vardiya: 4 saatte bir tetiklenir (cron), her vardiya 4 sa 15 dk sürer; `concurrency` (kuyruk, iptal yok; üretim ve dal denemeleri ayrı grup) sayesinde yeni vardiya eskisi BİTTİKTEN sonra başlar (çift emir yok, boşluk yok);
 # durum veri dalı `canli-durum` (dal doğrulamasında `canli-durum-deneme`): durum/*.json + kayit/<tarih>.jsonl; her 15 dk ve vardiya sonunda yayımlanır; yeni vardiya kaldığı yerden devam eder
 # (açılışta kaçan dolumlar REST ile tamamlanır, `gec_goruldu`). Ek koruma: `durum/kilit.json` (başka vardiya 20 dk içinde nabız attıysa motor başlamaz).
-# Dal doğrulaması: `copytrade/canli/CALISTIR` dosyasına satır eklenen push (main dışı dal) AYNI iş akışını koşturur, ama `canli-durum-deneme` dalına yazar ve kadroyu `radar-deneme`'den okur.
+# Dal doğrulaması: main dışı dalda `workflow_dispatch` AYNI iş akışını koşturur, ama `canli-durum-deneme` dalına yazar ve kadroyu `radar-deneme`'den okur.
+# 14.11 denetim: `push` tetiği yalnız main (`branches: [main]`); dalda `copytrade/canli/CALISTIR` push'u artık koşu BAŞLATMAZ.
 # G3 (cron geç kalıyor/kaçırıyor): motor NORMAL bitince vardiya bir SONRAKİ vardiyayı `workflow_dispatch` ile tetikler (yalnız main); cron'lar yedek olarak kalır. Dispatch koşusu da taze kilit varsa atlar.
 # Zincir AYRI `zincir` işindedir (needs: vardiya, yalnız main; koşu kasıtlı İPTAL edilmediyse `!cancelled()` ile çalışır — vardiya hata/zaman aşımıyla bitse, pano/yayım/artifact adımı düşse de zincir sürer;
 # hata döngüsü koruması: vardiya İŞİ 20 dk'dan genç bittiyse tetik YOK, yalnız alarm; checkout yok; Actions yazma izni yalnız orada): vardiya işindeki adımlar (kurulum, motor) bu yetkiyi görmez. Aynı işte vardiya sonu bir kez saglik.yml de tetiklenir.
@@ -23,6 +24,7 @@ on:
         description: "vardiya süresi (dakika); varsayılan ve üst sınır 255 (4 sa 15 dk)"
         default: "255"
   push:
+    branches: [main]              # 14.11 denetim: dal push'u CALISTIR ile deneme koşusu BAŞLATMAZ (istenmeyen koşular oldu); deneme = workflow_dispatch
     paths:
       - copytrade/canli/CALISTIR
 

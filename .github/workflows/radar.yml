@@ -7,7 +7,8 @@ name: Radar (günlük tarama + kadro)
 # Eksik koşuda (zaman bütçesi aşıldı / satır eksik / `veri_hatasi` payı > `radar_veri_hatasi_pay_max`, R-2) `radar_kadro` çıkış kodu 2 verir → iş kırmızı biter ve `son/` GÜNCELLENMEZ.
 # Kadro `radar_surum` v3 (motor `copytrade/canli/RADAR_SURUM` ile yalnız bunu uygular).
 # `kural_ust` / `aday_sayisi` girdisi YOK (donmuş kurallar).
-# Dal doğrulaması: `copytrade/radar/CALISTIR` dosyasına satır eklenen push (main dışı dal) AYNI iş akışını koşturur ama veri dalı `radar-deneme`'ye yazar (gerçek `radar` dalı yalnız main'den dokunulur).
+# Dal doğrulaması: main dışı dalda `workflow_dispatch` AYNI iş akışını koşturur ama veri dalı `radar-deneme`'ye yazar (gerçek `radar` dalı yalnız main'den dokunulur).
+# 14.11 denetim: `push` tetiği yalnız main (`branches: [main]`); dalda `copytrade/radar/CALISTIR` push'u artık koşu BAŞLATMAZ.
 # G-23 (canli_vardiya.yml ile aynı desen): checkout'lar `persist-credentials: false` (token diske yazılmaz); yazma izni yalnız `radar` işinde; push kimliği yalnız
 # yayım adımına `YAYIM_TOKEN` ile (radar_yayimla.sh, GIT_CONFIG_* extraheader). Tarama/kadro/isabet (python) adımları token görmez.
 on:
@@ -16,6 +17,7 @@ on:
     - cron: "17 2 * * *"            # YEDEK (T6 §4): 2026-11-05'te birincil cron hiç tetiklenmedi; o günün radar/<tarih>/ klasörü varsa iş hiçbir şey yapmadan biter
   workflow_dispatch:
   push:
+    branches: [main]              # 14.11 denetim: dal push'u CALISTIR ile deneme koşusu BAŞLATMAZ (istenmeyen koşular oldu); deneme = workflow_dispatch
     paths:
       - copytrade/radar/CALISTIR
 

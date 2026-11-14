@@ -180,7 +180,7 @@ def test_dal_sil_yalniz_listelenen_arsiv_dallari_elle_main():
 # ---------------------------------------------------------------------------------------------------- radar (T3)
 def test_radar_yml_gunluk_00_37_utc_kadro_ve_yayim_sirasi():
     wf = yukle("radar.yml")
-    assert wf["on"]["schedule"] == [{"cron": "37 0 * * *"}, {"cron": "17 2 * * *"}] and "workflow_dispatch" in wf["on"] and wf["on"]["push"] == {"paths": ["copytrade/radar/CALISTIR"]}
+    assert wf["on"]["schedule"] == [{"cron": "37 0 * * *"}, {"cron": "17 2 * * *"}] and "workflow_dispatch" in wf["on"] and wf["on"]["push"] == {"branches": ["main"], "paths": ["copytrade/radar/CALISTIR"]}
     assert adim(wf, "radar", "Veri dalına yaz")["env"]["VERI_DALI"] == "${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}"        # dal koşusu gerçek radar dalına yazmaz
     assert "inputs" not in (wf["on"]["workflow_dispatch"] or {})                              # donmuş kurallar: aday sayısı / kural_ust girdisi YOK
     assert wf["permissions"] == {"contents": "read"} and wf["jobs"]["radar"]["permissions"] == {"contents": "write"} and wf["concurrency"]["cancel-in-progress"] is False   # G-23: yazma yalnız radar işinde
@@ -271,7 +271,7 @@ def test_radar_yayimla_eski_gunde_kadro_varsa_yanlis_ilk_yazmaz(tmp_path):
 def test_canli_vardiya_yalniz_sanal_anahtarsiz_kuyruklu_ve_dal_ayrimi():
     metin = (WF / "canli_vardiya.yml").read_text(encoding="utf-8")
     wf = yukle("canli_vardiya.yml")
-    assert wf["on"]["schedule"] == [{"cron": "7 */4 * * *"}, {"cron": "37 */4 * * *"}] and wf["on"]["push"] == {"paths": ["copytrade/canli/CALISTIR"]}
+    assert wf["on"]["schedule"] == [{"cron": "7 */4 * * *"}, {"cron": "37 */4 * * *"}] and wf["on"]["push"] == {"branches": ["main"], "paths": ["copytrade/canli/CALISTIR"]}
     assert wf["concurrency"] == {"group": "${{ github.ref == 'refs/heads/main' && 'canli-vardiya-uretim' || format('canli-vardiya-deneme-{0}', github.ref_name) }}", "cancel-in-progress": False}      # K-37 §8: üretim ≠ deneme kuyruğu
     assert wf["permissions"] == {"contents": "read"} and wf["jobs"]["vardiya"]["permissions"] == {"contents": "write"}         # G-23: yazma yalnız vardiya işinde
     assert "HL_API_CUZDAN_ANAHTARI" not in metin and "HL_HESAP_ADRESI" not in metin and "--kip gercek" not in metin and "--kip sanal" in metin             # gerçek kip Actions'ta ASLA
@@ -859,3 +859,13 @@ def test_iki_canli_is_akisi_donem_betigini_kullanir():
         geri = [a for a in yukle(ad)["jobs"]["vardiya"]["steps"] if a.get("id") == "geri"][0]
         assert geri["run"].strip() == "bash .github/scripts/donem_geri.sh", ad
     assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\n?", (ROOT / "copytrade" / "canli" / "DONEM").read_text())
+
+
+def test_push_tetigi_yalniz_main():
+    """14.11 denetim: dal push'u (CALISTIR dahil) hiçbir iş akışında koşu başlatmaz; `on.push` olan her iş akışı `branches: [main]` ile sınırlı."""
+    for yol in sorted(WF.glob("*.yml")):
+        on = yukle(yol.name).get("on") or {}
+        if isinstance(on, dict) and "push" in on:
+            assert (on["push"] or {}).get("branches") == ["main"], yol.name
+    for ad in ("radar.yml", "canli_vardiya.yml"):
+        assert yukle(ad)["on"]["push"]["branches"] == ["main"], ad
