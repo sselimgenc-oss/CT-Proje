@@ -362,11 +362,22 @@ def gun_oku(dal: str, tarih: str, log: Callable[[str], None] = print) -> tuple[d
     return git_oku(dal, f"{k}/havuz.json"), git_oku(dal, f"{k}/kadro.json"), "son"
 
 
+def pencere_basi(havuz: dict, kadro: dict | None = None) -> tuple[int, str]:
+    """M-10 (Fable mantık denetimi, 14.11): `sonraki_7g` penceresi kadronun YAYIM anından başlar (motor kadroyu ancak yayımdan sonra uygulayabilir; tarama süresince ~1,5–2,5 sa
+    trader'ın zaten yaptığı işlemler "sonraki" sayılmasın). Kaynak sırası: kadro `olusturma_ms` (radar_kadro yazım anı, yayımdan hemen önce) → havuz `bitis_ms` (tarama sonu) → havuz
+    `kosu_ms` (eski günler; önceki davranış). Döner (UTC ms, kaynak adı)."""
+    for kaynak, deger in (("kadro_olusturma", (kadro or {}).get("olusturma_ms")), ("havuz_bitis", havuz.get("bitis_ms"))):
+        if deger:
+            return int(deger), kaynak
+    return int(havuz["kosu_ms"]), "havuz_kosu"
+
+
 def calistir(client: Any, havuz: dict, kadro: dict, tarih: str, simdi_ms: int, rules: dict, kismi: bool = False, log: Callable[[str], None] = print,
              saat: Callable[[], float] = time.monotonic, kadro_kaynagi: str | None = None, kayitlar: list[dict] | None = None, onceki_kadro: dict | None = None,
              durum_dali: str | None = None) -> dict | None:
-    """Tek havuz için isabet. Pencere = [havuz.kosu_ms, min(simdi, kosu_ms + 7 gün)]. Tam 7 gün dolmadıysa `kismi` yoksa None (ölçülmez); `kismi` ile ölçülür ve `pencere_tam: false` yazılır."""
-    bas = int(havuz["kosu_ms"])
+    """Tek havuz için isabet. Pencere = [başlangıç, min(simdi, başlangıç + 7 gün)]; başlangıç = `pencere_basi` (M-10: kadro yayım anı; eski günlerde havuz `kosu_ms`).
+    Tam 7 gün dolmadıysa `kismi` yoksa None (ölçülmez); `kismi` ile ölçülür ve `pencere_tam: false` yazılır."""
+    bas, bas_kaynak = pencere_basi(havuz, kadro)
     tam_bit = bas + int(rules["isabet_pencere_gun"]) * GUN_MS
     pencere_tam = simdi_ms >= tam_bit
     if not pencere_tam and not kismi:
@@ -384,7 +395,8 @@ def calistir(client: Any, havuz: dict, kadro: dict, tarih: str, simdi_ms: int, r
         olcum, eksik, hata = {}, True, type(h).__name__
         kutu["eksik_ek"] = True
         log(f"UYARI: isabet ölçümü yapılamadı ({hata})")
-    return isabet_olustur(tarih, havuz, kadro, secim, olcum, bas, bit, pencere_tam, eksik, (saat() - t0) / 60.0, hata, kadro_kaynagi=kadro_kaynagi, eksik_ek=kutu["eksik_ek"])
+    return {**isabet_olustur(tarih, havuz, kadro, secim, olcum, bas, bit, pencere_tam, eksik, (saat() - t0) / 60.0, hata, kadro_kaynagi=kadro_kaynagi, eksik_ek=kutu["eksik_ek"]),
+            "pencere_bas_kaynak": bas_kaynak}
 
 
 def varsayilan_tarih(simdi_ms: int, rules: dict, dal: str, geri_gun: int = 3) -> str:
@@ -395,7 +407,7 @@ def varsayilan_tarih(simdi_ms: int, rules: dict, dal: str, geri_gun: int = 3) ->
     for k in range(geri_gun, -1, -1):
         t = (bugun - timedelta(days=pencere + k)).isoformat()
         havuz = git_oku(dal, f"radar/{t}/havuz.json")
-        if havuz and not git_oku(dal, f"radar/{t}/isabet.json") and simdi_ms >= int(havuz["kosu_ms"]) + pencere * GUN_MS:
+        if havuz and not git_oku(dal, f"radar/{t}/isabet.json") and simdi_ms >= pencere_basi(havuz, git_oku(dal, f"radar/{t}/kadro.json"))[0] + pencere * GUN_MS:
             return t
     return (bugun - timedelta(days=pencere)).isoformat()
 

@@ -149,3 +149,13 @@ def test_veri_nedenleri_r1_elemesi_sayilmaz_ve_huni_ozeti():
     assert [e["adres"] for e in kd["elenenler"]] == ["0xB"]
     assert kd["huni"] == {"evren": 2457, "aday": 6, "islem_yeterli": 2, "islem_esik": int(RULES["radar_min_islem"]), "gecen": 1, "kadro": 1,
                           "neden": {"islem_az": 1, "kopya_zarar": 1, "payda_yok": 1, "veri_hatasi": 1, "zaman_yok": 1}}
+
+
+def test_m10_main_kadroya_olusturma_ani_yazar(tmp_path):
+    yol = tmp_path / "havuz.json"
+    yol.write_text(json.dumps(havuz([gecen("0xA", 0.03, 0.03)])), encoding="utf-8")
+    import time as _t
+    once = int(_t.time() * 1000)
+    assert k.main(["--havuz", str(yol)]) == 0
+    kd = json.loads((tmp_path / "kadro.json").read_text(encoding="utf-8"))
+    assert once <= kd["olusturma_ms"] <= int(_t.time() * 1000)

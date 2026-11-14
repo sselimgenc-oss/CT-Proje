@@ -652,7 +652,7 @@ def kos(client: Any, kosu_ms: int, cikti: Path, aday_sayisi: int | None = None, 
     zaman_yok = sum(1 for x in satirlar if x["neden"] == "zaman_yok")
     if zaman_yok:
         log(f"UYARI: zaman bütçesi ({rules['radar_zaman_butcesi_dk']} dk) aşıldı; {zaman_yok} aday `zaman_yok`")
-    sonuc = {"sema": SEMA, "kosu_ms": kosu_ms, "pencere_bas_ms": pencere_bas, "kasa_usd": baglam.kasa_usd, "evren_toplam": toplam, "evren_kesilen": kesilen,
+    sonuc = {"sema": SEMA, "kosu_ms": kosu_ms, "bitis_ms": kosu_ms + int((saat() - baslangic) * 1000), "pencere_bas_ms": pencere_bas, "kasa_usd": baglam.kasa_usd, "evren_toplam": toplam, "evren_kesilen": kesilen,
              **({"kural_ust": kural_ust} if kural_ust else {}), **({"payda_yan_yana": True} if payda_yan_yana else {}), "satirlar": satirlar}
     klasor = cikti / datetime.fromtimestamp(kosu_ms / 1000, UTC).date().isoformat()
     klasor.mkdir(parents=True, exist_ok=True)

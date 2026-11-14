@@ -4,7 +4,7 @@ T4 motoru `kadro.json`'u okuyup §5 kurallarını uygular.
     python -m copytrade.radar_kadro --havuz radar/2026-11-05/havuz.json [--kasa 10000] [--onceki-kadro onceki/kadro.json]    # → radar/2026-11-05/kadro.json
 
 `kadro.json` (docs/VERI_SOZLESMESI.md "Radar kadro"): {sema "radar-kadro-v1", kosu_ms, kasa_usd, slot_usd, saha_n, gecti_sayisi, soguyan[], satirlar[{adres, sira, katman, form, bilesenler{G,K,I1,I2,Y,H},
-kopya_getiri_7g, max_kaldirac, form_h_siz, sira_h_siz}], korelasyon{adresler, gun_sayisi, matris}, h_siz_girenler[], onceki_kosu_ms, elenenler[], eski_uye_neden{}, huni{}}.
+kopya_getiri_7g, max_kaldirac, form_h_siz, sira_h_siz}], korelasyon{adresler, gun_sayisi, matris}, h_siz_girenler[], onceki_kosu_ms, elenenler[], eski_uye_neden{}, huni{}, olusturma_ms}.
 `form_h_siz`/`sira_h_siz`/`h_siz_girenler`/`onceki_kosu_ms`/`elenenler`/`huni` YALNIZ BİLGİDİR: seçim, sıra ve eşikler değişmez (karar `form`'dadır). `eski_uye_neden` seçimi değiştirmez ama
 canlı motor TÜKETİR (D-02): `r1:<neden>` → üye aynı gün sonuçla düşer; `veri:<neden>` (veri_hatasi / payda_yok / zaman_yok; kullanıcı 14.11) sonuç vermez (K-39 iki gün kadro dışı kuralı). Eksik koşuda (zaman bütçesi aşıldı / satır eksik / `veri_hatasi` payı > `radar_veri_hatasi_pay_max`, R-2) kadro YAZILMAZ ve çıkış kodu 2 (`radar.yml` `son/` yayımlamaz)."""
 from __future__ import annotations
@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 from copytrade import boyut
@@ -132,7 +133,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"EKSİK KOŞU: {neden}; kadro yazılmadı", file=sys.stderr)
         return 2
     onceki = json.loads(args.onceki_kadro.read_text(encoding="utf-8")) if args.onceki_kadro else None
-    kadro = kadro_olustur(havuz, rules, args.kasa, onceki)
+    kadro = {**kadro_olustur(havuz, rules, args.kasa, onceki), "olusturma_ms": int(time.time() * 1000)}     # M-10: isabet `sonraki_7g` penceresi bu andan (yayımdan hemen önce) başlar
     cikti = args.cikti or args.havuz.with_name("kadro.json")
     gecici = cikti.with_suffix(".json.tmp")
     gecici.write_text(json.dumps(kadro, ensure_ascii=False, indent=1, allow_nan=False) + "\n", encoding="utf-8")
