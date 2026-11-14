@@ -3,7 +3,7 @@
 Saha = en çok N üye (`boyut.saha_sayisi`); kadro N'den küçükse (K‑33) boş slot NAKİT kalır (slot tutarı yine kasa / N; başka trader'a dağıtılmaz) ve kadro büyüdükçe giriş kuralıyla dolar.
 Kararlar `Karar` olarak döner (giriş / düş / değiştir / inen_kapat) — uygulamayı motor yapar (slot aç, pozisyon kapat, Telegram, kayıt).
 - İlk gün (saha hiç kurulmadıysa): sıra 1…N sahaya (korelasyon kuralı uygulanır); günlük değişiklik sınırına SAYILMAZ.
-- Giriş: slot boşsa İlk 11'in (katman `ilk11`) sahada olmayan, beklemede olmayan en iyi sıralısı. K‑44: boş slot doldurma günlük sınıra SAYILMAZ; `canli_gunde_degisiklik` yalnız sahadaki üyeyi değiştirmek (histerezis) için.
+- Giriş (saha hep dolu, kullanıcı 14.11): slot boşsa AYNI koşuda form sırasıyla en iyi uygun aday — önce İlk 11, sonra Yedek (beklemede/inişte olan ve korelasyonu bozan atlanır, sıradaki denenir); uygun aday yoksa yer boş kalır (`eksik`). K‑44: boş slot doldurma günlük sınıra SAYILMAZ; `canli_gunde_degisiklik` yalnız sahadaki üyeyi değiştirmek (histerezis) için.
 - Değiştirme (histerezis): aday sıra ≤ N **ve** üye sıra > İlk 11 sınırı **ve** aday formu ≥ üye formu + `canli_histerezis_puan` → üye "daha_iyisi_geldi" (sonuç dışı) ile iner.
 - Düşme — anında: slot düşüşü ≥ `canli_slot_dusus_oran`, kaldıraç > `radar_max_kaldirac` (R1/4); günlük (yeni `kosu_ms`): sıra 2 gün üst üste > `canli_sira_dus`, `canli_islem_yok_saat` saat işlem yok (sonuç dışı);
   **R1 elemesi (D-02, 14.11 denetim):** kadroda yok ve kadro `eski_uye_neden[adres]` `r1:` ile başlıyorsa AYNI gün SONUÇLA düşer (`r1_elendi`, `canli_bekleme_gun` bekleme);
@@ -96,6 +96,7 @@ class Saha:
         self.alarm_gunu: str | None = d.get("alarm_gunu")
         self.gun_kadro: dict | None = d.get("gun_kadro")           # K‑39: {"gun": UTC günü, "kadro": o günün İLK kadrosu}
         self.k39_gecis: bool = bool(d.get("k39_gecis", False))
+        self.eksik: dict | None = None                             # Saha hep dolu (kullanıcı 14.11): doldurmadan sonra yer boşsa {saha, n, neden: "uygun_aday_yok"} (kayıt + pano)
         self.gecis_silinen: list[str] = []                         # bu yüklemede silinen bekleme kayıtları (motor kayda yazar)
         if not self.k39_gecis:                                     # tek seferlik: 05.11'de aynı gün ikinci kadroyla verilen 3 bekleme silinir (K‑39)
             for a in list(self.bekleme):
@@ -180,6 +181,7 @@ class Saha:
         ilk_gun = not self.kurulu
         self._doldur(kadro, satirlar, simdi_ms, ilk_gun, kararlar)
         self._degistir(kadro, satirlar, simdi_ms, kararlar)
+        self.eksik = {"saha": len(self.uyeler), "n": self.n, "neden": "uygun_aday_yok"} if len(self.uyeler) < self.n else None
         if self.uyeler:
             self.kurulu = True
         return kararlar, "ok"
@@ -239,6 +241,8 @@ class Saha:
         return kor_bilesen_boyutu(kume, kadro.get("korelasyon"), float(self.rules["canli_kor_esik"])) <= int(self.rules["canli_kor_max"])
 
     def _doldur(self, kadro: dict, satirlar: dict[str, dict], simdi_ms: int, ilk_gun: bool, kararlar: list[Karar]) -> None:
+        """Saha hep dolu (kullanıcı 14.11; K-45/K-44): boş yer AYNI koşuda form sırasıyla dolar — önce İlk 11, sonra Yedek. Sahada / inişte / beklemede olan atlanır (R1'den elenen kadroda
+        zaten yoktur); korelasyon kuralını bozan aday doldurmayı ENGELLEMEZ, atlanır ve sıradaki denenir. Uygun aday kalmazsa yer boş kalır (`eksik`)."""
         hedef_sira = 10**6                                      # K‑45: boş slot sıradaki adayla dolar (İlk 11 önce, sonra Yedek; RADAR §6 "sıradaki üyeye yer verir")
         for s in self._uygun_adaylar(kadro, simdi_ms, hedef_sira):
             if len(self.uyeler) >= self.n:

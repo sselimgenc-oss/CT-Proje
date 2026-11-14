@@ -53,6 +53,12 @@ def hedef_metni(ozet: dict) -> tuple[str, str]:
     return ("aylık eşdeğer: " + ("—" if ay is None else tr_yuzde(float(ay), 1)), f"{etiket}: " + ("—" if gec is None else ("geçiyor" if gec else "geçmiyor")))
 
 
+def saha_metni(ozet: dict) -> str:
+    """Saha doluluğu (kullanıcı 14.11): "saha x/11" (+ ", uygun aday yok" motor boş yeri dolduramadıysa) · bugünkü kadronun R1'i geçen trader sayısı (`kadro.json` `gecti_sayisi`)."""
+    s = f"saha {ozet.get('saha', '—')}/{ozet.get('saha_n', '—')}" + (", uygun aday yok" if ozet.get("saha_eksik_neden") == "uygun_aday_yok" else "")
+    return f"{s} · bugün R1'i geçen trader: {ozet.get('r1_gecen') if ozet.get('r1_gecen') is not None else '—'}"
+
+
 def usd(v: float | None, isaretli: bool = False) -> str:
     return "—" if v is None else (tr_isaretli(v) if isaretli else tr_sayi(v)) + " $"
 
@@ -124,6 +130,7 @@ def pano_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], isab
     ucret24 = sum(float(k.get("ucret") or 0.0) for k in emirler)
     s = [f"# Canlı rapor — {datetime.fromtimestamp(simdi_ms / 1000, UTC):%Y-%m-%d %H:%M} UTC", "",
          f"**Kip** {ozet.get('kip', '—')} · vardiya `{ozet.get('vardiya', '—')}` · saha {ozet.get('saha', '—')}/{ozet.get('saha_n', '—')} (inen {ozet.get('inen', 0)})", "",
+         f"**Saha doluluğu** {saha_metni(ozet)}", "",
          "## Kasa", "",
          "| kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |", "|---|---|---|---|---|---|",
          f"| {usd(kasa)} | {usd(oz)} | {yuzde(gun_getiri)} | {yuzde(hafta)}{'' if hafta is not None else ' (geçmiş < 7 gün)'} | {yuzde(ozet.get('getiri'))} | {yuzde(-dusus if dusus is not None else None)} |", "",
@@ -538,7 +545,7 @@ input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler sectio
 @media(min-width:900px){{body{{padding:18px;max-width:1280px;margin:auto}}.sirit{{grid-template-columns:repeat(6,1fr)}}.hd{{font-size:20px}}.izgara{{grid-template-columns:repeat(3,1fr)}}.sag{{display:grid;gap:8px;grid-column:3;grid-row:1 / span 2;align-content:start}}.g2{{grid-column:span 2}}.g3{{grid-column:span 3}}}}
 </style></head><body>
 <div class="ust"><div><span class="lg0">CT</span> <b>COPY TRADE PANOSU</b></div><div><span class="rozet">{esc(kip_adi(kip))}</span> <span class="so">veri {_tsi(veri_ms, "%d.%m.%Y %H:%M")} TSİ · ~15 dakikada bir yenilenir</span></div></div><div id="bayat" data-ms="{veri_ms}" class="uy" style="display:none">⚠ VERİ BAYAT: son güncelleme 1 saatten eski, sistem durmuş olabilir</div>{uyari}
-<div class="sirit">{hucre("Özsermaye", tl(oz), "", f"kasa {tr_sayi(kasa, 0)} $")}{hucre("Bugün", tyuz(gun), renk(gun), (tl(oz - float(gun_basi), True) + " · UTC gün başına göre") if gun_basi is not None else "")}{hucre("Bu hafta", tyuz(hafta) if hafta is not None else "—", renk(hafta), "" if hafta is not None else "7 gün dolmadı")}{hucre("Başlangıçtan beri", tyuz(ozet.get("getiri")), renk(ozet.get("getiri")), tl(oz - kasa, True))}{hucre("BTC al-tut (aynı dönem)", btc_metni(ozet)[0].removeprefix("BTC al-tut: "), renk(ozet.get("btc_al_tut_getiri")), btc_metni(ozet)[1])}{hucre("Aylık eşdeğer", hedef_metni(ozet)[0].removeprefix("aylık eşdeğer: "), renk(ozet.get("aylik_esdeger")), hedef_metni(ozet)[1])}{hucre("Zirveden düşüş", tyuz(-dusus if dusus is not None else None), renk(-dusus if dusus is not None else None), f"motor zirvesi {tl(float(zirve))}" if zirve else "")}{hucre("Açık pozisyon", str(len(acik)), "", f"brüt {tl(sum(q.get('usd') or 0 for q in acik))}")}</div>
+<div class="sirit">{hucre("Özsermaye", tl(oz), "", f"kasa {tr_sayi(kasa, 0)} $")}{hucre("Bugün", tyuz(gun), renk(gun), (tl(oz - float(gun_basi), True) + " · UTC gün başına göre") if gun_basi is not None else "")}{hucre("Bu hafta", tyuz(hafta) if hafta is not None else "—", renk(hafta), "" if hafta is not None else "7 gün dolmadı")}{hucre("Başlangıçtan beri", tyuz(ozet.get("getiri")), renk(ozet.get("getiri")), tl(oz - kasa, True))}{hucre("BTC al-tut (aynı dönem)", btc_metni(ozet)[0].removeprefix("BTC al-tut: "), renk(ozet.get("btc_al_tut_getiri")), btc_metni(ozet)[1])}{hucre("Aylık eşdeğer", hedef_metni(ozet)[0].removeprefix("aylık eşdeğer: "), renk(ozet.get("aylik_esdeger")), hedef_metni(ozet)[1])}{hucre("Zirveden düşüş", tyuz(-dusus if dusus is not None else None), renk(-dusus if dusus is not None else None), f"motor zirvesi {tl(float(zirve))}" if zirve else "")}{hucre("Açık pozisyon", str(len(acik)), "", f"brüt {tl(sum(q.get('usd') or 0 for q in acik))}")}{hucre("Saha doluluğu", f"{ozet.get('saha', '—')}/{ozet.get('saha_n', '—')}", "eks" if ozet.get("saha_eksik_neden") else "", ("uygun aday yok · " if ozet.get("saha_eksik_neden") == "uygun_aday_yok" else "") + "bugün R1'i geçen trader: " + (str(ozet.get("r1_gecen")) if ozet.get("r1_gecen") is not None else "—"))}</div>
 <input type="radio" name="t" id="t1" checked><input type="radio" name="t" id="t2"><input type="radio" name="t" id="t3"><input type="radio" name="t" id="t4"><input type="radio" name="t" id="t5">
 <div class="tabs"><label for="t1">ÖZET</label><label for="t5">KADRO <em>{kadro_etiket}</em></label><label for="t2">POZİSYON <em>{len(acik)}</em></label><label for="t3">İŞLEMLER <em>{len(emirler)}</em></label><label for="t4">RİSK</label></div>
 <div class="sekmeler">

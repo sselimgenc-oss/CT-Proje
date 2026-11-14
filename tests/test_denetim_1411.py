@@ -328,3 +328,59 @@ def test_f06_pano_md_ve_html_aylik_ve_hedef():
 
 def test_f06_yayim_betigi_donem_serisini_tasir():
     assert "donem_seri.json" in (ROOT / ".github/scripts/canli_yayimla.sh").read_text(encoding="utf-8")
+
+
+# ================================================================================================ E/F: saha hep dolu (kullanıcı 14.11)
+def _saha_gun2(tmp_path, bekleyen=None, yedek=(12, 13, 14)):
+    m, _, saat, _ = kur(tmp_path)
+    m._kadro_uygula((True, n_kadro(11, saat() - SAAT)), saat())
+    assert len(m.saha.uyeler) == 11
+    if bekleyen:
+        m.saha.bekleme[adr(bekleyen)] = saat() + 10 * GUN
+    saat.ms += GUN
+    for a in m.saha.uyeler:
+        m.saha.islem_gordu(a, saat())
+    k2 = {**kadro([satir(i, i, 90 - i) for i in range(1, 10)] + [satir(i, i, 70 - i) for i in yedek], saat() - SAAT),
+          "eski_uye_neden": {adr(10): "r1:kopya_zarar", adr(11): "r1:kaldirac_yuksek"}, "gecti_sayisi": 42}
+    m._kadro_uygula((True, k2), saat())
+    return m
+
+
+def test_saha_hep_dolu_ilk11_den_iki_cikan_ayni_gun_yedekle_dolar(tmp_path):
+    m = _saha_gun2(tmp_path / "a")
+    assert len(m.saha.uyeler) == 11 and {adr(12), adr(13)} <= set(m.saha.uyeler) and adr(14) not in m.saha.uyeler
+    assert [x["neden"] for x in kayitlar(tmp_path / "a", "saha_giris")][-2:] == ["bos_slot", "bos_slot"] and m.saha.degisiklik["adet"] == 0    # K-44: sınıra sayılmaz
+    assert m.saha.eksik is None and not kayitlar(tmp_path / "a", "saha_eksik")
+    m2 = _saha_gun2(tmp_path / "b", bekleyen=12)                                                           # beklemedeki yedek atlanır, sıradaki girer
+    assert len(m2.saha.uyeler) == 11 and adr(12) not in m2.saha.uyeler and {adr(13), adr(14)} <= set(m2.saha.uyeler)
+    o = m2.ozet()
+    assert o["saha"] == 11 and o["r1_gecen"] == 42 and o["saha_eksik_neden"] is None
+    assert pano.saha_metni(o) == "saha 11/11 · bugün R1'i geçen trader: 42"
+
+
+def test_saha_uygun_aday_yoksa_bos_kalir_kayit_ve_pano(tmp_path):
+    m = _saha_gun2(tmp_path, yedek=(12,))
+    assert len(m.saha.uyeler) == 10 and m.saha.eksik == {"saha": 10, "n": 11, "neden": "uygun_aday_yok"}
+    m._kadro_uygula((True, m._son_kadro), m.saat_ms() + 60_000)                                             # aynı durum: tek kayıt
+    eksik = kayitlar(tmp_path, "saha_eksik")
+    assert len(eksik) == 1 and eksik[0]["saha"] == 10 and eksik[0]["n"] == 11
+    o = m.ozet()
+    assert pano.saha_metni(o) == "saha 10/11, uygun aday yok · bugün R1'i geçen trader: 42"
+    md, _ = pano.pano_olustur(o, {}, {}, [], [], [], T0)
+    assert "saha 10/11, uygun aday yok" in md
+    html = pano.html_olustur(o, {}, {}, [], [], T0)
+    assert "Saha doluluğu" in html and "10/11" in html and "uygun aday yok" in html and ("R1&#x27;i geçen trader: 42" in html or "R1'i geçen trader: 42" in html)
+
+
+def test_saha_korelasyon_doldurmayi_engellemez_siradaki_girer():
+    """Gün 2: 2 boş yer; aday 12 sahadaki 1 ve 2 ile benzer (r = 0,9; kor_max 2 → bileşen 3) → atlanır; 13 ve 14 girer."""
+    s = kd.Saha(load_rules(), 1000.0)
+    s.degerlendir(n_kadro(11), T0 + SAAT)
+    for a in s.uyeler:
+        s.islem_gordu(a, T0 + GUN)
+    adresler = [adr(1), adr(2), adr(12)]
+    kor = {"adresler": adresler, "gun_sayisi": 8, "matris": [[1.0, 0.9, 0.9], [0.9, 1.0, 0.9], [0.9, 0.9, 1.0]]}
+    k2 = {**kadro([satir(i, i, 90 - i) for i in range(1, 10)] + [satir(i, i, 70 - i) for i in (12, 13, 14)], T0 + GUN, kor), "eski_uye_neden": {adr(10): "r1:x", adr(11): "r1:y"}}
+    karar, _ = s.degerlendir(k2, T0 + GUN + SAAT)
+    assert [k.adres for k in karar if k.tur == "giris"] == [adr(13), adr(14)] and any(k.tur == "giris_atlandi" and k.adres == adr(12) for k in karar)
+    assert len(s.uyeler) == 11 and s.eksik is None

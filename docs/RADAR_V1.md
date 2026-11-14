@@ -73,13 +73,15 @@ H = trader'ın `son7g` brüt kârının erken-trend girişlerden gelen payı (0�
 
 ## 5. R3 — Kadro (K‑22/K‑23: tek motor, canlı; deneme/gölge yok)
 Kadro günlük radar koşusunun **form sırasıdır**, toplam **30**: 1–11 **İlk 11**, 12–30 **Yedek 19** (K‑24; PAF yok). Yalnız İlk 11'in ilk **N**'i
-gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez, emir yok. Havuzda 30'dan az kişi varsa kadro o kadardır.
+gerçek parayla kopyalanır (**saha**); Yedek sıra listesidir; sahada boş yer kalırsa (İlk 11'den uygun aday yoksa) sırayla sahaya girer (saha hep dolu, kullanıcı 14.11), sahada olmayan Yedek izlenmez, emir yok. Havuzda 30'dan az kişi varsa kadro o kadardır.
 - **Saha sayısı:** `N = min(11, taban(kasa / radar_canli_slot_min_usd))`, `radar_canli_slot_min_usd = 200` (K-56/K-66; v1: 25) → **kasa kullanıcı ayarıdır** (`canli_kasa_usd`, K‑30): 400 $ → N = 2 (slot 200 $), 1.000 $ → 5 (200 $);
   sanal 10.000 $ → 11 (≈ 909 $; K-66, `canli_sanal_kasa_ust_usd`). Üst sınır 1.000 $ (`AGENTS.md`). Kasa değişince N ve slot bir sonraki kadro okumasında yeniden hesaplanır; fazla slot sahadan
   **sonuç dışı** nedenle iner (bekleme cezası yok), açık pozisyonları §5 kuralıyla kapanır.
   Slot kasası = kasa / N (gerçek USDC).
 - **İlk gün:** form sırasının ilk N'i sahaya çıkar.
-- **Sahaya giriş (sonraki günler):** saha slotu boşalınca İlk 11'in sahada olmayan en iyi sıralısı girer.
+- **Sahaya giriş (sonraki günler) — saha hep dolu (kullanıcı 14.11, K-66; K-45/K-44):** saha slotu boşalınca AYNI koşuda form sırasıyla en iyi uygun aday girer:
+  önce İlk 11'in sahada olmayanları, sonra Yedek (12, 13, …). Beklemedeki (14 gün), sahadan yeni inen ve R1'den elenen (kadroda yok) atlanır; benzerlik kuralını (§6) bozan aday
+  doldurmayı engellemez, atlanır ve sıradaki denenir. Boş yer doldurma günlük değişiklik sınırına sayılmaz (K-44). Uygun aday kalmazsa yer boş kalır: kayıt `saha_eksik`, panoda "saha x/11, uygun aday yok".
 - **Değiştirme (histerezis):** dolu sahada bir üyenin yerini aday ancak aday form sırası ≤ N **ve** üye form sırası > 11 **ve** aday form puanı
   üyeninkinden en az **10 puan** (0–100 ölçeği) yüksekse alır (K‑27; marjinal fark koltuk değiştirmez).
   Günde en fazla **2** saha değişikliği (devir maliyeti).

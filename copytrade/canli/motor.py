@@ -1890,6 +1890,7 @@ class Motor:
         self.karar_uygula(self.saha.anlik(simdi, lambda a: self.hesap.slot_ozsermaye(a, self.marks), self._son_kadro, slot_bas=self.hesap.slot_bas.get), simdi)
 
     _son_kadro: dict | None = None
+    _eksik_imza: tuple | None = None
     _kasa_uyari: float | None = None              # D-01: son uyarı verilen kadro kasası (aynı fark için tekrar uyarı yok)
     _coin_hacim: dict[str, float] = {}                    # K-62: coin → 24 sa nosyonel hacim ($); `dakika` saatte bir yeniler (örnek başına atanır)
 
@@ -1961,6 +1962,11 @@ class Motor:
             self._son_kadro = kadro
             self._kadro_kasa_denetle(kadro)
         kararlar, durum = self.saha.degerlendir(self._son_kadro, simdi)
+        eksik = self.saha.eksik if durum == "ok" else None
+        imza = (self.saha.son_kosu_ms, eksik["saha"]) if eksik else None
+        if eksik and imza != self._eksik_imza:                 # saha hep dolu (14.11): uygun aday kalmadı → kayıt (kadro koşusu + doluluk başına bir kez); pano "saha x/11, uygun aday yok"
+            self.kayit({"olay": "saha_eksik", **eksik})
+        self._eksik_imza = imza
         if durum != "ok":
             self.kayit({"olay": "kadro_" + durum})
             if self.saha.alarm_gunu != gun(simdi):
@@ -2080,7 +2086,8 @@ class Motor:
         oz = self.ozsermaye()
         return {"kip": self.kip, "vardiya": self.vardiya_id, "sure_dk": (simdi - self.baslama_ms) / DAKIKA, "kasa_usd": self.kasa, "ozsermaye_usd": oz, "getiri": oz / self.kasa - 1,
                 **self.btc_kiyas(oz / self.kasa - 1),
-                "saha": len(self.saha.uyeler), "saha_n": self.saha.n, "inen": len(self.saha.inen), "slot_usd": self.saha.slot, "emir": dict(self.sayac),
+                "saha": len(self.saha.uyeler), "saha_n": self.saha.n, "inen": len(self.saha.inen), "saha_eksik_neden": (self.saha.eksik or {}).get("neden"),
+                "r1_gecen": (self._son_kadro or {}).get("gecti_sayisi"), "slot_usd": self.saha.slot, "emir": dict(self.sayac),
                 "ortalama_kayma_trader": ort(self.kayma_trader), "ortalama_kayma_ref": ort(self.kayma_ref), "kayma_n": len(self.kayma_trader), "acik_pozisyon": sum(len(c) for c in self.hesap.poz.values()),
                 "brut_usd": self.hesap.brut_toplam(self.marks), "tasfiye": len(self.hesap.tasfiyeler), "dur": self.risk.dur, "kayit_sayac": dict(self.kayit.sayac), "telegram_hata": self.tg.hata_sayisi,
                 "kor_kirpildi": len(self.kor_kirpildi), "neden_say": dict(sorted(self.neden_say.items())), "slot_tavani": self.neden_say.get("slot_tavani", 0),
