@@ -99,8 +99,8 @@ def test_b8_altin_ornek_zamana_bagli_payda_ve_eski_yan_yana(tmp_path):
     assert s["kopya_getiri_7g_eski"] == pytest.approx(0.001078055, abs=1e-9) and s["ayna_getiri_7g_eski"] == pytest.approx(0.0011, abs=1e-9)
     assert s["kopya_koruma_eski"] == pytest.approx(0.98005, abs=1e-5) and s["kopya_alt20_eski"] == pytest.approx(0.001078055, abs=1e-9)
     assert s["gecti"] is True and s["gecti_eski"] is True and s["neden_eski"] is None and sonuc["payda_yan_yana"] is True
-    assert s["kopya_getiri_72s"] == pytest.approx(0.0017819091, abs=1e-9)                                  # R2 72 sa oynatması da aynı payda
-    assert s["kopya_gunluk"][-1] == pytest.approx(0.0017819091, abs=1e-9)
+    assert s["kopya_getiri_72s"] == pytest.approx(0.0017819091 * 11, abs=1e-8)                             # F-03: aynı (yeni paydalı) oynatmanın eğrisinden, SLOT ölçeğinde (kasa getirisi × N)
+    assert len(s["kopya_gunluk"]) == 7 and all(g == 0.0 for g in s["kopya_gunluk"])                     # F-08: işlemin olduğu son gün (27 Eki, 12 sa) kısmi → seriden atıldı
     md = r.ozet_md(sonuc)
     assert "Payda (B8): portfolio 1" in md and "gecti eski 1 → yeni 1" in md and "yalnız yeni 0; yalnız eski 0" in md
     assert "| yuvarlanan_pay | 1 | 0 | 0 | 0 |" in md and "| kopya_getiri_7g_eski | 1 |" in md

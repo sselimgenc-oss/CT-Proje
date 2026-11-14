@@ -5,7 +5,7 @@
 - Patlama freni: bir trader `canli_patlama_pencere_dk` dk içinde ≥ `canli_patlama_coin` YENİ coin açarsa (o sekizinci açılış dahil) `canli_patlama_ara_dk` dk ondan yeni açılış kopyalanmaz (kapanışlar izlenir).
 - Günlük kayıp: UTC gün başı özsermayeden kayıp ≥ `canli_gunluk_kayip_oran` → o gün yeni açılış yok.
 - K-62 günlük sert fren: gün başından kayıp ≥ `canli_gunluk_kapat_oran` → `gunluk_kapat` olayı (motor tüm pozisyonları kapatır; o gün açılış yok; DUR değil, ertesi gün sürer).
-- K-62 sığ coin: 24 sa hacmi < `canli_sig_hacim_usd` olan coinde trader başına kopya pozisyonu ≤ `canli_sig_coin_tavan_usd`.
+- K-62 sığ coin: 24 sa hacmi < `canli_sig_hacim_usd` olan coinde trader başına kopya pozisyonu ≤ `canli_sig_coin_tavan_slot_oran` × slot (F-01; yedek `canli_sig_coin_tavan_usd`).
 - Zirveden düşüş ≥ `canli_zirve_dusus_oran` → `DUR`: tüm pozisyonlar reduce‑only kapatılır, motor durur, `durum/DUR` yazılır (elle silinmeden yeniden açılmaz; S-2: silinip yeniden başlatılınca zirve güncel özsermayeye kurulur). `/kapat` aynı (yeni `/dur` yalnız yeni girişi durdurur).
 - Kasa > kasa üst sınırı (gerçek kip `canli_kasa_ust_usd` = 1.000 $, AGENTS.md; sanal kip motor `kasa_ust` ile verir, K-66): yeni açılış yok + alarm.
 """
@@ -146,12 +146,20 @@ class Risk:
         kirpilan = max(0.0, izin)
         return (kirpilan, "coin_tavani_kirpildi") if kirpilan >= float(self.rules["radar_min_emir_usd"]) else (0.0, "coin_tavani")
 
-    def sig_coin_kirp(self, emir_usd: float, mevcut_usd: float, hacim_usd: float | None) -> tuple[float, str]:
-        """K-62: sığ coinde (24 sa hacim < `canli_sig_hacim_usd`) trader başına kopya pozisyonu ≤ `canli_sig_coin_tavan_usd`. `hacim_usd` None = hacim verisi hiç yok (sınır uygulanmaz).
+    def sig_coin_tavan(self, slot_usd: float | None = None) -> float:
+        """F-01 (14.11 denetim): sığ coin tavanı slotla ölçeklenir = `canli_sig_coin_tavan_slot_oran` × slot (0,75 × 200 $ = 150 $, gerçek kip 1.000 $ / 5 slotta değer aynı;
+        sanal 10.000 $ / 11 slotta ≈ 682 $). Slot ya da oran yoksa YEDEK mutlak `canli_sig_coin_tavan_usd` (150 $)."""
+        oran = self.rules.get("canli_sig_coin_tavan_slot_oran")
+        if oran is not None and slot_usd:
+            return float(oran) * float(slot_usd)
+        return float(self.rules["canli_sig_coin_tavan_usd"])
+
+    def sig_coin_kirp(self, emir_usd: float, mevcut_usd: float, hacim_usd: float | None, slot_usd: float | None = None) -> tuple[float, str]:
+        """K-62: sığ coinde (24 sa hacim < `canli_sig_hacim_usd`) trader başına kopya pozisyonu ≤ `sig_coin_tavan(slot_usd)` (F-01: oran × slot). `hacim_usd` None = hacim verisi hiç yok (sınır uygulanmaz).
         Döner (uygulanan $, neden): '' | 'sig_coin_kirpildi' | 'sig_coin_tavani' (kırpılan < min emir)."""
         if hacim_usd is None or float(hacim_usd) >= float(self.rules["canli_sig_hacim_usd"]):
             return emir_usd, ""
-        izin = float(self.rules["canli_sig_coin_tavan_usd"]) - float(mevcut_usd)
+        izin = self.sig_coin_tavan(slot_usd) - float(mevcut_usd)
         if emir_usd <= izin + 1e-9:
             return emir_usd, ""
         kirpilan = max(0.0, izin)

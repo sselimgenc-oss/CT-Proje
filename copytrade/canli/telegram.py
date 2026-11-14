@@ -307,7 +307,7 @@ def msg_kapat_alindi(kip: str) -> str:
 
 # ---------------------------------------------------------------------------------------------- mesaj biçimleri (sade Türkçe, emojili)
 KIP_ADI = {"sanal": "sanal · deneme parası", "gercek": "GERÇEK PARA"}
-NEDEN_TR = {"ilk_gun": "ilk kadro", "bos_slot": "boş yer açıldı", "kadro_disi": "günlük kadrodan düştü", "dusme": "slot değeri düştü (kural)"}
+NEDEN_TR = {"ilk_gun": "ilk kadro", "bos_slot": "boş yer açıldı", "kadro_disi": "günlük kadrodan düştü", "r1_elendi": "radarın kopyalanabilirlik (R1) elemesinden düştü", "dusme": "slot değeri düştü (kural)"}
 EYLEM_TR = {"ac": "pozisyon açtı", "artir": "pozisyonunu artırdı", "azalt": "pozisyonunu azalttı", "kapat": "pozisyonu kapattı"}
 
 

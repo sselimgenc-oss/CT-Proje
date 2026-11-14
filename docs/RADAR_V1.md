@@ -4,7 +4,11 @@ Durum: **tasarım, lider (Claude) yazdı, kullanıcı onayladı (K‑19, 2026-11
 Eski sistem (Kapı v3, İlk 11 puanı, oda/kontrol, ön kayıt) **kaldırıldı**; bu belge onun yerine geçen tek strateji kaynağıdır.
 
 > **K-66 (14.11.2026, kullanıcı kararı): yeniden yürürlükte.** D+ (`secim_d`) kapandı; seçim bu belge + v1.1 kuralları (K-53) aynen (vetosuz). Kadro `radar_surum` v3.
-> Saha 11 kişi; sanal kasa 10.000 $ (slot ≈ 909 $; sadık boyut: 5,5 $ altı açılmaz, tavan 1,5 × slot) (`canli_sanal_kasa_ust_usd`). Gerçek para sınırı ≤ 1.000 $ (K-22/K-26) değişmez. Değerlendirme 31.12.2026.
+> Saha 11 kişi; sanal kasa 10.000 $ (slot ≈ 909 $; sadık boyut: 5,5 $ altı açılmaz, tavan 1,5 × slot) (`canli_sanal_kasa_ust_usd`). Gerçek para sınırı ≤ 1.000 $ (K-22/K-26) değişmez. Değerlendirme 31.12.2026
+> (başarı: ayda ≥ %4 VE aynı dönemde BTC al-tut'tan iyi; pano ve `ozet.json` `btc_al_tut_getiri`/`btc_fark`).
+> **Bu belgedeki güncel boyut/risk değerleri (K-56 sadık boyut + K-66):** slot alt sınırı 200 $ (`radar_canli_slot_min_usd`; v1: 25 $), slot tavanı **1,5 × slot** (v1: 3,0×),
+> slot stopu **%20** (`canli_slot_dusus_oran`; v1: %10), açılış hedefi 5,5 $ altında açılmaz. Radar oynatması (R1/R2, isabet) motorla AYNI kasada: `radar_kasa_usd` = 10.000 $ (D-01, 14.11 denetim).
+> Aşağıdaki metinde v1 değerleri (25 $, %10, 3,0×) yalnız tarih için parantez içinde kalmıştır.
 
 ## 0. Temel fikir (neden böyle)
 - 7 günlük form tek başına şanstan ayrılamaz; çoğu öne çıkan zirvede yakalanır (ortalamaya dönüş). Bu yüzden form puanı şans korumalıdır
@@ -69,39 +73,42 @@ H = trader'ın `son7g` brüt kârının erken-trend girişlerden gelen payı (0�
 
 ## 5. R3 — Kadro (K‑22/K‑23: tek motor, canlı; deneme/gölge yok)
 Kadro günlük radar koşusunun **form sırasıdır**, toplam **30**: 1–11 **İlk 11**, 12–30 **Yedek 19** (K‑24; PAF yok). Yalnız İlk 11'in ilk **N**'i
-gerçek parayla kopyalanır (**saha**); Yedek yalnız sıra listesidir, izlenmez, emir yok. Havuzda 30'dan az kişi varsa kadro o kadardır.
-- **Saha sayısı:** `N = min(11, taban(kasa / radar_canli_slot_min_usd))`, `radar_canli_slot_min_usd = 25` → **kasa kullanıcı ayarıdır** (`canli_kasa_usd`, K‑30): 100 $ → N = 4 (slot 25 $), 250 $ → 10 (25 $), 500 $ → 11 (45,5 $), 750 $ → 11 (68,2 $),
-  1.000 $ → 11 (90,9 $). Üst sınır 1.000 $ (`AGENTS.md`). Kasa değişince N ve slot bir sonraki kadro okumasında yeniden hesaplanır; fazla slot sahadan
+gerçek parayla kopyalanır (**saha**); Yedek sıra listesidir; sahada boş yer kalırsa (İlk 11'den uygun aday yoksa) sırayla sahaya girer (saha hep dolu, kullanıcı 14.11), sahada olmayan Yedek izlenmez, emir yok. Havuzda 30'dan az kişi varsa kadro o kadardır.
+- **Saha sayısı:** `N = min(11, taban(kasa / radar_canli_slot_min_usd))`, `radar_canli_slot_min_usd = 200` (K-56/K-66; v1: 25) → **kasa kullanıcı ayarıdır** (`canli_kasa_usd`, K‑30): 400 $ → N = 2 (slot 200 $), 1.000 $ → 5 (200 $);
+  sanal 10.000 $ → 11 (≈ 909 $; K-66, `canli_sanal_kasa_ust_usd`). Üst sınır 1.000 $ (`AGENTS.md`). Kasa değişince N ve slot bir sonraki kadro okumasında yeniden hesaplanır; fazla slot sahadan
   **sonuç dışı** nedenle iner (bekleme cezası yok), açık pozisyonları §5 kuralıyla kapanır.
   Slot kasası = kasa / N (gerçek USDC).
 - **İlk gün:** form sırasının ilk N'i sahaya çıkar.
-- **Sahaya giriş (sonraki günler):** saha slotu boşalınca İlk 11'in sahada olmayan en iyi sıralısı girer.
+- **Sahaya giriş (sonraki günler) — saha hep dolu (kullanıcı 14.11, K-66; K-45/K-44):** saha slotu boşalınca AYNI koşuda form sırasıyla en iyi uygun aday girer:
+  önce İlk 11'in sahada olmayanları, sonra Yedek (12, 13, …). Beklemedeki (14 gün), sahadan yeni inen ve R1'den elenen (kadroda yok) atlanır; benzerlik kuralını (§6) bozan aday
+  doldurmayı engellemez, atlanır ve sıradaki denenir. Boş yer doldurma günlük değişiklik sınırına sayılmaz (K-44). Uygun aday kalmazsa yer boş kalır: kayıt `saha_eksik`, panoda "saha x/11, uygun aday yok".
 - **Değiştirme (histerezis):** dolu sahada bir üyenin yerini aday ancak aday form sırası ≤ N **ve** üye form sırası > 11 **ve** aday form puanı
   üyeninkinden en az **10 puan** (0–100 ölçeği) yüksekse alır (K‑27; marjinal fark koltuk değiştirmez).
   Günde en fazla **2** saha değişikliği (devir maliyeti).
 - **Sahadan düşme:**
-  - Anında: sahaya girişten beri slot düşüşü ≥ %10; R1/4 (kaldıraç > 20x) ihlali.
-  - Günlük: form sırası 2 gün üst üste > 22, ya da **iki farklı UTC gününün kadrosunda kadro dışı (> 30) (K‑39; sonuç dışı, bekleme yok; gün başına yalnız ilk kadro uygulanır)**; 72 sa yeni işlem yok; R1'den elendi.
-  - **Sonuçla** düşen (slot −%10, form sırası, R1 elemesi) 14 gün sahaya dönemez. **Sonuç dışı** nedenle yerini kaybeden (daha iyisi geldi,
+  - Anında: sahaya girişten beri slot düşüşü ≥ %20 (K-56/K-66; v1: %10); R1/4 (kaldıraç > 20x) ihlali.
+  - Günlük: form sırası 2 gün üst üste > 22, ya da **iki farklı UTC gününün kadrosunda kadro dışı (> 30) (K‑39; sonuç dışı, bekleme yok; gün başına yalnız ilk kadro uygulanır)**; 72 sa yeni işlem yok;
+    **R1'den elendi** (D-02, 14.11 denetim: kadro.json `eski_uye_neden[adres]` `r1:` ile başlıyorsa AYNI gün sonuçla düşer, `r1_elendi`; `r0_disi`/`sira_disi`/`soguyan` iki gün kuralında kalır).
+  - **Sonuçla** düşen (slot −%20, form sırası, R1 elemesi) 14 gün sahaya dönemez. **Sonuç dışı** nedenle yerini kaybeden (daha iyisi geldi,
     72 sa işlem yok, kasa değişikliği) bekleme cezası almaz (K‑27).
 - **Sahadan inen üyenin açık pozisyonları:** yeni açılış durur, trader'ın kapanışları izlenir, 24 sa sonra açık kalan kapatılır.
 
 ## 5b. Canlı yürütme ve boyutlandırma (sahada)
-- **Kip (K‑29):** `sanal` (cüzdan bağlı değil, 1.000 $ yatırılmış gibi; dolum o anki emir defterinden) ya da `gercek` (API cüzdanı). Kod yolu aynı;
+- **Kip (K‑29):** `sanal` (cüzdan bağlı değil, kasa kadar yatırılmış gibi — K-66: 10.000 $; dolum o anki emir defterinden) ya da `gercek` (API cüzdanı). Kod yolu aynı;
   kullanıcı hazır olunca anahtar + `canli_kip: gercek`.
-- **Açılış:** hedef nosyonel = slot kasası × (trader'ın pozisyon nosyoneli / trader hesap değeri), tavan **3,0 × slot kasası**.
-  Hedef < `radar_min_emir_usd` (**11 $**; HL alt sınırı 10 $ + pay): 3,0 × slot ≥ 11 $ ise 11 $'a yuvarlanır, değilse atlanır (`min_emir_atlandi`).
-- **Artırma (K‑36, hedef tabanlı):** hedef toplam = slot × (trader'ın dolum SONRASI nosyoneli / trader hesap), tek coin tavanı 3,0 × slot ve slot toplam
+- **Açılış:** hedef nosyonel = slot kasası × (trader'ın pozisyon nosyoneli / trader hesap değeri), tavan **1,5 × slot kasası** (K-56/K-66; v1: 3,0×).
+  Hedef < `radar_min_emir_usd` (**11 $**; HL alt sınırı 10 $ + pay): hedef ≥ 5,5 $ (`radar_min_emir_yuvarla_alt`, K-56) ve 1,5 × slot ≥ 11 $ ise 11 $'a yuvarlanır, değilse atlanır (`min_emir_atlandi`).
+- **Artırma (K‑36, hedef tabanlı):** hedef toplam = slot × (trader'ın dolum SONRASI nosyoneli / trader hesap), tek coin tavanı 1,5 × slot (v1: 3,0×) ve slot toplam
   tavanı (K‑35); emir = max(0, hedef toplam − bizim mevcut pozisyon). Emir < 11 $ → atlanır. (Eski "değişim oranı" kuralı, 11 $'a yuvarlanmış açılıştan sonra
   kısmi dolum zincirinde patlıyordu.)
-- **Azaltma (K‑38, hedef tabanlı):** hedef = slot × |trader_poz_sonra| × fiyat / trader_hesap (3 × slot tavanlı); fark = biz − hedef. fark ≥ 11 $ → fark kadar azalt; fark < 11 $ → atla (birikir, sonraki dolumda yakalanır); hedef < 11 $ ve biz ≥ 11 $ → tamamını kapat; trader tamamen kapatınca biz de tamamen kapatırız (reduce‑only). Trader hesabı bilinmiyorsa eski oransal kural yedek olarak kullanılır.
+- **Azaltma (K‑38, hedef tabanlı):** hedef = slot × |trader_poz_sonra| × fiyat / trader_hesap (1,5 × slot tavanlı; v1: 3×); fark = biz − hedef. fark ≥ 11 $ → fark kadar azalt; fark < 11 $ → atla (birikir, sonraki dolumda yakalanır); hedef < 11 $ ve biz ≥ 11 $ → tamamını kapat; trader tamamen kapatınca biz de tamamen kapatırız (reduce‑only). Trader hesabı bilinmiyorsa eski oransal kural yedek olarak kullanılır.
 - **Marj:** coin başına **izole, 3x** (bir pozisyonun tasfiyesi kasanın geri kalanını yakmaz).
 - **Emir:** IOC limit, fiyat = en iyi karşı fiyat ± **%0,5** kayma tavanı; dolmayan kısım aynı emirde yeniden denenmez (`dolmadi` kaydı); kalan fark sonraki olayda hedef tabanlı (K‑36/K‑38) kapanır.
 - Her emir için kayıt: trader dolum zamanı, bizim görme zamanımız, emir/dolum fiyatı, kayma, ücret, neden.
 - **Güvenlik:** HL **API cüzdanı** (işlem yetkili, para çekme yetkisiz); ana cüzdan anahtarı hiçbir yere konmaz. API anahtarı yalnız sunucuda.
 
 ## 6. R4 — Portföy riski
-- Slot başına pozisyon tavanı 3,0x (yukarıda), mevcut tasfiye ve aşamalı çıkış (v4) aynen.
+- Slot başına pozisyon tavanı 1,5x (yukarıda; K-56/K-66, v1: 3,0x), mevcut tasfiye ve aşamalı çıkış (v4) aynen.
 - **Coin yoğunlaşması:** aynı coinde tüm saha slotlarının toplam brüt nosyoneli ≤ kasanın %30'u; aşan açılış kırpılır.
 - **Benzer trader:** sahada `son7g` günlük kopya getirisi korelasyonu ≥ 0,7 olan en fazla 2 kişi; fazlası sıradaki üyeye yer verir.
 - **Patlama freni (K‑27):** bir trader 10 dk içinde ≥ 8 yeni coin açarsa ondan 30 dk yeni açılış kopyalanmaz (kapanışları izlenir).

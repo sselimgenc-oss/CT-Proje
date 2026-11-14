@@ -47,7 +47,7 @@ if [ -f "$kaynak/durum/donem.txt" ] && ! cmp -s "$kaynak/durum/donem.txt" "$work
   rm -rf "$work/durum" "$work/kayit" "$work/pano"
 fi
 mkdir -p "$work/durum" "$work/kayit"
-for f in hesap.json saha.json risk.json motor.json kilit.json ozet.json niyet.jsonl DUR donem.txt; do
+for f in hesap.json saha.json risk.json motor.json kilit.json ozet.json niyet.jsonl DUR donem.txt donem_seri.json; do
   if [ -f "$kaynak/durum/$f" ]; then cp "$kaynak/durum/$f" "$work/durum/$f"; fi
 done
 if [ -d "$kaynak/kayit" ]; then cp -r "$kaynak/kayit/." "$work/kayit/"; fi

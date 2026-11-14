@@ -13,7 +13,7 @@ FİİLEN sahaya oturan ilk 11; canlı motor kaydı `canli-durum` `kayit/*.jsonl`
 satırlarından sabit tohumla 30 kişi; tohum = YYYYMMDD + 1). Ek adresler ana gruplardan SONRA ölçülür; bütçe/okuma eksikleri `eksik_ek`'e yazılır (`eksik` ana gruplar içindir).
 **Kötü senaryo (K‑37):** aynı ölçüm kayma ×`isabet_kotu_kayma_carpan` (2) ve gecikme `isabet_kotu_gecikme_dk` (3 dk) ile; sütun adları `_kotu` ile biter.
 
-**Çıktı `radar/<havuz tarihi>/isabet.json`** (docs/VERI_SOZLESMESI.md "Radar isabet"): oranlar kesirdir (0,02 = %2), kopya_$ = 1.000 $ sanal kasa ölçeğinde getiri; zaman UTC ms.
+**Çıktı `radar/<havuz tarihi>/isabet.json`** (docs/VERI_SOZLESMESI.md "Radar isabet"): oranlar kesirdir (0,02 = %2), kopya_$ = `radar_kasa_usd` (D-01, K-66: 10.000 $, motorun sanal kasası) ölçeğinde getiri; zaman UTC ms.
 Süre bütçesi `isabet_butce_dk` (30): aşılırsa kalanlar ölçülmez, `eksik: true` yazılır ve tarama işi bozulmaz (çıkış kodu 0, ama hata/eksik dosyada ve günlükte görünür).
 **Hangi kadro (denetim R-1):** motor (K‑39) günün İLK kadrosunu uygular; ölçülen de odur: `kadro_ilk.json` + `havuz_ilk.json` → yoksa veri dalı geçmişindeki ilk yayım → yoksa güncel
 `kadro.json` (`kadro_kaynagi`: "ilk" | "ilk_git" | "son"). **R-7:** beklenmeyen her hata `ISABET HATASI` satırıyla basılır, çıkış 0 (kadro yayımı engellenmez).

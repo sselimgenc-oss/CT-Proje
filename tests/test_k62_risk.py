@@ -56,11 +56,24 @@ def test_motor_felaket_stopu_yuzde_20_aleyhe_pozisyonu_kapatir_trader_sahada_kal
     assert any(x["olay"] == "felaket_stop" and x["coin"] == "SOL" and x["kapandi"] for x in kayitlar(tmp_path)) and any("felaket stopu" in x for x in tgp.gonderilen)
 
 
+def test_risk_sig_coin_tavani_slotla_olceklenir_f01():
+    """F-01: tavan = 0,75 × slot. Gerçek kip 1.000 $ / 5 slot (200 $) → 150 $ (eski mutlak değer); sanal 10.000 $ / 11 slot (909,09 $) → 681,82 $."""
+    from copytrade.kurallar import load_rules_asil
+    uretim = load_rules_asil()
+    assert uretim["canli_sig_coin_tavan_slot_oran"] == 0.75
+    r = rk.Risk(uretim, 10000.0)
+    assert r.sig_coin_tavan(200.0) == pytest.approx(150.0) and r.sig_coin_tavan(10000 / 11) == pytest.approx(681.818, abs=1e-3)
+    assert r.sig_coin_kirp(1000.0, 0.0, 1e6, 10000 / 11) == (pytest.approx(681.818, abs=1e-3), "sig_coin_kirpildi")
+    assert r.sig_coin_kirp(600.0, 0.0, 1e6, 10000 / 11) == (600.0, "")                  # 909 $ slotta 600 $ sığ coin pozisyonu artık kırpılmaz (eskiden 150 $)
+    assert r.sig_coin_kirp(200.0, 0.0, 1e6, 200.0) == (150.0, "sig_coin_kirpildi")
+    assert r.sig_coin_tavan(None) == 150.0                                              # slot yok: mutlak yedek
+
+
 def test_motor_sig_coin_tavani_trader_basina_150(tmp_path):
-    m, hl, saat, _ = kur(tmp_path)
+    m, hl, saat, _ = kur(tmp_path, kurallar={"radar_canli_slot_min_usd": 200})            # F-01: gerçek kip ölçeği 1.000 $ / 5 slot (200 $) → tavan 0,75 × 200 = 150 $
     m.baslat()
     m._coin_hacim = {"BTC": 1e9, "ETH": 1e6}                                            # ETH bu testte sığ
-    s = m.olay_isle(olay("a:1", adr(1), "ETH", "B", 100, 2000.0, 0.0, saat))            # trader 200.000 $ / hesap 100.000 $ → hedef 300 $ (slot tavanı) → sığ: 150 $
+    s = m.olay_isle(olay("a:1", adr(1), "ETH", "B", 100, 2000.0, 0.0, saat))            # trader 200.000 $ / hesap 100.000 $ → hedef 400 $ (slot 200 $) → sığ: 0,75 × 200 = 150 $
     assert s[0].karar == "emir" and s[0].neden == "sig_coin_kirpildi" and abs(m.hesap.sz(adr(1), "ETH")) * 2000.0 == pytest.approx(150.0, rel=0.01)
     assert m.olay_isle(olay("a:2", adr(1), "ETH", "B", 10, 2000.0, 100.0, saat))[0].neden == "sig_coin_tavani"    # artırma: tavan dolu
     b = m.olay_isle(olay("a:3", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))             # majör: tavansız
