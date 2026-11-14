@@ -2,7 +2,7 @@
  "sema": "radar-kadro-v1",
  "radar_surum": "v2",
  "secim_yapi": "D",
- "kosu_ms": 1794553813144,
+ "kosu_ms": 1794639432898,
  "kasa_usd": 1000.0,
  "slot_usd": 200.0,
  "saha_n": 5,
@@ -67,7 +67,7 @@
    "ay_negatif": 0,
    "giris_hesap_usd": 221956.546809,
    "giris_pnl_kum": 225373.30000000002,
-   "zirve_pnl": 225507.63,
+   "zirve_pnl": 226838.72,
    "sicil_onceki": 0.0,
    "kopya_gunluk": null
   },
@@ -83,7 +83,7 @@
    "ay_negatif": 0,
    "giris_hesap_usd": 56797.226869,
    "giris_pnl_kum": 20089.430000000004,
-   "zirve_pnl": 20433.24761,
+   "zirve_pnl": 20573.077540000002,
    "sicil_onceki": 0.0,
    "kopya_gunluk": [
     0.0,
@@ -144,9 +144,7 @@
   ]
  },
  "doldurma_ay": "2026-11",
- "cikanlar": {
-  "0xc22db2c04e054786426671cec0b766c07304fb20": "veto_omur_zarar"
- },
+ "cikanlar": {},
  "cikanlar_gecmis": {
   "0x701adb5a67f3ee17b10ab5b156b37dbc0ed50f29": 1794322315164,
   "0xde29121a6858d90ae486855b127f9d5ee4035232": 1794468007297,
