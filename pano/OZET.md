@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-14 22:58 UTC
+# Canlı rapor — 2026-11-14 23:13 UTC
 
 **Kip** sanal · vardiya `43638869277` · saha 11/11 (inen 0)
 
@@ -8,21 +8,21 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 10.000,00 $ | 9.975,62 $ | −%0,24 | — (geçmiş < 7 gün) | −%0,24 | −%0,29 |
+| 10.000,00 $ | 9.975,04 $ | −%0,25 | — (geçmiş < 7 gün) | −%0,25 | −%0,30 |
 
-Başarı kıyası (aynı dönemde): toplam −%0,24 · BTC al-tut: −%3,2 · fark: +%2,9 · aylık eşdeğer: — · hedef %4/ay: —
+Başarı kıyası (aynı dönemde): toplam −%0,25 · BTC al-tut: −%2,8 · fark: +%2,5 · aylık eşdeğer: — · hedef %4/ay: —
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x5d908c… | HYPE | S | 782,36 $ | −8,95 $ |
-| 0x6463f5… | ETH | S | 534,06 $ | +3,95 $ |
+| 0x5d908c… | HYPE | S | 782,10 $ | −8,69 $ |
+| 0x6463f5… | ETH | S | 534,92 $ | +3,09 $ |
 
 ## Son 24 saat
 
 - emir 79 · dolum 79 · kayma p50 −%0,02 / max +%0,20 (n=79)
-- funding +0,12 $ · ücret 1,64 $
+- funding +0,13 $ · ücret 1,64 $
 
 _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun günlük kayıp tanımı); hafta/toplam kasaya göre; zirveden düşüş motorun zirvesine göre._
 
@@ -46,7 +46,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 135 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 151 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
@@ -58,16 +58,16 @@ olay yok
 
 ## Dönem (kalıcı seri)
 
-- motor 9.975,62 $ · BTC al-tut 9.684,08 $ · %4/ay hedef çizgisi 10.002,45 $
-- katkı: İlk 11 6 slot +3,35 $ · Yedek 5 slot −27,73 $
-- saha doluluğu %100,00 · nakitte kalan %93,29 (0,1 gün ölçüldü)
-- kullanılan sermaye getirisi −%3,64 · ort. brüt maruziyet 669,55 $ · ort. net 669,55 $ · risk kilidi olayı 0 (gölge eğri yok)
+- motor 9.975,04 $ · BTC al-tut 9.723,44 $ · %4/ay hedef çizgisi 10.002,45 $
+- katkı: İlk 11 6 slot +2,50 $ · Yedek 5 slot −27,46 $
+- saha doluluğu %100,00 · nakitte kalan %92,64 (0,1 gün ölçüldü)
+- kullanılan sermaye getirisi −%3,40 · ort. brüt maruziyet 734,21 $ · ort. net 734,21 $ · risk kilidi olayı 0 (gölge eğri yok)
 - atlanan sinyal %70,74 · yuvarlanan emir %0,00 (emir 79, atlanan 191)
 - radar hunisi: evren 2458 → aday 900 → ≥10 işlem 109 → geçen 21
 
 | trader | katman | giriş | çıkış | net $ |
 |---|---|---|---|---|
-| 0x6463f5… | ilk11 | 14.11 23:40 | sahada | +3,35 $ |
+| 0x6463f5… | ilk11 | 14.11 23:40 | sahada | +2,50 $ |
 | 0x428cbb… | ilk11 | 14.11 23:40 | sahada | +0,00 $ |
 | 0x6834b2… | ilk11 | 14.11 23:40 | sahada | +0,00 $ |
 | 0x557beb… | ilk11 | 14.11 23:40 | sahada | +0,00 $ |
@@ -77,4 +77,4 @@ olay yok
 | 0xf1881e… | yedek | 14.11 23:40 | sahada | +0,00 $ |
 | 0x3d21e3… | yedek | 14.11 23:40 | sahada | +0,00 $ |
 | 0x298830… | yedek | 14.11 23:40 | sahada | +0,00 $ |
-| 0x5d908c… | yedek | 14.11 23:40 | sahada | −27,73 $ |
+| 0x5d908c… | yedek | 14.11 23:40 | sahada | −27,46 $ |
