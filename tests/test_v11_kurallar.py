@@ -15,7 +15,7 @@ def lider_ay(adres, hesap, pnl, vlm, ay):
 
 
 def test_kurallar_v11_degerleri():
-    assert RULES["radar_surum"] == "v3"                                     # K-66: Form Radarı v3 = RADAR_V1 + v1.1 kuralları aynen
+    assert RULES["radar_surum"] == "v4"                                     # M-09 (14.11): v3 → v4 (radar hunisi + mantık denetimi düzeltmeleri)
     assert RULES["radar_ay_pnl_pozitif"] is True and RULES["radar_min_kopya_islem"] == 0 and RULES["radar_tutma_onceki_kadro"] is True
     assert float(RULES["radar_agirlik_h"]) == 0.0
     assert "radar_t_oncelik" not in RULES                                   # t önceliği (taslak) Fable denetimiyle reddedildi: kural yok
@@ -76,7 +76,7 @@ def test_kos_tutma_once_olculur_isaretlenir_ve_kadroya_girer(tmp_path):
     assert satir_al(sonuc, A2)["gecti"] is True and satir_al(sonuc, A1)["gecti"] is True and satir_al(sonuc, A2)["kopya_islem_sayisi"] == 12   # aynı işlemler → ikisi de geçer
     assert rk.kosu_tam_mi(sonuc, {**RULES1, "radar_aday_tavan": 1})[0]      # fazladan satır koşuyu eksik yapmaz
     kd = rk.kadro_olustur(sonuc, RULES1)
-    assert kd["radar_surum"] == "v3" and {s["adres"]: s["tutma"] for s in kd["satirlar"]} == {A1: False, A2: True}
+    assert kd["radar_surum"] == "v4" and {s["adres"]: s["tutma"] for s in kd["satirlar"]} == {A1: False, A2: True}
 
 
 def test_radar_yml_tarama_onceki_kadroyu_gecirir():

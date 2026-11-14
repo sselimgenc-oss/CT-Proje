@@ -1,2 +1,3 @@
 # K-54 (kullanıcı kararı 09.11): motor yalnız bu radar_surum değerli kadroyu uygular. K-66 (14.11): Form Radarı v3 (D+ v2 kadrosu uygulanmaz); v3 kadrosu yayımlanana kadar saha boş, kasa nakitte.
-v3
+# M-09 (kullanıcı kararı 14.11): v4 (radar hunisi + mantık denetimi düzeltmeleri); eski v3 kadrosu uygulanmaz, v4 kadrosu gelene kadar bekleme vardiyası.
+v4

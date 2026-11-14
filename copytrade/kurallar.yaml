@@ -129,7 +129,7 @@ radar_soguyor_min_getiri: -0.02         # oran (son 72 sa kopya getirisi bunun A
 radar_kadro_toplam: 30                  # kişi (İlk 11 + Yedek 19)
 radar_kadro_ilk: 11                     # kişi (İlk katman)
 radar_hip3_kopya: false                 # bool, K‑43: motorla aynı davranış (K‑28 tutarlılık düzeltmesi); true = eski v1 davranışı; kullanıcı onayına sunuldu. false = R1 kopya oynatmasında HIP‑3 (dex:COIN) dolumlarının TAMAMI atlanır (motor K‑42 gibi); eşik/ağırlık/yöntem DEĞİL
-radar_surum: "v3"                       # K-66 Form Radarı: RADAR_V1 + v1.1 seçim kuralları (K-53) aynen, D+ (v2) yerine; kadro.json `radar_surum` alanına yazılır, motor `canli/RADAR_SURUM` ile eşleştirir
+radar_surum: "v4"                       # M-09 (kullanıcı kararı 14.11): radar hunisi + M-02/M-03/M-06/M-07 sonrası v3 → v4 (eski v3 kadrosu uygulanmaz). K-66 Form Radarı: RADAR_V1 + v1.1 seçim kuralları (K-53), D+ (v2) yerine; kadro.json `radar_surum` alanına yazılır, motor `canli/RADAR_SURUM` ile eşleştirir
 radar_tutma_onceki_kadro: true          # bool, v1.1 nedene bağlı çıkış: önceki kadro üyeleri R0 ilk N dışına düşse de R1'den geçirilir (geçen kalır); false = v1
 radar_ay_pnl_pozitif: true              # bool, v1.1 S1: R0 (ve tutma) için lider tablosu 30 g pnl > 0 (pencere yoksa geçer); false = v1
 radar_min_kopya_islem: 0                # işlem, v1.1 S2: R1 kopya kapanan işlem sayısı >= bu (`kopya_islem_az`; sınır dahil); 0 = kapalı (v1). Radar hunisi (kullanıcı 14.11): 10 → 0 (RADAR_V1 §3'te yoktu; şans riski kural 8 aynen). t önceliği (taslak) Fable denetimiyle REDDEDİLDİ

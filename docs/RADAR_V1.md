@@ -3,7 +3,7 @@
 Durum: **tasarım, lider (Claude) yazdı, kullanıcı onayladı (K‑19, 2026-11-04).** Kod yok; uygulama `docs/GOREV_T*.md` ile Sonnet'te.
 Eski sistem (Kapı v3, İlk 11 puanı, oda/kontrol, ön kayıt) **kaldırıldı**; bu belge onun yerine geçen tek strateji kaynağıdır.
 
-> **K-66 (14.11.2026, kullanıcı kararı): yeniden yürürlükte.** D+ (`secim_d`) kapandı; seçim bu belge + v1.1 kuralları (K-53) aynen (vetosuz). Kadro `radar_surum` v3.
+> **K-66 (14.11.2026, kullanıcı kararı): yeniden yürürlükte.** D+ (`secim_d`) kapandı; seçim bu belge + v1.1 kuralları (K-53) aynen (vetosuz). Kadro `radar_surum` v3; M-09 (kullanıcı kararı 14.11): v4 (radar hunisi + mantık denetimi düzeltmeleri; eski v3 kadrosu uygulanmaz).
 > Saha 11 kişi; sanal kasa 10.000 $ (slot ≈ 909 $; sadık boyut: 5,5 $ altı açılmaz, tavan 1,5 × slot) (`canli_sanal_kasa_ust_usd`). Gerçek para sınırı ≤ 1.000 $ (K-22/K-26) değişmez. Değerlendirme 31.12.2026
 > (başarı: ayda ≥ %4 VE aynı dönemde BTC al-tut'tan iyi; pano ve `ozet.json` `btc_al_tut_getiri`/`btc_fark`).
 > **Bu belgedeki güncel boyut/risk değerleri (K-56 sadık boyut + K-66):** slot alt sınırı 200 $ (`radar_canli_slot_min_usd`; v1: 25 $), slot tavanı **1,5 × slot** (v1: 3,0×),
