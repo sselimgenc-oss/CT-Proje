@@ -1,0 +1,224 @@
+"""Bağımsız denetim 14.11 (K-66): D-01 radar kasa ölçeği = motor sanal kasası, D-02 R1 elemesi aynı gün sonuçla düşer, BTC al-tut kıyası (ozet.json + pano)."""
+from __future__ import annotations
+
+import json
+import re
+
+import pytest
+import yaml
+
+from copytrade import boyut, radar_isabet, radar_kadro
+from copytrade import radar_tarama as r
+from copytrade.canli import kadro as kd
+from copytrade.canli import motor as mt
+from copytrade.canli import pano
+from copytrade.kurallar import load_rules, load_rules_asil
+from tests.test_canli_motor import GUN, SAAT, T0, SahteHL, adr, kadro, kayitlar, kur, n_kadro, satir
+from tests.test_radar_tarama import A1, Sahte, lider, satir_al
+from tests.test_radar_tarama import KOSU, dolum, ms
+
+ROOT = __import__("pathlib").Path(__file__).resolve().parents[1]
+URETIM = load_rules_asil()                       # dosyadaki gerçek değerler (conftest v1 boyut değerlerini EZMEZ)
+
+
+# ================================================================================================ D-01: radar kasası
+def test_d01_uretim_radar_kasasi_motor_sanal_kasasiyla_ayni_gercek_para_degismez():
+    assert URETIM["radar_kasa_usd"] == 10000 and URETIM["canli_sanal_kasa_ust_usd"] == 10000
+    assert URETIM["canli_kasa_usd"] == 1000 and URETIM["canli_kasa_ust_usd"] == 1000                      # gerçek para sınırı değişmez
+    wf = (ROOT / ".github/workflows/canli_vardiya.yml").read_text(encoding="utf-8")
+    sanal = re.findall(r"--sanal-kasa-usd (\d+(?:\.\d+)?)", wf)
+    assert sanal and all(float(x) == float(URETIM["radar_kasa_usd"]) for x in sanal)                     # motor sanal kasası = radar kasası
+    assert "--kasa" not in (ROOT / ".github/workflows/radar.yml").read_text(encoding="utf-8")              # radar iş akışı kasayı kurallardan alır
+
+
+def test_d01_radar_kasa_onceligi_arguman_kural_eski():
+    assert boyut.radar_kasa(URETIM) == 10000.0
+    assert boyut.radar_kasa(URETIM, 2500.0) == 2500.0                                                      # CLI argümanı önce
+    assert boyut.radar_kasa({k: v for k, v in URETIM.items() if k != "radar_kasa_usd"}) == 1000.0        # anahtar yoksa eski canli_kasa_usd
+
+
+def _senaryo():
+    """Trader hesap 50.000 $, 10 BTC × 100 $ = 1.000 $ açar (oran 0,02), 110'dan kapatır.
+    Üretim boyutu: kasa 1.000 → N = min(11, 1000/200) = 5, slot 200 $ → hedef 4 $ < yuvarlama alt sınırı 5,5 $ → ATLANIR (kopya işlemi yok).
+    kasa 10.000 → N 11, slot 909,09 $ → hedef 18,18 $ ≥ 11 $ → AÇILIR (kâr 0,1818 BTC × 10 = 1,818 $ ayna)."""
+    dolumlar = {A1: [dolum(ms("10:00:00"), "BTC", "B", 10, 0, 100), dolum(ms("11:00:00"), "BTC", "A", 10, 10, 110, kapanan=100.0)]}
+    fiyat = lambda coin, t: 110.0 if t >= ms("11:00:00") else 100.0               # noqa: E731
+    return Sahte([lider(A1, 50_000, 100, 5_000)], dolumlar, fiyat)
+
+
+def _kos(tmp_path, rules, **kw):
+    return r.kos(_senaryo(), KOSU, tmp_path / "radar", None, rules, log=lambda *_: None, **kw)
+
+
+def test_d01_kucuk_acilis_1000_de_atlanir_10000_de_acilir_radar_kasa_usd_kullanilir(tmp_path):
+    kurallar = {**URETIM, "radar_min_islem": 1, "radar_min_kopya_islem": 1}
+    varsayilan = _kos(tmp_path / "a", kurallar)                                                            # argüman yok → radar_kasa_usd (10.000)
+    s10 = satir_al(varsayilan, A1)
+    assert varsayilan["kasa_usd"] == 10000.0
+    assert s10["kopya_islem_sayisi"] == 1 and s10["ayna_getiri_7g"] == pytest.approx(0.1818182 * 10 / 10000, rel=1e-5)
+    kucuk = _kos(tmp_path / "b", {**kurallar, "radar_kasa_usd": 1000})                                     # aynı veri, 1.000 $ ölçek
+    s1 = satir_al(kucuk, A1)
+    assert kucuk["kasa_usd"] == 1000.0 and not s1["kopya_islem_sayisi"] and not s1["ayna_getiri_7g"]
+    arg = _kos(tmp_path / "c", kurallar, kasa_usd=1000.0)                                                  # CLI argümanı kuralın önünde
+    assert arg["kasa_usd"] == 1000.0 and not satir_al(arg, A1)["kopya_islem_sayisi"]
+    yazilan = json.loads(next((tmp_path / "a" / "radar").glob("*/havuz.json")).read_text(encoding="utf-8"))
+    assert yazilan["kasa_usd"] == 10000.0                                                                  # havuz.json `kasa_usd`
+
+
+def test_d01_kadro_ve_isabet_radar_kasasini_kullanir():
+    havuz = {"sema": radar_kadro.HAVUZ_SEMA, "kosu_ms": 1, "satirlar": []}
+    k = radar_kadro.kadro_olustur(havuz, URETIM)
+    assert k["kasa_usd"] == 10000.0 and k["saha_n"] == 11 and k["slot_usd"] == pytest.approx(10000 / 11)
+    assert radar_kadro.kadro_olustur(havuz, URETIM, 1000.0)["kasa_usd"] == 1000.0                        # --kasa önce
+    assert r.Baglam(Sahte([], {}), 1, 0, URETIM).kasa_usd == 10000.0                                       # isabet `Baglam(client, bit, bas, rules)` ile aynı yol
+    assert "radar_kasa_usd" in radar_isabet.__doc__
+
+
+def test_d01_motor_kadro_kasasi_farkliysa_bir_kez_kayit_ve_uyari_durmaz(tmp_path):
+    m, _, saat, tgp = kur(tmp_path, kasa=1000.0)
+    k = {**n_kadro(3, saat() - SAAT), "kasa_usd": 10000.0}
+    m._kadro_uygula((True, k), saat())
+    m._kadro_uygula((True, k), saat() + 60_000)
+    fark = kayitlar(tmp_path, "kadro_kasa_farkli")
+    assert len(fark) == 1 and fark[0]["kadro_kasa_usd"] == 10000.0 and fark[0]["motor_kasa_usd"] == 1000.0
+    assert sum("kadro kasası farklı" in x for x in tgp.gonderilen) == 1
+    assert len(m.saha.uyeler) == 3 and not m.risk.dur                                                      # kadro uygulanır, motor durmaz
+    m2, _, saat2, tgp2 = kur(tmp_path / "esit", kasa=1000.0)
+    m2._kadro_uygula((True, n_kadro(3, saat2() - SAAT)), saat2())                                           # kasa 1.000 = motor: kayıt yok
+    assert not kayitlar(tmp_path / "esit", "kadro_kasa_farkli")
+
+
+# ================================================================================================ D-02: R1 elemesi
+def _gun2(neden):
+    """Gün 1: 11 üye sahada. Gün 2 kadrosunda adr(11) yok; `eski_uye_neden[adr(11)] = neden`."""
+    s = kd.Saha(load_rules(), 1000.0)
+    s.degerlendir(n_kadro(11), T0 + SAAT)
+    for a in s.uyeler:
+        s.islem_gordu(a, T0 + GUN)
+    k2 = {**kadro([satir(i, i, 90 - i) for i in range(1, 11)], T0 + GUN), "eski_uye_neden": {adr(11): neden}}
+    karar, _ = s.degerlendir(k2, T0 + GUN + SAAT)
+    return s, karar
+
+
+@pytest.mark.parametrize("neden", ["r1:kopya_zarar", "r1:kaldirac_yuksek"])
+def test_d02_r1_elenen_ayni_gun_sonucla_duser_ve_bekler(neden):
+    s, karar = _gun2(neden)
+    assert [(k.adres, k.neden, k.sonuc) for k in karar if k.tur == "dus"] == [(adr(11), "r1_elendi", True)]
+    assert s.bekleme[adr(11)] == T0 + GUN + SAAT + int(load_rules()["canli_bekleme_gun"]) * GUN
+    assert adr(11) in s.inen and adr(11) not in s.uyeler
+
+
+@pytest.mark.parametrize("neden", ["r0_disi", "sira_disi", "soguyan"])
+def test_d02_r1_disi_neden_iki_gun_kuralinda_kalir(neden):
+    s, karar = _gun2(neden)
+    assert [k for k in karar if k.tur == "dus"] == [] and s.uyeler[adr(11)]["disi_gunler"]                 # ilk gün yalnız işaret
+    for a in s.uyeler:
+        s.islem_gordu(a, T0 + 2 * GUN)
+    k3 = {**kadro([satir(i, i, 90 - i) for i in range(1, 11)], T0 + 2 * GUN), "eski_uye_neden": {}}
+    karar3, _ = s.degerlendir(k3, T0 + 2 * GUN + SAAT)
+    assert [(k.adres, k.neden, k.sonuc) for k in karar3 if k.tur == "dus"] == [(adr(11), "kadro_disi", False)] and adr(11) not in s.bekleme
+
+
+def test_d02_motor_uctan_uca_r1_elenen_kayit_telegram_ve_bekleme(tmp_path):
+    m, _, saat, tgp = kur(tmp_path)
+    m._kadro_uygula((True, n_kadro(3, saat() - SAAT)), saat())
+    assert adr(3) in m.saha.uyeler
+    saat.ms += GUN
+    for a in m.saha.uyeler:
+        m.saha.islem_gordu(a, saat())
+    k2 = {**kadro([satir(1, 1, 89), satir(2, 2, 88)], saat() - SAAT), "eski_uye_neden": {adr(3): "r1:kopya_zarar"}}
+    m._kadro_uygula((True, k2), saat())
+    dus = kayitlar(tmp_path, "saha_dus")
+    assert [(d["adres"], d["neden"], d["sonuc"]) for d in dus] == [(adr(3), "r1_elendi", True)]
+    assert m.saha.bekleme[adr(3)] > saat() + 13 * GUN
+    assert any("R1" in x and "sonuçla" in x for x in tgp.gonderilen)
+
+
+# ================================================================================================ BTC al-tut kıyası
+class BtcHL(SahteHL):
+    def __init__(self, mumlar=None, **kw):
+        super().__init__(**kw)
+        self.mumlar = mumlar if mumlar is not None else {"1m": [], "1h": []}
+
+    def __call__(self, y):
+        if y["type"] == "candleSnapshot":
+            self.istekler.append(y)
+            return self.mumlar.get(y["req"]["interval"], [])
+        return super().__call__(y)
+
+
+DONEM = "2027-01-15T07:00:00Z"                    # = T0 − 1 sa (T0 = 2027-01-15 08:00 UTC)
+DONEM_MS = T0 - SAAT
+
+
+def test_btc_al_tut_donem_basi_bir_kez_kaydedilir_ozet_ve_fark(tmp_path):
+    hl = BtcHL({"1m": [{"t": DONEM_MS - 60_000, "o": "79000"}, {"t": DONEM_MS, "o": "80000"}, {"t": DONEM_MS + 60_000, "o": "80100"}]}, mids={"BTC": "84000", "ETH": "2000", "SOL": "100"})
+    m, _, saat, _ = kur(tmp_path, hl=hl)
+    m.donem = DONEM
+    assert m.ozet()["btc_al_tut_getiri"] is None                                                           # henüz okunmadı → "—"
+    m.piyasa_oku(saat())
+    m.btc_donem_uygula(m.btc_donem_oku(saat()))
+    assert m.btc_donem["fiyat"] == 80000.0 and m.btc_donem["kaynak"] == "mum_1m" and m.btc_donem["bas_ms"] == DONEM_MS
+    o = m.ozet()
+    assert o["btc_al_tut_getiri"] == pytest.approx(0.05) and o["btc_fark"] == pytest.approx(o["getiri"] - 0.05) and o["donem"] == DONEM
+    n = len([y for y in hl.istekler if y.get("type") == "candleSnapshot"])
+    saat.ms += 10 * 60_000
+    assert m.btc_donem_oku(saat()) is None and len([y for y in hl.istekler if y.get("type") == "candleSnapshot"]) == n   # bir kez: tekrar okunmaz
+    assert len(kayitlar(tmp_path, "btc_donem")) == 1
+    m.durum_yaz()
+    m2, *_ = kur(tmp_path, hl=hl, saat=saat)                                                                # yeniden başlatma: motor.json'dan
+    m2.donem = DONEM
+    assert m2.btc_donem["fiyat"] == 80000.0 and m2.btc_donem_oku(saat()) is None
+    m2.donem = "2027-02-01T00:00:00Z"                                                                       # yeni dönem: eski fiyat geçersiz
+    assert m2.ozet()["btc_donem_fiyat"] is None
+
+
+def test_btc_al_tut_veri_yoksa_tire_ve_pano_metni(tmp_path):
+    hl = BtcHL({"1m": [], "1h": []})
+    m, _, saat, _ = kur(tmp_path, hl=hl)
+    m.donem = DONEM
+    saat.ms = DONEM_MS + 2 * SAAT                                                                           # 15 dk'dan geç: mid yedeği yok
+    m.piyasa_oku(saat())
+    assert m.btc_donem_oku(saat()) is None
+    o = m.ozet()
+    assert o["btc_al_tut_getiri"] is None and o["btc_fark"] is None
+    assert pano.btc_metni(o) == ("BTC al-tut: —", "fark: —")
+    m.donem = None
+    assert m.btc_donem_oku(saat()) is None and m.ozet()["donem"] is None
+
+
+def test_btc_al_tut_saatlik_mum_ve_mid_yedegi(tmp_path):
+    hl = BtcHL({"1m": [], "1h": [{"t": DONEM_MS, "o": "81000"}]})
+    m, _, saat, _ = kur(tmp_path, hl=hl)
+    m.donem = DONEM
+    assert m.btc_donem_oku(saat())["kaynak"] == "mum_1h"
+    hl2 = BtcHL({"1m": [], "1h": []}, mids={"BTC": "90000", "ETH": "2000", "SOL": "100"})
+    m2, _, saat2, _ = kur(tmp_path / "b", hl=hl2)
+    m2.donem = DONEM
+    saat2.ms = DONEM_MS + 5 * 60_000
+    m2.piyasa_oku(saat2())
+    b = m2.btc_donem_oku(saat2())
+    assert b["kaynak"] == "mid" and b["fiyat"] == 90000.0
+
+
+def test_btc_al_tut_pano_ozet_md_ve_html(tmp_path):
+    ozet = {"kip": "sanal", "kasa_usd": 10000.0, "ozsermaye_usd": 10500.0, "getiri": 0.05, "btc_al_tut_getiri": -0.032, "btc_fark": 0.082, "acik": []}
+    md, _ = pano.pano_olustur(ozet, {}, {}, [], [], [], T0)
+    assert "BTC al-tut: −%3,2" in md and "fark: +%8,2" in md
+    html = pano.html_olustur(ozet, {}, {}, [], [], T0)
+    assert "BTC al-tut (aynı dönem)" in html and "−%3,2" in html and "fark: +%8,2" in html
+    bos, _ = pano.pano_olustur({**ozet, "btc_al_tut_getiri": None, "btc_fark": None}, {}, {}, [], [], [], T0)
+    assert "BTC al-tut: — · fark: —" in bos
+
+
+def test_donem_oku(tmp_path):
+    y = tmp_path / "DONEM"
+    y.write_text("2026-11-14T15:15:00Z\n", encoding="utf-8")
+    assert mt.donem_oku(y) == "2026-11-14T15:15:00Z"
+    y.write_text("bozuk", encoding="utf-8")
+    assert mt.donem_oku(y) is None and mt.donem_oku(tmp_path / "yok") is None
+    assert mt.donem_oku() is not None                                                                       # depodaki gerçek dosya geçerli
+
+
+def test_yaml_okunur():
+    assert yaml.safe_load((ROOT / "copytrade/kurallar.yaml").read_text(encoding="utf-8"))["radar_kasa_usd"] == 10000

@@ -6,7 +6,8 @@ Kararlar `Karar` olarak döner (giriş / düş / değiştir / inen_kapat) — uy
 - Giriş: slot boşsa İlk 11'in (katman `ilk11`) sahada olmayan, beklemede olmayan en iyi sıralısı. K‑44: boş slot doldurma günlük sınıra SAYILMAZ; `canli_gunde_degisiklik` yalnız sahadaki üyeyi değiştirmek (histerezis) için.
 - Değiştirme (histerezis): aday sıra ≤ N **ve** üye sıra > İlk 11 sınırı **ve** aday formu ≥ üye formu + `canli_histerezis_puan` → üye "daha_iyisi_geldi" (sonuç dışı) ile iner.
 - Düşme — anında: slot düşüşü ≥ `canli_slot_dusus_oran`, kaldıraç > `radar_max_kaldirac` (R1/4); günlük (yeni `kosu_ms`): sıra 2 gün üst üste > `canli_sira_dus`, `canli_islem_yok_saat` saat işlem yok (sonuç dışı);
-  **kadro dışı (K‑39):** kadroda yok / sıra > `canli_kadro_disi_sira` durumu İKİ FARKLI UTC GÜNÜNÜN kadrosunda üst üste görülürse düşer (`kadro_disi`); düşme SONUÇ DIŞIDIR, bekleme yok. **Gün başına yalnız İLK kadro uygulanır (K‑39):** aynı `kosu_ms` UTC gününde gelen ikinci kadro
+  **R1 elemesi (D-02, 14.11 denetim):** kadroda yok ve kadro `eski_uye_neden[adres]` `r1:` ile başlıyorsa AYNI gün SONUÇLA düşer (`r1_elendi`, `canli_bekleme_gun` bekleme);
+  **kadro dışı (K‑39):** kadroda yok (R1 dışı neden: `r0_disi`, `sira_disi`, `soguyan`, alan yok) / sıra > `canli_kadro_disi_sira` durumu İKİ FARKLI UTC GÜNÜNÜN kadrosunda üst üste görülürse düşer (`kadro_disi`); düşme SONUÇ DIŞIDIR, bekleme yok. **Gün başına yalnız İLK kadro uygulanır (K‑39):** aynı `kosu_ms` UTC gününde gelen ikinci kadro
   saha kararlarını tetiklemez (ilk kadro `gun_kadro`da saklanır; yeniden başlatmada da ilki kullanılır). SONUÇLA düşen (slot, sıra, kadro dışı, kaldıraç/R1) `canli_bekleme_gun` gün sahaya dönemez; sonuç dışı düşenin bekleme cezası yok.
 - Korelasyon: sahada birbirine ≥ `canli_kor_esik` benzeyen (bağlı bileşen) en çok `canli_kor_max` kişi; ihlal eden aday atlanır (`kor_kirpildi`).
 - Kadro bayat / yok (`kosu_ms` > `canli_kadro_eski_saat` saat): yeni giriş yok, düşme kuralları çalışır (günlük sıra kuralları kadro verisi gerektirdiğinden yeni kosu_ms olmadan işlemez;
@@ -70,6 +71,13 @@ def kor_bilesen_boyutu(adresler: list[str], kor: dict | None, esik: float) -> in
     for a in adresler:
         sayi[bul(a)] = sayi.get(bul(a), 0) + 1
     return max(sayi.values())
+
+
+def r1_elendi(kadro: dict | None, adres: str) -> bool:
+    """D-02 (14.11 denetim): kadro.json `eski_uye_neden[adres]` (radar_kadro.onceki_karsilastir) `r1:` ile başlıyorsa üye bugünkü havuzda R1'den ELENDİ (RADAR_V1 §5: sonuçla düşer).
+    `r0_disi` / `sira_disi` / `soguyan` ya da alan yok → False (K‑39 iki gün kadro dışı kuralı)."""
+    neden = ((kadro or {}).get("eski_uye_neden") or {}).get(adres)
+    return isinstance(neden, str) and neden.startswith("r1:")
 
 
 class Saha:
@@ -190,6 +198,9 @@ class Saha:
         for adres in list(self.uyeler):
             u, s = self.uyeler[adres], satirlar.get(adres)
             gun_k = self._gun(int(self.gun_kadro["kadro"]["kosu_ms"])) if self.gun_kadro else self._gun(simdi_ms)
+            if s is None and r1_elendi(self.gun_kadro["kadro"] if self.gun_kadro else None, adres):
+                self._dus(adres, "r1_elendi", True, simdi_ms, kararlar)     # D-02 (14.11 denetim, RADAR §5): R1'den elenen AYNI gün sonuçla düşer; `canli_bekleme_gun` gün bekleme
+                continue
             if s is None or int(s["sira"]) > int(self.rules["canli_kadro_disi_sira"]):
                 gunler = list(u.get("disi_gunler") or [])
                 if gun_k not in gunler:

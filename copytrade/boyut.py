@@ -26,6 +26,15 @@ def saha_sayisi(kasa_usd: float, rules: dict | None = None) -> int:
     return n
 
 
+def radar_kasa(rules: dict | None = None, kasa_usd: float | None = None) -> float:
+    """D-01 (14.11 denetim, K-66): radar oynatma kasası ($; tarama, kadro, isabet). Öncelik: verilen `kasa_usd` (CLI) → `radar_kasa_usd` (motorun sanal kasasıyla aynı, 10.000 $)
+    → eski `canli_kasa_usd`. Gerçek para anlamı yoktur; `canli_kasa_usd` (gerçek kip, ≤ 1.000 $) değişmez."""
+    rules = rules or load_rules()
+    if kasa_usd is not None:
+        return float(kasa_usd)
+    return float(rules.get("radar_kasa_usd") or rules["canli_kasa_usd"])
+
+
 def slot_usd(kasa_usd: float | None = None, rules: dict | None = None) -> float:
     """Slot kasası = kasa / N (kasa verilmezse `canli_kasa_usd`)."""
     rules = rules or load_rules()

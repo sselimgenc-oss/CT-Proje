@@ -1,7 +1,7 @@
 """Günlük kadro (docs/RADAR_V1.md §5; görev T3 §3): T2 `havuz.json` → R2 form puanı → sıra = form azalan; 1–11 `ilk11`, 12–30 `yedek`. Saha kararları (slot −%10, bekleme, günde 2 değişiklik) burada DEĞİL:
 T4 motoru `kadro.json`'u okuyup §5 kurallarını uygular.
 
-    python -m copytrade.radar_kadro --havuz radar/2026-11-05/havuz.json [--kasa 1000] [--onceki-kadro onceki/kadro.json]    # → radar/2026-11-05/kadro.json
+    python -m copytrade.radar_kadro --havuz radar/2026-11-05/havuz.json [--kasa 10000] [--onceki-kadro onceki/kadro.json]    # → radar/2026-11-05/kadro.json
 
 `kadro.json` (docs/VERI_SOZLESMESI.md "Radar kadro"): {sema "radar-kadro-v1", kosu_ms, kasa_usd, slot_usd, saha_n, gecti_sayisi, soguyan[], satirlar[{adres, sira, katman, form, bilesenler{G,K,I1,I2,Y,H},
 kopya_getiri_7g, max_kaldirac, form_h_siz, sira_h_siz}], korelasyon{adresler, gun_sayisi, matris}, h_siz_girenler[], onceki_kosu_ms, elenenler[], eski_uye_neden{}}.
@@ -69,12 +69,12 @@ def onceki_karsilastir(onceki: dict | None, havuz: dict, satirlar: list[dict], s
 
 
 def kadro_olustur(havuz: dict, rules: dict | None = None, kasa_usd: float | None = None, onceki: dict | None = None) -> dict:
-    """Havuz → kadro (saf fonksiyon). `kasa_usd` verilmezse `canli_kasa_usd`; slot = kasa / N (`boyut`, K‑28). Havuzda 30'dan az `gecti` varsa kadro o kadardır.
+    """Havuz → kadro (saf fonksiyon). `kasa_usd` verilmezse `radar_kasa_usd` (D-01, K-66: motorun sanal kasasıyla aynı; `boyut.radar_kasa`); slot = kasa / N (`boyut`, K‑28). Havuzda 30'dan az `gecti` varsa kadro o kadardır.
     `onceki` (önceki günün kadrosu, isteğe bağlı) yalnız bilgi alanları `elenenler`/`eski_uye_neden` içindir; seçimi etkilemez."""
     rules = rules or load_rules()
     if havuz.get("sema") != HAVUZ_SEMA:
         raise ValueError(f"havuz şeması {HAVUZ_SEMA} olmalı: {havuz.get('sema')!r}")
-    kasa = float(rules["canli_kasa_usd"] if kasa_usd is None else kasa_usd)
+    kasa = boyut.radar_kasa(rules, kasa_usd)
     n = boyut.saha_sayisi(kasa, rules)
     puanli, soguyan = form_puanla(havuz["satirlar"], rules)
     havuz_satiri = {h["adres"]: h for h in havuz["satirlar"]}
@@ -101,7 +101,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--havuz", type=Path, required=True)
     ap.add_argument("--cikti", type=Path, default=None, help="varsayılan: havuz.json'ın yanına kadro.json")
-    ap.add_argument("--kasa", type=float, default=None, help="kasa $ (varsayılan kurallar.yaml canli_kasa_usd)")
+    ap.add_argument("--kasa", type=float, default=None, help="kasa $ (varsayılan kurallar.yaml radar_kasa_usd; D-01)")
     ap.add_argument("--onceki-kadro", type=Path, default=None, help="önceki günün kadro.json'u (yalnız bilgi: elenenler, eski_uye_neden); yoksa boş")
     args = ap.parse_args(argv)
     rules = load_rules()
