@@ -1,4 +1,5 @@
-{"zaman_ms":1794673806644,"olay":"kadro_kasa_farkli","kadro_kasa_usd":1000.0,"motor_kasa_usd":10000.0}
-{"zaman_ms":1794673806644,"olay":"telegram","metin":"⚠️ UYARI: kadro kasası farklı (sanal · deneme parası)\n━━━━━━━━━━━━━━\nRadar kadrosu 1.000 $ kasa ölçeğinde seçildi; motor kasası 10.000 $.\nKadro uygulanıyor (durdurma yok); radar_kasa_usd ile motor sanal kasasını eşitleyin.","acik":true}
-{"zaman_ms":1794673806645,"olay":"saha_eksik","saha":0,"n":11,"neden":"uygun_aday_yok"}
-{"zaman_ms":1794673806649,"olay":"bekleme_vardiyasi","gerekli":"v3"}
+{"zaman_ms":1794684606178,"olay":"kadro_surum_bekleniyor","gerekli":"v4","gelen":"v3"}
+{"zaman_ms":1794684606179,"olay":"telegram","metin":"ℹ️ BİLGİ: yeni seçim yapısı bekleniyor (sanal · deneme parası)\n━━━━━━━━━━━━━━\nGelen kadro sürümü v3, gereken v4. Trader alınmıyor; kasa nakitte.","acik":true}
+{"zaman_ms":1794684606185,"olay":"bekleme_vardiyasi","gerekli":"v4"}
+{"zaman_ms":1794684608607,"olay":"btc_donem","donem":"2026-11-14T19:30:00Z","bas_ms":1794684600000,"fiyat":65538.0,"kaynak":"mum_1m","mum_ms":1794684600000,"okundu_ms":1794684606185}
+{"zaman_ms":1794684608608,"olay":"tur","ozsermaye_usd":10000.0}

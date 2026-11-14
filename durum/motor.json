@@ -1,5 +1,12 @@
 {
- "btc_donem": null,
+ "btc_donem": {
+  "bas_ms": 1794684600000,
+  "donem": "2026-11-14T19:30:00Z",
+  "fiyat": 65538.0,
+  "kaynak": "mum_1m",
+  "mum_ms": 1794684600000,
+  "okundu_ms": 1794684606185
+ },
  "dur_bekliyor": false,
  "funding_gercek_usd": 0.0,
  "funding_kimlik": [],
@@ -23,6 +30,6 @@
  "tg_offset": 0,
  "ucret_gercek_usd": 0.0,
  "ucret_tahmin_say": 0,
- "vardiya": "43613537627",
- "yazildi_ms": 1794673806648
+ "vardiya": "43629614248",
+ "yazildi_ms": 1794685213057
 }

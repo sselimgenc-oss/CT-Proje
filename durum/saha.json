@@ -1,56 +1,14 @@
 {
- "alarm_gunu": null,
+ "alarm_gunu": "2026-11-14",
  "bekleme": {},
  "degisiklik": {
   "adet": 0,
   "gun": null
  },
- "gun_kadro": {
-  "gun": "2026-11-14",
-  "kadro": {
-   "elenenler": [
-    {
-     "adres": "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad",
-     "neden": "islem_az",
-     "onceki_sira": 1
-    },
-    {
-     "adres": "0xfc76f730c3e2939825484e0a777368075d779ef9",
-     "neden": "islem_az",
-     "onceki_sira": 2
-    },
-    {
-     "adres": "0x424d756e19469ddb13c753b280cc0e9d8c95420e",
-     "neden": "tutma_kisa",
-     "onceki_sira": 3
-    }
-   ],
-   "eski_uye_neden": {
-    "0x424d756e19469ddb13c753b280cc0e9d8c95420e": "r1:tutma_kisa",
-    "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": "r1:islem_az",
-    "0xfc76f730c3e2939825484e0a777368075d779ef9": "r1:islem_az"
-   },
-   "gecti_sayisi": 0,
-   "h_siz_girenler": [],
-   "kasa_usd": 1000.0,
-   "korelasyon": {
-    "adresler": [],
-    "gun_sayisi": 0,
-    "matris": []
-   },
-   "kosu_ms": 1794667566706,
-   "onceki_kosu_ms": 1794639432898,
-   "radar_surum": "v3",
-   "saha_n": 5,
-   "satirlar": [],
-   "sema": "radar-kadro-v1",
-   "slot_usd": 200.0,
-   "soguyan": []
-  }
- },
+ "gun_kadro": null,
  "inen": {},
  "k39_gecis": true,
  "kurulu": false,
- "son_kosu_ms": 1794667566706,
+ "son_kosu_ms": 0,
  "uyeler": {}
 }
