@@ -1,8 +1,8 @@
-# Canlı rapor — 2026-11-14 20:30 UTC
+# Canlı rapor — 2026-11-14 20:41 UTC
 
-**Kip** sanal · vardiya `43629614248` · saha 0/11 (inen 0) · **bekleme vardiyası** (saha boş / kadro bekleniyor)
+**Kip** sanal · vardiya `43629614248` · saha 11/11 (inen 0) · **bekleme vardiyası** (saha boş / kadro bekleniyor)
 
-**Saha doluluğu** saha 0/11 · bugün R1'i geçen trader: —
+**Saha doluluğu** saha 11/11 · bugün R1'i geçen trader: 21
 
 ## Kasa
 
@@ -25,7 +25,17 @@ _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun gü
 
 ## Saha değişiklikleri (24 sa)
 
-değişiklik yok
+- 2026-11-14 20:40 giriş 0x428cbb… — ilk_gun
+- 2026-11-14 20:40 giriş 0x6834b2… — ilk_gun
+- 2026-11-14 20:40 giriş 0x557beb… — ilk_gun
+- 2026-11-14 20:40 giriş 0x6463f5… — ilk_gun
+- 2026-11-14 20:40 giriş 0x0bae55… — ilk_gun
+- 2026-11-14 20:40 giriş 0x5d92ea… — ilk_gun
+- 2026-11-14 20:40 giriş 0xe69acc… — ilk_gun
+- 2026-11-14 20:41 giriş 0xf1881e… — ilk_gun
+- 2026-11-14 20:41 giriş 0x5d908c… — ilk_gun
+- 2026-11-14 20:41 giriş 0x3d21e3… — ilk_gun
+- 2026-11-14 20:41 giriş 0x298830… — ilk_gun
 
 ## Risk olayları (24 sa)
 
@@ -33,7 +43,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 56 dk · WS kopma — / yeniden bağlanma — · boşluk yok · REST 429 0
+- süre 72 dk · WS kopma — / yeniden bağlanma — · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
@@ -44,9 +54,23 @@ olay yok
 
 ## Dönem (kalıcı seri)
 
-- motor 10.000,00 $ · BTC al-tut 9.990,46 $ · %4/ay hedef çizgisi 10.002,45 $
-- katkı: — (henüz slot yok)
+- motor 10.000,00 $ · BTC al-tut 9.993,67 $ · %4/ay hedef çizgisi 10.002,45 $
+- katkı: İlk 11 6 slot +0,00 $ · Yedek 5 slot +0,00 $
 - saha doluluğu — · nakitte kalan — (0,0 gün ölçüldü)
 - kullanılan sermaye getirisi — · ort. brüt maruziyet — · ort. net — · risk kilidi olayı 0 (gölge eğri yok)
 - atlanan sinyal — · yuvarlanan emir — (emir 0, atlanan 0)
 - radar hunisi: — (kadroda `huni` yok)
+
+| trader | katman | giriş | çıkış | net $ |
+|---|---|---|---|---|
+| 0x428cbb… | ilk11 | 14.11 23:40 | sahada | +0,00 $ |
+| 0x6834b2… | ilk11 | 14.11 23:40 | sahada | +0,00 $ |
+| 0x557beb… | ilk11 | 14.11 23:40 | sahada | +0,00 $ |
+| 0x6463f5… | ilk11 | 14.11 23:40 | sahada | +0,00 $ |
+| 0x0bae55… | ilk11 | 14.11 23:40 | sahada | +0,00 $ |
+| 0x5d92ea… | ilk11 | 14.11 23:40 | sahada | +0,00 $ |
+| 0xe69acc… | yedek | 14.11 23:40 | sahada | +0,00 $ |
+| 0xf1881e… | yedek | 14.11 23:40 | sahada | +0,00 $ |
+| 0x5d908c… | yedek | 14.11 23:40 | sahada | +0,00 $ |
+| 0x3d21e3… | yedek | 14.11 23:40 | sahada | +0,00 $ |
+| 0x298830… | yedek | 14.11 23:40 | sahada | +0,00 $ |

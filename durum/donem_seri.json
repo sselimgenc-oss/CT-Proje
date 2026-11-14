@@ -5,16 +5,128 @@
   "kapasite_ms": 0.0,
   "nakit_ms": 0.0,
   "slot_ms": 0.0,
-  "son_ms": 1794687930016,
+  "son_ms": 1794688836304,
   "sure_ms": 0
  },
  "donem": "2026-11-14T19:30:00Z",
  "gunler": [
   {
-   "btc": 65475.5,
+   "btc": 65496.5,
    "gun": "2026-11-14",
    "ozsermaye_usd": 10000.0
   }
  ],
- "kasa_usd": 10000.0
+ "kasa_usd": 10000.0,
+ "slotlar": [
+  {
+   "adres": "0x428cbb506337bcc550f02bd3689671f52a7fa766",
+   "cikis_ms": null,
+   "cikis_neden": null,
+   "giris_ms": 1794688836304,
+   "giris_neden": "ilk_gun",
+   "katman": "ilk11",
+   "net_usd": 0.0,
+   "sonuc": null
+  },
+  {
+   "adres": "0x6834b221185e8af4d573583a570c47406804f5f6",
+   "cikis_ms": null,
+   "cikis_neden": null,
+   "giris_ms": 1794688836304,
+   "giris_neden": "ilk_gun",
+   "katman": "ilk11",
+   "net_usd": 0.0,
+   "sonuc": null
+  },
+  {
+   "adres": "0x557bebb117246d8f7b3388bda9afc5261f74f84c",
+   "cikis_ms": null,
+   "cikis_neden": null,
+   "giris_ms": 1794688836304,
+   "giris_neden": "ilk_gun",
+   "katman": "ilk11",
+   "net_usd": 0.0,
+   "sonuc": null
+  },
+  {
+   "adres": "0x6463f53d916cb7741a05a2c11aebdbd7324342f5",
+   "cikis_ms": null,
+   "cikis_neden": null,
+   "giris_ms": 1794688836304,
+   "giris_neden": "ilk_gun",
+   "katman": "ilk11",
+   "net_usd": 0.0,
+   "sonuc": null
+  },
+  {
+   "adres": "0x0bae55746c0bb3e7e07ace3012b08c1be51c21a4",
+   "cikis_ms": null,
+   "cikis_neden": null,
+   "giris_ms": 1794688836304,
+   "giris_neden": "ilk_gun",
+   "katman": "ilk11",
+   "net_usd": 0.0,
+   "sonuc": null
+  },
+  {
+   "adres": "0x5d92eace48c69a6fe4498093789e68deb7e28b5d",
+   "cikis_ms": null,
+   "cikis_neden": null,
+   "giris_ms": 1794688836304,
+   "giris_neden": "ilk_gun",
+   "katman": "ilk11",
+   "net_usd": 0.0,
+   "sonuc": null
+  },
+  {
+   "adres": "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a",
+   "cikis_ms": null,
+   "cikis_neden": null,
+   "giris_ms": 1794688836304,
+   "giris_neden": "ilk_gun",
+   "katman": "yedek",
+   "net_usd": 0.0,
+   "sonuc": null
+  },
+  {
+   "adres": "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3",
+   "cikis_ms": null,
+   "cikis_neden": null,
+   "giris_ms": 1794688836304,
+   "giris_neden": "ilk_gun",
+   "katman": "yedek",
+   "net_usd": 0.0,
+   "sonuc": null
+  },
+  {
+   "adres": "0x5d908c88be270889c0953e7dff1c8e1d699ceea3",
+   "cikis_ms": null,
+   "cikis_neden": null,
+   "giris_ms": 1794688836304,
+   "giris_neden": "ilk_gun",
+   "katman": "yedek",
+   "net_usd": 0.0,
+   "sonuc": null
+  },
+  {
+   "adres": "0x3d21e3d9af7ca1d76305c9eb2fb510b7af920659",
+   "cikis_ms": null,
+   "cikis_neden": null,
+   "giris_ms": 1794688836304,
+   "giris_neden": "ilk_gun",
+   "katman": "yedek",
+   "net_usd": 0.0,
+   "sonuc": null
+  },
+  {
+   "adres": "0x2988309f156f806cd1703fff8d29ddfa458fd4ef",
+   "cikis_ms": null,
+   "cikis_neden": null,
+   "giris_ms": 1794688836304,
+   "giris_neden": "ilk_gun",
+   "katman": "yedek",
+   "net_usd": 0.0,
+   "sonuc": null
+  }
+ ]
 }
