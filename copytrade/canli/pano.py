@@ -208,6 +208,17 @@ def doluluk_ozeti(ds: dict) -> tuple[float | None, float | None, float]:
     return ((float(dl.get("slot_ms") or 0) / kap) if kap > 0 else None, (float(dl.get("nakit_ms") or 0) / sure) if sure > 0 else None, sure / GUN_MS)
 
 
+def maruziyet_ozeti(ds: dict, oz: float, kasa: float) -> dict:
+    """M-04 (kullanıcı kararı 14.11; yalnız rapor): zaman ağırlıklı ortalama brüt ve |net| maruziyet ($ ve kasaya oran) ve KULLANILAN sermaye getirisi = (özsermaye − kasa) / ortalama brüt
+    maruziyet (kasanın tamamına değil, ortalamada piyasada duran paraya göre). Veri yoksa None. Yeni karar yok."""
+    dl = ds.get("doluluk") or {}
+    sure = float(dl.get("sure_ms") or 0)
+    brut = float(dl.get("brut_ms") or 0) / sure if sure > 0 and dl.get("brut_ms") is not None else None
+    net = float(dl.get("net_ms") or 0) / sure if sure > 0 and dl.get("net_ms") is not None else None
+    return {"brut": brut, "net": net, "brut_oran": brut / kasa if brut is not None and kasa > 0 else None, "net_oran": net / kasa if net is not None and kasa > 0 else None,
+            "sermaye_getirisi": (oz - kasa) / brut if brut and brut > 0 else None}
+
+
 def emir_orani(ds: dict) -> tuple[float | None, float | None, dict]:
     """(atlanan oranı = atlanan / (emir + atlanan), yuvarlanan oranı = yuvarlanan / emir, sayaç); veri yoksa None."""
     sy = ds.get("emir_sayac") or {}
@@ -247,6 +258,8 @@ def donem_md(ds: dict, kadro: dict) -> list[str]:
     s.append("- katkı: " + " · ".join(f"{KATMAN_AD.get(k, k)} {v['n']} slot {usd(v['net'], True)}" for k, v in sorted(so["katman"].items())) if so["katman"] else "- katkı: — (henüz slot yok)")
     dol, nakit, gun_ = doluluk_ozeti(ds)
     s.append(f"- saha doluluğu {yuzde(dol, False)} · nakitte kalan {yuzde(nakit, False)} ({tr_sayi(gun_, 1)} gün ölçüldü)")
+    mo = maruziyet_ozeti(ds, float((ds.get("gunler") or [{}])[-1].get("ozsermaye_usd") or ds.get("kasa_usd") or 0.0), float(ds.get("kasa_usd") or 0.0))
+    s.append(f"- kullanılan sermaye getirisi {yuzde(mo['sermaye_getirisi'])} · ort. brüt maruziyet {usd(mo['brut'])} · ort. net {usd(mo['net'])} · risk kilidi olayı {len(ds.get('kilitler') or [])} (gölge eğri yok)")
     at, yv, sy = emir_orani(ds)
     s.append(f"- atlanan sinyal {yuzde(at, False)} · yuvarlanan emir {yuzde(yv, False)} (emir {sy.get('emir', 0)}, atlanan {sy.get('atlanan', 0)})")
     hn = kadro.get("huni") or {}
@@ -289,10 +302,15 @@ def serit(hucreler: list[str], sinif: str = "") -> str:
     return f'<div class="sirit{(" " + sinif) if sinif else ""}" style="--sm:{tel};--sk:{mas}">{"".join(hucreler)}</div>'
 
 
-def _donem_egri_html(nok: list[tuple[int, float, float | None, float]]) -> str:
-    """Dönem eğrisi (inline SVG): motor kasası (turuncu) ↔ BTC al-tut (mavi) ↔ %4/ay hedef (gri kesikli). 2'den az nokta → açıklama."""
+def _donem_egri_html(nok: list[tuple[int, float, float | None, float]], kilitler: list[dict] | None = None) -> str:
+    """Dönem eğrisi (inline SVG): motor kasası (turuncu) ↔ BTC al-tut (mavi) ↔ %4/ay hedef (gri kesikli). 2'den az nokta → açıklama.
+    M-05 (kullanıcı kararı 14.11): risk kilidi olayları (`donem_seri.kilitler`) kırmızı dikey çizgiyle işaretlenir. Kilitsiz "gölge" eğri ÇİZİLMEZ: kilit yüzünden açılmayan / erken
+    kapanan pozisyonların sonraki fiyat yolu motor defterinde yok (ayrı bir gölge defter gerekir); bu yüzden yalnız işaret + açıklama."""
+    kilitler = kilitler or []
+    acik = (f'<div class="ha">Kilitsiz gölge eğri hesaplanmadı: kilit nedeniyle açılmayan / erken kapanan pozisyonların sonraki yolu defterde tutulmuyor. '
+            f'Kilit olayı: {len(kilitler)}' + (" (" + ", ".join(f"{_tsi(int(k['ms']), '%d.%m %H:%M')} {esc(str(k.get('tur')))}" for k in kilitler[-5:]) + ")" if kilitler else "") + ' — grafikte kırmızı çizgi.</div>')
     if len(nok) < 2:
-        return VERI_YOK.format("dönem eğrisi ilk UTC gün kaydından sonra çizilir")
+        return VERI_YOK.format("dönem eğrisi ilk UTC gün kaydından sonra çizilir") + acik
     x0, x1 = nok[0][0], nok[-1][0]
     deg = [v for n in nok for v in (n[1], n[2], n[3]) if v is not None]
     lo, hi = min(deg), max(deg)
@@ -302,10 +320,12 @@ def _donem_egri_html(nok: list[tuple[int, float, float | None, float]]) -> str:
                                     + " ".join(xy(n[0], n[i]) for n in nok if n[i] is not None) + '"/>')
     btc = cizgi(2, "#5b9dff") if sum(1 for n in nok if n[2] is not None) >= 2 else ""
     son = nok[-1]
-    return (f'<svg viewBox="0 0 300 80" preserveAspectRatio="none" class="gr">{cizgi(3, "#8a8a94", ' stroke-dasharray="4 3"')}{btc}{cizgi(1, "#f5a524")}</svg>'
+    isaret = "".join(f'<line x1="{(int(k["ms"]) - x0) / xa * 300:.1f}" y1="0" x2="{(int(k["ms"]) - x0) / xa * 300:.1f}" y2="80" stroke="#ff5d5d" stroke-width="1" vector-effect="non-scaling-stroke"/>'
+                     for k in kilitler if x0 <= int(k.get("ms") or 0) <= x1)
+    return (f'<svg viewBox="0 0 300 80" preserveAspectRatio="none" class="gr">{isaret}{cizgi(3, "#8a8a94", ' stroke-dasharray="4 3"')}{btc}{cizgi(1, "#f5a524")}</svg>'
             f'<div class="ek"><span>{_tsi(x0, "%d.%m")}</span><span>{_tsi(x1, "%d.%m %H:%M")}</span></div>'
             f'<div class="ek ek2"><span class="lg"><i style="background:#f5a524"></i>motor {esc(tl2(son[1]))}</span><span class="lg"><i style="background:#5b9dff"></i>BTC al-tut {esc(tl2(son[2]))}</span>'
-            f'<span class="lg"><i style="background:#8a8a94"></i>%4/ay hedef {esc(tl2(son[3]))}</span></div>')
+            f'<span class="lg"><i style="background:#8a8a94"></i>%4/ay hedef {esc(tl2(son[3]))}</span></div>' + acik)
 
 
 def _katki_html(so: dict) -> str:
@@ -348,6 +368,41 @@ def _huni_html(kadro: dict | None) -> str:
     nd = hn.get("neden") or {}
     top = sum(nd.values()) or 1
     return cubuk + '<div class="ha">Elenme nedenleri</div>' + "".join(f'<div class="s"><b>{n}</b> × {esc(k)} <span class="so">(%{n / top * 100:.0f})</span></div>' for k, n in list(nd.items())[:8])
+
+
+def _karar_kutusu_html(ozet: dict) -> str:
+    """31.12 karar kutusu (K-66 başarı ölçütü): aylık eşdeğer ≥ hedef VE aynı dönemde BTC al-tut'tan iyi. Motorun `ozet.json` alanları; yeni hesap yok."""
+    ay, hd, bt, gt = ozet.get("aylik_esdeger"), ozet.get("aylik_hedef"), ozet.get("btc_al_tut_getiri"), ozet.get("getiri")
+    hedef = "—" if ay is None or hd is None else ("✓" if ay >= hd else "✗")
+    btc = "—" if bt is None or gt is None else ("✓" if gt > bt else "✗")
+    gec = ozet.get("hedef_gecer")
+    return (f'<div class="s">aylık eşdeğer ≥ %{tr_sayi(float(hd if hd is not None else 0.04) * 100, 0)}: <b>{hedef}</b> <span class="so">({esc(yuzde(ay))})</span></div>'
+            f'<div class="s">BTC al-tut\'tan iyi: <b>{btc}</b> <span class="so">(biz {esc(yuzde(gt))} · BTC {esc(yuzde(bt))})</span></div>'
+            f'<div class="s">Bugün itibarıyla: <b class="{"art" if gec else ("eks" if gec is False else "yok")}">{"GEÇİYOR" if gec else ("GEÇMİYOR" if gec is False else "—")}</b></div>'
+            '<div class="ha">Değerlendirme 31.12.2026; geçmezse bu yapıyla gerçek para yok (K-66).</div>')
+
+
+def _isabet_ozet_html(isabetler: list[dict], ozet: dict) -> str:
+    """M-05: seçim isabeti ÖZETİ (karar kutusunun yanında): ölçüm sayısı, ortalama IC, İlk 11 − havuz / − elenen farkının ortalaması ve pozitif olan ölçüm payı."""
+    if not isabetler:
+        return VERI_YOK.format(isabet_yok_metni(ozet))
+    ic = [float(i["ic"]) for i in isabetler if i.get("ic") is not None]
+    fh = [float(i["fark_ilk11_havuz"]) for i in isabetler if i.get("fark_ilk11_havuz") is not None]
+    fe = [float(i["fark_ilk11_elenen"]) for i in isabetler if i.get("fark_ilk11_elenen") is not None]
+    ort = lambda x: sum(x) / len(x) if x else None                      # noqa: E731
+    return (f'<div class="s">{len(isabetler)} ölçüm · ortalama IC <b>{"—" if not ic else format(ort(ic), "+.2f")}</b></div>'
+            f'<div class="s">İlk 11 − havuz ort. <b>{esc(yuzde(ort(fh)))}</b> <span class="so">({sum(1 for x in fh if x > 0)}/{len(fh)} pozitif)</span></div>'
+            f'<div class="s">İlk 11 − elenen ort. <b>{esc(yuzde(ort(fe)))}</b> <span class="so">({sum(1 for x in fe if x > 0)}/{len(fe)} pozitif)</span></div>'
+            '<div class="ha">Pozitif = seçilenler sonraki 7 günde havuzdan / elenenlerden iyi (ayrıntı DÖNEM sekmesinde).</div>')
+
+
+def _maruziyet_ozet_html(mo: dict) -> str:
+    if mo["brut"] is None:
+        return VERI_YOK.format("maruziyet kaydı birikiyor")
+    return (f'<div class="s">kullanılan sermaye getirisi <b>{esc(yuzde(mo["sermaye_getirisi"]))}</b></div>'
+            f'<div class="s">ort. brüt maruziyet <b>{esc(tl2(mo["brut"]))}</b> <span class="so">(kasanın {esc(yuzde(mo["brut_oran"], False))})</span></div>'
+            f'<div class="s">ort. net maruziyet <b>{esc(tl2(mo["net"]))}</b> <span class="so">(kasanın {esc(yuzde(mo["net_oran"], False))})</span></div>'
+            '<div class="ha">Kullanılan sermaye getirisi = (özsermaye − kasa) / zaman ağırlıklı ortalama brüt pozisyon; yalnız bilgi.</div>')
 
 
 def _isabet_html(isabetler: list[dict], ozet: dict) -> str:
@@ -666,7 +721,8 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     so = slot_ozeti(ds)
     dol, nakit, dol_gun = doluluk_ozeti(ds)
     at_or, yv_or, sy = emir_orani(ds)
-    egri = _donem_egri_html(egri_noktalari(ds, float(kurallar.get("basari_aylik_hedef", 0.04)), simdi_ms))
+    egri = _donem_egri_html(egri_noktalari(ds, float(kurallar.get("basari_aylik_hedef", 0.04)), simdi_ms), ds.get("kilitler"))
+    mo = maruziyet_ozeti(ds, oz, kasa)
     hafta_goster = hafta is not None and (ozet.get("getiri") is None or abs(hafta - float(ozet["getiri"])) > 0.0005)        # 14.11: <7 gün ya da "Başlangıçtan beri" ile aynıysa gösterilmez
     ust_hucre = [hucre("Özsermaye", tl(oz), "", f"kasa {tr_sayi(kasa, 0)} $"), hucre("Bugün", tyuz(gun), renk(gun), (tl(oz - float(gun_basi), True) + " · UTC gün başına göre") if gun_basi is not None else ""),
                  *([hucre("Bu hafta", tyuz(hafta), renk(hafta), "son 7 gün")] if hafta_goster else []),
@@ -720,6 +776,9 @@ input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler sectio
 <div class="p"><div class="pb">Risk payı <span>sınıra göre</span></div><div class="pi"><div class="ha">Günlük kayıp {esc(yuzde(max(-(gun or 0.0), 0.0), False))} (sınır %{tr_sayi(gk_sinir * 100, 0)}; UTC gün başı özsermayesine göre, motorun freni)</div><div class="ol"><i style="width:{gun_kayip_pay:.0f}%"></i></div><div class="ha">Zirveden düşüş {esc(yuzde(dusus, False))} (sınır %{tr_sayi(dd_sinir * 100, 0)}; motorun zirvesine göre)</div><div class="ol"><i style="width:{dusus_pay:.0f}%"></i></div>{risk_html}</div></div>
 </div>
 <div class="p g2"><div class="pb">Dönem eğrisi <span>motor ↔ BTC al-tut ↔ %4/ay hedef · UTC gün sonları</span></div><div class="pi">{egri}</div></div>
+<div class="p"><div class="pb">31.12 karar kutusu <span>ayda ≥ %4 ve BTC'den iyi</span></div><div class="pi">{_karar_kutusu_html(ozet)}</div></div>
+<div class="p"><div class="pb">Seçim isabeti <span>özet</span></div><div class="pi">{_isabet_ozet_html(isabetler or [], ozet)}</div></div>
+<div class="p"><div class="pb">Sermaye ve maruziyet <span>dönem boyu</span></div><div class="pi">{_maruziyet_ozet_html(mo)}</div></div>
 </section>
 <section class="n6 izgara">
 <div class="p g3"><div class="pb">Trader katkısı <span>dönem boyu · kapanmış slotlar dahil</span></div>{_katki_html(so)}</div>

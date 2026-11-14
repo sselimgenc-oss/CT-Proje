@@ -1693,6 +1693,15 @@ class Motor:
             self._slot_net_guncelle(adres)
             r["cikis_ms"], r["cikis_neden"], r["sonuc"] = simdi, neden, bool(sonuc)
 
+    def donem_kilit(self, tur: str, simdi: int) -> None:
+        """M-05 (pano, 14.11): dönem boyu risk kilidi olayları [{ms, tur}] (günlük kayıp/sert fren, zirve düşüşü, felaket stopu); panoda dönem eğrisinde işaretlenir. En çok 500 kayıt."""
+        ds = self._ds()
+        if ds is None:
+            return
+        k = ds.setdefault("kilitler", [])
+        k.append({"ms": int(simdi), "tur": str(tur)})
+        del k[:-500]
+
     def donem_emir_say(self, tur: str, neden: str | None = None) -> None:
         """Pano (14.11) dönem boyu emir sayacı: `emir` (gönderilen), `atlanan` (`emir_yok`), `yuvarlanan` (min emre yuvarlanan gönderilen), `atlama_neden` {neden: adet}."""
         ds = self._ds()
@@ -1707,7 +1716,8 @@ class Motor:
         """F-06 (14.11 denetim): `durum/donem_seri.json` = {donem, bas_ms, kasa_usd, btc_donem_fiyat, gunler: [{gun (UTC), ozsermaye_usd, btc}]}. Her dakika o UTC gününün kaydı
         güncellenir: gün bitince son değer = gün sonu. Dönem değişince seri sıfırdan başlar. Dönem yoksa yazılmaz.
         Pano 14.11 ekleri: `slotlar` (açık slotların net K/Z'si her güncellemede; dönem başında sahada olan üye `giris_neden` "donem_basi" ile eklenir), `doluluk` {sure_ms, slot_ms
-        (Σ sahadaki üye × süre), kapasite_ms (Σ saha_n × süre), nakit_ms (Σ nakit payı × süre; nakit payı = 1 − min(1, brüt pozisyon / özsermaye)), son_ms}; adım ≤ 5 dk sayılır."""
+        (Σ sahadaki üye × süre), kapasite_ms (Σ saha_n × süre), nakit_ms (Σ nakit payı × süre; nakit payı = 1 − min(1, brüt pozisyon / özsermaye)), brut_ms / net_ms (M-04: Σ brüt $ / |net| $ × süre),
+        son_ms}; adım ≤ 5 dk sayılır. `kilitler` (M-05) `donem_kilit` ile."""
         if self._ds() is None:
             return
         for adres in self.hesap.slot_bas:
@@ -1718,7 +1728,11 @@ class Motor:
         if dl.get("son_ms") is not None and 0 < simdi - int(dl["son_ms"]) <= self.DOLULUK_ADIM_MAX_MS:
             dt = simdi - int(dl["son_ms"])
             oz = self.ozsermaye()
-            nakit = 1.0 - min(1.0, max(0.0, self.hesap.brut_toplam(self.marks) / oz)) if oz > 0 else 0.0
+            brut = self.hesap.brut_toplam(self.marks)
+            nakit = 1.0 - min(1.0, max(0.0, brut / oz)) if oz > 0 else 0.0
+            net = abs(sum(p.sz * (self.marks.get(c) or p.giris) for cs in self.hesap.poz.values() for c, p in cs.items()))
+            dl["brut_ms"] = float(dl.get("brut_ms") or 0.0) + brut * dt              # M-04: zaman ağırlıklı brüt maruziyet ($ × ms)
+            dl["net_ms"] = float(dl.get("net_ms") or 0.0) + net * dt                 # M-04: zaman ağırlıklı |net uzun − kısa| ($ × ms)
             dl["sure_ms"] = int(dl["sure_ms"]) + dt
             dl["slot_ms"] = float(dl["slot_ms"]) + len(self.saha.uyeler) * dt
             dl["kapasite_ms"] = float(dl["kapasite_ms"]) + int(self.saha.n) * dt
@@ -1848,6 +1862,7 @@ class Motor:
             return
         for ev in self.risk.ozsermaye_isle(oz, simdi):
             self.kayit({"olay": "risk", "tur": ev, "ozsermaye": oz})
+            self.donem_kilit(ev, simdi)
             if ev == "zirve_dusus":
                 self.dur_tetikle("zirve_dusus")
             elif ev == "gunluk_kapat":                                                          # K-62: günlük sert fren — hepsi kapanır, DUR değil (ertesi gün sürer)
@@ -1875,6 +1890,7 @@ class Motor:
                 if aleyhe >= oran - 1e-12:
                     ok, _ = self._kapat_coin(adres, coin, "felaket_stop", simdi)
                     self.kayit({"olay": "felaket_stop", "adres": adres, "coin": coin, "giris": p.giris, "mark": mk, "aleyhe": aleyhe, "kapandi": bool(ok)})
+                    self.donem_kilit("felaket_stop", simdi)
                     self.tg.gonder(tg.alarm("ALARM: felaket stopu", f"{tg.kisa(adres)} {coin} pozisyonu girişten %{aleyhe * 100:.0f} aleyhe gitti, "
                                             f"{'kapatıldı' if ok else 'kapatılamadı (yeniden denenecek)'}.", "🛑"))
 

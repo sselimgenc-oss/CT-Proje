@@ -156,3 +156,37 @@ def test_pano_md_donem_bolumu():
     assert "## Dönem (kalıcı seri)" in md and "İlk 11 2 slot +150,00 $" in md and "Yedek 1 slot +100,00 $" in md
     assert "saha doluluğu %75" in md and "atlanan sinyal %25" in md and "evren 2457 → aday 900 → ≥10 işlem 140 → geçen 12" in md
     assert "ilk ölçüm ≈ 2027-01-22" in md
+
+
+# ================================================================================================ M-04 + M-05 (kullanıcı kararı 14.11; yalnız rapor)
+def test_m04_maruziyet_ozeti_altin_ornek_ve_motor_birikimi(tmp_path):
+    """Elle: 10 sa ölçüm; brüt 4.000 $ × 6 sa + 0 × 4 sa → ortalama 2.400 $ (kasa 10.000'in %24'ü); |net| 1.000 $ × 6 sa → 600 $. Özsermaye 10.120 → kullanılan sermaye getirisi 120 / 2.400 = %5."""
+    ds = {"doluluk": {"sure_ms": 10 * SAAT, "brut_ms": 4000.0 * 6 * SAAT, "net_ms": 1000.0 * 6 * SAAT}}
+    mo = pano.maruziyet_ozeti(ds, 10_120.0, 10_000.0)
+    assert mo["brut"] == pytest.approx(2400.0) and mo["brut_oran"] == pytest.approx(0.24) and mo["net"] == pytest.approx(600.0) and mo["sermaye_getirisi"] == pytest.approx(0.05)
+    assert pano.maruziyet_ozeti({}, 1.0, 1.0)["sermaye_getirisi"] is None
+    m, hl, saat, _ = kur(tmp_path, kurallar={"canli_telegram_sanal_ozet_dk": 0})                # motor: 0,27273 BTC × 100 = 27,27 $ brüt; 2 dk
+    m.donem = DONEM
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    m.donem_seri_guncelle(saat())
+    brut = m.hesap.brut_toplam(m.marks)
+    saat.ms += 120_000
+    m.donem_seri_guncelle(saat())
+    dl = m.donem_seri["doluluk"]
+    assert dl["brut_ms"] == pytest.approx(brut * 120_000) and dl["net_ms"] == pytest.approx(brut * 120_000)        # tek uzun: |net| = brüt
+    m.donem_kilit("gunluk_kayip", saat())
+    assert m.donem_seri["kilitler"] == [{"ms": saat(), "tur": "gunluk_kayip"}]
+
+
+def test_m05_pano_karar_kutusu_isabet_ozeti_ve_kilit_isareti():
+    ozet = {"kip": "sanal", "kasa_usd": 10_000.0, "ozsermaye_usd": 10_250.0, "getiri": 0.025, "acik": [], "donem": DONEM, "aylik_esdeger": 0.06, "aylik_hedef": 0.04,
+            "btc_al_tut_getiri": -0.01, "hedef_gecer": True}
+    isabet = [{"tarih": "2027-01-08", "ic": 0.2, "fark_ilk11_havuz": 0.01, "fark_ilk11_elenen": -0.01}, {"tarih": "2027-01-09", "ic": 0.0, "fark_ilk11_havuz": 0.03, "fark_ilk11_elenen": 0.03}]
+    ds = {**DS, "kilitler": [{"ms": DONEM_MS + 20 * SAAT, "tur": "gunluk_kayip"}], "doluluk": {**DS["doluluk"], "brut_ms": 2500.0 * 10 * SAAT, "net_ms": 500.0 * 10 * SAAT}}
+    h = pano.html_olustur(ozet, {}, {}, [], [], T0 + GUN, KADRO, None, donem_seri=ds, isabetler=isabet)
+    i_karar, i_isabet = h.index("31.12 karar kutusu"), h.index("Seçim isabeti <span>özet")
+    assert 0 < i_isabet - i_karar < 2500 and "GEÇİYOR" in h                                                  # karar kutusunun hemen yanında
+    assert "2 ölçüm · ortalama IC <b>+0.10</b>" in h and "(2/2 pozitif)" in h and "(1/2 pozitif)" in h        # (0,2 + 0) / 2; havuz farkı 2/2, elenen 1/2 pozitif
+    assert 'stroke="#ff5d5d" stroke-width="1"' in h and "Kilit olayı: 1" in h and "gölge eğri hesaplanmadı" in h
+    assert "kullanılan sermaye getirisi <b>+%10,00" in h                                                    # 250 / 2.500
