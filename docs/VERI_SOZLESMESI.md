@@ -177,45 +177,6 @@ yalnız yeni `tutar_egrisi` parametresiyle — `golge.calistir`'in ön işlemesi
 **Form skoru** = son 30 gün sanal kopya getirisi / son 90 gün günlük oynaklık. **Yalnız ekran sıralaması içindir**;
 kopyalama kararını değiştirmez.
 
-## 4b. `gecikme_kar.json` — H1 gecikme–kâr ölçümü (v1.19, 2026-11-03; K‑17)
-YALNIZ ölçüm (bilgi amaçlı; eşik ve `durum.json` değişmez). Üretim: `python -m copytrade.gecikme_kar`.
-Hesap tek motorda: `kopya_v3.hesapla` → `defter.copy_ledger` (kural 7). `kopya_v3.hesapla(delay=0)` = **anlık**: yürütme fiyatı trader'ın dolum fiyatı `px`,
-yürütme zamanı dolum zamanı, maliyet ledger'daki taker + kayma (`kurallar.yaml` `maliyet_taker` + `maliyet_kayma`); `delay > 0` davranışı değişmedi.
-Anlıkta `px` yok/≤ 0 ise dolum `fiyatsiz_eylem`e girer (mum aranmaz, sahte fiyat yok).
-
-| Alan | Birim / anlam |
-|---|---|
-| `surum` | `"h1-v1"` |
-| `uretildi` | UTC ISO; koşu başlangıcı (okuma zamanı değil) |
-| `pencere` | `dakika` (t0 yerine `max(t0, şimdi − 4800 dk)`; bütün gecikmeler gerçek 1 dk açılışı) \| `tam` (t0'dan; 1 dk mum erişimi ~4999 dk dışındaki dolumlar saatlik açılışla YAKLAŞIK → kısa gecikmeler birbirinden ayrışmaz) |
-| `gecikmeler_dk` | `[0, 1, 5, 30, 120]` (dk; 0 = anlık) |
-| `maliyet.taker`, `maliyet.kayma` | ORAN, tek yön, notional'a oranla (varsayılan 0,00045 ve 0,0005; `--taker`/`--kayma` ile geçersiz kılınır; tüm gecikmelerde aynı) |
-| `traderlar[].id` | izleme kimliği (örn. `O01`) |
-| `traderlar[].adres` | küçük harf halka açık adres (bu dosya adres İÇERİR; `ozet.json`/`durum.json` gibi yayımlanmaz, yalnız CI artefaktı) |
-| `traderlar[].tarz` | `intraday` \| `swing` \| `bilinmiyor` (bilinmiyorsa izleme varsayılan gecikmesi 30 dk) |
-| `traderlar[].t0` | UTC ISO; ölçüm penceresinin etkin başlangıcı (`dakika` penceresinde kırpılmış olabilir) |
-| `traderlar[].ilk_dolum` | UTC ISO; API'nin gerçekten döndürdüğü, pencere içindeki ilk perp dolumunun zamanı (`null` = dolum yok). Yalnız okunurluk — ölçümü DEĞİŞTİRMEZ. `t0`'dan belirgin sonraysa API'nin ~10.000 dolum sınırı pencereyi kısaltmıştır (aşağıdaki veri sınırı) |
-| `traderlar[].dolum` | pencere içi perp dolum sayısı (adet) |
-| `traderlar[].mevcut_gecikme_dk` | izlemenin bu trader için kullandığı gecikme (dk; intraday 30, swing 120) |
-| `traderlar[].mevcut_net` | `gecikmeler[mevcut_gecikme_dk].net` (ORAN) — izleme `sanal_kopya_v3.getiri` ile `tam` pencerede karşılaştırılır |
-| `traderlar[].gecikmeler.<dk>.net` | net getiri, ORAN (0,012 = %1,2); 1.000 $ sanal kopya ölçeği; gerçekleşen − taker/kayma + funding + açık K/Z (işaretle); hesaplanamazsa `null` (sıfır SAYILMAZ) |
-| `…<dk>.islem` | kapanan kopya işlemi sayısı (adet; açık işlem sayılmaz) |
-| `…<dk>.fiyatsiz` | yürütme fiyatı BULUNAMAYAN dolum (adet; eksik mum / anlıkta `px` yok). Yürütme zamanı gelmemiş dolum burada DEĞİL |
-| `…<dk>.bekleyen` | yürütme zamanı (dolum + gecikme) henüz gelmemiş dolum (adet; anlıkta 0) — fiyatsız sayılmaz (B17 dersi) |
-| `…<dk>.yaklasik` | yürütme fiyatı saatlik açılışla yaklaşık bulunan hedef (adet; yalnız `tam` pencere) |
-| `…<dk>.tasfiye` | bool; kopya tasfiye oldu mu (v3 çapraz teminat) |
-| `…<dk>.neden` | `null`; v3 `hesaplanamadi` döndürürse nedeni (metin). **Sınır:** sabit tutar yolunda motor `net` için `None` döndürmez — hiç fiyatı bulunamayan trader `net = 0,0`, `islem = 0`, `fiyatsiz > 0` görünür; `fiyatsiz` sütunu okunmadan `net = 0` yorumlanmaz |
-| `traderlar[].fark_anlik_30dk` | `net(0) − net(30)`, ORAN puanı (0,01 = 1 puan); biri `null` ise `null` |
-| `hatalar[]` | `{id, hata}`: okunamayan trader (ölçümü düşürmez) |
-| `ozet` | `trader`, `anlik_hesaplanan`, `anlik_hesaplanamayan`, `anlik_kazanan` (net > 0), `anlik_kaybeden` (net < 0), `anlik_sifir`, `fark_anlik_30dk {min, medyan, maks}`, `fark_anlik_30dk_ortalama`, `anlik_30dk_karsilastirilan` |
-
-**Veri sınırı (küçük gerçek veri denemesi bulgusu, 2026-11-03):** Hyperliquid `userFillsByTime` yalnız hesabın EN YENİ ~10.000 dolumunu döndürür (sayfa sınırı değil, API'nin geçmiş sınırı). Çok işlem yapan hesapta (B17: ~220 dolum/saat) pencere gerçekte `t0`'dan çok daha kısadır
-(yerel kontrol: `t0` 29 Ekim iken ilk dönen dolum 3 Kasım 08:58) ve `dolum` sayısı pencere uzatıldıkça artmaz. Bu hesaplarda `traderlar[].t0` etkin başlangıcı DEĞİL istenen başlangıcı gösterir; `net` yalnız dönen dolumları kapsar ve ilk dolumlar miras pozisyona ekleme olduğundan `islem = 0` çıkabilir.
-Büyük `bekleyen` (B17: 120 dk gecikmede ~4.500) hata değildir: son 120 dk'daki dolum sayısıdır (yerel kontrol: son 120 dk 4.511, son 30 dk 1.958 dolum).
-
-Varsayım/sınır: anlık = bizim emrimizin trader dolumuyla AYNI fiyattan, kayma+taker ile dolması (algılama + emir gecikmesi 0 sayılır; gerçek gecikme H2 ile ölçülür).
-Geçmişte dakikalık fiyat ~4999 dk ile sınırlıdır; `tam` pencerede 1/5/30 dk yaklaşık olur — karar için `dakika` penceresi esas alınır.
-
 ## 7. Dinleyici risk kapısı — DRY-RUN (v1.18, H5; `copytrade/risk_defter.py`, `copytrade/live_koruma.py`)
 **Emir, anahtar, cüzdan, imza YOK; yalnız karar kaydı.** Her satır/blokta `emir_gonderildi` = `false`. Sınırlar `kurallar.yaml` `risk_dry_run:` bloğundan (tek kaynak).
 Tüm tutarlar **notional $, 1.000 $ sanal kopya ölçeğinde** (trader hesabı DEĞİL); zaman UTC; fiyat $/coin; maliyet (taker/kayma) hesaba katılmaz.
@@ -312,7 +273,7 @@ Gizlilik: dosyada API anahtarı, token, URL ya da sunucu IP'si yoktur (testle de
 - Hesaplanamazsa `{"surum":"v4","durum":"hesaplanamadi","neden":…}`; v3'ü etkilemez. Hiç okunmamış trader için `yer_tutucu: true`.
 
 ## 12. Radar havuzu (R0/R1) — `radar/<YYYY-MM-DD>/havuz.json` (v1.24, T2; `copytrade/radar_tarama.py`, strateji: `docs/RADAR_V1.md` §2–3)
-Üretici: `python -m copytrade.radar_tarama` (iş akışı `radar_deneme.yml`; günlük zamanlama T4'te). Salt okunur, herkese açık Hyperliquid verisi. **Birim kuralları:** oranlar kesirdir (0,10 = %10); `*_usd` alanlarında ölçek
+Üretici: `python -m copytrade.radar_tarama` (iş akışı `radar.yml`, günlük). Salt okunur, herkese açık Hyperliquid verisi. **Birim kuralları:** oranlar kesirdir (0,10 = %10); `*_usd` alanlarında ölçek
 adıyla yazılır: `trader_$` = trader'ın kendi hesabı, `kopya_$` = sanal kopya kasası (`canli_kasa_usd`, varsayılan 1.000 $; K‑28); zaman UTC milisaniye; tutma süresi saat; kaldıraç "x" (pozisyon değeri / hesap değeri).
 **Pencere** `son7g` = `[kosu_ms − radar_pencere_saat × 3.600.000, kosu_ms)` (koşu BAŞLANGICI; okuma zamanı değil). **Kopya oynatma** pencere başında BOŞ başlar (pencere başında açık pozisyon kopyalanmaz); gecikme `radar_kopya_gecikme_dk` (1 dk),
 maliyet taker + kayma (`kurallar.yaml`), **`kopya_v5.hesapla`** (K‑28: §5b oransal boyut `boyut.hedef_emir` + v4 HL azami kaldıraç/teminat sınırı, tarz `intraday`; **K‑35:** v4'ün eski emir başına 100 $ / trader toplamı 200 $ sınırı v5'te KALKTI, yerini trader'ın TÜM coinlerdeki toplamı ≤ 3 × slot tavanı aldı; slot = `canli_kasa_usd` / N; trader hesap paydası **B8 (08.11): zamana bağlı** — her emir, yürütme anında ya da öncesindeki son `portfolio` `accountValueHistory` noktasına (trader_$) oranlanır; seri okunamazsa / boşsa
@@ -365,7 +326,7 @@ daha eskisi için (Hyperliquid `candleSnapshot` yalnız son 5.000 dakikalık mum
 | `oransal_ayna` | oran, kopya_$ ölçeği | **B3, YALNIZ bilgi:** ayna (gecikmesiz, maliyetsiz) oynatması `radar_min_emir_usd` = 0 ile — asgari emre yuvarlama/atlama YOK (saf oransal; slot ve 3× tavanlar aynen, aynı payda) |
 | `koruma_boyut` | oran | **B3, YALNIZ bilgi:** `ayna_getiri_7g / oransal_ayna` (asgari emir tanecik bozulmasının aynaya etkisi; 1 = etkisiz); `oransal_ayna` ≤ 0 ya da yok → `null` |
 | `g_t_istat` | birimsiz (t) | **B14, YALNIZ bilgi (08.11):** `kopya_alt20` bootstrap'ının kullandığı AYNI dizi — kapanan geçerli kopya işlemlerinin `sonuc_usd / 1.000` (oran, kopya_$ kasasına göre) değerleri — için ortalama / (s / √n), s = örneklem std (n − 1). n < 2 ya da s = 0 → `null`. Kapıya GİRMEZ: `sans_riski` yine `kopya_alt20` > 0 (≈ t > 0,84); v1.1 adayı t ≥ 2 yalnız bilgi olarak izlenir |
-| `kopya_getiri_7g_eski`, `ayna_getiri_7g_eski`, `kopya_koruma_eski`, `kopya_alt20_eski` | yukarıdaki eşleriyle aynı | **B8 yan yana (YALNIZ `--payda-yan-yana` koşusunda; günlük `radar.yml` ve `radar_deneme.yml` açık):** aynı oynatma SABİT payda `hesap_usd` ile (eski hesap); kopya oynatmasına varmayan satırda yenisiyle aynı |
+| `kopya_getiri_7g_eski`, `ayna_getiri_7g_eski`, `kopya_koruma_eski`, `kopya_alt20_eski` | yukarıdaki eşleriyle aynı | **B8 yan yana (YALNIZ `--payda-yan-yana` koşusunda; günlük `radar.yml`'de açık):** aynı oynatma SABİT payda `hesap_usd` ile (eski hesap); kopya oynatmasına varmayan satırda yenisiyle aynı |
 | `gecti_eski`, `neden_eski` | bool, kod | B8 yan yana: R1 kuralları `_eski` kopya alanlarıyla (diğer ölçüler aynı) — "eski hesapla geçer miydi"; KARAR `gecti`'dedir. Üst düzeyde `payda_yan_yana: true` |
 | `gecti` | bool | R1'in tüm kuralları geçildi mi (radar havuzu) |
 | `neden` | kod \| `null` | ilk başarısız kuralın kodu; sıra: `veri_hatasi` (istek hatası), `payda_yok`, `devir_yuksek`, `vault`, `dolum_fazla`, `islem_az`, `tutma_kisa`, `kisa_islem_fazla`, `kaldirac_yuksek`, `likidite_dusuk`, `kopya_zarar`, `kopya_koruma_dusuk`, `kopya_islem_az` (v1.1), `sans_riski`, `akil_sagligi`, `zaman_yok` |

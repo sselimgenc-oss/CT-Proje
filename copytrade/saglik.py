@@ -214,7 +214,7 @@ def kontrol(simdi_ms: int, ozet: dict[str, Any] | None, kadro: dict[str, Any] | 
             b.append(Bulgu("KRITIK", "radar_durdu", f"Radar {_sa(yas)}dir çalışmadı: kadro çok eski."))
         elif yas * DAKIKA >= RADAR_UYARI:
             b.append(Bulgu("UYARI", "radar_gecikti", f"Bugünkü radar henüz gelmedi (kadro {_sa(yas)} eski)."))
-        gecti = kadro.get("gecti_sayisi") if kadro.get("radar_surum") != "v2" else None   # K-60: 8–20 / 11 beklentisi eski radar (v1) içindir; D+ (v2) bilerek saha_n kadar seçer → yalnız kadro_eksik denetlenir
+        gecti = kadro.get("gecti_sayisi")                                              # K-66: Form Radarı beklentisi 8–20 (D+'a özgü K-60 istisnası kaldırıldı)
         if gecti is not None and not (GECTI_ALT <= int(gecti) <= GECTI_UST):
             b.append(Bulgu("UYARI", "gecti_aralik_disi", f"Radarı geçen trader sayısı {int(gecti)} (beklenen {GECTI_ALT}–{GECTI_UST}); strateji/veri kontrol edilmeli."))
         elif gecti is not None and int(gecti) < 11:

@@ -75,7 +75,7 @@ risk_dry_run:
   referans_kasa_usd: 1000.0
   emir_tavan_usd: 100.0
   trader_tavan_usd: 200.0
-  toplam_brut_tavan_usd: 1500.0
+  toplam_brut_tavan_usd: 1500.0          # = 1,5 × referans_kasa_usd; YALNIZ H5 dinleyici defteri (risk_defter/live_koruma, sabit 1.000 $ referans). Canlı motor okumaz (K-66: sanal 2.200 $ kasayı bağlamaz)
   gunluk_zarar_usd: 30.0
   sinyal_tazelik_sn: 10
   dur_dosyasi: "$STATE_DIRECTORY/DUR"
@@ -104,13 +104,14 @@ radar_payda_zaman: true                 # bool, B8 hata düzeltmesi (08.11 seçi
 radar_veri_hatasi_pay_max: 0.10         # oran, R-2: `veri_hatasi` satırı bu payı AŞAN koşu eksik sayılır (kadro yazılmaz, çıkış 2, son/ güncellenmez); tam %10 tamdır
 # ---- Canlı boyut (K-28, K-30; RADAR_V1.md §5/§5b): tek yer copytrade/boyut.py. Birim: $ (kasa = sanal/gerçek kopya kasası, kopya_$) ----
 canli_kasa_usd: 1000                    # $ (kullanıcı ayarı; üst sınır 1.000, AGENTS.md)
-canli_kasa_ust_usd: 1000                # $ (güvenlik üst sınırı; aşan kasa ValueError)
+canli_kasa_ust_usd: 1000                # $ (GERÇEK para güvenlik üst sınırı, K-22/K-26; gerçek kipte aşan kasa reddedilir)
+canli_sanal_kasa_ust_usd: 10000         # $ (K-66 kullanıcı 14.11: YALNIZ sanal kip `--sanal-kasa-usd` üst sınırı; sanal 10.000 $, saha 11 × ~909 $ — seçimi boyut kısıtı olmadan ölçmek için. Gerçek kip sınırı yukarıdaki 1.000 $, değişmez)
 canli_hl_deger_ust_usd: 1500            # $ (gerçek kip AÇILIŞ / --kontrol: HL hesap değeri tavanı; kârlı günden sonra yeniden başlatma takılmasın. Kasa yine min(CANLI_KASA_USD, HL) ≤ canli_kasa_ust_usd; K‑22)
-radar_canli_slot_min_usd: 200           # $ (N = min(radar_saha_max, taban(kasa / bu))); K-56 D+: 200 $ (v1: 25)
-radar_saha_max: 5                       # kişi (K-56 D+: 5 kişi × 200 $ — sadık kopya, yuvarlama şişmesi ≤ 2×; v1: 11)
+radar_canli_slot_min_usd: 200           # $ (N = min(radar_saha_max, taban(kasa / bu))); K-56/K-66: 200 $ (v1: 25; küçük slotta açılışların %22–33'ü yuvarlanıyordu)
+radar_saha_max: 11                      # kişi (K-66 Form Radarı: İlk 11 sahada; sanal 10.000 $ kasada slot ≈ 909 $; 1.000 $ kasada N = 5)
 radar_min_emir_usd: 11                  # $ (HL alt emir sınırı 10 $ + pay)
-radar_min_emir_yuvarla_alt: 5.5         # $ (K-56 D+: açılış hedefi bunun altındaysa AÇILMAZ, [bu, 11) arası 11 $'a yuvarlanır; 0 = v1 her küçük hedef yuvarlanır)
-radar_slot_tavan_carpan: 1.5            # x (slot kasası başına pozisyon tavanı = çarpan x slot; K-56 D+: 1,5 = kasanın %30'u; v1: 3,0)
+radar_min_emir_yuvarla_alt: 5.5         # $ (K-56, K-66'da korunur: açılış hedefi bunun altındaysa AÇILMAZ, [bu, 11) arası 11 $'a yuvarlanır; 0 = v1 her küçük hedef yuvarlanır)
+radar_slot_tavan_carpan: 1.5            # x (slot kasası başına pozisyon tavanı = çarpan x slot; K-56, K-66'da korunur (sadık boyut): 1,5; v1: 3,0)
 # ---- R2 form puanı + günlük kadro (RADAR_V1.md §4, §5; v1'de donar). Ağırlıklar toplamı 1,0; oranlar kesir ----
 radar_agirlik_g: 0.4375                  # G güven ayarlı getiri (bootstrap alt yüzdelik)
 radar_agirlik_k: 0.1875                  # K kopya getirisi
@@ -126,7 +127,7 @@ radar_soguyor_min_getiri: -0.02         # oran (son 72 sa kopya getirisi bunun A
 radar_kadro_toplam: 30                  # kişi (İlk 11 + Yedek 19)
 radar_kadro_ilk: 11                     # kişi (İlk katman)
 radar_hip3_kopya: false                 # bool, K‑43: motorla aynı davranış (K‑28 tutarlılık düzeltmesi); true = eski v1 davranışı; kullanıcı onayına sunuldu. false = R1 kopya oynatmasında HIP‑3 (dex:COIN) dolumlarının TAMAMI atlanır (motor K‑42 gibi); eşik/ağırlık/yöntem DEĞİL
-radar_surum: "v1.1"                     # K-53 (kullanıcı kararı 09.11, Fable 5.1 görüşü): v1.1 seçim kuralları; kadro.json `radar_surum` alanına yazılır
+radar_surum: "v3"                       # K-66 Form Radarı: RADAR_V1 + v1.1 seçim kuralları (K-53) aynen, D+ (v2) yerine; kadro.json `radar_surum` alanına yazılır, motor `canli/RADAR_SURUM` ile eşleştirir
 radar_tutma_onceki_kadro: true          # bool, v1.1 nedene bağlı çıkış: önceki kadro üyeleri R0 ilk N dışına düşse de R1'den geçirilir (geçen kalır); false = v1
 radar_ay_pnl_pozitif: true              # bool, v1.1 S1: R0 (ve tutma) için lider tablosu 30 g pnl > 0 (pencere yoksa geçer); false = v1
 radar_min_kopya_islem: 10               # işlem, v1.1 S2: R1 kopya kapanan işlem sayısı >= bu (`kopya_islem_az`; sınır dahil); 0 = kapalı (v1). t önceliği (taslak) Fable denetimiyle REDDEDİLDİ
@@ -152,12 +153,12 @@ canli_borsa_stop_ceza_sn: 21600          # sn (K-65: zorunlu kapatmadan sonra bu
 canli_sig_hacim_usd: 20000000            # $ (K-62: 24 sa nosyonel hacmi bunun altındaki coin "sığ"; hacim okunamayan / listede olmayan coin de sığ sayılır)
 canli_sig_coin_tavan_usd: 150            # $ (K-62: sığ coinde trader başına kopya pozisyon tavanı; majörde slot tavanı 1,5 × slot geçerli)
 canli_zirve_dusus_oran: 0.20            # oran (zirveden düşüş >= bu: hepsini kapat, motor durur, DUR yazılır)
-canli_slot_dusus_oran: 0.20             # oran (K-56 D+: %20, evrenin 90 g düşüş sınırıyla uyumlu; v1: 0,10) (girişten beri slot düşüşü >= bu: anında sahadan düş)
+canli_slot_dusus_oran: 0.20             # oran (K-56'dan beri %20, K-66'da korunur; v1: 0,10) (girişten beri slot düşüşü >= bu: anında sahadan düş)
 canli_sira_dus: 22                      # sıra (form sırası bundan KÖTÜ (>) ise sayaç artar)
 canli_sira_dus_gun: 2                   # gün üst üste
 canli_kadro_disi_sira: 30               # sıra (kadroda yok / sıra bundan kötü = kadro dışı: 1 gün)
-canli_islem_yok_saat: 336               # saat (K-56 D+: 14 gün = secim_islem_yok_gun; v1: 72) (trader'ın yeni işlemi yoksa düş; sonuç dışı)
-canli_bekleme_gun: 31                   # gün (sonuçla düşen sahaya dönemez; K-56 D+: 31 = aylık kontrolden önce dönüş yok; v1: 14)
+canli_islem_yok_saat: 72                # saat (K-66 Form Radarı: RADAR_V1 §5, v1 değeri; D+ 336) (trader'ın yeni işlemi yoksa düş; sonuç dışı)
+canli_bekleme_gun: 14                   # gün (sonuçla düşen sahaya dönemez; K-66 Form Radarı: RADAR_V1 §5, v1 değeri; D+ 31)
 canli_histerezis_puan: 10               # puan (aday formu üyeninkinden en az bu kadar yüksek)
 canli_gunde_degisiklik: 2               # adet (günde en çok saha girişi/değişikliği; ilk gün hariç)
 canli_kor_esik: 0.7                     # korelasyon (>= : benzer trader)
@@ -202,24 +203,3 @@ isabet_butce_dk: 30                     # dakika (isabet adımı süre bütçesi
 isabet_kotu_gecikme_dk: 3               # dakika (kötü senaryo gecikmesi)
 isabet_kotu_kayma_carpan: 2             # kat (kötü senaryo: maliyet_kayma bu kadar katı)
 para_hareketi_isaret_payi: 0.2          # oran (T6 §2, bilgi: net yatırma / hafta başı sermaye bunun üstündeyse raporda işaretlenir; kapıyı DEĞİŞTİRMEZ)
-
-# ---- Seçim yapısı D (K-55, kullanıcı kararı 09.11; ön kayıt docs/ONKAYIT_SECIM_2026-11-09.md §1 D + B evreni; copytrade/secim_d.py) ----
-secim_min_hesap_usd: 10000              # $ (hesap değeri ≥; lider tablosu ön filtresi ve portfolio)
-secim_hafta_sayisi: 12                  # hafta (istikrar penceresi; portfolio allTime pnl)
-secim_pozitif_hafta_min: 8              # hafta (son 12 haftanın en az bu kadarı pnl > 0)
-secim_dusus_90g_max: 0.20               # oran (90 g kümülatif pnl düşüşü / hesap ≤; sınır dahil)
-secim_kopya_gun: 28                     # gün (kopya kapısı penceresi: son 4 hafta dolumları)
-secim_aday_ust: 400                     # kişi (B evreninden t sırasıyla kadro dolana dek kopya kapısına en çok bu kadar; 09.11 dal denemesi: ilk 40'ın tümü düştü, çoğu pasif hesap)
-secim_butce_dk: 90                      # dakika (doldurma: lider tablosu + portfolio taraması süre bütçesi)
-secim_kopya_butce_dk: 60                # dakika (doldurma: kopya kapısı döngüsü ek bütçesi; toplam ≤ 150 < iş 180)
-secim_cikis_zirve_dusus: 0.25           # oran (kümülatif pnl zirvesinden düşüş / hesap ≥ → çıkış)
-secim_islem_yok_gun: 14                 # gün (bu kadar gün işlem yok → çıkış)
-secim_aktif_coin_max: 8                 # coin (K-56 D+, C'den: son 28 g en çok bu kadar farklı coin)
-secim_cikis_giris_dusus: 0.20           # oran (K-56 D+: girişimizden beri trader hesap değeri düşüşü ≥ → çıkış; döngüyü keser)
-secim_veri_azami_yas_saat: 24           # saat (K-65 veri düzeltmesi: perp pnl serisinin en yeni noktası seçim anından bu kadar eskiyse aday `veri_bayat`; sınır dahil geçer)
-secim_payda_azami_fark: 0.02            # oran (K-65: |portfolio serisi hesap / motor tanımı hesap − 1| bunu aşarsa motor değeri kullanılır, `payda_duzeltildi`; motor = tüm perp dex accountValue + spot USDC)
-# ---- K-65 geçici güvenlik kuralı: iki veto (aday ve üye; kapılardan SONRA uygulanır) ----
-secim_veto_acik: true                   # bool (false = vetolar hiç uygulanmaz, yalnız ölçü yazılır)
-secim_veto_zarara_ekleme_oran: 0.40     # oran (zarardaki pozisyona ekleme payı ≥ ve ekleme sayısı ≥ martingale_min_additions → `veto_zarara_ekleme`; olcut.martingale_ratio, martingale_min_adverse ile)
-secim_veto_min_aday: 0                  # kişi (K-65 eki 12.11 kullanıcı kararı "veto kesin": 0 = vetolar hiç askıya alınmaz, temiz aday yoksa yer boş kalır; >0 ise: bu koşuda tüm kapıları VE iki vetoyu geçen aday sayısı bundan azsa vetolar bu koşu askıya alınır: `veto_askida`)
-

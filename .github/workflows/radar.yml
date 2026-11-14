@@ -1,10 +1,12 @@
 name: Radar (günlük tarama + kadro)
 
-# Her gün 00:37 UTC (03:37 TSİ) seçim yapısı D+ (K-56): üye denetimi her gün, doldurma ilk koşu + ayın ilk koşusu; motor son/kadro.json okur.
+# K-66 (14.11, kullanıcı kararı): Form Radarı v1/v1.1 (docs/RADAR_V1.md §2, §4, §5; K-53) yeniden yürürlükte (D+ kapandı ve silindi). Her gün 00:37 UTC (03:37 TSİ)
+# tarama (aday = radar_aday_tavan = 300, 7 gün getiriye göre; K-31) → R2 form puanı → kadro 30 (İlk 11 + Yedek 19) → isabet ölçümü.
 # Salt okunur halka açık Hyperliquid verisi; secret YOK. Çıktı veri dalı `radar` (kök commit yalnız ilk koşuda; sonra tarihli klasör eklenir, 90 gün tutulur):
 #   radar/<tarih>/{havuz,kadro}.json  +  radar/son/kadro.json  (T4 motoru `son/kadro.json`'u okur).
-# K-55/K-56 (09.11): tek adım copytrade.secim_d (seçim yapısı D+) havuz.json + kadro.json (radar_surum v2) yazar; süre bütçesi aşılırsa kısmi kadro yayımlanır (boş koltuk nakit).
-# `kural_ust` / `aday_sayisi` girdisi YOK (donmuş kurallar; deneme `radar_deneme.yml`'de).
+# Eksik koşuda (zaman bütçesi aşıldı / satır eksik / `veri_hatasi` payı > `radar_veri_hatasi_pay_max`, R-2) `radar_kadro` çıkış kodu 2 verir → iş kırmızı biter ve `son/` GÜNCELLENMEZ.
+# Kadro `radar_surum` v3 (motor `copytrade/canli/RADAR_SURUM` ile yalnız bunu uygular).
+# `kural_ust` / `aday_sayisi` girdisi YOK (donmuş kurallar).
 # Dal doğrulaması: `copytrade/radar/CALISTIR` dosyasına satır eklenen push (main dışı dal) AYNI iş akışını koşturur ama veri dalı `radar-deneme`'ye yazar (gerçek `radar` dalı yalnız main'den dokunulur).
 # G-23 (canli_vardiya.yml ile aynı desen): checkout'lar `persist-credentials: false` (token diske yazılmaz); yazma izni yalnız `radar` işinde; push kimliği yalnız
 # yayım adımına `YAYIM_TOKEN` ile (radar_yayimla.sh, GIT_CONFIG_* extraheader). Tarama/kadro/isabet (python) adımları token görmez.
@@ -65,26 +67,37 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
-      - name: Seçim yapısı D+ (K-55/K-56; üye denetimi her gün, doldurma ilk koşu + ayın ilk koşusu)
+      - name: Radar taraması (R0 + R1 + R2 girdileri)
         env:
           VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
         run: |
           mkdir -p radar
-          # Önceki kadro = veri dalındaki son/kadro.json (bugünkü yayından önce). v2 değilse (v1/v1.1) ya da yoksa: ilk doldurma.
+          # v1.1 (K-53) nedene bağlı çıkış: önceki kadro (veri dalı son/kadro.json) üyeleri R0 dışına düşse de R1'den geçirilir. Yoksa (ilk koşu) argümansız.
+          tutma=()
+          if git cat-file -e "origin/$VERI_DALI:radar/son/kadro.json" 2>/dev/null; then
+            git show "origin/$VERI_DALI:radar/son/kadro.json" > "$RUNNER_TEMP/onceki_kadro_tarama.json"
+            tutma=(--onceki-kadro "$RUNNER_TEMP/onceki_kadro_tarama.json")
+          fi
+          # B8 (08.11): zamana bağlı payda karar sayısıdır; `--payda-yan-yana` eski (sabit payda) sayıları `*_eski` alanlarına ve özete yazar (yalnız bilgi, kural 6: eski seri yan yana)
+          python -u -m copytrade.radar_tarama --cikti radar --payda-yan-yana "${tutma[@]}" --ozet-md radar/OZET.md
+      - name: Günlük kadro (R2 form puanı)
+        env:
+          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
+        run: |
+          havuz="$(ls radar/*/havuz.json | tail -n 1)"
+          # Yalnız bilgi alanları (elenenler, eski_uye_neden): önceki kadro = veri dalındaki son/kadro.json (bugünkü yayından önce). Dal/dosya yoksa (ilk koşu) argümansız; seçim etkilenmez.
           onceki=()
           if git cat-file -e "origin/$VERI_DALI:radar/son/kadro.json" 2>/dev/null; then
             git show "origin/$VERI_DALI:radar/son/kadro.json" > "$RUNNER_TEMP/onceki_kadro.json"
             onceki=(--onceki-kadro "$RUNNER_TEMP/onceki_kadro.json")
           fi
-          # D+ (K-56): motor durumu (slot sicili, cezayla düşenler) canli-durum dalından; yoksa yedek kurallar
-          canli=()
-          if git cat-file -e "origin/canli-durum:durum/hesap.json" 2>/dev/null; then
-            git show "origin/canli-durum:durum/hesap.json" > "$RUNNER_TEMP/canli_hesap.json"; canli+=(--canli-hesap "$RUNNER_TEMP/canli_hesap.json")
-          fi
-          if git cat-file -e "origin/canli-durum:durum/saha.json" 2>/dev/null; then
-            git show "origin/canli-durum:durum/saha.json" > "$RUNNER_TEMP/canli_saha.json"; canli+=(--canli-saha "$RUNNER_TEMP/canli_saha.json")
-          fi
-          python -u -m copytrade.secim_d --cikti radar "${onceki[@]}" "${canli[@]}"
+          python -u -m copytrade.radar_kadro --havuz "$havuz" "${onceki[@]}"
+      - name: Seçim isabeti (§7b)
+        env:
+          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
+        run: |
+          # 7 gün önceki havuz+kadro (veri dalından) için arada geçen 7 günün kopya getirisi; en çok 30 dk, hata tarama işini bozmaz (eksik yazılır). İlk ölçüm 2026-11-12.
+          python -u -m copytrade.radar_isabet --cikti radar --veri-dali "$VERI_DALI" --ozet-md radar/ISABET_OZET.md
       - name: Özet
         if: ${{ always() && hashFiles('radar/OZET.md') != '' }}
         run: |

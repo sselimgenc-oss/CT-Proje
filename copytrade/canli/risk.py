@@ -7,7 +7,7 @@
 - K-62 günlük sert fren: gün başından kayıp ≥ `canli_gunluk_kapat_oran` → `gunluk_kapat` olayı (motor tüm pozisyonları kapatır; o gün açılış yok; DUR değil, ertesi gün sürer).
 - K-62 sığ coin: 24 sa hacmi < `canli_sig_hacim_usd` olan coinde trader başına kopya pozisyonu ≤ `canli_sig_coin_tavan_usd`.
 - Zirveden düşüş ≥ `canli_zirve_dusus_oran` → `DUR`: tüm pozisyonlar reduce‑only kapatılır, motor durur, `durum/DUR` yazılır (elle silinmeden yeniden açılmaz; S-2: silinip yeniden başlatılınca zirve güncel özsermayeye kurulur). `/kapat` aynı (yeni `/dur` yalnız yeni girişi durdurur).
-- Kasa > `canli_kasa_ust_usd` (AGENTS.md sınırı): yeni açılış yok + alarm.
+- Kasa > kasa üst sınırı (gerçek kip `canli_kasa_ust_usd` = 1.000 $, AGENTS.md; sanal kip motor `kasa_ust` ile verir, K-66): yeni açılış yok + alarm.
 """
 from __future__ import annotations
 
@@ -87,8 +87,10 @@ class Risk:
     def dur_ver(self, neden: str) -> None:
         self.dur, self.dur_neden = True, neden
 
-    def kasa_siniri_asildi(self, kasa_usd: float) -> bool:
-        asildi = float(kasa_usd) > float(self.rules["canli_kasa_ust_usd"]) + 1e-9
+    def kasa_siniri_asildi(self, kasa_usd: float, ust_usd: float | None = None) -> bool:
+        """`ust_usd` verilmezse gerçek para sınırı `canli_kasa_ust_usd` (sıkı varsayılan); motor sanal kipte K-66 sanal sınırını verir."""
+        ust = float(self.rules["canli_kasa_ust_usd"] if ust_usd is None else ust_usd)
+        asildi = float(kasa_usd) > ust + 1e-9
         self.acilis_durdu["kasa_siniri"] = asildi
         return asildi
 

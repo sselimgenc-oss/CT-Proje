@@ -1,9 +1,0 @@
-# Faz 3 Finans/Arşiv mutabakat sözleşmesi (güvenli ön katman)
-
-Bu modül (`copytrade/finans_mutabakat.py`) yalnız dışarıdan sağlanan, salt okunur HL `clearinghouseState` anlık görüntüsü ile dahili ledger anlık görüntüsünü bellekte karşılaştırır. Ağ istemcisi, cüzdan/anahtar, imzalama, emir veya kalıcılık içermez. Mutabakat çıktısı yalnız denetim kararıdır; hiçbir pozisyonu veya ledger kaydını değiştirmez.
-
-Ledger girdisi `balance_usd` (USD hesap değeri) ve `positions` (`coin` → işaretli coin miktarı) taşır. HL girdisinde `marginSummary.accountValue` USD, `assetPositions[].position.{coin,szi}` işaretli coin miktarıdır. Fark `ledger - HL` olarak verilir. İki tolerans da çağıran tarafından açıkça belirtilir; geçersiz, eksik, bayat (yaş denetimi istendiyse) veya tolerans dışı veri `mismatch` sayılır. Mismatch yeni girişleri engeller; çıkışlara izin daima `true` kalır.
-
-Arşiv için `validate_evidence` dolum kanıtında değişmez `record_id`, `mode` (`paper`/`real` ayrı), kaynak ve kaynak olay kimliği, UTC zamanı, coin/yön/miktar/fiyat, ücret USD, funding USD, referans fiyat, slippage bps, ledger bağ kimliği ve politika sürümünü zorunlu tutar. Üretici katman bu kayıtları yalnız eklemeli saklamalı; düzeltme eski kaydı değiştirmek yerine yeni kayıt olmalıdır. Fee ve funding pozitif veya negatif imzalı USD nakit akışıdır; slippage bps gerçekleşen fiyat ile referans arasındaki ölçümdür. Bu yardımcı henüz veri çekmez ve kayıt yazmaz.
-
-İleriye dönük çalışma sınırı: yalnız onaylı İlk11 gerçek pilot adayıdır; gerçek para aşamasına geçiş ayrı Makam/operatör onaylarına bağlıdır. 100 USDC deneme bütçesi üst sınır/pilot kararı olarak ele alınmalıdır; bu katman bütçe ayırmaz, cüzdan bağlamaz ve emir oluşturmaz. PAPER ve gerçek kayıtlar aynı olay sözleşmesini kullanır, ancak `mode` ile kesin ayrılır.

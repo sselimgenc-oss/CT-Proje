@@ -16,7 +16,7 @@ from test_izleme import ADDRESS, NOW, Client, project
 ROOT = Path(__file__).resolve().parents[1]
 WF = ROOT / ".github/workflows"
 SCRIPTS = ROOT / ".github/scripts"
-ISLER = ("radar_deneme.yml", "radar.yml", "canli_vardiya.yml", "isabet_deneme.yml")   # 08.11 kullanıcı: eski deneme iş akışları (dinleyici/dolgu/gecikme_kar/izleme_deneme) silindi
+ISLER = ("radar.yml", "canli_vardiya.yml")   # 08.11 kullanıcı: eski deneme iş akışları (dinleyici/dolgu/gecikme_kar/izleme_deneme) silindi; K-66 (14.11): radar_deneme/isabet_deneme silindi
 
 
 def yukle(ad: str) -> dict:
@@ -55,8 +55,6 @@ def test_veri_dali_yazimlari_yalniz_veri_dallarina():
     for ad in ISLER:
         for satir in (WF / ad).read_text(encoding="utf-8").splitlines():
             assert "git push" not in satir, (ad, satir)              # push yalnız betikte; iş akışları (deneme dahil) doğrudan push etmez
-    for ad in ("radar_deneme.yml", "isabet_deneme.yml"):
-        assert yukle(ad)["permissions"] == {"contents": "read"}, ad                                 # deneme yazamaz
     for satir in (SCRIPTS / "izleme_yayimla.sh").read_text(encoding="utf-8").splitlines():
         if "git push" in satir:
             assert "HEAD:copytrade-izleme" in satir, satir
@@ -137,7 +135,7 @@ def test_s21_izleme_yayimla_betigini_hicbir_is_akisi_cagirmaz():
 
 # ---------------------------------------------------------------------------------------------------- artık dosya temizliği
 def test_eski_sistem_is_akislari_ve_betikleri_yok():
-    kalanlar = {"canli_vardiya.yml", "ci.yml", "isabet_deneme.yml", "radar.yml", "radar_deneme.yml", "saglik.yml", "nabiz_yayim.yml", "v11_sinama.yml", "kalicilik.yml", "secim_dogrulama.yml"} | ({"dal_sil.yml"} if (WF / "dal_sil.yml").exists() else set())   # 08.11 kullanıcı: eski deneme iş akışları ve tek seferlik dal_sil.yml (40 dal silindi) kaldırıldı   # dal_sil.yml: tek seferlik eski dal temizliği (kullanıcı onayı 08.11; iş bitince silinir)  # canli_vardiya_300.yml kaldırıldı (kullanıcı 08.11: tek sanal motor 1.000 $); sonnet_isci.yml kaldırıldı (devir denetimi G-11, 06.11); saglik.yml: sağlık kontrolü (kullanıcı kararı 2026-11-05; salt okur, testi test_saglik.py); nabiz_yayim.yml: G-10 dış ölü adam alarmı yayını (testi test_nabiz.py)  # v11_sinama.yml: v1.1 aday sınaması, salt okur (kullanıcı onayı 09.11, A seçeneği; K-47)  # secim_dogrulama.yml: walk-forward seçim doğrulaması, salt okur, dilimli (kullanıcı "Taşı" 12.11; K-65 Faz 4)
+    kalanlar = {"canli_vardiya.yml", "ci.yml", "radar.yml", "saglik.yml", "nabiz_yayim.yml"} | ({"dal_sil.yml"} if (WF / "dal_sil.yml").exists() else set())   # 08.11 kullanıcı: eski deneme iş akışları ve tek seferlik dal_sil.yml kaldırıldı; saglik.yml: sağlık kontrolü (test_saglik.py); nabiz_yayim.yml: G-10 dış ölü adam alarmı (test_nabiz.py)  # K-66 (14.11): radar_deneme, isabet_deneme, kalicilik, v11_sinama, secim_dogrulama silindi
     assert {p.name for p in WF.glob("*.yml")} == kalanlar          # eski sistem iş akışları (kapı, Pazar kadrosu, İlk 11 denemesi, v3 yan yana) geri gelmedi
     assert not (WF / "pano.yml").exists() and not (ROOT / "copytrade" / "pano_veri.py").exists() and not (ROOT / "pano").exists()     # eski GitHub Pages panosu (copytrade-izleme'ye bağlı) kaldırıldı; yeni pano `copytrade/canli/pano.py`
     assert not (SCRIPTS / "kapi_yayimla.sh").exists()
@@ -152,6 +150,17 @@ def test_silinen_deneme_is_akislarinin_olu_kodu_ve_tetik_dosyalari_yok():
         assert not (ROOT / yol).exists(), yol
     for yol in [*WF.glob("*.yml"), *(p for p in SCRIPTS.glob("*") if p.is_file()), *(ROOT / "copytrade").rglob("*.py")]:
         assert not re.search(r"deneme_arac|dolgu_deneme|risk_deneme|h1_ozet", yol.read_text(encoding="utf-8")), yol
+
+
+def test_k66_d_arti_ve_deneme_kalintilari_yok():
+    """K-66 (14.11) temizlik: D/D+ seçimi, K-65 vetoları, elle çıkarma, seçim doğrulaması ve deneme iş akışlarına ait kod, tetik dosyası ve kural anahtarı kalmadı."""
+    for yol in ("copytrade/secim_d.py", "copytrade/kalicilik_testi.py", "copytrade/v11_sinama.py", "copytrade/gecmis_funding.py", "copytrade/gecikme_kar.py",
+                "copytrade/finans_mutabakat.py", "copytrade/mutabakat_raporu.py", "copytrade/portfoy_oynatma.py", "copytrade/radar/HARIC", "copytrade/radar_deneme",
+                "copytrade/isabet_deneme", "copytrade/kalicilik", "copytrade/v11_sinama", "arastirma/secim_dogrulama"):
+        assert not (ROOT / yol).exists(), yol
+    assert not [k for k in yaml.safe_load((ROOT / "copytrade/kurallar.yaml").read_text(encoding="utf-8")) if k.startswith("secim_")]
+    for yol in [*WF.glob("*.yml"), *(p for p in SCRIPTS.glob("*") if p.is_file()), *(ROOT / "copytrade").rglob("*.py")]:
+        assert not re.search(r"secim_d\b|kalicilik_testi|v11_sinama|ANINDA_CIKIS|elle_cikarildi|veto_omur_zarar", yol.read_text(encoding="utf-8")), yol
 
 
 def test_dal_sil_yalniz_listelenen_arsiv_dallari_elle_main():
@@ -176,11 +185,11 @@ def test_radar_yml_gunluk_00_37_utc_kadro_ve_yayim_sirasi():
     assert "inputs" not in (wf["on"]["workflow_dispatch"] or {})                              # donmuş kurallar: aday sayısı / kural_ust girdisi YOK
     assert wf["permissions"] == {"contents": "read"} and wf["jobs"]["radar"]["permissions"] == {"contents": "write"} and wf["concurrency"]["cancel-in-progress"] is False   # G-23: yazma yalnız radar işinde
     ad = adimlar(wf, "radar")
-    # K-55 (09.11): tarama + kadro + isabet adımları yerine tek "Seçim yapısı D" adımı (havuz.json + kadro.json yazar); eski modüller testleriyle durur
-    secim = next(a for a in ad if a.startswith("Seçim yapısı D+"))
-    assert ad.index(secim) < ad.index("Veri dalına yaz (radar)") and "Radar taraması (R0 + R1 + R2 girdileri)" not in ad and "Seçim isabeti (§7b)" not in ad
-    run = adim(wf, "radar", "Seçim yapısı D+")["run"]
-    assert "python -u -m copytrade.secim_d --cikti radar" in run and '"${onceki[@]}" "${canli[@]}"' in run and "kural_ust" not in (WF / "radar.yml").read_text(encoding="utf-8").replace("`kural_ust`", "")
+    # K-66 (14.11): Form Radarı adımları (tarama → kadro → isabet) geri; D+ (secim_d) adımı yok
+    assert ad.index("Radar taraması (R0 + R1 + R2 girdileri)") < ad.index("Günlük kadro (R2 form puanı)") < ad.index("Seçim isabeti (§7b)") < ad.index("Veri dalına yaz (radar)")
+    tarama, kadro = adim(wf, "radar", "Radar taraması")["run"], adim(wf, "radar", "Günlük kadro")["run"]
+    assert "--aday-sayisi" not in tarama and "--kural-ust" not in tarama and "kural_ust" not in (WF / "radar.yml").read_text(encoding="utf-8").replace("`kural_ust`", "")
+    assert "python -u -m copytrade.radar_tarama --cikti radar" in tarama and "copytrade.radar_kadro" in kadro and "copytrade.secim_d" not in (WF / "radar.yml").read_text(encoding="utf-8")
     assert adim(wf, "radar", "Veri dalına yaz")["run"] == "bash .github/scripts/radar_yayimla.sh" and "if" not in adim(wf, "radar", "Veri dalına yaz")      # yalnız başarıda (varsayılan success())
     artifact = next(a for a in wf["jobs"]["radar"]["steps"] if str(a.get("uses", "")).startswith("actions/upload-artifact"))
     assert artifact["if"] == "always()"                                                       # eksik koşuda da havuz.json artifact'ı kalır
@@ -256,12 +265,6 @@ def test_radar_yayimla_eski_gunde_kadro_varsa_yanlis_ilk_yazmaz(tmp_path):
     _git(co, "push", "-q", "origin", "HEAD:radar")
     _radar_kosusu(tmp_path, remote, "kosu2", gun, 2)
     assert _dal_json(remote, f"radar/{gun}/kadro.json")["kosu_ms"] == 2 and _dal_json(remote, f"radar/{gun}/kadro_ilk.json") is None
-
-
-def test_radar_deneme_kural_ust_girdisi_var_yazamaz():
-    wf = yukle("radar_deneme.yml")
-    assert "kural_ust" in wf["on"]["workflow_dispatch"]["inputs"] and wf["permissions"] == {"contents": "read"}
-    assert "--kural-ust" in adim(wf, "radar", "Radar taraması")["run"] and "--v4-yan-yana" in adim(wf, "radar", "Radar taraması")["run"]
 
 
 # ---------------------------------------------------------------------------------------------------- canlı vardiya (T4)
@@ -674,9 +677,9 @@ def test_g23_tum_is_akislarinda_checkout_kimlik_birakmaz(ad):
     assert sayi == (WF / ad).read_text(encoding="utf-8").count("actions/checkout@")
 
 
-@pytest.mark.parametrize("ad", ("isabet_deneme.yml", "saglik.yml", "radar_deneme.yml", "ci.yml"))
+@pytest.mark.parametrize("ad", ("saglik.yml", "ci.yml"))
 def test_g23_salt_okur_is_akislari_yazma_izni_almaz(ad):
-    """Deneme/sağlık/CI iş akışları yalnız okur: iş akışı düzeyi `contents: read`, hiçbir iş yazma izni almaz, push yok."""
+    """Sağlık/CI iş akışları yalnız okur: iş akışı düzeyi `contents: read`, hiçbir iş yazma izni almaz, push yok."""
     wf = yukle(ad)
     assert wf["permissions"] == {"contents": "read"}, ad
     for is_adi, is_ in wf["jobs"].items():
@@ -746,8 +749,7 @@ def test_requirements_kullanilmayan_paketleri_icermez():
 def test_g23_ucuncu_taraf_eylemler_tam_commit_sha_ile_sabit():
     """G-23: tüm iş akışlarında `uses:` tam 40 haneli commit SHA + sürüm yorumu (git ls-remote ile çözüldü, 08.11)."""
     bilinen = {"actions/checkout": ("11d5960a326750d5838078e36cf38b85af677262", "v4.4.0"), "actions/setup-python": ("a26af69be951a213d495a4c3e4e4022e16d87065", "v5.6.0"),
-               "actions/upload-artifact": ("ea165f8d65b6e75b540449e92b4886f43607fa02", "v4.6.2"), "actions/setup-node": ("49933ea5288caeca8642d1e84afbd3f7d6820020", "v4.4.0"),
-               "actions/download-artifact": ("d3f86a106a0bac45b974a628896c90dbdf5c8093", "v4.3.0")}     # kalicilik.yml (09.11, git ls-remote refs/tags/v4.3.0)
+               "actions/upload-artifact": ("ea165f8d65b6e75b540449e92b4886f43607fa02", "v4.6.2"), "actions/setup-node": ("49933ea5288caeca8642d1e84afbd3f7d6820020", "v4.4.0")}
     sayi = 0
     for yol in WF.glob("*.yml"):
         for satir in yol.read_text(encoding="utf-8").splitlines():
@@ -758,7 +760,7 @@ def test_g23_ucuncu_taraf_eylemler_tam_commit_sha_ile_sabit():
             eylem, ref, yorum = m_.groups()
             assert re.fullmatch(r"[0-9a-f]{40}", ref) and yorum, (yol.name, satir)
             assert bilinen[eylem] == (ref, yorum), (yol.name, satir)
-    assert sayi >= 20 and sayi == sum(t.count("uses:") for t in (y.read_text(encoding="utf-8") for y in WF.glob("*.yml")))   # her `uses:` satırı yakalandı (08.11: 5 deneme iş akışı silindi, 30 → 25)
+    assert sayi >= 19 and sayi == sum(t.count("uses:") for t in (y.read_text(encoding="utf-8") for y in WF.glob("*.yml")))   # her `uses:` satırı yakalandı (08.11: 5 deneme iş akışı silindi, 30 → 25; K-66 14.11: 5 iş akışı daha silindi → 19)
 
 
 def test_s19_radar_concurrency_ref_e_bagli():

@@ -4,7 +4,7 @@ Akış: `dinleyici.py` WebSocket (trades + userFills; İlk 11'in sahadaki adresl
 → yürütücü (`yurutucu.py`: sanal l2Book yürüyüşü / gerçek HL SDK) → hesap (`hesap.py`) → kayıt JSONL + Telegram. Saha kararları `kadro.py` (kadro.json, her 5 dk).
 
 Kip güvencesi (G4): varsayılan SANAL. `gercek` YALNIZ sunucu ortamında `CANLI_KIP=gercek` + `HL_API_CUZDAN_ANAHTARI`/`HL_HESAP_ADRESI` ile (`kurallar.yaml canli_kip` yalnız `sanal`; depodan gerçek kip açılamaz) ve ASLA GitHub Actions'ta (`GITHUB_ACTIONS=true` + `CANLI_*` → ret).
-Kasa: sanal kip `canli_kasa_usd` (yaml) ya da `--sanal-kasa-usd` (yalnız sanal; 0 < kasa ≤ `canli_kasa_ust_usd`; ayrı durum dizini/veri dalı, ör. 300 $ paralel seri `canli-durum-300`); gerçek kip `CANLI_KASA_USD` ortam değişkeni ($, zorunlu; üst sınır `canli_kasa_ust_usd` = 1.000 $ — AGENTS.md): sınır aşılırsa yeni açılış yok + alarm.
+Kasa: sanal kip `canli_kasa_usd` (yaml) ya da `--sanal-kasa-usd` (yalnız sanal; 0 < kasa ≤ `canli_sanal_kasa_ust_usd` (K-66: 10.000 $); ayrı durum dizini/veri dalı, ör. 300 $ paralel seri `canli-durum-300`); gerçek kip `CANLI_KASA_USD` ortam değişkeni ($, zorunlu; üst sınır `canli_kasa_ust_usd` = 1.000 $ — AGENTS.md): sınır aşılırsa yeni açılış yok + alarm.
 T4b (K‑37): kapanış teyidi + yeniden deneme (`kapanis_kuyrugu`), emir öncesi niyet kaydı + cloid (`niyet.py`), gerçek kipte risk temeli HL özsermayesi, sanal kipte funding, gecikmiş AÇILIŞ yok
 (`gec_acilis`: olay yaşı > `canli_olay_stale_sn`; kapanış/azaltma yaşa bakmaz), öncelikli kuyruk (kapat/azalt önce), kendi hesap adresimiz kayıt/Telegram'a yazılmaz.
 `DUR` dosyası varken motor başlamaz (elle silinmeden yeniden açılmaz).
@@ -129,15 +129,23 @@ SAAT_SAPMA_SINIR_MS = 2000   # ms: `--kontrol` sunucu saati ile HL sunucu saati 
 _GECICI_HATALAR: tuple[type[BaseException], ...] = (HlOkunamadi, OSError, RateLimitError)       # OSError: requests ağ/zaman aşımı istisnaları dahil
 
 
+def kasa_ust(rules: dict, kip: str) -> float:
+    """Kasa üst sınırı ($): GERÇEK kip `canli_kasa_ust_usd` (1.000 $, K‑22/K‑26; değişmez); sanal kip `canli_sanal_kasa_ust_usd` (K-66: 10.000 $, yalnız sanal; anahtar yoksa gerçek sınır)."""
+    gercek = float(rules["canli_kasa_ust_usd"])
+    if kip == "gercek":
+        return gercek
+    return float(rules.get("canli_sanal_kasa_ust_usd", gercek))
+
+
 def sanal_kasa_dogrula(rules: dict, kip: str, sanal_kasa: Any) -> float:
-    """`--sanal-kasa-usd` ($): YALNIZ sanal kipte, sonlu ve 0 < kasa ≤ `canli_kasa_ust_usd` (K‑22). Gerçek kipte / sınır dışında KipHatasi (gerçek kip kasası yalnız sunucuda `CANLI_KASA_USD`)."""
+    """`--sanal-kasa-usd` ($): YALNIZ sanal kipte, sonlu ve 0 < kasa ≤ `kasa_ust(rules, "sanal")` (K-66). Gerçek kipte / sınır dışında KipHatasi (gerçek kip kasası yalnız sunucuda `CANLI_KASA_USD`, ≤ 1.000 $)."""
     if kip != "sanal":
         raise KipHatasi("--sanal-kasa-usd yalnız sanal kipte kullanılabilir (gerçek kip kasası yalnız sunucu ortamından)")
     try:
         kasa = float(sanal_kasa)
     except (TypeError, ValueError) as hata:
         raise KipHatasi(f"--sanal-kasa-usd sayı değil: {str(sanal_kasa)[:20]}") from hata
-    ust = float(rules["canli_kasa_ust_usd"])
+    ust = kasa_ust(rules, "sanal")
     if not math.isfinite(kasa) or kasa <= 0 or kasa > ust + 1e-9:
         raise KipHatasi(f"--sanal-kasa-usd 0 < kasa <= {ust:g} $ olmalı: {str(sanal_kasa)[:20]}")
     return kasa
@@ -1675,9 +1683,9 @@ class Motor:
             if abs(oz - self.risk.zirve) > 1e-9:
                 eski = self.risk.zirve_yenile(oz)
                 self.kayit({"olay": "zirve_yenilendi", "eski_zirve": eski, "yeni_zirve": oz, "gerekce": "dur_sonrasi_ilk_risk"})
-        if self.risk.kasa_siniri_asildi(self.kasa):
+        if self.risk.kasa_siniri_asildi(self.kasa, kasa_ust(self.rules, self.kip)):
             if self._aralik_mi("kasa_alarm", simdi, 3600):
-                self.tg.gonder(tg.alarm("ALARM: kasa sınırı aşıldı", f"Kasa {tg.tr_sayi(self.kasa, 0)} $ > sınır {tg.tr_sayi(float(self.rules['canli_kasa_ust_usd']), 0)} $.\nYeni pozisyon açılmıyor."))
+                self.tg.gonder(tg.alarm("ALARM: kasa sınırı aşıldı", f"Kasa {tg.tr_sayi(self.kasa, 0)} $ > sınır {tg.tr_sayi(kasa_ust(self.rules, self.kip), 0)} $.\nYeni pozisyon açılmıyor."))
         if self._hl_sicrama and simdi - self._hl_sicrama_ms <= 3 * float(self.rules["canli_mutabakat_sn"]) * 1000:      # S-6: açıklanmayan sıçrama → bu okumada DUR yok (bayrak + alarm verildi)
             self.kayit({"olay": "risk_ertelendi", "neden": "hl_sicrama", "ozsermaye": oz})
             return
@@ -2039,8 +2047,8 @@ class Motor:
         for adres in self.saha.gecis_silinen:                                                    # K‑39 tek seferlik geçiş: 05.11'de aynı gün ikinci kadro yüzünden verilen bekleme silindi
             self.kayit({"olay": "bekleme_silindi", "adres": adres, "neden": "K-39"})
         self.saha.gecis_silinen = []
-        if self.kasa > float(self.rules["canli_kasa_ust_usd"]) + 1e-9:
-            raise KipHatasi(f"kasa {self.kasa} $ > sınır {self.rules['canli_kasa_ust_usd']} $ (AGENTS.md)")
+        if self.kasa > kasa_ust(self.rules, self.kip) + 1e-9:                                    # gerçek kip 1.000 $ (AGENTS.md), sanal kip K-66 sanal sınırı
+            raise KipHatasi(f"kasa {self.kasa} $ > sınır {kasa_ust(self.rules, self.kip):g} $ ({self.kip} kip; AGENTS.md)")
         self.kilit_al()
         simdi = self.saat_ms()
         self.niyetleri_coz(simdi)
@@ -2748,7 +2756,7 @@ def kontrol(rules: dict, kip: str, post: Callable[[dict], Any], kadro_oku: Calla
     r: dict[str, Any] = {"kip": kip, "kasa_usd": kasa, "kasa_kaynagi": kaynak}          # kaynak: "ortam" (gerçek kip CANLI_KASA_USD) | "yaml" (sanal) | "arg" (sanal, --sanal-kasa-usd)
     if kasa_hata:
         r["kasa_hata"] = kasa_hata
-    r["kasa_siniri_ok"] = kasa_hata is None and r["kasa_usd"] <= float(rules["canli_kasa_ust_usd"])
+    r["kasa_siniri_ok"] = kasa_hata is None and r["kasa_usd"] <= kasa_ust(rules, kip)
     r["anahtar"] = bool(ortam.get("HL_API_CUZDAN_ANAHTARI")) and bool(ortam.get("HL_HESAP_ADRESI"))        # değerler ASLA yazılmaz
     try:
         r["hl_baglanti"] = len(post({"type": "meta"})["universe"]) > 0
@@ -2914,7 +2922,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--sure-sn", type=float, default=None, help="vardiya süresi (sn); varsayılan sonsuz")
     ap.add_argument("--kadro-dali", default=None, help="kadro.json veri dalı (varsayılan canli_kadro_dali; dal doğrulamasında radar-deneme)")
     ap.add_argument("--vardiya", default="yerel")
-    ap.add_argument("--sanal-kasa-usd", type=float, default=None, help="yalnız sanal kip: kasa $ (0 < kasa <= canli_kasa_ust_usd); varsayılan kurallar.yaml canli_kasa_usd. Ayrı --durum-dizin ile (G5)")
+    ap.add_argument("--sanal-kasa-usd", type=float, default=None, help="yalnız sanal kip: kasa $ (0 < kasa <= canli_sanal_kasa_ust_usd; K-66); varsayılan kurallar.yaml canli_kasa_usd. Ayrı --durum-dizin ile (G5)")
     args = ap.parse_args(argv)
     rules = load_rules()
     tgram = tg.Telegram(arka_plan=not args.kontrol, sessiz_utc=(int(rules["canli_telegram_sessiz_bas_utc"]), int(rules["canli_telegram_sessiz_bit_utc"])))

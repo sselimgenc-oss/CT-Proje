@@ -145,19 +145,6 @@ def test_k39_ayni_utc_gununde_ikinci_kadro_saha_kararini_tetiklemez_ilk_kadro_sa
     assert kd.Saha(RULES, 1000.0, eski.to_json()).gecis_silinen == []                                         # ikinci yüklemede tekrar silinmez
 
 
-def test_k61_elle_cikarma_ayni_gun_ikinci_kadroda_hemen_uygulanir_slot_yeni_kadrodan_dolar():
-    s = hazir_11()
-    ilk = [satir(i, i, 90 - i) for i in range(1, 12)]
-    s.degerlendir(kadro(ilk, T0 + GUN + SAAT), T0 + GUN + 2 * SAAT)                                             # günün ilk kadrosu
-    ikinci = kadro([satir(i, i, 90 - i) for i in range(1, 11)] + [satir(12, 11)], T0 + GUN + 7 * SAAT)        # 11 elle çıkarıldı, yerine 12
-    ikinci["cikanlar"] = {adr(11): "elle_cikarildi"}
-    karar, _ = s.degerlendir(ikinci, T0 + GUN + 8 * SAAT)
-    assert [(k.tur, k.adres, k.neden) for k in karar] == [("dus", adr(11), "elle_cikarildi"), ("giris", adr(12), "bos_slot")]
-    assert adr(11) not in s.uyeler and s.bekleme[adr(11)] > T0 + GUN + 8 * SAAT and s.gun_kadro["kadro"]["kosu_ms"] == T0 + GUN + 7 * SAAT
-    assert all(not u.get("disi_gunler") for u in s.uyeler.values())                                         # günlük kurallar ikinci kez çalışmadı
-    assert s.degerlendir(ikinci, T0 + GUN + 9 * SAAT)[0] == []                                                 # aynı kadro tekrar okununca yeni karar yok
-
-
 def test_bekleme_suresince_sahaya_donemez_bitince_girer():
     kosu = T0 + 14 * GUN - 2 * SAAT
     s1 = kd.Saha(RULES, 1000.0, {"bekleme": {adr(1): T0 + 14 * GUN}, "kurulu": True})
@@ -618,7 +605,7 @@ def test_kip_varsayilan_sanal_gercek_yalniz_ortam_anahtar_ve_actions_degil():
 
 def test_kasa_siniri_asan_kasada_motor_baslamaz(tmp_path):
     m, *_ = kur(tmp_path, kasa=1000.0)
-    m.rules = {**m.rules, "canli_kasa_ust_usd": 900}
+    m.rules = {**m.rules, "canli_kasa_ust_usd": 900, "canli_sanal_kasa_ust_usd": 900}          # sanal kipte sınır `canli_sanal_kasa_ust_usd` (K-66)
     m.kasa = 1000.0
     with pytest.raises(mt.KipHatasi):
         m.baslat()
@@ -1454,10 +1441,11 @@ def test_b11_kor_kirpildi_degistirmede_uye_basina_tekrar_yazilmaz(tmp_path):
 # ---------------------------------------------------------------- 300 $ paralel sanal seri (`--sanal-kasa-usd`, 08.11 kullanıcı onayı)
 def test_sanal_kasa_bayragi_yalniz_sanal_ve_sinir_icinde():
     assert mt.kasa_belirle(RULES, "sanal", {}, 300) == (300.0, "arg")
-    assert mt.kasa_belirle(RULES, "sanal", {}, 1000) == (1000.0, "arg")                                    # sınır dahil
+    assert mt.kasa_belirle(RULES, "sanal", {}, 1000) == (1000.0, "arg")
+    assert mt.kasa_belirle(RULES, "sanal", {}, 2200) == (2200.0, "arg")                                    # K-66 sanal sınır içinde
     assert mt.kasa_belirle(RULES, "sanal", {}) == (1000.0, "yaml")                                         # bayraksız: aynen yaml (1.000 $ seri)
     assert mt.kasa_belirle(RULES, "sanal", {"CANLI_KASA_USD": "500"}, 300) == (300.0, "arg")               # ortam kasası sanalda yine yok sayılır
-    for kotu in (0, -1, 1000.01, 5000, float("nan"), float("inf"), "x"):
+    for kotu in (0, -1, 10000.01, 15000, float("nan"), float("inf"), "x"):
         with pytest.raises(mt.KipHatasi, match="--sanal-kasa-usd"):
             mt.kasa_belirle(RULES, "sanal", {}, kotu)
     with pytest.raises(mt.KipHatasi, match="yalnız sanal kipte"):                                         # gerçek kipte bayrak ret (ortam kasası olsa da)
@@ -1525,15 +1513,15 @@ def _main_hazirla(monkeypatch, hl=None):
 
 
 def test_main_sanal_kasa_bayragi_reddi_cikis_3_ag_yok(monkeypatch, tmp_path):
-    """Gerçek kip + bayrak, > 1.000 $, ≤ 0: motor başlamaz (çıkış 3), HL'ye istek gitmez; kontrol kipinde de ret."""
+    """Gerçek kip + bayrak, > sanal sınır (K-66: 10.000 $), ≤ 0: motor başlamaz (çıkış 3), HL'ye istek gitmez; kontrol kipinde de ret."""
     def ag_yok(rules):
         raise AssertionError("ret öncesi ağ çağrısı olmamalı")
     _main_hazirla(monkeypatch)
     monkeypatch.setattr(mt, "rest_post_olustur", ag_yok)
     d = str(tmp_path / "durum")
-    assert mt.main(["--sanal-kasa-usd", "1500", "--durum-dizin", d]) == 3
+    assert mt.main(["--sanal-kasa-usd", "10000.01", "--durum-dizin", d]) == 3
     assert mt.main(["--sanal-kasa-usd", "0", "--durum-dizin", d]) == 3
-    assert mt.main(["--kontrol", "--sanal-kasa-usd", "2000", "--durum-dizin", d]) == 3
+    assert mt.main(["--kontrol", "--sanal-kasa-usd", "15000", "--durum-dizin", d]) == 3
     assert mt.main(["--kip", "gercek", "--sanal-kasa-usd", "300", "--durum-dizin", d]) == 3                 # Actions: gerçek kip zaten ret
     monkeypatch.delenv("GITHUB_ACTIONS")
     monkeypatch.setattr(mt, "kip_belirle", lambda rules, istenen=None, ortam=None: "gercek")                # sunucuda gerçek kip olsa bile bayrak ret

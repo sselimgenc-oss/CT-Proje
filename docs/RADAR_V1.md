@@ -3,6 +3,9 @@
 Durum: **tasarım, lider (Claude) yazdı, kullanıcı onayladı (K‑19, 2026-11-04).** Kod yok; uygulama `docs/GOREV_T*.md` ile Sonnet'te.
 Eski sistem (Kapı v3, İlk 11 puanı, oda/kontrol, ön kayıt) **kaldırıldı**; bu belge onun yerine geçen tek strateji kaynağıdır.
 
+> **K-66 (14.11.2026, kullanıcı kararı): yeniden yürürlükte.** D+ (`secim_d`) kapandı; seçim bu belge + v1.1 kuralları (K-53) aynen (vetosuz). Kadro `radar_surum` v3.
+> Saha 11 kişi; sanal kasa 10.000 $ (slot ≈ 909 $; sadık boyut: 5,5 $ altı açılmaz, tavan 1,5 × slot) (`canli_sanal_kasa_ust_usd`). Gerçek para sınırı ≤ 1.000 $ (K-22/K-26) değişmez. Değerlendirme 31.12.2026.
+
 ## 0. Temel fikir (neden böyle)
 - 7 günlük form tek başına şanstan ayrılamaz; çoğu öne çıkan zirvede yakalanır (ortalamaya dönüş). Bu yüzden form puanı şans korumalıdır
   (bootstrap alt sınırı, yayılma, istikrar) ve kopyalanabilirlik **bugün** gecikme + maliyetle sınanır (R1/6).

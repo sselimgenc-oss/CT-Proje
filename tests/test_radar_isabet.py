@@ -280,4 +280,4 @@ def test_radar_yml_isabet_adimi_yayimdan_once_ve_hata_yayimi_engellemez():
     import yaml
     wf = yaml.safe_load((Path(__file__).resolve().parents[1] / ".github/workflows/radar.yml").read_text(encoding="utf-8"))
     ad = [a.get("name", "") for a in wf["jobs"]["radar"]["steps"]]
-    assert "Seçim isabeti (§7b)" not in ad                                 # K-55 (09.11): isabet v1 havuzunu ölçer; D yapısında radar.yml'den çıkarıldı (modül + isabet_deneme.yml duruyor)
+    assert ad.index("Seçim isabeti (§7b)") < ad.index("Veri dalına yaz (radar)")             # K-66: Form Radarı ile isabet adımı geri

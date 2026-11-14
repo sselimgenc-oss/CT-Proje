@@ -19,7 +19,7 @@ def test_saha_sayisi_ve_slot(kasa, n, slot):
     assert boyut.slot_usd(500, RULES) == pytest.approx(45.4545, abs=1e-4) and boyut.slot_usd(1000, RULES) == pytest.approx(90.91, abs=1e-2)
 
 
-@pytest.mark.parametrize('kasa', [0, -5, 24.99, 1000.01, float('nan')])
+@pytest.mark.parametrize('kasa', [0, -5, 24.99, 10000.01, float('nan')])     # üst sınır = max(gerçek 1.000, sanal 10.000) (K-66); gerçek kip 1.000 $ motorda
 def test_kasa_sinirlari_hata(kasa):
     with pytest.raises(ValueError):
         boyut.saha_sayisi(kasa, RULES)

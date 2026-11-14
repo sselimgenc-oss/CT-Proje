@@ -1,4 +1,4 @@
-"""K-54 (kullanıcı kararı 09.11): yeni seçim yapısı (radar_surum v2) yayımlanana kadar motor eski yapının kadrosunu UYGULAMAZ (saha boş, kasa nakitte)."""
+"""K-54 (kullanıcı kararı 09.11): yeni seçim yapısı (radar_surum; K-66: v3) yayımlanana kadar motor eski yapının kadrosunu UYGULAMAZ (saha boş, kasa nakitte)."""
 from pathlib import Path
 
 from copytrade.canli import motor as mt
@@ -7,9 +7,9 @@ from tests.test_canli_motor import SAAT, kadro, kayitlar, kur, satir
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_radar_surum_dosyasi_v2_ve_donem_yeni():
-    assert mt.radar_surum_oku() == "v2"
-    assert (ROOT / "copytrade/canli/DONEM").read_text(encoding="utf-8").strip() == "2026-11-14T09:00:00Z"     # K-65 eki (14.11 12:00 TSİ): birleşik hesap paydası (emir teminatı) düzeltmesi sonrası yeni sanal dönem 600 $ / 3; eski dönem verisi git geçmişinde arşivli
+def test_radar_surum_dosyasi_v3_ve_donem_yeni():
+    assert mt.radar_surum_oku() == "v3"                                                                       # K-66: Form Radarı (D+ v2 kadrosu uygulanmaz)
+    assert (ROOT / "copytrade/canli/DONEM").read_text(encoding="utf-8").strip() == "2026-11-14T18:00:00Z"     # K-66 (14.11 21:00 TSİ): Form Radarı yeni sanal dönem 2.200 $ / 11; eski dönem verisi git geçmişinde arşivli
 
 
 def test_radar_surum_oku_yorum_bos_yok(tmp_path):
