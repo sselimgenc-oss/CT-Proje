@@ -792,7 +792,7 @@ class Motor:
             if emir_usd <= 0:
                 return self._atla(o, adres, eylem, "engel", kn)
             neden = kn or neden
-            emir_usd, sn = self.risk.sig_coin_kirp(emir_usd, biz_usd, self.coin_hacmi(o.coin))                          # K-62 sığ coin tavanı (trader başına)
+            emir_usd, sn = self.risk.sig_coin_kirp(emir_usd, biz_usd, self.coin_hacmi(o.coin), slot)                          # K-62 sığ coin tavanı (trader başına)
             if emir_usd <= 0:
                 return self._atla(o, adres, eylem, "engel", sn)
             neden = sn or neden
