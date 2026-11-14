@@ -1,64 +1,9 @@
-{"zaman_ms":1794614736663,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794615328636,"olay":"telegram","metin":"🧾 Son 1 saat (02:15–03:15 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 600,00 $ · bugün 🟢 +0,00 $ (%0,0) · başlangıçtan 🟢 +0,00 $ (%0,0)","acik":true}
-{"zaman_ms":1794615586332,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794616442206,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794617289917,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794618136805,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794618930592,"olay":"telegram","metin":"🧾 Son 1 saat (03:15–04:15 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 600,00 $ · bugün 🟢 +0,00 $ (%0,0) · başlangıçtan 🟢 +0,00 $ (%0,0)","acik":true}
-{"zaman_ms":1794618995348,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794619815041,"olay":"kapanis","ozet":{"kip":"sanal","vardiya":"43508905497","sure_dk":255.1935,"kasa_usd":600.0,"ozsermaye_usd":600.0,"getiri":0.0,"saha":2,"saha_n":3,"inen":0,"slot_usd":200.0,"emir":{"emir":0,"dolu":0,"kismi":0,"dolmadi":0,"red":0,"atlandi":0,"engel":0,"gec_goruldu":0,"gec_acilis":0,"kapanis_eksik":0,"min_nosyonel":0,"funding_oran_yok":0},"ortalama_kayma_trader":null,"ortalama_kayma_ref":null,"kayma_n":0,"acik_pozisyon":0,"brut_usd":0,"tasfiye":0,"dur":false,"kayit_sayac":{"kor_kirpildi":1,"kacan_tamamlandi":1,"tur":18,"telegram":4},"telegram_hata":0,"kor_kirpildi":1,"neden_say":{},"slot_tavani":0,"marj_yok":0,"uyeler":["0x8abc3b8b07082cc8752a1342ece30b9798aac9ad","0xfc76f730c3e2939825484e0a777368075d779ef9"],"gec_acilis":0,"kapanis_eksik":0,"kapanis_kuyrugu":0,"min_nosyonel":0,"funding_usd":0.0,"funding_gercek_usd":0.0,"ucret_gercek_usd":0.0,"ucret_tahmin_say":0,"funding_oran_yok":0,"kuyruk_gecikme_ms":{"n":180,"p50":5,"max":11},"en_buyuk_emir":{},"min_emir_say":{},"ters_netlesme":0,"spot_atlandi":0,"hip3_atlandi":0,"trader_atlanan":{"spot_atlandi":{},"hip3_atlandi":{}},"acik":[],"rest_istek":6510,"rest_429":0,"dinleyici":{"kopma":1,"yeniden_baglanma":1,"yeniden_baslama":0,"error":0,"subscription_response":706,"tekrar":6,"trades_mesaj":370151,"userfills_mesaj":8,"ping":608,"abonelik_oncesi_snapshot_gibi":0,"gecikme_60sn_ustu":0,"rest_abonelik_oncesi_atlanan":0,"dolgu_yeniden_deneme":0,"dolgu_bekleyen":0,"dolgu_hata_tur":{},"hakem_yeniden_deneme":0,"hakem_hata":0,"hakem_hata_tur":{},"rest_tur_atlanan":0,"kapanis_atlanan":0,"dolgu":0},"yazildi_ms":1794619815041}}
-{"zaman_ms":1794619914178,"olay":"kor_kirpildi","adres":"0x424d756e19469ddb13c753b280cc0e9d8c95420e","uyeler":["0x8abc3b8b07082cc8752a1342ece30b9798aac9ad","0xfc76f730c3e2939825484e0a777368075d779ef9"]}
-{"zaman_ms":1794619916266,"olay":"kacan_tamamlandi","adet":0,"bas_ms":1794616316007}
-{"zaman_ms":1794619973107,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794620779342,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794621649579,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794622495090,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794623335464,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794623529716,"olay":"telegram","metin":"🧾 Son 1 saat (04:31–05:32 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 600,00 $ · bugün 🟢 +0,00 $ (%0,0) · başlangıçtan 🟢 +0,00 $ (%0,0)","acik":true}
-{"zaman_ms":1794624176576,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794625021456,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794625891254,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794626737536,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794627154366,"olay":"telegram","metin":"🧾 Son 1 saat (05:32–06:32 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 600,00 $ · bugün 🟢 +0,00 $ (%0,0) · başlangıçtan 🟢 +0,00 $ (%0,0)","acik":true}
-{"zaman_ms":1794627577752,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794628448581,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794629296896,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794630167360,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794630784897,"olay":"telegram","metin":"🧾 Son 1 saat (06:32–07:33 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 600,00 $ · bugün 🟢 +0,00 $ (%0,0) · başlangıçtan 🟢 +0,00 $ (%0,0)","acik":true}
-{"zaman_ms":1794631015564,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794631853257,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794632722771,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794633568266,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794634409033,"olay":"telegram","metin":"🧾 Son 1 saat (07:33–08:33 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 600,00 $ · bugün 🟢 +0,00 $ (%0,0) · başlangıçtan 🟢 +0,00 $ (%0,0)","acik":true}
-{"zaman_ms":1794634441020,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794635220034,"olay":"kapanis","ozet":{"kip":"sanal","vardiya":"43540994392","sure_dk":255.1626,"kasa_usd":600.0,"ozsermaye_usd":600.0,"getiri":0.0,"saha":2,"saha_n":3,"inen":0,"slot_usd":200.0,"emir":{"emir":0,"dolu":0,"kismi":0,"dolmadi":0,"red":0,"atlandi":0,"engel":0,"gec_goruldu":0,"gec_acilis":0,"kapanis_eksik":0,"min_nosyonel":0,"funding_oran_yok":0},"ortalama_kayma_trader":null,"ortalama_kayma_ref":null,"kayma_n":0,"acik_pozisyon":0,"brut_usd":0,"tasfiye":0,"dur":false,"kayit_sayac":{"kor_kirpildi":1,"kacan_tamamlandi":1,"tur":18,"telegram":4},"telegram_hata":0,"kor_kirpildi":1,"neden_say":{},"slot_tavani":0,"marj_yok":0,"uyeler":["0x8abc3b8b07082cc8752a1342ece30b9798aac9ad","0xfc76f730c3e2939825484e0a777368075d779ef9"],"gec_acilis":0,"kapanis_eksik":0,"kapanis_kuyrugu":0,"min_nosyonel":0,"funding_usd":0.0,"funding_gercek_usd":0.0,"ucret_gercek_usd":0.0,"ucret_tahmin_say":0,"funding_oran_yok":0,"kuyruk_gecikme_ms":{"n":253,"p50":6,"max":12},"en_buyuk_emir":{},"min_emir_say":{},"ters_netlesme":0,"spot_atlandi":0,"hip3_atlandi":0,"trader_atlanan":{"spot_atlandi":{},"hip3_atlandi":{}},"acik":[],"rest_istek":6565,"rest_429":0,"dinleyici":{"kopma":1,"yeniden_baglanma":1,"yeniden_baslama":0,"error":0,"subscription_response":706,"tekrar":133,"trades_mesaj":366185,"userfills_mesaj":8,"ping":608,"abonelik_oncesi_snapshot_gibi":0,"gecikme_60sn_ustu":0,"rest_abonelik_oncesi_atlanan":0,"dolgu_yeniden_deneme":0,"dolgu_bekleyen":0,"dolgu_hata_tur":{},"hakem_yeniden_deneme":0,"hakem_hata":0,"hakem_hata_tur":{},"rest_tur_atlanan":0,"kapanis_atlanan":0,"dolgu":0},"yazildi_ms":1794635220034}}
-{"zaman_ms":1794635307954,"olay":"kor_kirpildi","adres":"0x424d756e19469ddb13c753b280cc0e9d8c95420e","uyeler":["0x8abc3b8b07082cc8752a1342ece30b9798aac9ad","0xfc76f730c3e2939825484e0a777368075d779ef9"]}
-{"zaman_ms":1794635310728,"olay":"kacan_tamamlandi","adet":0,"bas_ms":1794631710448}
-{"zaman_ms":1794635366725,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794636016788,"olay":"telegram","metin":"☀️ Günaydın! Dünün sonucu (sanal · deneme parası)\n━━━━━━━━━━━━━━\n📈 Son 24 saat: +0,00 $ (+%0,00)\n💰 Kasa şimdi: 600,00 $ (başlangıç 600 $)\n🏁 Başlangıçtan beri: +%0,00\n━━━━━━━━━━━━━━\n🧾 Dün 0 emir verildi · 👥 takipte 2/3 trader\n💸 Funding (sanal): +0,00 $\n📌 Açık pozisyon yok","acik":true}
-{"zaman_ms":1794636177110,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794637019614,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794637870704,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794638711720,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794638938150,"olay":"telegram","metin":"🧾 Son 1 saat (08:48–09:48 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 600,00 $ · bugün 🟢 +0,00 $ (%0,0) · başlangıçtan 🟢 +0,00 $ (%0,0)","acik":true}
-{"zaman_ms":1794639523112,"olay":"kor_kirpildi","adres":"0x424d756e19469ddb13c753b280cc0e9d8c95420e","uyeler":["0x8abc3b8b07082cc8752a1342ece30b9798aac9ad","0xfc76f730c3e2939825484e0a777368075d779ef9"]}
-{"zaman_ms":1794639555137,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794640403777,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794640791922,"olay":"telegram_hata","tur":"ConnectionError"}
-{"zaman_ms":1794641247608,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794642088278,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794642546759,"olay":"telegram","metin":"🧾 Son 1 saat (09:48–10:49 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 600,00 $ · bugün 🟢 +0,00 $ (%0,0) · başlangıçtan 🟢 +0,00 $ (%0,0)","acik":true}
-{"zaman_ms":1794642939419,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794643779743,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794644634758,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794645386499,"olay":"mark_okuma_hata","tur":"HTTPError"}
-{"zaman_ms":1794645521328,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794646173413,"olay":"telegram","metin":"🧾 Son 1 saat (10:49–11:49 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 600,00 $ · bugün 🟢 +0,00 $ (%0,0) · başlangıçtan 🟢 +0,00 $ (%0,0)","acik":true}
-{"zaman_ms":1794646365707,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794647218365,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794648066887,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794648910748,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794649762473,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794649797030,"olay":"telegram","metin":"🧾 Son 1 saat (11:49–12:49 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 600,00 $ · bugün 🟢 +0,00 $ (%0,0) · başlangıçtan 🟢 +0,00 $ (%0,0)","acik":true}
-{"zaman_ms":1794650607522,"olay":"tur","ozsermaye_usd":600.0}
-{"zaman_ms":1794650614982,"olay":"kapanis","ozet":{"kip":"sanal","vardiya":"43563197248","sure_dk":255.18398333333334,"kasa_usd":600.0,"ozsermaye_usd":600.0,"getiri":0.0,"saha":2,"saha_n":3,"inen":0,"slot_usd":200.0,"emir":{"emir":0,"dolu":0,"kismi":0,"dolmadi":0,"red":0,"atlandi":0,"engel":0,"gec_goruldu":0,"gec_acilis":0,"kapanis_eksik":0,"min_nosyonel":0,"funding_oran_yok":0},"ortalama_kayma_trader":null,"ortalama_kayma_ref":null,"kayma_n":0,"acik_pozisyon":0,"brut_usd":0,"tasfiye":0,"dur":false,"kayit_sayac":{"kor_kirpildi":2,"kacan_tamamlandi":1,"tur":19,"telegram":5,"telegram_hata":1,"mark_okuma_hata":1},"telegram_hata":1,"kor_kirpildi":2,"neden_say":{},"slot_tavani":0,"marj_yok":0,"uyeler":["0x8abc3b8b07082cc8752a1342ece30b9798aac9ad","0xfc76f730c3e2939825484e0a777368075d779ef9"],"gec_acilis":0,"kapanis_eksik":0,"kapanis_kuyrugu":0,"min_nosyonel":0,"funding_usd":0.0,"funding_gercek_usd":0.0,"ucret_gercek_usd":0.0,"ucret_tahmin_say":0,"funding_oran_yok":0,"kuyruk_gecikme_ms":{"n":180,"p50":3,"max":4},"en_buyuk_emir":{},"min_emir_say":{},"ters_netlesme":0,"spot_atlandi":0,"hip3_atlandi":0,"trader_atlanan":{"spot_atlandi":{},"hip3_atlandi":{}},"acik":[],"rest_istek":6481,"rest_429":0,"dinleyici":{"kopma":7,"yeniden_baglanma":1,"yeniden_baslama":0,"error":0,"subscription_response":706,"tekrar":0,"trades_mesaj":261324,"userfills_mesaj":6,"ping":602,"abonelik_oncesi_snapshot_gibi":0,"gecikme_60sn_ustu":0,"rest_abonelik_oncesi_atlanan":0,"dolgu_yeniden_deneme":0,"dolgu_bekleyen":0,"dolgu_hata_tur":{},"hakem_yeniden_deneme":0,"hakem_hata":0,"hakem_hata_tur":{},"rest_tur_atlanan":0,"kapanis_atlanan":0,"dolgu":0},"yazildi_ms":1794650614982}}
+{"zaman_ms":1794650707213,"olay":"saha_giris","adres":"0x8abc3b8b07082cc8752a1342ece30b9798aac9ad","neden":"ilk_gun","yerine":null,"slot_usd":200.0}
+{"zaman_ms":1794650707213,"olay":"telegram","metin":"➕ Yeni trader takibe alındı: 0x8abc3b…\n↳ Neden: ilk kadro","acik":true}
+{"zaman_ms":1794650709736,"olay":"saha_giris","adres":"0xfc76f730c3e2939825484e0a777368075d779ef9","neden":"ilk_gun","yerine":null,"slot_usd":200.0}
+{"zaman_ms":1794650709736,"olay":"telegram","metin":"➕ Yeni trader takibe alındı: 0xfc76f7…\n↳ Neden: ilk kadro","acik":true}
+{"zaman_ms":1794650709736,"olay":"kor_kirpildi","adres":"0x424d756e19469ddb13c753b280cc0e9d8c95420e","uyeler":["0x8abc3b8b07082cc8752a1342ece30b9798aac9ad","0xfc76f730c3e2939825484e0a777368075d779ef9"]}
+{"zaman_ms":1794650761440,"olay":"kacan_tamamlandi","adet":0,"bas_ms":1794650711620}
+{"zaman_ms":1794650770028,"olay":"telegram_hata","tur":"ConnectionError"}
+{"zaman_ms":1794650771741,"olay":"telegram","metin":"☀️ Günaydın! Dünün sonucu (sanal · deneme parası)\n━━━━━━━━━━━━━━\n📈 Son 24 saat: +0,00 $ (+%0,00)\n💰 Kasa şimdi: 600,00 $ (başlangıç 600 $)\n🏁 Başlangıçtan beri: +%0,00\n━━━━━━━━━━━━━━\n🧾 Dün 0 emir verildi · 👥 takipte 2/3 trader\n💸 Funding (sanal): +0,00 $\n📌 Açık pozisyon yok","acik":true}
+{"zaman_ms":1794650771741,"olay":"tur","ozsermaye_usd":600.0}

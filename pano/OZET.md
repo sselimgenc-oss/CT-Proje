@@ -1,6 +1,6 @@
-# Canlı rapor — 2026-11-14 10:03 UTC
+# Canlı rapor — 2026-11-14 10:20 UTC
 
-**Kip** sanal · vardiya `43563197248` · saha 2/3 (inen 0)
+**Kip** sanal · vardiya `43583461651` · saha 2/3 (inen 0)
 
 ## Kasa
 
@@ -21,8 +21,8 @@ _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun gü
 
 ## Saha değişiklikleri (24 sa)
 
-- 2026-11-13 16:58 giriş 0x8abc3b… — ilk_gun
-- 2026-11-13 16:58 giriş 0xfc76f7… — ilk_gun
+- 2026-11-14 10:05 giriş 0x8abc3b… — ilk_gun
+- 2026-11-14 10:05 giriş 0xfc76f7… — ilk_gun
 
 ## Risk olayları (24 sa)
 
@@ -30,7 +30,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 255 dk · WS kopma 7 / yeniden bağlanma 1 · boşluk yok · REST 429 0
+- süre 15 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
