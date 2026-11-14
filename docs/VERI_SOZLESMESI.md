@@ -297,19 +297,19 @@ daha eskisi için (Hyperliquid `candleSnapshot` yalnız son 5.000 dakikalık mum
 | `kisa_islem_payi` | oran | tutma süresi `radar_kisa_islem_dk`'dan KISA işlemlerin (süresi bilinenler içinde) payı |
 | `max_kaldirac` | x | pencere boyunca en yüksek (toplam pozisyon değeri / `hesap_usd`); payda **koşu anındaki** hesap değeridir (dolum anındaki değil; v1 kararı) |
 | `likit_pay` | oran | nosyonelin (px × sz, tüm perp dolumları) 24 sa hacmi ≥ `radar_likit_coin_hacim_usd` ($, `metaAndAssetCtxs.dayNtlVlm`) coinlerdeki payı |
-| `kopya_getiri_7g` | oran, kopya_$ ölçeği | sanal kopyanın (v5, kasa = havuz `kasa_usd` = `radar_kasa_usd`) pencere getirisi (gecikme + maliyet dahil); hesaplanamazsa `null` |
+| `kopya_getiri_7g` | oran, kopya_$ ölçeği | sanal kopyanın (v5, kasa = havuz `kasa_usd` = `radar_kasa_usd`) pencere getirisi (gecikme + maliyet dahil; M-03 14.11: funding (HL `fundingHistory`) ve motorla aynı sığ coin tavanı (`boyut.sig_coin_kirp`) dahil — ayna ve oransal ayna da); hesaplanamazsa `null` |
 | `ayna_getiri_7g` | oran, kopya_$ ölçeği | AYNI slot ve dolumlarla gecikmesiz + maliyetsiz oynatmanın getirisi (K‑32); kopya yoksa `null` |
 | `kopya_koruma` | oran | **K‑32:** `kopya_getiri_7g / ayna_getiri_7g`; ayna ≤ 0 ya da yok → `null` (`kopya_koruma_dusuk`) |
 | `v4_kopya_getiri_7g` | oran, kopya_$ ölçeği | YALNIZ bilgi (deneme koşuları `--v4-yan-yana`): aynı dolumlar `kopya_v4` (sabit tutar) ile; karar girdisi DEĞİL; yoksa `null` |
 | `v5_onceki_kopya_getiri_7g` | oran, kopya_$ ölçeği | YALNIZ bilgi (`--v4-yan-yana`): aynı dolumlar K‑35 ÖNCESİ v5 kuralıyla (v4 emir başına 100 $ / trader toplamı 200 $ sınırı açık, slot tavanı coin başına); `kopya_getiri_7g` ile "önce/sonra"; karar girdisi DEĞİL |
 | `devir_hafta` | kat | hafta `vlm` / `hesap_usd` (`vlm` trader_$ nosyonel) |
-| `kopya_alt20` | oran, kopya_$ ölçeği | kopya işlem sonuçlarından (`sonuc_usd / 1.000`, geçersiz işlem hariç) `radar_bootstrap_tekrar` yeniden örneklemenin TOPLAMININ `radar_bootstrap_alt_yuzdelik` alt yüzdeliği; tohum adresten türetilir |
+| `kopya_alt20` | oran, kopya_$ ölçeği | kopya işlem sonuçlarından (`sonuc_usd / kasa`, geçersiz işlem hariç; M-02 14.11: pencere sonunda AÇIK kalan kopya işlemi son işaret fiyatıyla SANAL kapanış olarak dahil — kapanış maliyeti düşülür, `acik_islemler`) `radar_bootstrap_tekrar` yeniden örneklemenin TOPLAMININ `radar_bootstrap_alt_yuzdelik` alt yüzdeliği; tohum adresten türetilir |
 | `fiyatsiz_eylem` | adet | yürütme fiyatı bulunamadığı için kopyalanamayan eylem sayısı (`null`: kopya hesaplanmadı) |
 | `yaklasik_fiyat_eylem` | adet | yürütme fiyatı 5 dk mumdan (yönümüze kötü olan fiyat) alınan kopya eylemi sayısı (`null`: kopya hesaplanmadı) |
 | `kopya_gunluk` | liste (kasa oranı) | **R2 girdisi, yalnız `gecti` satırlarında** (aksi `null`): günlük kopya getirisi = (özsermaye_gün − önceki) / kasa, pencere gün sayısı kadar (UTC günleri, ilk gün önceki = kasa); **F-08 (14.11):** koşu anında bitmemiş (24 sa'den kısa) SON gün atılır (İ1 ve korelasyon yalnız tam günlerle) |
 | `kopya_kazanc_gun_orani` | oran | R2 İ1 (yalnız `gecti`): aktif günlerde (getiri ≠ 0) getirisi > 0 olan gün oranı; aktif gün yoksa 0 |
 | `kopya_dusus` | oran | R2 İ2 (yalnız `gecti`): kopya özsermaye eğrisinin pencere içi en büyük zirveden düşüşü (kesir) |
-| `yayilma` | oran | R2 Y (yalnız `gecti`): 1 − (en iyi tek kopya işleminin kârlı işlemler toplamındaki payı); kâr yoksa 0 |
+| `yayilma` | oran | R2 Y (yalnız `gecti`): 1 − (en iyi tek kopya işleminin kârlı işlemler toplamındaki payı; M-02: pencere sonu sanal kapanışlar dahil); kâr yoksa 0 |
 | `kopya_getiri_72s` | oran, **SLOT ölçeği** | "form sürüyor" (yalnız `gecti`). **F-03 (14.11):** 7 günlük kopya oynatmasının özsermaye eğrisinden = (eğri sonu − `kosu_ms − radar_soguyor_saat`'ten önceki son UTC gün sonu özsermayesi; yoksa kasa) / `slot_usd` (72 sa önce açılıp eriyen pozisyon da sayılır; gün çözünürlüğü, 00:37 koşusunda ≈ 72,6 sa). Eşik `radar_soguyor_min_getiri` slot getirisine uygulanır. Eğri yoksa 0 (eski davranış) |
 | `kopya_getiri_72s_durum` | kod \| `null` | F-03 kaydı (yalnız `gecti`): `egri` (eğriden hesaplandı) \| `hesaplanamadi` (eğri yok → `kopya_getiri_72s` = 0, geçer sayılır; yalnız işaret) |
 | `kopya_slot_kat` | x | kasa / `slot_usd` (= N; kopya oynatıldıysa). F-03: `akil_sagligi` kuralı SLOT getirisine (`kopya_getiri_7g` × bu ≤ `radar_akil_sagligi_getiri_max`) uygulanır |
@@ -321,7 +321,7 @@ daha eskisi için (Hyperliquid `candleSnapshot` yalnız son 5.000 dakikalık mum
 | `payda_nokta` | adet | seri nokta sayısı (`week` noktalarının tamamı + yalnız ondan eski `month` / `allTime` noktaları; bitiş = `kosu_ms`); seri yoksa `null` |
 | `payda_bas_usd` | trader_$ | serinin pencere başındaki (`pencere_bas_ms`) değeri (o an ya da öncesindeki son nokta; yoksa ilk nokta) |
 | `payda_son_oran` | oran | serinin `kosu_ms` değeri / `hesap_usd` — portfolio ile lider tablosu tanımlarının akıl sağlığı kontrolü (≈ 1 beklenir; yalnız bilgi) |
-| `kopya_islem_sayisi` | adet | **B12; v1.1 (K-53) KAPI:** kopya oynatmasında kapanan, bootstrap'a giren (geçerli) kopya işlemi sayısı (`kopya_alt20` bu kadar işlemden); `radar_min_kopya_islem` (10) altı → `kopya_islem_az` |
+| `kopya_islem_sayisi` | adet | **B12; v1.1 (K-53) KAPI:** bootstrap'a giren (geçerli) kopya işlemi sayısı (kapanan + M-02 pencere sonu sanal kapanışlar; `kopya_alt20` bu kadar işlemden); `radar_min_kopya_islem` altı → `kopya_islem_az` (kullanıcı 14.11: eşik 0 = kapalı) |
 | `ay_pnl_usd` | $ | **v1.1 (K-53) S1:** lider tablosu 30 g pnl; R0/tutma için > 0 gerekir (`radar_ay_pnl_pozitif`); pencere yoksa `null` (kapı uygulanmaz) |
 | `tutma` | bool | **v1.1 (K-53) D1:** satır R0 ilk N dışından, önceki kadro üyesi olduğu için ölçüldü (`--onceki-kadro`); R1 aynen uygulanır |
 | `yuvarlanan_pay` | oran 0–1 | **B3, YALNIZ bilgi:** kopya açılışlarından (boyut kararı `ac`, emir > 0) `radar_min_emir_usd`'ye (11 $) YUKARI yuvarlananların payı; açılış yoksa `null` |

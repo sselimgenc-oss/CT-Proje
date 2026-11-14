@@ -229,6 +229,9 @@ class Sahte:
             return [{"universe": [{"name": a} for a in adlar]}, [{"dayNtlVlm": str(self.hacim[a])} for a in adlar]]
         if tip == "meta":
             return {"universe": [{"name": a, "maxLeverage": 50} for a in self.hacim]}
+        if tip == "fundingHistory":                                             # M-03: coin başına pencere funding'i (varsayılan yok)
+            self.__dict__.setdefault("funding_cagri", []).append(payload["coin"])
+            return getattr(self, "fonlama", {}).get(payload["coin"], [])
         raise AssertionError(payload)
 
 
@@ -675,3 +678,40 @@ def test_kural_ust_bool_false_gercekten_false_olur():
     assert r.kural_ust_uygula(RULES, ["radar_hip3_kopya=true"])[0]["radar_hip3_kopya"] is True
     with pytest.raises(ValueError):
         r.kural_ust_uygula(RULES, ["radar_hip3_kopya=hayir"])
+
+
+def test_m02_g_ve_y_acik_kopya_islemini_sanal_kapanisla_katar():
+    """M-02 (14.11): G (bootstrap alt yüzdelik) ve Y (yayılma) dizisi = kapanan + pencere sonu açık (sanal kapanış) işlemler. Kasa 1.000 $: kapanan +20 $, açık −60 $ (geçerli),
+    işareti olmayan açık (gecerli false) dışarıda → dizi [0,02; −0,06]; önceden yalnız [0,02] (alt yüzdelik > 0, `sans_riski` geçerdi)."""
+    sonuc = {"getiri": -0.04, "ayna": {"getiri": 0.01}, "baslangic_usd": 1000.0, "slot_usd": 1000.0 / 11,
+             "kapanan_islemler": [{"sonuc_usd": 20.0, "gecerli": True}],
+             "acik_islemler": [{"sonuc_usd": -60.0, "gecerli": True, "neden": "pencere_sonu"}, {"sonuc_usd": 5.0, "gecerli": False, "neden": "pencere_sonu"}]}
+    o = r.kopya_olculeri(sonuc, A1, RULES)
+    assert o["kopya_islem_sayisi"] == 2
+    assert o["kopya_alt20"] == r.bootstrap_alt([0.02, -0.06], int(RULES["radar_bootstrap_tekrar"]), float(RULES["radar_bootstrap_alt_yuzdelik"]), r.adres_tohumu(A1))
+    eski = r.kopya_olculeri({**sonuc, "acik_islemler": []}, A1, RULES)
+    assert eski["kopya_islem_sayisi"] == 1 and eski["kopya_alt20"] > 0 > o["kopya_alt20"]
+    assert [t["sonuc_usd"] for t in r.g_y_islemleri(sonuc)] == [20.0, -60.0, 5.0]
+
+
+def test_m03_radar_kopyasi_funding_ve_sig_coin_tavani_motorla_ayni():
+    """M-03 (Fable mantık denetimi, 14.11). Kasa 1.000 → slot 90,909 $.
+    Funding: altın örnekteki 0,11 BTC kopya 10:01–11:01 açık, 11:00'de oran 0,001, fiyat 110 → −0,11 × 110 × 0,001 = −0,0121 $ → kopya 0,001078055 − 0,0000121 = 0,001065955; ayna (10:00–11:00 açık, saat açılışı 100) −0,11 × 100 × 0,001 = −0,011 $ → 0,0011 − 0,000011.
+    Sığ coin: ALT (24 sa hacim 1.000 $ < `canli_sig_hacim_usd`): trader 30.000 $ açar / hesap 20.000 → hedef 1,5 × slot = 136,36 $ → sığ tavan 0,75 × slot = 68,18 $ → ayna 0,6818 × 10 / 1.000 = 0,0068182."""
+    dol = [dolum(ms("10:00:00"), "BTC", "B", 10, 0, 100), dolum(ms("11:00:00"), "BTC", "A", 10, 10, 110, kapanan=100.0)]
+    fiyat = lambda coin, t: 110.0 if t >= ms("11:00:00") else 100.0               # noqa: E731
+    c = Sahte([], {}, fiyat)
+    c.fonlama = {"BTC": [{"coin": "BTC", "fundingRate": "0.001", "premium": "0", "time": ms("11:00:00")}]}
+    b = r.Baglam(c, KOSU, BAS, RULES)
+    b.piyasa_oku()
+    o = b.kopya_oynat(dol, 20_000.0)
+    assert o["getiri"] == pytest.approx(0.001078055 - 0.0000121, abs=1e-9) and o["ayna"]["getiri"] == pytest.approx(0.0011 - 0.000011, abs=1e-9)
+    b.kopya_oynat(dol, 20_000.0)
+    assert c.funding_cagri == ["BTC"]                                            # coin başına koşuda bir kez (önbellek)
+    alt = [dolum(ms("10:00:00"), "ALT", "B", 300, 0, 100), dolum(ms("11:00:00"), "ALT", "A", 300, 300, 110, kapanan=3000.0)]
+    b2 = r.Baglam(Sahte([], {}, fiyat), KOSU, BAS, RULES)
+    b2.piyasa_oku()
+    sig = b2.kopya_oynat(alt, 20_000.0)
+    assert sig["ayna"]["getiri"] == pytest.approx(0.75 * 1000 / 11 * 0.1 / 1000)
+    b2.hacim["ALT"] = 5e8                                                        # derin coin: yalnız slot tavanı (1,5 × slot)
+    assert b2.kopya_oynat(alt, 20_000.0)["ayna"]["getiri"] == pytest.approx(1.5 * 1000 / 11 * 0.1 / 1000)

@@ -82,6 +82,10 @@ def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str,
     kapanan_islemler = [{'coin': t['coin'], 'acilis': iso_ms(t['acilis_ms']), 'kapanis': iso_ms(t['kapanis_ms']),
                          'sonuc_usd': t['sonuc_usd'], 'getiri': t['sonuc_usd'] / t['acilan_usd'] if t['acilan_usd'] else None,
                          'neden': t['neden'], 'gecerli': t['gecerli']} for t in ledger['islemler']]
+    # M-02 (14.11): pencere sonunda açık kalan kopya işlemleri, son işaret fiyatıyla SANAL kapanış (radar G/Y dizisi; yalnız raporlama, bakiye/getiri değişmez)
+    acik_islemler = [{'coin': t['coin'], 'acilis': iso_ms(t['acilis_ms']), 'kapanis': iso_ms(t['kapanis_ms']), 'sonuc_usd': t['sonuc_usd'],
+                      'getiri': t['sonuc_usd'] / t['acilan_usd'] if t['acilan_usd'] else None, 'neden': t['neden'], 'gecerli': t['gecerli']}
+                     for t in ledger.get('acik_islemler') or []]
     liquidations = [e['zaman_ms'] for e in ledger['olaylar'] if e.get('neden') == 'likidasyon']
     when, source = (min(liquidations), 'mum') if liquidations else (None, None)
     broke = equity[equity <= 0]
@@ -101,6 +105,6 @@ def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str,
             'toplam': ledger['net'], 'funding': ledger['funding'], 'maliyet': ledger['costs'],
             'fiyatsiz_eylem': int(ledger.get('missing', 0)) + bozuk_px, 'tasfiye': when is not None,
             'tasfiye_zamani': tasfiye_zamani, 'tasfiye_kaynagi': source,
-            'kapanis_nedenleri': kapanis_nedenleri, 'kapanan_islemler': kapanan_islemler,
+            'kapanis_nedenleri': kapanis_nedenleri, 'kapanan_islemler': kapanan_islemler, 'acik_islemler': acik_islemler,
             **({'risk_kirpma': ledger.get('risk_kirpma', []), 'acik_pozisyonlar': ledger.get('acik_pozisyonlar', [])} if risk_limitleri is not None else {}),
             **({'tepe_pozisyon_usd': ledger.get('tepe_pozisyon_usd'), 'tepe_brut_usd': ledger.get('tepe_brut_usd')} if (tepe or risk_limitleri is not None) else {})}

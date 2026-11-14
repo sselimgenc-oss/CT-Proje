@@ -232,6 +232,23 @@ class _IslemKaydi:
             self.kapat(olay["coin"], olay["zaman_ms"], olay["neden"], len(timeline[olay["coin"]]) - 1)
         return len(zorunlu)
 
+    def acik_bitir(self, funding_parca: dict[tuple[str, int], float], base_usd: float, end_ms: int, son: dict[str, tuple[float, float, float | None]], rate: float,
+                   k_say: dict[str, int]) -> list[dict]:
+        """M-02 (Fable mantık denetimi, 14.11): pencere sonunda AÇIK kalan kopya işlemleri, son işaret (mark) fiyatıyla SANAL kapanış: net = gerçekleşen kısmi K/Z − maliyet (giriş dahil)
+        + funding (işlemin parçaları [k_bas, son parça]) + açık K/Z (büyüklük × (mark − ortalama giriş)) − kapanış maliyeti (|büyüklük| × mark × `rate`). `son[coin]` = (büyüklük, ort. giriş,
+        mark | None); mark yoksa işlem `gecerli: false` (G/Y'ye girmez). Yalnız raporlama; defteri değiştirmez. `neden` = "pencere_sonu"."""
+        out = []
+        for coin, k in sorted(self.acik.items()):
+            sz, giris, mark = son.get(coin, (0.0, 0.0, None))
+            funding = sum(funding_parca.get((coin, i), 0.0) for i in range(k["k_bas"], k_say.get(coin, k["k_bas"])))
+            if mark is None or abs(sz) < 1e-15:
+                net, gecerli = k["pnl"] - k["maliyet"] + funding, False
+            else:
+                net, gecerli = k["pnl"] - k["maliyet"] + funding + sz * (mark - giris) - abs(sz) * mark * rate, bool(k["temiz"] and not k["fiyatsiz"])
+            out.append({"coin": coin, "acilis_ms": k["acilis_ms"], "kapanis_ms": end_ms, "sonuc_usd": net * base_usd, "acilan_usd": k["acilan"] * base_usd,
+                        "neden": "pencere_sonu", "gecerli": gecerli})
+        return out
+
     def bitir(self, funding_parca: dict[tuple[str, int], float], base_usd: float) -> list[dict]:
         """Funding'i işlemlere dağıtır (işlemin parçaları [k_bas, k_son)) ve $ cinsinden satırları döner."""
         out = []
@@ -674,4 +691,11 @@ def copy_ledger(fills: list[dict], market: Market, account: Any, delay_min: int,
         result.update({"daily": series, "exposure": by_day, "max_drawdown": drawdown})
     if kayit is not None:
         result["islemler"] = kayit.bitir(funding_parca, base_usd)
+        son: dict[str, tuple[float, float, float | None]] = {}
+        for coin in kayit.acik:
+            ev = timeline.get(coin) or []
+            i = bisect_right(event_times.get(coin, []), end_ms) - 1
+            found = market.mark_at(coin, end_ms)
+            son[coin] = (ev[i][1], ev[i][2], None if found is None else found[1]) if i >= 0 else (0.0, 0.0, None)
+        result["acik_islemler"] = kayit.acik_bitir(funding_parca, base_usd, end_ms, son, rate, {c: len(v) for c, v in timeline.items()})
     return result

@@ -15,6 +15,8 @@ from collections import deque
 from datetime import UTC, datetime
 from typing import Any
 
+from copytrade import boyut
+
 DAKIKA = 60_000
 
 
@@ -26,7 +28,6 @@ def coin_tavan_usd(rules: dict, kasa_usd: float) -> float:
     """Aynı coinde tüm slotların brüt tavanı ($): max(kasa × `canli_coin_tavan_oran`, `radar_slot_tavan_carpan` × slot). Slot kurulamıyorsa / kural yoksa yalnız oran."""
     oran = float(rules["canli_coin_tavan_oran"]) * float(kasa_usd)
     try:
-        from copytrade import boyut
         slot_tavan = float(rules["radar_slot_tavan_carpan"]) * boyut.slot_usd(float(kasa_usd), rules)
     except (KeyError, ValueError):
         slot_tavan = 0.0
@@ -147,23 +148,12 @@ class Risk:
         return (kirpilan, "coin_tavani_kirpildi") if kirpilan >= float(self.rules["radar_min_emir_usd"]) else (0.0, "coin_tavani")
 
     def sig_coin_tavan(self, slot_usd: float | None = None) -> float:
-        """F-01 (14.11 denetim): sığ coin tavanı slotla ölçeklenir = `canli_sig_coin_tavan_slot_oran` × slot (0,75 × 200 $ = 150 $, gerçek kip 1.000 $ / 5 slotta değer aynı;
-        sanal 10.000 $ / 11 slotta ≈ 682 $). Slot ya da oran yoksa YEDEK mutlak `canli_sig_coin_tavan_usd` (150 $)."""
-        oran = self.rules.get("canli_sig_coin_tavan_slot_oran")
-        if oran is not None and slot_usd:
-            return float(oran) * float(slot_usd)
-        return float(self.rules["canli_sig_coin_tavan_usd"])
+        """F-01 (14.11 denetim): sığ coin tavanı = `canli_sig_coin_tavan_slot_oran` × slot (yedek `canli_sig_coin_tavan_usd`); tek yer `boyut.sig_coin_tavan` (M-03: radar da kullanır)."""
+        return boyut.sig_coin_tavan(self.rules, slot_usd)
 
     def sig_coin_kirp(self, emir_usd: float, mevcut_usd: float, hacim_usd: float | None, slot_usd: float | None = None) -> tuple[float, str]:
-        """K-62: sığ coinde (24 sa hacim < `canli_sig_hacim_usd`) trader başına kopya pozisyonu ≤ `sig_coin_tavan(slot_usd)` (F-01: oran × slot). `hacim_usd` None = hacim verisi hiç yok (sınır uygulanmaz).
-        Döner (uygulanan $, neden): '' | 'sig_coin_kirpildi' | 'sig_coin_tavani' (kırpılan < min emir)."""
-        if hacim_usd is None or float(hacim_usd) >= float(self.rules["canli_sig_hacim_usd"]):
-            return emir_usd, ""
-        izin = self.sig_coin_tavan(slot_usd) - float(mevcut_usd)
-        if emir_usd <= izin + 1e-9:
-            return emir_usd, ""
-        kirpilan = max(0.0, izin)
-        return (kirpilan, "sig_coin_kirpildi") if kirpilan >= float(self.rules["radar_min_emir_usd"]) else (0.0, "sig_coin_tavani")
+        """K-62: sığ coin tavanı (trader başına); tek yer `boyut.sig_coin_kirp`. Döner (uygulanan $, neden): '' | 'sig_coin_kirpildi' | 'sig_coin_tavani'."""
+        return boyut.sig_coin_kirp(self.rules, emir_usd, mevcut_usd, hacim_usd, slot_usd)
 
     def marj_kirp(self, emir_usd: float, marj_kullanilan_usd: float, ozsermaye_usd: float, kaldirac: float | None = None) -> tuple[float, str]:
         """K‑35 toplam marj tavanı: açık pozisyonların başlangıç marjı toplamı (nosyonel / kaldıraç) + yeni emrin marjı ≤ özsermaye (serbest kasa). Aşan kısım KIRPILIR (`marj_yok`);
