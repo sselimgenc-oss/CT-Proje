@@ -82,7 +82,7 @@ risk_dry_run:
 # ---- Radar v1 (docs/RADAR_V1.md §2–3; T2: R0 evren + R1 kopyalanabilirlik). Eşikler v1'de donar; kodda sayı sabiti yok.
 # Birimler: *_usd = trader hesabı ölçeği ($, trader_$) — radar_likit_coin_hacim_usd coin 24 sa nosyonel hacmi ($); oranlar kesirdir (0,25 = %25); süre saat/dakika adıyla.
 radar_min_hesap_usd: 10000              # trader_$ (hafta başı sermaye = accountValue − hafta pnl; K-31)
-radar_aday_tavan: 300                   # kişi (7 gün getiriye göre ilk N; K-31)
+radar_aday_tavan: 900                   # kişi (7 gün getiriye göre ilk N; K-31). Radar hunisi (kullanıcı 14.11): 300 → 900 (14.11 koşusu 300 adaydan 0 geçen verdi; evren 2.457)
 radar_pencere_saat: 168                 # saat (son7g)
 radar_min_islem: 10                     # kapanmış round trip, sınır dahil
 radar_min_medyan_tutma_saat: 1.0        # saat, sınır dahil
@@ -99,7 +99,7 @@ radar_bootstrap_alt_yuzdelik: 0.20      # oran (alt yüzdelik)
 radar_akil_sagligi_getiri_max: 3.0      # oran (+%300), üstü veri hatası şüphesi
 radar_dolum_tavan: 5000                 # dolum (7 günde bu kadar ya da fazlası = ≈ 2 dk'da bir dolum: kopyalanamaz; `dolum_fazla`, kopya oynatılmaz, dolum alanları null)
 radar_api_agirlik_dk: 1100              # ağırlık/dk (radar istemcisi hız sınırı; HL IP sınırı 1.200)
-radar_zaman_butcesi_dk: 120             # dakika (koşu süresi; aşılınca kalan adaylar `zaman_yok`)
+radar_zaman_butcesi_dk: 150             # dakika (koşu süresi; aşılınca kalan adaylar `zaman_yok` ve koşu EKSİK: kadro yazılmaz, son/ güncellenmez). 14.11: 120 → 150 (900 aday ≈ 85–100 dk tahmini + pay; radar.yml iş zaman aşımı 210 dk)
 radar_payda_zaman: true                 # bool, B8 hata düzeltmesi (08.11 seçim denetimi): kopya oynatmasında trader hesap paydası emir anındaki değer (portfolio accountValueHistory); false = eski sabit koşu anı accountValue. Eşik/ağırlık DEĞİL
 radar_veri_hatasi_pay_max: 0.10         # oran, R-2: `veri_hatasi` satırı bu payı AŞAN koşu eksik sayılır (kadro yazılmaz, çıkış 2, son/ güncellenmez); tam %10 tamdır
 # ---- Canlı boyut (K-28, K-30; RADAR_V1.md §5/§5b): tek yer copytrade/boyut.py. Birim: $ (kasa = sanal/gerçek kopya kasası, kopya_$) ----
@@ -129,10 +129,10 @@ radar_soguyor_min_getiri: -0.02         # oran (son 72 sa kopya getirisi bunun A
 radar_kadro_toplam: 30                  # kişi (İlk 11 + Yedek 19)
 radar_kadro_ilk: 11                     # kişi (İlk katman)
 radar_hip3_kopya: false                 # bool, K‑43: motorla aynı davranış (K‑28 tutarlılık düzeltmesi); true = eski v1 davranışı; kullanıcı onayına sunuldu. false = R1 kopya oynatmasında HIP‑3 (dex:COIN) dolumlarının TAMAMI atlanır (motor K‑42 gibi); eşik/ağırlık/yöntem DEĞİL
-radar_surum: "v3"                       # K-66 Form Radarı: RADAR_V1 + v1.1 seçim kuralları (K-53) aynen, D+ (v2) yerine; kadro.json `radar_surum` alanına yazılır, motor `canli/RADAR_SURUM` ile eşleştirir
+radar_surum: "v4"                       # M-09 (kullanıcı kararı 14.11): radar hunisi + M-02/M-03/M-06/M-07 sonrası v3 → v4 (eski v3 kadrosu uygulanmaz). K-66 Form Radarı: RADAR_V1 + v1.1 seçim kuralları (K-53), D+ (v2) yerine; kadro.json `radar_surum` alanına yazılır, motor `canli/RADAR_SURUM` ile eşleştirir
 radar_tutma_onceki_kadro: true          # bool, v1.1 nedene bağlı çıkış: önceki kadro üyeleri R0 ilk N dışına düşse de R1'den geçirilir (geçen kalır); false = v1
 radar_ay_pnl_pozitif: true              # bool, v1.1 S1: R0 (ve tutma) için lider tablosu 30 g pnl > 0 (pencere yoksa geçer); false = v1
-radar_min_kopya_islem: 10               # işlem, v1.1 S2: R1 kopya kapanan işlem sayısı >= bu (`kopya_islem_az`; sınır dahil); 0 = kapalı (v1). t önceliği (taslak) Fable denetimiyle REDDEDİLDİ
+radar_min_kopya_islem: 0                # işlem, v1.1 S2: R1 kopya kapanan işlem sayısı >= bu (`kopya_islem_az`; sınır dahil); 0 = kapalı (v1). Radar hunisi (kullanıcı 14.11): 10 → 0 (RADAR_V1 §3'te yoktu; şans riski kural 8 aynen). t önceliği (taslak) Fable denetimiyle REDDEDİLDİ
 # ---- Canlı motor (T4; RADAR_V1.md §5, §5b, §6; K-29, K-30, K-33). Oranlar kesir; süre adıyla; $ = kasa ölçeği (kopya_$) ----
 canli_kip: sanal                        # yalnız sanal (G4: gercek yazılırsa motor KipHatasi; gerçek kip YALNIZ sunucuda CANLI_KIP=gercek + CANLI_KASA_USD ortamıyla, Actions'ta ASLA)
 canli_hip3_kopya: false                # K‑42: false = HIP‑3 (dex:COIN) yeni açılış/artırma iki kipte de atlanır (hip3_atlandi); kapanış/azaltma hep serbest. Gerçek kipte SDK perp_dexs gelmeden true YAPMA

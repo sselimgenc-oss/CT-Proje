@@ -57,9 +57,12 @@ def _slot_toplam_usd(held: dict, entry: dict, market: Any, when: int, coin: str,
     return toplam
 
 
-def boyutlayici(trader_hesap_usd: float | Callable[[int], float], slot: float, rules: dict, kayit: list | None = None, toplam_tavan: bool = True):
+def boyutlayici(trader_hesap_usd: float | Callable[[int], float], slot: float, rules: dict, kayit: list | None = None, toplam_tavan: bool = True,
+                hacim: dict[str, float] | None = None):
     """`copy_ledger(boyutlayici=…)` için geri çağrı. Defter birimi = coin / kasa; dönüş: dolumun kopyaya işaretli etkisi (aynı birim). Ters dönüş = kapanış + yeni açılış.
-    `trader_hesap_usd`: sabit payda ya da `PaydaSerisi` (B8: yürütme anı `when`'deki değer). `kayit` verilirse her karar `(eylem, neden, emir_usd)` olarak eklenir (rapor; hesabı değiştirmez). `toplam_tavan=False`: K‑35 öncesi coin başına tavan (YALNIZ önce/sonra karşılaştırması için; üretimde True)."""
+    `trader_hesap_usd`: sabit payda ya da `PaydaSerisi` (B8: yürütme anı `when`'deki değer). `kayit` verilirse her karar `(eylem, neden, emir_usd)` olarak eklenir (rapor; hesabı değiştirmez). `toplam_tavan=False`: K‑35 öncesi coin başına tavan (YALNIZ önce/sonra karşılaştırması için; üretimde True).
+    `hacim` (M-03, 14.11; coin → 24 sa nosyonel hacim $): verilirse açılış/artırmaya motorla AYNI sığ coin tavanı (`boyut.sig_coin_kirp`: hacim < `canli_sig_hacim_usd` → trader başına
+    ≤ `canli_sig_coin_tavan_slot_oran` × slot; listede olmayan coin sığ sayılır). None = sınır yok (eski davranış)."""
 
     payda = payda_fonk(trader_hesap_usd)
 
@@ -87,11 +90,17 @@ def boyutlayici(trader_hesap_usd: float | Callable[[int], float], slot: float, r
             acilacak = sonra
         else:                                                # ekleme (artış)
             emir, neden = boyut.hedef_emir("artir", before_leader, sonra, trader_hesap, biz_usd, slot, price, rules, toplam_usd)
+            if hacim is not None and emir > 0:
+                emir, sn = boyut.sig_coin_kirp(rules, emir, biz_usd, float(hacim.get(coin, 0.0)), slot)
+                neden = sn or neden
             if kayit is not None:
                 kayit.append(("artir", neden, emir))
             return sign * birim(emir)
         if acilacak is not None:
             emir, neden = boyut.hedef_emir("ac", 0.0, acilacak, trader_hesap, 0.0, slot, price, rules, toplam_usd)
+            if hacim is not None and emir > 0:
+                emir, sn = boyut.sig_coin_kirp(rules, emir, 0.0, float(hacim.get(coin, 0.0)), slot)
+                neden = sn or neden
             if kayit is not None:
                 kayit.append(("ac", neden, emir))
             sonuc += sign * birim(emir)
@@ -108,9 +117,11 @@ def hip3_ayikla(fills: list[dict], hip3_kopya: bool) -> list[dict]:
 
 def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str, list[dict]], yurutme: dict[str, dict[int, float]], funding: list[dict],
             t0: pd.Timestamp, now: pd.Timestamp, delay: int, style: str, rules: dict | None = None, azami_kaldirac: dict[str, float] | None = None,
-            trader_hesap_usd: float | Callable[[int], float] = 0.0, kasa_usd: float | None = None, kayit: list | None = None, k35: bool = True, hip3_kopya: bool | None = None) -> dict:
+            trader_hesap_usd: float | Callable[[int], float] = 0.0, kasa_usd: float | None = None, kayit: list | None = None, k35: bool = True, hip3_kopya: bool | None = None,
+            hacim: dict[str, float] | None = None) -> dict:
     """v5 sanal kopya sonucu (kasa ölçeğinde): v3/v4 alanları + `surum: v5`, `kasa_usd`, `slot_usd`. `delay` 0 = ayna (trader'ın dolum fiyatı; `kopya_v3.hesapla` H1 yolu).
     `k35=False`: K‑35 ÖNCESİ davranış (v4 emir/trader tavanı açık, slot tavanı coin başına) — yalnız önce/sonra karşılaştırması için; üretimde True.
+    `hacim` (M-03): coin → 24 sa hacim; verilirse motorla aynı sığ coin tavanı (`boyutlayici`). `funding`: HL `fundingHistory` satırları (coin, fundingRate, time) kopyanın funding'i için.
     `hip3_kopya` (K‑43 adayı, yalnız deneme): None = `rules["radar_hip3_kopya"]` (varsayılan true = HIP‑3 dolumları da kopyalanır, bugünkü davranış); False = HIP‑3 dolumları oynatmadan çıkar (`hip3_ayikla`)."""
     rules = rules or load_rules()
     fills = hip3_ayikla(fills, bool(rules.get("radar_hip3_kopya", True)) if hip3_kopya is None else hip3_kopya)
@@ -122,7 +133,7 @@ def hesapla(fills: list[dict], saatlik: dict[str, list[dict]], isaret: dict[str,
         # Aksi halde toplam 200 $'da takılır, canlı motor 272,7 $'a kadar açar ve R1/6 canlıdan farklı sayı görürdü. HL azami kaldıraç / teminat sınırı (`azami_kaldirac`) KALIR.
         lim = {**lim, "emir_tavan_usd": 1e12, "trader_tavan_usd": 1e12}
     sonuc = kopya_v3.hesapla(fills, saatlik, isaret, yurutme, funding, t0, now, delay, style, rules, risk_limitleri=lim, surum="v5",
-                             base_usd=kasa, boyutlayici=boyutlayici(trader_hesap_usd if callable(trader_hesap_usd) else float(trader_hesap_usd), slot, rules, kayit, k35))
+                             base_usd=kasa, boyutlayici=boyutlayici(trader_hesap_usd if callable(trader_hesap_usd) else float(trader_hesap_usd), slot, rules, kayit, k35, hacim))
     if sonuc.get("durum") != "hesaplanamadi":
         sonuc.update({"kasa_usd": kasa, "slot_usd": slot})
     return sonuc

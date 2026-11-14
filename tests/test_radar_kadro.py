@@ -28,7 +28,7 @@ def test_kadro_altin_ornek_3_kisi_elle():
     form A = 0,35×100 + 0,15×50 + (0,10 + 0,10 + 0,10 + 0,20) × 50 = 35 + 7,5 + 25 = 67,5; B = 17,5 + 15 + 25 = 57,5; C = 25. Slot (kasa 1.000) = 90,909 $, N = 11."""
     h = havuz([gecen("0xB", 0.02, 0.03), gecen("0xC", 0.01, 0.01), gecen("0xA", 0.03, 0.02), elenen("0xD")])
     kd = k.kadro_olustur(h, V1)
-    assert kd["sema"] == "radar-kadro-v1" and kd["radar_surum"] == "v3" and kd["kasa_usd"] == 1000.0 and kd["slot_usd"] == pytest.approx(1000 / 11) and kd["saha_n"] == 11 and kd["gecti_sayisi"] == 3
+    assert kd["sema"] == "radar-kadro-v1" and kd["radar_surum"] == "v4" and kd["kasa_usd"] == 1000.0 and kd["slot_usd"] == pytest.approx(1000 / 11) and kd["saha_n"] == 11 and kd["gecti_sayisi"] == 3
     assert [s["adres"] for s in kd["satirlar"]] == ["0xA", "0xB", "0xC"] and [s["sira"] for s in kd["satirlar"]] == [1, 2, 3]
     assert [s["form"] for s in kd["satirlar"]] == pytest.approx([67.5, 57.5, 25.0]) and {s["katman"] for s in kd["satirlar"]} == {"ilk11"}
     assert set(kd["satirlar"][0]) == {"adres", "sira", "katman", "form", "bilesenler", "kopya_getiri_7g", "max_kaldirac", "form_h_siz", "sira_h_siz", "g_t_istat", "tutma"}
@@ -66,8 +66,9 @@ def test_bos_havuz_bos_kadro_ve_sema_hatasi():
 def test_eksik_kosu_zaman_yok_ve_satir_eksigi():
     assert k.kosu_tam_mi(havuz([elenen("0xA")]), RULES) == (True, None)
     assert k.kosu_tam_mi(havuz([elenen("0xA", "zaman_yok")]), RULES)[0] is False
-    assert k.kosu_tam_mi(havuz([elenen("0xA")], evren_toplam=5000), RULES)[0] is False        # 1 satır < min(300, 5000)
-    assert k.kosu_tam_mi(havuz([elenen(f"0x{i}") for i in range(300)], evren_toplam=5000), RULES) == (True, None)
+    assert k.kosu_tam_mi(havuz([elenen("0xA")], evren_toplam=5000), RULES)[0] is False        # 1 satır < min(900, 5000)
+    assert k.kosu_tam_mi(havuz([elenen(f"0x{i}") for i in range(899)], evren_toplam=5000), RULES)[0] is False      # 14.11: aday tavanı 900 (önce 300)
+    assert k.kosu_tam_mi(havuz([elenen(f"0x{i}") for i in range(900)], evren_toplam=5000), RULES) == (True, None)
 
 
 def test_main_yazar_ve_eksik_kosuda_yazmaz(tmp_path):
@@ -136,3 +137,25 @@ def test_main_onceki_kadro_argumani(tmp_path):
     assert k.main(["--havuz", str(ok), "--onceki-kadro", str(onceki)]) == 0
     kd = json.loads((tmp_path / "kadro.json").read_text(encoding="utf-8"))
     assert kd["elenenler"] == [{"adres": "0xB", "onceki_sira": 1, "neden": "kopya_zarar"}] and kd["eski_uye_neden"] == {"0xB": "r1:kopya_zarar"}
+
+
+def test_veri_nedenleri_r1_elemesi_sayilmaz_ve_huni_ozeti():
+    """Kullanıcı 14.11: önceki üyenin bugünkü havuz nedeni veri_hatasi / payda_yok / zaman_yok ise `veri:<neden>` (sonuçla düşme yok), `elenenler`'e girmez; gerçek R1 nedeni `r1:`.
+    Huni (elle): 6 satır; işlem ölçülen 0xA (12), 0xB (10), 0xD (9) → eşik 10'da 2 yeterli; geçen 1 (0xA); nedenler islem_az 1, veri_hatasi 1, payda_yok 1, zaman_yok 1, kopya_zarar 1."""
+    h = havuz([{**gecen("0xA", 0.03, 0.03), "islem_sayisi": 12}, {**elenen("0xB", "kopya_zarar"), "islem_sayisi": 10}, {**elenen("0xD", "islem_az"), "islem_sayisi": 9},
+               elenen("0xV", "veri_hatasi"), elenen("0xP", "payda_yok"), elenen("0xZ", "zaman_yok")], evren_toplam=2457)
+    kd = k.kadro_olustur(h, RULES, onceki=onceki_kadro(["0xB", "0xV", "0xP", "0xZ"]))
+    assert kd["eski_uye_neden"] == {"0xB": "r1:kopya_zarar", "0xV": "veri:veri_hatasi", "0xP": "veri:payda_yok", "0xZ": "veri:zaman_yok"}
+    assert [e["adres"] for e in kd["elenenler"]] == ["0xB"]
+    assert kd["huni"] == {"evren": 2457, "aday": 6, "islem_yeterli": 2, "islem_esik": int(RULES["radar_min_islem"]), "gecen": 1, "kadro": 1,
+                          "neden": {"islem_az": 1, "kopya_zarar": 1, "payda_yok": 1, "veri_hatasi": 1, "zaman_yok": 1}}
+
+
+def test_m10_main_kadroya_olusturma_ani_yazar(tmp_path):
+    yol = tmp_path / "havuz.json"
+    yol.write_text(json.dumps(havuz([gecen("0xA", 0.03, 0.03)])), encoding="utf-8")
+    import time as _t
+    once = int(_t.time() * 1000)
+    assert k.main(["--havuz", str(yol)]) == 0
+    kd = json.loads((tmp_path / "kadro.json").read_text(encoding="utf-8"))
+    assert once <= kd["olusturma_ms"] <= int(_t.time() * 1000)

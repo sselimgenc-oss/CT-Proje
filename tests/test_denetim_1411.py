@@ -105,18 +105,34 @@ def test_d02_r1_elenen_ayni_gun_sonucla_duser_ve_bekler(neden):
     s, karar = _gun2(neden)
     assert [(k.adres, k.neden, k.sonuc) for k in karar if k.tur == "dus"] == [(adr(11), "r1_elendi", True)]
     assert s.bekleme[adr(11)] == T0 + GUN + SAAT + int(load_rules()["canli_bekleme_gun"]) * GUN
-    assert adr(11) in s.inen and adr(11) not in s.uyeler
+    assert [k.adres for k in karar if k.tur == "inen_kapat"] == [adr(11)] and adr(11) not in s.inen and adr(11) not in s.uyeler      # M-07: hemen kapanır
 
 
-@pytest.mark.parametrize("neden", ["r0_disi", "sira_disi", "soguyan"])
+@pytest.mark.parametrize("neden", ["r0_disi", "sira_disi"])
 def test_d02_r1_disi_neden_iki_gun_kuralinda_kalir(neden):
+    """K-39 iki gün kuralı kalır; M-06 (kullanıcı kararı 14.11): ikinci gün düşme SONUÇLA (sıra kuralı kadar cezalı) + bekleme, pozisyonlar hemen kapanır (M-07)."""
     s, karar = _gun2(neden)
     assert [k for k in karar if k.tur == "dus"] == [] and s.uyeler[adr(11)]["disi_gunler"]                 # ilk gün yalnız işaret
     for a in s.uyeler:
         s.islem_gordu(a, T0 + 2 * GUN)
     k3 = {**kadro([satir(i, i, 90 - i) for i in range(1, 11)], T0 + 2 * GUN), "eski_uye_neden": {}}
     karar3, _ = s.degerlendir(k3, T0 + 2 * GUN + SAAT)
-    assert [(k.adres, k.neden, k.sonuc) for k in karar3 if k.tur == "dus"] == [(adr(11), "kadro_disi", False)] and adr(11) not in s.bekleme
+    assert [(k.adres, k.neden, k.sonuc) for k in karar3 if k.tur == "dus"] == [(adr(11), "kadro_disi", True)] and adr(11) in s.bekleme
+    assert [k.adres for k in karar3 if k.tur == "inen_kapat"] == [adr(11)]
+
+
+@pytest.mark.parametrize("kaynak", ["eski_uye_neden", "soguyan_listesi"])
+def test_m06_soguyan_ayni_gun_sonucla_duser_bekler_ve_hemen_kapanir(kaynak):
+    """M-06 (kullanıcı kararı 14.11): soğuyan üye (son 72 sa < eşik; kadro `eski_uye_neden` "soguyan" ya da `soguyan` listesi) AYNI gün sonuçla düşer + bekleme; M-07: pozisyon hemen kapanır."""
+    s = kd.Saha(load_rules(), 1000.0)
+    s.degerlendir(n_kadro(11), T0 + SAAT)
+    for a in s.uyeler:
+        s.islem_gordu(a, T0 + GUN)
+    k2 = kadro([satir(i, i, 90 - i) for i in range(1, 11)], T0 + GUN)
+    k2 = {**k2, "eski_uye_neden": {adr(11): "soguyan"}} if kaynak == "eski_uye_neden" else {**k2, "soguyan": [{"adres": adr(11), "kopya_getiri_72s": -0.05}]}
+    karar, _ = s.degerlendir(k2, T0 + GUN + SAAT)
+    assert [(k.tur, k.adres, k.neden, k.sonuc) for k in karar if k.adres == adr(11)] == [("dus", adr(11), "soguyan", True), ("inen_kapat", adr(11), "soguyan", False)]
+    assert s.bekleme[adr(11)] == T0 + GUN + SAAT + int(load_rules()["canli_bekleme_gun"]) * GUN and adr(11) not in s.inen
 
 
 def test_d02_motor_uctan_uca_r1_elenen_kayit_telegram_ve_bekleme(tmp_path):
@@ -384,3 +400,38 @@ def test_saha_korelasyon_doldurmayi_engellemez_siradaki_girer():
     karar, _ = s.degerlendir(k2, T0 + GUN + SAAT)
     assert [k.adres for k in karar if k.tur == "giris"] == [adr(13), adr(14)] and any(k.tur == "giris_atlandi" and k.adres == adr(12) for k in karar)
     assert len(s.uyeler) == 11 and s.eksik is None
+
+
+@pytest.mark.parametrize("neden", ["veri:veri_hatasi", "veri:payda_yok", "veri:zaman_yok", "r1:veri_hatasi", "r1:payda_yok", "r1:zaman_yok"])
+def test_radar_hunisi_1411_veri_nedeni_sonucla_dusurmez_bekleme_yok(neden):
+    """Kullanıcı 14.11: R1 çıkışında VERİ nedenleri (yeni `veri:` biçimi ve eski kadrodaki `r1:veri_hatasi` vb.) sonuçla düşme + 14 gün bekleme VERMEZ: K-39 iki gün kadro dışı kuralı."""
+    assert kd.r1_elendi({"eski_uye_neden": {adr(11): neden}}, adr(11)) is False
+    s, karar = _gun2(neden)
+    assert [k for k in karar if k.tur == "dus"] == [] and adr(11) not in s.bekleme and s.uyeler[adr(11)]["disi_gunler"]
+
+
+def test_m06_veri_nedeniyle_baslayan_kadro_disi_ikinci_gun_sonuc_disi():
+    """Kullanıcı 14.11 + M-06: gün 2 neden `veri:veri_hatasi` (yalnız işaret), gün 3 kadroda yine yok (eski_uye_neden boş) → kadro_disi SONUÇ DIŞI, bekleme yok, inen (24 sa kuralı)."""
+    s, karar = _gun2("veri:veri_hatasi")
+    assert [k for k in karar if k.tur == "dus"] == []
+    for a in s.uyeler:
+        s.islem_gordu(a, T0 + 2 * GUN)
+    karar3, _ = s.degerlendir({**kadro([satir(i, i, 90 - i) for i in range(1, 11)], T0 + 2 * GUN), "eski_uye_neden": {}}, T0 + 2 * GUN + SAAT)
+    assert [(k.neden, k.sonuc) for k in karar3 if k.tur == "dus"] == [("kadro_disi", False)] and adr(11) not in s.bekleme and adr(11) in s.inen
+
+
+def test_m06_m07_motor_uctan_uca_soguyan_hemen_kapanir_ve_slot_silinir(tmp_path):
+    """Uçtan uca (sanal motor): adr(3) BTC açar; ertesi gün kadroda yok ve soğuyan → saha_dus (soguyan, sonuçla) + AYNI dakikada reduce-only kapanış; slot defterden silinir; 14 gün bekleme."""
+    from tests.test_canli_motor import olay
+    m, _, saat, _ = kur(tmp_path)
+    m._kadro_uygula((True, n_kadro(3, saat() - SAAT)), saat())
+    m.olay_isle(olay("a:1", adr(3), "BTC", "B", 300, 100.0, 0.0, saat))
+    assert m.hesap.sz(adr(3), "BTC") > 0
+    saat.ms += GUN
+    for a in m.saha.uyeler:
+        m.saha.islem_gordu(a, saat())
+    k2 = {**kadro([satir(1, 1, 89), satir(2, 2, 88)], saat() - SAAT), "eski_uye_neden": {adr(3): "soguyan"}}
+    m._kadro_uygula((True, k2), saat())
+    assert [(d["adres"], d["neden"], d["sonuc"]) for d in kayitlar(tmp_path, "saha_dus")] == [(adr(3), "soguyan", True)]
+    assert m.hesap.sz(adr(3), "BTC") == pytest.approx(0.0, abs=1e-12) and adr(3) not in m.hesap.slot_bas and adr(3) not in m.saha.inen
+    assert any(e.get("reduce_only") and e["adres"] == adr(3) for e in kayitlar(tmp_path, "emir")) and m.saha.bekleme[adr(3)] > saat() + 13 * GUN

@@ -98,7 +98,9 @@ def test_is_akislari_kontrol_isi_isabet_adimi_ve_zaman_butcesi():
     adimlar = [a.get("name", a.get("uses", "")) for a in radar["jobs"]["radar"]["steps"]]
     assert adimlar.index("Günlük kadro (R2 form puanı)") < adimlar.index("Seçim isabeti (§7b)") < adimlar.index("Veri dalına yaz (radar)")     # K-66: Form Radarı adımları geri
     isabet = next(a for a in radar["jobs"]["radar"]["steps"] if a.get("name") == "Seçim isabeti (§7b)")
-    assert "copytrade.radar_isabet" in isabet["run"] and "continue-on-error" not in isabet and radar["jobs"]["radar"]["timeout-minutes"] >= 180            # tarama 120 + isabet 30 dk bütçesi sığar
+    assert "copytrade.radar_isabet" in isabet["run"] and "continue-on-error" not in isabet and radar["jobs"]["radar"]["timeout-minutes"] >= 180
+    from copytrade.kurallar import load_rules_asil
+    assert radar["jobs"]["radar"]["timeout-minutes"] >= int(load_rules_asil()["radar_zaman_butcesi_dk"]) + int(load_rules_asil()["isabet_butce_dk"]) + 20   # 14.11: tarama 150 + isabet 30 + kurulum payı sığar
 
 
 def test_radar_yayimla_isabet_dosyalarini_da_yayimlar():

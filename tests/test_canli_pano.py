@@ -56,7 +56,7 @@ def test_hafta_getirisi_gecmisten_ve_yetersiz_gecmis():
 
 def test_isabet_yoksa_ilk_olcum_yazilir_acik_pozisyon_yoksa_ve_hesap_json_yedegi():
     md, _ = pano.pano_olustur({**OZET, "acik": []}, {}, {}, [], [], [], SIMDI)
-    assert "ilk ölçüm 2026-11-12" in md and "açık pozisyon yok" in md and "değişiklik yok" in md and "olay yok" in md and "(geçmiş < 7 gün)" in md
+    assert "henüz ölçüm yok" in md and "2026-11-12" not in md and "açık pozisyon yok" in md and "değişiklik yok" in md and "olay yok" in md and "(geçmiş < 7 gün)" in md
     # ozet'te 'acik' yoksa hesap.json'dan (mark yok → K/Z —)
     ozet = {k: v for k, v in OZET.items() if k != "acik"}
     md2, _ = pano.pano_olustur(ozet, RISK, {"poz": {A1: {"BTC": {"sz": 0.5, "giris": 100.0}}}}, [], [], [], SIMDI)
@@ -202,7 +202,7 @@ def test_pano_c1_canli_kopya_korumasi_ve_c6_kadro_kartlari():
     h = pano.html_olustur(ozet, {}, hesap, kayit, [], 1_793_900_000_000, kadro, saha, {a1: {"deger": 103_000.0, "ms": 1}}, {a1: {"yatirma_payi": 0.3, "kopya_koruma": 0.75}, a2: {"yatirma_payi": 0.05}})
     assert "+%5,40" in h and "+%3,00" in h and ">1,80<" in h                      # C1: bizim getiri / trader getirisi / koruma oranı
     assert "⚠ +%30,00" in h and "0,75" in h                                       # C6: yatirma_payi 0,3 > 0,2 ⇒ ⚠; radar koruma
-    assert "Güven ayarlı getiri" in h and "Hype yakalama" in h                    # C6: form bileşenleri
+    assert "Güven ayarlı getiri" in h and "Hype yakalama" not in h                # C6: form bileşenleri; 14.11: H (ağırlık 0) çubuğu gösterilmez
     assert f'href="https://app.hyperliquid.xyz/explorer/address/{a1}"' in h       # C6: trader sayfası bağlantısı (yalnız geçerli 42 karakterli adres)
     h2 = pano.html_olustur(ozet, {}, hesap, kayit, [], 1_793_900_000_000, kadro, {"uyeler": {a1: {"giris_ms": 1}}, "inen": {}}, None, None)
     assert "girişte kaydedilmemiş" in h2                                          # eski üyede giriş hesabı yok → "—"
@@ -246,7 +246,7 @@ def test_html_pano_kadro_bolumleri_sahada_bekliyor_iniyor_yedek_sirasi():
     h = pano.html_olustur(ozet, {}, {}, [], [], 1_793_900_000_000, kadro, saha)
     assert "SAHADA (1/11)" in h and "BEKLİYOR (1)" in h and "İNİYOR (1)" in h and "YEDEK (1)" in h
     assert h.index("SAHADA (1/11)") < h.index("BEKLİYOR (1)") < h.index("İNİYOR (1)") < h.index("YEDEK (1)")
-    assert "iniyor — yedeğe düşecek" in h and "11'e çıkmayı bekliyor" in h
+    assert "iniyor — yedeğe düşecek" in h and "sahaya çıkmayı bekliyor" in h
     assert "rz bk" in h and "kd kb" in h and "--bk:#f5d90a" in h                                       # BEKLİYOR sarı
     assert "KADRO <em>1/11</em>" in h
 

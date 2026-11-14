@@ -16,11 +16,11 @@ def test_k66_kurallar_dosyada():
     assert (r["radar_saha_max"], r["radar_canli_slot_min_usd"], r["radar_slot_tavan_carpan"], r["radar_min_emir_yuvarla_alt"]) == (11, 200, 1.5, 5.5)
     assert (r["canli_slot_dusus_oran"], r["canli_bekleme_gun"], r["canli_islem_yok_saat"]) == (0.20, 14, 72)             # slot stop %20 korunur; bekleme / işlem yok RADAR_V1 §5
     assert (r["canli_gunluk_kayip_oran"], r["canli_zirve_dusus_oran"]) == (0.05, 0.20)                                   # risk kilitleri değişmez
-    assert (r["radar_kadro_toplam"], r["radar_kadro_ilk"], r["radar_pencere_saat"], r["radar_surum"]) == (30, 11, 168, "v3")
+    assert (r["radar_kadro_toplam"], r["radar_kadro_ilk"], r["radar_pencere_saat"], r["radar_surum"]) == (30, 11, 168, "v4")
     assert (r["canli_kasa_ust_usd"], r["canli_sanal_kasa_ust_usd"]) == (1000, 10000)                                        # gerçek para ≤ 1.000 $ (K-22/K-26)
     assert boyut.saha_sayisi(10000.0, r) == 11 and boyut.slot_usd(10000.0, r) == pytest.approx(10000.0 / 11)
     assert boyut.saha_sayisi(1000.0, r) == 5 and boyut.slot_usd(1000.0, r) == pytest.approx(200.0)
-    assert mt.radar_surum_oku() == "v3"
+    assert mt.radar_surum_oku() == "v4"                                    # M-09 (14.11)
     assert "--sanal-kasa-usd 10000 " in (ROOT / ".github/workflows/canli_vardiya.yml").read_text(encoding="utf-8")
 
 

@@ -42,6 +42,27 @@ def slot_usd(kasa_usd: float | None = None, rules: dict | None = None) -> float:
     return kasa / saha_sayisi(kasa, rules)
 
 
+def sig_coin_tavan(rules: dict, slot_usd: float | None = None) -> float:
+    """F-01 (14.11 denetim): sığ coin tavanı slotla ölçeklenir = `canli_sig_coin_tavan_slot_oran` × slot; slot ya da oran yoksa YEDEK mutlak `canli_sig_coin_tavan_usd`.
+    TEK YER (kural 7): canlı motor (`canli/risk.py`) ve radar kopya oynatması (`kopya_v5.boyutlayici`, M-03) bunu kullanır."""
+    oran = rules.get("canli_sig_coin_tavan_slot_oran")
+    if oran is not None and slot_usd:
+        return float(oran) * float(slot_usd)
+    return float(rules["canli_sig_coin_tavan_usd"])
+
+
+def sig_coin_kirp(rules: dict, emir_usd: float, mevcut_usd: float, hacim_usd: float | None, slot_usd: float | None = None) -> tuple[float, str]:
+    """K-62: sığ coinde (24 sa hacim < `canli_sig_hacim_usd`) trader başına kopya pozisyonu ≤ `sig_coin_tavan`. `hacim_usd` None = hacim verisi hiç yok (sınır uygulanmaz).
+    Döner (uygulanan $, neden): '' | 'sig_coin_kirpildi' | 'sig_coin_tavani' (kırpılan < min emir)."""
+    if hacim_usd is None or float(hacim_usd) >= float(rules["canli_sig_hacim_usd"]):
+        return emir_usd, ""
+    izin = sig_coin_tavan(rules, slot_usd) - float(mevcut_usd)
+    if emir_usd <= izin + 1e-9:
+        return emir_usd, ""
+    kirpilan = max(0.0, izin)
+    return (kirpilan, "sig_coin_kirpildi") if kirpilan >= float(rules["radar_min_emir_usd"]) else (0.0, "sig_coin_tavani")
+
+
 def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trader_hesap_usd: float, biz_poz_usd: float, slot: float, fiyat: float,
                rules: dict | None = None, biz_slot_toplam_usd: float | None = None) -> tuple[float, str]:
     """§5b: tek bir trader dolumunun bizdeki emir BÜYÜKLÜĞÜ ($, işaretsiz; yönü çağıran bilir) ve nedeni.

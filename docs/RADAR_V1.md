@@ -3,7 +3,7 @@
 Durum: **tasarım, lider (Claude) yazdı, kullanıcı onayladı (K‑19, 2026-11-04).** Kod yok; uygulama `docs/GOREV_T*.md` ile Sonnet'te.
 Eski sistem (Kapı v3, İlk 11 puanı, oda/kontrol, ön kayıt) **kaldırıldı**; bu belge onun yerine geçen tek strateji kaynağıdır.
 
-> **K-66 (14.11.2026, kullanıcı kararı): yeniden yürürlükte.** D+ (`secim_d`) kapandı; seçim bu belge + v1.1 kuralları (K-53) aynen (vetosuz). Kadro `radar_surum` v3.
+> **K-66 (14.11.2026, kullanıcı kararı): yeniden yürürlükte.** D+ (`secim_d`) kapandı; seçim bu belge + v1.1 kuralları (K-53) aynen (vetosuz). Kadro `radar_surum` v3; M-09 (kullanıcı kararı 14.11): v4 (radar hunisi + mantık denetimi düzeltmeleri; eski v3 kadrosu uygulanmaz).
 > Saha 11 kişi; sanal kasa 10.000 $ (slot ≈ 909 $; sadık boyut: 5,5 $ altı açılmaz, tavan 1,5 × slot) (`canli_sanal_kasa_ust_usd`). Gerçek para sınırı ≤ 1.000 $ (K-22/K-26) değişmez. Değerlendirme 31.12.2026
 > (başarı: ayda ≥ %4 VE aynı dönemde BTC al-tut'tan iyi; pano ve `ozet.json` `btc_al_tut_getiri`/`btc_fark`).
 > **Bu belgedeki güncel boyut/risk değerleri (K-56 sadık boyut + K-66):** slot alt sınırı 200 $ (`radar_canli_slot_min_usd`; v1: 25 $), slot tavanı **1,5 × slot** (v1: 3,0×),
@@ -28,7 +28,7 @@ Akış: **R0 evren → R1 kopyalanabilirlik (şimdi) → R2 form puanı (son 7 g
 - Kaynak: Hyperliquid lider tablosu (`stats-data` leaderboard; `week` penceresi: `pnl`, `vlm`, `accountValue`). Leaderboard ROI **kullanılmaz**
   (yatırma/çekme bozuyor); getiri kendi kopya hesabımızdan gelir.
 - Ön filtre (K‑31): hafta başı sermaye `accountValue − hafta pnl ≥ 10.000 trader_$` (yatırma şişirmesini önler), hafta `pnl > 0`, hafta `vlm > 0`, vault/alt hesap değil.
-- **Günlük tarama (00:37 UTC):** ön filtreden geçenler **7 günlük getiriye** (`pnl / (accountValue − pnl)`, azalan; K‑31) göre sıralanır, ilk **300** için son 7 gün dolumları çekilir → R1 → R2 →
+- **Günlük tarama (00:37 UTC):** ön filtreden geçenler **7 günlük getiriye** (`pnl / (accountValue − pnl)`, azalan; K‑31) göre sıralanır, ilk **900** (kullanıcı 14.11, radar hunisi; önce 300) için son 7 gün dolumları çekilir → R1 → R2 →
   kadro yeniden sıralanır (giriş ve çıkış). Kesilen kişi sayısı raporlanır.
 - **Kayan pencere:** her gün o ana kadarki son 7 gün ölçülür; her gün verinin ~1/7'si değiştiği için sıra kendiliğinden sakindir
   (bir günde yükselen yakalanır, tek kötü günde düşülmez).
@@ -44,12 +44,14 @@ Akış: **R0 evren → R1 kopyalanabilirlik (şimdi) → R2 form puanı (son 7 g
 | 5 | Likit coin payı (nosyonel; coin 24 sa hacmi ≥ 1 milyon $) | ≥ %80 | Kayma |
 | 6 | **Gecikmeli kopya testi (K‑32):** `son7g` dolumları `kopya_v5` (§5b oransal boyut, slot = kasa / N) ile iki kez oynatılır, ikisi de pencere başında boş: **kopya** = 1 dk gecikme + maliyet (taker %0,045 + kayma %0,05; 1 dk mum yoksa 5 dk mumda yönümüze kötü fiyat); **ayna** = gecikmesiz, maliyetsiz (trader'ın aynı işlemleri, aynı boyutla) | kopya getirisi > 0 **ve** `kopya_koruma` = kopya / ayna ≥ 0,50 (ayna ≤ 0 → elenir) | Trader kazanıp biz kazanamıyorsak işe yaramaz; oran yalnız gecikme + maliyetin etkisini ölçer |
 | 7 | **Devir (piyasa yapıcı süzgeci, K‑27)** | hafta `vlm` / `accountValue` ≤ 100 (≈ aylık 400) | Hacmi hesabının çok üstündeki bot/MM kopyalanamaz |
-| 8 | **Şans süzgeci (K‑27)** | G (R2: kopya işlem getirilerinden bootstrap toplamın %20 alt yüzdeliği) > 0 | 300 kişi her gün tarandığında şansla parlayanlar çok; kârı birkaç işleme dayanan elenir |
+| 8 | **Şans süzgeci (K‑27)** | G (R2: kopya işlem getirilerinden bootstrap toplamın %20 alt yüzdeliği) > 0 | 900 kişi her gün tarandığında şansla parlayanlar çok; kârı birkaç işleme dayanan elenir |
 | 9 | Akıl sağlığı | kopya getirisi ≤ +%300, hesap > 0 | Uç değer = veri hatası şüphesi → elenir, raporlanır |
 
 **K‑43 notu (06.11, Opus onayı, kullanıcı onayı bekliyor):** yöntem aynı; yalnız HIP‑3 (`dex:COIN`) dolumları oynatmadan çıkar (`radar_hip3_kopya: false` varsayılan; motor K‑42 ile aynı). `true` = yukarıdaki yöntem aynen (eski v1); kapılar ve eşikler değişmez. Bilgi alanı `hip3_nosyonel_pay`.
 
-Ölçüm sırası ucuzdan pahalıya (devir → vault → dolum tavanı 5.000 → dolum kuralları → kopya oynatma); zaman bütçesi 120 dk (K‑27, T2 lider kararı).
+Ölçüm sırası ucuzdan pahalıya (devir → dolum tavanı 5.000 (yalnız perp dolum sayılır; 14.11) → dolum kuralları → vault → kopya oynatma; para hareketi yalnız kopya oynatmasına varanda); zaman bütçesi 150 dk (K‑27; 14.11: 900 aday için 120 → 150, iş zaman aşımı 210 dk). Bütçe aşılırsa koşu eksik sayılır, kadro yayımlanmaz.
+
+**Radar hunisi (kullanıcı 14.11):** v1.1'in (K-53) S2 kapısı "kopya kapanan işlem ≥ 10" (`radar_min_kopya_islem`) bu tabloda yoktu; 0 yapıldı (kapalı). Kural 8 (şans süzgeci) ve diğerleri aynen.
 R1'den geçenlere **"radar havuzu"** denir. Her eleme nedeniyle (`neden` kodu) raporlanır.
 
 ## 4. R2 — Form puanı (son 7 gün, havuz içinde göreli)
@@ -87,11 +89,11 @@ gerçek parayla kopyalanır (**saha**); Yedek sıra listesidir; sahada boş yer 
   Günde en fazla **2** saha değişikliği (devir maliyeti).
 - **Sahadan düşme:**
   - Anında: sahaya girişten beri slot düşüşü ≥ %20 (K-56/K-66; v1: %10); R1/4 (kaldıraç > 20x) ihlali.
-  - Günlük: form sırası 2 gün üst üste > 22, ya da **iki farklı UTC gününün kadrosunda kadro dışı (> 30) (K‑39; sonuç dışı, bekleme yok; gün başına yalnız ilk kadro uygulanır)**; 72 sa yeni işlem yok;
-    **R1'den elendi** (D-02, 14.11 denetim: kadro.json `eski_uye_neden[adres]` `r1:` ile başlıyorsa AYNI gün sonuçla düşer, `r1_elendi`; `r0_disi`/`sira_disi`/`soguyan` iki gün kuralında kalır).
-  - **Sonuçla** düşen (slot −%20, form sırası, R1 elemesi) 14 gün sahaya dönemez. **Sonuç dışı** nedenle yerini kaybeden (daha iyisi geldi,
+  - Günlük: form sırası 2 gün üst üste > 22, ya da **iki farklı UTC gününün kadrosunda kadro dışı (> 30) (K‑39; gün başına yalnız ilk kadro uygulanır; M-06, kullanıcı kararı 14.11: sıra kuralı kadar cezalı = SONUÇLA, bekleme; yalnız veri nedeniyle başlayan seri sonuç dışı)**; 72 sa yeni işlem yok;
+    **R1'den elendi** (D-02, 14.11 denetim: kadro.json `eski_uye_neden[adres]` `r1:` ile başlıyorsa AYNI gün sonuçla düşer, `r1_elendi`; `r0_disi`/`sira_disi` iki gün kuralında kalır; **soğuyan** (son 72 sa < −%2) üye M-06 (kullanıcı kararı 14.11) ile AYNI gün sonuçla düşer, `soguyan`; kullanıcı 14.11: `veri_hatasi`/`payda_yok`/`zaman_yok` VERİ nedenidir, R1 elemesi sayılmaz → `veri:<neden>`, sonuç ve bekleme yok).
+  - **Sonuçla** düşen (slot −%20, kaldıraç, form sırası, R1 elemesi, soğuma, kadro dışı) 14 gün sahaya dönemez ve **açık pozisyonları HEMEN kapatılır** (M-07, kullanıcı kararı 14.11; 24 sa açık bırakma yok). **Sonuç dışı** nedenle yerini kaybeden (daha iyisi geldi,
     72 sa işlem yok, kasa değişikliği) bekleme cezası almaz (K‑27).
-- **Sahadan inen üyenin açık pozisyonları:** yeni açılış durur, trader'ın kapanışları izlenir, 24 sa sonra açık kalan kapatılır.
+- **Sahadan inen üyenin açık pozisyonları:** sonuçla düşende HEMEN kapatılır (M-07, 14.11); sonuç dışı düşende yeni açılış durur, trader'ın kapanışları izlenir, 24 sa sonra açık kalan kapatılır.
 
 ## 5b. Canlı yürütme ve boyutlandırma (sahada)
 - **Kip (K‑29):** `sanal` (cüzdan bağlı değil, kasa kadar yatırılmış gibi — K-66: 10.000 $; dolum o anki emir defterinden) ya da `gercek` (API cüzdanı). Kod yolu aynı;
@@ -136,7 +138,7 @@ Kasa 1.000 $'da kalır; artırım ancak hepsi sağlanırsa **önerilir**:
   yalnız "üst sınır < 0" ise durulur. IC ve (b) yalnız bilgi. 12.11 ilk ölçümü boru hattı kontrolüdür, karar verisi değildir.
 
 ## 8. Kilit ve değişiklik
-- **v1.1 (K-53, 09.11, kullanıcı kararı):** R0'a 30 g pnl > 0 kapısı; R1'e kopya kapanan işlem ≥ 10 (`kopya_islem_az`); R2'de H ağırlığı 0 (diğerleri /0,80); önceki kadro üyeleri R0 dışına düşse de R1'den geçirilir (nedene bağlı çıkış). Bu sürüm kurulduktan sonra kurallar yine kilitlidir.
+- **v1.1 (K-53, 09.11, kullanıcı kararı):** R0'a 30 g pnl > 0 kapısı; R1'e kopya kapanan işlem ≥ 10 (`kopya_islem_az`; 14.11 radar hunisiyle 0 = kapalı); R2'de H ağırlığı 0 (diğerleri /0,80); önceki kadro üyeleri R0 dışına düşse de R1'den geçirilir (nedene bağlı çıkış). Bu sürüm kurulduktan sonra kurallar yine kilitlidir.
 - Tüm eşik ve ağırlıklar **v1'de donar**, `kurallar.yaml` `radar_*` anahtarlarında tek yerde (kodda sayı sabiti yok).
 - 28 günlük canlı değerlendirme bitmeden ayar değişmez (aşırı uydurma koruması). Değişiklik yeni sürüm olur (v1.1), eski seri silinmez.
 - Veri/kod hatası düzeltmesi serbesttir; sonuç sayılarını değiştiriyorsa PR'da eski ↔ yeni yan yana.

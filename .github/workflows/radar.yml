@@ -1,11 +1,11 @@
 name: Radar (günlük tarama + kadro)
 
 # K-66 (14.11, kullanıcı kararı): Form Radarı v1/v1.1 (docs/RADAR_V1.md §2, §4, §5; K-53) yeniden yürürlükte (D+ kapandı ve silindi). Her gün 00:37 UTC (03:37 TSİ)
-# tarama (aday = radar_aday_tavan = 300, 7 gün getiriye göre; K-31) → R2 form puanı → kadro 30 (İlk 11 + Yedek 19) → isabet ölçümü.
+# tarama (aday = radar_aday_tavan = 900 (kullanıcı 14.11; önce 300), 7 gün getiriye göre; K-31) → R2 form puanı → kadro 30 (İlk 11 + Yedek 19) → isabet ölçümü.
 # Salt okunur halka açık Hyperliquid verisi; secret YOK. Çıktı veri dalı `radar` (kök commit yalnız ilk koşuda; sonra tarihli klasör eklenir, 90 gün tutulur):
 #   radar/<tarih>/{havuz,kadro}.json  +  radar/son/kadro.json  (T4 motoru `son/kadro.json`'u okur).
 # Eksik koşuda (zaman bütçesi aşıldı / satır eksik / `veri_hatasi` payı > `radar_veri_hatasi_pay_max`, R-2) `radar_kadro` çıkış kodu 2 verir → iş kırmızı biter ve `son/` GÜNCELLENMEZ.
-# Kadro `radar_surum` v3 (motor `copytrade/canli/RADAR_SURUM` ile yalnız bunu uygular).
+# Kadro `radar_surum` v4 (M-09, 14.11; motor `copytrade/canli/RADAR_SURUM` ile yalnız bunu uygular).
 # `kural_ust` / `aday_sayisi` girdisi YOK (donmuş kurallar).
 # Dal doğrulaması: main dışı dalda `workflow_dispatch` AYNI iş akışını koşturur ama veri dalı `radar-deneme`'ye yazar (gerçek `radar` dalı yalnız main'den dokunulur).
 # 14.11 denetim: `push` tetiği yalnız main (`branches: [main]`); dalda `copytrade/radar/CALISTIR` push'u artık koşu BAŞLATMAZ.
@@ -56,7 +56,7 @@ jobs:
     needs: kontrol
     if: ${{ needs.kontrol.outputs.atla != 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 210             # 14.11: tarama bütçesi radar_zaman_butcesi_dk 150 + isabet 30 + kurulum/yayım payı (900 aday)
     permissions:
       contents: write               # veri dalı yayımı (yalnız radar_yayimla.sh, YAYIM_TOKEN ile)
     steps:

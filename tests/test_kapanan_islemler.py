@@ -142,7 +142,8 @@ def test_islem_kaydi_hesabi_degistirmez_fark_sifir():
         yeni = run(fills, FLAT, rates=funding_rows(), kayit=True, rules=rk)
         eski = run(fills, FLAT, rates=funding_rows(), kayit=False, rules=rk)
         assert "islemler" not in eski and "islemler" in yeni
-        assert set(yeni) - {"islemler"} == set(eski)
+        assert "acik_islemler" not in eski and "acik_islemler" in yeni                  # M-02 (14.11): pencere sonu sanal kapanışlar da yalnız kayıtla gelir
+        assert set(yeni) - {"islemler", "acik_islemler"} == set(eski)
         for key in eski:
             if key in ("daily", "exposure"):
                 pd.testing.assert_series_equal(yeni[key], eski[key], check_exact=True)
@@ -233,3 +234,16 @@ def test_v3_yurutulen_dolum_yoksa_islem_yok_bakiye_binde_kalir():
     assert sonuc['kapanan_islemler'] == [] and sonuc['fiyatsiz_eylem'] == 1 and sonuc['bakiye_usd'] == pytest.approx(1000.0)
     bos = v3([], hourly(BTC={'10:00': 100.0}), {})
     assert bos['kapanan_islemler'] == [] and bos['bakiye_usd'] == pytest.approx(1000.0)
+
+
+def test_m02_acik_islem_pencere_sonu_sanal_kapanis_elle():
+    """M-02 (Fable mantık denetimi, 14.11): B10@100 (saat 1), kapanmaz; işaret saat 5'ten itibaren 110, pencere sonu saat 7. Sanal kapanış = 0,0005·(110 − 100) − giriş maliyeti
+    0,0005·100·C − kapanış maliyeti 0,0005·110·C = 0,005 − 0,0000475 − 0,00005225 = 0,00490025 → 4,90025 $ (funding yok). Kapanan işlem listesi boş kalır.
+    Defter neti açık K/Z'yi içerir, kapanış maliyetini içermez: sanal kapanış = net·BASE − 0,0005·110·C·BASE."""
+    piyasa = candles({**{h: 100 for h in range(0, 5)}, **{h: 110 for h in range(5, 9)}})
+    out = run([fill(60, "B", 10, 0, 100)], piyasa)
+    assert out["islemler"] == [] and len(out["acik_islemler"]) == 1
+    t = out["acik_islemler"][0]
+    assert t["sonuc_usd"] == pytest.approx(1000 * (0.0005 * 10 - 0.0005 * 100 * C - 0.0005 * 110 * C)) == pytest.approx(4.90025)
+    assert (t["neden"], t["gecerli"], t["kapanis_ms"]) == ("pencere_sonu", True, T0 + 7 * HOUR)
+    assert t["sonuc_usd"] == pytest.approx(out["net"] * BASE - 0.0005 * 110 * C * BASE)

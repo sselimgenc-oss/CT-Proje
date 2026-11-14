@@ -281,3 +281,20 @@ def test_radar_yml_isabet_adimi_yayimdan_once_ve_hata_yayimi_engellemez():
     wf = yaml.safe_load((Path(__file__).resolve().parents[1] / ".github/workflows/radar.yml").read_text(encoding="utf-8"))
     ad = [a.get("name", "") for a in wf["jobs"]["radar"]["steps"]]
     assert ad.index("Seçim isabeti (§7b)") < ad.index("Veri dalına yaz (radar)")             # K-66: Form Radarı ile isabet adımı geri
+
+
+def test_m10_sonraki_7g_penceresi_kadro_yayim_anindan_baslar(monkeypatch):
+    """M-10 (Fable mantık denetimi, 14.11): pencere başı = kadro `olusturma_ms` (yayımdan hemen önce) → yoksa havuz `bitis_ms` → yoksa havuz `kosu_ms` (eski günler).
+    Kadro tarama başından 2 sa sonra yazıldı: pencere [BAS + 2 sa, BAS + 2 sa + 7 gün); 7. gün BAS + 7 gün + 1 sa'te pencere henüz dolmamış (ölçülmez)."""
+    monkeypatch.setattr(ri.radar_tarama, "Baglam", SahteBaglam)
+    SahteBaglam.ornekler = []
+    havuz, kadro = havuz_kadro(3)
+    yayim = BAS + 2 * 3_600_000
+    assert ri.pencere_basi(havuz, kadro) == (BAS, "havuz_kosu")
+    assert ri.pencere_basi({**havuz, "bitis_ms": BAS + 3_600_000}, kadro) == (BAS + 3_600_000, "havuz_bitis")
+    kadro = {**kadro, "olusturma_ms": yayim}
+    assert ri.pencere_basi({**havuz, "bitis_ms": BAS + 3_600_000}, kadro) == (yayim, "kadro_olusturma")
+    cli = SahteIstemci()
+    assert ri.calistir(cli, havuz, kadro, "2026-11-04", BAS + 7 * GUN + 3_600_000, RULES, log=lambda *_: None) is None
+    i = ri.calistir(cli, havuz, kadro, "2026-11-04", BAS + 8 * GUN, RULES, log=lambda *_: None)
+    assert (i["pencere_bas_ms"], i["pencere_bit_ms"], i["pencere_bas_kaynak"]) == (yayim, yayim + 7 * GUN, "kadro_olusturma") and cli.cagri[0][1:] == (yayim, yayim + 7 * GUN)
