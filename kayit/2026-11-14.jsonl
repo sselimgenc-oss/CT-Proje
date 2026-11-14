@@ -1,3 +1,4 @@
-{"zaman_ms":1794669305993,"olay":"kadro_surum_bekleniyor","gerekli":"v3","gelen":"v2"}
-{"zaman_ms":1794669305994,"olay":"telegram","metin":"ℹ️ BİLGİ: yeni seçim yapısı bekleniyor (sanal · deneme parası)\n━━━━━━━━━━━━━━\nGelen kadro sürümü v2, gereken v3. Trader alınmıyor; kasa nakitte.","acik":true}
-{"zaman_ms":1794669306000,"olay":"bekleme_vardiyasi","gerekli":"v3"}
+{"zaman_ms":1794673806644,"olay":"kadro_kasa_farkli","kadro_kasa_usd":1000.0,"motor_kasa_usd":10000.0}
+{"zaman_ms":1794673806644,"olay":"telegram","metin":"⚠️ UYARI: kadro kasası farklı (sanal · deneme parası)\n━━━━━━━━━━━━━━\nRadar kadrosu 1.000 $ kasa ölçeğinde seçildi; motor kasası 10.000 $.\nKadro uygulanıyor (durdurma yok); radar_kasa_usd ile motor sanal kasasını eşitleyin.","acik":true}
+{"zaman_ms":1794673806645,"olay":"saha_eksik","saha":0,"n":11,"neden":"uygun_aday_yok"}
+{"zaman_ms":1794673806649,"olay":"bekleme_vardiyasi","gerekli":"v3"}
