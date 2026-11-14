@@ -5,11 +5,11 @@
  "hesap_tr": {
   "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": {
    "deger": 54149.43965721,
-   "ms": 1794631620288
+   "ms": 1794632234384
   },
   "0xfc76f730c3e2939825484e0a777368075d779ef9": {
    "deger": 0.089585879992228,
-   "ms": 1794631620288
+   "ms": 1794632234384
   }
  },
  "hl_ofset": null,
@@ -162,15 +162,15 @@
   "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad|HYPE": 1794625762796
  },
  "poz_tr_senk_ms": {
-  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 1794631621927,
-  "0xfc76f730c3e2939825484e0a777368075d779ef9": 1794631621927
+  "0x8abc3b8b07082cc8752a1342ece30b9798aac9ad": 1794632236283,
+  "0xfc76f730c3e2939825484e0a777368075d779ef9": 1794632236283
  },
  "son_funding_ms": null,
- "son_funding_saat": 498508,
+ "son_funding_saat": 498509,
  "son_olay_ms": 1794625762796,
  "tg_offset": 0,
  "ucret_gercek_usd": 0.0,
  "ucret_tahmin_say": 0,
  "vardiya": "43540994392",
- "yazildi_ms": 1794631629535
+ "yazildi_ms": 1794632531453
 }
