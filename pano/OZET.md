@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-14 22:28 UTC
+# Canlı rapor — 2026-11-14 22:43 UTC
 
 **Kip** sanal · vardiya `43638869277` · saha 11/11 (inen 0)
 
@@ -8,16 +8,16 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 10.000,00 $ | 9.955,86 $ | −%0,44 | — (geçmiş < 7 gün) | −%0,44 | −%0,49 |
+| 10.000,00 $ | 9.963,14 $ | −%0,37 | — (geçmiş < 7 gün) | −%0,37 | −%0,42 |
 
-Başarı kıyası (aynı dönemde): toplam −%0,44 · BTC al-tut: −%2,1 · fark: +%1,6 · aylık eşdeğer: — · hedef %4/ay: —
+Başarı kıyası (aynı dönemde): toplam −%0,37 · BTC al-tut: −%2,5 · fark: +%2,2 · aylık eşdeğer: — · hedef %4/ay: —
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x5d908c… | HYPE | S | 795,30 $ | −21,89 $ |
-| 0x6463f5… | ETH | S | 540,89 $ | −2,89 $ |
+| 0x5d908c… | HYPE | S | 790,10 $ | −16,69 $ |
+| 0x6463f5… | ETH | S | 538,81 $ | −0,80 $ |
 
 ## Son 24 saat
 
@@ -46,7 +46,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 105 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 120 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
@@ -58,10 +58,10 @@ olay yok
 
 ## Dönem (kalıcı seri)
 
-- motor 9.955,86 $ · BTC al-tut 9.794,85 $ · %4/ay hedef çizgisi 10.002,45 $
-- katkı: İlk 11 6 slot −3,48 $ · Yedek 5 slot −40,66 $
-- saha doluluğu %100,00 · nakitte kalan %95,15 (0,1 gün ölçüldü)
-- kullanılan sermaye getirisi −%9,12 · ort. brüt maruziyet 484,02 $ · ort. net 484,02 $ · risk kilidi olayı 0 (gölge eğri yok)
+- motor 9.963,14 $ · BTC al-tut 9.745,87 $ · %4/ay hedef çizgisi 10.002,45 $
+- katkı: İlk 11 6 slot −1,40 $ · Yedek 5 slot −35,47 $
+- saha doluluğu %100,00 · nakitte kalan %94,10 (0,1 gün ölçüldü)
+- kullanılan sermaye getirisi −%6,26 · ort. brüt maruziyet 588,96 $ · ort. net 588,96 $ · risk kilidi olayı 0 (gölge eğri yok)
 - atlanan sinyal %70,74 · yuvarlanan emir %0,00 (emir 79, atlanan 191)
 - radar hunisi: evren 2458 → aday 900 → ≥10 işlem 109 → geçen 21
 
@@ -76,5 +76,5 @@ olay yok
 | 0xf1881e… | yedek | 14.11 23:40 | sahada | +0,00 $ |
 | 0x3d21e3… | yedek | 14.11 23:40 | sahada | +0,00 $ |
 | 0x298830… | yedek | 14.11 23:40 | sahada | +0,00 $ |
-| 0x6463f5… | ilk11 | 14.11 23:40 | sahada | −3,48 $ |
-| 0x5d908c… | yedek | 14.11 23:40 | sahada | −40,66 $ |
+| 0x6463f5… | ilk11 | 14.11 23:40 | sahada | −1,40 $ |
+| 0x5d908c… | yedek | 14.11 23:40 | sahada | −35,47 $ |
