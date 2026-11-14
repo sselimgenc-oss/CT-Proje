@@ -88,3 +88,5 @@
 {"zaman_ms":1794662059942,"olay":"emir_yok","adres":"0xfc76f730c3e2939825484e0a777368075d779ef9","coin":"@142","eylem":"ac","karar":"atlandi","neden":"spot_atlandi","trader_dolum_ms":1794662059618,"gorme_ms":1794662059940,"yas_ms":324}
 {"zaman_ms":1794662059943,"olay":"emir_yok","adres":"0xfc76f730c3e2939825484e0a777368075d779ef9","coin":"@142","eylem":"ac","karar":"atlandi","neden":"spot_atlandi","trader_dolum_ms":1794662059618,"gorme_ms":1794662059940,"yas_ms":325}
 {"zaman_ms":1794662857322,"olay":"tur","ozsermaye_usd":599.3636}
+{"zaman_ms":1794663723570,"olay":"tur","ozsermaye_usd":600.2237}
+{"zaman_ms":1794663914980,"olay":"telegram_hata","tur":"ConnectionError"}
