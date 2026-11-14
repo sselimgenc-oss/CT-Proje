@@ -18,3 +18,7 @@
 {"zaman_ms":1794655934696,"olay":"tur","ozsermaye_usd":600.0}
 {"zaman_ms":1794656796759,"olay":"tur","ozsermaye_usd":600.0}
 {"zaman_ms":1794657664980,"olay":"tur","ozsermaye_usd":600.0}
+{"zaman_ms":1794657951425,"olay":"telegram","metin":"🧾 Son 1 saat (14:05–15:05 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 600,00 $ · bugün 🟢 +0,00 $ (%0,0) · başlangıçtan 🟢 +0,00 $ (%0,0)","acik":true}
+{"zaman_ms":1794658529844,"olay":"tur","ozsermaye_usd":600.0}
+{"zaman_ms":1794658625600,"olay":"telegram_hata","tur":"ConnectionError"}
+{"zaman_ms":1794658657548,"olay":"telegram_hata","tur":"ConnectionError"}
