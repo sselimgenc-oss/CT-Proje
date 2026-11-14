@@ -428,6 +428,9 @@ def _main(argv: list[str] | None = None) -> int:
     if not havuz or not kadro:
         print(f"isabet: origin/{args.veri_dali} dalında radar/{tarih}/ havuz+kadro yok (ilk ölçüm 2026-11-12); atlandı")
         return 0
+    if havuz.get("sema", radar_tarama.SEMA) != radar_tarama.SEMA:                         # K-66: D+ (secim-d-havuz-v1, 09–14.11) günleri Form Radarı havuzu değil; ölçülmez
+        print(f"isabet: radar/{tarih}/ havuz şeması {havuz.get('sema')!r} (Form Radarı {radar_tarama.SEMA} değil); atlandı")
+        return 0
     print(f"isabet: radar/{tarih}/ kadro kaynağı {kaynak} (kadro kosu_ms {kadro.get('kosu_ms')}, havuz kosu_ms {havuz.get('kosu_ms')})")
     kayitlar = kayit_oku(args.durum_dali, int(kadro.get("kosu_ms") or havuz["kosu_ms"]))                   # B9 bilgi: fiili saha; None → ek saha grupları boş
     onceki_kadro = None if isinstance(kadro.get("eski_uye_neden"), dict) else onceki_kadro_oku(args.veri_dali, tarih)

@@ -1,6 +1,6 @@
-"""K-56 (09.11): üretim `kurallar.yaml` D+ boyut/risk değerlerine geçti (N 5, slot 200 $, tavan 1,5×, yuvarlama alt sınırı 5,5 $, slot stop %20, bekleme 31 g, işlem yok 336 sa).
+"""Üretim `kurallar.yaml` boyut/risk değerleri (K-56'dan, K-66 Form Radarı ile: N 11, slot 200 $, tavan 1,5×, yuvarlama alt sınırı 5,5 $, slot stop %20) v1'den farklıdır.
 Eski altın örnekler (elle hesaplanmış sayılar) v1 değerleriyle yazıldı; mantığı aynen sınamaya devam etsinler diye testlerde `load_rules()` bu yedi anahtarı v1 değerleriyle döndürür.
-D+ değerlerinin kendisi `tests/test_dplus.py`'de `load_rules_asil()` (dosyadaki gerçek değerler) ile ayrıca sınanır. Başka hiçbir anahtar değişmez."""
+Üretim değerlerinin kendisi `tests/test_k66_uretim.py`'de `load_rules_asil()` (dosyadaki gerçek değerler) ile ayrıca sınanır. Başka hiçbir anahtar değişmez."""
 import copytrade.kurallar as _k
 
 V1_BOYUT_RISK = {"radar_saha_max": 11, "radar_canli_slot_min_usd": 25, "radar_slot_tavan_carpan": 3.0, "radar_min_emir_yuvarla_alt": 0.0,

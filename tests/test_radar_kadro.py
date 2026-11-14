@@ -28,7 +28,7 @@ def test_kadro_altin_ornek_3_kisi_elle():
     form A = 0,35×100 + 0,15×50 + (0,10 + 0,10 + 0,10 + 0,20) × 50 = 35 + 7,5 + 25 = 67,5; B = 17,5 + 15 + 25 = 57,5; C = 25. Slot (kasa 1.000) = 90,909 $, N = 11."""
     h = havuz([gecen("0xB", 0.02, 0.03), gecen("0xC", 0.01, 0.01), gecen("0xA", 0.03, 0.02), elenen("0xD")])
     kd = k.kadro_olustur(h, V1)
-    assert kd["sema"] == "radar-kadro-v1" and kd["radar_surum"] == "v1.1" and kd["kasa_usd"] == 1000.0 and kd["slot_usd"] == pytest.approx(1000 / 11) and kd["saha_n"] == 11 and kd["gecti_sayisi"] == 3
+    assert kd["sema"] == "radar-kadro-v1" and kd["radar_surum"] == "v3" and kd["kasa_usd"] == 1000.0 and kd["slot_usd"] == pytest.approx(1000 / 11) and kd["saha_n"] == 11 and kd["gecti_sayisi"] == 3
     assert [s["adres"] for s in kd["satirlar"]] == ["0xA", "0xB", "0xC"] and [s["sira"] for s in kd["satirlar"]] == [1, 2, 3]
     assert [s["form"] for s in kd["satirlar"]] == pytest.approx([67.5, 57.5, 25.0]) and {s["katman"] for s in kd["satirlar"]} == {"ilk11"}
     assert set(kd["satirlar"][0]) == {"adres", "sira", "katman", "form", "bilesenler", "kopya_getiri_7g", "max_kaldirac", "form_h_siz", "sira_h_siz", "g_t_istat", "tutma"}
@@ -60,7 +60,7 @@ def test_bos_havuz_bos_kadro_ve_sema_hatasi():
     with pytest.raises(ValueError):
         k.kadro_olustur({**havuz([]), "sema": "yanlis"}, RULES)
     with pytest.raises(ValueError):
-        k.kadro_olustur(havuz([]), RULES, kasa_usd=1001.0)
+        k.kadro_olustur(havuz([]), RULES, kasa_usd=2201.0)
 
 
 def test_eksik_kosu_zaman_yok_ve_satir_eksigi():
