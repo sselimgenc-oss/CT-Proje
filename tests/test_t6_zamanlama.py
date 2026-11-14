@@ -101,13 +101,6 @@ def test_is_akislari_kontrol_isi_isabet_adimi_ve_zaman_butcesi():
     assert "copytrade.radar_isabet" in isabet["run"] and "continue-on-error" not in isabet and radar["jobs"]["radar"]["timeout-minutes"] >= 180            # tarama 120 + isabet 30 dk bütçesi sığar
 
 
-def test_isabet_deneme_salt_okunur_ve_kismi():
-    wf = yukle("isabet_deneme.yml")
-    assert wf["permissions"] == {"contents": "read"} and wf["on"]["push"] == {"paths": ["copytrade/isabet_deneme/CALISTIR"]}
-    adim = next(a for a in wf["jobs"]["isabet"]["steps"] if "isabet" in a.get("name", "").lower())
-    assert "--kismi" in adim["run"] and "git push" not in (WF / "isabet_deneme.yml").read_text(encoding="utf-8")
-
-
 def test_radar_yayimla_isabet_dosyalarini_da_yayimlar():
     metin = (ROOT / ".github/scripts/radar_yayimla.sh").read_text(encoding="utf-8")
     assert "isabet.json" in metin and 'git add -f "radar/$g/isabet.json"' in metin and "|| true" not in metin

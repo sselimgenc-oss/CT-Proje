@@ -1,6 +1,6 @@
 name: Radar (günlük tarama + kadro)
 
-# K-66 (14.11, kullanıcı kararı): Form Radarı v1/v1.1 (docs/RADAR_V1.md §2, §4, §5; K-53) yeniden yürürlükte (D+ / secim_d kapandı). Her gün 00:37 UTC (03:37 TSİ)
+# K-66 (14.11, kullanıcı kararı): Form Radarı v1/v1.1 (docs/RADAR_V1.md §2, §4, §5; K-53) yeniden yürürlükte (D+ kapandı ve silindi). Her gün 00:37 UTC (03:37 TSİ)
 # tarama (aday = radar_aday_tavan = 300, 7 gün getiriye göre; K-31) → R2 form puanı → kadro 30 (İlk 11 + Yedek 19) → isabet ölçümü.
 # Salt okunur halka açık Hyperliquid verisi; secret YOK. Çıktı veri dalı `radar` (kök commit yalnız ilk koşuda; sonra tarihli klasör eklenir, 90 gün tutulur):
 #   radar/<tarih>/{havuz,kadro}.json  +  radar/son/kadro.json  (T4 motoru `son/kadro.json`'u okur).

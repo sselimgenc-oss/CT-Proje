@@ -203,24 +203,3 @@ isabet_butce_dk: 30                     # dakika (isabet adımı süre bütçesi
 isabet_kotu_gecikme_dk: 3               # dakika (kötü senaryo gecikmesi)
 isabet_kotu_kayma_carpan: 2             # kat (kötü senaryo: maliyet_kayma bu kadar katı)
 para_hareketi_isaret_payi: 0.2          # oran (T6 §2, bilgi: net yatırma / hafta başı sermaye bunun üstündeyse raporda işaretlenir; kapıyı DEĞİŞTİRMEZ)
-
-# ---- Seçim yapısı D (K-55, kullanıcı kararı 09.11; ön kayıt docs/ONKAYIT_SECIM_2026-11-09.md §1 D + B evreni; copytrade/secim_d.py) ----
-secim_min_hesap_usd: 10000              # $ (hesap değeri ≥; lider tablosu ön filtresi ve portfolio)
-secim_hafta_sayisi: 12                  # hafta (istikrar penceresi; portfolio allTime pnl)
-secim_pozitif_hafta_min: 8              # hafta (son 12 haftanın en az bu kadarı pnl > 0)
-secim_dusus_90g_max: 0.20               # oran (90 g kümülatif pnl düşüşü / hesap ≤; sınır dahil)
-secim_kopya_gun: 28                     # gün (kopya kapısı penceresi: son 4 hafta dolumları)
-secim_aday_ust: 400                     # kişi (B evreninden t sırasıyla kadro dolana dek kopya kapısına en çok bu kadar; 09.11 dal denemesi: ilk 40'ın tümü düştü, çoğu pasif hesap)
-secim_butce_dk: 90                      # dakika (doldurma: lider tablosu + portfolio taraması süre bütçesi)
-secim_kopya_butce_dk: 60                # dakika (doldurma: kopya kapısı döngüsü ek bütçesi; toplam ≤ 150 < iş 180)
-secim_cikis_zirve_dusus: 0.25           # oran (kümülatif pnl zirvesinden düşüş / hesap ≥ → çıkış)
-secim_islem_yok_gun: 14                 # gün (bu kadar gün işlem yok → çıkış)
-secim_aktif_coin_max: 8                 # coin (K-56 D+, C'den: son 28 g en çok bu kadar farklı coin)
-secim_cikis_giris_dusus: 0.20           # oran (K-56 D+: girişimizden beri trader hesap değeri düşüşü ≥ → çıkış; döngüyü keser)
-secim_veri_azami_yas_saat: 24           # saat (K-65 veri düzeltmesi: perp pnl serisinin en yeni noktası seçim anından bu kadar eskiyse aday `veri_bayat`; sınır dahil geçer)
-secim_payda_azami_fark: 0.02            # oran (K-65: |portfolio serisi hesap / motor tanımı hesap − 1| bunu aşarsa motor değeri kullanılır, `payda_duzeltildi`; motor = tüm perp dex accountValue + spot USDC)
-# ---- K-65 geçici güvenlik kuralı: iki veto (aday ve üye; kapılardan SONRA uygulanır) ----
-secim_veto_acik: true                   # bool (false = vetolar hiç uygulanmaz, yalnız ölçü yazılır)
-secim_veto_zarara_ekleme_oran: 0.40     # oran (zarardaki pozisyona ekleme payı ≥ ve ekleme sayısı ≥ martingale_min_additions → `veto_zarara_ekleme`; olcut.martingale_ratio, martingale_min_adverse ile)
-secim_veto_min_aday: 0                  # kişi (K-65 eki 12.11 kullanıcı kararı "veto kesin": 0 = vetolar hiç askıya alınmaz, temiz aday yoksa yer boş kalır; >0 ise: bu koşuda tüm kapıları VE iki vetoyu geçen aday sayısı bundan azsa vetolar bu koşu askıya alınır: `veto_askida`)
-

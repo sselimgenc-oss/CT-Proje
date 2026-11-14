@@ -1,7 +1,7 @@
 # CT-Proje — Hyperliquid copy trade
 
-**Form Radarı v1** (`docs/RADAR_V1.md`): her gün son 7 günde formu yüksek, kopyalanabilir Hyperliquid trader'larını bul,
-İlk 11'i **1.000 $** kasayla kopyala. Şu an **sanal** (GitHub Actions vardiyası); gerçek paraya geçiş kullanıcı kararıdır.
+**Form Radarı v1/v1.1** (`docs/RADAR_V1.md`, K-66): her gün son 7 günde formu yüksek, kopyalanabilir Hyperliquid trader'larını bul;
+kadro 30 = İlk 11 + Yedek 19, sahada 11 × 200 $. Şu an **sanal** (GitHub Actions vardiyası, 2.200 $); gerçek paraya geçiş kullanıcı kararıdır (kasa ≤ 1.000 $).
 
 ## Durum nerede
 - `DURUM.md` — güncel durum, takvim (tek doğru kaynak)
