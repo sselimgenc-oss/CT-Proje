@@ -105,10 +105,10 @@ radar_veri_hatasi_pay_max: 0.10         # oran, R-2: `veri_hatasi` satırı bu p
 # ---- Canlı boyut (K-28, K-30; RADAR_V1.md §5/§5b): tek yer copytrade/boyut.py. Birim: $ (kasa = sanal/gerçek kopya kasası, kopya_$) ----
 canli_kasa_usd: 1000                    # $ (kullanıcı ayarı; üst sınır 1.000, AGENTS.md)
 canli_kasa_ust_usd: 1000                # $ (GERÇEK para güvenlik üst sınırı, K-22/K-26; gerçek kipte aşan kasa reddedilir)
-canli_sanal_kasa_ust_usd: 2200          # $ (K-66: YALNIZ sanal kip `--sanal-kasa-usd` üst sınırı; saha 11 × 200 $. Gerçek kip sınırı yukarıdaki 1.000 $, değişmez)
+canli_sanal_kasa_ust_usd: 10000         # $ (K-66 kullanıcı 14.11: YALNIZ sanal kip `--sanal-kasa-usd` üst sınırı; sanal 10.000 $, saha 11 × ~909 $ — seçimi boyut kısıtı olmadan ölçmek için. Gerçek kip sınırı yukarıdaki 1.000 $, değişmez)
 canli_hl_deger_ust_usd: 1500            # $ (gerçek kip AÇILIŞ / --kontrol: HL hesap değeri tavanı; kârlı günden sonra yeniden başlatma takılmasın. Kasa yine min(CANLI_KASA_USD, HL) ≤ canli_kasa_ust_usd; K‑22)
 radar_canli_slot_min_usd: 200           # $ (N = min(radar_saha_max, taban(kasa / bu))); K-56/K-66: 200 $ (v1: 25; küçük slotta açılışların %22–33'ü yuvarlanıyordu)
-radar_saha_max: 11                      # kişi (K-66 Form Radarı: İlk 11 sahada; 11 × 200 $ = 2.200 $ sanal kasa; 1.000 $ kasada N = 5)
+radar_saha_max: 11                      # kişi (K-66 Form Radarı: İlk 11 sahada; sanal 10.000 $ kasada slot ≈ 909 $; 1.000 $ kasada N = 5)
 radar_min_emir_usd: 11                  # $ (HL alt emir sınırı 10 $ + pay)
 radar_min_emir_yuvarla_alt: 5.5         # $ (K-56, K-66'da korunur: açılış hedefi bunun altındaysa AÇILMAZ, [bu, 11) arası 11 $'a yuvarlanır; 0 = v1 her küçük hedef yuvarlanır)
 radar_slot_tavan_carpan: 1.5            # x (slot kasası başına pozisyon tavanı = çarpan x slot; K-56, K-66'da korunur (sadık boyut): 1,5; v1: 3,0)

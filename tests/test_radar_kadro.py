@@ -60,7 +60,7 @@ def test_bos_havuz_bos_kadro_ve_sema_hatasi():
     with pytest.raises(ValueError):
         k.kadro_olustur({**havuz([]), "sema": "yanlis"}, RULES)
     with pytest.raises(ValueError):
-        k.kadro_olustur(havuz([]), RULES, kasa_usd=2201.0)
+        k.kadro_olustur(havuz([]), RULES, kasa_usd=10000.01)    # boyut üst sınırı = max(gerçek 1.000, sanal 10.000) (K-66)
 
 
 def test_eksik_kosu_zaman_yok_ve_satir_eksigi():

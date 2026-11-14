@@ -1,7 +1,7 @@
 name: Canlı vardiya (sanal kip)
 
 # T4 (docs/GOREV_T4_CANLI_MOTOR.md §3, K-29): sunucu açılana kadar canlı motor SANAL kipte GitHub Actions'ta vardiyalı koşar. GERÇEK KİP ASLA BURADA ÇALIŞMAZ: iş akışı HL anahtarı geçirmez ve
-# motor `GITHUB_ACTIONS=true` iken `gercek` kipi reddeder. Cüzdan YOK; sanal kasa `--sanal-kasa-usd 2200` (K-66: 11 × 200 $; yalnız sanal kip sınırı `canli_sanal_kasa_ust_usd`; gerçek para sınırı 1.000 $ değişmez).
+# motor `GITHUB_ACTIONS=true` iken `gercek` kipi reddeder. Cüzdan YOK; sanal kasa `--sanal-kasa-usd 10000` (K-66: sanal 10.000 $, 11 slot; yalnız sanal kip sınırı `canli_sanal_kasa_ust_usd`; gerçek para sınırı 1.000 $ değişmez).
 # Vardiya: 4 saatte bir tetiklenir (cron), her vardiya 4 sa 15 dk sürer; `concurrency` (kuyruk, iptal yok; üretim ve dal denemeleri ayrı grup) sayesinde yeni vardiya eskisi BİTTİKTEN sonra başlar (çift emir yok, boşluk yok);
 # durum veri dalı `canli-durum` (dal doğrulamasında `canli-durum-deneme`): durum/*.json + kayit/<tarih>.jsonl; her 15 dk ve vardiya sonunda yayımlanır; yeni vardiya kaldığı yerden devam eder
 # (açılışta kaçan dolumlar REST ile tamamlanır, `gec_goruldu`). Ek koruma: `durum/kilit.json` (başka vardiya 20 dk içinde nabız attıysa motor başlamaz).
@@ -128,7 +128,7 @@ jobs:
             done ) &
           yayim=$!
           set +e
-          env -u YAYIM_TOKEN python -u -m copytrade.canli.motor --kip sanal --sanal-kasa-usd 2200 --kadro-dali "$KADRO_DALI" --durum-dizin durum --kayit-dizin kayit --sure-sn "$((sure_dk * 60))" --vardiya "${GITHUB_RUN_ID}"
+          env -u YAYIM_TOKEN python -u -m copytrade.canli.motor --kip sanal --sanal-kasa-usd 10000 --kadro-dali "$KADRO_DALI" --durum-dizin durum --kayit-dizin kayit --sure-sn "$((sure_dk * 60))" --vardiya "${GITHUB_RUN_ID}"
           cikis=$?
           # S-18: arka plan döngüsü durdurulur ama ÇALIŞAN yayım KESİLMEZ: dur dosyası + döngünün uyuyan `sleep` çocuğu öldürülür, çalışan yayım biter, sonra `wait` (en çok 15 dk).
           # Son yayım (sonraki adım) canli_yayimla.sh içindeki flock ile ayrıca sıraya girer (aynı anda iki yazar yok).

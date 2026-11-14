@@ -14,7 +14,7 @@ EPS = 1e-9
 
 def saha_sayisi(kasa_usd: float, rules: dict | None = None) -> int:
     """N = min(`radar_saha_max`, taban(kasa / `radar_canli_slot_min_usd`)). Kasa üst sınırı aşarsa / slot kurulamıyorsa ValueError.
-    Üst sınır = max(`canli_kasa_ust_usd`, `canli_sanal_kasa_ust_usd`) (K-66: sanal 2.200 $ boyutlanabilsin); GERÇEK kipin 1.000 $ sınırı motorda (`motor.kasa_ust`, `kasa_belirle`) ayrıca uygulanır."""
+    Üst sınır = max(`canli_kasa_ust_usd`, `canli_sanal_kasa_ust_usd`) (K-66: sanal 10.000 $ boyutlanabilsin); GERÇEK kipin 1.000 $ sınırı motorda (`motor.kasa_ust`, `kasa_belirle`) ayrıca uygulanır."""
     rules = rules or load_rules()
     kasa = float(kasa_usd)
     ust = max(float(rules["canli_kasa_ust_usd"]), float(rules.get("canli_sanal_kasa_ust_usd", 0.0) or 0.0))
