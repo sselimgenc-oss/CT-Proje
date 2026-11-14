@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_radar_surum_dosyasi_v2_ve_donem_yeni():
     assert mt.radar_surum_oku() == "v2"
-    assert (ROOT / "copytrade/canli/DONEM").read_text(encoding="utf-8").strip() == "2026-11-13T15:30:00Z"     # K-65 eki (13.11 18:30 TSİ): payda/korelasyon/coin tavanı düzeltmeleri sonrası yeni sanal dönem 600 $ / 3; eski dönem verisi git geçmişinde arşivli
+    assert (ROOT / "copytrade/canli/DONEM").read_text(encoding="utf-8").strip() == "2026-11-14T09:00:00Z"     # K-65 eki (14.11 12:00 TSİ): birleşik hesap paydası (emir teminatı) düzeltmesi sonrası yeni sanal dönem 600 $ / 3; eski dönem verisi git geçmişinde arşivli
 
 
 def test_radar_surum_oku_yorum_bos_yok(tmp_path):

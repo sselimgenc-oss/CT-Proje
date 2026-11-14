@@ -961,6 +961,7 @@ def test_k65_payda_birlesik_hesapta_marj_iki_kez_sayilmaz_portfoy_marjinda_hl_de
     birlesik = TipliHL("unifiedAccount", 43_311.149608, 43_351.31518421, 43_311.149608, 43_351.315184)
     assert mt.hesap_degeri_oku(birlesik, adr(1), []) == pytest.approx(43_351.315184, abs=0.01)                 # eski formül 86.662 $ (iki kat) verirdi
     assert mt.hesap_degeri_oku(TipliHL("unifiedAccount", 0.0, 213_155.48, 0.0), adr(1), []) == pytest.approx(213_155.48)     # pozisyonsuz birleşik hesap
+    assert mt.hesap_degeri_oku(TipliHL("unifiedAccount", 0.0, 213_155.47758588, 213_155.388), adr(1), []) == pytest.approx(213_155.48, abs=0.01)   # 14.11 0xfc76…: pozisyonsuz ama emirli (hold = emir teminatı); total − hold 0,09 $ verirdi
     assert mt.hesap_degeri_oku(TipliHL("default", 60_000.0, 10_000.0, 2_000.0), adr(1), []) == pytest.approx(70_000.0)    # klasik: K-35 tanımı aynen (hold düşülmez)
     pm = TipliHL("portfolioMargin", 0.0, -63_715.67, -76_912.22, 62_164.79)
     assert mt.hesap_degeri_oku(pm, adr(1), []) == pytest.approx(62_164.79)                                        # perp + spot formülü 13.196 $ / −63.716 $ verirdi

@@ -94,7 +94,8 @@ def portfolio_son_deger(post: Callable[[dict], Any], adres: str) -> float:
 def hesap_degeri_oku(post: Callable[[dict], Any], adres: str, dexler: list[str] | None) -> float | None:
     """G-6: `dexler` None (dex listesi bilinmiyor) → None (kısmi toplam YOK; çağıran hesabı bilinmiyor sayar). Hesap değeri ($), hesap tipine göre (K-65 eki 13.11, Fable denetimi):
     - klasik: TÜM perp dex'lerin `marginSummary.accountValue` toplamı + spot USDC `total` (K‑35 tek payda; radar lider tablosu `accountValue` ile aynı tanım);
-    - birleşik (`unifiedAccount`): perp marjı spot USDC'nin içinde (`hold`) — iki kez sayılmaz: perp toplamı + USDC `total` − USDC `hold` (HL `portfolio` değeriyle aynı);
+    - birleşik (`unifiedAccount`): perp hesabı spot USDC'nin içinde — yalnız USDC `total` (HL `portfolio` değeriyle aynı; 14.11 düzeltmesi: `hold` bekleyen emir
+      teminatını da içerir, `total − hold` pozisyonsuz ama emirli hesapta ~0 veriyordu — 0xfc76… 213.155 $ yerine 0,09 $);
     - portföy marjı (`portfolioMargin`; teminat USDC dışı, USDC borçlu olabilir): HL `portfolio` gün serisinin son değeri.
     Herhangi bir okuma başarısızsa istisna (kısmi toplam dönmez: oran paydası eksik olursa emirler şişer)."""
     if dexler is None:
@@ -102,14 +103,13 @@ def hesap_degeri_oku(post: Callable[[dict], Any], adres: str, dexler: list[str] 
     soyut = hesap_soyutlama(post, adres)
     if soyut == "portfolioMargin":
         return portfolio_son_deger(post, adres)
+    durum = post({"type": "spotClearinghouseState", "user": adres}) or {}
+    spot = sum(float(b.get("total", 0) or 0) for b in durum.get("balances", []) if str(b.get("coin")) == "USDC")
+    if soyut == "unifiedAccount":
+        return spot
     toplam = 0.0
     for dex in ["", *dexler]:
         toplam += float(post(clearinghouse_yuk(adres, dex))["marginSummary"]["accountValue"])
-    durum = post({"type": "spotClearinghouseState", "user": adres}) or {}
-    usdc = [b for b in durum.get("balances", []) if str(b.get("coin")) == "USDC"]
-    spot = sum(float(b.get("total", 0) or 0) for b in usdc)
-    if soyut == "unifiedAccount":
-        spot -= sum(float(b.get("hold", 0) or 0) for b in usdc)
     return toplam + spot
 
 
