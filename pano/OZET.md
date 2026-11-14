@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-14 08:03 UTC
+# Canlı rapor — 2026-11-14 08:18 UTC
 
 **Kip** sanal · vardiya `43563197248` · saha 2/3 (inen 0)
 
@@ -30,7 +30,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 135 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 151 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
