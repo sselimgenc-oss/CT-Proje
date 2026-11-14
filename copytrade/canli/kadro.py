@@ -8,12 +8,15 @@ Kararlar `Karar` olarak döner (giriş / düş / değiştir / inen_kapat) — uy
 - Düşme — anında: slot düşüşü ≥ `canli_slot_dusus_oran`, kaldıraç > `radar_max_kaldirac` (R1/4); günlük (yeni `kosu_ms`): sıra 2 gün üst üste > `canli_sira_dus`, `canli_islem_yok_saat` saat işlem yok (sonuç dışı);
   **R1 elemesi (D-02, 14.11 denetim):** kadroda yok ve kadro `eski_uye_neden[adres]` `r1:` ile başlıyorsa AYNI gün SONUÇLA düşer (`r1_elendi`, `canli_bekleme_gun` bekleme); veri nedenleri
   (`veri_hatasi`, `payda_yok`, `zaman_yok`; kullanıcı 14.11) R1 elemesi SAYILMAZ → kadro dışı kuralı;
-  **kadro dışı (K‑39):** kadroda yok (R1 dışı neden: `r0_disi`, `sira_disi`, `soguyan`, alan yok) / sıra > `canli_kadro_disi_sira` durumu İKİ FARKLI UTC GÜNÜNÜN kadrosunda üst üste görülürse düşer (`kadro_disi`); düşme SONUÇ DIŞIDIR, bekleme yok. **Gün başına yalnız İLK kadro uygulanır (K‑39):** aynı `kosu_ms` UTC gününde gelen ikinci kadro
+  **soğuyan (M-06, kullanıcı kararı 14.11):** kadroda yok ve soğuyor (`eski_uye_neden` "soguyan" / `soguyan` listesi) → AYNI gün sonuçla + bekleme (`soguyan`);
+  **kadro dışı (K‑39; M-06):** kadroda yok (`r0_disi`, `sira_disi`, alan yok) / sıra > `canli_kadro_disi_sira` durumu İKİ FARKLI UTC GÜNÜNÜN kadrosunda üst üste görülürse düşer (`kadro_disi`);
+  M-06'dan beri en az sıra kuralı kadar cezalı: SONUÇLA + bekleme (yalnız veri nedeni `veri:<x>` sonuç dışı kalır).
+  **Sonuçla düşmede pozisyonlar HEMEN kapanır (M-07, kullanıcı kararı 14.11):** `dus` ile aynı anda `inen_kapat`; 24 sa açık bırakma yalnız sonuç dışı düşmede. **Gün başına yalnız İLK kadro uygulanır (K‑39):** aynı `kosu_ms` UTC gününde gelen ikinci kadro
   saha kararlarını tetiklemez (ilk kadro `gun_kadro`da saklanır; yeniden başlatmada da ilki kullanılır). SONUÇLA düşen (slot, sıra, kadro dışı, kaldıraç/R1) `canli_bekleme_gun` gün sahaya dönemez; sonuç dışı düşenin bekleme cezası yok.
 - Korelasyon: sahada birbirine ≥ `canli_kor_esik` benzeyen (bağlı bileşen) en çok `canli_kor_max` kişi; ihlal eden aday atlanır (`kor_kirpildi`).
 - Kadro bayat / yok (`kosu_ms` > `canli_kadro_eski_saat` saat): yeni giriş yok, düşme kuralları çalışır (günlük sıra kuralları kadro verisi gerektirdiğinden yeni kosu_ms olmadan işlemez;
   R-6: kadro verisi gerektirmeyen `canli_islem_yok_saat` (72 sa) işlem yok düşmesi bayat/yok kadroda da HER çağrıda denetlenir).
-- Sahadan inen: yeni açılış durur, trader'ın kapanışları izlenir, `canli_inen_saat` sonra kalan pozisyon kapatılır (`inen_kapat`).
+- Sahadan inen (yalnız SONUÇ DIŞI düşme, M-07): yeni açılış durur, trader'ın kapanışları izlenir, `canli_inen_saat` sonra kalan pozisyon kapatılır (`inen_kapat`). Sonuçla düşen anında kapatılır.
 """
 from __future__ import annotations
 
@@ -77,6 +80,19 @@ def kor_bilesen_boyutu(adresler: list[str], kor: dict | None, esik: float) -> in
 R1_VERI_NEDENLERI = ("veri_hatasi", "payda_yok", "zaman_yok")     # kullanıcı 14.11: veri/okuma/bütçe nedeni; R1 performans elemesi SAYILMAZ (radar_kadro.VERI_NEDENLERI ile aynı)
 
 
+def veri_nedeni(kadro: dict | None, adres: str) -> bool:
+    """Kullanıcı 14.11: `eski_uye_neden[adres]` bir VERİ nedeni mi (`veri:<x>` ya da eski biçim `r1:veri_hatasi`/`r1:payda_yok`/`r1:zaman_yok`) — sonuç ve bekleme vermez."""
+    neden = ((kadro or {}).get("eski_uye_neden") or {}).get(adres)
+    return isinstance(neden, str) and (neden.startswith("veri:") or (neden.startswith("r1:") and neden[3:] in R1_VERI_NEDENLERI))
+
+
+def soguyan_mi(kadro: dict | None, adres: str) -> bool:
+    """M-06 (kullanıcı kararı 14.11): üye bugünkü kadroda yok ve soğuyor (son 72 sa kopya getirisi < `radar_soguyor_min_getiri`): kadro `eski_uye_neden[adres] == "soguyan"`
+    ya da `soguyan` listesinde."""
+    k = kadro or {}
+    return (k.get("eski_uye_neden") or {}).get(adres) == "soguyan" or any(isinstance(x, dict) and x.get("adres") == adres for x in k.get("soguyan") or [])
+
+
 def r1_elendi(kadro: dict | None, adres: str) -> bool:
     """D-02 (14.11 denetim): kadro.json `eski_uye_neden[adres]` (radar_kadro.onceki_karsilastir) `r1:` ile başlıyorsa üye bugünkü havuzda R1'den ELENDİ (RADAR_V1 §5: sonuçla düşer).
     Kullanıcı 14.11: neden VERİ nedeniyse (`veri:<x>` ya da eski biçim `r1:veri_hatasi` / `r1:payda_yok` / `r1:zaman_yok`) → False (sonuç ve bekleme YOK; K‑39 iki gün kadro dışı kuralı).
@@ -133,11 +149,16 @@ class Saha:
         self.uyeler[adres] = {"giris_ms": simdi_ms, "giris_sira": satir.get("sira"), "sira_ust": 0, "son_islem_ms": None}
 
     def _dus(self, adres: str, neden: str, sonuc: bool, simdi_ms: int, kararlar: list[Karar]) -> None:
+        """M-07 (kullanıcı kararı 14.11): SONUÇLA düşmede (slot stopu, kaldıraç, R1, soğuma, sıra, kadro dışı) pozisyonlar HEMEN kapatılır (`inen_kapat` aynı anda; 24 sa açık bırakma
+        yok, `inen`e girmez) + `canli_bekleme_gun` bekleme. Sonuç dışı düşmede (işlem yok, daha iyisi geldi, veri nedeni) eski kural: `inen`, trader kapanışları izlenir, `canli_inen_saat` sonra kalan kapatılır."""
         self.uyeler.pop(adres, None)
-        self.inen[adres] = {"inis_ms": simdi_ms, "neden": neden}
+        kararlar.append(Karar("dus", adres, neden, sonuc))
         if sonuc:
             self.bekleme[adres] = simdi_ms + int(self.rules["canli_bekleme_gun"]) * GUN
-        kararlar.append(Karar("dus", adres, neden, sonuc))
+            self.inen.pop(adres, None)
+            kararlar.append(Karar("inen_kapat", adres, neden))
+        else:
+            self.inen[adres] = {"inis_ms": simdi_ms, "neden": neden}
 
     def islem_gordu(self, adres: str, zaman_ms: int) -> None:
         u = self.uyeler.get(adres)
@@ -205,18 +226,25 @@ class Saha:
         for adres in list(self.uyeler):
             u, s = self.uyeler[adres], satirlar.get(adres)
             gun_k = self._gun(int(self.gun_kadro["kadro"]["kosu_ms"])) if self.gun_kadro else self._gun(simdi_ms)
-            if s is None and r1_elendi(self.gun_kadro["kadro"] if self.gun_kadro else None, adres):
+            gk = self.gun_kadro["kadro"] if self.gun_kadro else None
+            if s is None and r1_elendi(gk, adres):
                 self._dus(adres, "r1_elendi", True, simdi_ms, kararlar)     # D-02 (14.11 denetim, RADAR §5): R1'den elenen AYNI gün sonuçla düşer; `canli_bekleme_gun` gün bekleme
+                continue
+            if s is None and soguyan_mi(gk, adres):
+                self._dus(adres, "soguyan", True, simdi_ms, kararlar)       # M-06 (kullanıcı kararı 14.11): son 72 sa formu eşiğin altında → AYNI gün sonuçla + bekleme
                 continue
             if s is None or int(s["sira"]) > int(self.rules["canli_kadro_disi_sira"]):
                 gunler = list(u.get("disi_gunler") or [])
                 if gun_k not in gunler:
                     gunler.append(gun_k)
                 u["disi_gunler"] = gunler
-                if len(gunler) >= 2:                               # K‑39: iki farklı UTC gününün kadrosunda yok → sonuç dışı düşme, bekleme yok
-                    self._dus(adres, "kadro_disi", False, simdi_ms, kararlar)
+                if s is None and veri_nedeni(gk, adres):
+                    u["veri_disi"] = True                          # kullanıcı 14.11: kadro dışı serisi bir VERİ nedeniyle başladıysa düşme sonuç dışı kalır
+                if len(gunler) >= 2:                               # K‑39: iki farklı UTC gününün kadrosunda yok → düşer; M-06 (14.11): sıra kuralı kadar cezalı = SONUÇLA (veri nedeni hariç)
+                    self._dus(adres, "kadro_disi", not u.get("veri_disi"), simdi_ms, kararlar)
                 continue                                           # kadro dışındayken sıra/işlem kuralları sayılmaz (ilk gün: yalnız işaretlenir)
             u["disi_gunler"] = []
+            u.pop("veri_disi", None)
             if int(s["sira"]) > int(self.rules["canli_sira_dus"]):
                 u["sira_ust"] = int(u.get("sira_ust", 0)) + 1
                 if u["sira_ust"] >= int(self.rules["canli_sira_dus_gun"]):

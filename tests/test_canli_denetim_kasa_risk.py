@@ -214,8 +214,8 @@ def test_s3_saha_anlik_uyenin_kendi_tabanina_gore():
     assert s.anlik(10, lambda a: 27.0, None, slot_bas=taban.get) == []
     s2 = kd.Saha(RULES, 500.0)
     s2.uyeler = dict(s.uyeler)
-    assert [k.neden for k in s2.anlik(10, lambda a: 27.0, None)] == ["slot_dusus"]
-    assert [k.neden for k in s.anlik(10, lambda a: 300 / 11 * 0.9, None, slot_bas=taban.get)] == ["slot_dusus"]
+    assert [k.neden for k in s2.anlik(10, lambda a: 27.0, None) if k.tur == "dus"] == ["slot_dusus"]
+    assert [k.neden for k in s.anlik(10, lambda a: 300 / 11 * 0.9, None, slot_bas=taban.get) if k.tur == "dus"] == ["slot_dusus"]
 
 
 # ================================================================================================ M-1

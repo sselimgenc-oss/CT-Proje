@@ -89,11 +89,11 @@ gerçek parayla kopyalanır (**saha**); Yedek sıra listesidir; sahada boş yer 
   Günde en fazla **2** saha değişikliği (devir maliyeti).
 - **Sahadan düşme:**
   - Anında: sahaya girişten beri slot düşüşü ≥ %20 (K-56/K-66; v1: %10); R1/4 (kaldıraç > 20x) ihlali.
-  - Günlük: form sırası 2 gün üst üste > 22, ya da **iki farklı UTC gününün kadrosunda kadro dışı (> 30) (K‑39; sonuç dışı, bekleme yok; gün başına yalnız ilk kadro uygulanır)**; 72 sa yeni işlem yok;
-    **R1'den elendi** (D-02, 14.11 denetim: kadro.json `eski_uye_neden[adres]` `r1:` ile başlıyorsa AYNI gün sonuçla düşer, `r1_elendi`; `r0_disi`/`sira_disi`/`soguyan` iki gün kuralında kalır; kullanıcı 14.11: `veri_hatasi`/`payda_yok`/`zaman_yok` VERİ nedenidir, R1 elemesi sayılmaz → `veri:<neden>`, sonuç ve bekleme yok).
-  - **Sonuçla** düşen (slot −%20, form sırası, R1 elemesi) 14 gün sahaya dönemez. **Sonuç dışı** nedenle yerini kaybeden (daha iyisi geldi,
+  - Günlük: form sırası 2 gün üst üste > 22, ya da **iki farklı UTC gününün kadrosunda kadro dışı (> 30) (K‑39; gün başına yalnız ilk kadro uygulanır; M-06, kullanıcı kararı 14.11: sıra kuralı kadar cezalı = SONUÇLA, bekleme; yalnız veri nedeniyle başlayan seri sonuç dışı)**; 72 sa yeni işlem yok;
+    **R1'den elendi** (D-02, 14.11 denetim: kadro.json `eski_uye_neden[adres]` `r1:` ile başlıyorsa AYNI gün sonuçla düşer, `r1_elendi`; `r0_disi`/`sira_disi` iki gün kuralında kalır; **soğuyan** (son 72 sa < −%2) üye M-06 (kullanıcı kararı 14.11) ile AYNI gün sonuçla düşer, `soguyan`; kullanıcı 14.11: `veri_hatasi`/`payda_yok`/`zaman_yok` VERİ nedenidir, R1 elemesi sayılmaz → `veri:<neden>`, sonuç ve bekleme yok).
+  - **Sonuçla** düşen (slot −%20, kaldıraç, form sırası, R1 elemesi, soğuma, kadro dışı) 14 gün sahaya dönemez ve **açık pozisyonları HEMEN kapatılır** (M-07, kullanıcı kararı 14.11; 24 sa açık bırakma yok). **Sonuç dışı** nedenle yerini kaybeden (daha iyisi geldi,
     72 sa işlem yok, kasa değişikliği) bekleme cezası almaz (K‑27).
-- **Sahadan inen üyenin açık pozisyonları:** yeni açılış durur, trader'ın kapanışları izlenir, 24 sa sonra açık kalan kapatılır.
+- **Sahadan inen üyenin açık pozisyonları:** sonuçla düşende HEMEN kapatılır (M-07, 14.11); sonuç dışı düşende yeni açılış durur, trader'ın kapanışları izlenir, 24 sa sonra açık kalan kapatılır.
 
 ## 5b. Canlı yürütme ve boyutlandırma (sahada)
 - **Kip (K‑29):** `sanal` (cüzdan bağlı değil, kasa kadar yatırılmış gibi — K-66: 10.000 $; dolum o anki emir defterinden) ya da `gercek` (API cüzdanı). Kod yolu aynı;

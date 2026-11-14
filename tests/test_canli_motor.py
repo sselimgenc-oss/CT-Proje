@@ -74,20 +74,22 @@ def test_histerezis_form_farki_en_az_10_puan_sinirda_girer():
 
 
 def test_gunde_en_fazla_2_degisiklik_ve_sonuc_ile_dusene_14_gun_bekleme():
-    """K‑39: kadro dışı İKİ FARKLI UTC gününde ister, sonuç dışıdır (bekleme yok). 14 gün bekleme sonuçla düşenlere (burada slot düşüşü) aynen kalır."""
+    """K‑39: kadro dışı İKİ FARKLI UTC gününde ister; M-06 (kullanıcı kararı 14.11): artık SONUÇLA (sıra kuralı kadar cezalı) → 14 gün bekleme ve pozisyonlar hemen kapanır (M-07).
+    14 gün bekleme slot düşüşünde de aynen."""
     s = hazir_11()
     rows = [satir(i, i, 90 - i) for i in range(1, 9)] + [satir(12, 9), satir(13, 10), satir(14, 11)]          # 9, 10, 11 kadro dışı; 3 aday
     karar, _ = s.degerlendir(kadro(rows, T0 + GUN), T0 + GUN + SAAT)
     assert [k for k in karar if k.tur == "dus"] == [] and [k for k in karar if k.tur == "giris"] == []        # 1. gün: yalnız işaretlenir, düşme yok
-    karar2, _ = s.degerlendir(kadro(rows, T0 + 2 * GUN), T0 + 2 * GUN + SAAT)                                  # 2. gün: üçü düşer (SONUÇ DIŞI)
-    assert [k.adres for k in karar2 if k.tur == "dus"] == [adr(9), adr(10), adr(11)] and not any(k.sonuc for k in karar2 if k.tur == "dus")
+    karar2, _ = s.degerlendir(kadro(rows, T0 + 2 * GUN), T0 + 2 * GUN + SAAT)                                  # 2. gün: üçü düşer (M-06: SONUÇLA)
+    assert [k.adres for k in karar2 if k.tur == "dus"] == [adr(9), adr(10), adr(11)] and all(k.sonuc for k in karar2 if k.tur == "dus")
+    assert [k.adres for k in karar2 if k.tur == "inen_kapat"] == [adr(9), adr(10), adr(11)]                    # M-07: pozisyonlar hemen kapanır
     assert [k.adres for k in karar2 if k.tur == "giris"] == [adr(12), adr(13), adr(14)] and len(s.uyeler) == 11   # K‑44: boş slot doldurma günlük değişiklik sınırına SAYILMAZ → 3 boş slot aynı gün dolar
-    assert s.degisiklik["adet"] == 0 and not s.bekleme                                                         # sınır sayacı artmadı; kadro dışı: bekleme YOK
+    assert s.degisiklik["adet"] == 0 and set(s.bekleme) == {adr(9), adr(10), adr(11)}                         # sınır sayacı artmadı; M-06: kadro dışı da bekler
     karar3, _ = s.degerlendir(kadro(rows, T0 + 3 * GUN), T0 + 3 * GUN + SAAT)
     assert [k.adres for k in karar3 if k.tur == "giris"] == []                                                 # zaten dolu
     sd = hazir_11()                                                                                            # sonuçla düşen (slot düşüşü) 14 gün bekler
     kd_ = sd.anlik(T0 + GUN + SAAT, lambda a: 10.0 if a == adr(1) else None)
-    assert [(k.adres, k.neden, k.sonuc) for k in kd_] == [(adr(1), "slot_dusus", True)] and sd.bekleme[adr(1)] == T0 + GUN + SAAT + 14 * GUN
+    assert [(k.adres, k.neden, k.sonuc) for k in kd_ if k.tur == "dus"] == [(adr(1), "slot_dusus", True)] and sd.bekleme[adr(1)] == T0 + GUN + SAAT + 14 * GUN
     bitis = T0 + GUN + SAAT + 14 * GUN
     assert sd._bekliyor(adr(1), bitis - 1) is True and sd._bekliyor(adr(1), bitis) is False                      # 14 gün: bitiş anında serbest
 
@@ -186,11 +188,11 @@ def test_sira_iki_gun_ust_uste_22_den_kotu_ve_kadro_disi_ve_kaldirac():
     s2 = hazir_11()
     k1 = [satir(i, i) for i in range(1, 11)] + [satir(11, 31)]
     assert [k for k in s2.degerlendir(kadro(k1, T0 + GUN), T0 + GUN + SAAT)[0] if k.tur == "dus"] == []                          # sıra 31 > 30: K‑39 bir gün yetmez
-    karar2, _ = s2.degerlendir(kadro(k1, T0 + 2 * GUN), T0 + 2 * GUN + SAAT)                                                     # ikinci FARKLI UTC günü: sonuç dışı düşme
-    assert [(k.neden, k.sonuc) for k in karar2 if k.tur == "dus"] == [("kadro_disi", False)] and not s2.bekleme
+    karar2, _ = s2.degerlendir(kadro(k1, T0 + 2 * GUN), T0 + 2 * GUN + SAAT)                                                     # ikinci FARKLI UTC günü: düşme (M-06: sonuçla)
+    assert [(k.neden, k.sonuc) for k in karar2 if k.tur == "dus"] == [("kadro_disi", True)] and adr(11) in s2.bekleme
     s3 = hazir_11()
     kar3 = s3.anlik(T0 + SAAT, lambda a: None, kadro([satir(i, i, kald=25.0 if i == 4 else 3.0) for i in range(1, 12)]))
-    assert [(k.adres, k.neden, k.sonuc) for k in kar3] == [(adr(4), "kaldirac_ihlali", True)]
+    assert [(k.adres, k.neden, k.sonuc) for k in kar3 if k.tur == "dus"] == [(adr(4), "kaldirac_ihlali", True)]
 
 
 def test_slot_dusus_anlik_tam_yuzde_10_dusurur():
@@ -198,12 +200,14 @@ def test_slot_dusus_anlik_tam_yuzde_10_dusurur():
     esik = s.slot * 0.9                                             # 81,818
     assert s.anlik(T0 + 2 * SAAT, lambda a: esik + 0.01) == []
     k = s.anlik(T0 + 2 * SAAT, lambda a: esik if a == adr(3) else s.slot)
-    assert [(x.adres, x.neden, x.sonuc) for x in k] == [(adr(3), "slot_dusus", True)] and adr(3) in s.inen and s.bekleme[adr(3)] > T0
+    assert [(x.tur, x.adres, x.neden, x.sonuc) for x in k] == [("dus", adr(3), "slot_dusus", True), ("inen_kapat", adr(3), "slot_dusus", False)]     # M-07: pozisyonlar HEMEN kapanır
+    assert adr(3) not in s.inen and s.bekleme[adr(3)] > T0
 
 
 def test_inen_24_saat_sonra_kapatilir():
+    """M-07 sonrası 24 sa açık bırakma yalnız SONUÇ DIŞI düşmede (ör. işlem yok)."""
     s = hazir_11()
-    s.anlik(T0 + 2 * SAAT, lambda a: 0.0 if a == adr(3) else s.slot)
+    s._dus(adr(3), "islem_yok", False, T0 + 2 * SAAT, [])
     assert s.inenleri_kapat(T0 + 2 * SAAT + 23 * SAAT) == []
     k = s.inenleri_kapat(T0 + 2 * SAAT + 24 * SAAT)
     assert [(x.tur, x.adres) for x in k] == [("inen_kapat", adr(3))] and adr(3) not in s.inen
@@ -374,7 +378,7 @@ def test_inen_trader_acilis_engel_kapanis_serbest_ve_saha_disi_trader_yok_sayili
     m, hl, saat, _ = kur(tmp_path)
     m.baslat()
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
-    m.saha.anlik(saat(), lambda a: 0.0)                                                      # slot düşüşü: inene geçir
+    m.saha._dus(adr(1), "islem_yok", False, saat(), [])                                      # sonuç dışı düşme: inene geçir (M-07: sonuçla düşen hemen kapanır)
     assert adr(1) in m.saha.inen and adr(1) not in m.saha.uyeler
     s_ac = m.olay_isle(olay("a:2", adr(1), "ETH", "B", 10, 2000.0, 0.0, saat))
     assert s_ac[0].karar == "engel" and s_ac[0].neden == "inen_trader"
