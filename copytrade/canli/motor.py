@@ -441,6 +441,7 @@ class Motor:
         self._snap: dict[str, tuple[float, float]] = {}        # G-14/G-17b: yalnız snapshot (canlı değil) görülen kimlik -> (önce, sonra); aynı dolum sonra dolgu/rest ile gelirse poz_tr ikinci kez değişmez, emir bu değerlerle
         self.poz_tr: dict[str, dict[str, float]] = {a: dict(c) for a, c in (m.get("poz_tr") or {}).items()}       # trader işaretli pozisyonları (coin birimi)
         self.hesap_tr: dict[str, dict] = dict(m.get("hesap_tr") or {})                                              # adres -> {deger, ms}
+        self.donem_seri: dict = _oku(durum_dizin / "donem_seri.json") or {}     # F-06: dönem boyu UTC gün sonu özsermaye + BTC serisi (pano 15 gün kırpmasından bağımsız, kalıcı)
         self.btc_donem: dict | None = m.get("btc_donem")          # BTC al-tut: {donem, bas_ms, fiyat, kaynak, okundu_ms}; dönem başında BİR kez okunur, motor.json'da kalıcı
         self.son_olay_ms: int = int(m.get("son_olay_ms", 0))
         self._poz_tr_ms: dict[tuple[str, str], int] = {}              # (adres, coin) -> poz_tr'yi son güncelleyen trader dolum zamanı (kuyruktan düşen olayın geç uygulanması yeniyi ezmesin)
@@ -536,6 +537,8 @@ class Motor:
         if self.kip == "gercek":
             _yaz(d / "borsa_stop.json", self.borsa_stop.to_json())
         _yaz(d / "motor.json", self._motor_json())
+        if self.donem_seri:
+            _yaz(d / "donem_seri.json", self.donem_seri)
         self.niyet.sikistir(int(self.rules["canli_islenen_sakla"]))
 
     def _motor_json(self) -> dict:
@@ -1581,7 +1584,7 @@ class Motor:
                 ("inen", lambda: self.karar_uygula(self.saha.inenleri_kapat(simdi), simdi)), ("mutabakat", lambda: self._mutabakat(simdi, hl)), ("kapanis_kuyrugu", lambda: self._kuyruk_isle(simdi)),
                 ("kadro", lambda: self._kadro_uygula(kadro, simdi)), ("senkron", lambda: (self.senkron_uygula(senkron), self.hesap_uygula(hesaplar, simdi)) if senkron is not None else None),
                 ("telegram", lambda: self._komutlar(komutlar)), ("ajan_suresi", lambda: self.ajan_suresi_uygula(ajan, simdi)), ("ozet", lambda: self._gunluk_ozet(simdi)),
-                ("emir_ozeti", lambda: self.emir_ozeti(simdi)), ("btc_donem", lambda: self.btc_donem_uygula(btc)),
+                ("emir_ozeti", lambda: self.emir_ozeti(simdi)), ("btc_donem", lambda: self.btc_donem_uygula(btc)), ("donem_seri", lambda: self.donem_seri_guncelle(simdi)),
                 ("tur_kaydi", lambda: self._tur_kaydi(simdi)),
                 ("durum_yaz", self.durum_yaz),                                     # G-12b: disk dolu / salt okunur → dakikalık görev ölmez; kayıt + alarm
             ]
@@ -1607,11 +1610,8 @@ class Motor:
         Kaynak sırası: dönem başını içeren 1 dk mumun açılışı (`mum_1m`) → 1 sa mum (`mum_1h`; 1 dk mum ~3,5 günden eskiyse) → dönem başından en çok 15 dk sonra güncel BTC mid (`mid`). Yoksa None (pano "—")."""
         if not self.donem or self._btc_donem_gecerli() or not self._aralik_mi("btc_donem", simdi, 300):
             return None
-        try:
-            bas = int(datetime.fromisoformat(self.donem.replace("Z", "+00:00")).timestamp() * 1000)
-        except ValueError:
-            return None
-        if simdi < bas:
+        bas = donem_ms(self.donem)
+        if bas is None or simdi < bas:
             return None
         for aralik, adim in (("1m", 60_000), ("1h", 3_600_000)):
             try:
@@ -1640,13 +1640,39 @@ class Motor:
         self.btc_donem = okuma
         self.kayit({"olay": "btc_donem", **okuma})
 
+    def donem_seri_guncelle(self, simdi: int) -> None:
+        """F-06 (14.11 denetim): `durum/donem_seri.json` = {donem, bas_ms, kasa_usd, btc_donem_fiyat, gunler: [{gun (UTC), ozsermaye_usd, btc}]}. Her dakika o UTC gününün kaydı
+        güncellenir: gün bitince son değer = gün sonu. Dönem değişince seri sıfırdan başlar. Dönem yoksa yazılmaz."""
+        if not self.donem:
+            return
+        if self.donem_seri.get("donem") != self.donem:
+            self.donem_seri = {"donem": self.donem, "bas_ms": None, "kasa_usd": self.kasa, "btc_donem_fiyat": None, "gunler": []}
+        b = self._btc_donem_gecerli()
+        if b:
+            self.donem_seri["bas_ms"], self.donem_seri["btc_donem_fiyat"] = b["bas_ms"], b["fiyat"]
+        self.donem_seri["kasa_usd"] = self.kasa
+        g = gun(simdi)
+        satir = {"gun": g, "ozsermaye_usd": round(self.ozsermaye(), 4), "btc": self.marks.get("BTC")}
+        gunler = self.donem_seri.setdefault("gunler", [])
+        if gunler and gunler[-1].get("gun") == g:
+            gunler[-1] = satir
+        else:
+            gunler.append(satir)
+
     def btc_kiyas(self, getiri: float | None) -> dict[str, Any]:
-        """Aynı dönemde BTC al-tut getirisi = güncel BTC mid / dönem başı fiyat − 1; `btc_fark` = motor getirisi − BTC al-tut (oran farkı). Veri yoksa None."""
+        """Aynı dönemde BTC al-tut getirisi = güncel BTC mid / dönem başı fiyat − 1; `btc_fark` = motor getirisi − BTC al-tut (oran farkı). Veri yoksa None.
+        F-06: `donem_gun` (dönem başından gün, kesirli), `aylik_esdeger` = (1 + getiri)^(30 / gün) − 1 (`aylik_esdeger`), `hedef_gecer` = aylık ≥ `basari_aylik_hedef` (%4) VE getiri > BTC al-tut."""
         b = self._btc_donem_gecerli()
         simdi_px = self.marks.get("BTC")
         al_tut = (float(simdi_px) / float(b["fiyat"]) - 1) if b and simdi_px else None
+        bas_ms = donem_ms(self.donem)
+        gun_sayi = (self.saat_ms() - bas_ms) / 86_400_000 if bas_ms is not None else None
+        aylik = aylik_esdeger(getiri, gun_sayi)
+        hedef = float(self.rules.get("basari_aylik_hedef", 0.04))
         return {"donem": self.donem, "btc_donem_fiyat": b["fiyat"] if b else None, "btc_fiyat": simdi_px, "btc_al_tut_getiri": al_tut,
-                "btc_fark": (getiri - al_tut) if al_tut is not None and getiri is not None else None}
+                "btc_fark": (getiri - al_tut) if al_tut is not None and getiri is not None else None,
+                "donem_gun": gun_sayi, "aylik_esdeger": aylik, "aylik_hedef": hedef,
+                "hedef_gecer": None if aylik is None or al_tut is None or getiri is None else bool(aylik >= hedef and getiri > al_tut)}
 
     def _tur_kaydi(self, simdi: int) -> None:
         """Pano özsermaye/düşüş grafiği için ~15 dk'da bir `tur` kaydı (özsermaye $). Karar mantığına girmez."""
@@ -2905,6 +2931,24 @@ def radar_surum_oku(yol: Path = RADAR_SURUM_DOSYA) -> str | None:
 
 
 DONEM_DOSYA = Path(__file__).with_name("DONEM")
+
+
+def donem_ms(donem: str | None) -> int | None:
+    """Dönem başı (UTC ISO) → UTC ms; yok/bozuk → None."""
+    if not donem:
+        return None
+    try:
+        return int(datetime.fromisoformat(donem.replace("Z", "+00:00")).timestamp() * 1000)
+    except ValueError:
+        return None
+
+
+def aylik_esdeger(getiri: float | None, gun_sayi: float | None, en_az_gun: float = 1.0) -> float | None:
+    """F-06 başarı ölçütü (31.12: ayda ≥ %4 VE BTC al-tut'tan iyi): dönem getirisi R, geçen gün d → aylık eşdeğer = (1 + R)^(30 / d) − 1.
+    d < `en_az_gun` (1 gün; çok kısa sürede üs patlar) ya da R ≤ −1 / veri yok → None. Altın: R = 0,02, d = 15 → 1,02² − 1 = 0,0404."""
+    if getiri is None or gun_sayi is None or gun_sayi < en_az_gun or getiri <= -1:
+        return None
+    return (1.0 + float(getiri)) ** (30.0 / float(gun_sayi)) - 1.0
 
 
 def donem_oku(yol: Path = DONEM_DOSYA) -> str | None:

@@ -274,3 +274,57 @@ def test_f10_kontrol_adimi_da_sanal_kasa_10000():
     wf = (ROOT / ".github/workflows/canli_vardiya.yml").read_text(encoding="utf-8")
     satirlar = [s for s in wf.splitlines() if "copytrade.canli.motor" in s and "python" in s]
     assert any("--kontrol" in s for s in satirlar) and all("--sanal-kasa-usd 10000" in s for s in satirlar)
+
+
+# ================================================================================================ F-06: dönem serisi ve aylık eşdeğer ölçütü
+def test_f06_aylik_esdeger_formulu():
+    assert mt.aylik_esdeger(0.02, 15.0) == pytest.approx(1.02 ** 2 - 1)                                     # 0,0404
+    assert mt.aylik_esdeger(0.04, 30.0) == pytest.approx(0.04) and mt.aylik_esdeger(0.0816, 60.0) == pytest.approx(0.04, abs=1e-4)
+    assert mt.aylik_esdeger(0.01, 0.5) is None and mt.aylik_esdeger(None, 10.0) is None and mt.aylik_esdeger(-1.0, 10.0) is None
+    assert URETIM["basari_aylik_hedef"] == 0.04
+
+
+def test_f06_donem_seri_kalici_gun_sonu_ve_hedef(tmp_path):
+    hl = BtcHL({"1m": [{"t": DONEM_MS, "o": "80000"}]}, mids={"BTC": "80800", "ETH": "2000", "SOL": "100"})
+    m, _, saat, _ = kur(tmp_path, hl=hl, kasa=10_000.0)
+    m.donem = DONEM
+    m.piyasa_oku(saat())
+    m.btc_donem_uygula(m.btc_donem_oku(saat()))
+    m.donem_seri_guncelle(saat())
+    saat.ms += 30 * 60_000
+    m.donem_seri_guncelle(saat())                                                                           # aynı UTC günü: kayıt güncellenir (gün sonu = son değer)
+    gun_sonu = (T0 // GUN + 1) * GUN
+    saat.ms = gun_sonu + SAAT
+    m.donem_seri_guncelle(saat())                                                                           # ertesi gün yeni satır
+    m.durum_yaz()
+    seri = json.loads((tmp_path / "durum" / "donem_seri.json").read_text(encoding="utf-8"))
+    assert seri["donem"] == DONEM and seri["btc_donem_fiyat"] == 80000.0 and seri["bas_ms"] == DONEM_MS and seri["kasa_usd"] == 10_000.0
+    assert [g["gun"] for g in seri["gunler"]] == ["2027-01-15", "2027-01-16"] and seri["gunler"][0]["btc"] == 80800.0
+    m2, *_ = kur(tmp_path, hl=hl, saat=saat, kasa=10_000.0)                                                 # yeniden başlatma: seri dosyadan
+    m2.donem = DONEM
+    assert len(m2.donem_seri["gunler"]) == 2
+    m2.donem = "2027-02-01T00:00:00Z"
+    m2.donem_seri_guncelle(saat())
+    assert m2.donem_seri["donem"] == "2027-02-01T00:00:00Z" and len(m2.donem_seri["gunler"]) == 1         # yeni dönem: sıfırdan
+    m.hesap.realize["x"] = 300.0                                                                            # dönem getirisi +%3, BTC +%1
+    saat.ms = DONEM_MS + 15 * GUN
+    o = m.ozet()
+    assert o["donem_gun"] == pytest.approx(15.0) and o["aylik_esdeger"] == pytest.approx(1.03 ** 2 - 1) and o["hedef_gecer"] is True
+    assert pano.hedef_metni(o) == ("aylık eşdeğer: +%6,1", "hedef %4/ay: geçiyor")
+    hl.mids["BTC"] = "84000"                                                                                # BTC +%5 > bizim +%3
+    m.piyasa_oku(saat())
+    assert m.ozet()["hedef_gecer"] is False and pano.hedef_metni(m.ozet())[1] == "hedef %4/ay: geçmiyor"
+    assert pano.hedef_metni({}) == ("aylık eşdeğer: —", "hedef %4/ay: —")
+
+
+def test_f06_pano_md_ve_html_aylik_ve_hedef():
+    ozet = {"kip": "sanal", "kasa_usd": 10000.0, "ozsermaye_usd": 10300.0, "getiri": 0.03, "btc_al_tut_getiri": 0.01, "btc_fark": 0.02,
+            "aylik_esdeger": 0.0609, "aylik_hedef": 0.04, "hedef_gecer": True, "acik": []}
+    md, _ = pano.pano_olustur(ozet, {}, {}, [], [], [], T0)
+    assert "aylık eşdeğer: +%6,1" in md and "hedef %4/ay: geçiyor" in md and "BTC al-tut: +%1,0" in md
+    html = pano.html_olustur(ozet, {}, {}, [], [], T0)
+    assert "Aylık eşdeğer" in html and "hedef %4/ay: geçiyor" in html
+
+
+def test_f06_yayim_betigi_donem_serisini_tasir():
+    assert "donem_seri.json" in (ROOT / ".github/scripts/canli_yayimla.sh").read_text(encoding="utf-8")
