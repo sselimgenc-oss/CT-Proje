@@ -5,12 +5,12 @@
  "aylik_hedef": 0.04,
  "bekleme_vardiyasi": true,
  "brut_usd": 0,
- "btc_al_tut_getiri": 0.002357410967682938,
+ "btc_al_tut_getiri": 0.001350361622264984,
  "btc_donem_fiyat": 65538.0,
- "btc_fark": -0.002357410967682938,
- "btc_fiyat": 65692.5,
+ "btc_fark": -0.001350361622264984,
+ "btc_fiyat": 65626.5,
  "donem": "2026-11-14T19:30:00Z",
- "donem_gun": 0.017587037037037036,
+ "donem_gun": 0.028077997685185187,
  "dur": false,
  "emir": {
   "atlandi": 0,
@@ -44,7 +44,7 @@
   "btc_donem": 1,
   "kadro_surum_bekleniyor": 1,
   "telegram": 1,
-  "tur": 2
+  "tur": 3
  },
  "kayma_n": 0,
  "kip": "sanal",
@@ -63,14 +63,14 @@
  "ozsermaye_usd": 10000.0,
  "r1_gecen": null,
  "rest_429": 0,
- "rest_istek": 90,
+ "rest_istek": 123,
  "saha": 0,
  "saha_eksik_neden": null,
  "saha_n": 11,
  "slot_tavani": 0,
  "slot_usd": 909.0909090909091,
  "spot_atlandi": 0,
- "sure_dk": 25.29265,
+ "sure_dk": 40.399633333333334,
  "tasfiye": 0,
  "telegram_hata": 0,
  "ters_netlesme": 0,
@@ -82,5 +82,5 @@
  "ucret_tahmin_say": 0,
  "uyeler": [],
  "vardiya": "43629614248",
- "yazildi_ms": 1794686119520
+ "yazildi_ms": 1794687025939
 }
