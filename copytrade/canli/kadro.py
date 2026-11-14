@@ -6,7 +6,8 @@ Kararlar `Karar` olarak döner (giriş / düş / değiştir / inen_kapat) — uy
 - Giriş (saha hep dolu, kullanıcı 14.11): slot boşsa AYNI koşuda form sırasıyla en iyi uygun aday — önce İlk 11, sonra Yedek (beklemede/inişte olan ve korelasyonu bozan atlanır, sıradaki denenir); uygun aday yoksa yer boş kalır (`eksik`). K‑44: boş slot doldurma günlük sınıra SAYILMAZ; `canli_gunde_degisiklik` yalnız sahadaki üyeyi değiştirmek (histerezis) için.
 - Değiştirme (histerezis): aday sıra ≤ N **ve** üye sıra > İlk 11 sınırı **ve** aday formu ≥ üye formu + `canli_histerezis_puan` → üye "daha_iyisi_geldi" (sonuç dışı) ile iner.
 - Düşme — anında: slot düşüşü ≥ `canli_slot_dusus_oran`, kaldıraç > `radar_max_kaldirac` (R1/4); günlük (yeni `kosu_ms`): sıra 2 gün üst üste > `canli_sira_dus`, `canli_islem_yok_saat` saat işlem yok (sonuç dışı);
-  **R1 elemesi (D-02, 14.11 denetim):** kadroda yok ve kadro `eski_uye_neden[adres]` `r1:` ile başlıyorsa AYNI gün SONUÇLA düşer (`r1_elendi`, `canli_bekleme_gun` bekleme);
+  **R1 elemesi (D-02, 14.11 denetim):** kadroda yok ve kadro `eski_uye_neden[adres]` `r1:` ile başlıyorsa AYNI gün SONUÇLA düşer (`r1_elendi`, `canli_bekleme_gun` bekleme); veri nedenleri
+  (`veri_hatasi`, `payda_yok`, `zaman_yok`; kullanıcı 14.11) R1 elemesi SAYILMAZ → kadro dışı kuralı;
   **kadro dışı (K‑39):** kadroda yok (R1 dışı neden: `r0_disi`, `sira_disi`, `soguyan`, alan yok) / sıra > `canli_kadro_disi_sira` durumu İKİ FARKLI UTC GÜNÜNÜN kadrosunda üst üste görülürse düşer (`kadro_disi`); düşme SONUÇ DIŞIDIR, bekleme yok. **Gün başına yalnız İLK kadro uygulanır (K‑39):** aynı `kosu_ms` UTC gününde gelen ikinci kadro
   saha kararlarını tetiklemez (ilk kadro `gun_kadro`da saklanır; yeniden başlatmada da ilki kullanılır). SONUÇLA düşen (slot, sıra, kadro dışı, kaldıraç/R1) `canli_bekleme_gun` gün sahaya dönemez; sonuç dışı düşenin bekleme cezası yok.
 - Korelasyon: sahada birbirine ≥ `canli_kor_esik` benzeyen (bağlı bileşen) en çok `canli_kor_max` kişi; ihlal eden aday atlanır (`kor_kirpildi`).
@@ -73,11 +74,15 @@ def kor_bilesen_boyutu(adresler: list[str], kor: dict | None, esik: float) -> in
     return max(sayi.values())
 
 
+R1_VERI_NEDENLERI = ("veri_hatasi", "payda_yok", "zaman_yok")     # kullanıcı 14.11: veri/okuma/bütçe nedeni; R1 performans elemesi SAYILMAZ (radar_kadro.VERI_NEDENLERI ile aynı)
+
+
 def r1_elendi(kadro: dict | None, adres: str) -> bool:
     """D-02 (14.11 denetim): kadro.json `eski_uye_neden[adres]` (radar_kadro.onceki_karsilastir) `r1:` ile başlıyorsa üye bugünkü havuzda R1'den ELENDİ (RADAR_V1 §5: sonuçla düşer).
-    `r0_disi` / `sira_disi` / `soguyan` ya da alan yok → False (K‑39 iki gün kadro dışı kuralı)."""
+    Kullanıcı 14.11: neden VERİ nedeniyse (`veri:<x>` ya da eski biçim `r1:veri_hatasi` / `r1:payda_yok` / `r1:zaman_yok`) → False (sonuç ve bekleme YOK; K‑39 iki gün kadro dışı kuralı).
+    `r0_disi` / `sira_disi` / `soguyan` ya da alan yok → False."""
     neden = ((kadro or {}).get("eski_uye_neden") or {}).get(adres)
-    return isinstance(neden, str) and neden.startswith("r1:")
+    return isinstance(neden, str) and neden.startswith("r1:") and neden[3:] not in R1_VERI_NEDENLERI
 
 
 class Saha:

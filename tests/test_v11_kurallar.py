@@ -16,7 +16,7 @@ def lider_ay(adres, hesap, pnl, vlm, ay):
 
 def test_kurallar_v11_degerleri():
     assert RULES["radar_surum"] == "v3"                                     # K-66: Form Radarı v3 = RADAR_V1 + v1.1 kuralları aynen
-    assert RULES["radar_ay_pnl_pozitif"] is True and RULES["radar_min_kopya_islem"] == 10 and RULES["radar_tutma_onceki_kadro"] is True
+    assert RULES["radar_ay_pnl_pozitif"] is True and RULES["radar_min_kopya_islem"] == 0 and RULES["radar_tutma_onceki_kadro"] is True
     assert float(RULES["radar_agirlik_h"]) == 0.0
     assert "radar_t_oncelik" not in RULES                                   # t önceliği (taslak) Fable denetimiyle reddedildi: kural yok
 
@@ -43,11 +43,13 @@ def test_evren_ay_kapisi_tek_haftada_parlayani_ayiklar():
 def test_kopya_islem_kapisi_sansdan_once_ve_kapatilabilir():
     iyi = {"hesap_usd": 20_000.0, "islem_sayisi": 30, "medyan_tutma_saat": 2.0, "kisa_islem_payi": 0.0, "max_kaldirac": 3.0, "likit_pay": 1.0,
            "kopya_getiri_7g": 0.05, "kopya_koruma": 0.9, "devir_hafta": 1.0, "kopya_alt20": 0.0, "kopya_islem_sayisi": 4, "hata": None}
-    assert r.degerlendir(iyi, RULES) == (False, "kopya_islem_az")          # işlem az: şans kapısından önce
-    assert r.degerlendir({**iyi, "kopya_islem_sayisi": 10}, RULES) == (False, "sans_riski")
-    assert r.degerlendir({**iyi, "kopya_islem_sayisi": 10, "kopya_alt20": 0.01}, RULES) == (True, None)
+    acik = {**RULES, "radar_min_kopya_islem": 10}                          # kullanıcı 14.11: üretimde 0 (kapalı); mekanizma eşik 10 ile sınanır
+    assert r.degerlendir(iyi, acik) == (False, "kopya_islem_az")           # işlem az: şans kapısından önce
+    assert r.degerlendir({**iyi, "kopya_islem_sayisi": 10}, acik) == (False, "sans_riski")
+    assert r.degerlendir({**iyi, "kopya_islem_sayisi": 10, "kopya_alt20": 0.01}, acik) == (True, None)
+    assert r.degerlendir(iyi, RULES) == (False, "sans_riski")             # üretim (0): 4 kopya işlemi elemez; şans süzgeci (kural 8) aynen
     assert r.degerlendir({**iyi, "kopya_alt20": 0.01}, {**RULES, "radar_min_kopya_islem": 0}) == (True, None)     # 0 = kapalı (v1)
-    assert r.degerlendir(iyi, RULES, yalniz_dolum=True) == (True, None)    # dolum aşamasında bakılmaz (kopya oynatılmadan önce)
+    assert r.degerlendir(iyi, acik, yalniz_dolum=True) == (True, None)    # dolum aşamasında bakılmaz (kopya oynatılmadan önce)
 
 
 def test_tutma_adaylari_onceki_kadro_r0_disindan():

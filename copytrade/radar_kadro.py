@@ -4,8 +4,9 @@ T4 motoru `kadro.json`'u okuyup §5 kurallarını uygular.
     python -m copytrade.radar_kadro --havuz radar/2026-11-05/havuz.json [--kasa 10000] [--onceki-kadro onceki/kadro.json]    # → radar/2026-11-05/kadro.json
 
 `kadro.json` (docs/VERI_SOZLESMESI.md "Radar kadro"): {sema "radar-kadro-v1", kosu_ms, kasa_usd, slot_usd, saha_n, gecti_sayisi, soguyan[], satirlar[{adres, sira, katman, form, bilesenler{G,K,I1,I2,Y,H},
-kopya_getiri_7g, max_kaldirac, form_h_siz, sira_h_siz}], korelasyon{adresler, gun_sayisi, matris}, h_siz_girenler[], onceki_kosu_ms, elenenler[], eski_uye_neden{}}.
-`form_h_siz`/`sira_h_siz`/`h_siz_girenler`/`onceki_kosu_ms`/`elenenler`/`eski_uye_neden` YALNIZ BİLGİDİR: seçim, sıra ve eşikler değişmez (karar `form`'dadır). Eksik koşuda (zaman bütçesi aşıldı / satır eksik / `veri_hatasi` payı > `radar_veri_hatasi_pay_max`, R-2) kadro YAZILMAZ ve çıkış kodu 2 (`radar.yml` `son/` yayımlamaz)."""
+kopya_getiri_7g, max_kaldirac, form_h_siz, sira_h_siz}], korelasyon{adresler, gun_sayisi, matris}, h_siz_girenler[], onceki_kosu_ms, elenenler[], eski_uye_neden{}, huni{}}.
+`form_h_siz`/`sira_h_siz`/`h_siz_girenler`/`onceki_kosu_ms`/`elenenler`/`huni` YALNIZ BİLGİDİR: seçim, sıra ve eşikler değişmez (karar `form`'dadır). `eski_uye_neden` seçimi değiştirmez ama
+canlı motor TÜKETİR (D-02): `r1:<neden>` → üye aynı gün sonuçla düşer; `veri:<neden>` (veri_hatasi / payda_yok / zaman_yok; kullanıcı 14.11) sonuç vermez (K-39 iki gün kadro dışı kuralı). Eksik koşuda (zaman bütçesi aşıldı / satır eksik / `veri_hatasi` payı > `radar_veri_hatasi_pay_max`, R-2) kadro YAZILMAZ ve çıkış kodu 2 (`radar.yml` `son/` yayımlamaz)."""
 from __future__ import annotations
 
 import argparse
@@ -39,10 +40,14 @@ def kosu_tam_mi(havuz: dict, rules: dict | None = None) -> tuple[bool, str | Non
     return True, None
 
 
+VERI_NEDENLERI = ("veri_hatasi", "payda_yok", "zaman_yok")     # kullanıcı 14.11: R1 performans/kopyalanabilirlik nedeni DEĞİL (veri/okuma/bütçe); sonuçla düşme ve bekleme vermez
+
+
 def onceki_karsilastir(onceki: dict | None, havuz: dict, satirlar: list[dict], soguyan: list[dict]) -> tuple[list[dict], dict[str, str]]:
-    """BİLGİ AMAÇLI. Önceki kadronun (`onceki`, radar-kadro-v1) bugünkü kadroda OLMAYAN üyeleri için neden (bugünkü havuza göre):
-    `soguyan` (R1'i geçti ama form sürmüyor) · `r1:<neden>` (havuzda, `gecti` false) · `r0_disi` (havuzda yok: 7 g getiri ilk `radar_aday_tavan`'dan düştü) · `sira_disi` (puanlandı, form sırası > kadro).
-    `elenenler` = bunlardan R1'de elenenler [{adres, onceki_sira, neden}] (önceki sıra artan). `onceki` None → ([], {})."""
+    """Önceki kadronun (`onceki`, radar-kadro-v1) bugünkü kadroda OLMAYAN üyeleri için neden (bugünkü havuza göre). Seçimi değiştirmez; canlı motor `eski_uye_neden`'i okur (D-02):
+    `soguyan` (R1'i geçti ama form sürmüyor) · `r1:<neden>` (havuzda, `gecti` false, gerçek R1 nedeni → motor aynı gün sonuçla düşürür) · `veri:<neden>` (havuzda, `gecti` false ama neden
+    `VERI_NEDENLERI`: veri_hatasi / payda_yok / zaman_yok → sonuç YOK, K-39 kadro dışı kuralı) · `r0_disi` (havuzda yok: 7 g getiri ilk `radar_aday_tavan`'dan düştü) · `sira_disi` (puanlandı, form sırası > kadro).
+    `elenenler` = bunlardan gerçek R1 nedeniyle elenenler [{adres, onceki_sira, neden}] (önceki sıra artan; `veri:` girmez). `onceki` None → ([], {})."""
     if not onceki:
         return [], {}
     if onceki.get("sema") != SEMA:
@@ -58,6 +63,8 @@ def onceki_karsilastir(onceki: dict | None, havuz: dict, satirlar: list[dict], s
         h = havuz_satiri.get(a)
         if h is None:
             neden[a] = "r0_disi"
+        elif not h.get("gecti") and h.get("neden") in VERI_NEDENLERI:
+            neden[a] = f"veri:{h.get('neden')}"
         elif not h.get("gecti"):
             neden[a] = f"r1:{h.get('neden')}"
             elenenler.append({"adres": a, "onceki_sira": u["sira"], "neden": h.get("neden")})
@@ -66,6 +73,19 @@ def onceki_karsilastir(onceki: dict | None, havuz: dict, satirlar: list[dict], s
         else:
             neden[a] = "sira_disi"
     return elenenler, neden
+
+
+def huni_ozeti(havuz: dict, rules: dict, kadro_n: int) -> dict:
+    """Radar hunisi (BİLGİ; pano 14.11): evren (R0 lider tablosu) → aday (taranan satır) → işlem yeterli (dolumu ölçülüp `islem_sayisi` ≥ `radar_min_islem`) → R1 geçen → kadro.
+    `neden`: elenme nedeni → adet (havuz satırlarının `neden`i; geçen yok sayılır). Yeni hesap yok: havuz.json alanlarının sayımı."""
+    satirlar = havuz.get("satirlar") or []
+    esik = int(rules["radar_min_islem"])
+    nedenler: dict[str, int] = {}
+    for x in satirlar:
+        if not x.get("gecti"):
+            nedenler[str(x.get("neden"))] = nedenler.get(str(x.get("neden")), 0) + 1
+    return {"evren": havuz.get("evren_toplam"), "aday": len(satirlar), "islem_yeterli": sum(1 for x in satirlar if (x.get("islem_sayisi") or 0) >= esik),
+            "islem_esik": esik, "gecen": sum(1 for x in satirlar if x.get("gecti")), "kadro": kadro_n, "neden": dict(sorted(nedenler.items(), key=lambda kv: (-kv[1], kv[0])))}
 
 
 def kadro_olustur(havuz: dict, rules: dict | None = None, kasa_usd: float | None = None, onceki: dict | None = None) -> dict:
@@ -94,7 +114,8 @@ def kadro_olustur(havuz: dict, rules: dict | None = None, kasa_usd: float | None
     return {"sema": SEMA, "radar_surum": str(rules.get("radar_surum", "v1")), "kosu_ms": havuz["kosu_ms"], "kasa_usd": kasa, "slot_usd": boyut.slot_usd(kasa, rules), "saha_n": n,
             "gecti_sayisi": sum(1 for s in havuz["satirlar"] if s.get("gecti")), "soguyan": soguyan, "satirlar": satirlar,
             "korelasyon": korelasyon([{"adres": p["adres"], "kopya_gunluk": p["kopya_gunluk"]} for p in secilen]),          # K-45 eki (08.11): tüm kadro (İlk 11 + Yedek); Yedek boş slota girebildiği için benzerlik denetimi onları da kapsar
-            "h_siz_girenler": h_siz_girenler, "onceki_kosu_ms": (onceki or {}).get("kosu_ms"), "elenenler": elenenler, "eski_uye_neden": eski_uye_neden}
+            "h_siz_girenler": h_siz_girenler, "onceki_kosu_ms": (onceki or {}).get("kosu_ms"), "elenenler": elenenler, "eski_uye_neden": eski_uye_neden,
+            "huni": huni_ozeti(havuz, rules, len(satirlar))}
 
 
 def main(argv: list[str] | None = None) -> int:

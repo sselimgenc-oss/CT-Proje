@@ -384,3 +384,11 @@ def test_saha_korelasyon_doldurmayi_engellemez_siradaki_girer():
     karar, _ = s.degerlendir(k2, T0 + GUN + SAAT)
     assert [k.adres for k in karar if k.tur == "giris"] == [adr(13), adr(14)] and any(k.tur == "giris_atlandi" and k.adres == adr(12) for k in karar)
     assert len(s.uyeler) == 11 and s.eksik is None
+
+
+@pytest.mark.parametrize("neden", ["veri:veri_hatasi", "veri:payda_yok", "veri:zaman_yok", "r1:veri_hatasi", "r1:payda_yok", "r1:zaman_yok"])
+def test_radar_hunisi_1411_veri_nedeni_sonucla_dusurmez_bekleme_yok(neden):
+    """Kullanıcı 14.11: R1 çıkışında VERİ nedenleri (yeni `veri:` biçimi ve eski kadrodaki `r1:veri_hatasi` vb.) sonuçla düşme + 14 gün bekleme VERMEZ: K-39 iki gün kadro dışı kuralı."""
+    assert kd.r1_elendi({"eski_uye_neden": {adr(11): neden}}, adr(11)) is False
+    s, karar = _gun2(neden)
+    assert [k for k in karar if k.tur == "dus"] == [] and adr(11) not in s.bekleme and s.uyeler[adr(11)]["disi_gunler"]

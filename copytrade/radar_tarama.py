@@ -1,6 +1,6 @@
 """Radar taraması: R0 evren + R1 kopyalanabilirlik (docs/RADAR_V1.md §2–3, görev T2). Salt okunur: yalnız herkese açık Hyperliquid verisi.
 
-Akış: lider tablosu → `evren` (R0, hafta getirisine göre ilk N; K‑31) → vault süzgeci → her aday için son 7 günün dolumları → `islem_olculeri` + kopya oynatma
+Akış: lider tablosu → `evren` (R0, hafta getirisine göre ilk N; K‑31) → her aday için son 7 günün dolumları → `islem_olculeri` → (dolum kurallarını geçene) vault süzgeci → kopya oynatma
 (`kopya_v4.hesapla`, 1 dk gecikme + maliyet, pencere başında BOŞ) → `degerlendir` (R1 kuralları sırayla) → `radar/<tarih>/havuz.json`.
 
 Kural 7 (tek yer): HL istekleri yalnız `tarama.PublicClient`; işlem eşleme `olcut.closed_round_trips`, kaldıraç `olcut.effective_leverage_detail`;
@@ -40,8 +40,8 @@ from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter, Ra
 MINUTE = 60_000
 SEMA = "radar-havuz-v1"
 KOPYA_TARZ = "intraday"                 # kopya_v3 çıkış kuralları (E3) için tarz; radar henüz tarz sınıflamaz (kurallar.yaml golge_v2.intraday)
-NEDENLER = ("veri_hatasi", "payda_yok", "devir_yuksek", "vault", "dolum_fazla", "islem_az", "tutma_kisa", "kisa_islem_fazla", "kaldirac_yuksek",
-            "likidite_dusuk", "kopya_zarar", "kopya_koruma_dusuk", "kopya_islem_az", "sans_riski", "akil_sagligi", "zaman_yok")        # ucuzdan pahalıya ölçüm sırası (lider kararı 2026-11-04)
+NEDENLER = ("veri_hatasi", "payda_yok", "devir_yuksek", "dolum_fazla", "islem_az", "tutma_kisa", "kisa_islem_fazla", "kaldirac_yuksek",
+            "likidite_dusuk", "vault", "kopya_zarar", "kopya_koruma_dusuk", "kopya_islem_az", "sans_riski", "akil_sagligi", "zaman_yok")        # ucuzdan pahalıya ölçüm sırası (lider kararı 2026-11-04; 14.11 hız: vault dolum kurallarından SONRA)
 DOLUM_KURALI = 5                  # NEDENLER içinde dolum tabanlı kurallar (islem_az … likidite_dusuk): bunlardan biri başarısızsa kopya oynatılmaz
 SAYISAL = ("hesap_usd", "hafta_pnl_usd", "ay_pnl_usd", "trader_getiri_7g", "islem_sayisi", "medyan_tutma_saat", "kisa_islem_payi", "max_kaldirac", "likit_pay",
            "kopya_getiri_7g", "ayna_getiri_7g", "kopya_koruma", "devir_hafta", "kopya_alt20", "fiyatsiz_eylem", "yaklasik_fiyat_eylem", "v4_kopya_getiri_7g", "v5_onceki_kopya_getiri_7g",
@@ -518,9 +518,25 @@ def _bos_satir(aday: dict, vlm: float, rules: dict) -> dict:
             "g_t_istat": None, "kopya_slot_kat": None, "kopya_getiri_72s_durum": None, "gecti": False, "neden": None, "hata": None}
 
 
-def kopyalanabilirlik(aday: dict, dolumlar: list[dict] | None, hata: str | None, baglam: Baglam) -> dict:
-    """R1: tek adayın satırı, ucuzdan pahalıya: `veri_hatasi` (istek hatası) → `payda_yok` / `devir_yuksek` (lider tablosundan) → `dolum_fazla` (dolum sayısı ≥ `radar_dolum_tavan`;
-    dolum alanları null) → dolum tabanlı kurallar 1–5 → (hepsi geçtiyse) kopya oynatma ve kalan kurallar. Ölçülmeyen alan `null`; ölçülenler elense de yazılır."""
+def dolum_cekim_tavani(rules: dict) -> int:
+    """14.11 (dolum_fazla perp süzgecinden sonra): spot dolumlar perp kotasını yemesin diye ikinci çekimin satır tavanı = 2 × `radar_dolum_tavan` (eşik DEĞİL; çekim sınırı).
+    Bu kadar ham dolum gelirse pencere kesilmiş olabilir (perp ölçüleri eksik) → `dolum_fazla`."""
+    return 2 * int(rules["radar_dolum_tavan"])
+
+
+def dolum_cek(client: Any, adres: str, bas_ms: int, bit_ms: int, rules: dict) -> list[dict]:
+    """Dolumlar: önce `radar_dolum_tavan` satır; ham sayı tavana ulaştı ama PERP dolum sayısı tavanın altındaysa (spot ağırlıklı hesap) `dolum_cekim_tavani` ile yeniden çekilir."""
+    tavan = int(rules["radar_dolum_tavan"])
+    dolumlar = client.fills(adres, bas_ms, max_rows=tavan, end_ms=bit_ms)
+    if len(dolumlar) >= tavan and len(perp_fills(dolumlar)) < tavan:
+        dolumlar = client.fills(adres, bas_ms, max_rows=dolum_cekim_tavani(rules), end_ms=bit_ms)
+    return dolumlar
+
+
+def kopyalanabilirlik(aday: dict, dolumlar: list[dict] | None, hata: str | None, baglam: Baglam, vault_mi: Any = None) -> dict:
+    """R1: tek adayın satırı, ucuzdan pahalıya: `veri_hatasi` (istek hatası) → `payda_yok` / `devir_yuksek` (lider tablosundan) → `dolum_fazla` (PERP dolum sayısı ≥ `radar_dolum_tavan`
+    ya da ham dolum `dolum_cekim_tavani`'na ulaştı (pencere kesik); dolum alanları null; 14.11: spot dolumlar sayılmaz) → dolum tabanlı kurallar 1–5 → `vault` (`vault_mi()` doğruysa;
+    14.11 hız: yalnız dolum kurallarını geçende sorulur) → kopya oynatma ve kalan kurallar. Ölçülmeyen alan `null`; ölçülenler elense de yazılır."""
     rules = baglam.rules
     satir = _bos_satir(aday, aday["hafta_vlm_usd"], rules)
     if hata:
@@ -528,14 +544,22 @@ def kopyalanabilirlik(aday: dict, dolumlar: list[dict] | None, hata: str | None,
     on = on_eleme(aday, aday["hafta_vlm_usd"], rules)
     if on:
         return {**satir, "neden": on}
-    if len(dolumlar or []) >= int(rules["radar_dolum_tavan"]):
+    ham = dolumlar or []
+    perp = perp_fills(ham)
+    if len(perp) >= int(rules["radar_dolum_tavan"]) or len(ham) >= dolum_cekim_tavani(rules):
         return {**satir, "neden": "dolum_fazla"}
-    dolumlar = [f for f in perp_fills(dolumlar or []) if baglam.pencere_bas_ms <= int(f["time"]) < baglam.kosu_ms]
+    dolumlar = [f for f in perp if baglam.pencere_bas_ms <= int(f["time"]) < baglam.kosu_ms]
     satir.update(islem_olculeri(dolumlar, aday["hesap_usd"], baglam.likit_coinler(), rules))
     satir["hip3_nosyonel_pay"] = hip3_nosyonel_pay(dolumlar)
     satir["gecti"], satir["neden"] = degerlendir(satir, rules, yalniz_dolum=True)
     if satir["neden"]:
         return satir                                                       # dolum tabanlı kural başarısız: kopya oynatılmaz (kopya alanları null)
+    if vault_mi is not None:                                               # 14.11 hız: vault sorgusu yalnız ucuz dolum kapılarını geçen adayda
+        try:
+            if vault_mi():
+                return {**satir, "gecti": False, "neden": "vault"}
+        except HATALAR as hata_:
+            return {**satir, "gecti": False, "neden": "veri_hatasi", "hata": im.data_error_reason(hata_)}
     payda, payda_bilgi = payda_oku(baglam.client, aday["adres"], aday["hesap_usd"], baglam.pencere_bas_ms, baglam.kosu_ms, rules)      # B8: zamana bağlı payda (okunamazsa sabit)
     satir.update(payda_bilgi)
     try:
@@ -559,7 +583,7 @@ def kopyalanabilirlik(aday: dict, dolumlar: list[dict] | None, hata: str | None,
 def kos(client: Any, kosu_ms: int, cikti: Path, aday_sayisi: int | None = None, rules: dict | None = None, log=print, saat=time.monotonic, v4_yan_yana: bool = False,
         kural_ust: dict | None = None, payda_yan_yana: bool = False, onceki_adresler: list[str] | None = None, kasa_usd: float | None = None) -> dict:
     """R0 + R1 + yazım. `aday_sayisi` verilirse `radar_aday_tavan` yerine o (küçük deneme). Ucuzdan pahalıya: lider tablosundan elemeler (`payda_yok`, `devir_yuksek`) dolum
-    ÇEKİLMEDEN; sonra `vault`; sonra dolum (en çok `radar_dolum_tavan`). Süre `radar_zaman_butcesi_dk`'yı aşınca kalan adaylar `zaman_yok`. Döner: havuz.json sözlüğü."""
+    ÇEKİLMEDEN; sonra dolum (`dolum_cek`); dolum kurallarını geçene `vault` ve kopya oynatma; para hareketi yalnız kopya oynatmasına varanlarda (14.11 hız). Süre `radar_zaman_butcesi_dk`'yı aşınca kalan adaylar `zaman_yok`. Döner: havuz.json sözlüğü."""
     rules = rules or load_rules()
     baslangic = saat()
     butce_sn = float(rules["radar_zaman_butcesi_dk"]) * 60.0
@@ -586,20 +610,17 @@ def kos(client: Any, kosu_ms: int, cikti: Path, aday_sayisi: int | None = None, 
             continue
         dolumlar, hata = None, None
         try:
-            if client.vault_details(adres):
-                satirlar.append({**_bos_satir(aday, aday["hafta_vlm_usd"], rules), "neden": "vault"})
-                log(f"{etiket} vault")
-                continue
-            dolumlar = client.fills(adres, pencere_bas, max_rows=int(rules["radar_dolum_tavan"]), end_ms=kosu_ms)
+            dolumlar = dolum_cek(client, adres, pencere_bas, kosu_ms, rules)
         except HATALAR as hata_:
             hata = im.data_error_reason(hata_)
-        satir = kopyalanabilirlik(aday, dolumlar, hata, baglam)
+        satir = kopyalanabilirlik(aday, dolumlar, hata, baglam, vault_mi=lambda adres=adres: bool(client.vault_details(adres)))
         satirlar.append(satir)
         log(f"{etiket} dolum {len(dolumlar or [])}, işlem {satir['islem_sayisi']}, gecti {satir['gecti']} ({satir['neden']}{': ' + satir['hata'] if satir.get('hata') else ''}); {saat() - t_aday:.0f} sn (toplam {(saat() - baslangic) / 60:.1f} dk)")
     for x in satirlar:                                                     # v1.1 (K-53) bilgi: R0 ilk N dışından, önceki kadro üyesi olduğu için ölçüldü
         x["tutma"] = x["adres"] in tutma_adres
-    okunan = para_hareketi_ekle(client, satirlar, pencere_bas, kosu_ms, rules, log, saat, baslangic)
-    log(f"para hareketi: {okunan}/{len(satirlar)} adres okundu; yatırma payı > {rules['para_hareketi_isaret_payi']}: {len(yatirma_isaretli(satirlar, float(rules['para_hareketi_isaret_payi'])))} kişi")
+    olculen = [x for x in satirlar if x.get("payda_kaynak") is not None]       # 14.11 hız: para hareketi yalnız dolum kurallarını + vault'u geçip kopya oynatmasına varanlarda (bilgi alanı)
+    okunan = para_hareketi_ekle(client, olculen, pencere_bas, kosu_ms, rules, log, saat, baslangic)
+    log(f"para hareketi: {okunan}/{len(olculen)} adres okundu (kopya oynatmasına varan); yatırma payı > {rules['para_hareketi_isaret_payi']}: {len(yatirma_isaretli(satirlar, float(rules['para_hareketi_isaret_payi'])))} kişi")
     if payda_yan_yana:                                                     # kopya oynatmasına varmayan satırda payda karara girmez: eski = yeni
         for x in satirlar:
             if "gecti_eski" not in x:
