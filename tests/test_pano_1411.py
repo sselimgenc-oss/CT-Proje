@@ -190,3 +190,15 @@ def test_m05_pano_karar_kutusu_isabet_ozeti_ve_kilit_isareti():
     assert "2 ölçüm · ortalama IC <b>+0.10</b>" in h and "(2/2 pozitif)" in h and "(1/2 pozitif)" in h        # (0,2 + 0) / 2; havuz farkı 2/2, elenen 1/2 pozitif
     assert 'stroke="#ff5d5d" stroke-width="1"' in h and "Kilit olayı: 1" in h and "gölge eğri hesaplanmadı" in h
     assert "kullanılan sermaye getirisi <b>+%10,00" in h                                                    # 250 / 2.500
+
+
+def test_komisyon_ozeti_ve_tutma_sinifi_1511():
+    """15.11 (kullanıcı isteği, Fable önerisi; yalnız bilgi): dönem başından ücret, brüt K/Z = net + ücret, oran; dönem öncesi emir sayılmaz. Tutma sınıfı eşikleri."""
+    from copytrade.canli import pano as p
+    kay = [{"olay": "emir", "durum": "dolu", "ucret": 5.0, "zaman_ms": 50}, {"olay": "emir", "durum": "dolu", "ucret": 4.0, "zaman_ms": 150},
+           {"olay": "emir", "durum": "kismi", "ucret": 6.0, "zaman_ms": 200}, {"olay": "emir", "durum": "red", "ucret": 9.0, "zaman_ms": 200}]
+    u, b, o = p.komisyon_ozeti(kay, {"kasa_usd": 1000.0, "ozsermaye_usd": 1030.0}, {"bas_ms": 100})
+    assert u == 10.0 and b == 40.0 and o == 0.25
+    assert p.komisyon_ozeti(kay, {"kasa_usd": 1000.0, "ozsermaye_usd": 980.0}, {"bas_ms": 100})[2] is None          # brüt ≤ 0: oran yok
+    assert p.komisyon_metni(kay, {"kasa_usd": 1000.0, "ozsermaye_usd": 1030.0}, {"bas_ms": 100})[1] == "brüt kârın %25'i"
+    assert [p.tutma_sinifi(x) for x in (0.2, 1.2, 4.0, 10.0, 30.0, None)] == ["scalp", "kısa day", "day", "day", "swing", "—"]

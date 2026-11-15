@@ -4,7 +4,7 @@ T4 motoru `kadro.json`'u okuyup §5 kurallarını uygular.
     python -m copytrade.radar_kadro --havuz radar/2026-11-05/havuz.json [--kasa 10000] [--onceki-kadro onceki/kadro.json]    # → radar/2026-11-05/kadro.json
 
 `kadro.json` (docs/VERI_SOZLESMESI.md "Radar kadro"): {sema "radar-kadro-v1", kosu_ms, kasa_usd, slot_usd, saha_n, gecti_sayisi, soguyan[], satirlar[{adres, sira, katman, form, bilesenler{G,K,I1,I2,Y,H},
-kopya_getiri_7g, max_kaldirac, form_h_siz, sira_h_siz}], korelasyon{adresler, gun_sayisi, matris}, h_siz_girenler[], onceki_kosu_ms, elenenler[], eski_uye_neden{}, huni{}, olusturma_ms}.
+kopya_getiri_7g, max_kaldirac, form_h_siz, sira_h_siz, medyan_tutma_saat, devir_hafta (bilgi)}], korelasyon{adresler, gun_sayisi, matris}, h_siz_girenler[], onceki_kosu_ms, elenenler[], eski_uye_neden{}, huni{}, olusturma_ms}.
 `form_h_siz`/`sira_h_siz`/`h_siz_girenler`/`onceki_kosu_ms`/`elenenler`/`huni` YALNIZ BİLGİDİR: seçim, sıra ve eşikler değişmez (karar `form`'dadır). `eski_uye_neden` seçimi değiştirmez ama
 canlı motor TÜKETİR (D-02): `r1:<neden>` → üye aynı gün sonuçla düşer; `veri:<neden>` (veri_hatasi / payda_yok / zaman_yok; kullanıcı 14.11) sonuç vermez (K-39 iki gün kadro dışı kuralı). Eksik koşuda (zaman bütçesi aşıldı / satır eksik / `veri_hatasi` payı > `radar_veri_hatasi_pay_max`, R-2) kadro YAZILMAZ ve çıkış kodu 2 (`radar.yml` `son/` yayımlamaz)."""
 from __future__ import annotations
@@ -106,7 +106,8 @@ def kadro_olustur(havuz: dict, rules: dict | None = None, kasa_usd: float | None
     hsiz_sira = {a: i for i, a in enumerate(sorted(hsiz, key=lambda a: (-hsiz[a], a)), 1)}
     satirlar = [{"adres": p["adres"], "sira": i, "katman": "ilk11" if i <= ilk else "yedek", "form": p["form"], "bilesenler": p["bilesenler"],
                  "kopya_getiri_7g": p["kopya_getiri_7g"], "max_kaldirac": p["max_kaldirac"], "form_h_siz": hsiz[p["adres"]], "sira_h_siz": hsiz_sira[p["adres"]],
-                 "g_t_istat": havuz_satiri[p["adres"]].get("g_t_istat"), "tutma": bool(havuz_satiri[p["adres"]].get("tutma"))}
+                 "g_t_istat": havuz_satiri[p["adres"]].get("g_t_istat"), "tutma": bool(havuz_satiri[p["adres"]].get("tutma")),
+                 "medyan_tutma_saat": havuz_satiri[p["adres"]].get("medyan_tutma_saat"), "devir_hafta": havuz_satiri[p["adres"]].get("devir_hafta")}   # 15.11 yalnız bilgi (Fable): tutma sınıfı / devir ölçümü; seçimi ETKİLEMEZ
                 for i, p in enumerate(secilen, 1)]
     secilen_adres = {p["adres"] for p in secilen}
     h_siz_girenler = [{"adres": a, "sira_h_siz": hsiz_sira[a], "form_h_siz": hsiz[a]} for a in sorted(hsiz_sira, key=hsiz_sira.get)

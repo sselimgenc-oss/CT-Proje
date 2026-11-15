@@ -31,7 +31,8 @@ def test_kadro_altin_ornek_3_kisi_elle():
     assert kd["sema"] == "radar-kadro-v1" and kd["radar_surum"] == "v4" and kd["kasa_usd"] == 1000.0 and kd["slot_usd"] == pytest.approx(1000 / 11) and kd["saha_n"] == 11 and kd["gecti_sayisi"] == 3
     assert [s["adres"] for s in kd["satirlar"]] == ["0xA", "0xB", "0xC"] and [s["sira"] for s in kd["satirlar"]] == [1, 2, 3]
     assert [s["form"] for s in kd["satirlar"]] == pytest.approx([67.5, 57.5, 25.0]) and {s["katman"] for s in kd["satirlar"]} == {"ilk11"}
-    assert set(kd["satirlar"][0]) == {"adres", "sira", "katman", "form", "bilesenler", "kopya_getiri_7g", "max_kaldirac", "form_h_siz", "sira_h_siz", "g_t_istat", "tutma"}
+    assert set(kd["satirlar"][0]) == {"adres", "sira", "katman", "form", "bilesenler", "kopya_getiri_7g", "max_kaldirac", "form_h_siz", "sira_h_siz", "g_t_istat", "tutma",
+                                         "medyan_tutma_saat", "devir_hafta"}      # 15.11 yalnız bilgi alanları (Fable): havuzdan aynen
     assert kd["korelasyon"]["adresler"] == ["0xA", "0xB", "0xC"]
     # v1.1 (H = 0, dördü /0,80): A 43,75 + 9,375 + 0,375×50 = 71,875; B 21,875 + 18,75 + 18,75 = 59,375; C 18,75 — sıra aynı
     kd11 = k.kadro_olustur(h, RULES)
