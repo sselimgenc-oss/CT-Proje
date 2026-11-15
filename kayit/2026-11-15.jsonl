@@ -3187,3 +3187,5 @@
 {"zaman_ms":1794751204668,"olay":"emir_yok","adres":"0x6834b221185e8af4d573583a570c47406804f5f6","coin":"ZEC","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1794751201882,"gorme_ms":1794751202334,"yas_ms":2786}
 {"zaman_ms":1794751204669,"olay":"emir_yok","adres":"0x6834b221185e8af4d573583a570c47406804f5f6","coin":"ZEC","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1794751201882,"gorme_ms":1794751202334,"yas_ms":2787}
 {"zaman_ms":1794751228673,"olay":"funding","saat":498542,"saat_adet":1,"funding_usd":-0.04776040807855658,"toplam_funding_usd":-0.41631382001507244}
+{"zaman_ms":1794751551112,"olay":"tur","ozsermaye_usd":9877.2244}
+{"zaman_ms":1794752413273,"olay":"tur","ozsermaye_usd":9880.0613}
