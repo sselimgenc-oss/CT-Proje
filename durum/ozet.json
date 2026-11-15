@@ -4,83 +4,83 @@
    "adres": "0x2988309f156f806cd1703fff8d29ddfa458fd4ef",
    "coin": "HYPE",
    "giris": 67.25763698334829,
-   "kz_usd": 2.085984952495866,
-   "mark": 66.4285,
+   "kz_usd": 1.9903826216545477,
+   "mark": 66.4665,
    "sz": -2.5158508116138583,
-   "usd": 167.12419563929117
+   "usd": 167.2197979701325
   },
   {
    "adres": "0x3d21e3d9af7ca1d76305c9eb2fb510b7af920659",
    "coin": "ADA",
    "giris": 0.15372,
-   "kz_usd": 0.17956724553907252,
-   "mark": 0.153375,
+   "kz_usd": 0.3435199479878035,
+   "mark": 0.15306,
    "sz": -520.4847696784949,
-   "usd": 79.82935154943917
+   "usd": 79.66539884699043
   },
   {
    "adres": "0x3d21e3d9af7ca1d76305c9eb2fb510b7af920659",
    "coin": "DOGE",
    "giris": 0.05898504764708153,
-   "kz_usd": 1.6750834523066622,
-   "mark": 0.05866,
+   "kz_usd": 1.8296838747997575,
+   "mark": 0.05863,
    "sz": -5153.347416437315,
-   "usd": 302.2953594482129
+   "usd": 302.1407590257198
   },
   {
    "adres": "0x3d21e3d9af7ca1d76305c9eb2fb510b7af920659",
    "coin": "SOL",
    "giris": 72.19800000000001,
-   "kz_usd": 5.887585160102404,
-   "mark": 71.2405,
+   "kz_usd": 7.683068049658428,
+   "mark": 70.9485,
    "sz": -6.148914005328816,
-   "usd": 438.0517081966275
+   "usd": 436.2562253070715
   },
   {
    "adres": "0x3d21e3d9af7ca1d76305c9eb2fb510b7af920659",
    "coin": "TRX",
    "giris": 0.30745,
-   "kz_usd": -4.016361285742842,
-   "mark": 0.30514,
+   "kz_usd": -4.146762626189121,
+   "mark": 0.305065,
    "sz": 1738.6845392826315,
-   "usd": 530.5422003167022
+   "usd": 530.4117989762559
   },
   {
    "adres": "0x6463f53d916cb7741a05a2c11aebdbd7324342f5",
    "coin": "ETH",
    "giris": 1755.9340047990154,
-   "kz_usd": -18.296671636356756,
-   "mark": 1815.65,
+   "kz_usd": -17.77580044134242,
+   "mark": 1813.95,
    "sz": -0.3063948205966606,
-   "usd": 556.3057560163269
+   "usd": 555.7848848213125
   },
   {
    "adres": "0x6834b221185e8af4d573583a570c47406804f5f6",
    "coin": "ZEC",
    "giris": 898.0042906083789,
-   "kz_usd": 0.7373367933730041,
-   "mark": 898.49,
+   "kz_usd": -3.847209345532364,
+   "mark": 895.47,
    "sz": 1.5180616353991376,
-   "usd": 1363.9631987897712
+   "usd": 1359.378652650866
   },
   {
    "adres": "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3",
    "coin": "BTC",
    "giris": 65530.52715689198,
-   "kz_usd": -17.668074049415296,
-   "mark": 64677.5,
+   "kz_usd": -19.511460368002442,
+   "mark": 64588.5,
    "sz": 0.020712205826821845,
-   "usd": 1339.6136923642698
+   "usd": 1337.7703060456827
   }
  ],
  "acik_pozisyon": 8,
  "aylik_esdeger": null,
  "aylik_hedef": 0.04,
- "brut_usd": 4777.725462320641,
- "btc_al_tut_getiri": -0.013129787298971629,
+ "brut_usd": 4768.627823644031,
+ "btc_al_tut_getiri": -0.014487778082944214,
  "btc_donem_fiyat": 65538.0,
- "btc_fark": 7.141444540026409e-05,
- "btc_fiyat": 64677.5,
+ "btc_fark": 0.0010275023374459735,
+ "btc_fiyat": 64588.5,
  "dinleyici": {
   "abonelik_oncesi_snapshot_gibi": 23,
   "dolgu_bekleyen": 0,
@@ -93,18 +93,18 @@
   "hakem_yeniden_deneme": 0,
   "kapanis_atlanan": 0,
   "kopma": 0,
-  "ping": 34,
+  "ping": 71,
   "rest_abonelik_oncesi_atlanan": 0,
   "rest_tur_atlanan": 0,
   "subscription_response": 360,
   "tekrar": 1,
-  "trades_mesaj": 17314,
+  "trades_mesaj": 34040,
   "userfills_mesaj": 11,
   "yeniden_baglanma": 0,
   "yeniden_baslama": 0
  },
  "donem": "2026-11-14T19:30:00Z",
- "donem_gun": 0.9536390625,
+ "donem_gun": 0.9643184953703704,
  "dur": false,
  "emir": {
   "atlandi": 1,
@@ -125,7 +125,7 @@
  "funding_oran_yok": 0,
  "funding_usd": -0.48749258252662564,
  "gec_acilis": 0,
- "getiri": -0.013058372853571365,
+ "getiri": -0.01346027574549824,
  "hedef_gecer": null,
  "hip3_atlandi": 0,
  "inen": 0,
@@ -136,15 +136,15 @@
   "emir_yok": 1,
   "kacan_tamamlandi": 1,
   "kor_kirpildi": 6,
-  "tur": 2
+  "tur": 3
  },
  "kayma_n": 0,
  "kip": "sanal",
  "kor_kirpildi": 6,
  "kuyruk_gecikme_ms": {
   "max": 13,
-  "n": 419,
-  "p50": 6
+  "n": 512,
+  "p50": 5
  },
  "marj_yok": 0,
  "min_emir_say": {},
@@ -154,17 +154,17 @@
  },
  "ortalama_kayma_ref": null,
  "ortalama_kayma_trader": null,
- "ozsermaye_usd": 9869.416271464286,
+ "ozsermaye_usd": 9865.397242545017,
  "r1_gecen": 23,
  "rest_429": 0,
- "rest_istek": 631,
+ "rest_istek": 1095,
  "saha": 11,
  "saha_eksik_neden": null,
  "saha_n": 11,
  "slot_tavani": 0,
  "slot_usd": 909.0909090909091,
  "spot_atlandi": 0,
- "sure_dk": 14.68295,
+ "sure_dk": 30.061333333333334,
  "tasfiye": 0,
  "telegram_hata": 0,
  "ters_netlesme": 0,
@@ -188,5 +188,5 @@
   "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3"
  ],
  "vardiya": "43744920747",
- "yazildi_ms": 1794766994415
+ "yazildi_ms": 1794767917118
 }
