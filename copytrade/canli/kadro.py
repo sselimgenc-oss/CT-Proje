@@ -13,7 +13,8 @@ Kararlar `Karar` olarak döner (giriş / düş / değiştir / inen_kapat) — uy
   M-06'dan beri en az sıra kuralı kadar cezalı: SONUÇLA + bekleme (yalnız veri nedeni `veri:<x>` sonuç dışı kalır).
   **Sonuçla düşmede pozisyonlar HEMEN kapanır (M-07, kullanıcı kararı 14.11):** `dus` ile aynı anda `inen_kapat`; 24 sa açık bırakma yalnız sonuç dışı düşmede. **Gün başına yalnız İLK kadro uygulanır (K‑39):** aynı `kosu_ms` UTC gününde gelen ikinci kadro
   saha kararlarını tetiklemez (ilk kadro `gun_kadro`da saklanır; yeniden başlatmada da ilki kullanılır). SONUÇLA düşen (slot, sıra, kadro dışı, kaldıraç/R1) `canli_bekleme_gun` gün sahaya dönemez; sonuç dışı düşenin bekleme cezası yok.
-- Korelasyon: sahada birbirine ≥ `canli_kor_esik` benzeyen (bağlı bileşen) en çok `canli_kor_max` kişi; ihlal eden aday atlanır (`kor_kirpildi`).
+- Korelasyon: sahada birbirine ≥ `canli_kor_esik` benzeyen (bağlı bileşen) en çok `canli_kor_max` kişi; ihlal eden aday atlanır (`kor_kirpildi`). Kullanıcı kararı 15.11: boş yer doldurmada
+  kural sahanın dolmasını ENGELLEMEZ — uygun aday kalmazsa sahadakilere doğrudan en az benzeyen aday girer (`kor_gevsetildi`); değiştirmede (histerezis) kural aynen geçerli.
 - Kadro bayat / yok (`kosu_ms` > `canli_kadro_eski_saat` saat): yeni giriş yok, düşme kuralları çalışır (günlük sıra kuralları kadro verisi gerektirdiğinden yeni kosu_ms olmadan işlemez;
   R-6: kadro verisi gerektirmeyen `canli_islem_yok_saat` (72 sa) işlem yok düşmesi bayat/yok kadroda da HER çağrıda denetlenir).
 - Sahadan inen (yalnız SONUÇ DIŞI düşme, M-07): yeni açılış durur, trader'ın kapanışları izlenir, `canli_inen_saat` sonra kalan pozisyon kapatılır (`inen_kapat`). Sonuçla düşen anında kapatılır.
@@ -75,6 +76,23 @@ def kor_bilesen_boyutu(adresler: list[str], kor: dict | None, esik: float) -> in
     for a in adresler:
         sayi[bul(a)] = sayi.get(bul(a), 0) + 1
     return max(sayi.values())
+
+
+def kor_komsu_sayisi(adres: str, saha: list[str], kor: dict | None, esik: float) -> int:
+    """`adres`in sahadaki üyelerden kaçına DOĞRUDAN benzediği (r ≥ eşik ya da ikisi de matriste ama r ölçülemedi; F11 ile aynı temkin). Matriste olmayan çift ilişkisiz."""
+    if not kor:
+        return 0
+    idx = {a: i for i, a in enumerate(kor.get("adresler", []))}
+    m = kor.get("matris", [])
+    if adres not in idx:
+        return 0
+    say = 0
+    for b in saha:
+        if b in idx:
+            r = m[idx[adres]][idx[b]]
+            if r is None or r >= esik:
+                say += 1
+    return say
 
 
 R1_VERI_NEDENLERI = ("veri_hatasi", "payda_yok", "zaman_yok")     # kullanıcı 14.11: veri/okuma/bütçe nedeni; R1 performans elemesi SAYILMAZ (radar_kadro.VERI_NEDENLERI ile aynı)
@@ -275,7 +293,7 @@ class Saha:
 
     def _doldur(self, kadro: dict, satirlar: dict[str, dict], simdi_ms: int, ilk_gun: bool, kararlar: list[Karar]) -> None:
         """Saha hep dolu (kullanıcı 14.11; K-45/K-44): boş yer AYNI koşuda form sırasıyla dolar — önce İlk 11, sonra Yedek. Sahada / inişte / beklemede olan atlanır (R1'den elenen kadroda
-        zaten yoktur); korelasyon kuralını bozan aday doldurmayı ENGELLEMEZ, atlanır ve sıradaki denenir. Uygun aday kalmazsa yer boş kalır (`eksik`)."""
+        zaten yoktur); korelasyon kuralını bozan aday birinci turda atlanır ve sıradaki denenir; yer kalırsa ikinci tur (`kor_gevsetildi`) doldurur. Yer yalnız hiç aday kalmazsa boş kalır (`eksik`)."""
         hedef_sira = 10**6                                      # K‑45: boş slot sıradaki adayla dolar (İlk 11 önce, sonra Yedek; RADAR §6 "sıradaki üyeye yer verir")
         for s in self._uygun_adaylar(kadro, simdi_ms, hedef_sira):
             if len(self.uyeler) >= self.n:
@@ -285,6 +303,16 @@ class Saha:
                 continue
             self._ekle(s["adres"], s, simdi_ms)
             kararlar.append(Karar("giris", s["adres"], "ilk_gun" if ilk_gun else "bos_slot"))
+        # Kullanıcı kararı 15.11 (Fable A+): korelasyon kuralı sahanın dolmasını ENGELLEMEZ. Birinci turdan sonra yer kaldıysa, kalan uygun adaylar arasından sahadakilere
+        # DOĞRUDAN en az benzeyen (r ≥ `canli_kor_esik` ya da ölçülemeyen çift sayısı en küçük; eşitlikte form sırası) seçilir → `kor_gevsetildi`. Saha her zaman 11'e tamamlanır.
+        esik = float(self.rules["canli_kor_esik"])
+        while len(self.uyeler) < self.n:
+            kalan = self._uygun_adaylar(kadro, simdi_ms, hedef_sira)
+            if not kalan:
+                break
+            s = min(kalan, key=lambda x: (kor_komsu_sayisi(x["adres"], list(self.uyeler), kadro.get("korelasyon"), esik), int(x["sira"])))
+            self._ekle(s["adres"], s, simdi_ms)
+            kararlar.append(Karar("giris", s["adres"], "kor_gevsetildi"))
 
     def _degistir(self, kadro: dict, satirlar: dict[str, dict], simdi_ms: int, kararlar: list[Karar]) -> None:
         if len(self.uyeler) < self.n:

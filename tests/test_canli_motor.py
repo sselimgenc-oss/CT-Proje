@@ -228,8 +228,10 @@ def test_korelasyon_en_fazla_2_kisi_bagli_bilesen_kor_kirpildi():
     m = [[1, 0.8, 0.1, 0.0], [0.8, 1, 0.75, 0.0], [0.1, 0.75, 1, 0.0], [0.0, 0.0, 0.0, 1]]
     s = kd.Saha(RULES, 100.0)
     karar, _ = s.degerlendir(kadro([satir(i, i) for i in range(1, 5)], kor={"adresler": adresler, "gun_sayisi": 8, "matris": m}), T0 + SAAT)
-    assert set(s.uyeler) == {adr(1), adr(2), adr(4)}
     assert [(k.tur, k.adres, k.neden) for k in karar if k.tur == "giris_atlandi"] == [("giris_atlandi", adr(3), "kor_kirpildi")]
+    # Kullanıcı kararı 15.11: korelasyon sahanın dolmasını engellemez → birinci turda atlanan a3, ikinci turda `kor_gevsetildi` ile girer (saha 4/4)
+    assert [(k.adres, k.neden) for k in karar if k.tur == "giris"] == [(adr(1), "ilk_gun"), (adr(2), "ilk_gun"), (adr(4), "ilk_gun"), (adr(3), "kor_gevsetildi")]
+    assert set(s.uyeler) == {adr(1), adr(2), adr(3), adr(4)} and s.eksik is None
     assert kd.kor_bilesen_boyutu(adresler[:3], {"adresler": adresler, "matris": m}, 0.7) == 3 and kd.kor_bilesen_boyutu(adresler[:2], {"adresler": adresler, "matris": m}, 0.7) == 2
     assert kd.kor_bilesen_boyutu(adresler, None, 0.7) == 1 and kd.kor_bilesen_boyutu([adr(9), adr(1)], {"adresler": adresler, "matris": m}, 0.7) == 1       # bilinmeyen çift ilişkisiz
     m_bos = [[1.0, None], [None, 1.0]]
@@ -1592,3 +1594,17 @@ def test_f10_bayat_hesap_onbellegi_acilista_kullanilmaz(tmp_path):
     m.hesap_tr[adr(1)] = {"deger": 100_000.0, "ms": saat() - 60_000}                                # taze (1 dk): ağ bozukken de kullanılır
     s = m.olay_isle(olay("a:3", adr(1), "ETH", "B", 3000, 10.0, 0.0, saat))
     assert [x.karar for x in s] == ["emir"]
+
+
+def test_kor_gevsetildi_saha_hep_dolu_en_az_benzeyen_secilir():
+    """Kullanıcı kararı 15.11 (Fable A+; 15.11 olayı: 18 adayın hepsi kor_kirpildi, saha 8/11 kaldı). Kasa 100 → N 4. a1–a2 bağlı (2 kişi); a3, a4, a5 hepsi
+    birinci turda bileşeni 3'e çıkarır. İkinci tur: sahadakilere DOĞRUDAN en az benzeyen girer — a3 (2 komşu), a4 (2 komşu), a5 (1 komşu) → a5; sıra a3'ten kötü olsa da."""
+    adresler = [adr(i) for i in range(1, 6)]
+    m = [[1, 0.9, 0.9, 0.9, 0.9], [0.9, 1, 0.9, 0.9, 0.1], [0.9, 0.9, 1, 0.0, 0.0], [0.9, 0.9, 0.0, 1, 0.0], [0.9, 0.1, 0.0, 0.0, 1]]
+    s = kd.Saha(RULES, 100.0)
+    satirlar = [satir(1, 1), satir(2, 2), satir(3, 3), satir(4, 4), satir(5, 5), satir(6, 6)]
+    karar, _ = s.degerlendir(kadro(satirlar, kor={"adresler": adresler, "gun_sayisi": 8, "matris": m}), T0 + SAAT)
+    assert [(k.adres, k.neden) for k in karar if k.tur == "giris"] == [(adr(1), "ilk_gun"), (adr(2), "ilk_gun"), (adr(6), "ilk_gun"), (adr(5), "kor_gevsetildi")]
+    assert len(s.uyeler) == 4 and s.eksik is None
+    assert kd.kor_komsu_sayisi(adr(3), [adr(1), adr(2)], {"adresler": adresler, "matris": m}, 0.7) == 2
+    assert kd.kor_komsu_sayisi(adr(9), [adr(1)], {"adresler": adresler, "matris": m}, 0.7) == 0 and kd.kor_komsu_sayisi(adr(1), [adr(2)], None, 0.7) == 0
