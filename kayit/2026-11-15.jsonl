@@ -289,3 +289,7 @@
 {"zaman_ms":1794705012603,"olay":"emir_yok","adres":"0x6834b221185e8af4d573583a570c47406804f5f6","coin":"BTC","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1794705012251,"gorme_ms":1794705012601,"yas_ms":352}
 {"zaman_ms":1794705012604,"olay":"emir_yok","adres":"0x6834b221185e8af4d573583a570c47406804f5f6","coin":"BTC","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1794705012251,"gorme_ms":1794705012601,"yas_ms":353}
 {"zaman_ms":1794705281436,"olay":"tur","ozsermaye_usd":10020.6641}
+{"zaman_ms":1794705362545,"olay":"emir_yok","adres":"0x557bebb117246d8f7b3388bda9afc5261f74f84c","coin":"BTC","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794705362177,"gorme_ms":1794705362545,"yas_ms":368}
+{"zaman_ms":1794705371727,"olay":"emir_yok","adres":"0x6834b221185e8af4d573583a570c47406804f5f6","coin":"BTC","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1794705371397,"gorme_ms":1794705371726,"yas_ms":330}
+{"zaman_ms":1794705371727,"olay":"emir_yok","adres":"0x6834b221185e8af4d573583a570c47406804f5f6","coin":"BTC","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1794705371397,"gorme_ms":1794705371726,"yas_ms":330}
+{"zaman_ms":1794706142603,"olay":"tur","ozsermaye_usd":10028.9778}
