@@ -1,6 +1,6 @@
-# Canlı rapor — 2026-11-15 18:07 UTC
+# Canlı rapor — 2026-11-15 18:23 UTC
 
-**Kip** sanal · vardiya `43721031930` · saha 11/11 (inen 0)
+**Kip** sanal · vardiya `43744920747` · saha 11/11 (inen 0)
 
 **Saha doluluğu** saha 11/11 · bugün R1'i geçen trader: 23
 
@@ -8,22 +8,24 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 10.000,00 $ | 9.869,87 $ | −%0,77 | — (geçmiş < 7 gün) | −%1,30 | −%1,74 |
+| 10.000,00 $ | 9.869,42 $ | −%0,78 | — (geçmiş < 7 gün) | −%1,31 | −%1,75 |
 
-Başarı kıyası (aynı dönemde): toplam −%1,30 · BTC al-tut: −%1,4 · fark: +%0,1 · aylık eşdeğer: — · hedef %4/ay: —
+Başarı kıyası (aynı dönemde): toplam −%1,31 · BTC al-tut: −%1,3 · fark: +%0,0 · aylık eşdeğer: — · hedef %4/ay: —
+
+Komisyon (dönem): ödenen ücret: 15,02 $ · brüt K/Z ≤ 0: ücret zararı büyütüyor _(ücret işlem hacmine bağlıdır, emir sayısına değil)_
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x6834b2… | ZEC | L | 1.369,13 $ | +5,91 $ |
-| 0xf1881e… | BTC | L | 1.337,94 $ | −19,35 $ |
-| 0x6463f5… | ETH | S | 556,46 $ | −18,45 $ |
-| 0x3d21e3… | TRX | L | 530,58 $ | −3,98 $ |
-| 0x3d21e3… | SOL | S | 440,12 $ | +3,82 $ |
-| 0x3d21e3… | DOGE | S | 302,85 $ | +1,12 $ |
-| 0x298830… | HYPE | S | 167,32 $ | +1,89 $ |
-| 0x3d21e3… | ADA | S | 79,93 $ | +0,08 $ |
+| 0x6834b2… | ZEC | L | 1.363,96 $ | +0,74 $ |
+| 0xf1881e… | BTC | L | 1.339,61 $ | −17,67 $ |
+| 0x6463f5… | ETH | S | 556,31 $ | −18,30 $ |
+| 0x3d21e3… | TRX | L | 530,54 $ | −4,02 $ |
+| 0x3d21e3… | SOL | S | 438,05 $ | +5,89 $ |
+| 0x3d21e3… | DOGE | S | 302,30 $ | +1,68 $ |
+| 0x298830… | HYPE | S | 167,12 $ | +2,09 $ |
+| 0x3d21e3… | ADA | S | 79,83 $ | +0,18 $ |
 
 ## Son 24 saat
 
@@ -58,7 +60,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 257 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
+- süre 15 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
@@ -71,26 +73,26 @@ olay yok
 
 ## Dönem (kalıcı seri)
 
-- motor 9.869,87 $ · BTC al-tut 9.856,34 $ · %4/ay hedef çizgisi 10.015,54 $
-- katkı: İlk 11 8 slot −31,79 $ · Yedek 6 slot −98,34 $
-- saha doluluğu %93,60 · nakitte kalan %58,64 (0,9 gün ölçüldü)
-- kullanılan sermaye getirisi −%3,18 · ort. brüt maruziyet 4.091,13 $ · ort. net 2.185,87 $ · risk kilidi olayı 0 (gölge eğri yok)
-- atlanan sinyal %85,33 · yuvarlanan emir %0,77 (emir 519, atlanan 3018)
+- motor 9.869,42 $ · BTC al-tut 9.868,70 $ · %4/ay hedef çizgisi 10.015,54 $
+- katkı: İlk 11 8 slot −36,80 $ · Yedek 6 slot −93,78 $
+- saha doluluğu %93,69 · nakitte kalan %58,55 (0,9 gün ölçüldü)
+- kullanılan sermaye getirisi −%3,19 · ort. brüt maruziyet 4.099,85 $ · ort. net 2.179,48 $ · risk kilidi olayı 0 (gölge eğri yok)
+- atlanan sinyal %85,33 · yuvarlanan emir %0,77 (emir 519, atlanan 3019)
 - radar hunisi: evren 2541 → aday 901 → ≥10 işlem 117 → geçen 23
 
 | trader | katman | giriş | çıkış | net $ |
 |---|---|---|---|---|
-| 0x6834b2… | ilk11 | 14.11 23:40 | sahada | +40,80 $ |
+| 0x6834b2… | ilk11 | 14.11 23:40 | sahada | +35,63 $ |
 | 0x557beb… | ilk11 | 14.11 23:40 | 15.11 11:48 r1_elendi | +8,56 $ |
-| 0x298830… | yedek | 14.11 23:40 | sahada | +2,18 $ |
-| 0x3d21e3… | yedek | 14.11 23:40 | sahada | +0,36 $ |
+| 0x3d21e3… | yedek | 14.11 23:40 | sahada | +3,05 $ |
+| 0x298830… | yedek | 14.11 23:40 | sahada | +2,37 $ |
 | 0x0bae55… | ilk11 | 14.11 23:40 | sahada | +0,00 $ |
 | 0xe69acc… | yedek | 14.11 23:40 | sahada | +0,00 $ |
 | 0x6a8686… | ilk11 | 15.11 16:50 | sahada | +0,00 $ |
 | 0x76c2cd… | yedek | 15.11 16:50 | sahada | +0,00 $ |
 | 0xc2dd65… | ilk11 | 15.11 16:50 | sahada | +0,00 $ |
-| 0xf1881e… | yedek | 14.11 23:40 | sahada | −13,81 $ |
-| 0x6463f5… | ilk11 | 14.11 23:40 | sahada | −19,15 $ |
+| 0xf1881e… | yedek | 14.11 23:40 | sahada | −12,13 $ |
+| 0x6463f5… | ilk11 | 14.11 23:40 | sahada | −18,99 $ |
 | 0x428cbb… | ilk11 | 14.11 23:40 | sahada | −21,56 $ |
 | 0x5d92ea… | ilk11 | 14.11 23:40 | 15.11 11:48 r1_elendi | −40,43 $ |
 | 0x5d908c… | yedek | 14.11 23:40 | 15.11 11:48 r1_elendi | −87,08 $ |
