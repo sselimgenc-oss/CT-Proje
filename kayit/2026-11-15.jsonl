@@ -3373,3 +3373,17 @@
 {"zaman_ms":1794783243676,"olay":"tur","ozsermaye_usd":9866.789}
 {"zaman_ms":1794783626253,"olay":"funding","saat":498551,"saat_adet":1,"funding_usd":-0.0020766173551711904,"toplam_funding_usd":-0.5622304228801404}
 {"zaman_ms":1794784097976,"olay":"tur","ozsermaye_usd":9865.7014}
+{"zaman_ms":1794784266399,"olay":"emir_yok","adres":"0x428cbb506337bcc550f02bd3689671f52a7fa766","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794784266071,"gorme_ms":1794784266399,"yas_ms":328}
+{"zaman_ms":1794784270826,"olay":"emir_yok","adres":"0x428cbb506337bcc550f02bd3689671f52a7fa766","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794784270298,"gorme_ms":1794784270825,"yas_ms":528}
+{"zaman_ms":1794784271649,"olay":"emir_yok","adres":"0x428cbb506337bcc550f02bd3689671f52a7fa766","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794784271324,"gorme_ms":1794784271648,"yas_ms":325}
+{"zaman_ms":1794784272899,"olay":"emir_yok","adres":"0x428cbb506337bcc550f02bd3689671f52a7fa766","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794784272553,"gorme_ms":1794784272898,"yas_ms":346}
+{"zaman_ms":1794784272899,"olay":"emir_yok","adres":"0x428cbb506337bcc550f02bd3689671f52a7fa766","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794784272553,"gorme_ms":1794784272898,"yas_ms":346}
+{"zaman_ms":1794784272899,"olay":"emir_yok","adres":"0x428cbb506337bcc550f02bd3689671f52a7fa766","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794784272553,"gorme_ms":1794784272898,"yas_ms":346}
+{"zaman_ms":1794784272900,"olay":"emir_yok","adres":"0x428cbb506337bcc550f02bd3689671f52a7fa766","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794784272553,"gorme_ms":1794784272898,"yas_ms":347}
+{"zaman_ms":1794784272900,"olay":"emir_yok","adres":"0x428cbb506337bcc550f02bd3689671f52a7fa766","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794784272553,"gorme_ms":1794784272898,"yas_ms":347}
+{"zaman_ms":1794784272900,"olay":"emir_yok","adres":"0x428cbb506337bcc550f02bd3689671f52a7fa766","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794784272553,"gorme_ms":1794784272898,"yas_ms":347}
+{"zaman_ms":1794784272901,"olay":"emir_yok","adres":"0x428cbb506337bcc550f02bd3689671f52a7fa766","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794784272553,"gorme_ms":1794784272898,"yas_ms":348}
+{"zaman_ms":1794784272901,"olay":"emir_yok","adres":"0x428cbb506337bcc550f02bd3689671f52a7fa766","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794784272553,"gorme_ms":1794784272898,"yas_ms":348}
+{"zaman_ms":1794784272901,"olay":"emir_yok","adres":"0x428cbb506337bcc550f02bd3689671f52a7fa766","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794784272553,"gorme_ms":1794784272898,"yas_ms":348}
+{"zaman_ms":1794784272901,"olay":"emir_yok","adres":"0x428cbb506337bcc550f02bd3689671f52a7fa766","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794784272553,"gorme_ms":1794784272898,"yas_ms":348}
+{"zaman_ms":1794784953676,"olay":"tur","ozsermaye_usd":9865.8324}
