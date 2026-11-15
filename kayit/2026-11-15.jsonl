@@ -3044,3 +3044,5 @@
 {"zaman_ms":1794744007219,"olay":"funding","saat":498540,"saat_adet":1,"funding_usd":-0.016814520539969617,"toplam_funding_usd":-0.32160894032582665}
 {"zaman_ms":1794744670706,"olay":"tur","ozsermaye_usd":9897.8065}
 {"zaman_ms":1794744967368,"olay":"telegram_hata","tur":"ConnectionError"}
+{"zaman_ms":1794745535179,"olay":"tur","ozsermaye_usd":9892.623}
+{"zaman_ms":1794746071979,"olay":"telegram","metin":"🧾 Son 1 saat (14:34–15:34 TSİ): 12 emir · sanal\n➕ açılış 0 · ⬆️ artırma 0 · ⬇️ azaltma 11 · ✖️ kapanış 1\n🏆 En büyük: 314 $ (ZEC, SAT) · 0x6834b2…\n⏭️ Kopyalanmayan trader dolumu: 5 (≈4 ayrı işlem)\n   • kural gereği 5: 5 ters netleşme (K‑41)\n   • kaçırılan 0 (geç görülen / veri yok)\n💵 Tutar toplamı: 1","acik":true}
