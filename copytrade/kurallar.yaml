@@ -167,6 +167,10 @@ canli_gunde_degisiklik: 2               # adet (günde en çok saha girişi/değ
 canli_kor_esik: 0.7                     # korelasyon (>= : benzer trader)
 canli_kor_max: 2                        # kişi (sahada birbirine benzer en çok bu kadar kişi)
 canli_inen_saat: 24                     # saat (sahadan inenin açık pozisyonu bu süre sonra kapatılır)
+canli_bant_usd: 50                      # $ (TOPLU EMİR, kullanıcı kararı 15.11; Fable: max(50 $, %10) — 14 sa veride 456 → ~190 emir, sonuç aynı) artırma farkı bundan küçükse emir verilmez, birikir
+canli_bant_oran: 0.10                   # oran × hedef (artırma bandı = max(canli_bant_usd, bu × hedef); açılış / tam kapanış / küçük kalan kapatma muaf)
+canli_bant_azalt_usd: 25                # $ (azaltma bandı daha dar: kâr alma / risk azaltma gecikmesin; Fable önerisi)
+canli_bant_azalt_oran: 0.05             # oran × hedef
 canli_mutabakat_sn: 60                  # sn
 canli_mutabakat_oran: 0.01              # oran (fark_usd > kasa x bu => alarm + yeni açılış dur)
 canli_hesap_okuma_sn: 600               # sn (trader hesap değeri / pozisyon senkron okuma sıklığı)

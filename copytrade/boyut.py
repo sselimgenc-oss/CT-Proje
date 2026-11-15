@@ -64,7 +64,7 @@ def sig_coin_kirp(rules: dict, emir_usd: float, mevcut_usd: float, hacim_usd: fl
 
 
 def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trader_hesap_usd: float, biz_poz_usd: float, slot: float, fiyat: float,
-               rules: dict | None = None, biz_slot_toplam_usd: float | None = None) -> tuple[float, str]:
+               rules: dict | None = None, biz_slot_toplam_usd: float | None = None, bant: bool = False) -> tuple[float, str]:
     """§5b: tek bir trader dolumunun bizdeki emir BÜYÜKLÜĞÜ ($, işaretsiz; yönü çağıran bilir) ve nedeni.
 
     `eylem`: `ac` (taze açılış; trader sonrası pozisyonu `trader_poz_sonra`, coin birimi, işaretli) · `artir` · `azalt` · `kapat` (trader tam kapanış).
@@ -76,7 +76,10 @@ def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trad
       (`slot_tavani`); emir < minimum → 0 (`min_emir_atlandi`); hesap/fiyat ≤ 0 → 0 (`hesap_yok`).
     - `azalt` (K‑38, hedef tabanlı): hedef = slot × trader nosyonel(sonra) / trader hesap (coin tavanı 3 × slot); fark = biz − hedef. hedef < minimum ve biz ≥ minimum → tamamı kapat (`kucuk_kalan_kapat`);
       fark ≥ minimum → fark kadar azalt; aksi halde 0 (`min_emir_atlandi`; atlanan azaltma KAYBOLMAZ, hedef tabanlı olduğundan bir sonraki dolumda yakalanır). Trader hesabı bilinmiyorsa eski oransal kural (yedek).
-    - `kapat`: bizim pozisyonun tamamı (trader tam kapattı)."""
+    - `kapat`: bizim pozisyonun tamamı (trader tam kapattı).
+    - `bant` (TOPLU EMİR, kullanıcı kararı 15.11; Fable önerisi; YALNIZ canlı motor — radar kopya simülasyonu `bant=False`): `artir` farkı max(`canli_bant_usd`, `canli_bant_oran` × hedef)
+      altındaysa, `azalt` farkı max(`canli_bant_azalt_usd`, `canli_bant_azalt_oran` × hedef) altındaysa emir verilmez (`bant_ici`); fark KAYBOLMAZ (hedef tabanlı), eşik aşılınca tek emirle
+      hedefe eşitlenir. Muaf: `ac`, `kapat`, `kucuk_kalan_kapat`, trader hesabı bilinmeyen azaltma (oransal yedek)."""
     rules = rules or load_rules()
     minimum, tavan = float(rules["radar_min_emir_usd"]), float(rules["radar_slot_tavan_carpan"]) * float(slot)
     biz = abs(float(biz_poz_usd))
@@ -110,6 +113,8 @@ def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trad
         emir, neden = max(0.0, hedef - biz), "tamam"
         if emir > kalan + EPS:
             emir, neden = kalan, "slot_tavani"
+        if bant and neden == "tamam" and emir < max(float(rules["canli_bant_usd"]), float(rules["canli_bant_oran"]) * hedef) - EPS:
+            return 0.0, "bant_ici"
         if emir >= minimum - EPS:
             return emir, neden
         return (0.0, "slot_tavani") if neden == "slot_tavani" else (0.0, "min_emir_atlandi")
@@ -127,6 +132,8 @@ def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trad
         if hedef < minimum - EPS and biz >= minimum - EPS:
             return biz, "kucuk_kalan_kapat"
         fark = biz - hedef
+        if bant and fark > 0 and fark < max(float(rules["canli_bant_azalt_usd"]), float(rules["canli_bant_azalt_oran"]) * hedef) - EPS:
+            return 0.0, "bant_ici"
         if fark >= minimum - EPS:
             return fark, "tamam"
         return 0.0, "min_emir_atlandi"
