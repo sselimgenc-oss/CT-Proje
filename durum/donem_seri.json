@@ -2,23 +2,23 @@
  "bas_ms": 1794684600000,
  "btc_donem_fiyat": 65538.0,
  "doluluk": {
-  "brut_ms": 71326435089.24174,
-  "kapasite_ms": 270478670.0,
-  "nakit_ms": 17407410.767513286,
-  "net_ms": 47624933737.13544,
-  "slot_ms": 270478670.0,
-  "son_ms": 1794713425274,
-  "sure_ms": 24588970
+  "brut_ms": 77139581824.53842,
+  "kapasite_ms": 280625774.0,
+  "nakit_ms": 17738936.697615754,
+  "net_ms": 50828472578.367805,
+  "slot_ms": 280625774.0,
+  "son_ms": 1794714347738,
+  "sure_ms": 25511434
  },
  "donem": "2026-11-14T19:30:00Z",
  "emir_sayac": {
   "atlama_neden": {
    "min_emir_atlandi": 634,
-   "slot_tavani": 357,
+   "slot_tavani": 403,
    "spot_atlandi": 2,
    "ters_netlesme": 19
   },
-  "atlanan": 1012,
+  "atlanan": 1058,
   "emir": 208,
   "yuvarlanan": 1
  },
@@ -29,9 +29,9 @@
    "ozsermaye_usd": 9946.9552
   },
   {
-   "btc": 64947.5,
+   "btc": 65109.5,
    "gun": "2026-11-15",
-   "ozsermaye_usd": 9842.607
+   "ozsermaye_usd": 9822.9591
   }
  ],
  "kasa_usd": 10000.0,
@@ -43,7 +43,7 @@
    "giris_ms": 1794688836304,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": -36.8709,
+   "net_usd": -42.3387,
    "sonuc": null
   },
   {
@@ -53,7 +53,7 @@
    "giris_ms": 1794688836304,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": 50.0696,
+   "net_usd": 53.5969,
    "sonuc": null
   },
   {
@@ -73,7 +73,7 @@
    "giris_ms": 1794688836304,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": -19.5664,
+   "net_usd": -21.7418,
    "sonuc": null
   },
   {
@@ -93,7 +93,7 @@
    "giris_ms": 1794688836304,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": -58.5063,
+   "net_usd": -70.5699,
    "sonuc": null
   },
   {
@@ -123,7 +123,7 @@
    "giris_ms": 1794688836304,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": -100.6266,
+   "net_usd": -103.9864,
    "sonuc": null
   },
   {
@@ -143,7 +143,7 @@
    "giris_ms": 1794688836304,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": -0.4516,
+   "net_usd": -0.5602,
    "sonuc": null
   }
  ]
