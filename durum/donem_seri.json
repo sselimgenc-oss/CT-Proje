@@ -2,24 +2,24 @@
  "bas_ms": 1794684600000,
  "btc_donem_fiyat": 65538.0,
  "doluluk": {
-  "brut_ms": 48552636224.13038,
-  "kapasite_ms": 230746318.0,
-  "nakit_ms": 16111110.956478402,
-  "net_ms": 35072588780.743164,
-  "slot_ms": 230746318.0,
-  "son_ms": 1794709813242,
-  "sure_ms": 20976938
+  "brut_ms": 54144630744.91672,
+  "kapasite_ms": 240553467.0,
+  "nakit_ms": 16435196.148019945,
+  "net_ms": 38152174333.73998,
+  "slot_ms": 240553467.0,
+  "son_ms": 1794710704801,
+  "sure_ms": 21868497
  },
  "donem": "2026-11-14T19:30:00Z",
  "emir_sayac": {
   "atlama_neden": {
    "min_emir_atlandi": 634,
-   "slot_tavani": 160,
+   "slot_tavani": 202,
    "spot_atlandi": 2,
-   "ters_netlesme": 10
+   "ters_netlesme": 18
   },
-  "atlanan": 806,
-  "emir": 207,
+  "atlanan": 856,
+  "emir": 208,
   "yuvarlanan": 1
  },
  "gunler": [
@@ -29,9 +29,9 @@
    "ozsermaye_usd": 9946.9552
   },
   {
-   "btc": 64457.5,
+   "btc": 64794.5,
    "gun": "2026-11-15",
-   "ozsermaye_usd": 9865.6091
+   "ozsermaye_usd": 9847.581
   }
  ],
  "kasa_usd": 10000.0,
@@ -43,7 +43,7 @@
    "giris_ms": 1794688836304,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": -25.2383,
+   "net_usd": -31.1682,
    "sonuc": null
   },
   {
@@ -53,7 +53,7 @@
    "giris_ms": 1794688836304,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": 39.3685,
+   "net_usd": 46.7061,
    "sonuc": null
   },
   {
@@ -73,7 +73,7 @@
    "giris_ms": 1794688836304,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": -14.9383,
+   "net_usd": -17.2975,
    "sonuc": null
   },
   {
@@ -93,7 +93,7 @@
    "giris_ms": 1794688836304,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": -51.1674,
+   "net_usd": -62.5383,
    "sonuc": null
   },
   {
@@ -123,7 +123,7 @@
    "giris_ms": 1794688836304,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": -90.8691,
+   "net_usd": -96.403,
    "sonuc": null
   },
   {
@@ -143,7 +143,7 @@
    "giris_ms": 1794688836304,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": -0.1056,
+   "net_usd": -0.2773,
    "sonuc": null
   }
  ]
