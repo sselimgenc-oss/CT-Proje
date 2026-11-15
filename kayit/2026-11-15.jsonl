@@ -3350,3 +3350,5 @@
 {"zaman_ms":1794776389586,"olay":"emir_yok","adres":"0x6834b221185e8af4d573583a570c47406804f5f6","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794776389313,"gorme_ms":1794776389586,"yas_ms":273}
 {"zaman_ms":1794776427284,"olay":"funding","saat":498549,"saat_adet":1,"funding_usd":-0.02545883888971029,"toplam_funding_usd":-0.5527991495859993}
 {"zaman_ms":1794776518585,"olay":"tur","ozsermaye_usd":9871.2209}
+{"zaman_ms":1794776969963,"olay":"telegram","metin":"🧾 Son 1 saat (23:09–00:09 TSİ): 12 emir · sanal\n➕ açılış 0 · ⬆️ artırma 0 · ⬇️ azaltma 12 · ✖️ kapanış 0\n🏆 En büyük: 206 $ (ZEC, SAT) · 0x6834b2…\n⏭️ Kopyalanmayan trader dolumu: 43 (≈2 ayrı işlem)\n   • kural gereği 43: 42 toplu emir bekliyor (fark küçük) · 1 ters netleşme (K‑41)\n   • kaçırılan 0 (ge","acik":true}
+{"zaman_ms":1794777386456,"olay":"tur","ozsermaye_usd":9870.2464}
