@@ -3387,3 +3387,5 @@
 {"zaman_ms":1794784272901,"olay":"emir_yok","adres":"0x428cbb506337bcc550f02bd3689671f52a7fa766","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794784272553,"gorme_ms":1794784272898,"yas_ms":348}
 {"zaman_ms":1794784272901,"olay":"emir_yok","adres":"0x428cbb506337bcc550f02bd3689671f52a7fa766","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794784272553,"gorme_ms":1794784272898,"yas_ms":348}
 {"zaman_ms":1794784953676,"olay":"tur","ozsermaye_usd":9865.8324}
+{"zaman_ms":1794785146257,"olay":"telegram","metin":"🧾 Son 1 saat (01:25–02:25 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 14 (≈5 ayrı işlem)\n   • kural gereği 14: 13 ters netleşme (K‑41) · 1 toplu emir bekliyor (fark küçük)\n   • kaçırılan 0 (geç görülen / veri yok)\n💰 Kasa: 9.865,88 $ · bugün 🔴 −81,08 $ (−%0,8) · başlangıçtan 🔴 −","acik":true}
+{"zaman_ms":1794785835669,"olay":"tur","ozsermaye_usd":9863.2396}
