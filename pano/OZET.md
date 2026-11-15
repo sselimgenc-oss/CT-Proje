@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-15 17:51 UTC
+# Canlı rapor — 2026-11-15 18:06 UTC
 
 **Kip** sanal · vardiya `43721031930` · saha 11/11 (inen 0)
 
@@ -8,27 +8,27 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 10.000,00 $ | 9.862,63 $ | −%0,85 | — (geçmiş < 7 gün) | −%1,37 | −%1,82 |
+| 10.000,00 $ | 9.869,59 $ | −%0,78 | — (geçmiş < 7 gün) | −%1,30 | −%1,75 |
 
-Başarı kıyası (aynı dönemde): toplam −%1,37 · BTC al-tut: −%1,7 · fark: +%0,3 · aylık eşdeğer: — · hedef %4/ay: —
+Başarı kıyası (aynı dönemde): toplam −%1,30 · BTC al-tut: −%1,4 · fark: +%0,1 · aylık eşdeğer: — · hedef %4/ay: —
 
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x6834b2… | ZEC | L | 1.357,78 $ | −5,45 $ |
-| 0xf1881e… | BTC | L | 1.334,99 $ | −22,29 $ |
-| 0x6463f5… | ETH | S | 553,82 $ | −15,81 $ |
-| 0x3d21e3… | TRX | L | 530,26 $ | −4,30 $ |
-| 0x3d21e3… | SOL | S | 437,79 $ | +6,15 $ |
-| 0x3d21e3… | DOGE | S | 301,59 $ | +2,38 $ |
-| 0x298830… | HYPE | S | 166,69 $ | +2,52 $ |
-| 0x3d21e3… | ADA | S | 79,43 $ | +0,58 $ |
+| 0x6834b2… | ZEC | L | 1.368,50 $ | +5,28 $ |
+| 0xf1881e… | BTC | L | 1.338,81 $ | −18,48 $ |
+| 0x6463f5… | ETH | S | 556,70 $ | −18,69 $ |
+| 0x3d21e3… | TRX | L | 530,65 $ | −3,91 $ |
+| 0x3d21e3… | SOL | S | 440,33 $ | +3,61 $ |
+| 0x3d21e3… | DOGE | S | 302,94 $ | +1,03 $ |
+| 0x298830… | HYPE | S | 167,35 $ | +1,86 $ |
+| 0x3d21e3… | ADA | S | 79,95 $ | +0,06 $ |
 
 ## Son 24 saat
 
 - emir 519 · dolum 519 · kayma p50 +%0,00 / max +%0,21 (n=519)
-- funding −0,53 $ · ücret 15,02 $
+- funding −0,57 $ · ücret 15,02 $
 
 _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun günlük kayıp tanımı); hafta/toplam kasaya göre; zirveden düşüş motorun zirvesine göre._
 
@@ -58,7 +58,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 241 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
+- süre 256 dk · WS kopma 1 / yeniden bağlanma 1 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
@@ -71,26 +71,26 @@ olay yok
 
 ## Dönem (kalıcı seri)
 
-- motor 9.862,63 $ · BTC al-tut 9.834,68 $ · %4/ay hedef çizgisi 10.015,54 $
-- katkı: İlk 11 8 slot −40,48 $ · Yedek 6 slot −96,89 $
-- saha doluluğu %93,53 · nakitte kalan %58,72 (0,9 gün ölçüldü)
-- kullanılan sermaye getirisi −%3,36 · ort. brüt maruziyet 4.082,85 $ · ort. net 2.191,92 $ · risk kilidi olayı 0 (gölge eğri yok)
+- motor 9.869,59 $ · BTC al-tut 9.862,75 $ · %4/ay hedef çizgisi 10.015,54 $
+- katkı: İlk 11 8 slot −32,66 $ · Yedek 6 slot −97,75 $
+- saha doluluğu %93,60 · nakitte kalan %58,64 (0,9 gün ölçüldü)
+- kullanılan sermaye getirisi −%3,19 · ort. brüt maruziyet 4.090,84 $ · ort. net 2.186,08 $ · risk kilidi olayı 0 (gölge eğri yok)
 - atlanan sinyal %85,33 · yuvarlanan emir %0,77 (emir 519, atlanan 3018)
 - radar hunisi: evren 2541 → aday 901 → ≥10 işlem 117 → geçen 23
 
 | trader | katman | giriş | çıkış | net $ |
 |---|---|---|---|---|
-| 0x6834b2… | ilk11 | 14.11 23:40 | sahada | +29,46 $ |
+| 0x6834b2… | ilk11 | 14.11 23:40 | sahada | +40,17 $ |
 | 0x557beb… | ilk11 | 14.11 23:40 | 15.11 11:48 r1_elendi | +8,56 $ |
-| 0x3d21e3… | yedek | 14.11 23:40 | sahada | +4,14 $ |
-| 0x298830… | yedek | 14.11 23:40 | sahada | +2,80 $ |
+| 0x298830… | yedek | 14.11 23:40 | sahada | +2,14 $ |
+| 0x3d21e3… | yedek | 14.11 23:40 | sahada | +0,11 $ |
 | 0x0bae55… | ilk11 | 14.11 23:40 | sahada | +0,00 $ |
 | 0xe69acc… | yedek | 14.11 23:40 | sahada | +0,00 $ |
 | 0x6a8686… | ilk11 | 15.11 16:50 | sahada | +0,00 $ |
 | 0x76c2cd… | yedek | 15.11 16:50 | sahada | +0,00 $ |
 | 0xc2dd65… | ilk11 | 15.11 16:50 | sahada | +0,00 $ |
-| 0x6463f5… | ilk11 | 14.11 23:40 | sahada | −16,51 $ |
-| 0xf1881e… | yedek | 14.11 23:40 | sahada | −16,75 $ |
+| 0xf1881e… | yedek | 14.11 23:40 | sahada | −12,94 $ |
+| 0x6463f5… | ilk11 | 14.11 23:40 | sahada | −19,39 $ |
 | 0x428cbb… | ilk11 | 14.11 23:40 | sahada | −21,56 $ |
 | 0x5d92ea… | ilk11 | 14.11 23:40 | 15.11 11:48 r1_elendi | −40,43 $ |
 | 0x5d908c… | yedek | 14.11 23:40 | 15.11 11:48 r1_elendi | −87,08 $ |
