@@ -46,6 +46,25 @@ def btc_metni(ozet: dict) -> tuple[str, str]:
     return ("BTC al-tut: " + ("—" if bt is None else tr_yuzde(float(bt), 1)), "fark: " + ("—" if fk is None else tr_yuzde(float(fk), 1)))
 
 
+def komisyon_ozeti(kayitlar: list[dict], ozet: dict, donem_seri: dict | None) -> tuple[float | None, float | None, float | None]:
+    """Kullanıcı isteği 15.11 (Fable önerisi; yalnız bilgi): dönem başından (`donem_seri.bas_ms`; yoksa tüm kayıt penceresi) ödenen ücret, brüt K/Z (= net + ücret) ve ücretin brüt K/Z'ye oranı.
+    Komisyon emir ADEDİNE değil HACME bağlıdır. Kayıt penceresi ≤ 14 gün; dönem daha uzunsa ücret penceredekiyle sınırlıdır. Döner (ücret, brüt, oran) — brüt ≤ 0 ise oran None."""
+    bas = int((donem_seri or {}).get("bas_ms") or 0)
+    ucret = sum(float(k.get("ucret") or 0.0) for k in kayitlar if k.get("olay") == "emir" and k.get("durum") in ("dolu", "kismi") and int(k.get("zaman_ms") or 0) >= bas)
+    kasa, oz = ozet.get("kasa_usd"), ozet.get("ozsermaye_usd")
+    if kasa is None or oz is None:
+        return ucret, None, None
+    brut = float(oz) - float(kasa) + ucret
+    return ucret, brut, (ucret / brut if brut > 0 else None)
+
+
+def komisyon_metni(kayitlar: list[dict], ozet: dict, donem_seri: dict | None) -> tuple[str, str]:
+    """("ödenen ücret: 14,40 $", "brüt kârın %x'i" | "brüt K/Z ≤ 0: kâr yok, ücret zararı büyütüyor")."""
+    u, b, o = komisyon_ozeti(kayitlar, ozet, donem_seri)
+    alt = "—" if b is None else (f"brüt kârın %{tr_sayi(o * 100, 0)}'i" if o is not None else "brüt K/Z ≤ 0: ücret zararı büyütüyor")
+    return (f"ödenen ücret: {usd(u)}", alt)
+
+
 def hedef_metni(ozet: dict) -> tuple[str, str]:
     """F-06: ("aylık eşdeğer: +%x,x", "hedef %4/ay: geçiyor|geçmiyor|—") — motorun `aylik_esdeger` ((1 + R)^(30/gün) − 1), `aylik_hedef`, `hedef_gecer` alanlarından."""
     ay, hd, gec = ozet.get("aylik_esdeger"), ozet.get("aylik_hedef"), ozet.get("hedef_gecer")
@@ -135,7 +154,8 @@ def pano_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], isab
          "## Kasa", "",
          "| kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |", "|---|---|---|---|---|---|",
          f"| {usd(kasa)} | {usd(oz)} | {yuzde(gun_getiri)} | {yuzde(hafta)}{'' if hafta is not None else ' (geçmiş < 7 gün)'} | {yuzde(ozet.get('getiri'))} | {yuzde(-dusus if dusus is not None else None)} |", "",
-         f"Başarı kıyası (aynı dönemde): toplam {yuzde(ozet.get('getiri'))} · {' · '.join(btc_metni(ozet))} · {' · '.join(hedef_metni(ozet))}", ""]
+         f"Başarı kıyası (aynı dönemde): toplam {yuzde(ozet.get('getiri'))} · {' · '.join(btc_metni(ozet))} · {' · '.join(hedef_metni(ozet))}", "",
+         f"Komisyon (dönem): {' · '.join(komisyon_metni(kayitlar, ozet, donem_seri))} _(ücret işlem hacmine bağlıdır, emir sayısına değil)_", ""]
     # açık pozisyonlar: ozet['acik'] (mark'lı) varsa K/Z ile, yoksa hesap.json'dan giriş fiyatıyla
     s += ["## Açık pozisyonlar", ""]
     acik = ozet.get("acik")
@@ -473,6 +493,24 @@ def pencere_basi(gecmis: list[dict], donem: tuple[str, str, int] | None) -> tupl
     return (float(once[-1]["ozsermaye"]), once[-1]["gun"]) if once else None
 
 
+def tutma_sinifi(saat: float | None) -> str:
+    """Fable 15.11 (yalnız bilgi): medyan pozisyon tutma süresi → scalp (< 0,5 sa) · kısa day (0,5–4 sa) · day (4–24 sa) · swing (> 24 sa)."""
+    if saat is None:
+        return "—"
+    return "scalp" if saat < 0.5 else ("kısa day" if saat < 4 else ("day" if saat <= 24 else "swing"))
+
+
+def _tarz_html(r: dict) -> str:
+    """Kadro satırının bilgi alanları (radar 15.11): medyan tutma süresi + sınıfı, haftalık devir (trader hafta hacmi / hesap ≈ kopya hacmi / slot). Kural DEĞİL; 1–2 hafta ölçüm için."""
+    t, d = r.get("medyan_tutma_saat"), r.get("devir_hafta")
+    if t is None and d is None:
+        return ""
+    t_txt = "—" if t is None else f"{tr_sayi(float(t), 1)} sa · {tutma_sinifi(float(t))}"
+    d_txt = "—" if d is None else f"{tr_sayi(float(d), 1)}× / hafta"
+    return (f'<div><span class="so">Pozisyon tutma (medyan)</span><br>{esc(t_txt)}</div>'
+            f'<div><span class="so">Al-sat sıklığı (haftalık devir)</span><br>{esc(d_txt)}</div>')
+
+
 def _maliyet_html(kayitlar: list[dict], oz: float, kasa: float, gecmis: list[dict] | None = None, kip: str = "sanal") -> str:
     """C4: maliyet dökümü (kayıt penceresi, ≤ 14 gün): ücret, kayma (trader fiyatına göre; + maliyet), funding; brüt K/Z = net + maliyet. Kayma zaten dolum fiyatlarında gömülü olduğundan net'e AYRICA eklenmez, brüt tahmininde geri eklenir.
     S-4: net AYNI pencereden: pencere başından önceki günlük özsermaye (`gecmis`) varsa net = özsermaye − o değer; yoksa (seri pencere içinde başladı) net = özsermaye − kasa. Etiket gerçek gün aralığını yazar."""
@@ -661,12 +699,13 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
                        f'<div><span class="so">Emir sayısı</span><br>{emir_say.get(ad, 0)}</div>'
                        f'<div><span class="so">Açık pozisyon</span><br>{poz_adres.get(ad, 0)}</div>'
                        f'<div><span class="so">Son işlem</span><br>{_tsi(son_emir[ad]) if ad in son_emir else "—"}</div>'
-                       f'<div><span class="so">Radar 7g kopya getirisi</span><br>{esc(tyuz(r.get("kopya_getiri_7g")))}</div></div>')
+                       f'<div><span class="so">Radar 7g kopya getirisi</span><br>{esc(tyuz(r.get("kopya_getiri_7g")))}</div>'
+                       f'<div><span class="so">Ödenen ücret</span><br>{esc(tl(float(ucr.get(ad, 0.0))))}</div>{_tarz_html(r)}</div>')
         else:
             ayrinti = (f'<div class="ms"><div><span class="so">Durum</span><br>Henüz sahada değil — {"bekleme süresi, korelasyon ya da günlük değişiklik sınırı nedeniyle olabilir" if durum == "BEKLİYOR" else ("radar listesinde yok" if durum == "KADRO DIŞI" else "yedek listede")}</div>'
                        f'<div><span class="so">Radar 7g kopya getirisi</span><br>{esc(tyuz(r.get("kopya_getiri_7g")))}</div>'
                        f'<div><span class="so">Form puanı</span><br>{tr_sayi(float(r.get("form") or 0), 1)} / 100</div>'
-                       f'<div><span class="so">Azami kaldıraç</span><br>{tr_sayi(float(r.get("max_kaldirac") or 0), 1)}x</div></div>')
+                       f'<div><span class="so">Azami kaldıraç</span><br>{tr_sayi(float(r.get("max_kaldirac") or 0), 1)}x</div>{_tarz_html(r)}</div>')
         ek = ""
         hv = (havuz or {}).get(ad) or {}
         if ad in slot_bas:                                                                      # C1: canlı kopya koruması — bizim slot getirimiz ↔ aynı sürede trader'ın hesap getirisi
@@ -726,7 +765,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     hafta_goster = hafta is not None and (ozet.get("getiri") is None or abs(hafta - float(ozet["getiri"])) > 0.0005)        # 14.11: <7 gün ya da "Başlangıçtan beri" ile aynıysa gösterilmez
     ust_hucre = [hucre("Özsermaye", tl(oz), "", f"kasa {tr_sayi(kasa, 0)} $"), hucre("Bugün", tyuz(gun), renk(gun), (tl(oz - float(gun_basi), True) + " · UTC gün başına göre") if gun_basi is not None else ""),
                  *([hucre("Bu hafta", tyuz(hafta), renk(hafta), "son 7 gün")] if hafta_goster else []),
-                 hucre("Başlangıçtan beri", tyuz(ozet.get("getiri")), renk(ozet.get("getiri")), tl(oz - kasa, True)),
+                 hucre("Başlangıçtan beri", tyuz(ozet.get("getiri")), renk(ozet.get("getiri")), tl(oz - kasa, True) + " · komisyon " + komisyon_metni(kayitlar, ozet, ds)[0].removeprefix("ödenen ücret: ") + " (" + komisyon_metni(kayitlar, ozet, ds)[1] + ")"),
                  hucre("BTC al-tut (aynı dönem)", btc_metni(ozet)[0].removeprefix("BTC al-tut: "), renk(ozet.get("btc_al_tut_getiri")), btc_metni(ozet)[1]),
                  hucre("Aylık eşdeğer", hedef_metni(ozet)[0].removeprefix("aylık eşdeğer: "), renk(ozet.get("aylik_esdeger")), hedef_metni(ozet)[1]),
                  hucre("Zirveden düşüş", tyuz(-dusus if dusus is not None else None), renk(-dusus if dusus is not None else None), f"motor zirvesi {tl(float(zirve))}" if zirve else ""),
