@@ -1196,7 +1196,28 @@
    "giris_sira": 2,
    "hesap_giris_usd": 54191.64637,
    "sira_ust": 0,
-   "son_islem_ms": 1794743200498
+   "son_islem_ms": 1794751201882
+  },
+  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": {
+   "giris_ms": 1794750620134,
+   "giris_sira": 6,
+   "hesap_giris_usd": 121998.366537,
+   "sira_ust": 0,
+   "son_islem_ms": 1794736450746
+  },
+  "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": {
+   "giris_ms": 1794750620134,
+   "giris_sira": 21,
+   "hesap_giris_usd": 1312504.5607737899,
+   "sira_ust": 0,
+   "son_islem_ms": 1794665939032
+  },
+  "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": {
+   "giris_ms": 1794750620134,
+   "giris_sira": 7,
+   "hesap_giris_usd": 13492.47149215,
+   "sira_ust": 0,
+   "son_islem_ms": 1794631088209
   },
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": {
    "disi_gunler": [],
