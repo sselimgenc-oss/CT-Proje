@@ -1020,7 +1020,7 @@
    "giris_sira": 15,
    "hesap_giris_usd": 212674.85030551,
    "sira_ust": 0,
-   "son_islem_ms": 1794723421012
+   "son_islem_ms": 1794724321014
   },
   "0x5d92eace48c69a6fe4498093789e68deb7e28b5d": {
    "giris_ms": 1794688836304,
@@ -1041,7 +1041,7 @@
    "giris_sira": 2,
    "hesap_giris_usd": 54191.64637,
    "sira_ust": 0,
-   "son_islem_ms": 1794721736060
+   "son_islem_ms": 1794724250024
   },
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": {
    "giris_ms": 1794688836304,
@@ -1055,7 +1055,7 @@
    "giris_sira": 14,
    "hesap_giris_usd": 56157.609627,
    "sira_ust": 0,
-   "son_islem_ms": 1794723431014
+   "son_islem_ms": 1794724331058
   }
  }
 }
