@@ -3018,3 +3018,5 @@
 {"zaman_ms":1794740403415,"olay":"emir_yok","adres":"0xf1881ebf291d32f6663c8ee44bfac2249b8135d3","coin":"BTC","eylem":"artir","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1794740403046,"gorme_ms":1794740403415,"yas_ms":369}
 {"zaman_ms":1794740408339,"olay":"funding","saat":498539,"saat_adet":1,"funding_usd":-0.07322955747454407,"toplam_funding_usd":-0.30479441978585703}
 {"zaman_ms":1794740408339,"olay":"tur","ozsermaye_usd":9895.3341}
+{"zaman_ms":1794741168625,"olay":"telegram_hata","tur":"ConnectionError"}
+{"zaman_ms":1794741266632,"olay":"tur","ozsermaye_usd":9889.7235}
