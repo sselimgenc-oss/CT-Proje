@@ -3371,3 +3371,5 @@
 {"zaman_ms":1794782001748,"olay":"emir_yok","adres":"0x2988309f156f806cd1703fff8d29ddfa458fd4ef","coin":"HYPE","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1794782001384,"gorme_ms":1794782001748,"yas_ms":364}
 {"zaman_ms":1794782387619,"olay":"tur","ozsermaye_usd":9867.3813}
 {"zaman_ms":1794783243676,"olay":"tur","ozsermaye_usd":9866.789}
+{"zaman_ms":1794783626253,"olay":"funding","saat":498551,"saat_adet":1,"funding_usd":-0.0020766173551711904,"toplam_funding_usd":-0.5622304228801404}
+{"zaman_ms":1794784097976,"olay":"tur","ozsermaye_usd":9865.7014}
