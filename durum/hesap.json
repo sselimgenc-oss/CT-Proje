@@ -470,6 +470,12 @@
     "giris": 65100.0,
     "kaldirac": 3.0,
     "sz": 0.013904621043192381
+   },
+   "SOL": {
+    "acilis_ms": 1794842116566,
+    "giris": 70.256,
+    "kaldirac": 3.0,
+    "sz": -6.674089849101839
    }
   },
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": {}
@@ -500,7 +506,7 @@
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 909.0909090909091,
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 909.0909090909091
  },
- "son_niyet_cloid": "0x23d1ef68241d0b850bda2a544f754ad9",
+ "son_niyet_cloid": "0xe33cbf3b7ac5a8c5576c82e1ed69f1bb",
  "tasfiyeler": [],
  "ucret": {
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 0.0,
@@ -512,7 +518,7 @@
   "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": 0.0,
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": 0.031788029314780974,
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": 0.0,
-  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 0.4073358734603208,
+  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 0.6183385588576452,
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 0.0
  }
 }
