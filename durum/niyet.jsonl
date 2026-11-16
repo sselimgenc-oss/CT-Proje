@@ -1204,3 +1204,7 @@
 {"t":"sonuc","cloid":"0x2e40c0ddb026af88bb2bc15924b0b1e3","durum":"dolu","ms":1794825181739,"sz":0.05812518340221857,"px":887.44,"ucret":0.023212175741309182}
 {"t":"niyet","kimlik":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea:659829309207685","eylem":"ac","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"BNB","yon":"A","usd":81.929972,"reduce_only":false,"cloid":"0x2c70e098b228c0eeb0d5b39487aab867","ms":1794825250166}
 {"t":"sonuc","cloid":"0x2c70e098b228c0eeb0d5b39487aab867","durum":"dolu","ms":1794825250323,"sz":0.1389491422610768,"px":589.64,"ucret":0.0368684875092696}
+{"t":"niyet","kimlik":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e:246566079793175","eylem":"ac","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"WLFI","yon":"A","usd":181.029442,"reduce_only":false,"cloid":"0x30120d0c5f4fb01cd410bd3dcfe7f80f","ms":1794826854359}
+{"t":"sonuc","cloid":"0x30120d0c5f4fb01cd410bd3dcfe7f80f","durum":"dolu","ms":1794826854579,"sz":3956.408824908353,"px":0.045756,"ucret":0.08146324898662796}
+{"t":"niyet","kimlik":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e:131193617844765","eylem":"ac","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"FIL","yon":"A","usd":11.0,"reduce_only":false,"cloid":"0x37a9e2d42ae7309aba708cfbf8b8fd1d","ms":1794826856451}
+{"t":"sonuc","cloid":"0x37a9e2d42ae7309aba708cfbf8b8fd1d","durum":"dolu","ms":1794826856611,"sz":18.326613575022492,"px":0.60022,"ucret":0.0049499999999999995}
