@@ -2,30 +2,30 @@
  "bas_ms": 1794828600000,
  "btc_donem_fiyat": 64642.0,
  "doluluk": {
-  "brut_ms": 3956048771.390772,
-  "kapasite_ms": 87893762.0,
-  "nakit_ms": 7594649.113615846,
-  "net_ms": 794207972.0636615,
-  "slot_ms": 87893762.0,
-  "son_ms": 1794836717894,
-  "sure_ms": 7990342
+  "brut_ms": 5059652967.545801,
+  "kapasite_ms": 98186847.0,
+  "nakit_ms": 8420011.41776398,
+  "net_ms": 1406415950.5612621,
+  "slot_ms": 98186847.0,
+  "son_ms": 1794837653629,
+  "sure_ms": 8926077
  },
  "donem": "2026-11-16T11:30:00Z",
  "emir_sayac": {
   "atlama_neden": {
-   "bant_ici": 1540,
+   "bant_ici": 1737,
    "hip3_atlandi": 34,
-   "min_emir_atlandi": 57
+   "min_emir_atlandi": 73
   },
-  "atlanan": 1631,
-  "emir": 13,
-  "yuvarlanan": 4
+  "atlanan": 1844,
+  "emir": 16,
+  "yuvarlanan": 5
  },
  "gunler": [
   {
-   "btc": 64347.5,
+   "btc": 64142.5,
    "gun": "2026-11-16",
-   "ozsermaye_usd": 9999.2465
+   "ozsermaye_usd": 9999.2504
   }
  ],
  "kasa_usd": 10000.0,
@@ -57,7 +57,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": 0.0052,
+   "net_usd": 0.0411,
    "sonuc": null
   },
   {
@@ -97,7 +97,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": -0.7587,
+   "net_usd": -0.7907,
    "sonuc": null
   },
   {
