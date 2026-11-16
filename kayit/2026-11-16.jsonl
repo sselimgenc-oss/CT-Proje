@@ -458,3 +458,10 @@
 {"zaman_ms":1794821883407,"olay":"tur","ozsermaye_usd":9864.0826}
 {"zaman_ms":1794822772625,"olay":"tur","ozsermaye_usd":9862.5913}
 {"zaman_ms":1794823226627,"olay":"funding","saat":498562,"saat_adet":1,"funding_usd":-0.016651448423187006,"toplam_funding_usd":-0.06949336400425815}
+{"zaman_ms":1794823261433,"olay":"telegram","metin":"🧾 Son 1 saat (12:00–13:00 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 9.864,09 $ · bugün 🟢 +2,66 $ (%0,0) · başlangıçtan 🔴 −135,91 $ (−%1,4)","acik":true}
+{"zaman_ms":1794823611420,"olay":"tur","ozsermaye_usd":9863.6724}
+{"zaman_ms":1794823969805,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:INTC","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1794823969518,"gorme_ms":1794823969804,"yas_ms":287}
+{"zaman_ms":1794823978078,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:MU","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1794823977785,"gorme_ms":1794823978078,"yas_ms":293}
+{"zaman_ms":1794823988243,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:SNDK","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1794823987966,"gorme_ms":1794823988243,"yas_ms":277}
+{"zaman_ms":1794823988244,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:SNDK","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1794823987966,"gorme_ms":1794823988243,"yas_ms":278}
+{"zaman_ms":1794823996921,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:ANT","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1794823996356,"gorme_ms":1794823996921,"yas_ms":565}
