@@ -342,3 +342,9 @@
 {"zaman_ms":1794814916496,"olay":"emir_yok","adres":"0x2988309f156f806cd1703fff8d29ddfa458fd4ef","coin":"HYPE","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1794814916198,"gorme_ms":1794814916493,"yas_ms":298}
 {"zaman_ms":1794814991768,"olay":"tur","ozsermaye_usd":9861.7329}
 {"zaman_ms":1794815855010,"olay":"tur","ozsermaye_usd":9856.1727}
+{"zaman_ms":1794816020607,"olay":"funding","saat":498560,"saat_adet":1,"funding_usd":0.0422812894859578,"toplam_funding_usd":-0.397163441501456}
+{"zaman_ms":1794816020607,"olay":"telegram","metin":"🧾 Son 1 saat (09:59–11:00 TSİ): 3 emir · sanal\n➕ açılış 0 · ⬆️ artırma 1 · ⬇️ azaltma 1 · ✖️ kapanış 1\n🏆 En büyük: 276 $ (ETH, AL) · 0x6834b2…\n⏭️ Kopyalanmayan trader dolumu: 13 (≈4 ayrı işlem)\n   • kural gereği 13: 11 toplu emir bekliyor (fark küçük) · 1 HIP-3 coin · 1 çok küçük (< 11 $)\n   • kaçır","acik":true}
+{"zaman_ms":1794816720012,"olay":"tur","ozsermaye_usd":9866.0365}
+{"zaman_ms":1794816866631,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:SPCX","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1794816866235,"gorme_ms":1794816866631,"yas_ms":396}
+{"zaman_ms":1794816866632,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:SPCX","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1794816866235,"gorme_ms":1794816866631,"yas_ms":397}
+{"zaman_ms":1794816866632,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:SPCX","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1794816866235,"gorme_ms":1794816866631,"yas_ms":397}
