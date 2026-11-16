@@ -769,6 +769,8 @@ class Motor:
         inen = adres in self.saha.inen and adres not in self.saha.uyeler
         if acilis and inen:
             return self._atla(o, adres, eylem, "engel", "inen_trader")
+        if acilis:
+            self._inen_ters_kapat(adres, o.coin, "B" if sonra > 0 else "A", simdi)
         if acilis and self.hesap.ters_yonlu_var(adres, o.coin, "B" if sonra > 0 else "A", self.marks, float(self.rules["canli_kapanis_toz_usd"])):          # K‑41: başka trader'dan ters yönlü kopya pozisyonu var → net küçülmesin, açılış yok
             return self._atla(o, adres, eylem, "atlandi", "ters_netlesme")
         yeni_coin = eylem == "ac" and abs(biz_sz) < EPS            # bizim için taze pozisyon (patlama freni sayacı)
@@ -1178,9 +1180,15 @@ class Motor:
                 self.donem_slot_cikis(k.adres, k.neden, k.sonuc, simdi)
                 self.tg.gonder(tg.msg_saha("çıkış", k.adres, f"{k.neden}{' (sonuçla, 14 gün bekleme)' if k.sonuc else ' (sonuç dışı)'}"))
             elif k.tur == "inen_kapat":
-                self._adres_kapat(k.adres, "inen_24sa", simdi)
+                self._adres_kapat(k.adres, "inen_24sa" if not k.neden.startswith("inen_") else k.neden, simdi)
                 self._slot_net_guncelle(k.adres)                                   # pano (14.11): slot silinmeden son net
                 self.hesap.slot_kapat(k.adres)
+            elif k.tur == "uyari":                                               # haftalık kadro (16.11): hafta içi form/radar uyarısı; çıkış YOK
+                self.kayit({"olay": "saha_uyari", "adres": k.adres, "neden": k.neden})
+                self.tg.gonder(tg.msg_saha("uyarı", k.adres, k.neden))
+            elif k.tur == "hafta_degisimi":
+                self.kayit({"olay": "hafta_degisimi", "hafta": k.neden, "saha": list(self.saha.uyeler), "inen": list(self.saha.inen)})
+                self.tg.gonder(f"🔄 Haftalık kadro değişimi ({k.neden} haftası): sahada {len(self.saha.uyeler)} trader; yedeğe inenlerin pozisyonları trader kapatana kadar izleniyor")
             elif k.tur == "giris_atlandi":
                 imza = (self.saha.son_kosu_ms, tuple(sorted(k.saha if k.saha is not None else (k.kor_kirpildi or []))))
                 if self._kor_imza.get(k.adres) != imza:                          # B11: imza = (kadro koşusu, adayın karşılaştığı TAM saha); değiştirmede üye başına değişen `kalan` imzaya girmez → aynı durum bir kez yazılır
@@ -1981,6 +1989,37 @@ class Motor:
 
     def _anlik(self, simdi: int) -> None:
         self.karar_uygula(self.saha.anlik(simdi, lambda a: self.hesap.slot_ozsermaye(a, self.marks), self._son_kadro, slot_bas=self.hesap.slot_bas.get), simdi)
+        self._inen_tavan(simdi)
+
+    def _inen_nosyonel(self, adres: str) -> float:
+        return sum(abs(p.sz) * (self.mark(c, p.giris) or p.giris) for c, p in self.hesap.poz.get(adres, {}).items())
+
+    def _inen_tavan(self, simdi: int) -> None:
+        """Fable denetimi 16.11 (açık 1/7): trader'a bırakılan (inen) pozisyonların toplam nosyoneli kasa × `canli_inen_tavan_oran`'ı aşarsa, slotuna göre EN ZARARDAKİ inen trader'ın
+        pozisyonları kapatılır (tavan altına inene kadar)."""
+        if not self.saha.haftalik:
+            return
+        tavan = float(self.rules["canli_inen_tavan_oran"]) * float(self.kasa)
+        while self.saha.inen and sum(self._inen_nosyonel(a) for a in self.saha.inen) > tavan + 1e-9:
+            def kz(a: str) -> float:
+                ozs = self.hesap.slot_ozsermaye(a, self.marks)
+                return (ozs if ozs is not None else 0.0) - float(self.hesap.slot_bas.get(a) or self.saha.slot)
+            adres = min(self.saha.inen, key=kz)
+            del self.saha.inen[adres]
+            self.kayit({"olay": "inen_tavan_kapat", "adres": adres, "tavan_usd": tavan})
+            self.karar_uygula([Karar("inen_kapat", adres, "inen_tavan")], simdi)
+
+    def _inen_ters_kapat(self, adres: str, coin: str, yon: str, simdi: int) -> None:
+        """Fable denetimi 16.11 (açık 2): sahadaki trader bir coinde açılış yaparken, aynı coinde TERS yönde yalnız INEN (trader'a bırakılmış) bir pozisyon varsa o inen pozisyon kapatılır;
+        böylece K‑41 ters netleşme yeni kadronun açılışını engellemez."""
+        if not self.saha.haftalik:
+            return
+        isaret = 1.0 if yon == "B" else -1.0
+        for a in list(self.saha.inen):
+            p = self.hesap.poz.get(a, {}).get(coin)
+            if a != adres and p is not None and p.sz * isaret < -EPS:
+                self.kayit({"olay": "inen_ters_kapat", "adres": a, "coin": coin, "acan": adres})
+                self._kapat_coin(a, coin, "inen_ters", simdi)
 
     _son_kadro: dict | None = None
     _eksik_imza: tuple | None = None

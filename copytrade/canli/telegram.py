@@ -307,7 +307,7 @@ def msg_kapat_alindi(kip: str) -> str:
 
 # ---------------------------------------------------------------------------------------------- mesaj biçimleri (sade Türkçe, emojili)
 KIP_ADI = {"sanal": "sanal · deneme parası", "gercek": "GERÇEK PARA"}
-NEDEN_TR = {"ilk_gun": "ilk kadro", "bos_slot": "boş yer açıldı", "kor_gevsetildi": "boş yer açıldı (benzerlik kuralı gevşetildi; saha hep dolu)", "kadro_disi": "günlük kadrodan düştü", "r1_elendi": "radarın kopyalanabilirlik (R1) elemesinden düştü", "dusme": "slot değeri düştü (kural)"}
+NEDEN_TR = {"ilk_gun": "ilk kadro", "bos_slot": "boş yer açıldı", "kor_gevsetildi": "boş yer açıldı (benzerlik kuralı gevşetildi; saha hep dolu)", "kadro_disi": "günlük kadrodan düştü", "r1_elendi": "radarın kopyalanabilirlik (R1) elemesinden düştü", "dusme": "slot değeri düştü (kural)", "hafta_yedege": "haftalık değişim: yedeğe indi (pozisyonlar trader kapatana kadar izlenir)", "hafta_elendi": "haftalık değişim: radar eledi (pozisyonlar kapatıldı)", "hafta_kadro_disi": "haftalık değişim: yeni kadroda yok (pozisyonlar kapatıldı)", "bugun_kadroda_yok": "bugünkü radar kadrosunda yok"}
 EYLEM_TR = {"ac": "pozisyon açtı", "artir": "pozisyonunu artırdı", "azalt": "pozisyonunu azalttı", "kapat": "pozisyonu kapattı"}
 
 
@@ -338,6 +338,8 @@ def msg_saha(tur: str, adres: str, neden: str, sira: int | None = None) -> str:
     aciklama = NEDEN_TR.get(kok, kok) + (f" {ek}" if ek else "")
     if tur == "giriş":
         return f"➕ Yeni trader takibe alındı: {kisa(adres)}\n↳ Neden: {aciklama}"
+    if tur == "uyarı":
+        return f"⚠️ Hafta içi uyarı (çıkış yok, pazar değerlendirilir): {kisa(adres)}\n↳ {aciklama}"
     return f"➖ Trader takipten çıktı: {kisa(adres)}\n↳ Neden: {aciklama}"
 
 

@@ -1,6 +1,6 @@
 # DURUM (lider günceller; tek doğru kaynak)
 
-Son güncelleme: 2026-11-14, lider Claude. Son karar: kullanıcı.
+Son güncelleme: 2026-11-16, lider Claude. Son karar: kullanıcı.
 
 ## Hedef (K-66, kullanıcı kararı 14.11)
 Kullanıcının asıl modeli: **Form Radarı** (`docs/RADAR_V1.md`, v1.1 kuralları K-53). Her gün son 7 günün formuna göre kadro:
@@ -10,7 +10,7 @@ Kullanıcının asıl modeli: **Form Radarı** (`docs/RADAR_V1.md`, v1.1 kuralla
 - Kapanan yollar (kodları repodan silindi): D+ (sabit kadro), K-65 seçim vetoları, elle çıkarma listesi, walk-forward seçim doğrulaması, Revizyon 1. Sebep: geçmiş performansa göre seçim rastgeleden iyi çıkmadı (K-65 sonu); kullanıcı özgün Form Radarı'na döndü.
 
 ## Şu an
-- Form Radarı yürürlükte (kadro `radar_surum` v4): radar iş akışı tarama → kadro → isabet; saha 11 kişi (sanal kasa 10.000 $ → slot ≈ 909 $, `canli_sanal_kasa_ust_usd`; gerçek para sınırı 1.000 $ değişmez); yeni sanal dönem 14.11 19:30Z (22:30 TSİ; v4: 900 aday, kopya-işlem kapısı yok, mantık denetimi düzeltmeleri). Ayrıntı K-66.
+- Form Radarı yürürlükte (kadro `radar_surum` v4): radar iş akışı tarama → kadro → isabet; saha 11 kişi (sanal kasa 10.000 $ → slot ≈ 909 $, `canli_sanal_kasa_ust_usd`; gerçek para sınırı 1.000 $ değişmez); kadro haftalık (pazardan pazara; hafta içi yalnız güvenlik çıkışları; pazar yedeğe inenin pozisyonları trader'a bırakılır, en çok 72 sa); toplu emir bandı; yeni sanal dönem 16.11 11:30Z (14:30 TSİ). Ayrıntı K-66.
 - **Ana dal koruması** (`main-koruma`): PR zorunlu, `test` + `canli_sdk` yeşil olmadan birleşmez.
 - Telegram açık; dış nabız alarmı `sg-nabiz` (`docs/NABIZ_ALARMI.md`).
 - Repo adı `sselimgenc-oss/CT-Proje`.

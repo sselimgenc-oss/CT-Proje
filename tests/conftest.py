@@ -6,7 +6,8 @@ import copytrade.kurallar as _k
 V1_BOYUT_RISK = {"radar_saha_max": 11, "radar_canli_slot_min_usd": 25, "radar_slot_tavan_carpan": 3.0, "radar_min_emir_yuvarla_alt": 0.0,
                  "canli_slot_dusus_oran": 0.10, "canli_bekleme_gun": 14, "canli_islem_yok_saat": 72,
                  "radar_kasa_usd": 1000,       # D-01 (14.11): v1 radar oynatma kasası = canli_kasa_usd (1.000 $); üretim 10.000 $ test_k66_uretim / test_d01_radar_kasa'da
-                 "canli_bant_usd": 0, "canli_bant_oran": 0.0, "canli_bant_azalt_usd": 0, "canli_bant_azalt_oran": 0.0}   # toplu emir bandı (15.11) v1'de yok; üretim değerleri test_boyut_bant'ta load_rules_asil ile
+                 "canli_bant_usd": 0, "canli_bant_oran": 0.0, "canli_bant_azalt_usd": 0, "canli_bant_azalt_oran": 0.0,
+                 "canli_haftalik_kadro": False, "canli_inen_saat": 24}   # haftalık kadro (16.11) v1'de yok; üretim davranışı test_haftalik_kadro'da load_rules_asil ile   # toplu emir bandı (15.11) v1'de yok; üretim değerleri test_boyut_bant'ta load_rules_asil ile
 
 if not hasattr(_k, "load_rules_asil"):
     _k.load_rules_asil = _k.load_rules

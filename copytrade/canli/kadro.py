@@ -135,6 +135,7 @@ class Saha:
         self.alarm_gunu: str | None = d.get("alarm_gunu")
         self.gun_kadro: dict | None = d.get("gun_kadro")           # K‑39: {"gun": UTC günü, "kadro": o günün İLK kadrosu}
         self.k39_gecis: bool = bool(d.get("k39_gecis", False))
+        self.hafta: dict | None = d.get("hafta")                   # Haftalık kadro (kullanıcı kararı 16.11): {"hafta": pazar günü (UTC, "YYYY-MM-DD"), "kadro": haftanın kadrosu}
         self.eksik: dict | None = None                             # Saha hep dolu (kullanıcı 14.11): doldurmadan sonra yer boşsa {saha, n, neden: "uygun_aday_yok"} (kayıt + pano)
         self.gecis_silinen: list[str] = []                         # bu yüklemede silinen bekleme kayıtları (motor kayda yazar)
         if not self.k39_gecis:                                     # tek seferlik: 05.11'de aynı gün ikinci kadroyla verilen 3 bekleme silinir (K‑39)
@@ -166,13 +167,14 @@ class Saha:
     def _ekle(self, adres: str, satir: dict, simdi_ms: int) -> None:
         self.uyeler[adres] = {"giris_ms": simdi_ms, "giris_sira": satir.get("sira"), "sira_ust": 0, "son_islem_ms": None}
 
-    def _dus(self, adres: str, neden: str, sonuc: bool, simdi_ms: int, kararlar: list[Karar]) -> None:
+    def _dus(self, adres: str, neden: str, sonuc: bool, simdi_ms: int, kararlar: list[Karar], hemen_kapat: bool | None = None) -> None:
         """M-07 (kullanıcı kararı 14.11): SONUÇLA düşmede (slot stopu, kaldıraç, R1, soğuma, sıra, kadro dışı) pozisyonlar HEMEN kapatılır (`inen_kapat` aynı anda; 24 sa açık bırakma
         yok, `inen`e girmez) + `canli_bekleme_gun` bekleme. Sonuç dışı düşmede (işlem yok, daha iyisi geldi, veri nedeni) eski kural: `inen`, trader kapanışları izlenir, `canli_inen_saat` sonra kalan kapatılır."""
         self.uyeler.pop(adres, None)
         kararlar.append(Karar("dus", adres, neden, sonuc))
         if sonuc:
             self.bekleme[adres] = simdi_ms + int(self.rules["canli_bekleme_gun"]) * GUN
+        if sonuc or hemen_kapat:                                   # haftalık (16.11): yeni haftanın kadrosunda HİÇ olmayan, sonuç dışı da olsa hemen kapanır (bekleme yok)
             self.inen.pop(adres, None)
             kararlar.append(Karar("inen_kapat", adres, neden))
         else:
@@ -196,7 +198,19 @@ class Saha:
                 self._dus(adres, "slot_dusus", True, simdi_ms, kararlar)
             elif (satir.get(adres) or {}).get("max_kaldirac") is not None and float(satir[adres]["max_kaldirac"]) > float(self.rules["radar_max_kaldirac"]):
                 self._dus(adres, "kaldirac_ihlali", True, simdi_ms, kararlar)
+        if self.haftalik:                                          # Fable denetimi 16.11 (açık 1): inen (trader'a bırakılan) pozisyonlarda da slot −%20 stopu → hemen kapat + bekleme
+            for adres in list(self.inen):
+                ozs = slot_ozsermaye(adres)
+                taban = (slot_bas(adres) if slot_bas is not None else None) or self.slot
+                if ozs is not None and ozs <= taban * (1 - float(self.rules["canli_slot_dusus_oran"])) + 1e-9:
+                    del self.inen[adres]
+                    self.bekleme[adres] = simdi_ms + int(self.rules["canli_bekleme_gun"]) * GUN
+                    kararlar.append(Karar("inen_kapat", adres, "inen_slot_dusus"))
         return kararlar
+
+    @property
+    def haftalik(self) -> bool:
+        return bool(self.rules.get("canli_haftalik_kadro", False))
 
     def inenleri_kapat(self, simdi_ms: int) -> list[Karar]:
         """Sahadan ineli `canli_inen_saat` saati geçenlerin kalan pozisyonu kapatılır; kayıt silinir (motor pozisyonları kapatır)."""
@@ -217,6 +231,8 @@ class Saha:
                 self._islem_yok_dus(adres, simdi_ms, kararlar)
             return kararlar, neden
         kadro = self._gun_kadrosu(kadro)
+        if self.haftalik:
+            return self._haftalik_degerlendir(kadro, simdi_ms)
         satirlar = {s["adres"]: s for s in kadro["satirlar"]}
         yeni_gun = int(kadro["kosu_ms"]) != self.son_kosu_ms
         if yeni_gun:
@@ -225,6 +241,72 @@ class Saha:
         ilk_gun = not self.kurulu
         self._doldur(kadro, satirlar, simdi_ms, ilk_gun, kararlar)
         self._degistir(kadro, satirlar, simdi_ms, kararlar)
+        self.eksik = {"saha": len(self.uyeler), "n": self.n, "neden": "uygun_aday_yok"} if len(self.uyeler) < self.n else None
+        if self.uyeler:
+            self.kurulu = True
+        return kararlar, "ok"
+
+    # ------------------------------------------------------------------ haftalık kadro (kullanıcı kararı 16.11; Fable önerisi + denetimi)
+    @staticmethod
+    def hafta_anahtari(ms: int) -> str:
+        """Haftanın PAZAR günü (UTC, "YYYY-MM-DD"): kadro pazardan pazara değişir. Pazar koşusu yoksa haftanın ilk taze koşusu o haftanın kadrosu olur."""
+        from datetime import UTC, datetime, timedelta
+        d = datetime.fromtimestamp(ms / 1000, UTC).date()
+        return (d - timedelta(days=(d.weekday() + 1) % 7)).isoformat()
+
+    def _haftalik_degerlendir(self, gk: dict, simdi_ms: int) -> tuple[list[Karar], str]:
+        """Haftalık kadro (kullanıcı 16.11: "geçmiş 1 hafta performansına göre iyi diyorsam bir hafta kalmalı; pazardan pazara değiştiririz").
+        - Haftanın kadrosu `hafta` alanında kalıcı (yeniden başlatmada korunur). Yeni hafta = günlük kadronun `kosu_ms`i yeni bir pazar haftasına düştü → PAZAR DEĞİŞİMİ:
+          yeni İlk 11'de olmayan üye iner; yeni kadroda (yedekte) duruyorsa pozisyonları trader kapatana kadar izlenir (`inen`, en çok `canli_inen_saat`),
+          kadroda hiç yoksa hemen kapanır (R1/soğuma ise sonuçla + bekleme). Sayaçlar sıfırlanır; günlük değişiklik sınırına sayılmaz.
+        - Hafta içi: R1 / soğuma / kadro dışı / sıra / histerezis çıkışı YOK → yalnız `uyari` kararı (Telegram). Açık kalan güvenlik çıkışları: slot −%20 ve kaldıraç (`anlik`;
+          radar kaldıraçtan elediyse burada), 72 sa işlem yok, felaket stopu, günlük frenler, kasa kilidi (motor/risk).
+        - Boş yer: haftanın kadrosunun sırasıyla, ama o günün kadrosunda da DURAN aday (radarın o gün elediği alınmaz); korelasyon kuralı aynen."""
+        kararlar: list[Karar] = []
+        anahtar = self.hafta_anahtari(int(gk["kosu_ms"]))
+        yeni_gun = int(gk["kosu_ms"]) != self.son_kosu_ms
+        gunluk = {s["adres"]: s for s in gk["satirlar"]}
+        if self.hafta is None or self.hafta.get("hafta") != anahtar:
+            pazar = self.hafta is not None and self.kurulu
+            self.hafta = {"hafta": anahtar, "kadro": gk}
+            if pazar:
+                yeni = {s["adres"]: s for s in gk["satirlar"]}
+                ilk = int(self.rules["radar_kadro_ilk"])
+                for adres in list(self.uyeler):
+                    s = yeni.get(adres)
+                    if s is not None and int(s["sira"]) <= ilk:
+                        continue
+                    if s is not None:
+                        self._dus(adres, "hafta_yedege", False, simdi_ms, kararlar)                       # yedekte: pozisyonlar trader kapatana kadar (en çok canli_inen_saat)
+                    elif r1_elendi(gk, adres) or soguyan_mi(gk, adres):
+                        self._dus(adres, "hafta_elendi", not veri_nedeni(gk, adres), simdi_ms, kararlar, hemen_kapat=True)
+                    else:
+                        self._dus(adres, "hafta_kadro_disi", False, simdi_ms, kararlar, hemen_kapat=True)
+                for u in self.uyeler.values():
+                    u["sira_ust"], u["disi_gunler"] = 0, []
+                    u.pop("veri_disi", None)
+                self.degisiklik = {"gun": None, "adet": 0}
+                kararlar.append(Karar("hafta_degisimi", "", anahtar))
+        elif yeni_gun:
+            for adres in list(self.uyeler):
+                neden = ((gk.get("eski_uye_neden") or {}).get(adres))
+                if adres not in gunluk and isinstance(neden, str) and neden == "r1:kaldirac_yuksek":
+                    self._dus(adres, "kaldirac_ihlali", True, simdi_ms, kararlar)                       # Fable açık 3: radar kaldıraçtan elediyse satır yok → anlik göremez; burada güvenlik çıkışı
+                    continue
+                if adres not in gunluk and (r1_elendi(gk, adres) or soguyan_mi(gk, adres)):
+                    kararlar.append(Karar("uyari", adres, "radar_eledi:" + str(neden)))
+                elif adres in gunluk and int(gunluk[adres]["sira"]) > int(self.rules["canli_sira_dus"]):
+                    kararlar.append(Karar("uyari", adres, f"form_sirasi:{int(gunluk[adres]['sira'])}"))
+                elif adres not in gunluk:
+                    kararlar.append(Karar("uyari", adres, "bugun_kadroda_yok"))
+        if yeni_gun:
+            for adres in list(self.uyeler):
+                self._islem_yok_dus(adres, simdi_ms, kararlar)                                           # 72 sa işlem yok: sonuç dışı, pozisyonlar trader'a bırakılır
+            self.son_kosu_ms = int(gk["kosu_ms"])
+        hk = dict(self.hafta["kadro"])
+        hk["satirlar"] = [s for s in hk["satirlar"] if s["adres"] in gunluk]                               # radarın bugün elediği haftalık aday alınmaz
+        ilk_gun = not self.kurulu
+        self._doldur(hk, {s["adres"]: s for s in hk["satirlar"]}, simdi_ms, ilk_gun, kararlar)
         self.eksik = {"saha": len(self.uyeler), "n": self.n, "neden": "uygun_aday_yok"} if len(self.uyeler) < self.n else None
         if self.uyeler:
             self.kurulu = True
@@ -339,4 +421,4 @@ class Saha:
 
     # ------------------------------------------------------------------ kalıcılık
     def to_json(self) -> dict[str, Any]:
-        return {"uyeler": self.uyeler, "inen": self.inen, "bekleme": self.bekleme, "degisiklik": self.degisiklik, "son_kosu_ms": self.son_kosu_ms, "kurulu": self.kurulu, "alarm_gunu": self.alarm_gunu, "gun_kadro": self.gun_kadro, "k39_gecis": self.k39_gecis}
+        return {"uyeler": self.uyeler, "inen": self.inen, "bekleme": self.bekleme, "degisiklik": self.degisiklik, "son_kosu_ms": self.son_kosu_ms, "kurulu": self.kurulu, "alarm_gunu": self.alarm_gunu, "gun_kadro": self.gun_kadro, "k39_gecis": self.k39_gecis, "hafta": self.hafta}
