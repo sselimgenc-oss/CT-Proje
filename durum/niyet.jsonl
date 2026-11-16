@@ -62,3 +62,11 @@
 {"t":"sonuc","cloid":"0x4ffd8b1b2bfaaa593e97ffe96b652305","durum":"dolu","ms":1794854210252,"sz":0.012419835606539609,"px":885.68,"ucret":0.0049499999999999995}
 {"t":"niyet","kimlik":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9:1015956877500096","eylem":"azalt","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"ZEC","yon":"B","usd":11.128111,"reduce_only":true,"cloid":"0xb6c0aad98f3c91a92dac87f1dc6f6c4e","ms":1794855050760}
 {"t":"sonuc","cloid":"0xb6c0aad98f3c91a92dac87f1dc6f6c4e","durum":"dolu","ms":1794855050881,"sz":0.012396799015530887,"px":897.66,"ucret":0.005007649771926655}
+{"t":"niyet","kimlik":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461:43355107743216","eylem":"ac","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"HYPE","yon":"A","usd":11.0,"reduce_only":false,"cloid":"0xe84a263af91c62d1faa54bdc38e7882c","ms":1794866671144}
+{"t":"sonuc","cloid":"0xe84a263af91c62d1faa54bdc38e7882c","durum":"dolu","ms":1794866671305,"sz":0.15536064856008927,"px":70.803,"ucret":0.0049499999999999995}
+{"t":"niyet","kimlik":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461:860597048847621","eylem":"artir","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"HYPE","yon":"A","usd":88.790769,"reduce_only":false,"cloid":"0x74b66496fc1c1348668a995b4e98847c","ms":1794866818301}
+{"t":"sonuc","cloid":"0x74b66496fc1c1348668a995b4e98847c","durum":"dolu","ms":1794866818457,"sz":1.259997574731858,"px":70.469,"ucret":0.03995584609220068}
+{"t":"niyet","kimlik":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461:418882365943709","eylem":"artir","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"HYPE","yon":"A","usd":53.480278,"reduce_only":false,"cloid":"0x00371b89d2923f4dab52524f59f01912","ms":1794867120745}
+{"t":"sonuc","cloid":"0x00371b89d2923f4dab52524f59f01912","durum":"dolu","ms":1794867120901,"sz":0.756075972372211,"px":70.734,"ucret":0.024066125023399186}
+{"t":"niyet","kimlik":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e:1115171422854084","eylem":"artir","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"CAKE","yon":"B","usd":50.032121,"reduce_only":false,"cloid":"0xb67d16670b4b0f68b1eedf51a831352d","ms":1794867201460}
+{"t":"sonuc","cloid":"0xb67d16670b4b0f68b1eedf51a831352d","durum":"dolu","ms":1794867201623,"sz":30.770062369662362,"px":1.626,"ucret":0.022514454635881948}
