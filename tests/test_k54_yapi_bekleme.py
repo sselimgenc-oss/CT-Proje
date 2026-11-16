@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_radar_surum_dosyasi_v4_ve_donem_yeni():
     assert mt.radar_surum_oku() == "v4"                                                                       # K-66 (14.11 mantık denetimi): kural sürümü v4; v3 ve D+ v2 kadrosu uygulanmaz
-    assert (ROOT / "copytrade/canli/DONEM").read_text(encoding="utf-8").strip() == "2026-11-14T19:30:00Z"     # K-66 v4 (14.11 22:30 TSİ): yeni sanal dönem 10.000 $ / 11; eski dönem verisi git geçmişinde arşivli
+    assert (ROOT / "copytrade/canli/DONEM").read_text(encoding="utf-8").strip() == "2026-11-16T11:30:00Z"     # K-66 haftalık kadro (16.11 14:30 TSİ): yeni sanal dönem 10.000 $ / 11; eski dönem verisi git geçmişinde arşivli
 
 
 def test_radar_surum_oku_yorum_bos_yok(tmp_path):
