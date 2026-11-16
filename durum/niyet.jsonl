@@ -50,3 +50,5 @@
 {"t":"sonuc","cloid":"0xd1b12ac8f623883ed4f1c7ae0330b5aa","durum":"dolu","ms":1794844339117,"sz":0.020205189559059544,"px":1820.8,"ucret":0.016555324117111025}
 {"t":"niyet","kimlik":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9:64136818611627","eylem":"azalt","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"ETH","yon":"B","usd":32.844565,"reduce_only":true,"cloid":"0x1ffbcbe06a51869d5f8d858ca613073b","ms":1794844339124}
 {"t":"sonuc","cloid":"0x1ffbcbe06a51869d5f8d858ca613073b","durum":"dolu","ms":1794844339245,"sz":0.01802616030507301,"px":1820.8000000000002,"ucret":0.014769914707564624}
+{"t":"niyet","kimlik":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:814774734517954","eylem":"ac","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"VVV","yon":"A","usd":40.188201,"reduce_only":false,"cloid":"0xb29363365ab630cf70e68713fa372649","ms":1794850824722}
+{"t":"sonuc","cloid":"0xb29363365ab630cf70e68713fa372649","durum":"dolu","ms":1794850824858,"sz":2.022047869394588,"px":19.875,"ucret":0.018084690631897847}
