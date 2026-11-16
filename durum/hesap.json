@@ -469,13 +469,13 @@
     "acilis_ms": 1794841218362,
     "giris": 65100.0,
     "kaldirac": 3.0,
-    "sz": 0.013904621043192381
+    "sz": 0.012591972627408379
    },
    "SOL": {
     "acilis_ms": 1794842116566,
-    "giris": 70.256,
+    "giris": 70.31351759473628,
     "kaldirac": 3.0,
-    "sz": -6.674089849101839
+    "sz": -7.8391827009249155
    }
   },
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": {}
@@ -490,7 +490,7 @@
   "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": 0.0,
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": 0.0,
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": 0.0,
-  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 0.0,
+  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": -0.8479708765964651,
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 0.0
  },
  "slot_bas": {
@@ -506,7 +506,7 @@
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 909.0909090909091,
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 909.0909090909091
  },
- "son_niyet_cloid": "0xe33cbf3b7ac5a8c5576c82e1ed69f1bb",
+ "son_niyet_cloid": "0xc1769067c1dd4df3a45245a39077722b",
  "tasfiyeler": [],
  "ucret": {
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 0.0,
@@ -518,7 +518,7 @@
   "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": 0.0,
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": 0.031788029314780974,
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": 0.0,
-  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 0.6183385588576452,
+  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 0.6934485517526711,
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 0.0
  }
 }
