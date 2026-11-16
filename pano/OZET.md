@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-16 11:45 UTC
+# Canlı rapor — 2026-11-16 12:00 UTC
 
 **Kip** sanal · vardiya `43856204797` · saha 11/11 (inen 0)
 
@@ -8,9 +8,9 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 10.000,00 $ | 9.998,72 $ | −%0,01 | — (geçmiş < 7 gün) | −%0,01 | −%0,01 |
+| 10.000,00 $ | 9.998,49 $ | −%0,01 | — (geçmiş < 7 gün) | −%0,02 | −%0,02 |
 
-Başarı kıyası (aynı dönemde): toplam −%0,01 · BTC al-tut: −%0,2 · fark: +%0,2 · aylık eşdeğer: — · hedef %4/ay: —
+Başarı kıyası (aynı dönemde): toplam −%0,02 · BTC al-tut: −%0,3 · fark: +%0,3 · aylık eşdeğer: — · hedef %4/ay: —
 
 Komisyon (dönem): ödenen ücret: 0,18 $ · brüt K/Z ≤ 0: ücret zararı büyütüyor _(ücret işlem hacmine bağlıdır, emir sayısına değil)_
 
@@ -18,12 +18,12 @@ Komisyon (dönem): ödenen ücret: 0,18 $ · brüt K/Z ≤ 0: ücret zararı bü
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x76c2cd… | WLFI | S | 189,44 $ | −0,07 $ |
-| 0x76c2cd… | INJ | L | 87,52 $ | −0,70 $ |
-| 0x76c2cd… | kSHIB | L | 65,88 $ | −0,36 $ |
-| 0x76c2cd… | ALGO | L | 24,84 $ | −0,01 $ |
-| 0x76c2cd… | AVAX | L | 11,02 $ | +0,02 $ |
-| 0x76c2cd… | FIL | S | 10,98 $ | +0,02 $ |
+| 0x76c2cd… | WLFI | S | 189,66 $ | −0,29 $ |
+| 0x76c2cd… | INJ | L | 87,60 $ | −0,62 $ |
+| 0x76c2cd… | kSHIB | L | 65,79 $ | −0,45 $ |
+| 0x76c2cd… | ALGO | L | 24,82 $ | −0,04 $ |
+| 0x76c2cd… | AVAX | L | 11,00 $ | +0,00 $ |
+| 0x76c2cd… | FIL | S | 10,94 $ | +0,06 $ |
 
 ## Son 24 saat
 
@@ -52,7 +52,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 15 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 30 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
@@ -66,11 +66,11 @@ olay yok
 
 ## Dönem (kalıcı seri)
 
-- motor 9.998,72 $ · BTC al-tut 9.983,06 $ · %4/ay hedef çizgisi 10.006,81 $
-- katkı: İlk 11 7 slot +0,00 $ · Yedek 4 slot −1,28 $
-- saha doluluğu %100,00 · nakitte kalan %96,46 (0,0 gün ölçüldü)
-- kullanılan sermaye getirisi −%0,36 · ort. brüt maruziyet 354,26 $ · ort. net 46,43 $ · risk kilidi olayı 0 (gölge eğri yok)
-- atlanan sinyal %96,27 · yuvarlanan emir %33,33 (emir 6, atlanan 155)
+- motor 9.998,49 $ · BTC al-tut 9.966,04 $ · %4/ay hedef çizgisi 10.006,81 $
+- katkı: İlk 11 7 slot +0,00 $ · Yedek 4 slot −1,51 $
+- saha doluluğu %100,00 · nakitte kalan %96,26 (0,0 gün ölçüldü)
+- kullanılan sermaye getirisi −%0,40 · ort. brüt maruziyet 373,74 $ · ort. net 27,26 $ · risk kilidi olayı 0 (gölge eğri yok)
+- atlanan sinyal %98,22 · yuvarlanan emir %33,33 (emir 6, atlanan 331)
 - radar hunisi: evren 2552 → aday 902 → ≥10 işlem 120 → geçen 22
 
 | trader | katman | giriş | çıkış | net $ |
@@ -85,4 +85,4 @@ olay yok
 | 0xe69acc… | ilk11 | 16.11 14:30 | sahada | +0,00 $ |
 | 0xc30c7e… | yedek | 16.11 14:30 | sahada | +0,00 $ |
 | 0xc3602c… | yedek | 16.11 14:30 | sahada | +0,00 $ |
-| 0x76c2cd… | yedek | 16.11 14:30 | sahada | −1,28 $ |
+| 0x76c2cd… | yedek | 16.11 14:30 | sahada | −1,51 $ |
