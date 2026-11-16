@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-16 16:31 UTC
+# Canlı rapor — 2026-11-16 16:46 UTC
 
 **Kip** sanal · vardiya `43896987878` · saha 11/11 (inen 0)
 
@@ -8,9 +8,9 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 10.000,00 $ | 9.993,07 $ | −%0,07 | — (geçmiş < 7 gün) | −%0,07 | −%0,18 |
+| 10.000,00 $ | 9.993,13 $ | −%0,07 | — (geçmiş < 7 gün) | −%0,07 | −%0,18 |
 
-Başarı kıyası (aynı dönemde): toplam −%0,07 · BTC al-tut: +%0,1 · fark: −%0,2 · aylık eşdeğer: — · hedef %4/ay: —
+Başarı kıyası (aynı dönemde): toplam −%0,07 · BTC al-tut: −%0,0 · fark: −%0,0 · aylık eşdeğer: — · hedef %4/ay: —
 
 Komisyon (dönem): ödenen ücret: 1,38 $ · brüt K/Z ≤ 0: ücret zararı büyütüyor _(ücret işlem hacmine bağlıdır, emir sayısına değil)_
 
@@ -18,21 +18,21 @@ Komisyon (dönem): ödenen ücret: 1,38 $ · brüt K/Z ≤ 0: ücret zararı bü
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0xdebd49… | BTC | L | 678,56 $ | −4,16 $ |
-| 0xdebd49… | SOL | S | 556,80 $ | −5,60 $ |
-| 0x76c2cd… | TRX | L | 541,69 $ | +3,87 $ |
-| 0x76c2cd… | WLFI | S | 238,85 $ | +0,68 $ |
-| 0x76c2cd… | INJ | L | 138,30 $ | −0,20 $ |
-| 0x76c2cd… | BCH | L | 82,31 $ | +0,75 $ |
-| 0x76c2cd… | kSHIB | L | 65,91 $ | −0,33 $ |
-| 0x76c2cd… | WLD | S | 49,20 $ | −0,52 $ |
-| 0x76c2cd… | ADA | L | 31,72 $ | +0,36 $ |
-| 0x76c2cd… | ALGO | L | 24,95 $ | +0,10 $ |
-| 0x76c2cd… | BTC | L | 13,04 $ | +0,12 $ |
-| 0x76c2cd… | DOGE | L | 11,18 $ | +0,18 $ |
+| 0xdebd49… | BTC | L | 677,58 $ | −5,13 $ |
+| 0xdebd49… | SOL | S | 556,50 $ | −5,30 $ |
+| 0x76c2cd… | TRX | L | 541,74 $ | +3,92 $ |
+| 0x76c2cd… | WLFI | S | 238,45 $ | +1,08 $ |
+| 0x76c2cd… | INJ | L | 138,63 $ | +0,13 $ |
+| 0x76c2cd… | BCH | L | 82,28 $ | +0,72 $ |
+| 0x76c2cd… | kSHIB | L | 65,93 $ | −0,31 $ |
+| 0x76c2cd… | WLD | S | 49,21 $ | −0,53 $ |
+| 0x76c2cd… | ADA | L | 31,70 $ | +0,34 $ |
+| 0x76c2cd… | ALGO | L | 24,95 $ | +0,09 $ |
+| 0x76c2cd… | BTC | L | 13,02 $ | +0,10 $ |
+| 0x76c2cd… | DOGE | L | 11,19 $ | +0,19 $ |
+| 0x76c2cd… | CAKE | L | 11,10 $ | +0,10 $ |
 | 0x76c2cd… | FIL | S | 11,10 $ | −0,10 $ |
-| 0x76c2cd… | CAKE | L | 11,08 $ | +0,08 $ |
-| 0x76c2cd… | AVAX | L | 11,00 $ | −0,00 $ |
+| 0x76c2cd… | AVAX | L | 10,99 $ | −0,01 $ |
 
 ## Son 24 saat
 
@@ -61,7 +61,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 60 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 75 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
@@ -75,16 +75,16 @@ olay yok
 
 ## Dönem (kalıcı seri)
 
-- motor 9.993,07 $ · BTC al-tut 10.009,51 $ · %4/ay hedef çizgisi 10.006,81 $
-- katkı: İlk 11 7 slot −12,34 $ · Yedek 4 slot +5,41 $
-- saha doluluğu %100,00 · nakitte kalan %87,10 (0,2 gün ölçüldü)
-- kullanılan sermaye getirisi −%0,54 · ort. brüt maruziyet 1.289,96 $ · ort. net 488,32 $ · risk kilidi olayı 0 (gölge eğri yok)
-- atlanan sinyal %99,23 · yuvarlanan emir %23,08 (emir 26, atlanan 3363)
+- motor 9.993,13 $ · BTC al-tut 9.995,13 $ · %4/ay hedef çizgisi 10.006,81 $
+- katkı: İlk 11 7 slot −13,02 $ · Yedek 4 slot +6,15 $
+- saha doluluğu %100,00 · nakitte kalan %86,52 (0,2 gün ölçüldü)
+- kullanılan sermaye getirisi −%0,51 · ort. brüt maruziyet 1.346,98 $ · ort. net 501,20 $ · risk kilidi olayı 0 (gölge eğri yok)
+- atlanan sinyal %99,26 · yuvarlanan emir %23,08 (emir 26, atlanan 3480)
 - radar hunisi: evren 2552 → aday 902 → ≥10 işlem 120 → geçen 22
 
 | trader | katman | giriş | çıkış | net $ |
 |---|---|---|---|---|
-| 0x76c2cd… | yedek | 16.11 14:30 | sahada | +4,45 $ |
+| 0x76c2cd… | yedek | 16.11 14:30 | sahada | +5,19 $ |
 | 0xc30c7e… | yedek | 16.11 14:30 | sahada | +0,96 $ |
 | 0x6a8686… | ilk11 | 16.11 14:30 | sahada | +0,15 $ |
 | 0x6d2667… | ilk11 | 16.11 14:30 | sahada | +0,00 $ |
@@ -94,4 +94,4 @@ olay yok
 | 0x9eb42f… | ilk11 | 16.11 14:30 | sahada | +0,00 $ |
 | 0xe69acc… | ilk11 | 16.11 14:30 | sahada | +0,00 $ |
 | 0xc3602c… | yedek | 16.11 14:30 | sahada | +0,00 $ |
-| 0xdebd49… | ilk11 | 16.11 14:30 | sahada | −12,49 $ |
+| 0xdebd49… | ilk11 | 16.11 14:30 | sahada | −13,17 $ |
