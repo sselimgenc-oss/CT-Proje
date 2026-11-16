@@ -373,7 +373,50 @@
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": {},
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": {},
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": {},
-  "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": {},
+  "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": {
+   "ADA": {
+    "acilis_ms": 1794824771689,
+    "giris": 0.15193,
+    "kaldirac": 3.0,
+    "sz": 131.15771880785755
+   },
+   "ALGO": {
+    "acilis_ms": 1794824804593,
+    "giris": 0.078703,
+    "kaldirac": 3.0,
+    "sz": 143.54557569525957
+   },
+   "ARB": {
+    "acilis_ms": 1794824821497,
+    "giris": 0.13345,
+    "kaldirac": 3.0,
+    "sz": -236.06847498615332
+   },
+   "BCH": {
+    "acilis_ms": 1794824973466,
+    "giris": 206.15,
+    "kaldirac": 3.0,
+    "sz": 0.33434876146138903
+   },
+   "ETH": {
+    "acilis_ms": 1794824914007,
+    "giris": 1807.7,
+    "kaldirac": 3.0,
+    "sz": 0.00700069473636802
+   },
+   "HYPE": {
+    "acilis_ms": 1794824988898,
+    "giris": 67.23,
+    "kaldirac": 3.0,
+    "sz": 0.599031874235522
+   },
+   "INJ": {
+    "acilis_ms": 1794825026552,
+    "giris": 6.6636,
+    "kaldirac": 3.0,
+    "sz": 10.505845604508366
+   }
+  },
   "0x9eb42f017e793512e4734f8785de605c4cb3a24e": {},
   "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": {},
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": {},
@@ -386,7 +429,20 @@
     "sz": 0.020712205826821845
    }
   },
-  "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": {}
+  "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": {
+   "ADA": {
+    "acilis_ms": 1794824990449,
+    "giris": 0.15201,
+    "kaldirac": 3.0,
+    "sz": 1177.1506301984728
+   },
+   "HYPE": {
+    "acilis_ms": 1794825049270,
+    "giris": 67.174,
+    "kaldirac": 3.0,
+    "sz": 0.5479660927806341
+   }
+  }
  },
  "realize": {
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 0.0,
@@ -414,19 +470,19 @@
   "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3": 909.0909090909091,
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 909.0909090909091
  },
- "son_niyet_cloid": "0xa32dd9252cc5414367be1268db50e8ad",
+ "son_niyet_cloid": "0xdb55257a09f51ec2d8cb90164728b8b6",
  "tasfiyeler": [],
  "ucret": {
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 0.0,
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 0.0,
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 0.0,
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 0.0,
-  "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": 0.0,
+  "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": 0.11456478736856004,
   "0x9eb42f017e793512e4734f8785de605c4cb3a24e": 0.0,
   "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": 0.0,
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": 0.0,
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 0.0,
   "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3": 1.836146526244575,
-  "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 0.0
+  "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 0.09708648372581227
  }
 }

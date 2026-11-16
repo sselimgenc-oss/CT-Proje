@@ -7,11 +7,13 @@
  },
  "dur": false,
  "dur_neden": null,
- "fren_bitis": {},
+ "fren_bitis": {
+  "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": 1794826826560
+ },
  "gun": "2026-11-16",
  "gun_basi": 9861.426721696578,
  "kapat_gunu": null,
- "son_oz": 9866.344293584809,
+ "son_oz": 9868.009002635963,
  "yeni_coin": {
   "0x2988309f156f806cd1703fff8d29ddfa458fd4ef": [
    [
@@ -72,6 +74,16 @@
    [
     1794732814380,
     "BTC"
+   ]
+  ],
+  "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": [
+   [
+    1794824990288,
+    "ADA"
+   ],
+   [
+    1794825049077,
+    "HYPE"
    ]
   ]
  },
