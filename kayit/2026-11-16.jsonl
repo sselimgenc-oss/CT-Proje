@@ -212,3 +212,5 @@
 {"zaman_ms":1794804153651,"olay":"emir_yok","adres":"0x6834b221185e8af4d573583a570c47406804f5f6","coin":"ZEC","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1794804151637,"gorme_ms":1794804152009,"yas_ms":2014}
 {"zaman_ms":1794804203523,"olay":"telegram","metin":"🧾 Son 1 saat (06:43–07:43 TSİ): 7 emir · sanal\n➕ açılış 1 · ⬆️ artırma 6 · ⬇️ azaltma 0 · ✖️ kapanış 0\n🏆 En büyük: 87,1 $ (ZEC, AL) · 0x6834b2…\n⏭️ Kopyalanmayan trader dolumu: 19 (≈1 ayrı işlem)\n   • kural gereği 19: 19 toplu emir bekliyor (fark küçük)\n   • kaçırılan 0 (geç görülen / veri yok)\n💵 Tut","acik":true}
 {"zaman_ms":1794804777108,"olay":"tur","ozsermaye_usd":9881.0996}
+{"zaman_ms":1794805225100,"olay":"funding","saat":498557,"saat_adet":1,"funding_usd":-0.0016385806485826899,"toplam_funding_usd":-0.5121887585663184}
+{"zaman_ms":1794805638917,"olay":"tur","ozsermaye_usd":9878.9276}
