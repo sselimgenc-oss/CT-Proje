@@ -1144,3 +1144,7 @@
 {"t":"sonuc","cloid":"0x53a4faa19f6914a6e3686a8927f02f19","durum":"dolu","ms":1794809982568,"sz":0.15095655098704758,"px":1809.9,"ucret":0.12294731773415583}
 {"t":"niyet","kimlik":"0x6834b221185e8af4d573583a570c47406804f5f6:807464332475456","eylem":"artir","adres":"0x6834b221185e8af4d573583a570c47406804f5f6","coin":"ETH","yon":"A","usd":230.047851,"reduce_only":false,"cloid":"0x8c0760f821296ee396347ad054dc41ef","ms":1794809982575}
 {"t":"sonuc","cloid":"0x8c0760f821296ee396347ad054dc41ef","durum":"dolu","ms":1794809982732,"sz":0.12710528250529007,"px":1809.9,"ucret":0.10352153286284603}
+{"t":"niyet","kimlik":"0x6834b221185e8af4d573583a570c47406804f5f6:936284367341264","eylem":"azalt","adres":"0x6834b221185e8af4d573583a570c47406804f5f6","coin":"ETH","yon":"B","usd":275.519522,"reduce_only":true,"cloid":"0x4ba7c74789b3f77977f338f32b56aae7","ms":1794813518061}
+{"t":"sonuc","cloid":"0x4ba7c74789b3f77977f338f32b56aae7","durum":"dolu","ms":1794813518219,"sz":0.15250720793826683,"px":1806.6,"ucret":0.12398378483757277}
+{"t":"niyet","kimlik":"kapat:0x6834b221185e8af4d573583a570c47406804f5f6:ETH:1794813518227:0:tam_kapanis","eylem":"kapat","adres":"0x6834b221185e8af4d573583a570c47406804f5f6","coin":"ETH","yon":"B","usd":238.385859,"reduce_only":true,"cloid":"0xf8bb419676f37a3690cf550ccaccabfd","ms":1794813518227}
+{"t":"sonuc","cloid":"0xf8bb419676f37a3690cf550ccaccabfd","durum":"dolu","ms":1794813518383,"sz":0.12555462555407082,"px":1806.6,"ucret":0.10207214393669295}
