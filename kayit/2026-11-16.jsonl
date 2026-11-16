@@ -121,3 +121,7 @@
 {"zaman_ms":1794793807471,"olay":"emir_yok","adres":"0x6834b221185e8af4d573583a570c47406804f5f6","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794793807073,"gorme_ms":1794793807469,"yas_ms":398}
 {"zaman_ms":1794793807472,"olay":"emir_yok","adres":"0x6834b221185e8af4d573583a570c47406804f5f6","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794793807073,"gorme_ms":1794793807469,"yas_ms":399}
 {"zaman_ms":1794793807472,"olay":"emir_yok","adres":"0x6834b221185e8af4d573583a570c47406804f5f6","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1794793807073,"gorme_ms":1794793807469,"yas_ms":399}
+{"zaman_ms":1794794370552,"olay":"tur","ozsermaye_usd":9871.5079}
+{"zaman_ms":1794794404156,"olay":"funding","saat":498554,"saat_adet":1,"funding_usd":0.0599386438063013,"toplam_funding_usd":-0.5282087945919336}
+{"zaman_ms":1794795071599,"olay":"emir_yok","adres":"0x2988309f156f806cd1703fff8d29ddfa458fd4ef","coin":"HYPE","eylem":"azalt","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1794795071242,"gorme_ms":1794795071599,"yas_ms":357}
+{"zaman_ms":1794795071667,"olay":"emir_yok","adres":"0x2988309f156f806cd1703fff8d29ddfa458fd4ef","coin":"@107","eylem":"ac","karar":"atlandi","neden":"spot_atlandi","trader_dolum_ms":1794795071308,"gorme_ms":1794795071667,"yas_ms":359}
