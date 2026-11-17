@@ -2,26 +2,26 @@
  "bas_ms": 1794828600000,
  "btc_donem_fiyat": 64642.0,
  "doluluk": {
-  "brut_ms": 315730297663.8511,
-  "kapasite_ms": 1125013791.0,
-  "nakit_ms": 70714192.83727552,
-  "net_ms": 64130527692.68808,
-  "slot_ms": 1125013791.0,
-  "son_ms": 1794931001533,
-  "sure_ms": 102273981
+  "brut_ms": 319033620358.8848,
+  "kapasite_ms": 1135097656.0,
+  "nakit_ms": 71301085.04315467,
+  "net_ms": 64665060826.452995,
+  "slot_ms": 1135097656.0,
+  "son_ms": 1794931918248,
+  "sure_ms": 103190696
  },
  "donem": "2026-11-16T11:30:00Z",
  "emir_sayac": {
   "atlama_neden": {
-   "bant_ici": 4863,
-   "hip3_atlandi": 793,
-   "min_emir_atlandi": 160,
+   "bant_ici": 4884,
+   "hip3_atlandi": 1101,
+   "min_emir_atlandi": 175,
    "slot_tavani": 2061,
    "spot_atlandi": 14,
    "ters_netlesme": 13
   },
-  "atlanan": 7904,
-  "emir": 74,
+  "atlanan": 8248,
+  "emir": 78,
   "yuvarlanan": 10
  },
  "gunler": [
@@ -31,9 +31,9 @@
    "ozsermaye_usd": 10002.1748
   },
   {
-   "btc": 63765.5,
+   "btc": 64166.5,
    "gun": "2026-11-17",
-   "ozsermaye_usd": 10004.1327
+   "ozsermaye_usd": 10021.376
   }
  ],
  "kasa_usd": 10000.0,
@@ -45,7 +45,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": 35.9588,
+   "net_usd": 42.9092,
    "sonuc": null
   },
   {
@@ -75,7 +75,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": -45.5862,
+   "net_usd": -37.1801,
    "sonuc": null
   },
   {
@@ -95,7 +95,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": -1.6543,
+   "net_usd": -3.1482,
    "sonuc": null
   },
   {
@@ -105,7 +105,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": 14.3169,
+   "net_usd": 18.9003,
    "sonuc": null
   },
   {
@@ -135,7 +135,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "kor_gevsetildi",
    "katman": "yedek",
-   "net_usd": 1.5079,
+   "net_usd": 0.3051,
    "sonuc": null
   },
   {
