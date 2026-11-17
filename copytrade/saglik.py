@@ -21,7 +21,7 @@ RADAR_UYARI = 30 * SAAT                    # günlük radar (00:37Z + yedek 02:1
 RADAR_KRITIK = 54 * SAAT
 PANO_UYARI = 45 * DAKIKA                   # veri dalındaki pano 15 dk'da bir; canlı Cloudflare sayfası en az bir yayın geride olabilir
 GECTI_ALT = 8                              # RADAR_V1 günlük beklenti 8–20 (devir kontrol listesi)
-GECTI_UST = 20
+GECTI_UST = 30                             # 2026-11-17 kullanıcı: 20 sık yanlış alarm veriyordu (21–22 normal)
 TELEGRAM_HATA_UYARI = 5
 KOPMA_UYARI = 5
 # G2 (2026-11-06): kalıcı durum + kayıt olayları + iş akışı koşusu + veri dalı commit yaşı
