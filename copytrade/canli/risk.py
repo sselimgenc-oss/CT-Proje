@@ -44,6 +44,7 @@ class Risk:
         self.son_oz: float | None = float(d["son_oz"]) if d.get("son_oz") is not None else None     # F09: son gözlenen özsermaye (gün sınırı tabanı)
         self.dur: bool = bool(d.get("dur", False))
         self.dur_neden: str | None = d.get("dur_neden")
+        self.dur_dosya: bool = bool(d["dur_dosya"]) if "dur_dosya" in d else self.dur      # Denetim-3: `durum/DUR` yazıldı/görüldü mü (False + dur → yazılamadı/çökme: motor kurtarır). Eski biçim (alan yok): dur açıksa yazılmış sayılır
         self.fren_bitis: dict[str, int] = {k: int(v) for k, v in (d.get("fren_bitis") or {}).items()}
         self.yeni_coin: dict[str, deque[tuple[int, str]]] = {a: deque((int(x[0]), str(x[1])) if isinstance(x, (list, tuple)) else (int(x), "") for x in v) for a, v in (d.get("yeni_coin") or {}).items()}      # (ms, coin); eski biçim (yalnız ms) okunur
         self.acilis_durdu: dict[str, bool] = dict(d.get("acilis_durdu") or {})        # neden -> aktif mi (gunluk_kayip, mutabakat, kasa_siniri, kadro)
@@ -70,7 +71,7 @@ class Risk:
             olaylar.append("gunluk_kapat")
         dusus = (self.zirve - ozsermaye) / self.zirve if self.zirve > 0 else 0.0
         if dusus >= float(self.rules["canli_zirve_dusus_oran"]) - 1e-12 and not self.dur:
-            self.dur, self.dur_neden = True, "zirve_dusus"
+            self.dur, self.dur_neden, self.dur_dosya = True, "zirve_dusus", False
             olaylar.append("zirve_dusus")
         return olaylar
 
@@ -166,5 +167,5 @@ class Risk:
 
     # ------------------------------------------------------------------ kalıcılık
     def to_json(self) -> dict[str, Any]:
-        return {"zirve": self.zirve, "gun": self.gun, "gun_basi": self.gun_basi, "son_oz": self.son_oz, "dur": self.dur, "dur_neden": self.dur_neden, "fren_bitis": self.fren_bitis,
+        return {"zirve": self.zirve, "gun": self.gun, "gun_basi": self.gun_basi, "son_oz": self.son_oz, "dur": self.dur, "dur_neden": self.dur_neden, "dur_dosya": self.dur_dosya, "fren_bitis": self.fren_bitis,
                 "yeni_coin": {a: list(v) for a, v in self.yeni_coin.items()}, "acilis_durdu": self.acilis_durdu, "kapat_gunu": self.kapat_gunu}
