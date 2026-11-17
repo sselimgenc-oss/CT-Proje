@@ -1137,3 +1137,7 @@
 {"zaman_ms":1794895214160,"olay":"telegram","metin":"☀️ Günaydın! Dünün sonucu (sanal · deneme parası)\n━━━━━━━━━━━━━━\n📉 Son 24 saat: −4,60 $ (−%0,05)\n💰 Kasa şimdi: 9.995,15 $ (başlangıç 10.000 $)\n🏁 Başlangıçtan beri: −%0,05\n━━━━━━━━━━━━━━\n🧾 Dün 51 emir verildi · 👥 takipte 11/11 trader\n💸 Funding (sanal): +0,11 $\n📌 Açık pozisyonlar (18):\n🟩 HYPE · 1.021 ","acik":true}
 {"zaman_ms":1794895373546,"olay":"tur","ozsermaye_usd":9995.1121}
 {"zaman_ms":1794896240548,"olay":"tur","ozsermaye_usd":9993.6831}
+{"zaman_ms":1794896593312,"olay":"telegram","metin":"🧾 Son 1 saat (08:23–09:23 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 97 (≈64 ayrı işlem)\n   • kural gereği 97: 97 slot tavanı\n   • kaçırılan 0 (geç görülen / veri yok)\n💰 Kasa: 9.992,14 $ · bugün 🔴 −10,04 $ (−%0,1) · başlangıçtan 🔴 −7,86 $ (−%0,1)","acik":true}
+{"zaman_ms":1794897094331,"olay":"tur","ozsermaye_usd":9993.3139}
+{"zaman_ms":1794897317759,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"BTC","eylem":"azalt","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1794897317467,"gorme_ms":1794897317758,"yas_ms":292}
+{"zaman_ms":1794897317759,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"BTC","eylem":"azalt","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1794897317467,"gorme_ms":1794897317758,"yas_ms":292}
