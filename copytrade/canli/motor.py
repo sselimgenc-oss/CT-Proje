@@ -923,6 +923,23 @@ class Motor:
         except Exception as hata:                          # noqa: BLE001
             self.kayit({"olay": "kapanis_borsa_okuma_hata", "tur": type(hata).__name__})
             return yerel, False
+        if abs(yerel) > EPS and abs(hl.get(coin, 0.0)) <= EPS:        # Denetim-1: boş/eksik pozisyon yanıtı tek okumayla "borsa 0" sayılmaz (defter emirsiz silinir, stop iptal olurdu)
+            mk0 = self._mark_kapanis(adres, coin)
+            if not mk0 or abs(yerel) * mk0 > float(self.rules["canli_kapanis_toz_usd"]):
+                try:
+                    hl2: dict[str, float] | None = clearinghouse_pozisyonlari(self.post, os.environ.get("HL_HESAP_ADRESI", ""), self._dexler())
+                except Exception as hata:                  # noqa: BLE001
+                    self.kayit({"olay": "kapanis_borsa_okuma_hata", "tur": type(hata).__name__, "asama": "teyit"})
+                    hl2 = None
+                if hl2 is None or abs(hl2.get(coin, 0.0)) > EPS:      # ikinci okuma teyit etmedi: defterden SİLME; mutabakat bayrağı + alarm
+                    self.risk.bayrak("mutabakat", True)
+                    self.kayit({"olay": "bos_okuma_teyitsiz", "adres": adres, "coin": coin, "yerel_sz": yerel, "ikinci_okuma": None if hl2 is None else hl2.get(coin, 0.0)})
+                    if self._aralik_mi("bos_okuma_alarm", self.saat_ms(), 600):
+                        self.tg.gonder(tg.alarm("ALARM: borsa pozisyon okuması tutarsız", f"{coin}: defterde {yerel:g} var, borsa okuması boş döndü ama ikinci okuma teyit etmedi.\n"
+                                                "Defter silinmedi, stop iptal edilmedi; yeni açılış durdu (mutabakat)."))
+                    if hl2 is None:
+                        return yerel, False
+                    hl = hl2                                # ikinci okuma pozisyonu gösteriyor: ona göre devam (kapanış emri borsadaki gerçek miktara kırpılır)
         diger = sum(c[coin].sz for a, c in self.hesap.poz.items() if a != adres and coin in c)
         self._kalan_hl = {"coin": coin, "hl": hl.get(coin, 0.0), "diger": diger}
         return self._kirp(yerel, hl.get(coin, 0.0) - diger), True
@@ -1917,6 +1934,19 @@ class Motor:
             self.kayit({"olay": "acik_emir_okuma_hata", "tur": type(hata).__name__})
             return None
 
+    def _stop_kayip_teyit(self, coin: str, yerel_net: float) -> tuple[str, float | None]:
+        """Denetim-1 (O2): borsa stopu açık emirlerde görünmüyor. Borsadaki net pozisyon aynı yönde ve (≥ %98) aynı miktarda duruyorsa "duruyor" (stop dışarıda iptal/sorunlu; pozisyon
+        KAPATILMAZ); küçülmüş/kapanmış/ters → "kucuk" (mevcut tetiklendi akışı); okunamadı → "bilinmiyor" (kapatılmaz). Döner (durum, borsa_sz)."""
+        try:
+            hl = clearinghouse_pozisyonlari(self.post, os.environ.get("HL_HESAP_ADRESI", ""), self._dexler())
+        except Exception as hata:                          # noqa: BLE001
+            self.kayit({"olay": "borsa_stop_kayip_okuma_hata", "tur": type(hata).__name__, "coin": coin})
+            return "bilinmiyor", None
+        v = float(hl.get(coin, 0.0))
+        if v * yerel_net > 0 and abs(v) >= 0.98 * abs(yerel_net):
+            return "duruyor", v
+        return "kucuk", v
+
     def borsa_stop_esitle(self, acik: list[dict] | None, simdi: int) -> None:
         """K-64: gerçek kipte borsada duran felaket stoplarını net pozisyonlarla eşitler. Kaybolan (tetiklenmiş) stopun coinindeki yerel pozisyonlar borsa teyitli
         kapanış yoluyla temizlenir (`_kapat_coin` → borsa 0 ise G-13 harici kapanış + defter düzeltmesi). Hata → kayıt + saatte bir alarm; motor durmaz."""
@@ -1924,15 +1954,28 @@ class Motor:
             return
         hedef = borsa_stop.hedefler(self.hesap.poz, self.marks, float(self.rules["canli_borsa_stop_oran"]), float(self.rules.get("canli_min_nosyonel_usd", 10)))
         olay = self.borsa_stop.esitle(hedef, acik, self.yurutucu)
+        yeniden = False
         for c in olay["kayip"]:
             adresler = [a for a, cs in self.hesap.poz.items() if c in cs]
             self.kayit({"olay": "borsa_stop_kayip", "coin": c, "yerel_acik": bool(adresler)})
             if not adresler:                                      # pozisyon zaten kapalı: HL reduce-only stopu kendisi düşürmüş olabilir; alarm yok
                 continue
+            durum, hl_sz = self._stop_kayip_teyit(c, sum(self.hesap.poz[a][c].sz for a in adresler))
+            if durum != "kucuk":                              # Denetim-1 (O2): borsada pozisyon HÂLÂ duruyor (ya da okunamadı) → KAPATMA; stop yeniden kurulur + alarm
+                self.kayit({"olay": "borsa_stop_kayip_poz_duruyor" if durum == "duruyor" else "borsa_stop_kayip_teyitsiz", "coin": c, "hl_sz": hl_sz})
+                self.tg.gonder(tg.alarm("ALARM: borsa stopu kayboldu, pozisyon borsada duruyor" if durum == "duruyor" else "ALARM: borsa stopu kayboldu, pozisyon okunamadı",
+                                        f"{c} için borsadaki felaket stopu açık emirlerde yok; " + (f"borsada pozisyon hâlâ {hl_sz:g}. Kapatılmadı, stop yeniden kuruluyor." if durum == "duruyor"
+                                                                                                    else "borsa pozisyonu okunamadığı için kapatılmadı; stop bir sonraki eşitlemede yeniden kurulacak."), "🛑"))
+                yeniden = yeniden or durum == "duruyor"
+                continue
             self.tg.gonder(tg.alarm("ALARM: borsa stopu tetiklendi / kayboldu", f"{c} için borsadaki felaket stopu açık emirlerde yok (tetiklenmiş olabilir).\n"
                                     "Pozisyon borsadan teyitle temizleniyor; stop yeniden kurulacak.", "🛑"))
             for adres in adresler:
                 self._kapat_coin(adres, c, "borsa_stop", simdi)
+        if yeniden:                                           # stopsuz an uzamasın: hemen yeniden kur (açık emir okuması yok → yalnız koy/iptal)
+            ek = self.borsa_stop.esitle(hedef, None, self.yurutucu)
+            for ad in ("konan", "hata"):
+                olay[ad].extend(ek[ad])
         for ad in ("konan", "iptal", "yetim"):
             for x in olay[ad]:
                 self.kayit({"olay": f"borsa_stop_{ad}", **x})
