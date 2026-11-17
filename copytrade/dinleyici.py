@@ -14,6 +14,7 @@ import asyncio
 import json
 import math
 import os
+import random
 import re
 import signal
 import socket
@@ -208,6 +209,8 @@ class Olcum:
                     pencere[ad].kacan_sinif[sinif] = pencere[ad].kacan_sinif.get(sinif, 0) + 1
                 if sinif == "gercek":
                     gercek += 1
+                if sinif in ("gercek", "kopma_araligi"):      # Denetim-8 (O11): kaçan perp dolum yalnız sayılmaz; dolgu yoluyla İŞLENİR (kapanış geç de olsa uygulanır; açılış `canli_olay_stale_sn` ile reddedilir)
+                    self.dolgu_yeni.append((ad, f))
         for pencere in (self.toplam, self.saat):
             pencere[ad].kacan += gercek
         return gercek
@@ -333,6 +336,7 @@ class Ayar:
     alma_zaman_asimi_sn: float = 60.0
     geri_cekilme_ilk_sn: float = 1.0
     geri_cekilme_max_sn: float = 30.0
+    kararli_oturum_sn: float = 60.0                               # Denetim-8 (O10): geri çekilme YALNIZ bu süre kesintisiz açık kalan oturumdan sonra ilk değere döner (bağlanıp hemen kapanan bağlantı abonelik fırtınası yaratmasın)
     sure_sn: float | None = None
     baslangic_bekleme_sn: tuple[float, ...] = (2.0, 5.0, 15.0)    # H5b: başlangıç pozisyonu okuması hata verirse yeniden denemeden önce bekleme (sn); 3 yeniden deneme
     rest_dolum_ara_sn: float = 1.5                                # `userFillsByTime` (dolgu, hakem; sayfalar dahil) ardışık istekleri arası en az (sn; ağırlık ≥ 20 → ≈ 13-15 ağırlık/sn, HL sınırı 20/sn)
@@ -357,6 +361,8 @@ class Dinleyici:
         self.ayar = ayar or Ayar()
         self.saat_ms = saat_ms or (lambda: int(time.time() * 1000))
         self.mono = mono or time.monotonic
+        self._oturum_bas: float | None = None
+        self._oturum_son: float | None = None
         self.olcum = Olcum(izlenenler)
         self.olcum.genel["yeniden_baslama"] = onceki_baslama
         self.baslangic_ms = self.saat_ms()
@@ -554,11 +560,15 @@ class Dinleyici:
                 del self._dolgu_bekleyen[i.ad]
             genel["dolgu_bekleyen"] = len(self._dolgu_bekleyen)
             genel["dolgu"] = genel.get("dolgu", 0) + self.olcum.dolgu(i.ad, i.adres, dolumlar, bas, bit)
-            yeni, self.olcum.dolgu_yeni = sorted(self.olcum.dolgu_yeni, key=lambda x: int(x[1]["time"])), []
-            for ad, f in yeni:       # H5: dolgu geç gelir -> girişler `gec_sinyal` ile reddedilir, çıkışlar serbest
-                adres = next((x.adres for x in self.liste if x.ad == ad), "")
-                self.risk_isle(Olay(f"{adres}:{f['tid']}" if adres else "", ad, adres, int(f["time"]), bit, "dolgu", False, "", str(f.get("coin", "")), _sayi(f.get("px")),
-                                    _sayi(f.get("sz")), str(f.get("side", "")), _sayi(f.get("startPosition"))), True, bit)       # kimlik: motor aynı dolumu snapshot'tan tanır (poz_tr bir kez)
+            self._dolgu_olaylarini_isle(bit)
+
+    def _dolgu_olaylarini_isle(self, bit: int) -> None:
+        """`olcum.dolgu_yeni` (dolgu ya da REST hakemin kaçan dolumları, Denetim-8 O11) risk/motor hattına verilir ve boşaltılır."""
+        yeni, self.olcum.dolgu_yeni = sorted(self.olcum.dolgu_yeni, key=lambda x: int(x[1]["time"])), []
+        for ad, f in yeni:       # H5: dolgu geç gelir -> girişler `gec_sinyal` ile reddedilir, çıkışlar serbest
+            adres = next((x.adres for x in self.liste if x.ad == ad), "")
+            self.risk_isle(Olay(f"{adres}:{f['tid']}" if adres else "", ad, adres, int(f["time"]), bit, "dolgu", False, "", str(f.get("coin", "")), _sayi(f.get("px")),
+                                _sayi(f.get("sz")), str(f.get("side", "")), _sayi(f.get("startPosition"))), True, bit)       # kimlik: motor aynı dolumu snapshot'tan tanır (poz_tr bir kez)
 
     def _hakem_baslat(self) -> None:
         """REST hakem turunu ARKA PLANDA başlatır (WS akışı beklemez). Önceki tur sürüyorsa bu tur atlanır (`genel.rest_tur_atlanan`). Doldurulamayan dolgu varsa onu da yeniden dener."""
@@ -597,6 +607,7 @@ class Dinleyici:
                     self._hata_say("hakem", tur or "Bilinmiyor")
                     continue
                 self.olcum.rest_karsilastir(i.ad, i.adres, dolumlar, bit, eski.rest_tolerans_ms)
+                self._dolgu_olaylarini_isle(bit)                        # Denetim-8 (O11): hakemin bulduğu kaçanlar dolgu yoluyla işlenir
         finally:
             self.ayar = eski
         self.olcum.temizle(self.saat_ms())
@@ -614,6 +625,7 @@ class Dinleyici:
 
     async def _oturum(self, ws: Any) -> None:
         son_ping = son_rest = son_ozet = son_alma = self.mono()
+        self._oturum_bas = self._oturum_son = son_ping                    # Denetim-8 (O10): oturumun kararlı kalma süresi (ek mono() okuması yok: sahte saatli testler kaymasın)
         while not self._dur.is_set():
             if self.ayar.sure_sn is not None and self.mono() - self._t0 >= self.ayar.sure_sn:
                 return
@@ -622,6 +634,7 @@ class Dinleyici:
             except asyncio.TimeoutError:
                 ham = None
             simdi = self.mono()
+            self._oturum_son = simdi
             if ham is not None:
                 son_alma = simdi
                 self.mesaj_isle(ham)
@@ -656,8 +669,12 @@ class Dinleyici:
                     if len(self.olcum.kopma_araliklari) > onceki_aralik:
                         self._dolgu_baslat(self.olcum.kopma_araliklari[-1])       # H2b: kopmada kaçan işlem = kayıp -> REST ile tamamla (ARKA PLANDA; kopma aralığı bekleyende saklanır)
                     self._bas_baslat()                                            # H5b: trader'ın açık pozisyonları, ARKA PLANDA (dolgudan SONRA başlar: REST gerçektir)
-                    bekleme = self.ayar.geri_cekilme_ilk_sn
-                    await self._oturum(ws)
+                    self._oturum_bas = self._oturum_son = None
+                    try:
+                        await self._oturum(ws)
+                    finally:
+                        if self._oturum_bas is not None and self._oturum_son - self._oturum_bas >= self.ayar.kararli_oturum_sn:      # Denetim-8 (O10): kararlı oturum → geri çekilme sıfırlanır; abonelikten hemen sonra DEĞİL
+                            bekleme = self.ayar.geri_cekilme_ilk_sn
                 except asyncio.CancelledError:
                     raise
                 except Exception:        # noqa: BLE001 - her bağlantı/akış hatası kopma sayılır; ayrıntı (sağlayıcı metni) yazılmaz
@@ -665,7 +682,7 @@ class Dinleyici:
                     if self.olcum.kopma_bas_ms is None:
                         self.olcum.kopma_bas_ms = self.olcum.son_mesaj_ms or self.saat_ms()
                     try:
-                        await asyncio.wait_for(self._dur.wait(), timeout=bekleme)
+                        await asyncio.wait_for(self._dur.wait(), timeout=bekleme * random.uniform(0.5, 1.5))      # Denetim-8 (O10): jitter (çok süreç/abonelik aynı anda yeniden bağlanmasın)
                     except asyncio.TimeoutError:
                         pass
                     bekleme = min(self.ayar.geri_cekilme_max_sn, bekleme * 2)

@@ -98,6 +98,7 @@ class Telegram:
         self.token = (token if token is not None else ortam.get("TELEGRAM_BOT_TOKEN", "")).strip()
         self.chat_id = str(chat_id if chat_id is not None else ortam.get("TELEGRAM_CHAT_ID", "")).strip()
         self.post = post or varsayilan_post
+        self.izinli_id: set[str] = {x.strip() for x in re.split(r"[,\s]+", str(ortam.get("TELEGRAM_IZINLI_ID", ""))) if x.strip()}      # Denetim-8: GERÇEK kipte grup sohbetinde komut verebilecek kullanıcı kimlikleri (from.id); boş = grupta komut yok
         self.komut_kapali = komut_kapali_mi(ortam.get("TELEGRAM_KOMUT", ""))      # G4: tek getUpdates tüketicisi (sunucu); kapalıysa yalnız gönderim (S-22: "kapalı" da)
         self.kayit = kayit
         self.sessiz_utc, self.saat_s = sessiz_utc, saat_s or time.time          # gece (UTC saat aralığı) önemsiz mesajlar sessiz (bildirim sesi yok); alarmlar HER ZAMAN sesli
@@ -217,7 +218,11 @@ class Telegram:
             return False
         kimden = m.get("from") or {}
         if self.chat_id.startswith("-"):
-            return not kimden.get("is_bot", False)
+            if kimden.get("is_bot", False):
+                return False
+            if self.kip == "gercek":                            # Denetim-8: gerçek parada gruptaki HER üye /kapat /devam veremez: `TELEGRAM_IZINLI_ID` boşsa komut yok, doluysa yalnız listedeki from.id
+                return str(kimden.get("id", "")) in self.izinli_id
+            return True                                         # sanal kip: eski davranış (grup üyesi)
         return str(kimden.get("id", "")) == self.chat_id
 
     def komutlari_al(self) -> list[str]:
@@ -438,7 +443,8 @@ ATLA_TR = {"gec_acilis": "geç görülen açılış", "spot_atlandi": "spot coin
            "hesap_yok": "trader hesap değeri kullanılamadı", "slot_tavani": "slot tavanı", "marj_yok": "marj yok", "coin_tavani": "coin tavanı", "min_nosyonel": "çok küçük emir",
            "min_emir_atlandi": "çok küçük (< 11 $)", "bant_ici": "toplu emir bekliyor (fark küçük)", "inen_trader": "ayrılan trader (yeni alım yok)", "patlama_freni": "patlama freni", "dur": "motor durdu",
            "gunluk_kayip": "günlük kayıp freni", "mutabakat": "mutabakat farkı", "elle_dur": "elle duraklatma", "kasa_siniri": "kasa sınırı", "belirsiz": "belirsiz emir bekleniyor", "stop_korumasiz": "stopsuz pozisyon kapatıldı (geçici)",
-           "kapanis_eksik": "kapanış eksik", "kaldirac_dusuk": "azami kaldıraç düşük (< 5x)", "kaldirac_bilinmiyor": "azami kaldıraç okunamadı", "mark_eski": "fiyat verisi eski"}
+           "kapanis_eksik": "kapanış eksik", "kaldirac_dusuk": "azami kaldıraç düşük (< 5x)", "kaldirac_bilinmiyor": "azami kaldıraç okunamadı", "mark_eski": "fiyat verisi eski",
+           "hl_deger": "HL hesap değeri geçersiz"}
 KACIRILAN_NEDENLER = ("gec_acilis", "trader_hesap_yok", "hesap_yok")      # S-13: "kaçırılan" (geç görülen / veri yok); geri kalanı "kural gereği"
 
 
