@@ -37,7 +37,7 @@ from copytrade.canli.niyet import Niyet, cloid_uret
 from copytrade.canli import borsa_stop
 from copytrade.canli.borsa_stop import BorsaStop
 from copytrade.canli.risk import Risk, gun
-from copytrade.canli.yurutucu import AnahtarYok, Dolum, SanalYurutucu, Yurutucu, gercek_yurutucu_olustur
+from copytrade.canli.yurutucu import AnahtarYok, Dolum, SanalYurutucu, Yurutucu, gercek_yurutucu_olustur, ucret_eslestir
 from copytrade.dinleyici import Ayar, Dinleyici, Izlenen, Olay, clearinghouse_ayristir, clearinghouse_pozisyonlari, clearinghouse_yuk, coin_listesi, rest_dolumlar, rest_post_fabrikasi, ws_baglan
 from copytrade.hl_ortak import spot_usdc
 from copytrade.izleme_liste import perp_dex_names
@@ -483,6 +483,8 @@ class Motor:
         self.saha = Saha(rules, self.kasa, _oku(durum_dizin / "saha.json"))
         self.risk = Risk(rules, self.kasa, oku("risk.json"))
         self.borsa_stop = BorsaStop(oku("borsa_stop.json"))             # K-64: borsada duran felaket stopları (yalnız gerçek kip kullanır)
+        if self.kip == "gercek":
+            self.borsa_stop.kalici_yaz = lambda: _yaz(durum_dizin / "borsa_stop.json", self.borsa_stop.to_json())      # Denetim-6 (O3): stop cloid'i gönderimden ÖNCE diske
         if self._donem_eski is not None:
             self.risk.donem_yenile(self.hesap.ozsermaye({}))     # S-3: zirve / gün başı yeni dönem özsermayesine (500 → 300 geçişi zirve düşüşü sayılmaz)
         self._islenen: dict[str, None] = {}                     # işlenen (canlı) dolum kimlikleri, ekleme sırasıyla; G-14: sınır ADRES BAŞINA (`canli_islenen_adres_sakla`), tek yoğun adres diğerlerini düşürmez
@@ -546,6 +548,7 @@ class Motor:
         self.funding_kimlik: list[str] = list(m.get("funding_kimlik") or [])       # G7: son işlenen satırların "time:coin" anahtarları (çift sayım yok)
         self.funding_gercek_usd = float(m.get("funding_gercek_usd", 0.0))          # G7: HL'den işlenen gerçek funding toplamı ($, HL hesabı = kasa ölçeği; + alınan / − ödenen)
         self.ucret_gercek_usd = float(m.get("ucret_gercek_usd", 0.0))              # G7: HL `fee` ile deftere yazılan gerçek ücret toplamı ($)
+        self.ucret_bekleyen: list[dict] = [dict(x) for x in (m.get("ucret_bekleyen") or []) if isinstance(x, dict)]     # Denetim-6 (O9): tahmini ücretle deftere yazılmış gerçek dolumlar (cloid, adres, coin, oid, ms, kayit_ms, tahmin); dakikalık bakım kilit dışında gerçek ücretle düzeltir
         self.ucret_tahmin_say = int(m.get("ucret_tahmin_say", 0))                  # G7: gerçek ücret bulunamayıp tahmin (`maliyet_taker`) kullanılan dolum sayısı
         self.kuyruk_gecikme: deque[float] = deque(maxlen=20000)
         self.en_buyuk_emir: dict = {}
@@ -600,7 +603,7 @@ class Motor:
                 "ozet_gunu": self._ozet_gunu, "ozet_oz": self._ozet_oz, "ozet_emir": self._ozet_emir, "kip": self.kip, "kasa_usd": self.kasa, "kasa_ayar_usd": self.kasa_ayar, "vardiya": self.vardiya_id, "yazildi_ms": self.saat_ms(),
                 "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.kalici_offset,
                 "son_funding_ms": self.son_funding_ms, "funding_kimlik": self.funding_kimlik[-500:], "funding_gercek_usd": self.funding_gercek_usd, "ucret_gercek_usd": self.ucret_gercek_usd, "ucret_tahmin_say": self.ucret_tahmin_say,
-                "btc_donem": self.btc_donem, "mutabakat_tutan": self.mutabakat_tutan, "yetim_ilk": self.yetim_ilk}
+                "ucret_bekleyen": self.ucret_bekleyen[-500:], "btc_donem": self.btc_donem, "mutabakat_tutan": self.mutabakat_tutan, "yetim_ilk": self.yetim_ilk}
 
     def _hesap_yaz(self) -> None:
         """hesap.json atomik yazılır; gerçek kipte önce son sağlam sürüm `hesap.json.bak` (Denetim-2)."""
@@ -641,6 +644,49 @@ class Motor:
     # ------------------------------------------------------------------ yardımcılar
     def mark(self, coin: str, yedek: float | None = None) -> float | None:
         return self.marks.get(coin) or yedek
+
+    def ucret_oku(self, simdi: int) -> list | None:
+        """Denetim-6 (O9; ağ, KİLİT DIŞI): tahmini ücretle yazılmış dolumlar varsa tek `userFillsByTime` okuması (en eski bekleyenden 5 sn öncesinden). Okunamazsa None (bekleyenler kalır, sonraki dakika)."""
+        bekleyen = list(self.ucret_bekleyen)
+        adres = os.environ.get("HL_HESAP_ADRESI", "").strip()
+        if self.kip != "gercek" or not bekleyen or not adres:
+            return None
+        try:
+            r = self.post({"type": "userFillsByTime", "user": adres, "startTime": max(0, min(int(b.get("ms") or 0) for b in bekleyen) - 5000)})
+        except Exception as hata:                          # noqa: BLE001
+            self.kayit({"olay": "ucret_okuma_hata", "tur": type(hata).__name__})
+            return None
+        return r if isinstance(r, list) else None
+
+    def ucret_uygula(self, satirlar: list | None, simdi: int) -> None:
+        """Denetim-6 (O9; kilit altında, ağ yok): bekleyen tahmini ücretleri HL `fee` ile düzeltir. Düzeltme `hesap.ucret_duzelt` ile özdeşliği korur (özsermaye −Δ); `motor.json` (bekleyen listesi) ÖNCE,
+        `hesap.json` SONRA yazılır (çökmede çift düzeltme yok, en kötü ihtimal tahmin kalır). 30 dk içinde eşleşmeyen kayıt düşer (tahmin kalır; `ucret_tahmin_say` o dolumu saymaya devam eder)."""
+        if not self.ucret_bekleyen:
+            return
+        kalan: list[dict] = []
+        duzeltilen = 0
+        for b in self.ucret_bekleyen:
+            gercek = ucret_eslestir(satirlar, b["coin"], b.get("oid"), b.get("cloid")) if satirlar is not None else None
+            if gercek is None:
+                if simdi - int(b.get("kayit_ms", simdi)) < 1_800_000:
+                    kalan.append(b)
+                else:
+                    self.kayit({"olay": "ucret_duzeltme_vazgec", "cloid": b.get("cloid"), "coin": b.get("coin")})
+                continue
+            delta = gercek - float(b.get("tahmin", 0.0))
+            self.hesap.ucret_duzelt(b["adres"], delta)
+            self.ucret_gercek_usd += gercek
+            self.ucret_tahmin_say = max(0, self.ucret_tahmin_say - 1)
+            duzeltilen += 1
+            self.kayit({"olay": "ucret_duzeltildi", "cloid": b.get("cloid"), "adres": b["adres"], "coin": b["coin"], "tahmin": b.get("tahmin"), "gercek": gercek, "fark": delta})
+        self.ucret_bekleyen = kalan
+        if duzeltilen:
+            self._dolum_yaz()
+
+    def mark_taze_mi(self, coin: str, simdi: int) -> bool:
+        """Denetim-6 (O5): coinin mark'ı `canli_mark_stale_sn`den eski değil mi (hiç yoksa taze değil). Gerçek kipte açılış/artırma ve mutabakat kullanır (kapanış serbest)."""
+        yas = simdi - self.mark_ms.get(coin, -10**15)
+        return yas <= float(self.rules["canli_mark_stale_sn"]) * 1000
 
     def trader_hesap_usd(self, adres: str, simdi_ms: int, zorla: bool = False, taze_sart: bool = False) -> float | None:
         """Trader hesap değeri (oran paydası, K‑35): tüm perp dex `accountValue` toplamı + spot USDC (`hesap_degeri_oku`). Önbellekteki değer kullanılır (yenileme `dakika()` içinde kilit dışında,
@@ -827,6 +873,8 @@ class Motor:
             if sinif == "hip3" and not bool(self.rules.get("canli_hip3_kopya", False)):
                 self.atlanan_trader["hip3_atlandi"][adres] = self.atlanan_trader["hip3_atlandi"].get(adres, 0) + 1
                 return self._atla(o, adres, eylem, "atlandi", "hip3_atlandi")
+            if self.kip == "gercek" and not self.mark_taze_mi(o.coin, simdi):          # Denetim-6 (O5): gerçek kipte bayat mark'la AÇILIŞ/artırma yok (kapanış serbest)
+                return self._atla(o, adres, eylem, "engel", "mark_eski")
             kn = self.kaldirac_yetersiz(o.coin)                     # Denetim-4a: gerçek kipte HL azami kaldıracı < `canli_min_azami_kaldirac` → açılış/artırma yok (kapanış serbest)
             if kn:
                 return self._atla(o, adres, eylem, "atlandi", kn)
@@ -946,6 +994,8 @@ class Motor:
                 else:
                     self.ucret_tahmin_say += 1
                     self.kayit({"olay": "ucret_tahmin", "adres": adres, "coin": o.coin, "cloid": cloid, "ucret": d.ucret})
+                    if getattr(d, "ucret_tahmini", False):          # Denetim-6 (O9): gerçek ücret kilit dışında, dakikalık bakımda düzeltilir
+                        self.ucret_bekleyen.append({"cloid": cloid, "adres": adres, "coin": o.coin, "oid": d.oid, "ms": int(d.emir_ms or dolum_ms), "kayit_ms": dolum_ms, "tahmin": d.ucret})
             if kayma_trader is not None:
                 self.kayma_trader.append(kayma_trader)
             if d.kayma_oran is not None:
@@ -1682,6 +1732,7 @@ class Motor:
         hl_zamani = self.kip == "gercek" and simdi - self._son.get("mutabakat", 0) >= float(self.rules["canli_mutabakat_sn"]) * 1000
         self._hl_okuma_imza = self._poz_imza() if hl_zamani else None          # mutabakat yarışı: HL okumasından ÖNCEKİ yerel pozisyonlar
         hl = self.hl_oku() if hl_zamani else None
+        ucretler = self.ucret_oku(simdi)                                           # Denetim-6 (O9): gerçek ücret düzeltmesi için okuma (kilit dışı)
         oranlar = self.funding_oku() if self.funding_bekliyor(simdi) else None
         stop_acik = self.acik_emir_oku() if self.kip == "gercek" and self._aralik_mi("borsa_stop", simdi, float(self.rules["canli_borsa_stop_sn"])) else False     # K-64
         hacimler = self.hacim_oku() if self._aralik_mi("hacim", simdi, 3600 if self._coin_hacim else 300) else None     # K-62: saatte bir (veri yoksa 5 dk'da bir dene)
@@ -1700,6 +1751,7 @@ class Motor:
                 self.son_funding_saat = simdi // 3_600_000
             adimlar: list[tuple[str, Callable[[], None]]] = [
                 ("belirsiz", lambda: self.belirsiz_coz(simdi)),                    # G-1: sonucu belirsiz emirler risk/mutabakattan ÖNCE deftere
+                ("ucret_duzelt", lambda: self.ucret_uygula(ucretler, simdi)),      # Denetim-6 (O9): tahmini ücret → HL fee (okuma kilit dışında yapıldı)
                 ("tasfiye", lambda: self._tasfiye(simdi)), ("funding", lambda: self.funding_uygula(oranlar, simdi)), ("funding_gercek", lambda: self.funding_gercek_uygula(fgercek, simdi)),
                 ("hl_ozsermaye", lambda: self.hl_uygula(hl[1], simdi) if hl else None), ("ofset", lambda: self.ofset_yenile(ledger, simdi)),
                 ("hl_sicrama", lambda: self._hl_sicrama_denetle(simdi) if hl else None), ("risk", lambda: self._risk(simdi)), ("felaket_stop", lambda: self._felaket_stop(simdi)),
@@ -2099,7 +2151,7 @@ class Motor:
             ek = self.borsa_stop.esitle(hedef, None, self.yurutucu)
             for ad in ("konan", "hata"):
                 olay[ad].extend(ek[ad])
-        for ad in ("konan", "iptal", "yetim"):
+        for ad in ("konan", "iptal", "yetim", "konan_belirsiz", "benimsenen"):
             for x in olay[ad]:
                 self.kayit({"olay": f"borsa_stop_{ad}", **x})
         if olay["hata"]:
@@ -2317,6 +2369,9 @@ class Motor:
             if self._hl_sicrama:
                 sorunlar = [*sorunlar, {"neden": "hl_sicrama"}]
             sorunlar = [*sorunlar, *self._mutabakat_tutan_sorunlar(bizim, hl_poz, simdi)]
+            eski = sorted({c for cs in self.hesap.poz.values() for c in cs if not self.mark_taze_mi(c, simdi)})          # Denetim-6 (O5): açık coinde eski mark → yazılım stopu / tavan / boyut bayat fiyatla çalışırdı; açılış durur
+            if eski:
+                sorunlar = [*sorunlar, {"neden": "mark_eski", "coinler": eski[:10]}]
             self._yetim_izle(bizim, hl_poz, sorunlar, simdi)
         else:
             sorunlar = sanal_tutarlilik(self.hesap, self.marks, self.mark_ms, simdi, float(self.rules["canli_mark_stale_sn"]))
