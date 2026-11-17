@@ -503,6 +503,7 @@ class Motor:
         if m and "poz_tr_senk_ms" not in m:                           # G-14 geçişi (eski biçim motor.json): poz_tr en az son işlenen dolum kadar taze sayılır
             self._poz_tr_senk_ms = {a: self.son_olay_ms for a in self.poz_tr}
         self.mutabakat_tutan: dict[str, dict] = {k: dict(v) for k, v in (m.get("mutabakat_tutan") or {}).items() if isinstance(v, dict)}      # Denetim-4: çözümde konan mutabakat notları (anahtar -> {coin, ms, neden}); borsa=defter teyidine dek bayrak kalkmaz
+        self.yetim_ilk: dict[str, dict] = {k: dict(v) for k, v in (m.get("yetim_ilk") or {}).items() if isinstance(v, dict)}      # Denetim-5 (K-68): defter dışı borsa fazlası, coin -> {ms (ilk görülme), mark (o andaki mark; stop referansı, SABİT), sz (son işaretli fazla)}; kesintisiz sürerse `canli_yetim_kapat_sn` sonra kapatılır
         self._hl_maks_kaldirac: dict[str, float] = {}               # Denetim-4: gerçek kip kaldıraç süzgeci için HL coin başına azami kaldıraç (yalnız bellek)
         self.baslama_ms: int = self.saat_ms()
         self.marks: dict[str, float] = {}
@@ -599,7 +600,7 @@ class Motor:
                 "ozet_gunu": self._ozet_gunu, "ozet_oz": self._ozet_oz, "ozet_emir": self._ozet_emir, "kip": self.kip, "kasa_usd": self.kasa, "kasa_ayar_usd": self.kasa_ayar, "vardiya": self.vardiya_id, "yazildi_ms": self.saat_ms(),
                 "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.kalici_offset,
                 "son_funding_ms": self.son_funding_ms, "funding_kimlik": self.funding_kimlik[-500:], "funding_gercek_usd": self.funding_gercek_usd, "ucret_gercek_usd": self.ucret_gercek_usd, "ucret_tahmin_say": self.ucret_tahmin_say,
-                "btc_donem": self.btc_donem, "mutabakat_tutan": self.mutabakat_tutan}
+                "btc_donem": self.btc_donem, "mutabakat_tutan": self.mutabakat_tutan, "yetim_ilk": self.yetim_ilk}
 
     def _hesap_yaz(self) -> None:
         """hesap.json atomik yazılır; gerçek kipte önce son sağlam sürüm `hesap.json.bak` (Denetim-2)."""
@@ -1191,14 +1192,16 @@ class Motor:
                 fazla[coin] = f
         return fazla
 
-    def _borsa_yetim_kapat(self, neden: str, simdi: int) -> dict[str, float] | None:
+    def _borsa_yetim_kapat(self, neden: str, simdi: int, coinler: set[str] | None = None) -> dict[str, float] | None:
         """G-2: DUR / `/kapat` için borsadaki defter dışı payı reduce-only IOC ile kapatır (bant merdiveni; her turdan sonra borsa yeniden okunur). Yerel deftere dokunmaz
-        (defterde olmayan pozisyon). Döner: kalan fazla ({} = borsa düz) ya da None (borsa okunamadı)."""
+        (defterde olmayan pozisyon). Döner: kalan fazla ({} = borsa düz) ya da None (borsa okunamadı). `coinler` verilirse (Denetim-5 yetim süre kapatması) yalnız o coinler kapatılır/döner."""
         bantlar = [float(x) for x in self.rules["canli_kapanis_bantlari"]]
         fazla: dict[str, float] | None = None
         belirsiz: set[str] = set()                         # Y-2: yanıtı belirsiz kalan coine bu çağrıda ikinci emir yok (sonraki dakika borsa yeniden okunur)
         for i in range(len(bantlar) + 1):
             fazla = self._borsa_fazla(simdi)
+            if fazla and coinler is not None:
+                fazla = {c: v for c, v in fazla.items() if c in coinler}
             if not fazla or i >= len(bantlar):
                 break
             for coin, sz in fazla.items():
@@ -2067,10 +2070,15 @@ class Motor:
         kapanış yoluyla temizlenir (`_kapat_coin` → borsa 0 ise G-13 harici kapanış + defter düzeltmesi). Hata → kayıt + saatte bir alarm; motor durmaz."""
         if self.kip != "gercek" or not hasattr(self.yurutucu, "stop_koy"):
             return
-        hedef = borsa_stop.hedefler(self.hesap.poz, self.marks, float(self.rules["canli_borsa_stop_oran"]), float(self.rules.get("canli_min_nosyonel_usd", 10)))
+        hedef = borsa_stop.hedefler(self.hesap.poz, self.marks, float(self.rules["canli_borsa_stop_oran"]), float(self.rules.get("canli_min_nosyonel_usd", 10)))     # defter temelli (K-64; değişmedi)
+        hedef.update(borsa_stop.yetim_hedefler(self.yetim_ilk, self.marks, float(self.rules["canli_borsa_stop_oran"]), float(self.rules.get("canli_min_nosyonel_usd", 10))))      # Denetim-5 (K-68): defter dışı fazla için SABİT (ilk görülen mark) referanslı ek stop
         olay = self.borsa_stop.esitle(hedef, acik, self.yurutucu)
         yeniden = False
         for c in olay["kayip"]:
+            if borsa_stop.yetim_mi(c):                           # yetim stopu tetiklendi / dışarıda iptal: kapatma `_yetim_izle`nin işi; alarm + kayıt
+                self.kayit({"olay": "borsa_stop_kayip", "coin": borsa_stop.coin_adi(c), "yetim": True})
+                self.tg.gonder(tg.alarm("ALARM: yetim pozisyon stopu kayboldu", f"{borsa_stop.coin_adi(c)} için defter dışı fazla stopu açık emirlerde yok (tetiklenmiş olabilir). Yetim durumu mutabakatla yeniden değerlendirilir.", "🛑"))
+                continue
             adresler = [a for a, cs in self.hesap.poz.items() if c in cs]
             self.kayit({"olay": "borsa_stop_kayip", "coin": c, "yerel_acik": bool(adresler)})
             if not adresler:                                      # pozisyon zaten kapalı: HL reduce-only stopu kendisi düşürmüş olabilir; alarm yok
@@ -2106,7 +2114,7 @@ class Motor:
         o coindeki pozisyonlar kapatılır (`borsa_stop_korumasiz`) ve `canli_borsa_stop_ceza_sn` boyunca yeni açılış/artırma durur (`stop_korumasiz` bayrağı). Kapanış serbest."""
         bs_ = self.borsa_stop
         sinir_ms = float(self.rules["canli_borsa_stop_korumasiz_sn"]) * 1000
-        stopsuz = {c for c in hedef if c not in bs_.stoplar}
+        stopsuz = {c for c in hedef if c not in bs_.stoplar and not borsa_stop.yetim_mi(c)}      # yetim stopunun kapatması `_yetim_izle` (K-68) ile; K-65 stopsuz sayacı yalnız defter pozisyonları için
         bs_.korumasiz = {c: t for c, t in bs_.korumasiz.items() if c in stopsuz}
         for c in stopsuz:
             bs_.korumasiz.setdefault(c, simdi)
@@ -2214,6 +2222,73 @@ class Motor:
                 kalan.append({"neden": "cozum_teyidi_bekliyor", "coin": coin, "not": n.get("neden"), "bizim": bizim.get(coin, 0.0) if coin else None, "hl": hl_poz.get(coin, 0.0) if coin else None})
         return kalan
 
+    def _belirsiz_coin_kumesi(self) -> tuple[set[str], bool]:
+        """Denetim-5 (K-68): belirsiz (sonucu bilinmeyen) emri ya da sonuçsuz niyeti olan coinler. Döner (coinler, genel): adres/coin bilgisi olmayan girdi varsa genel=True (hiçbir coin kapatılmaz).
+        `_belirsiz_coinler`den farkı: `deneme` ≥ 5 olan belirsizler de sayılır (yetim kapatma kesin zemin ister)."""
+        coinler: set[str] = set()
+        genel = False
+        for b in self.hesap.belirsiz.values():
+            if b.get("coin"):
+                coinler.add(str(b["coin"]))
+            else:
+                genel = True
+        for n in self.niyet.sonucsuz():
+            if n.get("coin"):
+                coinler.add(str(n["coin"]))
+            else:
+                genel = True
+        return coinler, genel
+
+    def _yetim_izle(self, bizim: dict[str, float], hl_poz: dict[str, float], sorunlar: list[dict], simdi: int) -> None:
+        """Denetim-5 / K-68 (kullanıcı kararı): defter dışı borsa fazlası (`poz_farki` sorunu olan coinde `_kirp(hl, hl − defter)` ≠ 0: borsada defterin karşılamadığı pay; `yetim` = defterde hiç olmayan coin,
+        `fark` = aynı coinde borsa fazlası) `canli_yetim_kapat_sn` KESİNTİSİZ sürerse reduce-only, borsa teyitli kapatılır (`_borsa_yetim_kapat`, yalnız o coinler). Eşik geçtikten sonra her mutabakat turunda
+        (dakikada bir) yeniden denenir. Coinde belirsiz emir / sonuçsuz niyet varken kapatılmaz. Durum (ilk görülme, o andaki mark, son fazla) `motor.json`'da kalıcıdır; mark stop referansıdır (`borsa_stop_esitle`).
+        Tespitte ve kapatmada Telegram alarmı + kayıt. Yalnız gerçek kip (çağıran)."""
+        aday = {s["coin"] for s in sorunlar if s.get("coin") and s.get("neden") in ("yetim", "fark", "mark_yok")}
+        fazla: dict[str, float] = {}
+        for coin in aday:
+            f = self._kirp(float(hl_poz.get(coin, 0.0)), float(hl_poz.get(coin, 0.0)) - float(bizim.get(coin, 0.0)))
+            if abs(f) > EPS:
+                fazla[coin] = f
+        for coin in [c for c in self.yetim_ilk if c not in fazla]:
+            ilk = self.yetim_ilk.pop(coin)
+            self.kayit({"olay": "yetim_bitti", "coin": coin, "sure_sn": round((simdi - int(ilk.get("ms", simdi))) / 1000)})
+        for coin, f in fazla.items():
+            y = self.yetim_ilk.get(coin)
+            mk = self.mark(coin)
+            if y is None:
+                self.yetim_ilk[coin] = {"ms": simdi, "mark": mk or None, "sz": f}
+                sn = float(self.rules["canli_yetim_kapat_sn"])
+                self.kayit({"olay": "yetim_tespit", "coin": coin, "sz": f, "mark": mk, "kapat_sn": sn})
+                self.tg.gonder(tg.alarm("ALARM: defter dışı borsa pozisyonu", f"{coin}: borsada defterin karşılamadığı {f:g} var (mark {mk if mk else 'yok'}).\n"
+                                        f"Borsa stopu bu miktar için de kurulur; {sn / 60:g} dk içinde düzelmezse reduce-only kapatılacak. Yeni açılış durdu."))
+            else:
+                y["sz"] = f
+                if not y.get("mark") and mk:
+                    y["mark"] = mk                                    # ilk görülmede mark yoktuysa ilk bilinen mark (bir kez; sonra sabit)
+        sinir_ms = float(self.rules["canli_yetim_kapat_sn"]) * 1000
+        vadesi = {c for c, y in self.yetim_ilk.items() if simdi - int(y.get("ms", simdi)) >= sinir_ms}
+        if not vadesi:
+            return
+        belirsiz, genel = self._belirsiz_coin_kumesi()
+        hedef = {c for c in vadesi if not genel and c not in belirsiz}
+        for c in sorted(vadesi - hedef):
+            self.kayit({"olay": "yetim_kapat_ertelendi", "coin": c, "neden": "belirsiz_emir"})
+        if not hedef:
+            return
+        kalan = self._borsa_yetim_kapat("yetim_sure", simdi, hedef)
+        if kalan is None:
+            self.kayit({"olay": "yetim_kapat_okunamadi", "coinler": sorted(hedef)})
+            return
+        kapanan = sorted(c for c in hedef if c not in kalan)
+        for c in kapanan:
+            self.yetim_ilk.pop(c, None)
+        self.kayit({"olay": "yetim_kapat", "denenen": sorted(hedef), "kapanan": kapanan, "kalan": kalan})
+        if kapanan:
+            self.tg.gonder(tg.alarm("Defter dışı borsa pozisyonu kapatıldı", f"{', '.join(kapanan)}: {sinir_ms / 60000:g} dk düzelmediği için reduce-only kapatıldı (borsa teyitli).", "🛑"))
+        if kalan and self._aralik_mi("yetim_kapat_alarm", simdi, 300):
+            self.tg.gonder(tg.alarm("ALARM: defter dışı pozisyon kapanmadı", f"{', '.join(f'{c} {v:g}' for c, v in list(kalan.items())[:5])} kapatılamadı; her dakika yeniden deneniyor."))
+
     def _mutabakat(self, simdi: int, hl: tuple[dict[str, float], float] | None = None) -> None:
         """Gerçek kip: HL ↔ yerel defter. `hl` kilit DIŞINDA okunduysa `_hl_okuma_imza` (`dakika`) o andaki yerel pozisyonlardır; kilit altında defter farklıysa (arada dolum / kapanış) HL kilit altında
         YENİDEN okunur (aksi hâlde eski HL anlık görüntüsü yeni defterle karşılaştırılıp sahte mutabakat alarmı + açılış durması olurdu)."""
@@ -2242,6 +2317,7 @@ class Motor:
             if self._hl_sicrama:
                 sorunlar = [*sorunlar, {"neden": "hl_sicrama"}]
             sorunlar = [*sorunlar, *self._mutabakat_tutan_sorunlar(bizim, hl_poz, simdi)]
+            self._yetim_izle(bizim, hl_poz, sorunlar, simdi)
         else:
             sorunlar = sanal_tutarlilik(self.hesap, self.marks, self.mark_ms, simdi, float(self.rules["canli_mark_stale_sn"]))
         onceki = bool(self.risk.acilis_durdu.get("mutabakat"))

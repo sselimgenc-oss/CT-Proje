@@ -13,6 +13,7 @@ from __future__ import annotations
 import secrets
 from typing import Any
 
+YETIM_SONEK = "#yetim"                  # Denetim-5 (K-68): defter dışı (yetim) borsa fazlası için AYRI stop anahtarı ("ETH#yetim"); borsaya giden coin adı sonekten önceki kısımdır
 ONEK = "0x5354"                         # "ST": borsa stopu cloid öneki (Y-5 yabancı emir denetimi bunları bizim sayar)
 
 
@@ -44,6 +45,32 @@ def hedefler(poz: dict[str, dict[str, Any]], marks: dict[str, float], oran: floa
         if abs(n) * mk < float(min_usd):
             continue
         sonuc[c] = {"long": long, "sz": abs(n), "tetik": giris * (1 - oran) if long else giris * (1 + oran)}
+    return sonuc
+
+
+def coin_adi(anahtar: str) -> str:
+    """Stop anahtarı → borsa coin adı ("ETH#yetim" → "ETH")."""
+    return anahtar[: -len(YETIM_SONEK)] if anahtar.endswith(YETIM_SONEK) else anahtar
+
+
+def yetim_mi(anahtar: str) -> bool:
+    return anahtar.endswith(YETIM_SONEK)
+
+
+def yetim_hedefler(yetim: dict[str, dict], marks: dict[str, float], oran: float, min_usd: float) -> dict[str, dict]:
+    """Denetim-5 (K-68): defter dışı borsa fazlası için ek stop. `yetim`: coin → {sz (işaretli fazla), mark (yetimin İLK görüldüğü andaki mark; kalıcı)}.
+    Tetik referansı SABİT ilk mark'tır (her dakika güncellenmez: stop fiyatı kovalamaz), `oran` kadar aleyhe. Referans mark yoksa stop yok (uydurma fiyat yok).
+    Defter temelli `hedefler` DEĞİŞMEZ; bu yalnız fazla miktarı korur (anahtar: coin + YETIM_SONEK)."""
+    sonuc: dict[str, dict] = {}
+    for c, y in yetim.items():
+        sz, ref = float(y.get("sz") or 0.0), float(y.get("mark") or 0.0)
+        if abs(sz) <= 1e-12 or ref <= 0:
+            continue
+        mk = float(marks.get(c) or ref)
+        if abs(sz) * mk < float(min_usd):
+            continue
+        long = sz > 0
+        sonuc[c + YETIM_SONEK] = {"long": long, "sz": abs(sz), "tetik": ref * (1 - oran) if long else ref * (1 + oran)}
     return sonuc
 
 
@@ -80,7 +107,7 @@ class BorsaStop:
                     del self.stoplar[c]
             kalan = []
             for x in self.silinecek:                                         # açık emirlerde yoksa zaten gitmiş; varsa yeniden iptal dene
-                if str(x.get("oid")) in acik_oid and not yurutucu.stop_iptal(str(x.get("coin")), x.get("oid")):
+                if str(x.get("oid")) in acik_oid and not yurutucu.stop_iptal(coin_adi(str(x.get("coin"))), x.get("oid")):
                     kalan.append(x)
             self.silinecek = kalan
             if self.ilk:
@@ -94,7 +121,7 @@ class BorsaStop:
             if c not in hedef and c not in olay["kayip"]:
                 s = self.stoplar[c]
                 del self.stoplar[c]
-                if yurutucu.stop_iptal(c, s.get("oid")):
+                if yurutucu.stop_iptal(coin_adi(c), s.get("oid")):
                     olay["iptal"].append({"coin": c, "oid": s.get("oid"), "neden": "pozisyon_yok"})
                 else:
                     self.silinecek.append({"coin": c, "oid": s.get("oid")})
@@ -106,13 +133,13 @@ class BorsaStop:
             if eski is not None and not degisti_mi(eski, h):
                 continue
             cloid = stop_cloid()
-            oid, neden, tetik = yurutucu.stop_koy(c, h["long"], h["sz"], h["tetik"], cloid)
+            oid, neden, tetik = yurutucu.stop_koy(coin_adi(c), h["long"], h["sz"], h["tetik"], cloid)
             if oid is None:
                 olay["hata"].append({"coin": c, "islem": "koy", "neden": neden})
                 continue
             self.stoplar[c] = {"oid": oid, "cloid": cloid, "long": h["long"], "sz": h["sz"], "tetik": tetik}
             olay["konan"].append({"coin": c, "oid": oid, "long": h["long"], "sz": h["sz"], "tetik": tetik})
-            if eski is not None and not yurutucu.stop_iptal(c, eski.get("oid")):
+            if eski is not None and not yurutucu.stop_iptal(coin_adi(c), eski.get("oid")):
                 self.silinecek.append({"coin": c, "oid": eski.get("oid")})
                 olay["hata"].append({"coin": c, "islem": "eski_iptal", "oid": eski.get("oid")})
         return olay
