@@ -1198,3 +1198,6 @@
 {"zaman_ms":1794909608643,"olay":"telegram_hata","tur":"ConnectionError"}
 {"zaman_ms":1794909610061,"olay":"funding","saat":498586,"saat_adet":1,"funding_usd":0.02027805205822642,"toplam_funding_usd":0.3090981609039809}
 {"zaman_ms":1794909957489,"olay":"tur","ozsermaye_usd":10006.2793}
+{"zaman_ms":1794910554621,"olay":"telegram_hata","tur":"ConnectionError"}
+{"zaman_ms":1794910618201,"olay":"telegram_hata","tur":"ConnectionError"}
+{"zaman_ms":1794910809836,"olay":"tur","ozsermaye_usd":10007.1621}
