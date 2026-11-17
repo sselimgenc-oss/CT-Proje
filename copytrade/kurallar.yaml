@@ -140,6 +140,7 @@ canli_kadro_dali: radar                 # kadro.json'un okunduğu veri dalı (ra
 canli_kadro_aralik_sn: 300              # sn (kadro.json okuma sıklığı)
 canli_kadro_eski_saat: 36               # saat (kosu_ms bundan eskiyse kadro bayat: yeni giriş yok, düşme kuralları çalışır, alarm günde 1)
 canli_marj_kaldirac: 3                  # x (coin başına izole marj)
+canli_min_azami_kaldirac: 5              # x (K-67, 17.11: gerçek kipte HL azami kaldıracı bunun altındaki coinde AÇILIŞ yok; izole 3x'te azami 3 olan coin −%20'de tasfiye olur, stoplar %20/%22; sanal kip etkilenmez)
 canli_ioc_bant: 0.005                   # oran (IOC limit fiyatı = en iyi karşı fiyat ± bu bant)
 canli_coin_tavan_oran: 0.30             # oran (aynı coinde tüm slotların brüt nosyoneli <= kasa x bu)
 canli_patlama_coin: 8                   # adet (trader 10 dk içinde bu kadar YENİ coin açarsa fren)
