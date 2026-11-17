@@ -539,6 +539,7 @@ class Motor:
             self.hl_ofset, self.ledger_son_ms = None, None
         self.hl_oz: float | None = None
         self.hl_oz_ms: int = 0
+        self._hl_son_okuma: tuple | None = None                         # Denetim-8 (D5): (son hl_oku sonucu, okumanın başladığı saat_ms)
         self.son_funding_saat: int | None = m.get("son_funding_saat")
         self._funding_bekleyen: list[tuple[int, int, list]] = []       # F07: oran okunamayan saatlerin pozisyon görüntüleri (saat, kapsanan saat sayısı, [(adres, coin, sz, mark)])
         self.son_funding_ms: int | None = m.get("son_funding_ms")                  # G7 gerçek kip: işlenen en son `userFunding` satırının zamanı (ms, UTC); alan yoksa ilk bakımda "şimdi" (geçmiş okunmaz)
@@ -1374,7 +1375,7 @@ class Motor:
                         x = float(v)
                     except (TypeError, ValueError):
                         continue
-                    if x > 0:
+                    if math.isfinite(x) and x > 0:                  # Denetim-8 (D3): inf/NaN mark yok sayılır
                         sonuc[coin] = x
             return sonuc
         except Exception as hata:                          # noqa: BLE001
@@ -1496,19 +1497,44 @@ class Motor:
         return yerel
 
     def hl_oku(self) -> tuple[dict[str, float], float] | None:
-        """Gerçek kip (ağ; kilitsiz): HL pozisyonları (tüm dex) + hesap değeri (tüm perp dex + spot USDC)."""
+        """Gerçek kip (ağ; kilitsiz): HL pozisyonları (tüm dex) + hesap değeri (tüm perp dex + spot USDC). Okumanın BAŞLADIĞI an (`saat_ms`) değerle birlikte saklanır (`hl_oz_ms`: Denetim-8 D5 — döngü başı
+        değil; aradaki mevduat/çekim ledger satırı hl_oz_ms'ten sonra ise sonraki okumaya kalır, sahte özsermaye düşüşü olmaz)."""
         adres = os.environ.get("HL_HESAP_ADRESI", "")
+        bas = self.saat_ms()
         try:
             dexler = self._dexler()
-            return clearinghouse_pozisyonlari(self.post, adres, dexler), hesap_degeri_oku(self.post, adres, dexler)
+            sonuc = clearinghouse_pozisyonlari(self.post, adres, dexler), hesap_degeri_oku(self.post, adres, dexler)
         except Exception as hata:                          # noqa: BLE001
             self.kayit({"olay": "hl_okuma_hata", "tur": type(hata).__name__})
             return None
+        self._hl_son_okuma = (sonuc, bas)
+        return sonuc
 
-    def hl_uygula(self, deger: float, simdi: int) -> None:
-        self.hl_oz, self.hl_oz_ms = float(deger), simdi
+    def _hl_okuma_ms(self, hl: tuple | None, simdi: int) -> int:
+        """`hl` bu motorun son `hl_oku` sonucuysa okumanın başladığı an; değilse (dışarıdan verilen) `simdi`."""
+        son = self._hl_son_okuma
+        return son[1] if son is not None and hl is not None and son[0] is hl else simdi
+
+    def hl_uygula(self, deger: float, simdi: int, okuma_ms: int | None = None) -> bool:
+        """HL hesap değerini uygular. Denetim-8 (D3): NaN/inf/negatif değer UYGULANMAZ (karşılaştırmaları sessizce geçerdi): kayıt + alarm (bir kez) + AYRI `hl_deger` açılış bayrağı (mutabakat bayrağı aynı
+        dakikada yeniden hesaplanıp silinirdi); geçerli değer gelince bayrak kalkar. Döner: geçerli mi. `okuma_ms` (D5): okumanın gerçek zamanı (yoksa `simdi`)."""
+        try:
+            d = float(deger)
+        except (TypeError, ValueError):
+            d = math.nan
+        if not math.isfinite(d) or d < 0:
+            if not self.risk.acilis_durdu.get("hl_deger"):
+                self.risk.bayrak("hl_deger", True)
+                self.kayit({"olay": "hl_deger_gecersiz", "deger": str(deger)[:24]})
+                self.tg.gonder(tg.alarm("ALARM: HL hesap değeri geçersiz", "HL'den gelen hesap değeri sayı değil / negatif. Yeni pozisyon açılmıyor; değer düzelince kalkar."))
+            return False
+        if self.risk.acilis_durdu.get("hl_deger"):
+            self.risk.bayrak("hl_deger", False)
+            self.kayit({"olay": "hl_deger_duzeldi"})
+        self.hl_oz, self.hl_oz_ms = d, (simdi if okuma_ms is None else okuma_ms)
         if self.hl_ofset is None:
-            self.hl_ofset = float(deger) - self.yerel_ozsermaye()
+            self.hl_ofset = d - self.yerel_ozsermaye()
+        return True
 
     def ledger_oku(self, simdi: int) -> list[dict] | None:
         """Gerçek kip (ağ; kilitsiz): kendi hesabımızın `userNonFundingLedgerUpdates` satırları (sayfalı), `ledger_son_ms`ten sonrası. İlk çağrıda yalnız başlangıç anı sabitlenir (ilk ofset zaten ilk HL okumasından)."""
@@ -1698,7 +1724,7 @@ class Motor:
             adimlar: list[tuple[str, Callable[[], None]]] = [
                 ("belirsiz", lambda: self.belirsiz_coz(simdi)),                    # G-1: sonucu belirsiz emirler risk/mutabakattan ÖNCE deftere
                 ("tasfiye", lambda: self._tasfiye(simdi)), ("funding", lambda: self.funding_uygula(oranlar, simdi)), ("funding_gercek", lambda: self.funding_gercek_uygula(fgercek, simdi)),
-                ("hl_ozsermaye", lambda: self.hl_uygula(hl[1], simdi) if hl else None), ("ofset", lambda: self.ofset_yenile(ledger, simdi)),
+                ("hl_ozsermaye", lambda: self.hl_uygula(hl[1], simdi, self._hl_okuma_ms(hl, simdi)) if hl else None), ("ofset", lambda: self.ofset_yenile(ledger, simdi)),
                 ("hl_sicrama", lambda: self._hl_sicrama_denetle(simdi) if hl else None), ("risk", lambda: self._risk(simdi)), ("felaket_stop", lambda: self._felaket_stop(simdi)),
                 ("borsa_stop", lambda: self.borsa_stop_esitle(stop_acik, simdi) if stop_acik is not False else None), ("anlik_saha", lambda: self._anlik(simdi)),
                 ("inen", lambda: self.karar_uygula(self.saha.inenleri_kapat(simdi), simdi)), ("mutabakat", lambda: self._mutabakat(simdi, hl)), ("kapanis_kuyrugu", lambda: self._kuyruk_isle(simdi)),
@@ -1930,6 +1956,7 @@ class Motor:
     _hl_sicrama = False                                     # S-6: son HL okumasında açıklanmayan özsermaye sıçraması var mı
     _hl_sicrama_ms = 0
     _hl_onceki: tuple[float, float] | None = None           # S-6: önceki HL okumasında (HL − ofset, yerel özsermaye) $
+    _mutabakat_tamam_ms: int | None = None                 # Denetim-8 (O4): `_mutabakat` sonuna kadar çalıştığı an (ilk_mutabakat tamamlandı mı)
     _hl_okuma_imza: tuple | None = None                     # `dakika`: HL kilit dışında okunmadan hemen önceki yerel pozisyon imzası (`_mutabakat` tüketir)
 
     def _poz_imza(self) -> tuple:
@@ -2230,21 +2257,25 @@ class Motor:
             if hl is None:
                 return
             hl_poz, hl_deger = hl
-            self.hl_uygula(hl_deger, simdi)
+            hl_gecerli = self.hl_uygula(hl_deger, simdi, self._hl_okuma_ms(hl, simdi))
             bizim: dict[str, float] = {}
             for coinler in self.hesap.poz.values():
                 for c, p in coinler.items():
                     bizim[c] = bizim.get(c, 0.0) + p.sz
             sorunlar = poz_farki(bizim, hl_poz, self.marks, self.kasa, float(self.rules["canli_mutabakat_oran"]))
-            fark = abs((hl_deger - (self.hl_ofset or 0.0)) - self.yerel_ozsermaye())          # yerel defter ↔ HL özsermaye farkı (K‑37 §2)
-            if fark > self.kasa * float(self.rules["canli_mutabakat_oran"]):
-                sorunlar = [*sorunlar, {"neden": "ozsermaye_farki", "fark_usd": fark}]
+            if not hl_gecerli:                                                                 # Denetim-8 (D3): geçersiz HL değeri → özsermaye karşılaştırması yapılamaz (sorun + ayrı `hl_deger` bayrağı)
+                sorunlar = [*sorunlar, {"neden": "hl_deger_gecersiz"}]
+            else:
+                fark = abs((hl_deger - (self.hl_ofset or 0.0)) - self.yerel_ozsermaye())          # yerel defter ↔ HL özsermaye farkı (K‑37 §2)
+                if fark > self.kasa * float(self.rules["canli_mutabakat_oran"]):
+                    sorunlar = [*sorunlar, {"neden": "ozsermaye_farki", "fark_usd": fark}]
             if self._hl_sicrama:
                 sorunlar = [*sorunlar, {"neden": "hl_sicrama"}]
             sorunlar = [*sorunlar, *self._mutabakat_tutan_sorunlar(bizim, hl_poz, simdi)]
         else:
             sorunlar = sanal_tutarlilik(self.hesap, self.marks, self.mark_ms, simdi, float(self.rules["canli_mark_stale_sn"]))
         onceki = bool(self.risk.acilis_durdu.get("mutabakat"))
+        self._mutabakat_tamam_ms = simdi
         self.risk.bayrak("mutabakat", bool(sorunlar))
         if sorunlar and not onceki:
             self.kayit({"olay": "mutabakat_alarm", "sorunlar": sorunlar[:10]})
@@ -2511,6 +2542,33 @@ class Motor:
                 self.trader_pozlari_oku(adres)
         self.durum_yaz()
 
+    def _dolum_satirlari_oku(self, bas_ms: int) -> list | None:
+        """Denetim-8 (D4; ağ): kendi hesabımızın `userFillsByTime` satırları (`bas_ms`'den 5 sn önce başlar). Hata/biçim bozuk → None (çağıran limitPx + mutabakat notuna düşer)."""
+        adres = os.environ.get("HL_HESAP_ADRESI", "").strip()
+        if not adres:
+            return None
+        try:
+            r = self.post({"type": "userFillsByTime", "user": adres, "startTime": max(0, int(bas_ms) - 5000)})
+        except Exception as hata:                          # noqa: BLE001
+            self.kayit({"olay": "dolum_okuma_hata", "tur": type(hata).__name__})
+            return None
+        return r if isinstance(r, list) else None
+
+    @staticmethod
+    def _gercek_dolum(satirlar: list | None, coin: str, cloid: str, oid: Any = None) -> tuple[float, float, float | None] | None:
+        """Denetim-8 (D4; saf): cloid (ya da oid) eşleşen dolum satırlarından (sz toplamı, sz ağırlıklı ortalama px, fee toplamı | None). Eşleşme/geçerli sayı yoksa None."""
+        try:
+            es = [f for f in (satirlar or []) if isinstance(f, dict) and f.get("coin") == coin
+                  and ((cloid and str(f.get("cloid") or "").lower() == str(cloid).lower()) or (oid is not None and f.get("oid") == oid))]
+            sz = sum(float(f["sz"]) for f in es)
+            if not es or not math.isfinite(sz) or sz <= 0:
+                return None
+            px = sum(float(f["sz"]) * float(f["px"]) for f in es) / sz
+            fee = sum(float(f["fee"]) for f in es if f.get("fee") is not None) if any(f.get("fee") is not None for f in es) else None
+            return (sz, px, fee) if math.isfinite(px) and px > 0 else None
+        except (KeyError, TypeError, ValueError):
+            return None
+
     def niyetleri_coz(self, simdi: int) -> int:
         """Çökmeden kalan sonucu yazılmamış niyetler (K‑37 §3) ve yeniden oynatma (t4b #2/#3). Gerçek kip: `orderStatus(cloid)`; emir varsa dolan miktar (`origSz − sz`) DURUMDAN BAĞIMSIZ kullanılır
         (`filled`, `canceled` …): > 0 ise sonuç satırına yazılır (limit fiyatla YAKLAŞIK; kesin değer mutabakatta), `sz > 0` kalmışsa ya da iptal edilmişse "kismi" sayılır. Emir yoksa niyet iptal. Sanal kip: `sonucsuz`,
@@ -2519,6 +2577,7 @@ class Motor:
         sayi = 0
         belirsiz_eklendi = 0
         takip: list[tuple[dict, float, float]] = []                  # (niyet, dolan sz, limit px): kısmi kalan için izleme
+        satirlar_n: list[list | None] = [None]                       # Denetim-8 (D4): userFillsByTime yanıtı (tek okuma, tembel)
         for n in self.niyet.sonucsuz():
             if n["cloid"] in self.hesap.belirsiz:              # G-1: belirsiz emir — işaretçi zaten geçti; `belirsiz_coz` deftere doğrudan (bir kez) uygular
                 continue
@@ -2536,7 +2595,19 @@ class Motor:
                         px = float(e.get("limitPx", 0))
                         kismi = dolan > 0 and (durum != "filled" or kalan_sz > EPS)
                         if dolan > 0 and n.get("adres") and n.get("coin"):
-                            ek = {"sz": dolan, "px": px, "ucret": 0.0, "dolum": "kismi" if kismi else "dolu"}
+                            ucret_n = 0.0
+                            if satirlar_n[0] is None:                                    # Denetim-8 (D4): çökme sonrası çözümde fiyat/ücret önce userFillsByTime'dan (cloid eşleşmesi); tek okuma
+                                satirlar_n[0] = self._dolum_satirlari_oku(min([int(x.get("ms", simdi)) for x in self.niyet.sonucsuz()] or [simdi]))
+                            g = self._gercek_dolum(satirlar_n[0], n["coin"], n["cloid"], e.get("oid"))
+                            if g is not None:
+                                px = g[1]
+                                if g[2] is not None:
+                                    ucret_n = g[2]
+                                    self.ucret_gercek_usd += g[2]
+                            else:                                                        # bulunamadı: limitPx (en kötü bant fiyatı) YAKLAŞIK; borsa=defter teyidine dek mutabakat notu
+                                self.kayit({"olay": "dolum_px_yaklasik", "cloid": n["cloid"], "coin": n["coin"], "limit_px": px})
+                                self._mutabakat_tut(n["coin"], "dolum_px_yaklasik", simdi)
+                            ek = {"sz": dolan, "px": px, "ucret": ucret_n, "dolum": "kismi" if kismi else "dolu"}
                         if kismi:
                             self.sayac["kismi"] += 1
                         if n.get("eylem") in ("azalt", "kapat") and (kismi or durum != "filled"):
@@ -2588,6 +2659,7 @@ class Motor:
         bekle_ms = float(self.rules.get("canli_emir_zaman_asimi_sn", 10)) * 1000
         sayi = 0
         takip: list[tuple[dict, float, float]] = []
+        satirlar_b: list[list | None] = [None]                       # Denetim-8 (D4): userFillsByTime yanıtı (tek okuma, tembel)
         for cloid, b in list(self.hesap.belirsiz.items()):
             n = niyetler.get(cloid)
             if n is None or not n.get("adres") or not n.get("coin"):          # niyet satırı yok (bozulma): uygulanamaz → borsa ile mutabakat
@@ -2619,8 +2691,15 @@ class Motor:
                         dolan = max(0.0, float(e.get("origSz", 0)) - kalan_sz)
                         px = float(e.get("limitPx", 0))
                         if dolan > 0:
-                            ucret_bul = getattr(self.yurutucu, "_gercek_ucret", None)
-                            gercek = ucret_bul(n["coin"], e.get("oid"), cloid, int(n.get("ms", simdi))) if ucret_bul else None
+                            if satirlar_b[0] is None:                                    # Denetim-8 (D4): gerçek fiyat + ücret userFillsByTime'dan (cloid/oid eşleşmesi; tek okuma)
+                                satirlar_b[0] = self._dolum_satirlari_oku(min([int(v.get("ms", simdi)) for v in self.hesap.belirsiz.values()] or [simdi]))
+                            g = self._gercek_dolum(satirlar_b[0], n["coin"], cloid, e.get("oid"))
+                            if g is not None:
+                                px = g[1]
+                            else:                                                        # bulunamadı: limitPx YAKLAŞIK + mutabakat notu
+                                self.kayit({"olay": "dolum_px_yaklasik", "cloid": cloid, "coin": n["coin"], "limit_px": px})
+                                self._mutabakat_tut(n["coin"], "dolum_px_yaklasik", simdi)
+                            gercek = g[2] if g is not None else None
                             ucret = gercek if gercek is not None else dolan * px * float(self.rules["maliyet_taker"])
                             if gercek is not None:
                                 self.ucret_gercek_usd += gercek
@@ -2727,6 +2806,30 @@ class Motor:
         if hedef * yerel < 0:
             hedef = 0.0
         self._eksik_ekle(adres, coin, "azalt", hedef, "niyet_kismi", simdi)
+
+    def ilk_mutabakat(self) -> None:
+        """Denetim-8 (O4; gerçek kip, `calis` başında, kaçan dolumlar oynatılmadan önce): yalnız mark + HL okuma + mutabakat + borsa stop eşitleme (tam `dakika` değil). Eski sorun: motor kapalıyken
+        tetiklenen stop → borsada 0, defterde pozisyon; bayat `biz_sz` ile oynatılan açılış yanlış boyutlanırdı. Mutabakat TAMAMLANMAZSA (HL okunamadı) açılış bayrağı kalır; mutabakat sonucu
+        sorunsa bayrak yine kalır; yalnız temiz mutabakat bayrağı kaldırır. Her adım ayrı korunur (hata kayıt + bayrak, motor düşmez)."""
+        simdi = self.saat_ms()
+        self._mutabakat_tamam_ms = None
+        mids = self.mids_al()
+        self._hl_okuma_imza = self._poz_imza()
+        hl = self.hl_oku()
+        stop_acik = self.acik_emir_oku() if self._aralik_mi("borsa_stop", simdi, float(self.rules["canli_borsa_stop_sn"])) else False
+        with self._lock:
+            self.mids_uygula(mids, simdi)
+            for ad, f in (("ilk_mutabakat", lambda: self._mutabakat(simdi, hl)), ("ilk_borsa_stop", lambda: self.borsa_stop_esitle(stop_acik, simdi) if stop_acik is not False else None)):
+                try:
+                    f()
+                except Exception as hata:                  # noqa: BLE001
+                    self.kayit({"olay": "adim_hata", "adim": ad, "tur": type(hata).__name__, "mesaj": str(hata)[:160], "ardisik": 1})
+            if self._mutabakat_tamam_ms is None:           # mutabakat çalışmadı / tamamlanmadı: açılış kapalı kalır
+                self.risk.bayrak("mutabakat", True)
+                self.kayit({"olay": "ilk_mutabakat_yok"})
+            else:
+                self.kayit({"olay": "ilk_mutabakat", "acilis_acik": not self.risk.acilis_durdu.get("mutabakat")})
+            self.durum_yaz()
 
     def kacanlari_tamamla(self, bas_ms: int | None = None) -> int:
         """Açılışta REST ile kaçan dolumları tamamlar (`gec_goruldu`): her saha/inen adresi için `bas_ms`'den şimdiye. Pencere `canli_kacan_pencere_dk` ile sınırlıdır."""
@@ -3027,6 +3130,8 @@ async def calis(motor: Motor, sure_sn: float | None = None, ws: Callable[[], Any
             loop.add_signal_handler(sig, lambda: (din.durdur(), durdur.set()))
     except (NotImplementedError, RuntimeError):
         pass
+    if motor.kip == "gercek":
+        motor.ilk_mutabakat()                              # Denetim-8 (O4): kaçan dolumlar oynatılmadan ÖNCE borsa mutabakatı + borsa stop eşitlemesi (tam `dakika` değil); geçene kadar açılış kapalı
     motor.kacanlari_tamamla()
     bekci = Bekci(motor, float(motor.rules.get("canli_bekci_sn", 180)))
     motor.bekci_nabiz = bekci.nabiz                       # kapanış döngüsü (DUR / kuyruk) her denemede besler
@@ -3075,6 +3180,22 @@ def http_kadro_oku(rules: dict, dal: str | None = None, deneme: int = 3, bekle_s
 
 
 # ---------------------------------------------------------------------------------------------------- açılış güvenceleri (G-15, G-20, G-21)
+ORTAM_DOSYALARI = ("/etc/sg-canli.env", "/etc/sg-canli-telegram.env")          # sunucu ortam dosyaları (deploy/kurulum.md); systemd EnvironmentFile
+
+
+def ortam_izin_zorunlu(yollar: tuple[str, ...] | None = None) -> None:
+    """Denetim-8: gerçek kip açılışında ortam dosyalarının izni 600/400 olmalı (grup/diğerleri okuyabiliyorsa API anahtarı sızar). Var olan her dosya `ortam_dosyasi.izin_denetle` ile denetlenir; sorun → `KipHatasi`
+    (kalıcı çıkış 3, motor BAŞLAMAZ). Dosya yoksa atlanır (ortam başka yoldan verilmiş; `--kontrol` ayrıca denetler). Yalnız gerçek kip çağırır: sanal/Actions etkilenmez."""
+    from copytrade.canli.ortam_dosyasi import izin_denetle
+    sorunlar: list[str] = []
+    for y in (ORTAM_DOSYALARI if yollar is None else yollar):
+        yol = Path(y)
+        if yol.exists():
+            sorunlar += [f"{yol.name}: {x}" for x in izin_denetle(yol)]
+    if sorunlar:
+        raise KipHatasi("ortam dosyası izni güvensiz, motor başlamadı: " + "; ".join(sorunlar[:3]))
+
+
 def durum_dizin_dogrula(dizin: Path, kip: str) -> None:
     """G-21: gerçek kipte durum dizini MUTLAK yol olmalı (çalışma dizinine göre göreli bir yol, aynı agent cüzdanla ayrı defterli ikinci bir süreç açtırabilir). Aksi halde KipHatasi (çıkış 3)."""
     if kip == "gercek" and not Path(dizin).is_absolute():
@@ -3469,6 +3590,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if kip == "gercek":
             try:
+                ortam_izin_zorunlu()                                      # Denetim-8: ortam dosyası izni 600 değilse başlama
                 kilit_fd = motor_kilidi_al(args.durum_dizin)              # G-21: aynı durum dizininde ikinci gerçek süreç → 3
                 adres = os.environ.get("HL_HESAP_ADRESI", "").strip()
                 if adres:

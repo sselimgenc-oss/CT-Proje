@@ -328,3 +328,6 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 
 ## K-67 — Canlı denetim (17.11, Fable onaylı): gerçek kipte kaldıraç süzgeci
 - 2026-11-17 canlı denetim (Fable onaylı): `canli_min_azami_kaldirac` 5. Gerçek kipte HL azami kaldıracı 5'ten küçük coinde AÇILIŞ/artırma yok (atla nedeni `kaldirac_dusuk`; tablo okunamazsa `kaldirac_bilinmiyor`, kapanış serbest). Gerekçe: izole 3x'te azami kaldıracı 3 olan coin −%20'de tasfiye olur; stoplar %20/%22. Sanal kip etkilenmez.
+
+## K-69 — Canlı denetim (17.11, kullanıcı kararı): stopsuz pozisyon toleransı 2 saat → 30 dakika (K-65 güncellemesi)
+- `canli_borsa_stop_korumasiz_sn` 7200 → **1800**. Borsa stopu beklenen coinde 30 dk kurulamazsa pozisyon otomatik kapatılır (K-65'in geri kalanı aynı: ceza süresi `canli_borsa_stop_ceza_sn`, kapanış serbest). Gerekçe: stopsuz pozisyonun 2 saat çıplak kalması; yalnız gerçek kip etkilenir, sanal kip borsa stopu kullanmaz.

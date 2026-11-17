@@ -93,7 +93,7 @@ def test_sanal_kipte_borsa_stopu_yok(tmp_path):
     assert not any(y["type"] == "openOrders" for y in hl.istekler) and m.borsa_stop.stoplar == {}
 
 
-def test_k65_stop_2_saat_kurulamazsa_pozisyon_kapanir_yeni_acilis_durur(tmp_path, monkeypatch):
+def test_k65_stop_30_dk_kurulamazsa_pozisyon_kapanir_yeni_acilis_durur(tmp_path, monkeypatch):
     m, sim, saat, tgp = kur_gercek(tmp_path, monkeypatch, BorsaSim())
     m.baslat()
     monkeypatch.setattr(m.yurutucu, "stop_koy", lambda *a, **k: (None, "red", None))     # borsa stopu her seferinde reddediyor
@@ -101,10 +101,11 @@ def test_k65_stop_2_saat_kurulamazsa_pozisyon_kapanir_yeni_acilis_durur(tmp_path
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     m.dakika()
     assert m.hesap.sz(adr(1), "BTC") > 0 and "BTC" in m.borsa_stop.korumasiz and not m.risk.acilis_durdu.get("stop_korumasiz")
-    saat.ms += 7200_000 - 60_000                                                    # 1 sa 59 dk: henüz kapatılmaz
+    assert RULES["canli_borsa_stop_korumasiz_sn"] == 1800                 # K-69 (kullanıcı kararı 17.11): 7200 → 1800
+    saat.ms += 1800_000 - 60_000                                                    # 29 dk: henüz kapatılmaz
     m.dakika()
     assert m.hesap.sz(adr(1), "BTC") > 0 and not kayitlar(tmp_path, "borsa_stop_korumasiz_kapat")
-    saat.ms += 60_000                                                               # 2 sa doldu
+    saat.ms += 60_000                                                               # 30 dk doldu
     m.dakika()
     assert m.hesap.sz(adr(1), "BTC") == pytest.approx(0.0, abs=1e-9)
     assert kayitlar(tmp_path, "borsa_stop_korumasiz_kapat")[0]["coin"] == "BTC" and any("stopsuz pozisyon kapatıldı" in x for x in tgp.gonderilen)
@@ -124,10 +125,10 @@ def test_k65_stop_gecikmeli_kurulursa_kapatma_yok(tmp_path, monkeypatch):
     sim.trader_poz[adr(1)] = {"BTC": 300.0}
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     m.dakika()
-    saat.ms += 3600_000
-    monkeypatch.setattr(m.yurutucu, "stop_koy", asil)                               # 1 saat sonra borsa kabul ediyor
+    saat.ms += 1500_000
+    monkeypatch.setattr(m.yurutucu, "stop_koy", asil)                               # 25 dk sonra (30 dk sınırından önce) borsa kabul ediyor
     m.dakika()
     assert m.borsa_stop.korumasiz == {} and "BTC" in m.borsa_stop.stoplar
-    saat.ms += 7200_000
+    saat.ms += 3600_000
     m.dakika()
     assert m.hesap.sz(adr(1), "BTC") > 0 and not kayitlar(tmp_path, "borsa_stop_korumasiz_kapat")

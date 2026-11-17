@@ -22,8 +22,12 @@ class Niyet:
 
     def _ekle(self, satir: dict) -> None:
         self.yol.parent.mkdir(parents=True, exist_ok=True)
-        with self.yol.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(satir, ensure_ascii=False, separators=(",", ":")) + "\n")
+        with self.yol.open("a+b") as f:                 # Denetim-8 (D2): çökme son satırı '\n'siz bıraktıysa yeni satır ona YAPIŞMASIN (yapışırsa her ikisi de okunamaz, niyet kaybolur)
+            if f.seek(0, os.SEEK_END) > 0:
+                f.seek(-1, os.SEEK_END)
+                if f.read(1) != b"\n":
+                    f.write(b"\n")
+            f.write((json.dumps(satir, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8"))
             f.flush()
             os.fsync(f.fileno())
 

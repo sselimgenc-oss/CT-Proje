@@ -80,8 +80,8 @@ jobs:
       KADRO_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
       GIRDI_SURE_DK: ${{ inputs.sure_dk }}
       # B1 (Opus denetimi 05.11): Telegram yalnız main'de; deneme dalı token görmez (aynı bota iki getUpdates tüketicisi komut kaybettirir).
-      TELEGRAM_BOT_TOKEN: ${{ github.ref == 'refs/heads/main' && vars.TELEGRAM_ACIK == 'evet' && secrets.TELEGRAM_BOT_TOKEN || '' }}
-      TELEGRAM_CHAT_ID: ${{ github.ref == 'refs/heads/main' && vars.TELEGRAM_ACIK == 'evet' && secrets.TELEGRAM_CHAT_ID || '' }}
+      # Denetim-8 (D8): TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID iş düzeyinde DEĞİL, yalnız kullanan adımlarda (açılış kontrolü, motor [içindeki sağlık döngüsü dahil], alarm): `pip install` gibi
+      # üçüncü taraf kod çalıştıran adımlar token'ı görmez.
       # O-1 (G4/K1): repo değişkeni `TELEGRAM_KOMUT` (tanımsız = boş = komut alma AÇIK, mevcut davranış). Sunucu motoru devreye girince `kapali` yapılır (Telegram tek tüketici).
       TELEGRAM_KOMUT: ${{ vars.TELEGRAM_KOMUT }}
     steps:
@@ -99,6 +99,9 @@ jobs:
         run: bash .github/scripts/donem_geri.sh
       - id: acilis
         name: Açılış kontrolü (anahtarsız, emir göndermez)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ github.ref == 'refs/heads/main' && vars.TELEGRAM_ACIK == 'evet' && secrets.TELEGRAM_BOT_TOKEN || '' }}
+          TELEGRAM_CHAT_ID: ${{ github.ref == 'refs/heads/main' && vars.TELEGRAM_ACIK == 'evet' && secrets.TELEGRAM_CHAT_ID || '' }}
         run: python -u -m copytrade.canli.motor --kontrol --sanal-kasa-usd 10000 --kadro-dali "$KADRO_DALI" --durum-dizin kontrol
       - id: sure
         name: Vardiya süresi (sınırlı)
@@ -116,6 +119,8 @@ jobs:
         name: Canlı motor (sanal kip)
         env:
           YAYIM_TOKEN: ${{ github.token }}  # G-23: yalnız arka plan yayım betiğine; motor ve sağlık süreçleri `env -u` ile görmez
+          TELEGRAM_BOT_TOKEN: ${{ github.ref == 'refs/heads/main' && vars.TELEGRAM_ACIK == 'evet' && secrets.TELEGRAM_BOT_TOKEN || '' }}
+          TELEGRAM_CHAT_ID: ${{ github.ref == 'refs/heads/main' && vars.TELEGRAM_ACIK == 'evet' && secrets.TELEGRAM_CHAT_ID || '' }}
         run: |
           sure_dk="${SURE_DK:-255}"
           # 15 dk'da bir durumu veri dalına yayımlayan arka plan döngüsü (ayrı git worktree: motorun çalıştığı dizin değişmez)
