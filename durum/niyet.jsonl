@@ -126,3 +126,5 @@
 {"t":"sonuc","cloid":"0xa49f20a802c3cc4edc6b358599e0f7b4","durum":"dolu","ms":1794912911841,"sz":0.0011477612312695523,"px":64156.99999999999,"ucret":0.0331366127915523}
 {"t":"niyet","kimlik":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a:327562240677829","eylem":"azalt","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"BTC","yon":"A","usd":64.57598,"reduce_only":true,"cloid":"0x6faad26361f957f618b4b06b2526a1f6","ms":1794912911846}
 {"t":"sonuc","cloid":"0x6faad26361f957f618b4b06b2526a1f6","durum":"dolu","ms":1794912912014,"sz":0.0010065619145048512,"px":64154.99999999999,"ucret":0.029059190831276425}
+{"t":"niyet","kimlik":"kapat:0xdebd491a259a242fc9bd8fd780a507e8e062b67a:BTC:1794913511439:0:tam_kapanis","eylem":"kapat","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"BTC","yon":"A","usd":148.354918,"reduce_only":true,"cloid":"0x69ca1685244485b37c688e97c0985910","ms":1794913511439}
+{"t":"sonuc","cloid":"0x69ca1685244485b37c688e97c0985910","durum":"dolu","ms":1794913511646,"sz":0.002202208567898851,"px":64156.00000000001,"ucret":0.0635782017969534}
