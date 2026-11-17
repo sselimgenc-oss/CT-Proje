@@ -2,26 +2,26 @@
  "bas_ms": 1794828600000,
  "btc_donem_fiyat": 64642.0,
  "doluluk": {
-  "brut_ms": 155066212819.99603,
-  "kapasite_ms": 655713575.0,
-  "nakit_ms": 44105179.24682613,
-  "net_ms": 32380567707.048813,
-  "slot_ms": 655713575.0,
-  "son_ms": 1794888337877,
-  "sure_ms": 59610325
+  "brut_ms": 158635300752.34415,
+  "kapasite_ms": 665548609.0,
+  "nakit_ms": 44642306.71327648,
+  "net_ms": 33173584973.80244,
+  "slot_ms": 665548609.0,
+  "son_ms": 1794889231971,
+  "sure_ms": 60504419
  },
  "donem": "2026-11-16T11:30:00Z",
  "emir_sayac": {
   "atlama_neden": {
-   "bant_ici": 4508,
-   "hip3_atlandi": 325,
-   "min_emir_atlandi": 148,
-   "slot_tavani": 584,
+   "bant_ici": 4521,
+   "hip3_atlandi": 328,
+   "min_emir_atlandi": 149,
+   "slot_tavani": 625,
    "spot_atlandi": 14,
    "ters_netlesme": 12
   },
-  "atlanan": 5591,
-  "emir": 50,
+  "atlanan": 5649,
+  "emir": 53,
   "yuvarlanan": 9
  },
  "gunler": [
@@ -31,9 +31,9 @@
    "ozsermaye_usd": 10002.1748
   },
   {
-   "btc": 64909.5,
+   "btc": 64966.5,
    "gun": "2026-11-17",
-   "ozsermaye_usd": 9999.4734
+   "ozsermaye_usd": 9999.4144
   }
  ],
  "kasa_usd": 10000.0,
@@ -45,7 +45,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": 5.248,
+   "net_usd": 3.1345,
    "sonuc": null
   },
   {
@@ -65,7 +65,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": 1.091,
+   "net_usd": 0.7388,
    "sonuc": null
   },
   {
@@ -75,7 +75,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": -15.7031,
+   "net_usd": -14.6729,
    "sonuc": null
   },
   {
@@ -95,7 +95,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": -7.7013,
+   "net_usd": -8.2063,
    "sonuc": null
   },
   {
@@ -105,7 +105,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": 15.7345,
+   "net_usd": 17.6159,
    "sonuc": null
   },
   {
