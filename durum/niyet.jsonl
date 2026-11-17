@@ -186,3 +186,5 @@
 {"t":"sonuc","cloid":"0x00407c5ed82e35f2455591a4085f124e","durum":"dolu","ms":1794945686761,"sz":0.10757974382085442,"px":1788.1,"ucret":0.0865635029667314}
 {"t":"niyet","kimlik":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e:791195165684058","eylem":"azalt","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"CAKE","yon":"A","usd":25.026634,"reduce_only":true,"cloid":"0x10375307a46802bf3d4c9b85465662df","ms":1794946670379}
 {"t":"sonuc","cloid":"0x10375307a46802bf3d4c9b85465662df","durum":"dolu","ms":1794946670594,"sz":15.404797787019783,"px":1.6246,"ucret":0.011261985518156553}
+{"t":"niyet","kimlik":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e:209330014827913","eylem":"ac","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"HBAR","yon":"A","usd":14.612619,"reduce_only":false,"cloid":"0x66e2420809a77673d89f9de65349af0d","ms":1794947824170}
+{"t":"sonuc","cloid":"0x66e2420809a77673d89f9de65349af0d","durum":"dolu","ms":1794947824328,"sz":256.6183526425221,"px":0.056943,"ucret":0.006575678484535411}
