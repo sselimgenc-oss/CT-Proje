@@ -48,6 +48,9 @@ def test_gercek_ucret_tahmin_yerine_yazilir_altin_ornek(tmp_path, monkeypatch):
     """300 BTC açılışı (hesap 100.000 $ → oran 0,3 → 27,273 $ = 0,27273 BTC × 100). Tahmin: 27,273 × 0,00045 = 0,01227285; HL gerçek fee 0,012 $ → defterde 0,012."""
     m, sim, saat = ac(tmp_path, monkeypatch, fee=0.012)
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    assert m.hesap.ucret[adr(1)] == pytest.approx(0.01227285, abs=1e-12) and m.ucret_tahmin_say == 1       # Denetim-6 (O9): emir kilidi içinde yalnız TAHMİN (ağ çağrısı yok)
+    saat.ms += 60_000
+    m.dakika()                                                                                             # dakikalık bakım (kilit dışı okuma) gerçek fee ile düzeltir
     assert m.hesap.ucret[adr(1)] == pytest.approx(0.012, abs=1e-12) and m.hesap.ucret[adr(1)] != pytest.approx(0.01227285, abs=1e-9)
     assert m.ucret_gercek_usd == pytest.approx(0.012) and m.ucret_tahmin_say == 0
     z = m.ozet()
@@ -99,6 +102,7 @@ def test_funding_islenmezse_fark_birikir_islenince_kapanir_onceki_sonraki(tmp_pa
     m.dakika()
     t0 = m.son_funding_ms
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    m.ucret_uygula(m.ucret_oku(saat.ms), saat.ms)                              # Denetim-6 (O9): gerçek fee dakikalık bakımda düzeltilir (burada yalnız o adım)
     sim.deger = 1000.0 - 0.012 - 0.04
     assert fark(m, sim) == pytest.approx(0.04, abs=1e-9)                       # önce: funding toplamı kadar kayma
     m.funding_gercek_uygula([fund_satir(t0 + 1, "BTC", -0.04)], saat.ms)

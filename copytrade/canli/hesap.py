@@ -111,6 +111,14 @@ class Hesap:
         self.ucret[adres] = self.ucret.get(adres, 0.0) + ucret
         return pnl
 
+    def ucret_duzelt(self, adres: str, delta: float) -> None:
+        """Denetim-6 (O9): tahmini ücretin gerçek ücretle düzeltmesi (`delta` = gerçek − tahmin). Özsermaye değişimi tam −delta (özdeşlik): slot hâlâ kayıtlıysa `ucret[adres]`e,
+        kapanıp silindiyse (`kapanmis_net`e taşındı) doğrudan `kapanmis_net`ten düşülür."""
+        if adres in self.ucret:
+            self.ucret[adres] += float(delta)
+        else:
+            self.kapanmis_net -= float(delta)
+
     # ------------------------------------------------------------------ değerleme
     def poz_usd(self, adres: str, coin: str, mark: float | None) -> float:
         p = self.poz.get(adres, {}).get(coin)
