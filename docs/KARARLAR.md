@@ -325,3 +325,6 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
   (5) hafta içi boş yer: haftanın sırasıyla, o günün kadrosunda da duran aday; (6) pazar: yeni İlk 11'de olmayan iner — yedekte duruyorsa pozisyonları trader kapatana kadar izlenir (`canli_inen_saat` 24 → 72 sa), kadroda hiç yoksa hemen kapanır (R1/soğuma ise sonuçla + bekleme);
   (7) inenlere slot −%20 stopu; inenlerin toplam nosyoneli kasa × %15'i (`canli_inen_tavan_oran`) aşarsa en zarardaki inen kapanır; sahadaki trader ters yönde açarsa inenin o coini kapanır (K-41 engellemesin); (8) inen, iniş bitene kadar yeniden giremez; (9) yeni dönem `DONEM` 2026-11-16T11:30Z (31.12 ölçümü kural setlerini karıştırmasın).
   Fable ölçümü (bu dönem): çıkışlarda hemen kapatma, trader'a bırakmaya göre ~90 $ daha iyiydi (ZEC/HYPE) — 2–3 hafta sonra (6) yeniden ölçülecek. M-07'nin hafta içi R1/soğuma kısmı bu kuralla askıya alındı.
+
+## K-67 — Canlı denetim (17.11, Fable onaylı): gerçek kipte kaldıraç süzgeci
+- 2026-11-17 canlı denetim (Fable onaylı): `canli_min_azami_kaldirac` 5. Gerçek kipte HL azami kaldıracı 5'ten küçük coinde AÇILIŞ/artırma yok (atla nedeni `kaldirac_dusuk`; tablo okunamazsa `kaldirac_bilinmiyor`, kapanış serbest). Gerekçe: izole 3x'te azami kaldıracı 3 olan coin −%20'de tasfiye olur; stoplar %20/%22. Sanal kip etkilenmez.
