@@ -1195,3 +1195,6 @@
 {"zaman_ms":1794908977551,"olay":"saha_uyari","adres":"0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a","neden":"radar_eledi:r1:sans_riski"}
 {"zaman_ms":1794908977551,"olay":"telegram","metin":"⚠️ Hafta içi uyarı (çıkış yok, pazar değerlendirilir): 0xe69acc…\n↳ radar_eledi:r1:sans_riski","acik":true}
 {"zaman_ms":1794909098585,"olay":"tur","ozsermaye_usd":10010.6481}
+{"zaman_ms":1794909608643,"olay":"telegram_hata","tur":"ConnectionError"}
+{"zaman_ms":1794909610061,"olay":"funding","saat":498586,"saat_adet":1,"funding_usd":0.02027805205822642,"toplam_funding_usd":0.3090981609039809}
+{"zaman_ms":1794909957489,"olay":"tur","ozsermaye_usd":10006.2793}
