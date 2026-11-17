@@ -328,3 +328,7 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 
 ## K-67 — Canlı denetim (17.11, Fable onaylı): gerçek kipte kaldıraç süzgeci
 - 2026-11-17 canlı denetim (Fable onaylı): `canli_min_azami_kaldirac` 5. Gerçek kipte HL azami kaldıracı 5'ten küçük coinde AÇILIŞ/artırma yok (atla nedeni `kaldirac_dusuk`; tablo okunamazsa `kaldirac_bilinmiyor`, kapanış serbest). Gerekçe: izole 3x'te azami kaldıracı 3 olan coin −%20'de tasfiye olur; stoplar %20/%22. Sanal kip etkilenmez.
+
+## K-68 — Canlı denetim (17.11, kullanıcı onaylı): defter dışı borsa fazlası otomatik kapanır ve stopla korunur (yalnız gerçek kip)
+- `canli_yetim_kapat_sn: 600`. Borsada defterin karşılamadığı pay (yetim coin ya da aynı coinde fazla) 600 sn KESİNTİSİZ sürerse reduce-only, borsa teyitli kapatılır (`_borsa_yetim_kapat`, yalnız o coinler); eşikten sonra her dakika yeniden denenir. O coinde belirsiz emir / sonuçsuz niyet varken kapatılmaz. Tespitte ve kapatmada Telegram alarmı + kayıt. İlk görülme zamanı ve mark `motor.json`'da kalıcı (`yetim_ilk`).
+- Bekleme süresince koruma: fazla miktar için ek borsa stopu, tetik referansı yetimin İLK görüldüğü andaki mark (sabit; fiyatı kovalamaz), `canli_borsa_stop_oran` uzakta. Defter temelli borsa stopu (`hedefler`) değişmedi. Sanal kip etkilenmez.
