@@ -1149,3 +1149,5 @@
 {"zaman_ms":1794900201238,"olay":"telegram","metin":"🧾 Son 1 saat (09:23–10:23 TSİ): 1 emir · sanal\n➕ açılış 0 · ⬆️ artırma 0 · ⬇️ azaltma 1 · ✖️ kapanış 0\n🏆 En büyük: 100 $ (BTC, SAT) · 0xdebd49…\n⏭️ Kopyalanmayan trader dolumu: 2 (≈1 ayrı işlem)\n   • kural gereği 2: 2 çok küçük (< 11 $)\n   • kaçırılan 0 (geç görülen / veri yok)\n💵 Tutar toplamı: 100 $","acik":true}
 {"zaman_ms":1794900546410,"olay":"tur","ozsermaye_usd":10002.2069}
 {"zaman_ms":1794901401142,"olay":"tur","ozsermaye_usd":10002.5585}
+{"zaman_ms":1794902257892,"olay":"tur","ozsermaye_usd":10007.0222}
+{"zaman_ms":1794902414702,"olay":"funding","saat":498584,"saat_adet":1,"funding_usd":0.09759449595472555,"toplam_funding_usd":0.2317470217783891}
