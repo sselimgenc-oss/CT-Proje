@@ -490,7 +490,14 @@
   "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": {},
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": {},
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": {},
-  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": {},
+  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": {
+   "BTC": {
+    "acilis_ms": 1794957911049,
+    "giris": 64942.0,
+    "kaldirac": 3.0,
+    "sz": 0.0022755310469079765
+   }
+  },
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": {}
  },
  "realize": {
@@ -519,7 +526,7 @@
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 909.0909090909091,
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 909.0909090909091
  },
- "son_niyet_cloid": "0xa14f89f4fce66bb3dd705f9e53ff6117",
+ "son_niyet_cloid": "0x31e4a185065dff5386ff4be7539621fb",
  "tasfiyeler": [],
  "ucret": {
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 0.6106398751552012,
@@ -531,7 +538,7 @@
   "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": 0.0,
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": 0.15464536599983777,
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": 0.0,
-  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 2.7642974812874974,
+  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 2.8307973730492315,
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 0.0
  }
 }
