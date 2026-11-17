@@ -332,3 +332,6 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 ## K-68 — Canlı denetim (17.11, kullanıcı onaylı): defter dışı borsa fazlası otomatik kapanır ve stopla korunur (yalnız gerçek kip)
 - `canli_yetim_kapat_sn: 600`. Borsada defterin karşılamadığı pay (yetim coin ya da aynı coinde fazla) 600 sn KESİNTİSİZ sürerse reduce-only, borsa teyitli kapatılır (`_borsa_yetim_kapat`, yalnız o coinler); eşikten sonra her dakika yeniden denenir. O coinde belirsiz emir / sonuçsuz niyet varken kapatılmaz. Tespitte ve kapatmada Telegram alarmı + kayıt. İlk görülme zamanı ve mark `motor.json`'da kalıcı (`yetim_ilk`).
 - Bekleme süresince koruma: fazla miktar için ek borsa stopu, tetik referansı yetimin İLK görüldüğü andaki mark (sabit; fiyatı kovalamaz), `canli_borsa_stop_oran` uzakta. Defter temelli borsa stopu (`hedefler`) değişmedi. Sanal kip etkilenmez.
+
+## K-69 — Canlı denetim (17.11, kullanıcı kararı): stopsuz pozisyon toleransı 2 saat → 30 dakika (K-65 güncellemesi)
+- `canli_borsa_stop_korumasiz_sn` 7200 → **1800**. Borsa stopu beklenen coinde 30 dk kurulamazsa pozisyon otomatik kapatılır (K-65'in geri kalanı aynı: ceza süresi `canli_borsa_stop_ceza_sn`, kapanış serbest). Gerekçe: stopsuz pozisyonun 2 saat çıplak kalması; yalnız gerçek kip etkilenir, sanal kip borsa stopu kullanmaz.

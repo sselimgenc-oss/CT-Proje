@@ -23,7 +23,7 @@ KASA_UST_USD = 1000.0                     # $ (AGENTS.md K‑22; kurallar.yaml c
 
 TURLER: dict[str, dict[str, set[str]]] = {
     "motor": {"zorunlu": {"HL_API_CUZDAN_ANAHTARI", "HL_HESAP_ADRESI"}, "izinli": {"HL_API_CUZDAN_ANAHTARI", "HL_HESAP_ADRESI", "CANLI_KIP", "CANLI_KASA_USD", "TELEGRAM_KOMUT"}},
-    "telegram": {"zorunlu": {"TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"}, "izinli": {"TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"}},
+    "telegram": {"zorunlu": {"TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"}, "izinli": {"TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TELEGRAM_IZINLI_ID"}},     # IZINLI_ID: grup sohbetinde komut verebilecek from.id'ler (virgülle)
     "yayim": {"zorunlu": set(), "izinli": {"GERCEK_YAYIM_HEDEF", "GERCEK_YAYIM_TOKEN"}},
 }
 
@@ -92,6 +92,8 @@ def denetle(metin: str, tur: str) -> list[str]:
             sorunlar.append("TELEGRAM_KOMUT sunucuda boş olmalı (motor komutları alır)")
     if tur == "telegram" and d.get("TELEGRAM_CHAT_ID") and not re.fullmatch(r"-?\d+", d["TELEGRAM_CHAT_ID"]):
         sorunlar.append("TELEGRAM_CHAT_ID sayı değil")
+    if tur == "telegram" and d.get("TELEGRAM_IZINLI_ID") and not re.fullmatch(r"\d+(,\d+)*", d["TELEGRAM_IZINLI_ID"]):
+        sorunlar.append("TELEGRAM_IZINLI_ID virgülle ayrılmış sayılar olmalı")
     return sorunlar
 
 
