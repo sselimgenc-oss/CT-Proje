@@ -3,7 +3,6 @@ import json
 
 import pytest
 
-from copytrade.canli import borsa_stop as bs
 from copytrade.canli import motor as mt
 from copytrade.canli import telegram as tg
 from copytrade.canli import yurutucu as yu
