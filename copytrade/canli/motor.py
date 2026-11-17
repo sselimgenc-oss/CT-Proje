@@ -1249,7 +1249,8 @@ class Motor:
         simdi = self.saat_ms()
         self.risk.dur_ver(neden)
         self.dur_bekliyor = True
-        self._dur_yaz_atomik(neden, simdi, True)                                                # DUR dosyası kapanışlardan ÖNCE (kapanış istisnası DUR'u etkilemesin)
+        if self._dur_yaz_atomik(neden, simdi, True):                                            # DUR dosyası kapanışlardan ÖNCE (kapanış istisnası DUR'u etkilemesin)
+            self.risk.dur_dosya = True                                                          # Denetim-3: dosya yazıldı (operatör silerse bu "elle devam"; yazılmadıysa `_dur_kurtar` yeniden dener)
         kapatilan = 0
         for a in list(self.hesap.poz):
             try:
@@ -1856,6 +1857,7 @@ class Motor:
                                 "Transfer (send/alt hesap) ya da HL tasfiyesi olabilir. Yeni pozisyon açılmıyor; risk freni bir okuma ertelendi. HL ekranını kontrol edin."))
 
     def _risk(self, simdi: int) -> None:
+        self._dur_kurtar(simdi)
         oz = self.ozsermaye()
         if self._zirve_yenile:                                                                  # S-2: DUR sonrası ilk risk adımı (gerçek kipte HL − ofset temeli artık okunmuş olabilir)
             self._zirve_yenile = False
@@ -1869,8 +1871,10 @@ class Motor:
             self.kayit({"olay": "risk_ertelendi", "neden": "hl_sicrama", "ozsermaye": oz})
             return
         for ev in self.risk.ozsermaye_isle(oz, simdi):
-            self.kayit({"olay": "risk", "tur": ev, "ozsermaye": oz})
-            self.donem_kilit(ev, simdi)
+            try:
+                self.kayit({"olay": "risk", "tur": ev, "ozsermaye": oz})
+            except Exception as hata:                                                           # noqa: BLE001 - kayıt hatası DUR/kapanışı engellemez (Denetim-3 O1)
+                self._kayit_hata("risk_kayit", hata)
             if ev == "zirve_dusus":
                 self.dur_tetikle("zirve_dusus")
             elif ev == "gunluk_kapat":                                                          # K-62: günlük sert fren — hepsi kapanır, DUR değil (ertesi gün sürer)
@@ -1882,6 +1886,31 @@ class Motor:
                                         f"{kapanan} pozisyon kapatıldı{f', {kalan} kapanmadı (yeniden denenecek)' if kalan else ''}. Bugün yeni pozisyon açılmıyor; yarın (UTC) normal devam.", "🛑"))
             else:
                 self.tg.gonder(tg.alarm("ALARM: günlük kayıp sınırı", f"Bugünkü kayıp %{float(self.rules['canli_gunluk_kayip_oran']) * 100:.0f} sınırına ulaştı (özsermaye {tg.tr_sayi(oz)} $).\nBugün yeni pozisyon açılmıyor."))
+            try:                                                                                # kozmetik (pano işareti): koruyucu işlemden SONRA ve izole; istisnası DUR/kapanışı kaybettirmez
+                self.donem_kilit(ev, simdi)
+            except Exception as hata:                                                           # noqa: BLE001
+                self._kayit_hata("donem_kilit", hata)
+
+    def _kayit_hata(self, ad: str, hata: Exception) -> None:
+        try:
+            self.kayit({"olay": "risk_yan_adim_hata", "adim": ad, "tur": type(hata).__name__})
+        except Exception:                                                                       # noqa: BLE001 - kayıt da çalışmıyorsa sessiz (asıl iş sürer)
+            pass
+
+    def _dur_kurtar(self, simdi: int) -> None:
+        """Denetim-3 (O1): `risk.dur` açık ama `durum/DUR` hiç yazılmadı/görülmedi (kozmetik adım istisnası, DUR yazım hatası, çökme) → pozisyonlar açık kalırdı. DUR yeniden tetiklenir
+        (yazım + reduce-only kapanış). DUR dosyası bir kez yazıldıysa (`dur_dosya`) ve operatör sildiyse DOKUNULMAZ (elle devam yolu). En çok 5 dk'da bir denenir."""
+        r = self.risk
+        if not r.dur or r.dur_dosya or self.dur_dosyasi.exists():
+            if r.dur and self.dur_dosyasi.exists():
+                r.dur_dosya = True
+            return
+        if not self._aralik_mi("dur_kurtarma", simdi, 300):
+            return
+        neden = r.dur_neden or "dur_kurtarma"
+        self.kayit({"olay": "dur_kurtarma", "neden": neden, "dur_bekliyor": self.dur_bekliyor})
+        self.tg.gonder(tg.alarm("ALARM: DUR kurtarılıyor", f"Risk kaydında DUR ({neden}) açık ama `durum/DUR` dosyası yok (adım hatası / yazım hatası / çökme).\nDUR yeniden tetikleniyor: pozisyonlar kapatılacak.", "🛑"))
+        self.dur_tetikle(neden)
 
     def _felaket_stop(self, simdi: int) -> None:
         """K-62 felaket stopu: pozisyon ortalama girişten `canli_felaket_stop_oran` kadar aleyhe gittiyse (mark ile) o pozisyon kapanır. Trader sahada kalır (slot kuralı ayrıca işler).
@@ -2268,9 +2297,16 @@ class Motor:
             e = self._donem_eski
             self.kayit({"olay": "donem_yenilendi", "eski_kasa_usd": e["kasa_usd"], "yeni_kasa_usd": self.kasa, "eski_ozsermaye": e["ozsermaye"], "ozsermaye": self.hesap.ozsermaye({}),
                         "kapanmis_net": self.hesap.kapanmis_net, "slot_usd": self.saha.slot, "uye": len(e["slot_bas"])})
-        if not self.dur_dosyasi.exists() and self.risk.dur:                                      # DUR dosyası tek yetkili: dosya yoksa risk.json'daki bayat dur sıfırlanır
+        if self.dur_dosyasi.exists() and self.risk.dur:
+            self.risk.dur_dosya = True
+        if not self.dur_dosyasi.exists() and self.risk.dur and self.kip == "gercek" and not self.risk.dur_dosya:
+            # Denetim-3: DUR dosyası HİÇ yazılmamış (kozmetik adım istisnası / yazım hatası / çökme) — operatör silmedi. Sessiz sıfırlama (zirve de sıfırlanır) DUR'u kaybettirirdi:
+            # DUR korunur, ilk risk adımında `_dur_kurtar` yeniden tetikler.
+            self.kayit({"olay": "dur_korundu", "neden": self.risk.dur_neden, "gerekce": "DUR dosyası hiç yazılmamış; risk.dur korunuyor"})
+            self.tg.gonder(tg.alarm("ALARM: DUR korunuyor", f"Risk kaydında DUR ({self.risk.dur_neden}) açık ama `durum/DUR` hiç yazılmamış; sıfırlanmadı. İlk risk adımında pozisyonlar kapatılacak.", "🛑"))
+        elif not self.dur_dosyasi.exists() and self.risk.dur:                                    # DUR dosyası tek yetkili: dosya yoksa risk.json'daki bayat dur sıfırlanır
             self.kayit({"olay": "dur_sifirlandi", "neden": self.risk.dur_neden, "gerekce": "DUR dosyası yok"})
-            self.risk.dur, self.risk.dur_neden = False, None
+            self.risk.dur, self.risk.dur_neden, self.risk.dur_dosya = False, None, False
             eski = self.risk.zirve_yenile(self.yerel_ozsermaye())                               # S-2: operatör DUR'u silip yeniden başlattı → zirve GÜNCEL özsermayeye (yoksa 60 sn'de yeniden DUR)
             self._zirve_yenile = True                                                            # gerçek kipte ilk risk adımında HL temelli özsermayeyle bir kez daha kurulur
             self.kayit({"olay": "zirve_yenilendi", "eski_zirve": eski, "yeni_zirve": self.risk.zirve, "gerekce": "dur_sonrasi_yeniden_baslatma"})
