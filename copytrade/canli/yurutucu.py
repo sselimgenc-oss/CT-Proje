@@ -35,6 +35,9 @@ class Dolum:
     px: float | None = None       # yürünen ortalama fiyat
     ucret: float = 0.0            # $ (taker)
     ucret_gercek: bool = False    # True: `ucret` HL `userFills.fee` (kesin); False: tahmin (`maliyet_taker` × nosyonel)
+    ucret_tahmini: bool = False   # Denetim-6 (O9): gerçek kipte emir kilidi içinde gerçek ücret SORULMAZ; `ucret` tahmin ve True. Motor dakikalık bakımda (kilit dışı) `userFillsByTime` ile düzeltir
+    oid: Any = None               # Denetim-6 (O9): HL emir kimliği (filled.oid); ücret düzeltmesinde eşleştirme
+    emir_ms: int = 0              # Denetim-6 (O9): emir gönderiminden önceki duvar saati (ms, UTC); `userFillsByTime` başlangıcı
     referans_px: float | None = None      # en iyi karşı fiyat (emir anı)
     kayma_oran: float | None = None
     reduce_only: bool = False
@@ -160,6 +163,13 @@ def min_nosyonel_ok(sz: float, fiyat: float, reduce_only: bool, acik_sz: float |
     return sz * fiyat >= minimum - 1e-9
 
 
+def ucret_eslestir(satirlar: Any, coin: str, oid: Any, cloid: str | None) -> float | None:
+    """Denetim-6 (O9): `userFillsByTime` satırlarından bu emrin (`oid` ya da `cloid`) dolumlarının gerçek `fee` toplamı ($); eşleşme yoksa None. Saf (ağ yok)."""
+    fee = [float(x["fee"]) for x in (satirlar if isinstance(satirlar, list) else []) if isinstance(x, dict) and x.get("coin") == coin and x.get("fee") is not None
+           and ((oid is not None and x.get("oid") == oid) or (cloid and str(x.get("cloid") or "").lower() == str(cloid).lower()))]
+    return sum(fee) if fee else None
+
+
 class AnahtarYok(RuntimeError):
     """Gerçek kip için ortam değişkenleri eksik: motor BAŞLAMAZ."""
 
@@ -245,9 +255,7 @@ class GercekYurutucu:
             return None
         try:
             satirlar = self.post({"type": "userFillsByTime", "user": adres, "startTime": max(0, int(baslangic_ms) - 5000)}) or []
-            fee = [float(x["fee"]) for x in satirlar if x.get("coin") == coin and x.get("fee") is not None
-                   and ((oid is not None and x.get("oid") == oid) or (cloid and str(x.get("cloid") or "").lower() == str(cloid).lower()))]
-            return sum(fee) if fee else None
+            return ucret_eslestir(satirlar, coin, oid, cloid)
         except Exception:                              # noqa: BLE001 - ücret araması emri bozmaz
             return None
 
@@ -300,20 +308,27 @@ class GercekYurutucu:
         except (KeyError, IndexError, TypeError):
             d.durum, d.neden = "red", "yanit_bicimi"
             return d
-        if "filled" in durum:
-            d.sz, d.px = float(durum["filled"]["totalSz"]), float(durum["filled"]["avgPx"])
-            d.usd_dolan = d.sz * d.px
-            d.ucret = d.usd_dolan * float(self.rules["maliyet_taker"])             # tahmini; kesin ücret bulunursa (G7) aşağıda üzerine yazılır
-            gercek = self._gercek_ucret(coin, durum["filled"].get("oid"), cloid, emir_oncesi_ms)
-            if gercek is not None:
-                d.ucret, d.ucret_gercek = gercek, True
-            d.kayma_oran = kayma(yon, en_iyi, d.px)
-            tam_kapanis = tavan_sz is not None and sz >= tavan_sz and d.sz >= tavan_sz - 0.5 * 10 ** -dec      # M-3: istek pozisyonla kırpıldı ve kırpılan miktarın tamamı doldu → TAM kapanış
-            d.durum = "dolu" if d.usd_dolan >= usd * 0.999 or tam_kapanis else "kismi"
-        elif "error" in durum:
-            d.durum, d.neden = "red", str(durum["error"])[:160]
-        else:
-            d.durum, d.neden = "dolmadi", "dolmadi"                                  # IOC: resting olmamalı; yeniden denenmez
+        try:                                            # Denetim-6 (O8): dolum yanıtı ayrıştırması korumalı; beklenmedik biçim emri düşürmez, "belirsiz" olur (orderStatus(cloid) çözer)
+            if "filled" in durum:
+                d.sz, d.px = float(durum["filled"]["totalSz"]), float(durum["filled"]["avgPx"])
+                if not (math.isfinite(d.sz) and math.isfinite(d.px)) or d.sz <= 0 or d.px <= 0:
+                    raise ValueError("dolum sz/px geçersiz")
+                d.usd_dolan = d.sz * d.px
+                d.ucret = d.usd_dolan * float(self.rules["maliyet_taker"])        # TAHMİN (O9: emir kilidi içinde ağ çağrısı yok); gerçek ücret motorun dakikalık düzeltmesiyle gelir
+                d.ucret_tahmini = True
+                d.oid = durum["filled"].get("oid")
+                d.emir_ms = emir_oncesi_ms
+                d.kayma_oran = kayma(yon, en_iyi, d.px)
+                tam_kapanis = tavan_sz is not None and sz >= tavan_sz and d.sz >= tavan_sz - 0.5 * 10 ** -dec      # M-3: istek pozisyonla kırpıldı ve kırpılan miktarın tamamı doldu → TAM kapanış
+                d.durum = "dolu" if d.usd_dolan >= usd * 0.999 or tam_kapanis else "kismi"
+            elif "error" in durum:
+                d.durum, d.neden = "red", str(durum["error"])[:160]
+            else:
+                d.durum, d.neden = "dolmadi", "dolmadi"                                  # IOC: resting olmamalı; yeniden denenmez
+        except (KeyError, IndexError, TypeError, ValueError, AttributeError) as hata:
+            d.sz, d.px, d.usd_dolan, d.ucret, d.ucret_tahmini, d.oid, d.kayma_oran, d.emir_ms = 0.0, None, 0.0, 0.0, False, None, None, 0
+            d.durum, d.neden = "belirsiz", f"yanit_ayrisma: {type(hata).__name__}"
+            d.ham = {"yanit": str(yanit)[:300]}                                          # ham yanıtın kısa özeti (motor kayda `ham` olarak yazar)
         return d
 
 
@@ -345,6 +360,22 @@ class GercekYurutucu:
             if isinstance(v, dict) and v.get("oid") is not None:
                 return v["oid"], "", tetik_y
         return None, f"oid_yok: {str(durum)[:120]}", tetik_y
+
+    def stop_durum(self, cloid: str) -> Any:
+        """Denetim-6 (O3): stop emrinin `cloid`i ile `orderStatus`: borsada AÇIK (resting / henüz tetiklenmemiş) ise emrin oid'i, değilse ya da yanıt biçimi tanınmıyorsa / hata olursa None.
+        HL yanıt biçimi doğrulanamadı (savunmacı): `{"status": "order", "order": {"order": {"oid": ..}, "status": "open"|"triggered"|"filled"|...}}`; yalnız open/resting oid döner."""
+        try:
+            adres = os.environ.get("HL_HESAP_ADRESI", "").strip()
+            r = self.post({"type": "orderStatus", "user": adres, "oid": cloid})
+            if not isinstance(r, dict) or r.get("status") != "order":
+                return None
+            sarmal = r.get("order")
+            if not isinstance(sarmal, dict) or str(sarmal.get("status", "")).lower() not in ("open", "resting"):
+                return None
+            emir = sarmal.get("order")
+            return emir.get("oid") if isinstance(emir, dict) else None
+        except Exception:                              # noqa: BLE001 - bilinmiyor = None
+            return None
 
     def stop_iptal(self, coin: str, oid: Any) -> bool:
         """K-64: stop emrini iptal eder. Başarı: True. Hata / ret: False (motor sonraki eşitlemede yeniden dener)."""

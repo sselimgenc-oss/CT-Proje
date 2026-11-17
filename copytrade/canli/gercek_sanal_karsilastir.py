@@ -102,7 +102,8 @@ def karsilastir(gercek: list[dict], sanal: list[dict] | None = None, n: int = 50
     taker = float(rules["maliyet_taker"])
     sz_decimals = sz_decimals or {}
     emirler = sorted([k for k in gercek if k.get("olay") == "emir" and k.get("kip") == "gercek"], key=_sira)[: max(0, int(n))]
-    tahmin_cloid = {k.get("cloid") for k in gercek if k.get("olay") == "ucret_tahmin" and k.get("cloid")}
+    duzeltilen = {k.get("cloid"): _f(k.get("gercek")) for k in gercek if k.get("olay") == "ucret_duzeltildi" and k.get("cloid")}          # Denetim-6 (O9): sonradan HL fee ile düzeltilen ücretler
+    tahmin_cloid = {k.get("cloid") for k in gercek if k.get("olay") == "ucret_tahmin" and k.get("cloid")} - set(duzeltilen)
     sanal_tablo: dict[tuple, dict] = {}
     for k in sorted([k for k in (sanal or []) if k.get("olay") == "emir" and k.get("kip") == "sanal"], key=_sira):
         sanal_tablo.setdefault(_anahtar(k), k)         # aynı anahtarda ilk sanal emir
@@ -117,6 +118,8 @@ def karsilastir(gercek: list[dict], sanal: list[dict] | None = None, n: int = 50
         if s is None:
             s = sanal_hesapla(e, rules)
         g_sz, g_ucret, ref = _f(e.get("sz")) or 0.0, _f(e.get("ucret")) or 0.0, _f(e.get("referans_px"))
+        if duzeltilen.get(e.get("cloid")) is not None:
+            g_ucret = duzeltilen[e.get("cloid")]
         dolu = g_sz > 0
         satir: dict[str, Any] = {
             "zaman_ms": e.get("emir_ms") or e.get("zaman_ms"), "coin": e.get("coin"), "yon": e.get("yon"), "eylem": e.get("eylem"), "reduce_only": bool(e.get("reduce_only")),
