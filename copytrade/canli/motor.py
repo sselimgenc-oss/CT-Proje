@@ -17,6 +17,7 @@ import json
 import math
 import os
 import re
+import shutil
 import signal
 import sys
 import threading
@@ -115,6 +116,11 @@ def hesap_degeri_oku(post: Callable[[dict], Any], adres: str, dexler: list[str] 
 
 class KipHatasi(RuntimeError):
     """Kip kuralı ihlali (gerçek kip Actions'ta / ayar yok): motor BAŞLAMAZ."""
+
+
+class DurumBozuk(KipHatasi):
+    """Denetim-2 (K1): durum dosyası VAR ama okunamıyor (bozuk/yarım/dict değil) ya da motor.json var, hesap.json yok (defter kaybı). Gerçek kipte motor BAŞLAMAZ: boş defterle açılış
+    borsa stoplarını iptal ettirir, pozisyonlar korumasız kalır. Elle onarım gerekir (hesap.json için son sağlam kopya: hesap.json.bak). Sanal kipte BAŞLAMA engellenmez (alarm + kayıt; bkz. Motor)."""
 
 
 class HlOkunamadi(KipHatasi):
@@ -369,6 +375,21 @@ def maskele(metin: str) -> str:
     return metin
 
 
+def _yedekle(yol: Path) -> None:
+    """Denetim-2: yazımdan ÖNCE mevcut SAĞLAM (geçerli JSON nesnesi) dosya `<ad>.bak` olur (atomik); bozuk dosya sağlam yedeği ezmez. Hata sessiz (yedek yardımcıdır)."""
+    try:
+        if not yol.is_file():
+            return
+        eski = yol.read_text(encoding="utf-8")
+        if isinstance(json.loads(eski), dict):
+            bak = yol.with_name(yol.name + ".bak")
+            gb = bak.with_name(bak.name + ".tmp")
+            gb.write_text(eski, encoding="utf-8")
+            os.replace(gb, bak)
+    except (OSError, ValueError):
+        pass
+
+
 def _yaz(yol: Path, veri: Any) -> None:
     yol.parent.mkdir(parents=True, exist_ok=True)
     gecici = yol.with_suffix(yol.suffix + ".tmp")
@@ -394,6 +415,19 @@ def _oku(yol: Path) -> dict | None:
         return None
 
 
+def _oku_siki(yol: Path) -> dict | None:
+    """Denetim-2: dosya yoksa None; VAR ama okunamıyor / geçerli JSON nesnesi değilse DurumBozuk (bozukluk "dosya yok" sayılmaz)."""
+    if not yol.is_file():
+        return None
+    try:
+        veri = json.loads(yol.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as hata:
+        raise DurumBozuk(f"{yol.name} okunamadı ({type(hata).__name__}): elle onarın (hesap.json için son sağlam kopya: hesap.json.bak); motor başlamadı") from hata
+    if not isinstance(veri, dict):
+        raise DurumBozuk(f"{yol.name} geçerli bir nesne değil ({type(veri).__name__}): elle onarın; motor başlamadı")
+    return veri
+
+
 class Motor:
     """Olay işleme + periyodik görevler. `post`: HL info (REST); `yurutucu`: emir arka ucu; `kadro_oku()`: kadro.json sözlüğü ya da None; `saat_ms`: enjekte (testte sahte)."""
 
@@ -413,8 +447,25 @@ class Motor:
         self.kasa = float(rules["canli_kasa_usd"])
         self.kasa_ayar = float(rules.get("canli_kasa_ayar_usd", self.kasa))        # G5: ayarlı kasa ($; gerçek kip CANLI_KASA_USD). `kasa` etkin (min(ayar, HL değeri)) ve oynak; uyuşmazlık denetimi ayara bakar
         self.dur_dosyasi = durum_dizin / "DUR"
-        m = _oku(durum_dizin / "motor.json") or {}
-        h = _oku(durum_dizin / "hesap.json")
+        self.durum_bozuk: list[str] = []                           # Denetim-2: sanal kipte okunamayan durum dosyaları (baslat: alarm + kayıt); gerçek kipte DurumBozuk ile BAŞLAMAZ
+
+        def oku(ad: str) -> dict | None:
+            yol = durum_dizin / ad
+            try:
+                return _oku_siki(yol)
+            except DurumBozuk:
+                if self.kip == "gercek":
+                    raise
+                self.durum_bozuk.append(ad)                        # sanal: Actions vardiya zincirini kilitlememek için başlar (alarm + kayıt); bozuk dosya `.bozuk` olarak saklanır
+                try:
+                    shutil.copy2(yol, yol.with_name(ad + ".bozuk"))
+                except OSError:
+                    pass
+                return None
+        m = oku("motor.json") or {}
+        h = oku("hesap.json")
+        if self.kip == "gercek" and m and h is None:
+            raise DurumBozuk("motor.json var, hesap.json yok: defter kaybı; elle mutabakat gerekli (hesap.json.bak varsa kontrol edin); motor başlamadı")
         self.hesap = Hesap.from_json(h) if h else Hesap(self.kasa, float(rules["canli_marj_kaldirac"]))
         self._hesap_yok = h is None                                                # hesap.json hiç yok: niyet dosyasındaki eski dolumlar yeni deftere OYNATILMAZ (hayalet pozisyon)
         self._oynat_gecis = h is not None and "son_niyet_cloid" not in h          # eski biçim hesap.json: geçiş (işaretçi = niyet dosyasının sonu, geçmiş oynatılmaz)
@@ -430,8 +481,8 @@ class Motor:
         else:
             self.hesap.kasa_usd = self.kasa                      # boş dizin / sanal kip (kasa sabit) / açık pozisyonla kasa değişikliği (baslat reddeder): eski davranış
         self.saha = Saha(rules, self.kasa, _oku(durum_dizin / "saha.json"))
-        self.risk = Risk(rules, self.kasa, _oku(durum_dizin / "risk.json"))
-        self.borsa_stop = BorsaStop(_oku(durum_dizin / "borsa_stop.json"))             # K-64: borsada duran felaket stopları (yalnız gerçek kip kullanır)
+        self.risk = Risk(rules, self.kasa, oku("risk.json"))
+        self.borsa_stop = BorsaStop(oku("borsa_stop.json"))             # K-64: borsada duran felaket stopları (yalnız gerçek kip kullanır)
         if self._donem_eski is not None:
             self.risk.donem_yenile(self.hesap.ozsermaye({}))     # S-3: zirve / gün başı yeni dönem özsermayesine (500 → 300 geçişi zirve düşüşü sayılmaz)
         self._islenen: dict[str, None] = {}                     # işlenen (canlı) dolum kimlikleri, ekleme sırasıyla; G-14: sınır ADRES BAŞINA (`canli_islenen_adres_sakla`), tek yoğun adres diğerlerini düşürmez
@@ -531,7 +582,7 @@ class Motor:
         d = self.durum_dizin
         if not getattr(self, "_kilit_birakildi", False):
             self.kilit_yaz(False)
-        _yaz(d / "hesap.json", self.hesap.to_json())
+        self._hesap_yaz()
         _yaz(d / "saha.json", self.saha.to_json())
         _yaz(d / "risk.json", self.risk.to_json())
         if self.kip == "gercek":
@@ -548,10 +599,17 @@ class Motor:
                 "son_funding_ms": self.son_funding_ms, "funding_kimlik": self.funding_kimlik[-500:], "funding_gercek_usd": self.funding_gercek_usd, "ucret_gercek_usd": self.ucret_gercek_usd, "ucret_tahmin_say": self.ucret_tahmin_say,
                 "btc_donem": self.btc_donem}
 
+    def _hesap_yaz(self) -> None:
+        """hesap.json atomik yazılır; gerçek kipte önce son sağlam sürüm `hesap.json.bak` (Denetim-2)."""
+        yol = self.durum_dizin / "hesap.json"
+        if self.kip == "gercek":
+            _yedekle(yol)
+        _yaz(yol, self.hesap.to_json())
+
     def _dolum_yaz(self) -> None:
         """Her emir sonucundan SONRA (t4b #3): `motor.json` önce, `hesap.json` (son uygulanan niyet işaretçisiyle) SON; ikisi de atomik. Aralarında çökme olursa açılışta işaretçiden sonraki sonuçlu niyetler oynatılır."""
         _yaz(self.durum_dizin / "motor.json", self._motor_json())
-        _yaz(self.durum_dizin / "hesap.json", self.hesap.to_json())
+        self._hesap_yaz()
 
     @property
     def islenen(self) -> list[str]:
@@ -2264,6 +2322,10 @@ class Motor:
     def baslat(self) -> None:
         """Açılış: kip/kasa uyumu (G5); DUR varsa BAŞLAMAZ; kasa sınırı; kadro ilk okuması (saha kurulumu); saha üyelerinin pozisyon/hesap okuması; markları al."""
         self.kip_uyumu_denetle()
+        if self.durum_bozuk:                                                                     # Denetim-2: sanal kipte bozuk durum dosyası → kâğıt sonuçlar sessizce sıfırlanmaz: kayıt + alarm
+            self.kayit({"olay": "durum_bozuk", "dosyalar": list(self.durum_bozuk), "kip": self.kip})
+            self.tg.gonder(tg.alarm("ALARM: durum dosyası bozuk", f"{', '.join(self.durum_bozuk)} okunamadı; bozuk kopya '.bozuk' olarak saklandı, ilgili durum SIFIRDAN başladı.\n"
+                                    "Sanal kip: motor sürüyor; veri dalındaki durumu kontrol edin."))
         if self._donem_eski is not None:
             e = self._donem_eski
             self.kayit({"olay": "donem_yenilendi", "eski_kasa_usd": e["kasa_usd"], "yeni_kasa_usd": self.kasa, "eski_ozsermaye": e["ozsermaye"], "ozsermaye": self.hesap.ozsermaye({}),
@@ -3190,7 +3252,10 @@ def _motor_calistir(args: argparse.Namespace, rules: dict, kip: str, post: Calla
         return _baslamadi(tgram, hata, CIKIS_KALICI)
     except (RuntimeError, ValueError) as hata:                     # SDK kurulu değil / anahtar biçimi bozuk: metin anahtar içerebilir, yalnız tür adı
         return _baslamadi(tgram, KipHatasi(f"gerçek yürütücü kurulamadı ({type(hata).__name__})"), CIKIS_KALICI)
-    motor = Motor(rules, yur, post, tgram, args.durum_dizin, args.kayit_dizin or (args.durum_dizin / "kayit"), kadro_oku, vardiya_id=args.vardiya)
+    try:
+        motor = Motor(rules, yur, post, tgram, args.durum_dizin, args.kayit_dizin or (args.durum_dizin / "kayit"), kadro_oku, vardiya_id=args.vardiya)
+    except DurumBozuk as hata:                                      # Denetim-2: bozuk/eksik durum (gerçek kip) → kalıcı çıkış + alarm; stop iptali hiç çağrılmaz
+        return _baslamadi(tgram, hata, CIKIS_KALICI)
     motor.radar_surum_gerekli = radar_surum_oku()
     motor.donem = donem_oku()
     try:
