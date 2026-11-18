@@ -2,27 +2,27 @@
  "bas_ms": 1794828600000,
  "btc_donem_fiyat": 64642.0,
  "doluluk": {
-  "brut_ms": 889084282932.2295,
-  "kapasite_ms": 2223007105.0,
-  "nakit_ms": 113191174.7381687,
-  "net_ms": 159403147104.01056,
-  "slot_ms": 2223007105.0,
-  "son_ms": 1795038234305,
-  "sure_ms": 202091555
+  "brut_ms": 894473281349.567,
+  "kapasite_ms": 2233058454.0,
+  "nakit_ms": 113567328.57038602,
+  "net_ms": 160479574209.56058,
+  "slot_ms": 2233058454.0,
+  "son_ms": 1795039148064,
+  "sure_ms": 203005314
  },
  "donem": "2026-11-16T11:30:00Z",
  "emir_sayac": {
   "atlama_neden": {
    "bant_ici": 6799,
    "gec_acilis": 8,
-   "hip3_atlandi": 2850,
+   "hip3_atlandi": 2851,
    "min_emir_atlandi": 1961,
    "slot_tavani": 4723,
    "spot_atlandi": 14,
-   "ters_netlesme": 784,
+   "ters_netlesme": 808,
    "trader_hesap_yok": 3
   },
-  "atlanan": 17142,
+  "atlanan": 17167,
   "emir": 147,
   "yuvarlanan": 15
  },
@@ -38,9 +38,9 @@
    "ozsermaye_usd": 10018.0461
   },
   {
-   "btc": 62335.5,
+   "btc": 62312.5,
    "gun": "2026-11-18",
-   "ozsermaye_usd": 10022.1618
+   "ozsermaye_usd": 10028.5362
   }
  ],
  "kasa_usd": 10000.0,
@@ -82,7 +82,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": -78.1505,
+   "net_usd": -77.9693,
    "sonuc": null
   },
   {
@@ -102,7 +102,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": -11.9369,
+   "net_usd": -10.1442,
    "sonuc": null
   },
   {
@@ -112,7 +112,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": 15.9217,
+   "net_usd": 15.6047,
    "sonuc": null
   },
   {
@@ -142,7 +142,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "kor_gevsetildi",
    "katman": "yedek",
-   "net_usd": 3.3489,
+   "net_usd": 5.6505,
    "sonuc": null
   },
   {
@@ -152,7 +152,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "kor_gevsetildi",
    "katman": "yedek",
-   "net_usd": 27.2593,
+   "net_usd": 29.6753,
    "sonuc": null
   }
  ]
