@@ -436,7 +436,7 @@ def _zincir_calistir(tmp_path: Path, gh_cikis: int, curl_cikis: int = 0, telegra
 
 def test_g3_zincir_basarida_vardiya_ve_saglik_tetiklenir(tmp_path):
     r, gh, curl = _zincir_calistir(tmp_path, 0, telegram=True)
-    assert r.returncode == 0 and gh == ["workflow run canli_vardiya.yml --ref main", "workflow run saglik.yml --ref main"] and curl == []
+    assert r.returncode == 0 and gh == ["workflow run canli_vardiya.yml --ref main -f onceki_vardiya=1", "workflow run saglik.yml --ref main"] and curl == []
     assert "TOK" not in r.stdout + r.stderr                                                          # secret yazdırılmaz
 
 
@@ -496,13 +496,13 @@ def test_y1_zincir_yas_okunamazsa_guvenli_yon_tetiklemez(tmp_path):
 
 def test_y1_zincir_20_dk_ve_uzeri_iki_tetik(tmp_path):
     r, gh, curl = _zincir_calistir(tmp_path, 0, telegram=True, yas_dk=21)
-    assert r.returncode == 0 and gh == ["workflow run canli_vardiya.yml --ref main", "workflow run saglik.yml --ref main"] and curl == []
+    assert r.returncode == 0 and gh == ["workflow run canli_vardiya.yml --ref main -f onceki_vardiya=1", "workflow run saglik.yml --ref main"] and curl == []
 
 
 def test_a2_zincir_zaman_asimi_iptalinde_de_tetikler_ve_alarm_verir(tmp_path):
     """A-2 (c): vardiya işi `cancelled` (zaman aşımı; koşu iptal edilmedi) → zincir sonrakini YİNE tetikler; ::warning + Telegram alarmı (token yazdırılmaz)."""
     r, gh, curl = _zincir_calistir(tmp_path, 0, telegram=True, yas_dk=290, sonuc="cancelled")
-    assert r.returncode == 0 and gh == ["workflow run canli_vardiya.yml --ref main", "workflow run saglik.yml --ref main"]
+    assert r.returncode == 0 and gh == ["workflow run canli_vardiya.yml --ref main -f onceki_vardiya=1", "workflow run saglik.yml --ref main"]
     assert "::warning::vardiya işi 'cancelled'" in r.stdout and len(curl) == 1 and "iptal" in curl[0] and "TOK" not in r.stdout + r.stderr
 
 

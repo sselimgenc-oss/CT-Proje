@@ -643,6 +643,11 @@ class Motor:
     def kilit_al(self) -> None:
         """`durum/kilit.json`: başka bir vardiya `canli_kilit_dk` içinde nabız attıysa BAŞLAMAZ (çift emir yok). Temiz kapanışta bırakılır; çökme/zaman aşımında nabız eskir ve sonraki vardiya devralır."""
         k = _oku(self.durum_dizin / "kilit.json") or {}
+        devral = str(getattr(self, "devral_vardiya", "") or "")
+        if devral and str(k.get("vardiya")) == devral and not k.get("birakildi"):
+            # İş akışı kilit sahibi koşunun BİTTİĞİNİ doğruladı (gh api completed ya da zincir tetiği + concurrency kuyruğu): ölmüş vardiyanın bırakılmamış kilidi devralınır. YALNIZ bu kimlik; başka sahip → eski kural.
+            self.kayit({"olay": "kilit_devralindi", "onceki": devral, "vardiya": self.vardiya_id})
+            k = {**k, "birakildi": True}
         if k.get("vardiya") not in (None, self.vardiya_id) and not k.get("birakildi") and self.saat_ms() - int(k.get("nabiz_ms", 0)) < float(self.rules["canli_kilit_dk"]) * DAKIKA:
             mesaj = f"başka vardiya aktif ({k.get('vardiya')}); kilit {self.rules['canli_kilit_dk']} dk içinde nabız attı"
             self.kayit({"olay": "vardiya_baslamadi", "neden": mesaj, "vardiya": self.vardiya_id})
@@ -3396,6 +3401,11 @@ class Bekci:
         if self.tetiklendi or gecen < self.sinir_sn:
             return False
         self.tetiklendi = True
+        try:                                               # kilit "bitti": süreç ölüyor, zincirle gelen sonraki vardiya (tetikleyen kendi kilidi) hemen devralır. Önce bayrak: asılı ana iş parçacığı kilidi yeniden "aktif" yazmasın.
+            self.motor._kilit_birakildi = True
+            self.motor.kilit_yaz(True)
+        except Exception:                                  # noqa: BLE001 - disk dolu olabilir: çıkış yine olur (sahip-koşu denetimi yedekte)
+            pass
         metin = tg.alarm("ALARM: motor dondu, yeniden başlatılıyor", f"Dakikalık bakım {gecen:.0f} sn'dir tamamlanmadı (sınır {self.sinir_sn:.0f} sn).\nSüreç çıkış kodu 1 ile kapanıyor; sunucu yeniden başlatır.")
 
         def bildir() -> None:
@@ -3957,6 +3967,7 @@ def _motor_calistir(args: argparse.Namespace, rules: dict, kip: str, post: Calla
         return _baslamadi(tgram, KipHatasi(f"gerçek yürütücü kurulamadı ({type(hata).__name__})"), CIKIS_KALICI)
     try:
         motor = Motor(rules, yur, post, tgram, args.durum_dizin, args.kayit_dizin or (args.durum_dizin / "kayit"), kadro_oku, vardiya_id=args.vardiya, **({"post_hizli": post_hizli} if post_hizli is not post else {}))
+        motor.devral_vardiya = str(args.devral_vardiya or "")
     except DurumBozuk as hata:                                      # Denetim-2: bozuk/eksik durum (gerçek kip) → kalıcı çıkış + alarm; stop iptali hiç çağrılmaz
         return _baslamadi(tgram, hata, CIKIS_KALICI)
     motor.kapanis_modu = kapanis_modu
@@ -3985,6 +3996,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--sure-sn", type=float, default=None, help="vardiya süresi (sn); varsayılan sonsuz")
     ap.add_argument("--kadro-dali", default=None, help="kadro.json veri dalı (varsayılan canli_kadro_dali; dal doğrulamasında radar-deneme)")
     ap.add_argument("--vardiya", default="yerel")
+    ap.add_argument("--devral-vardiya", default="", help="iş akışının BİTMİŞ doğruladığı önceki vardiya kimliği: kilit sahibi bu ise (bırakılmamış olsa da) kilit devralınır; boş = devralma yok")
     ap.add_argument("--sanal-kasa-usd", type=float, default=None, help="yalnız sanal kip: kasa $ (0 < kasa <= canli_sanal_kasa_ust_usd; K-66); varsayılan kurallar.yaml canli_kasa_usd. Ayrı --durum-dizin ile (G5)")
     args = ap.parse_args(argv)
     rules = load_rules()

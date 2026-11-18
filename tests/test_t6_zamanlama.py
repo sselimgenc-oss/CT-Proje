@@ -191,7 +191,7 @@ def _sahte_gh_ile(tmp_path, kilit, gh_govde):
 
 
 @pytest.mark.parametrize("gh_govde, beklenen", [
-    ("echo completed", "atla=false"),       # A-2 (b): kilit bırakılmamış ama sahibi koşu BİTMİŞ (son yayım düştü) → bayat kilit, vardiya başlar (zincir kopmaz)
+    ("echo completed", "atla=false\ndevral=123456"),       # A-2 (b): kilit bırakılmamış ama sahibi koşu BİTMİŞ (son yayım düştü) → bayat kilit, vardiya başlar (zincir kopmaz)
     ("echo in_progress", "atla=true"),      # sahibi koşu sürüyor → gerçek taze kilit, atla (çift vardiya yok)
     ("exit 1", "atla=true"),                # durum okunamadı → güvenli yön: taze say, atla
 ])
@@ -199,7 +199,7 @@ def test_a2_canli_dispatch_kilit_sahibi_kosu_bittiyse_bayat_sayilir(tmp_path, gh
     kilit = {"vardiya": "123456", "birakildi": False, "nabiz_ms": int(time.time() * 1000) - 2 * 60_000}
     cikti, stdout, gh = _sahte_gh_ile(tmp_path, kilit, gh_govde)
     assert cikti == beklenen and gh[:3] == ["api", "repos/o/r/actions/runs/123456", "--jq"]
-    assert ("bayat kilit" in stdout) == (beklenen == "atla=false")
+    assert ("bayat kilit" in stdout) == beklenen.startswith("atla=false")
 
 
 def test_a2_kilit_sahibi_sayisal_degilse_ya_da_kilit_bayatsa_gh_cagrilmaz(tmp_path):
@@ -214,3 +214,32 @@ def test_a2_kilit_sahibi_sayisal_degilse_ya_da_kilit_bayatsa_gh_cagrilmaz(tmp_pa
 def test_a2_kontrol_isi_salt_okur_actions_okuma_ve_gh_token():
     k = yukle("canli_vardiya.yml")["jobs"]["kontrol"]
     assert k["permissions"] == {"contents": "read", "actions": "read"} and k["steps"][1]["env"]["GH_TOKEN"] == "${{ github.token }}"
+
+
+def test_zincir_dispatch_kilit_sahibi_onceki_vardiyaysa_devral_cikti_verir_baskasiysa_atlar(tmp_path):
+    """Olay 18.11: bekçi ölümü sonrası kilit bırakılmamış kalır; zincirin tetiklediği koşu (`ONCEKI_VARDIYA` == kilit sahibi) başlar ve `devral=<id>` verir; başka sahip → atlar."""
+    kilit = json.dumps({"vardiya": "111", "birakildi": False, "nabiz_ms": int(time.time() * 1000) - 3 * 60_000})
+    c = kur(tmp_path / "a", "canli-durum", {"durum/kilit.json": kilit})
+    bos = tmp_path / "bos"
+    bos.mkdir()
+    (bos / "gh").write_text("#!/usr/bin/env bash\nexit 1\n", encoding="utf-8")        # gh api okunamıyor: yalnız girdi belirleyici
+    (bos / "gh").chmod(0o755)
+    env0 = {"PATH": f"{bos}:{os.environ['PATH']}", "GITHUB_REPOSITORY": "o/r"}
+
+    def kos(onceki):
+        cikti = c / "cikti.txt"
+        cikti.write_text("", encoding="utf-8")
+        env = {**os.environ, **env0, "GITHUB_EVENT_NAME": "workflow_dispatch", "VERI_DALI": "canli-durum", "GITHUB_OUTPUT": str(cikti), "ONCEKI_VARDIYA": onceki}
+        r = subprocess.run(["bash", str(BETIK), "canli"], cwd=c, env=env, capture_output=True, text=True)
+        assert r.returncode == 0, r.stderr
+        return cikti.read_text(encoding="utf-8").split()
+    assert kos("111") == ["atla=false", "devral=111"]            # tetikleyen koşu = kilit sahibi: devral
+    assert kos("") == ["atla=true"]                   # girdi yok, sahip okunamıyor: güvenli yön (canlı sayılır)
+    assert kos("222") == ["atla=true"]                # başka koşu adına devralma YOK: gerçekten canlı vardiya varken başlamaz
+
+
+def test_is_akisi_zincir_onceki_vardiyayi_girdi_verir_ve_motor_devral_kimligini_alir():
+    ham = (WF / "canli_vardiya.yml").read_text(encoding="utf-8")
+    assert 'onceki_vardiya=${GITHUB_RUN_ID}' in ham and "--devral-vardiya" in ham and "needs.kontrol.outputs.devral" in ham
+    assert "--retry-all-errors" in ham
+    assert "onceki_vardiya" in yukle("canli_vardiya.yml")["on"]["workflow_dispatch"]["inputs"]

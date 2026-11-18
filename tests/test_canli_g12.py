@@ -335,6 +335,15 @@ def test_bekci_180_sn_ilerleme_yoksa_alarm_ve_cikis_1_nabiz_sifirlar():
     assert b.kontrol() is False and cikis == [1]                               # tek sefer
 
 
+def test_bekci_cikmadan_once_kilidi_birakildi_isaretler_zincir_vardiyasi_engellenmez():
+    """Olay 18.11: bekçi `os._exit` öncesi kilidi "bırakıldı" yazar (+ `_kilit_birakildi`: asılı ana iş parçacığı yeniden aktif yazmaz)."""
+    saat, cikis, yazilan = Saatci(), [], []
+    m = types.SimpleNamespace(kayit=lambda o: None, tg=types.SimpleNamespace(gonder=lambda x: None), kilit_yaz=yazilan.append)
+    b = mt.Bekci(m, 180, saat=saat, cik=cikis.append, alarm_bekle_sn=1.0)
+    saat.t += 181
+    assert b.kontrol() is True and cikis == [1] and yazilan == [True] and m._kilit_birakildi is True
+
+
 def test_bekci_asili_dakika_periyodik_ile_tetiklenir():
     """Uçtan uca: `dakika` asılı (G-12a: zaman aşımsız emir kilidi tutar) → `_periyodik` nabız atamaz; bekçi iş parçacığı sınırı geçince `cik(1)`."""
     saat, cikis = Saatci(), []
