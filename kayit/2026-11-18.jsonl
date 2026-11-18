@@ -414,3 +414,5 @@
 {"zaman_ms":1795002967142,"olay":"hesap_okuma_hata","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","tur":"HTTPError"}
 {"zaman_ms":1795002972894,"olay":"bekci_tetik","gecen_sn":183.4,"sinir_sn":180.0}
 {"zaman_ms":1795002972895,"olay":"telegram","metin":"🚨 ALARM: motor dondu, yeniden başlatılıyor (sanal · deneme parası)\n━━━━━━━━━━━━━━\nDakikalık bakım 183 sn'dir tamamlanmadı (sınır 180 sn).\nSüreç çıkış kodu 1 ile kapanıyor; sunucu yeniden başlatır.","acik":true}
+{"zaman_ms":1795003042609,"olay":"vardiya_baslamadi","neden":"başka vardiya aktif (44284507712); kilit 20 dk içinde nabız attı","vardiya":"44299217872"}
+{"zaman_ms":1795003042609,"olay":"telegram","metin":"🚨 ALARM: tur başlayamadı (sanal · deneme parası)\n━━━━━━━━━━━━━━\nVardiya 44299217872 BAŞLAMADI: başka vardiya aktif (44284507712); kilit 20 dk içinde nabız attı\nSistem şu an işlem kopyalamıyor.","acik":true}
