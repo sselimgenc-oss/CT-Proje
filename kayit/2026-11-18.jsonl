@@ -395,3 +395,5 @@
 {"zaman_ms":1794993602471,"olay":"telegram","metin":"⚠️ Hafta içi uyarı (çıkış yok, pazar değerlendirilir): 0xe69acc…\n↳ bugünkü radar kadrosunda yok","acik":true}
 {"zaman_ms":1794993909411,"olay":"tur","ozsermaye_usd":9972.9544}
 {"zaman_ms":1794994758713,"olay":"tur","ozsermaye_usd":9976.8485}
+{"zaman_ms":1794995623035,"olay":"tur","ozsermaye_usd":9968.6893}
+{"zaman_ms":1794996007598,"olay":"funding","saat":498610,"saat_adet":1,"funding_usd":0.007026795075371904,"toplam_funding_usd":0.4296413889297131}
