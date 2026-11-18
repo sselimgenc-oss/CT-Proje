@@ -410,3 +410,7 @@
 {"zaman_ms":1795000915655,"olay":"telegram","metin":"🧾 Son 1 saat (13:21–14:21 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 9.984,10 $ · bugün 🔴 −33,95 $ (−%0,3) · başlangıçtan 🔴 −15,90 $ (−%0,2)","acik":true}
 {"zaman_ms":1795001555565,"olay":"tur","ozsermaye_usd":9981.1852}
 {"zaman_ms":1795002407272,"olay":"tur","ozsermaye_usd":9977.7843}
+{"zaman_ms":1795002901260,"olay":"hesap_okuma_hata","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","tur":"HTTPError"}
+{"zaman_ms":1795002967142,"olay":"hesap_okuma_hata","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","tur":"HTTPError"}
+{"zaman_ms":1795002972894,"olay":"bekci_tetik","gecen_sn":183.4,"sinir_sn":180.0}
+{"zaman_ms":1795002972895,"olay":"telegram","metin":"🚨 ALARM: motor dondu, yeniden başlatılıyor (sanal · deneme parası)\n━━━━━━━━━━━━━━\nDakikalık bakım 183 sn'dir tamamlanmadı (sınır 180 sn).\nSüreç çıkış kodu 1 ile kapanıyor; sunucu yeniden başlatır.","acik":true}
