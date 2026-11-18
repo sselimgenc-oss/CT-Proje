@@ -35,3 +35,14 @@ data/tv2/
 
 # wrangler geçici dizini (G-10 sg-nabiz yayını)
 .wrangler/
+
+# D-13 (2. denetim): sır içerebilecek dosyalar yanlışlıkla commit edilmesin (örnek şablonlar `.ornek`/`.example` ile eklenebilir)
+.env
+*.env
+*.pem
+*.key
+secrets*
+!*.env.ornek
+!*.env.example
+!*.pem.example
+!*.key.example

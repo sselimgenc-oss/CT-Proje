@@ -228,11 +228,11 @@ class GercekYurutucu:
         meta = self.post({"type": "meta", **({"dex": dex} if dex else {})})
         return {str(u["name"]): int(u["szDecimals"]) for u in meta["universe"]}
 
-    def _sz_decimals(self, coin: str) -> int:
+    def _sz_decimals(self, coin: str, kapanis: bool = False) -> int:
         """S-11: szDecimals önbelleği dex başına (ana dex ""; HIP-3 `dex:COIN` → o dex'in `meta`'sı, YALNIZ `canli_hip3_kopya` açıkken). Önbellekte olmayan coin → meta BİR KEZ yeniden okunur
         (açılıştan sonra listelenen coin yeniden başlatma beklemesin); yine yoksa açık metinli hata `bilinmeyen coin: X`."""
         dex = coin.split(":", 1)[0] if ":" in coin else ""
-        if dex and not bool(self.rules.get("canli_hip3_kopya", False)):
+        if dex and not kapanis and not bool(self.rules.get("canli_hip3_kopya", False)):          # D-4: AÇILIŞ kapısı `canli_hip3_kopya`da kalır; kapanış/stop (reduce-only) HIP-3 pozisyonunu da kapatabilir
             raise ValueError(f"bilinmeyen coin: {coin} (HIP-3 kapalı: canli_hip3_kopya=false)")
         tablo = self._sz_dec_dex.get(dex)
         if tablo is None or coin not in tablo:
@@ -245,7 +245,7 @@ class GercekYurutucu:
     def lot_adim(self, coin: str) -> float | None:
         """2. denetim O-5: coinin lot adımı (10^−szDecimals); bilinmiyor / meta okunamıyor → None (çağıran lot kuralını uygulamaz). Ağ okuması yapabilir (kilit altı: hızlı istemci)."""
         try:
-            return 10.0 ** -self._sz_decimals(coin)
+            return 10.0 ** -self._sz_decimals(coin, kapanis=True)
         except Exception:                              # noqa: BLE001
             return None
 
@@ -280,7 +280,7 @@ class GercekYurutucu:
             en_iyi = float(seviyeler[0]["px"])
             d.defter = {"levels": [list(kitap["levels"][0])[:10], list(kitap["levels"][1])[:10]]}
             bant = float(self.rules["canli_ioc_bant"]) if bant is None else float(bant)
-            dec = self._sz_decimals(coin)
+            dec = self._sz_decimals(coin, kapanis=reduce_only)
             limit = limit_yuvarla(en_iyi * (1 + bant) if yon == "B" else en_iyi * (1 - bant), dec, yon, en_iyi)
             if reduce_only:
                 sz = round(float(usd) / en_iyi, dec)
@@ -352,7 +352,7 @@ class GercekYurutucu:
         """K-64: borsada duran felaket stopu. Reduce-only, piyasa tetikli (`tpsl: sl`): long için satış (tetik altta), short için alış (tetik üstte).
         Miktar szDecimals'e AŞAĞI, tetik ızgaraya pozisyondan UZAĞA yuvarlanır. Döner (oid | None, neden, yuvarlanmış tetik)."""
         try:
-            dec = self._sz_decimals(coin)
+            dec = self._sz_decimals(coin, kapanis=True)
             adim = 10 ** -dec
             sz_y = math.floor(float(sz) / adim + 1e-9) * adim
             sz_y = round(sz_y, dec)
@@ -419,8 +419,7 @@ def gercek_yurutucu_olustur(post: Callable[[dict], Any], rules: dict | None = No
     rules = rules or load_rules()
     zaman_asimi = float(rules.get("canli_emir_zaman_asimi_sn", 10))         # G-12a: SDK varsayılanı None (süresiz bekler, motor kilidi tutulur); `API.post` → `session.post(..., timeout=)`
     ek: dict[str, Any] = {}
-    if bool(rules.get("canli_hip3_kopya", False)):                       # S-11 / K-42: HIP-3 (`dex:COIN`) SDK varlık tablosu YALNIZ HIP-3 kopyası açıkken (okunamazsa motor başlamaz)
-        from copytrade.izleme_liste import perp_dex_names
-        ek["perp_dexs"] = ["", *perp_dex_names(post({"type": "perpDexs"}))]
+    from copytrade.izleme_liste import perp_dex_names
+    ek["perp_dexs"] = ["", *perp_dex_names(post({"type": "perpDexs"}))]      # 2. denetim D-4: SDK varlık tablosu HER ZAMAN HIP-3 dex'lerini içerir (elle/eski HIP-3 pozisyonu kapatılabilsin; okunamazsa motor başlamaz). AÇILIŞ kapısı `canli_hip3_kopya`da (`_sz_decimals`)
     url = constants.TESTNET_API_URL if (ortam.get("HL_AG") or "").strip().lower() == "testnet" else constants.MAINNET_API_URL      # K-64: yalnız deneme betiği testnet kullanır
     return GercekYurutucu(Exchange(Account.from_key(anahtar), url, account_address=hesap, timeout=zaman_asimi, **ek), post, rules)

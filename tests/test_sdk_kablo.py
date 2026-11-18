@@ -77,6 +77,8 @@ def info_post(y):
         return {"coin": y["coin"], "time": 0, "levels": [[{"px": "99.9", "sz": "50"}], [{"px": "100", "sz": "50"}]]}
     if y["type"] == "meta":
         return META
+    if y["type"] == "perpDexs":                          # 2. denetim D-4: SDK varlık tablosu her zaman HIP-3 dex listesiyle kurulur (HIP-3 yok: yalnız ana dex)
+        return [None]
     raise AssertionError(y)
 
 

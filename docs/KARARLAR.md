@@ -335,3 +335,11 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 
 ## K-69 — Canlı denetim (17.11, kullanıcı kararı): stopsuz pozisyon toleransı 2 saat → 30 dakika (K-65 güncellemesi)
 - `canli_borsa_stop_korumasiz_sn` 7200 → **1800**. Borsa stopu beklenen coinde 30 dk kurulamazsa pozisyon otomatik kapatılır (K-65'in geri kalanı aynı: ceza süresi `canli_borsa_stop_ceza_sn`, kapanış serbest). Gerekçe: stopsuz pozisyonun 2 saat çıplak kalması; yalnız gerçek kip etkilenir, sanal kip borsa stopu kullanmaz.
+
+## K-70 — 2. canlı denetim kararları (18.11, kullanıcı: "hepsini yapalım"; Fable önerileri)
+- **O-1 (N = 3):** gerçek kipte ardışık 3 HL okuma hatasında `hl_okunamiyor` açılış bayrağı + alarm (saatte bir); başarılı okumada kalkar. Risk/DUR ertelenmez.
+- **O-2 (600 sn → kapat):** defterde pozisyonu olup ne `saha.uyeler` ne `saha.inen`de olan adres ilk görülmede alarm; `canli_yetim_kapat_sn` (600 sn, K-68) KESİNTİSİZ sürerse reduce-only kapatılır (kapanış kuyruğundaki / belirsiz emirli coinler hariç). Sanal kipte de aynı bekleme. Gerçek kipte `saha.json` sıkı okunur (bozuksa `DurumBozuk`); kozmetik pano çağrıları yalıtılır.
+- **K-1 (ofset bayrağı / yerel risk):** açılışta ledger okunur, ofset mutabakattan ÖNCE yenilenir (transfer türleri dahil). Ofset doğrulanana kadar risk YEREL defter özsermayesiyle sürer (çekimden etkilenmez, ertelenmez), yalnız `ofset` açılış bayrağı kapalı; 3. başarısız ledger okumasında alarm (saatte bir). Açıklanamayan sıçrama (`hl_sicrama`) hafızası `motor.json`'da; açılışta son kayıtlı özsermayeyle kıyas.
+- **D-11 (yalnız kapanış modu):** gerçek kipte HL > `canli_hl_deger_ust_usd` (1.500 $) iken yeniden başlatmada borsada açık pozisyon varsa motor başlar ama YENİ AÇILIŞ YOK (`kapanis_modu` bayrağı + alarm; kapanış, borsa stopu, trader kapanış takibi çalışır). Pozisyon yoksa bugünkü ret (çıkış 3).
+- **D-2 yapılmadı:** `set_expires_after` borsa stoplarını bozar (Fable); `belirsiz_coz` bunun yerine yalnız açık `unknownOid` yanıtını ve iki ardışık okumada "emir yok" sayar.
+

@@ -4,6 +4,8 @@ Eski günlük aday tarayıcı (prefilter/run/main) T1'de silindi; yeni tarama T2
 from __future__ import annotations
 
 import time
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any
 
 import requests
@@ -103,10 +105,18 @@ class PublicClient:
 
     @staticmethod
     def _retry_after(response: Any) -> float:
-        """`Retry-After` (saniye) başlığı; yok / geçersizse 0. `RETRY_AFTER_MAX` ile sınırlı."""
+        """`Retry-After` başlığı: saniye YA DA HTTP-date (RFC 9110); yok / geçersizse 0. `RETRY_AFTER_MAX` ile sınırlı."""
+        ham = (getattr(response, "headers", None) or {}).get("Retry-After", 0)
         try:
-            return min(max(float((getattr(response, "headers", None) or {}).get("Retry-After", 0)), 0.0), RETRY_AFTER_MAX)
+            return min(max(float(ham), 0.0), RETRY_AFTER_MAX)
         except (TypeError, ValueError):
+            pass
+        try:
+            tarih = parsedate_to_datetime(str(ham))
+            if tarih.tzinfo is None:
+                tarih = tarih.replace(tzinfo=UTC)
+            return min(max((tarih - datetime.now(UTC)).total_seconds(), 0.0), RETRY_AFTER_MAX)
+        except (TypeError, ValueError, IndexError):
             return 0.0
 
     def _sogut(self, sn: float) -> None:
@@ -156,10 +166,12 @@ class PublicClient:
                     if kind == "429":
                         raise RateLimitError("Hyperliquid rate limit exceeded after retries")
                     response.raise_for_status()
-                self.sleep(max(waits[used[kind]], self._retry_after(response)) if kind == "429" else waits[used[kind]])
+                self.sleep(max(waits[used[kind]], self._retry_after(response)))             # D-8: `Retry-After` 5xx'te de dikkate alınır (429'da olduğu gibi; ≤ 300 sn)
                 used[kind] += 1
                 kendi_bekleme = hizli
                 continue
+            if response.status_code == 418:           # D-8: IP geçici engeli ("I'm a teapot"): yeniden DENENMEZ; paylaşılan soğuma (Retry-After yoksa 600 sn)
+                self._sogut(self._retry_after(response) or 600.0)
             response.raise_for_status()           # diğer 4xx: yeniden denenmez
             data = response.json()
             # Yanıt boyutuna göre ek ağırlık (Hyperliquid belgesi): dolum/fonlama listelerinde 20 kayıt başına 1;

@@ -139,15 +139,20 @@ def hesap_degeri_oku(post: Callable[[dict], Any], adres: str, dexler: list[str] 
         return None
     soyut = hesap_soyutlama(post, adres)
     if soyut == "portfolioMargin":
-        return portfolio_son_deger(post, adres)
-    durum = post({"type": "spotClearinghouseState", "user": adres}) or {}
-    spot = sum(float(b.get("total", 0) or 0) for b in durum.get("balances", []) if str(b.get("coin")) == "USDC")
-    if soyut == "unifiedAccount":
-        return spot
-    toplam = 0.0
-    for dex in ["", *dexler]:
-        toplam += float(post(clearinghouse_yuk(adres, dex))["marginSummary"]["accountValue"])
-    return toplam + spot
+        deger = portfolio_son_deger(post, adres)
+    else:
+        durum = post({"type": "spotClearinghouseState", "user": adres}) or {}
+        spot = sum(float(b.get("total", 0) or 0) for b in durum.get("balances", []) if str(b.get("coin")) == "USDC")
+        if soyut == "unifiedAccount":
+            deger = spot
+        else:
+            toplam = 0.0
+            for dex in ["", *dexler]:
+                toplam += float(post(clearinghouse_yuk(adres, dex))["marginSummary"]["accountValue"])
+            deger = toplam + spot
+    if not math.isfinite(deger) or deger <= 0:                  # 2. denetim D-10: NaN/inf/≤ 0 geçersiz (`not hesap_usd` NaN'ı geçirirdi; oran paydası bu değerle bölünür)
+        raise ValueError("hesap değeri geçersiz")
+    return deger
 
 
 class KipHatasi(RuntimeError):
@@ -389,6 +394,18 @@ class Kayit:
     def __init__(self, dizin: Path, saat_ms: Callable[[], int]) -> None:
         self.dizin, self.saat_ms = dizin, saat_ms
         self.sayac: dict[str, int] = {}
+        self._onarildi: set[Path] = set()                  # D-7: bu süreçte yarım son satırı denetlenen günlük dosyaları
+
+    def _yarim_onar(self, yol: Path) -> None:
+        """D-7: çökme son satırı '\n'siz bıraktıysa yeni satır ona YAPIŞMASIN (`niyet._ekle` deseni): dosya başına süreçte bir kez bakılır."""
+        if yol in self._onarildi:
+            return
+        self._onarildi.add(yol)
+        with yol.open("a+b") as f:
+            if f.seek(0, os.SEEK_END) > 0:
+                f.seek(-1, os.SEEK_END)
+                if f.read(1) != b"\n":
+                    f.write(b"\n")
 
     def __call__(self, olay: dict) -> None:
         ms = self.saat_ms()
@@ -396,7 +413,9 @@ class Kayit:
         self.sayac[olay.get("olay", "?")] = self.sayac.get(olay.get("olay", "?"), 0) + 1
         try:
             self.dizin.mkdir(parents=True, exist_ok=True)
-            with (self.dizin / f"{gun(ms)}.jsonl").open("a", encoding="utf-8") as f:
+            yol = self.dizin / f"{gun(ms)}.jsonl"
+            self._yarim_onar(yol)
+            with yol.open("a", encoding="utf-8") as f:
                 f.write(maskele(json.dumps(olay, ensure_ascii=False, separators=(",", ":"), default=str)) + "\n")
         except OSError:
             self.sayac["yazma_hatasi"] = self.sayac.get("yazma_hatasi", 0) + 1
@@ -585,6 +604,7 @@ class Motor:
             self._hl_onceki, self._hl_sicrama = None, False
         if self.kip == "gercek":
             self.risk.bayrak("ofset", False)                      # K-1: diskteki bayrak BAYAT sayılır; açılışta (`ilk_mutabakat`) temizlenip yeniden değerlendirilir
+            self.risk.bayrak("kapanis_modu", False)               # D-11: aynı (açılışta `_motor_calistir` yeniden belirler)
             self.risk.bayrak("hl_okunamiyor", False)              # O-1: aynı (HL okuması açılışta zaten yapılmıştır; `ilk_mutabakat` yeniden değerlendirir)
         self.hl_oz: float | None = None
         self.hl_oz_ms: int = 0
@@ -1416,6 +1436,14 @@ class Motor:
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(gecici, self.dur_dosyasi)
+            try:                                                   # D-6: dizin fsync (elektrik kesintisinde yeniden adlandırma kaybolup `risk.json`da dur_dosya=True kalırsa açılış "operatör sildi" sayardı)
+                dfd = os.open(self.dur_dosyasi.parent, os.O_RDONLY)
+                try:
+                    os.fsync(dfd)
+                finally:
+                    os.close(dfd)
+            except OSError:                                        # dizin fsync desteklenmeyen dosya sistemi: dosya fsync'i yapıldı
+                pass
             return True
         except OSError as hata:
             self.kayit({"olay": "dur_yazim_hata", "neden": neden, "tur": type(hata).__name__})
@@ -2223,6 +2251,7 @@ class Motor:
             except Exception as hata:                                                           # noqa: BLE001
                 self._kayit_hata("donem_kilit", hata)
 
+    kapanis_modu = False                                    # D-11 (K-70): gerçek kip, HL > `canli_hl_deger_ust_usd` iken açık pozisyonla başlatıldı → YALNIZ kapanış (yeni açılış yok; kapanış/stop/trader kapanış takibi çalışır)
     _hl_ardisik = 0                                         # O-1: ardışık başarısız HL okuması (gerçek kip)
     HL_ARDISIK_ESIK = 3                                     # K-70: 3 ardışık okuma (≈ 3 dk) → `hl_okunamiyor` açılış bayrağı + alarm (saatte bir)
     SAHIPSIZ_TARAMA_KOPUK_MS = 3 * DAKIKA                   # taramalar arası bu kadar boşluk "kesintisiz" sayılmaz (yeniden başlatma / vardiya boşluğu)
@@ -2871,6 +2900,11 @@ class Motor:
             raise KipHatasi(f"kasa {self.kasa} $ > sınır {kasa_ust(self.rules, self.kip):g} $ ({self.kip} kip; AGENTS.md)")
         self.kilit_al()
         simdi = self.saat_ms()
+        if self.kapanis_modu:
+            self.risk.bayrak("kapanis_modu", True)                 # D-11: `acilis_izni` her yeni açılışı/artırmayı reddeder; kapanış/azaltma buradan geçmez
+            self.kayit({"olay": "kapanis_modu", "kasa": self.kasa})
+            self.tg.gonder(tg.alarm("ALARM: yalnız kapanış modu", f"HL hesap değeri sınırı ({hl_deger_ust(self.rules):g} $) aştı ve açık pozisyon var: motor başladı ama YENİ POZİSYON AÇMIYOR.\n"
+                                    "Kapanış, borsa stopu ve trader kapanış takibi çalışır. Kârı çekip motoru yeniden başlatın.", "🛑"))
         self.niyetleri_coz(simdi)
         if dur_yarim is not None:
             self._dur_kapanis_kuyrukla(dur_yarim["neden"], dur_yarim["borsa_acik"], simdi)
@@ -3859,9 +3893,19 @@ def acilis_yeniden_dene(is_: Callable[[], Any], bekle: tuple[float, ...] | None 
     raise son
 
 
-def acilis_hl_denetle(rules: dict, kip: str, post: Callable[[dict], Any], sk: dict, niyet_yolu: Path | None = None) -> tuple[float, float | None]:
+def _borsada_pozisyon_var(post: Callable[[dict], Any]) -> bool:
+    """D-11: kendi HL hesabımızda (tüm perp dex) açık pozisyon var mı. Okunamazsa `HlOkunamadi` (geçici: yeniden denenir; belirsizlikte açılış tavanı reddi kalıcı sayılmaz)."""
+    try:
+        hl = clearinghouse_pozisyonlari(post, os.environ.get("HL_HESAP_ADRESI", ""), perp_dex_names(post({"type": "perpDexs"})))
+    except Exception as hata:                              # noqa: BLE001
+        raise HlOkunamadi(f"HL pozisyonları okunamadı ({type(hata).__name__}): kapanış modu kararı verilemedi") from hata
+    return any(abs(v) > EPS for v in hl.values())
+
+
+def acilis_hl_denetle(rules: dict, kip: str, post: Callable[[dict], Any], sk: dict, niyet_yolu: Path | None = None, kapanis_modu_izni: bool = False) -> tuple[float, float | None]:
     """Açılışın HL'ye bağlı adımları (bir deneme): gerçek kipte API cüzdanı (G6) + etkin kasa + HL değer sınırı (K‑22) + (Y-5, `niyet_yolu` verilirse) yabancı açık emir yok.
-    Kalıcı ret `KipHatasi`; HL okunamadı `HlOkunamadi` (G-15)."""
+    Kalıcı ret `KipHatasi`; HL okunamadı `HlOkunamadi` (G-15). 2. denetim D-11 (K-70): `kapanis_modu_izni` iken HL değeri tavanı aşıyorsa ve borsada AÇIK POZİSYON varsa reddedilmez
+    (çağıran `hl_deger > hl_deger_ust` ile "yalnız kapanış modu" kurar); pozisyon yoksa bugünkü ret (çıkış 3) kalır."""
     if kip == "gercek":                                    # G6: emirden önce API cüzdanı doğrulaması (ana anahtar / agent değil → başlamaz)
         dogrulama = api_cuzdan_dogrula(post, os.environ)
         if not dogrulama["tamam"]:
@@ -3869,6 +3913,8 @@ def acilis_hl_denetle(rules: dict, kip: str, post: Callable[[dict], Any], sk: di
                 raise HlOkunamadi(f"API cüzdanı denetlenemedi: {dogrulama['neden']}")
             raise KipHatasi(f"API cüzdanı doğrulanamadı: {dogrulama['neden']}")
     kasa, hl_deger = etkin_kasa(rules, kip, post, **sk)
+    if kip == "gercek" and hl_deger is not None and hl_deger > hl_deger_ust(rules) + 1e-9 and kapanis_modu_izni and _borsada_pozisyon_var(post):
+        return kasa, hl_deger                                  # D-11: açık pozisyon yönetimsiz kalmasın → yalnız kapanış modunda başla (yeni açılış yok)
     if kip == "gercek" and hl_deger is not None and hl_deger > hl_deger_ust(rules) + 1e-9:          # HL tavanı 1.500 $ (kasa yine ≤ 1.000 $: min(ayar, HL))
         raise KipHatasi(f"HL hesap değeri {hl_deger:.0f} $ > sınır {hl_deger_ust(rules):g} $ (K‑22): kârı çekin ya da kullanıcı kararı")
     if kip == "gercek" and niyet_yolu is not None:
@@ -3886,15 +3932,21 @@ def _motor_calistir(args: argparse.Namespace, rules: dict, kip: str, post: Calla
     try:
         if kip == "gercek" and (os.environ.get("HL_AG") or "").strip():
             raise KipHatasi("HL_AG ayarlı: motor yalnız ana ağda çalışır (testnet yalnız `copytrade.canli.stop_deneme` içindir); HL_AG satırını ortamdan kaldırın")      # K-64
-        kasa, _ = acilis_yeniden_dene(lambda: acilis_hl_denetle(rules, kip, post, sk, Path(args.durum_dizin) / "niyet.jsonl"), bildir=bildir)
-        rules = {**rules, "canli_kasa_ayar_usd": kasa_belirle(rules, kip, **sk)[0], "canli_kasa_usd": kasa}
-        if sk:
-            rules["canli_kasa_kaynagi"] = "arg"                     # G5: Motor sanal kasa uyumunu denetler (bayraksız koşuda anahtar yok, davranış aynı)
-        boyut.saha_sayisi(kasa, rules)
+        kasa, hl_acilis = acilis_yeniden_dene(lambda: acilis_hl_denetle(rules, kip, post, sk, Path(args.durum_dizin) / "niyet.jsonl", kapanis_modu_izni=True), bildir=bildir)
+        kapanis_modu = kip == "gercek" and hl_acilis is not None and hl_acilis > hl_deger_ust(rules) + 1e-9          # D-11: HL > 1.500 $ ve açık pozisyon var (yoksa denetle zaten reddetti)
+        try:
+            rules = {**rules, "canli_kasa_ayar_usd": kasa_belirle(rules, kip, **sk)[0], "canli_kasa_usd": kasa}
+            if sk:
+                rules["canli_kasa_kaynagi"] = "arg"                     # G5: Motor sanal kasa uyumunu denetler (bayraksız koşuda anahtar yok, davranış aynı)
+            boyut.saha_sayisi(kasa, rules)
+        except ValueError as hata:                                      # D-9: ValueError YALNIZ kasa/boyut ayarında kalıcıdır (3)
+            raise KipHatasi(f"kasa/boyut ayarı geçersiz: {hata}") from hata
     except HlOkunamadi as hata:
         return _baslamadi(tgram, hata, CIKIS_GECICI)
-    except (KipHatasi, ValueError) as hata:
+    except KipHatasi as hata:
         return _baslamadi(tgram, hata, CIKIS_KALICI)
+    except ValueError as hata:                                          # D-9: HL ayrıştırma vb. beklenmeyen ValueError (geçici HL bozukluğu servisi kalıcı durdurmasın): geçici (75)
+        return _baslamadi(tgram, HlOkunamadi(f"açılışta beklenmeyen ayrıştırma hatası ({type(hata).__name__})"), CIKIS_GECICI)
     try:
         yur: Yurutucu = acilis_yeniden_dene(lambda: gercek_yurutucu_olustur(post_hizli, rules), bildir=bildir) if kip == "gercek" else SanalYurutucu(post_hizli, rules)
     except HlOkunamadi as hata:
@@ -3907,6 +3959,7 @@ def _motor_calistir(args: argparse.Namespace, rules: dict, kip: str, post: Calla
         motor = Motor(rules, yur, post, tgram, args.durum_dizin, args.kayit_dizin or (args.durum_dizin / "kayit"), kadro_oku, vardiya_id=args.vardiya, **({"post_hizli": post_hizli} if post_hizli is not post else {}))
     except DurumBozuk as hata:                                      # Denetim-2: bozuk/eksik durum (gerçek kip) → kalıcı çıkış + alarm; stop iptali hiç çağrılmaz
         return _baslamadi(tgram, hata, CIKIS_KALICI)
+    motor.kapanis_modu = kapanis_modu
     motor.radar_surum_gerekli = radar_surum_oku()
     motor.donem = donem_oku()
     try:

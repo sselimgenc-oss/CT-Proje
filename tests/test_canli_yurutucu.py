@@ -172,9 +172,9 @@ def test_g12a_exchange_zaman_asimi_kurallardan_sdk_kurucusuna_gecer(monkeypatch)
     for ad, mod in {"hyperliquid": hl, "hyperliquid.exchange": hl_ex, "hyperliquid.utils": hl_ut, "eth_account": eth}.items():
         monkeypatch.setitem(sys.modules, ad, mod)
     assert RULES["canli_emir_zaman_asimi_sn"] == 10
-    g = yu.gercek_yurutucu_olustur(lambda y: {}, RULES, {"HL_API_CUZDAN_ANAHTARI": "anahtar", "HL_HESAP_ADRESI": "0xabc"})
+    g = yu.gercek_yurutucu_olustur(lambda y: [None], RULES, {"HL_API_CUZDAN_ANAHTARI": "anahtar", "HL_HESAP_ADRESI": "0xabc"})
     assert kurulan == {"wallet": "cuzdan", "base_url": "https://api.hyperliquid.xyz", "account_address": "0xabc", "timeout": 10.0} and isinstance(g, yu.GercekYurutucu)
-    yu.gercek_yurutucu_olustur(lambda y: {}, {**RULES, "canli_emir_zaman_asimi_sn": 3}, {"HL_API_CUZDAN_ANAHTARI": "a", "HL_HESAP_ADRESI": "0xabc"})
+    yu.gercek_yurutucu_olustur(lambda y: [None], {**RULES, "canli_emir_zaman_asimi_sn": 3}, {"HL_API_CUZDAN_ANAHTARI": "a", "HL_HESAP_ADRESI": "0xabc"})
     assert kurulan["timeout"] == 3.0
 
 
