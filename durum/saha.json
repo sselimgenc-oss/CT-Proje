@@ -2205,14 +2205,14 @@
    "giris_sira": 12,
    "hesap_giris_usd": 1114416.615588,
    "sira_ust": 0,
-   "son_islem_ms": 1794979868897
+   "son_islem_ms": 1794980720505
   },
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": {
    "giris_ms": 1794828602613,
    "giris_sira": 18,
    "hesap_giris_usd": 325053.469196,
    "sira_ust": 0,
-   "son_islem_ms": 1794809946364
+   "son_islem_ms": 1794980302293
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": {
    "giris_ms": 1794828602613,
