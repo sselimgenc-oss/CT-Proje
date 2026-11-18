@@ -1191,9 +1191,23 @@ class Motor:
             self.kayit({"olay": "kapanis_eksik", "adres": adres, "coin": coin, "neden": neden})
             self.tg.gonder(tg.alarm("ALARM: pozisyon kapanmadı", f"kapanış EKSİK: {coin} (trader {tg.kisa(adres)}) {len(self.rules['canli_kapanis_bantlari'])} denemede kapanmadı ({neden}).\nArtan aralıklarla (1 → 30 dk) yeniden denenecek, yeni pozisyon açılmıyor."))
 
+    def _lot_adim(self, coin: str) -> float | None:
+        """2. denetim O-5: gerçek kipte coinin lot adımı (yürütücünün szDecimals'ı); sanalda / bilinmiyorsa None (lot kuralı yok)."""
+        f = getattr(self.yurutucu, "lot_adim", None)
+        if self.kip != "gercek" or f is None:
+            return None
+        try:
+            return f(coin)
+        except Exception:                              # noqa: BLE001
+            return None
+
     def _azalt_kuyruga(self, adres: str, coin: str, hedef_sz: float, neden: str, simdi: int, mk: float) -> None:
         kalan = self.hesap.sz(adres, coin) - hedef_sz
         if abs(kalan) * mk > float(self.rules["canli_kapanis_toz_usd"]) and kalan * self.hesap.sz(adres, coin) > 0:
+            adim = self._lot_adim(coin)
+            if adim is not None and abs(kalan) < adim / 2 - 1e-12:           # O-5: kalıntı yarım lotun altında: borsada emir verilemez (0 lot → `sz_sifir`); kuyruğa alınmaz, `kapanis_eksik` doğmaz
+                self.kayit({"olay": "azalt_lot_alti", "adres": adres, "coin": coin, "kalan_sz": abs(kalan), "lot": adim})
+                return
             self._eksik_ekle(adres, coin, "azalt", hedef_sz, neden, simdi, deneme=0)
 
     def _kuyruk_geri_cekil(self, anahtar: str, simdi: int) -> None:
@@ -1259,7 +1273,7 @@ class Motor:
                 fake = Olay("", adres, adres, simdi, simdi, "kapat", False, "", coin, mk, abs(fark), yon, None)
                 s = self._yurut(fake, adres, "azalt", yon, abs(fark) * mk * 1.001, True, abs(yerel), str(e.get("neden", "kuyruk")), False, simdi, bant=float(self.rules["canli_kapanis_bantlari"][0]),
                                 kimlik=f"azalt:{adres}:{coin}:{self.saat_ms()}")
-                if s.neden == "min_nosyonel":                    # kalan küçük kısmi azaltma: HL reddeder; bırak
+                if s.neden in ("min_nosyonel", "sz_sifir"):      # kalan küçük kısmi azaltma: HL reddeder / lot altı (0 lot) emir verilemez; bırak (O-5)
                     self.kapanis_kuyrugu.pop(anahtar, None)
                     continue
                 fark2 = self.hesap.sz(adres, coin) - float(e["hedef_sz"])

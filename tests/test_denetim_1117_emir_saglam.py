@@ -45,14 +45,14 @@ def test_o8_motor_belirsiz_bayragi_orderstatus_ile_cozulur_defter_dolar(tmp_path
     m.baslat()
     sim.trader_poz[adr(1)] = {"BTC": 300.0}
     s = m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
-    assert s[0].karar == "belirsiz" and sim.poz["BTC"] == pytest.approx(0.27273, abs=1e-5)         # borsada doldu, defterde yok
+    assert s[0].karar == "belirsiz" and sim.poz["BTC"] == pytest.approx(0.27272, abs=1e-5)         # borsada doldu, defterde yok
     (cloid,) = list(m.hesap.belirsiz)
     assert m.risk.acilis_durdu.get("belirsiz") is True and [x["cloid"] for x in m.niyet.sonucsuz()] == [cloid]      # niyet açık, "red" sayılmadı
     assert "yarim" in kayitlar(tmp_path, "emir")[-1]["ham"]
-    sim.durumlar[cloid] = {"status": "order", "order": {"order": {"coin": "BTC", "side": "B", "limitPx": "100.5", "sz": "0.0", "origSz": "0.27273", "oid": 7}, "status": "filled"}}
+    sim.durumlar[cloid] = {"status": "order", "order": {"order": {"coin": "BTC", "side": "B", "limitPx": "100.5", "sz": "0.0", "origSz": "0.27272", "oid": 7}, "status": "filled"}}
     saat.ms += 60_000
     m.dakika()
-    assert not m.hesap.belirsiz and m.hesap.sz(adr(1), "BTC") == pytest.approx(0.27273, abs=1e-9)
+    assert not m.hesap.belirsiz and m.hesap.sz(adr(1), "BTC") == pytest.approx(0.27272, abs=1e-9)
 
 
 # ------------------------------------------------------------------ O5
@@ -208,11 +208,11 @@ class KilitSim(G7Sim):
 
 
 def test_o9_gercek_ucret_sorgusu_kilit_disinda_defter_ve_ozsermaye_ozdesligi_altin_ornek(tmp_path, monkeypatch):
-    """300 BTC açılışı: 0,27273 BTC × 100 = 27,273 $. Tahmin ücret 27,273 × 0,00045 = 0,01227285; HL fee 0,012. Emir sırasında userFillsByTime YOK (kilit içinde ağ yok);
+    """300 BTC açılışı: 0,27272 BTC × 100 = 27,273 $. Tahmin ücret 27,273 × 0,00045 = 0,01227285; HL fee 0,012. Emir sırasında userFillsByTime YOK (kilit içinde ağ yok);
     düzeltme dakikalık bakımda kilit dışı okumayla: ücret 0,012, özsermaye 1000 − 0,012 (Δ = −0,00027285 kadar artar), realize değişmez."""
     sim = KilitSim()
     sim.kilitli = []
-    sim.fills = [{"coin": "BTC", "oid": 1, "fee": "0.012", "sz": "0.27273", "px": "100.0"}]
+    sim.fills = [{"coin": "BTC", "oid": 1, "fee": "0.012", "sz": "0.27272", "px": "100.0"}]
     m, sim, saat, _ = kur_gercek(tmp_path, monkeypatch, sim)
     sim.motor = m
     sim.trader_poz[adr(1)] = {"BTC": 300.0}
@@ -221,19 +221,19 @@ def test_o9_gercek_ucret_sorgusu_kilit_disinda_defter_ve_ozsermaye_ozdesligi_alt
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     assert len([x for x in sim.istekler if x["type"] == "userFillsByTime"]) == n0                        # emir yolunda sorgu yok
     oz0, marks = m.hesap.ozsermaye(m.marks), m.marks
-    assert oz0 == pytest.approx(1000.0 - 0.01227285, abs=1e-9) and len(m.ucret_bekleyen) == 1
+    assert oz0 == pytest.approx(1000.0 - 0.0122724, abs=1e-9) and len(m.ucret_bekleyen) == 1
     kayitli = json.loads((tmp_path / "durum" / "motor.json").read_text())["ucret_bekleyen"]
-    assert kayitli and kayitli[0]["tahmin"] == pytest.approx(0.01227285)                                  # bekleyen düzeltme kalıcı
+    assert kayitli and kayitli[0]["tahmin"] == pytest.approx(0.0122724)                                  # bekleyen düzeltme kalıcı
     realize0, slot0 = dict(m.hesap.realize), m.hesap.slot_ozsermaye(adr(1), marks)
     saat.ms += 60_000
     m.dakika()
     assert sim.kilitli and not any(sim.kilitli)                                                          # sorgu kilit DIŞINDA
     assert m.hesap.ucret[adr(1)] == pytest.approx(0.012, abs=1e-12) and m.hesap.realize == realize0
-    assert m.hesap.ozsermaye(m.marks) == pytest.approx(1000.0 - 0.012, abs=1e-9) and m.hesap.ozsermaye(m.marks) - oz0 == pytest.approx(0.01227285 - 0.012, abs=1e-9)
-    assert m.hesap.slot_ozsermaye(adr(1), m.marks) - slot0 == pytest.approx(0.01227285 - 0.012, abs=1e-9)
+    assert m.hesap.ozsermaye(m.marks) == pytest.approx(1000.0 - 0.012, abs=1e-9) and m.hesap.ozsermaye(m.marks) - oz0 == pytest.approx(0.0122724 - 0.012, abs=1e-9)
+    assert m.hesap.slot_ozsermaye(adr(1), m.marks) - slot0 == pytest.approx(0.0122724 - 0.012, abs=1e-9)
     assert not m.ucret_bekleyen and m.ucret_gercek_usd == pytest.approx(0.012) and m.ucret_tahmin_say == 0
     d = kayitlar(tmp_path, "ucret_duzeltildi")[0]
-    assert d["gercek"] == pytest.approx(0.012) and d["tahmin"] == pytest.approx(0.01227285)
+    assert d["gercek"] == pytest.approx(0.012) and d["tahmin"] == pytest.approx(0.0122724)
 
 
 def test_o9_fee_bulunamazsa_tahmin_kalir_bekleyen_30dk_sonra_duser(tmp_path, monkeypatch):
@@ -243,7 +243,7 @@ def test_o9_fee_bulunamazsa_tahmin_kalir_bekleyen_30dk_sonra_duser(tmp_path, mon
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     saat.ms += 60_000
     m.dakika()
-    assert len(m.ucret_bekleyen) == 1 and m.hesap.ucret[adr(1)] == pytest.approx(0.01227285)             # eşleşme yok: tahmin, tekrar denenir
+    assert len(m.ucret_bekleyen) == 1 and m.hesap.ucret[adr(1)] == pytest.approx(0.0122724)             # eşleşme yok: tahmin, tekrar denenir
     saat.ms += 1_800_000
     m.dakika()
     assert not m.ucret_bekleyen and m.ucret_tahmin_say == 1 and kayitlar(tmp_path, "ucret_duzeltme_vazgec")

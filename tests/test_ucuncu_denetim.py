@@ -1,7 +1,7 @@
 """Üçüncü dış denetim (09.11): Y-1 (yarım DUR), Y-2 (belirsizde merdiven durur), Y-5 (ikinci motor / yabancı emir), Y-7 (limit fiyat ızgarası) ve mutasyon boşlukları.
 Ağsız; gerçek kip YALNIZ sahte borsa (`BorsaSim`) ile sınanır, ÇALIŞTIRILMAZ. Sayılar elle hesaplanmıştır:
 - Kasa 1.000 $, 11 slot → slot 90,909 $; trader hesabı 100.000 $.
-- BTC: trader 300 × 100 $ = 30.000 $ (oran 0,30) → 27,27 $ / ask 100 = 0,27273 BTC (szDecimals 5).
+- BTC: trader 300 × 100 $ = 30.000 $ (oran 0,30) → 27,27 $ / ask 100 = 0,27272 BTC (szDecimals 5).
 - ETH: trader 15 × 2.000 $ = 30.000 $ (oran 0,30) → 27,27 $ / ask 2.000 = 0,013636 → 4 hane 0,0136 ETH.
 - Kapanış limitleri (bant %0,5, satış yukarı yuvarlanır): BTC bid 99,9 × 0,995 = 99,4005 → tick 0,1 → 99,5; ETH bid 1.999 × 0,995 = 1.989,005 → tick 0,1 → 1.989,1.
 """
@@ -22,7 +22,7 @@ from tests.test_canli_motor import RULES, SahteHL, SahteTG, adr, kayitlar, kur, 
 from tests.test_canli_t4b import BorsaSim, Cokus, kur_gercek
 from tests.test_g15_g22_acilis import HESAP, _main_kur
 
-BTC_SZ, ETH_SZ = 0.27273, 0.0136
+BTC_SZ, ETH_SZ = 0.27272, 0.0136
 
 
 @pytest.fixture(autouse=True)
@@ -110,7 +110,7 @@ def _kapanis_niyetleri(m):
 
 
 def test_y2_kapanis_merdiveni_ilk_belirsizde_durur_cozulunce_kuyruk_kapatir(tmp_path, monkeypatch):
-    """Açık 0,27273 BTC; trader kapatır; her kapanış emri zaman aşımına düşüyor (HL emri hiç görmedi). Eskiden merdiven 5 emir verip 5 çözülmemiş cloid biriktirirdi.
+    """Açık 0,27272 BTC; trader kapatır; her kapanış emri zaman aşımına düşüyor (HL emri hiç görmedi). Eskiden merdiven 5 emir verip 5 çözülmemiş cloid biriktirirdi.
     Şimdi: 1 emir, 1 belirsiz, girdi kuyrukta (eksik alarmı yok). Aynı dakika (10 sn dolmadı): yeni emir YOK. +60 sn: `orderStatus` → emir yok → kuyruk kapatır (borsa 0)."""
     sim = ZamanAsimiBorsa(ulasti=False, asili=0)
     m, sim, saat, tgp = kur_gercek(tmp_path, monkeypatch, sim)
@@ -245,7 +245,7 @@ def test_mut_gunluk_kayip_paydasi_gun_basi_kasa_degil():
 
 @pytest.mark.parametrize("orig, beklenen_yerel, beklenen_uygulanan", [(0.4, 0.0, BTC_SZ), (0.1, BTC_SZ - 0.1, 0.1)])
 def test_mut_belirsiz_reduce_only_kismi_kirpma(tmp_path, monkeypatch, orig, beklenen_yerel, beklenen_uygulanan):
-    """Defter 0,27273 BTC uzun; belirsiz reduce-only satış `orderStatus` filled. origSz 0,4 > defter → uygulanan min(0,4; 0,27273) = 0,27273, defter 0 (−0,12727 kısa DEĞİL).
+    """Defter 0,27272 BTC uzun; belirsiz reduce-only satış `orderStatus` filled. origSz 0,4 > defter → uygulanan min(0,4; 0,27272) = 0,27272, defter 0 (−0,12727 kısa DEĞİL).
     origSz 0,1 < defter → uygulanan 0,1, defter 0,17273 (kırpma tüm pozisyonu silmez)."""
     m, sim, saat, _ = kur_gercek(tmp_path, monkeypatch, BorsaSim())
     m.baslat()

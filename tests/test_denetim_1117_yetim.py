@@ -105,18 +105,18 @@ def test_belirsiz_emir_varken_kapatilmaz_cozulunce_kapanir(tmp_path, monkeypatch
 
 
 def test_defterli_coinde_borsa_fazlasi_ek_stop_defter_stopu_degismez_ve_yalniz_fazla_kapanir(tmp_path, monkeypatch):
-    """Defter BTC 0,27273 (giriş 100); borsada 0,5 → fazla 0,22727. Defter stopu (sz 0,27273, tetik 78) AYNEN; ek yetim stopu sz 0,22727, tetik 78. 10 dk sonra yalnız 0,22727 satılır, defter payı kalır."""
+    """Defter BTC 0,27272 (giriş 100); borsada 0,5 → fazla 0,22728. Defter stopu (sz 0,27272, tetik 78) AYNEN; ek yetim stopu sz 0,22728, tetik 78. 10 dk sonra yalnız 0,22728 satılır, defter payı kalır."""
     m, sim, saat, tgp = _hazir(tmp_path, monkeypatch)
     sim.trader_poz[adr(1)] = {"BTC": 300.0}
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
-    assert sim.poz["BTC"] == pytest.approx(0.27273, abs=1e-5)
+    assert sim.poz["BTC"] == pytest.approx(0.27272, abs=1e-5)
     sim.poz["BTC"] = 0.5
     _dk(m, saat, 2)
     st = sorted((e for e in sim.acik if e["coin"] == "BTC"), key=lambda e: e["sz"])
-    assert [round(e["sz"], 5) for e in st] == [0.22727, 0.27273] and all(float(e["triggerPx"]) == pytest.approx(78.0) for e in st)
-    assert m.borsa_stop.stoplar["BTC"]["sz"] == pytest.approx(0.27273, abs=1e-5)
+    assert [round(e["sz"], 5) for e in st] == [0.22728, 0.27272] and all(float(e["triggerPx"]) == pytest.approx(78.0) for e in st)
+    assert m.borsa_stop.stoplar["BTC"]["sz"] == pytest.approx(0.27272, abs=1e-5)
     _dk(m, saat, 9)
-    assert sim.poz["BTC"] == pytest.approx(0.27273, abs=1e-5) and m.hesap.sz(adr(1), "BTC") == pytest.approx(0.27273, abs=1e-5)
+    assert sim.poz["BTC"] == pytest.approx(0.27272, abs=1e-5) and m.hesap.sz(adr(1), "BTC") == pytest.approx(0.27272, abs=1e-5)
 
 
 def test_sanal_kip_yetim_izlemez(tmp_path):

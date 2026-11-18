@@ -239,6 +239,13 @@ class GercekYurutucu:
             raise ValueError(f"bilinmeyen coin: {coin}")
         return tablo[coin]
 
+    def lot_adim(self, coin: str) -> float | None:
+        """2. denetim O-5: coinin lot adımı (10^−szDecimals); bilinmiyor / meta okunamıyor → None (çağıran lot kuralını uygulamaz). Ağ okuması yapabilir (kilit altı: hızlı istemci)."""
+        try:
+            return 10.0 ** -self._sz_decimals(coin)
+        except Exception:                              # noqa: BLE001
+            return None
+
     def hazirla(self, coin: str) -> None:
         """Coin başına izole marj + `canli_marj_kaldirac`x (ilk AÇILIŞ/ARTIRMA emrinden önce, bir kez). G-4: reduce-only emirde çağrılmaz (kaldıraç reddi kapanışı engellemez)."""
         if coin in self._ayarli:
@@ -272,7 +279,10 @@ class GercekYurutucu:
             bant = float(self.rules["canli_ioc_bant"]) if bant is None else float(bant)
             dec = self._sz_decimals(coin)
             limit = limit_yuvarla(en_iyi * (1 + bant) if yon == "B" else en_iyi * (1 - bant), dec, yon, en_iyi)
-            sz = round(float(usd) / en_iyi, dec)
+            if reduce_only:
+                sz = round(float(usd) / en_iyi, dec)
+            else:                                       # 2. denetim D-1 [A]: AÇILIŞ/artırma miktarı AŞAĞI (lot) yuvarlanır: slot tavanı lot yarısı kadar aşılmaz (XRP 2,5 $, dec 0: 14 $ → 5 lot, 6 değil)
+                sz = float((Decimal(str(float(usd))) / Decimal(str(en_iyi))).quantize(Decimal(1).scaleb(-dec), rounding=ROUND_FLOOR))
             tavan_sz = round(abs(acik_sz), dec) if reduce_only and acik_sz is not None else None
             if tavan_sz is not None:
                 sz = min(sz, tavan_sz)
@@ -320,7 +330,8 @@ class GercekYurutucu:
                 d.emir_ms = emir_oncesi_ms
                 d.kayma_oran = kayma(yon, en_iyi, d.px)
                 tam_kapanis = tavan_sz is not None and sz >= tavan_sz and d.sz >= tavan_sz - 0.5 * 10 ** -dec      # M-3: istek pozisyonla kırpıldı ve kırpılan miktarın tamamı doldu → TAM kapanış
-                d.durum = "dolu" if d.usd_dolan >= usd * 0.999 or tam_kapanis else "kismi"
+                lot_dolu = d.sz >= sz - 0.5 * 10 ** -dec                                  # D-1: istenen LOT sayısının tamamı doldu (lot yuvarlaması usd'nin altında bırakabilir) → "dolu"
+                d.durum = "dolu" if d.usd_dolan >= usd * 0.999 or tam_kapanis or lot_dolu else "kismi"
             elif "error" in durum:
                 d.durum, d.neden = "red", str(durum["error"])[:160]
             else:
