@@ -214,3 +214,7 @@ isabet_butce_dk: 30                     # dakika (isabet adımı süre bütçesi
 isabet_kotu_gecikme_dk: 3               # dakika (kötü senaryo gecikmesi)
 isabet_kotu_kayma_carpan: 2             # kat (kötü senaryo: maliyet_kayma bu kadar katı)
 para_hareketi_isaret_payi: 0.2          # oran (T6 §2, bilgi: net yatırma / hafta başı sermaye bunun üstündeyse raporda işaretlenir; kapıyı DEĞİŞTİRMEZ)
+# Gölge kurallar (Fable 18.11; yalnız kayıt, işlem etkisi yok): motor `golge_kural` olayı yazar (kural başlayınca/bitince), emir/kadro değişmez
+golge_hesap_alt_usd: 5000               # $ (trader hesap değeri bundan KÜÇÜKSE A_hesap_5k)
+golge_kaldirac_uyari: 5                 # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_5x; yalnız kayıt, işlem etkisi yok)
+golge_kaldirac_cikar: 20                # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_20x; yalnız kayıt, işlem etkisi yok)

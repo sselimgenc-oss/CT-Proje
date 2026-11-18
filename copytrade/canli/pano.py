@@ -500,6 +500,15 @@ def tutma_sinifi(saat: float | None) -> str:
     return "scalp" if saat < 0.5 else ("kısa day" if saat < 4 else ("day" if saat <= 24 else "swing"))
 
 
+def _kaldirac_html(r: dict, kaldirac: dict | None) -> str:
+    """Trader kartı kaldıraç bilgisi (yalnız gösterim): motorun `kaldirac_tr` kaydı (anlık nosyonel / hesap değeri) + radar 7g azami. Eksik veri "—"."""
+    k = kaldirac or {}
+    kal, hes = k.get("anlik_kaldirac"), k.get("hesap_usd")
+    anlik = "—" if kal is None else f"{tr_sayi(float(kal), 1)}x" + ("" if hes is None else f" (hesap {tr_sayi(float(hes), 0)} $)")
+    rad = "—" if r.get("max_kaldirac") is None else f"{tr_sayi(float(r['max_kaldirac']), 1)}x"
+    return f'<div><span class="so">Anlık kaldıraç</span><br>{esc(anlik)}</div><div><span class="so">Radar azami (7g)</span><br>{rad}</div>'
+
+
 def _tarz_html(r: dict) -> str:
     """Kadro satırının bilgi alanları (radar 15.11): medyan tutma süresi + sınıfı, haftalık devir (trader hafta hacmi / hesap ≈ kopya hacmi / slot). Kural DEĞİL; 1–2 hafta ölçüm için."""
     t, d = r.get("medyan_tutma_saat"), r.get("devir_hafta")
@@ -550,7 +559,7 @@ def _maruziyet_html(acik: list[dict], kasa: float, oz: float, kaldirac: float, c
 
 
 def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecmis: list[dict], simdi_ms: int, kadro: dict | None = None, saha_durum: dict | None = None, hesap_tr: dict | None = None, havuz: dict | None = None, kurallar: dict | None = None,
-                 donem_seri: dict | None = None, isabetler: list[dict] | None = None) -> str:
+                 donem_seri: dict | None = None, isabetler: list[dict] | None = None, kaldirac_tr: dict | None = None) -> str:
     """Telefonda/bilgisayarda açılan tek dosyalık koyu "terminal" paneli (`pano/index.html`; kullanıcının Cloudflare Workers statik sayfası `sg-pano` `canli-durum` dalının `pano/` klasörünü gösterir, salt okunur): rakam şeridi, özsermaye/düşüş/günlük K-Z grafikleri, pozisyon dağılımı, pozisyon ve işlem tabloları; DÖNEM sekmesi (14.11): dönem eğrisi, trader katkısı, İlk 11 ↔ Yedek, giriş/çıkış geçmişi, doluluk, emir oranları, radar hunisi, seçim isabeti (`donem_seri`, `kadro.huni`, `isabetler`).
     Saf fonksiyon; yeni hesap yok (özet + kayıtlardan yalnız toplama/dizme). Dış kaynak/JS yok; tüm metin HTML kaçışlı."""
     kasa, oz = float(ozet.get("kasa_usd") or 0.0), float(ozet.get("ozsermaye_usd") or 0.0)
@@ -700,12 +709,12 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
                        f'<div><span class="so">Açık pozisyon</span><br>{poz_adres.get(ad, 0)}</div>'
                        f'<div><span class="so">Son işlem</span><br>{_tsi(son_emir[ad]) if ad in son_emir else "—"}</div>'
                        f'<div><span class="so">Radar 7g kopya getirisi</span><br>{esc(tyuz(r.get("kopya_getiri_7g")))}</div>'
-                       f'<div><span class="so">Ödenen ücret</span><br>{esc(tl(float(ucr.get(ad, 0.0))))}</div>{_tarz_html(r)}</div>')
+                       f'<div><span class="so">Ödenen ücret</span><br>{esc(tl(float(ucr.get(ad, 0.0))))}</div>{_kaldirac_html(r, (kaldirac_tr or {}).get(ad))}{_tarz_html(r)}</div>')
         else:
             ayrinti = (f'<div class="ms"><div><span class="so">Durum</span><br>Henüz sahada değil — {"bekleme süresi, korelasyon ya da günlük değişiklik sınırı nedeniyle olabilir" if durum == "BEKLİYOR" else ("radar listesinde yok" if durum == "KADRO DIŞI" else "yedek listede")}</div>'
                        f'<div><span class="so">Radar 7g kopya getirisi</span><br>{esc(tyuz(r.get("kopya_getiri_7g")))}</div>'
                        f'<div><span class="so">Form puanı</span><br>{tr_sayi(float(r.get("form") or 0), 1)} / 100</div>'
-                       f'<div><span class="so">Azami kaldıraç</span><br>{tr_sayi(float(r.get("max_kaldirac") or 0), 1)}x</div>{_tarz_html(r)}</div>')
+                       f'{_kaldirac_html(r, (kaldirac_tr or {}).get(ad))}{_tarz_html(r)}</div>')
         ek = ""
         hv = (havuz or {}).get(ad) or {}
         if ad in slot_bas:                                                                      # C1: canlı kopya koruması — bizim slot getirimiz ↔ aynı sürede trader'ın hesap getirisi
@@ -935,7 +944,7 @@ def main(argv: list[str] | None = None) -> int:
     args.gecmis.write_text(json.dumps(yeni, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     if args.html:
         args.html.write_text(html_olustur(ozet, _json(args.durum / "risk.json"), _json(args.durum / "hesap.json"), kayitlar, yeni, int(time.time() * 1000), kadro, _json(args.durum / "saha.json"), _json(args.durum / "motor.json").get("hesap_tr"), havuz_oku(args.isabet_dali, kadro),
-                                               donem_seri=ds, isabetler=isabetler), encoding="utf-8")
+                                               donem_seri=ds, isabetler=isabetler, kaldirac_tr=_json(args.durum / "motor.json").get("kaldirac_tr")), encoding="utf-8")
     print(md)
     return 0
 
