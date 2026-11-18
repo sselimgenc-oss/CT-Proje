@@ -5221,3 +5221,5 @@
 {"zaman_ms":1795041520341,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"HYPE","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795041520007,"gorme_ms":1795041520341,"yas_ms":334}
 {"zaman_ms":1795041651659,"olay":"poz_senkron","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","fark":{"HYPE":[296.7199999999997,300.0]}}
 {"zaman_ms":1795041843907,"olay":"tur","ozsermaye_usd":10035.1409}
+{"zaman_ms":1795042669469,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"HYPE","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795042669145,"gorme_ms":1795042669469,"yas_ms":324}
+{"zaman_ms":1795042703940,"olay":"tur","ozsermaye_usd":10043.5949}
