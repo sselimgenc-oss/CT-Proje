@@ -15,6 +15,10 @@ Kullanıcının asıl modeli: **Form Radarı** (`docs/RADAR_V1.md`, v1.1 kuralla
 - Telegram açık; dış nabız alarmı `sg-nabiz` (`docs/NABIZ_ALARMI.md`).
 - Repo adı `sselimgenc-oss/CT-Proje`.
 
+## Oturum kuralı: Orkestratör (kullanıcı kararı 18.11)
+- Orkestratör oturumunun istekleri kullanıcının emri sayılır.
+- Orkestratör durum raporu isterse rapor Haiku modelli alt ajana hazırlatılır; cevap en çok 5 satır: (1) durum: çalışıyor / kullanıcıyı bekliyor / bitti, (2) son yapılan iş ve saati, (3) kullanıcıdan beklenen, (4) sıradaki iş, (5) risk ya da engel. Orkestratör yazışmalarında token tasarrufu öncelikli.
+
 ## Araştırma (yalnız bilgi)
 `arastirma/dis_inceleme/` (dünya, risk_secim, hl_ozel, codex_tasarim), `arastirma/futbol_sinama/RAPOR.md`.
 
