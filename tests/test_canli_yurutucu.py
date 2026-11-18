@@ -116,7 +116,12 @@ def test_gercek_yurutucu_red_hata_ve_dolmayan_yanitlar_motoru_dusurmez():
     d2 = yu.GercekYurutucu(SahteExchange(hata=ConnectionError("x")), meta_post, RULES).emir("BTC", "B", 11.0)
     assert d2.durum == "belirsiz" and "sdk_hatasi" in d2.neden and d2.sz == 0     # G-1: emir isteği gittikten sonra bağlantı hatası → HL emri almış olabilir: "red" DEĞİL "belirsiz"
     d3 = yu.GercekYurutucu(SahteExchange({"beklenmedik": 1}), meta_post, RULES).emir("BTC", "B", 11.0)
-    assert d3.durum == "red" and d3.neden == "yanit_bicimi"
+    assert d3.durum == "belirsiz" and d3.neden == "yanit_bicimi"                    # 2. denetim O-4 (GÜÇLENDİRME): `statuses` okunamıyor → HL emri işlemiş olabilir; eskiden "red"
+    for yanit in ({"error": "Could not parse JSON: <html>"}, {"status": "ok", "response": {"type": "order", "data": {"statuses": []}}}):
+        d6 = yu.GercekYurutucu(SahteExchange(yanit), meta_post, RULES).emir("BTC", "B", 11.0)
+        assert d6.durum == "belirsiz" and d6.neden == "yanit_bicimi" and d6.sz == 0 and d6.ham["yanit"]
+    acik_red = {"status": "ok", "response": {"type": "order", "data": {"statuses": [{"error": "Order must have minimum value of $10."}]}}}
+    assert yu.GercekYurutucu(SahteExchange(acik_red), meta_post, RULES).emir("BTC", "B", 11.0).durum == "red"          # açık HL reddi hâlâ kesin red
     resting = {"status": "ok", "response": {"type": "order", "data": {"statuses": [{"resting": {"oid": 5}}]}}}
     d4 = yu.GercekYurutucu(SahteExchange(resting), meta_post, RULES).emir("BTC", "B", 11.0)
     assert d4.durum == "dolmadi" and d4.sz == 0                                  # IOC: resting yeniden denenmez
@@ -126,7 +131,10 @@ def test_gercek_yurutucu_red_hata_ve_dolmayan_yanitlar_motoru_dusurmez():
 
 # ------------------------------------------------------------------------------------------------ G-1 / G-12a: zaman aşımı → belirsiz
 class ClientError(Exception):
-    """SDK `hyperliquid.utils.error.ClientError` taklidi (HTTP 4xx: HL isteği açıkça reddetti; sınıf adıyla tanınır)."""
+    """SDK `hyperliquid.utils.error.ClientError` taklidi (HTTP 4xx; sınıf adıyla tanınır; gerçek SDK'daki gibi `status_code` alanı var)."""
+    def __init__(self, status_code=400, *a):
+        super().__init__(status_code, *a)
+        self.status_code = status_code
 
 
 def test_g1_emir_cagrisinda_zaman_asimi_belirsiz_emir_oncesi_hata_ve_4xx_red():
@@ -139,7 +147,8 @@ def test_g1_emir_cagrisinda_zaman_asimi_belirsiz_emir_oncesi_hata_ve_4xx_red():
     d = yu.GercekYurutucu(ex, bozuk_post, RULES).emir("BTC", "B", 11.0, cloid="0x" + "1" * 32)
     assert d.durum == "red" and ex.cagrilar == []                                # emir hiç gönderilmedi
     for hata, beklenen in [(requests.exceptions.ReadTimeout("zaman aşımı"), "belirsiz"), (requests.exceptions.ConnectionError("koptu"), "belirsiz"),
-                           (RuntimeError("5xx"), "belirsiz"), (ClientError("422"), "red")]:
+                           (RuntimeError("5xx"), "belirsiz"), (ClientError(422), "red"), (ClientError(400), "red"), (ClientError(429), "red"), (ClientError(403), "red"),
+                           (ClientError(408), "belirsiz"), (ClientError(499), "belirsiz"), (ClientError(404), "belirsiz")]:           # D-3: yalnız 400/401/403/422/429 kesin red
         d = yu.GercekYurutucu(SahteExchange(hata=hata), meta_post, RULES).emir("BTC", "B", 11.0, cloid="0x" + "1" * 32)
         assert (d.durum, d.sz, d.usd_dolan) == (beklenen, 0.0, 0.0) and d.neden == f"sdk_hatasi: {type(hata).__name__}"
 

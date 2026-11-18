@@ -126,7 +126,10 @@ def test_y2_kapanis_merdiveni_ilk_belirsizde_durur_cozulunce_kuyruk_kapatir(tmp_
     assert len(_kapanis_niyetleri(m)) == 1 and sim.asili == 4                                     # belirsiz çözülmeden kuyruk beklemede
     sim.asili = 0
     saat.ms += 60_000
-    m.dakika()
+    m.dakika()                                                                                       # 2. denetim O-4: ilk `unknownOid` kesin değil
+    assert len(m.hesap.belirsiz) == 1 and len(_kapanis_niyetleri(m)) == 1
+    saat.ms += 60_000
+    m.dakika()                                                                                       # ikinci ardışık okuma: emir yok kesinleşir → kuyruk kapatır
     assert m.hesap.belirsiz == {} and len(_kapanis_niyetleri(m)) == 2 and sim.poz["BTC"] == pytest.approx(0.0, abs=1e-9)
     assert m.hesap.sz(adr(1), "BTC") == pytest.approx(0.0, abs=1e-9) and not m.kapanis_kuyrugu
 

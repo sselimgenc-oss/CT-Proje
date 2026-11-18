@@ -90,7 +90,10 @@ def test_g1_orderstatus_emir_yok_dolmadi_pozisyon_yok(tmp_path, monkeypatch):
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     saat.ms += 60_000
     m.dakika()
-    assert sim.orderstatus_say() == 1 and m.hesap.sz(adr(1), "BTC") == 0.0 and not sim.poz.get("BTC") and "BTC" not in m.hesap.poz.get(adr(1), {})
+    assert sim.orderstatus_say() == 1 and len(m.hesap.belirsiz) == 1 and m.risk.acilis_durdu["belirsiz"] is True         # 2. denetim O-4: ilk `unknownOid` KESİN değil (çözülmemiş; açılış kapalı)
+    saat.ms += 60_000
+    m.dakika()                                                                    # ikinci ardışık `unknownOid` → emir yok kesinleşir
+    assert sim.orderstatus_say() == 2 and m.hesap.sz(adr(1), "BTC") == 0.0 and not sim.poz.get("BTC") and "BTC" not in m.hesap.poz.get(adr(1), {})
     assert m.hesap.belirsiz == {} and m.niyet.sonucsuz() == [] and m.risk.acilis_durdu["belirsiz"] is False
     assert kayitlar(tmp_path, "belirsiz_cozuldu")[0]["durum"] == "emir_yok" and kayitlar(tmp_path, "belirsiz_cozuldu")[0]["uygulanan_sz"] == 0.0
 

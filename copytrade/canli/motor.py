@@ -3024,13 +3024,27 @@ class Motor:
                     try:
                         y = self.post_hizli({"type": "orderStatus", "user": os.environ.get("HL_HESAP_ADRESI", ""), "oid": cloid})
                     except Exception as hata:                  # noqa: BLE001 - ağ yok: girdi kalır, sonraki dakika yeniden
+                        b["yok_say"] = 0
                         b["deneme"] = int(b.get("deneme", 0)) + 1
                         self.kayit({"olay": "belirsiz_sorgu_hata", "cloid": cloid, "coin": n["coin"], "deneme": b["deneme"], "tur": type(hata).__name__})
                         if b["deneme"] == 5:
                             self.tg.gonder(tg.alarm("ALARM: belirsiz emir çözülemiyor", f"{n['coin']} {n.get('eylem')} emrinin durumu {b['deneme']} kez sorgulanamadı.\nYeni pozisyon açılmıyor; her dakika yeniden deneniyor."))
                         continue
                     durum, dolan, px, kalan_sz, ucret = "emir_yok", 0.0, 0.0, 0.0, 0.0
-                    if (y or {}).get("status") == "order":
+                    if not (isinstance(y, dict) and y.get("status") in ("order", "unknownOid")):
+                        # 2. denetim O-4: hata / boş / beklenmeyen biçim "emir yok" DEĞİLDİR: girdi çözülmemiş kalır (yeni açılış durur), sonraki dakika yeniden sorulur
+                        b["yok_say"] = 0
+                        b["deneme"] = int(b.get("deneme", 0)) + 1
+                        self.kayit({"olay": "belirsiz_sorgu_bicim", "cloid": cloid, "coin": n["coin"], "deneme": b["deneme"], "yanit": str(y)[:120]})
+                        if b["deneme"] == 5:
+                            self.tg.gonder(tg.alarm("ALARM: belirsiz emir çözülemiyor", f"{n['coin']} {n.get('eylem')} emrinin durumu {b['deneme']} kez anlaşılır biçimde sorgulanamadı.\nYeni pozisyon açılmıyor; her dakika yeniden deneniyor."))
+                        continue
+                    if y.get("status") == "unknownOid":
+                        b["yok_say"] = int(b.get("yok_say", 0)) + 1                       # açık `unknownOid` yanıtı; kesinleşmesi için İKİ ardışık okuma (geç işlenen emir için pay)
+                        if b["yok_say"] < 2:
+                            self.kayit({"olay": "belirsiz_emir_yok_ilk", "cloid": cloid, "coin": n["coin"]})
+                            continue
+                    if y.get("status") == "order":
                         emir = y["order"]
                         durum = str(emir.get("status", "?"))
                         e = emir.get("order", {})

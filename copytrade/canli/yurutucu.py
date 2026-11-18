@@ -170,6 +170,9 @@ def ucret_eslestir(satirlar: Any, coin: str, oid: Any, cloid: str | None) -> flo
     return sum(fee) if fee else None
 
 
+KESIN_RED_KODLARI = (400, 401, 403, 422, 429)          # D-3: bu HTTP kodlarında emir kesin alınmadı (red); diğer 4xx belirsiz
+
+
 class AnahtarYok(RuntimeError):
     """Gerçek kip için ortam değişkenleri eksik: motor BAŞLAMAZ."""
 
@@ -305,7 +308,8 @@ class GercekYurutucu:
         except Exception as hata:                      # noqa: BLE001 - G-1: emir isteği GÖNDERİLDİKTEN sonra hata (zaman aşımı, bağlantı, 5xx)
             # HL emri almış ve doldurmuş olabilir: "red" DEĞİL "belirsiz" → motor niyeti açık bırakır, `orderStatus(cloid)` ile çözer.
             # Yalnız HL'nin açıkça reddettiği istek (SDK `ClientError`, HTTP 4xx) kesin red sayılır.
-            d.durum = "red" if type(hata).__name__ == "ClientError" else "belirsiz"
+            # 2. denetim D-3: SDK `ClientError` (HTTP 4xx) yalnız HL'nin açıkça reddettiği kodlarda (400/401/403/422/429) kesin red; ara katmandan gelen diğer 4xx (408, 499 …) belirsiz
+            d.durum = "red" if type(hata).__name__ == "ClientError" and getattr(hata, "status_code", None) in KESIN_RED_KODLARI else "belirsiz"
             d.neden = f"sdk_hatasi: {type(hata).__name__}"
             d.ham = {"istisna": type(hata).__name__, "metin": str(getattr(hata, "error_message", None) or hata)[:300]}      # G-19: HL'nin açıklaması kaybolmasın
             return d
@@ -316,7 +320,8 @@ class GercekYurutucu:
         try:
             durum = yanit["response"]["data"]["statuses"][0]
         except (KeyError, IndexError, TypeError):
-            d.durum, d.neden = "red", "yanit_bicimi"
+            d.durum, d.neden = "belirsiz", "yanit_bicimi"       # 2. denetim O-4: `statuses` okunamaz / boş / SDK `{"error": ...}` (bozuk 200 gövdesi): HL emri işlemiş olabilir → `orderStatus(cloid)` çözer (eskiden "red")
+            d.ham = {"yanit": str(yanit)[:300]}
             return d
         try:                                            # Denetim-6 (O8): dolum yanıtı ayrıştırması korumalı; beklenmedik biçim emri düşürmez, "belirsiz" olur (orderStatus(cloid) çözer)
             if "filled" in durum:
