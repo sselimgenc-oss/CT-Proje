@@ -184,8 +184,8 @@ class Telegram:
 
     def _gonder_sync(self, metin: str) -> bool:
         """G-18: önemli mesaj (ONEMLI_ONEKLER) gönderilemezse 2/5/15 sn beklemeyle 3 kez daha denenir; 429'da en az `retry_after` (≤ 60 sn) beklenir, önemsiz mesaj da 429'da bir kez
-        yeniden denenir. Bekleme yalnız `_yeniden` (arka plan iş parçacığı) açıkken; eşzamanlı yolda tek deneme. `hata_sayisi` yalnız son başarısızlıkta artar."""
-        plan = list(YENIDEN_BEKLEME_S) if (metin.startswith(ONEMLI_ONEKLER) and self._yeniden) else []
+        yeniden denenir. Önemli mesaj eşzamanlı yolda da bekleyerek yeniden denenir (en çok ≈22 sn + HTTP süreleri; motor kilidi altında çağrılmaz: motor gönderimi arka plan havuzunda); önemsiz mesaj eşzamanlı yolda tek deneme. `hata_sayisi` yalnız son başarısızlıkta artar."""
+        plan = list(YENIDEN_BEKLEME_S) if metin.startswith(ONEMLI_ONEKLER) else []      # önemli mesaj eşzamanlı yolda da yeniden denenir (sağlık/açılış/başlamadı alarmı: kilit altında DEĞİL; motor gönderimi zaten arka plan havuzunda)
         deneme = 0
         while True:
             deneme += 1

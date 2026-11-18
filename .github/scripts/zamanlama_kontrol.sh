@@ -8,6 +8,7 @@ set -euo pipefail
 mod="${1:?radar|canli}"
 veri_dali="${VERI_DALI:?}"
 atla=false
+devral=""   # kilit sahibi koşu DOĞRULANMIŞ biçimde bitmişse onun kimliği: motor bu kilidi devralır (aksi halde motor kendi taze-nabız kontrolüyle başlamaz → zincir kopar)
 neden="yedek cron değil: normal çalışır"
 # radar: HER schedule koşusu (birincil de) bugün yapılmışsa atlar — geç gelen birincil koşu kadroyu gün içinde ikinci kez yazmasın (Opus denetimi, 05.11). canli: yalnız yedek cron.
 olay="${GITHUB_EVENT_NAME:-}"
@@ -37,9 +38,12 @@ if { [ "$olay" = schedule ] && { [ "$mod" = radar ] || { [ -n "${YEDEK_CRON:-}" 
             *)
               sahip_durum=""
               if ! sahip_durum="$(gh api "repos/${GITHUB_REPOSITORY:-}/actions/runs/${sahip}" --jq .status 2>/dev/null)"; then sahip_durum=""; fi
-              if [ "$sahip_durum" = completed ]; then
+              # Zincir tetiği (`onceki_vardiya` girdisi = tetikleyen koşunun run_id'si): concurrency grubu (cancel-in-progress=false) bu koşuyu önceki koşu TAMAMEN bitmeden başlatmaz;
+              # kilit sahibi o koşuysa (gh api okunamasa / henüz `in_progress` dönse bile) bitmiştir.
+              if [ "$sahip_durum" = completed ] || { [ "$olay" = workflow_dispatch ] && [ -n "${ONCEKI_VARDIYA:-}" ] && [ "${ONCEKI_VARDIYA}" = "$sahip" ]; }; then
                 taze=hayir
-                echo "::warning::kilit bırakılmamış ama sahibi koşu ($sahip) bitmiş: bayat kilit, vardiya başlar"
+                devral="$sahip"
+                echo "::warning::kilit bırakılmamış ama sahibi koşu ($sahip) bitmiş: bayat kilit, vardiya başlar (motor kilidi devralır)"
               fi
               ;;
           esac
@@ -54,5 +58,6 @@ if { [ "$olay" = schedule ] && { [ "$mod" = radar ] || { [ -n "${YEDEK_CRON:-}" 
   fi
 fi
 echo "atla=$atla" >> "${GITHUB_OUTPUT:-/dev/null}"
+if [ -n "$devral" ]; then echo "devral=$devral" >> "${GITHUB_OUTPUT:-/dev/null}"; fi
 echo "zamanlama kontrolü [$mod]: $neden"
 if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then echo "- zamanlama kontrolü [$mod]: $neden (atla=$atla)" >> "$GITHUB_STEP_SUMMARY"; fi

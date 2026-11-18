@@ -20,9 +20,11 @@ else
 fi
 metin="🚨 Vardiya BAŞLAMADI/ÇÖKTÜ (${is_adi}): ${RUN_URL:-?}
 adım: ${adim}"
-if ! curl -fsS --max-time 30 --retry 2 -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+# Telegram geçici hata verirse (ReadTimeout/5xx/bağlantı/429) artan beklemeyle yeniden dener: 4 deneme, 5 sn aralık; --retry-all-errors HTTP hatalarını da kapsar (429'da Retry-After saygı görür).
+if ! curl -fsS --max-time 30 --retry 3 --retry-all-errors --retry-delay 5 -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
   --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" --data-urlencode "text=${metin}" >/dev/null 2>&1; then
-  echo "Telegram alarmı gönderilemedi" >&2
+  # Asıl başarısızlık (yukarıdaki adım) iş durumunda ZATEN kırmızı; Telegram'ın kendisi düşerse sebep gizlenmesin diye uyarı + adım kırmızı (exit 1).
+  echo "::warning::Telegram alarmı gönderilemedi (4 deneme); asıl başarısızlık: ${adim} — ${RUN_URL:-?}" >&2
   exit 1
 fi
 echo "Telegram alarmı gönderildi"

@@ -109,9 +109,16 @@ def test_g18_onemli_mesaj_3_kez_yeniden_denenir_2_5_15():
     bekle = []
     t = tg.Telegram(TOKEN, CHAT, post, uyku=bekle.append)
     assert t.gonder("🧾 Son 1 saat …") is False and len(cagrilar) == 1 and bekle == []
-    post, cagrilar = _sahte_post([ConnectionError()] * 9)                  # eşzamanlı yol (test/--kontrol; uyku verilmedi): bekleme yok, tek deneme
+    post, cagrilar = _sahte_post([ConnectionError()] * 9)                  # eşzamanlı yol (sağlık/--kontrol/başlamadı alarmı): önemli mesaj da 2/5/15 sn beklemeyle yeniden denenir (kilit dışı)
     t = tg.Telegram(TOKEN, CHAT, post)
-    assert t.gonder(tg.alarm("ALARM: x", "y")) is False and len(cagrilar) == 1
+    bekle = []
+    t.uyku = bekle.append
+    assert t.gonder(tg.alarm("ALARM: x", "y")) is False and len(cagrilar) == 4 and bekle == [2.0, 5.0, 15.0]
+    post, cagrilar = _sahte_post([ConnectionError()] * 9)                  # eşzamanlı yolda önemsiz mesaj hâlâ tek deneme
+    t = tg.Telegram(TOKEN, CHAT, post)
+    bekle = []
+    t.uyku = bekle.append
+    assert t.gonder("🧾 bilgi") is False and len(cagrilar) == 1 and bekle == []
 
 
 def test_g18_429_retry_after_kadar_beklenir_tavan_60():

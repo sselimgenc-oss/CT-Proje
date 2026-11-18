@@ -775,6 +775,30 @@ def test_kilit_baska_vardiya_aktifse_baslamaz_birakilmis_ya_da_eskiyse_devralir(
     m4.baslat()                                                            # bırakılmış kilit hemen devralınır
 
 
+def test_zincir_kilit_devri_yalniz_dogrulanmis_sahip_icin(tmp_path):
+    """Bekçi/çökme: sahibi BİTMİŞ (iş akışı doğruladı) bırakılmamış kilit devralınır; başka sahip için eski kural (canlı vardiya varken BAŞLAMAZ)."""
+    saat = Saat()
+    m1, *_ = kur(tmp_path, saat=saat)
+    m1.vardiya_id = "A"
+    m1.baslat()                                                            # kilit: A, bırakılmadı, nabız taze
+    m2, *_ = kur(tmp_path, saat=saat)
+    m2.vardiya_id = "B"
+    m2.devral_vardiya = "X"                                                # doğrulanan sahip A değil: devralma YOK
+    with pytest.raises(mt.KipHatasi):
+        m2.baslat()
+    m3, *_ = kur(tmp_path, saat=saat)
+    m3.vardiya_id = "B"
+    m3.devral_vardiya = "A"                                                # A'nın bittiği doğrulandı
+    m3.baslat()
+    assert json.loads((tmp_path / "durum" / "kilit.json").read_text())["vardiya"] == "B"
+    assert any(k.get("olay") == "kilit_devralindi" and k["onceki"] == "A" for k in kayitlar(tmp_path))
+    m4, *_ = kur(tmp_path, saat=saat)
+    m4.vardiya_id = "C"
+    m4.devral_vardiya = "A"                                                # kilit artık B'nin (canlı): eski sahip kimliği devralma yetkisi VERMEZ
+    with pytest.raises(mt.KipHatasi):
+        m4.baslat()
+
+
 def test_mark_ana_dex_ve_hip3_dex_allmids_ile_okunur(tmp_path):
     class HL(SahteHL):
         def __call__(self, y):
