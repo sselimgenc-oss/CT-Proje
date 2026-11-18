@@ -57,6 +57,8 @@ class BorsaSim:
             return [{"universe": [{"name": c} for c in self.funding]}, [{"funding": v} for v in self.funding.values()]]
         if t == "orderStatus":
             return self.durumlar.get(y["oid"], {"status": "unknownOid"})
+        if t == "userNonFundingLedgerUpdates":                # K-1 (2. denetim): ledger okunamazsa ofset doğrulanmaz (risk yerel); varsayılan sahte uç boş ledger döner (LedgerSim doldurur)
+            return []
         if t == "openOrders":
             return [dict(e) for e in self.acik]
         raise AssertionError(y)

@@ -170,6 +170,9 @@ def ucret_eslestir(satirlar: Any, coin: str, oid: Any, cloid: str | None) -> flo
     return sum(fee) if fee else None
 
 
+KESIN_RED_KODLARI = (400, 401, 403, 422, 429)          # D-3: bu HTTP kodlarında emir kesin alınmadı (red); diğer 4xx belirsiz
+
+
 class AnahtarYok(RuntimeError):
     """Gerçek kip için ortam değişkenleri eksik: motor BAŞLAMAZ."""
 
@@ -225,11 +228,11 @@ class GercekYurutucu:
         meta = self.post({"type": "meta", **({"dex": dex} if dex else {})})
         return {str(u["name"]): int(u["szDecimals"]) for u in meta["universe"]}
 
-    def _sz_decimals(self, coin: str) -> int:
+    def _sz_decimals(self, coin: str, kapanis: bool = False) -> int:
         """S-11: szDecimals önbelleği dex başına (ana dex ""; HIP-3 `dex:COIN` → o dex'in `meta`'sı, YALNIZ `canli_hip3_kopya` açıkken). Önbellekte olmayan coin → meta BİR KEZ yeniden okunur
         (açılıştan sonra listelenen coin yeniden başlatma beklemesin); yine yoksa açık metinli hata `bilinmeyen coin: X`."""
         dex = coin.split(":", 1)[0] if ":" in coin else ""
-        if dex and not bool(self.rules.get("canli_hip3_kopya", False)):
+        if dex and not kapanis and not bool(self.rules.get("canli_hip3_kopya", False)):          # D-4: AÇILIŞ kapısı `canli_hip3_kopya`da kalır; kapanış/stop (reduce-only) HIP-3 pozisyonunu da kapatabilir
             raise ValueError(f"bilinmeyen coin: {coin} (HIP-3 kapalı: canli_hip3_kopya=false)")
         tablo = self._sz_dec_dex.get(dex)
         if tablo is None or coin not in tablo:
@@ -238,6 +241,13 @@ class GercekYurutucu:
         if coin not in tablo:
             raise ValueError(f"bilinmeyen coin: {coin}")
         return tablo[coin]
+
+    def lot_adim(self, coin: str) -> float | None:
+        """2. denetim O-5: coinin lot adımı (10^−szDecimals); bilinmiyor / meta okunamıyor → None (çağıran lot kuralını uygulamaz). Ağ okuması yapabilir (kilit altı: hızlı istemci)."""
+        try:
+            return 10.0 ** -self._sz_decimals(coin, kapanis=True)
+        except Exception:                              # noqa: BLE001
+            return None
 
     def hazirla(self, coin: str) -> None:
         """Coin başına izole marj + `canli_marj_kaldirac`x (ilk AÇILIŞ/ARTIRMA emrinden önce, bir kez). G-4: reduce-only emirde çağrılmaz (kaldıraç reddi kapanışı engellemez)."""
@@ -270,9 +280,12 @@ class GercekYurutucu:
             en_iyi = float(seviyeler[0]["px"])
             d.defter = {"levels": [list(kitap["levels"][0])[:10], list(kitap["levels"][1])[:10]]}
             bant = float(self.rules["canli_ioc_bant"]) if bant is None else float(bant)
-            dec = self._sz_decimals(coin)
+            dec = self._sz_decimals(coin, kapanis=reduce_only)
             limit = limit_yuvarla(en_iyi * (1 + bant) if yon == "B" else en_iyi * (1 - bant), dec, yon, en_iyi)
-            sz = round(float(usd) / en_iyi, dec)
+            if reduce_only:
+                sz = round(float(usd) / en_iyi, dec)
+            else:                                       # 2. denetim D-1 [A]: AÇILIŞ/artırma miktarı AŞAĞI (lot) yuvarlanır: slot tavanı lot yarısı kadar aşılmaz (XRP 2,5 $, dec 0: 14 $ → 5 lot, 6 değil)
+                sz = float((Decimal(str(float(usd))) / Decimal(str(en_iyi))).quantize(Decimal(1).scaleb(-dec), rounding=ROUND_FLOOR))
             tavan_sz = round(abs(acik_sz), dec) if reduce_only and acik_sz is not None else None
             if tavan_sz is not None:
                 sz = min(sz, tavan_sz)
@@ -295,7 +308,8 @@ class GercekYurutucu:
         except Exception as hata:                      # noqa: BLE001 - G-1: emir isteği GÖNDERİLDİKTEN sonra hata (zaman aşımı, bağlantı, 5xx)
             # HL emri almış ve doldurmuş olabilir: "red" DEĞİL "belirsiz" → motor niyeti açık bırakır, `orderStatus(cloid)` ile çözer.
             # Yalnız HL'nin açıkça reddettiği istek (SDK `ClientError`, HTTP 4xx) kesin red sayılır.
-            d.durum = "red" if type(hata).__name__ == "ClientError" else "belirsiz"
+            # 2. denetim D-3: SDK `ClientError` (HTTP 4xx) yalnız HL'nin açıkça reddettiği kodlarda (400/401/403/422/429) kesin red; ara katmandan gelen diğer 4xx (408, 499 …) belirsiz
+            d.durum = "red" if type(hata).__name__ == "ClientError" and getattr(hata, "status_code", None) in KESIN_RED_KODLARI else "belirsiz"
             d.neden = f"sdk_hatasi: {type(hata).__name__}"
             d.ham = {"istisna": type(hata).__name__, "metin": str(getattr(hata, "error_message", None) or hata)[:300]}      # G-19: HL'nin açıklaması kaybolmasın
             return d
@@ -306,7 +320,8 @@ class GercekYurutucu:
         try:
             durum = yanit["response"]["data"]["statuses"][0]
         except (KeyError, IndexError, TypeError):
-            d.durum, d.neden = "red", "yanit_bicimi"
+            d.durum, d.neden = "belirsiz", "yanit_bicimi"       # 2. denetim O-4: `statuses` okunamaz / boş / SDK `{"error": ...}` (bozuk 200 gövdesi): HL emri işlemiş olabilir → `orderStatus(cloid)` çözer (eskiden "red")
+            d.ham = {"yanit": str(yanit)[:300]}
             return d
         try:                                            # Denetim-6 (O8): dolum yanıtı ayrıştırması korumalı; beklenmedik biçim emri düşürmez, "belirsiz" olur (orderStatus(cloid) çözer)
             if "filled" in durum:
@@ -320,7 +335,8 @@ class GercekYurutucu:
                 d.emir_ms = emir_oncesi_ms
                 d.kayma_oran = kayma(yon, en_iyi, d.px)
                 tam_kapanis = tavan_sz is not None and sz >= tavan_sz and d.sz >= tavan_sz - 0.5 * 10 ** -dec      # M-3: istek pozisyonla kırpıldı ve kırpılan miktarın tamamı doldu → TAM kapanış
-                d.durum = "dolu" if d.usd_dolan >= usd * 0.999 or tam_kapanis else "kismi"
+                lot_dolu = d.sz >= sz - 0.5 * 10 ** -dec                                  # D-1: istenen LOT sayısının tamamı doldu (lot yuvarlaması usd'nin altında bırakabilir) → "dolu"
+                d.durum = "dolu" if d.usd_dolan >= usd * 0.999 or tam_kapanis or lot_dolu else "kismi"
             elif "error" in durum:
                 d.durum, d.neden = "red", str(durum["error"])[:160]
             else:
@@ -336,7 +352,7 @@ class GercekYurutucu:
         """K-64: borsada duran felaket stopu. Reduce-only, piyasa tetikli (`tpsl: sl`): long için satış (tetik altta), short için alış (tetik üstte).
         Miktar szDecimals'e AŞAĞI, tetik ızgaraya pozisyondan UZAĞA yuvarlanır. Döner (oid | None, neden, yuvarlanmış tetik)."""
         try:
-            dec = self._sz_decimals(coin)
+            dec = self._sz_decimals(coin, kapanis=True)
             adim = 10 ** -dec
             sz_y = math.floor(float(sz) / adim + 1e-9) * adim
             sz_y = round(sz_y, dec)
@@ -403,8 +419,7 @@ def gercek_yurutucu_olustur(post: Callable[[dict], Any], rules: dict | None = No
     rules = rules or load_rules()
     zaman_asimi = float(rules.get("canli_emir_zaman_asimi_sn", 10))         # G-12a: SDK varsayılanı None (süresiz bekler, motor kilidi tutulur); `API.post` → `session.post(..., timeout=)`
     ek: dict[str, Any] = {}
-    if bool(rules.get("canli_hip3_kopya", False)):                       # S-11 / K-42: HIP-3 (`dex:COIN`) SDK varlık tablosu YALNIZ HIP-3 kopyası açıkken (okunamazsa motor başlamaz)
-        from copytrade.izleme_liste import perp_dex_names
-        ek["perp_dexs"] = ["", *perp_dex_names(post({"type": "perpDexs"}))]
+    from copytrade.izleme_liste import perp_dex_names
+    ek["perp_dexs"] = ["", *perp_dex_names(post({"type": "perpDexs"}))]      # 2. denetim D-4: SDK varlık tablosu HER ZAMAN HIP-3 dex'lerini içerir (elle/eski HIP-3 pozisyonu kapatılabilsin; okunamazsa motor başlamaz). AÇILIŞ kapısı `canli_hip3_kopya`da (`_sz_decimals`)
     url = constants.TESTNET_API_URL if (ortam.get("HL_AG") or "").strip().lower() == "testnet" else constants.MAINNET_API_URL      # K-64: yalnız deneme betiği testnet kullanır
     return GercekYurutucu(Exchange(Account.from_key(anahtar), url, account_address=hesap, timeout=zaman_asimi, **ek), post, rules)

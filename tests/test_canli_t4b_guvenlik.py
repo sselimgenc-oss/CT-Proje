@@ -127,8 +127,8 @@ def _coktur_noktasi(m, nokta, monkeypatch):
 
 @pytest.mark.parametrize("nokta", ["dosyalar_once", "motor_sonra_hesap_once", "hesap_gecici_yazildi_replace_once"])
 def test_cokme_dolum_sonrasi_durum_yazimi_arasinda_yeniden_baslatinca_hesap_tutarli(tmp_path, monkeypatch, nokta):
-    """Trader 300 BTC açar → 27,27 $ = 0,27273 BTC (sz 5 hane). Emir borsada DOLDU, sonuç satırı yazıldı; sonra çökme (üç farklı nokta). Yeniden başlatınca hesap.json'daki işaretçiden sonraki
-    sonuçlu niyet oynatılır: defter 0,27273 (kayıp yok); ikinci kez yeniden başlatmada AYNI değer (çift uygulama yok); ikinci emir yok; hesap.json her zaman geçerli JSON."""
+    """Trader 300 BTC açar → 27,27 $ = 0,27272 BTC (sz 5 hane). Emir borsada DOLDU, sonuç satırı yazıldı; sonra çökme (üç farklı nokta). Yeniden başlatınca hesap.json'daki işaretçiden sonraki
+    sonuçlu niyet oynatılır: defter 0,27272 (kayıp yok); ikinci kez yeniden başlatmada AYNI değer (çift uygulama yok); ikinci emir yok; hesap.json her zaman geçerli JSON."""
     sim = BorsaSim()
     m, sim, saat, _ = kur_gercek(tmp_path, monkeypatch, sim)
     m.baslat()
@@ -142,26 +142,26 @@ def test_cokme_dolum_sonrasi_durum_yazimi_arasinda_yeniden_baslatinca_hesap_tuta
     assert len(sim.siparisler) == 1 and [x["t"] for x in m.niyet.satirlar()] == ["niyet", "sonuc"]
     m2 = _yeniden(tmp_path, monkeypatch, sim, saat)
     m2.baslat()
-    assert m2.hesap.sz(adr(1), "BTC") == pytest.approx(0.27273, abs=1e-9)
-    assert kayitlar(tmp_path, "niyet_oynatildi")[-1]["sz"] == pytest.approx(0.27273)
+    assert m2.hesap.sz(adr(1), "BTC") == pytest.approx(0.27272, abs=1e-9)
+    assert kayitlar(tmp_path, "niyet_oynatildi")[-1]["sz"] == pytest.approx(0.27272)
     assert m2.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat)) == [] and len(sim.siparisler) == 1
     m3 = _yeniden(tmp_path, monkeypatch, sim, saat)
     m3.baslat()
-    assert m3.hesap.sz(adr(1), "BTC") == pytest.approx(0.27273, abs=1e-9)         # ikinci yeniden başlatma: çift uygulama YOK
+    assert m3.hesap.sz(adr(1), "BTC") == pytest.approx(0.27272, abs=1e-9)         # ikinci yeniden başlatma: çift uygulama YOK
     assert m3.hesap.son_niyet_cloid == ny.cloid_uret("a:1", "ac")
 
 
 def test_normal_calismada_isaretci_ilerler_yeniden_baslatma_cift_uygulamaz(tmp_path, monkeypatch):
-    """Açılış (0,27273) + trader azaltması sonrası hesap.json her dolumda yazılır; işaretçi son niyet. Temiz yeniden başlatma: aynı defter (oynatma yok)."""
+    """Açılış (0,27272) + trader azaltması sonrası hesap.json her dolumda yazılır; işaretçi son niyet. Temiz yeniden başlatma: aynı defter (oynatma yok)."""
     sim = BorsaSim()
     m, sim, saat, _ = kur_gercek(tmp_path, monkeypatch, sim)
     m.baslat()
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     h = json.loads((tmp_path / "durum" / "hesap.json").read_text())             # durum_yaz çağrılmadan bile diskte
-    assert h["son_niyet_cloid"] == ny.cloid_uret("a:1", "ac") and h["poz"][adr(1)]["BTC"]["sz"] == pytest.approx(0.27273)
+    assert h["son_niyet_cloid"] == ny.cloid_uret("a:1", "ac") and h["poz"][adr(1)]["BTC"]["sz"] == pytest.approx(0.27272)
     m.olay_isle(olay("a:2", adr(1), "BTC", "A", 150, 100.0, 300.0, saat))
     sz = m.hesap.sz(adr(1), "BTC")
-    assert sz < 0.27273 and json.loads((tmp_path / "durum" / "motor.json").read_text())["islenen"][-1] == "a:2"
+    assert sz < 0.27272 and json.loads((tmp_path / "durum" / "motor.json").read_text())["islenen"][-1] == "a:2"
     m2 = _yeniden(tmp_path, monkeypatch, sim, saat)
     m2.baslat()
     assert m2.hesap.sz(adr(1), "BTC") == pytest.approx(sz) and not kayitlar(tmp_path, "niyet_oynatildi")

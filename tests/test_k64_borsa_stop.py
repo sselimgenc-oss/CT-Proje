@@ -38,16 +38,16 @@ def test_motor_gercek_stop_kurar_buyuyunce_yeniler_kapaninca_iptal(tmp_path, mon
     m, sim, saat, tgp = kur_gercek(tmp_path, monkeypatch, BorsaSim())
     m.baslat()
     sim.trader_poz[adr(1)] = {"BTC": 300.0}                                       # trader pozisyonu (senkron kapatmasın)
-    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))           # 0,27273 BTC
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))           # 0,27272 BTC
     m.dakika()
-    assert len(sim.acik) == 1 and sim.acik[0]["side"] == "A" and sim.acik[0]["sz"] == pytest.approx(0.27273)
+    assert len(sim.acik) == 1 and sim.acik[0]["side"] == "A" and sim.acik[0]["sz"] == pytest.approx(0.27272)
     assert sim.acik[0]["triggerPx"] == pytest.approx(m.hesap.poz[adr(1)]["BTC"].giris * 0.78, abs=0.1)
     ilk = sim.acik[0]["oid"]
     sim.trader_poz[adr(1)] = {"BTC": 600.0}
     m.olay_isle(olay("a:2", adr(1), "BTC", "B", 300, 100.0, 300.0, saat))         # artırma
     saat.ms += 60_000
     m.dakika()
-    assert len(sim.acik) == 1 and sim.acik[0]["oid"] != ilk and sim.acik[0]["sz"] > 0.27273      # yeni konuldu, eski iptal
+    assert len(sim.acik) == 1 and sim.acik[0]["oid"] != ilk and sim.acik[0]["sz"] > 0.27272      # yeni konuldu, eski iptal
     sim.trader_poz[adr(1)] = {}
     m.olay_isle(olay("a:3", adr(1), "BTC", "A", 600, 100.0, 600.0, saat))         # tam kapanış
     saat.ms += 60_000

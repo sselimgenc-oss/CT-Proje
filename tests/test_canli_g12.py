@@ -1,8 +1,8 @@
 """G-1 + G-12 (DENETIM_PROJE_2026-11-08): emir zaman aşımı "belirsiz" → `orderStatus(cloid)` ile çözüm (deftere TEK kez), dakikalık görevin sessiz ölmemesi, bekçi.
 Ağsız; gerçek kip YALNIZ sahte borsa (`BorsaSim`) ile sınanır, ÇALIŞTIRILMAZ. Sayılar elle hesaplanmıştır:
-- Kasa 1.000 $, trader hesabı 100.000 $, trader 300 BTC × 100 $ açar (oran 0,30) → emir 27,27 $ → ask 100 → sz = 27,27 / 100 = 0,27273 BTC (5 hane).
+- Kasa 1.000 $, trader hesabı 100.000 $, trader 300 BTC × 100 $ açar (oran 0,30) → emir 27,27 $ → ask 100 → sz = 27,27 / 100 = 0,27272 BTC (5 hane).
 - IOC limit = 100 × 1,005 = 100,5 $. `orderStatus` ortalama fiyat vermez: defter limitPx ile YAKLAŞIK (100,5; kesin değer mutabakatta).
-- Ücret (HL `fee` bulunamadı → tahmin): 0,27273 × 100,5 × 0,00045 = 0,01233421 $.
+- Ücret (HL `fee` bulunamadı → tahmin): 0,27272 × 100,5 × 0,00045 = 0,01233421 $.
 """
 import asyncio
 import errno
@@ -17,9 +17,9 @@ from copytrade.canli import yurutucu as yu
 from tests.test_canli_motor import RULES, kayitlar, kur, olay, adr
 from tests.test_canli_t4b import BorsaSim, Cokus, kur_gercek
 
-SZ = 0.27273
+SZ = 0.27272
 LIMIT = 100.5
-UCRET = 0.27273 * 100.5 * 0.00045                    # 0,01233421 $
+UCRET = 0.27272 * 100.5 * 0.00045                    # 0,01233421 $
 
 
 @pytest.fixture(autouse=True)
@@ -54,7 +54,7 @@ class ZamanAsimiBorsa(BorsaSim):
 # ================================================================================================ G-1: belirsiz → orderStatus
 def test_g1_asili_emir_zaman_asimi_belirsiz_orderstatus_filled_deftere_tek_kez(tmp_path, monkeypatch):
     """Emir HL'de doldu ama yanıt zaman aşımına düştü → `belirsiz` (red DEĞİL): defter 0, niyet açık, yeni açılış durur. Zaman aşımı süresi (10 sn) dolmadan sorgu yok.
-    Sonraki dakika `orderStatus` filled → defter 0,27273 BTC @ 100,5, ücret 0,01233 $; bayrak kalkar. Tekrar dakika ve yeniden başlatma: ikinci uygulama/sorgu/emir YOK."""
+    Sonraki dakika `orderStatus` filled → defter 0,27272 BTC @ 100,5, ücret 0,01233 $; bayrak kalkar. Tekrar dakika ve yeniden başlatma: ikinci uygulama/sorgu/emir YOK."""
     sim = ZamanAsimiBorsa(ulasti=True)
     m, sim, saat, tgp = kur_gercek(tmp_path, monkeypatch, sim)
     m.baslat()
@@ -70,7 +70,7 @@ def test_g1_asili_emir_zaman_asimi_belirsiz_orderstatus_filled_deftere_tek_kez(t
     p = m.hesap.poz[adr(1)]["BTC"]
     assert sim.orderstatus_say() == 1 and p.sz == pytest.approx(SZ) and p.giris == pytest.approx(LIMIT)
     assert m.hesap.ucret[adr(1)] == pytest.approx(UCRET, abs=1e-9) and m.hesap.belirsiz == {} and m.risk.acilis_durdu["belirsiz"] is False
-    assert m.niyet.sonucsuz() == [] and m.risk.acilis_durdu.get("mutabakat") is False                     # borsa 0,27273 = defter 0,27273
+    assert m.niyet.sonucsuz() == [] and m.risk.acilis_durdu.get("mutabakat") is False                     # borsa 0,27272 = defter 0,27272
     c = kayitlar(tmp_path, "belirsiz_cozuldu")
     assert len(c) == 1 and c[0]["durum"] == "filled" and c[0]["uygulanan_sz"] == pytest.approx(SZ) and c[0]["ucret"] == pytest.approx(UCRET, abs=1e-9)
     saat.ms += 60_000
@@ -90,7 +90,10 @@ def test_g1_orderstatus_emir_yok_dolmadi_pozisyon_yok(tmp_path, monkeypatch):
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     saat.ms += 60_000
     m.dakika()
-    assert sim.orderstatus_say() == 1 and m.hesap.sz(adr(1), "BTC") == 0.0 and not sim.poz.get("BTC") and "BTC" not in m.hesap.poz.get(adr(1), {})
+    assert sim.orderstatus_say() == 1 and len(m.hesap.belirsiz) == 1 and m.risk.acilis_durdu["belirsiz"] is True         # 2. denetim O-4: ilk `unknownOid` KESİN değil (çözülmemiş; açılış kapalı)
+    saat.ms += 60_000
+    m.dakika()                                                                    # ikinci ardışık `unknownOid` → emir yok kesinleşir
+    assert sim.orderstatus_say() == 2 and m.hesap.sz(adr(1), "BTC") == 0.0 and not sim.poz.get("BTC") and "BTC" not in m.hesap.poz.get(adr(1), {})
     assert m.hesap.belirsiz == {} and m.niyet.sonucsuz() == [] and m.risk.acilis_durdu["belirsiz"] is False
     assert kayitlar(tmp_path, "belirsiz_cozuldu")[0]["durum"] == "emir_yok" and kayitlar(tmp_path, "belirsiz_cozuldu")[0]["uygulanan_sz"] == 0.0
 
@@ -120,7 +123,7 @@ def test_g1_orderstatus_hatasi_girdi_kalir_sonraki_dakika_cozulur(tmp_path, monk
 
 def test_g1_sonuc_yazildi_defter_kaydedilmeden_cokme_yeniden_baslatmada_tek_kez(tmp_path, monkeypatch):
     """Çözüm sonuç satırını yazdı (fsync), defter (`hesap.json`) kaydedilmeden süreç öldü. Yeniden başlatma: `hesap.json` hâlâ belirsiz girdisini taşır; yazılmış sonuç kullanılır
-    (ikinci `orderStatus` yok), defter 0,27273 — çift uygulama ve kayıp yok."""
+    (ikinci `orderStatus` yok), defter 0,27272 — çift uygulama ve kayıp yok."""
     sim = ZamanAsimiBorsa(ulasti=True)
     m, sim, saat, _ = kur_gercek(tmp_path, monkeypatch, sim)
     m.baslat()
@@ -143,8 +146,8 @@ def test_g1_sonuc_yazildi_defter_kaydedilmeden_cokme_yeniden_baslatmada_tek_kez(
 
 
 def test_g1_belirsiz_kapanis_borsa_teyidi_yereli_temizlediyse_ters_pozisyon_acilmaz(tmp_path, monkeypatch):
-    """Açık 0,27273 BTC; trader kapatır, reduce-only kapanış emri HL'de dolar ama yanıt zaman aşımı → belirsiz. Kapanış teyidi borsada 0 görür, yereli mark'ta temizler.
-    Sonraki dakika `orderStatus` filled 0,27273: reduce-only dolum defterdeki pozisyondan (0) fazla uygulanmaz → defter 0 (−0,27273 short DEĞİL)."""
+    """Açık 0,27272 BTC; trader kapatır, reduce-only kapanış emri HL'de dolar ama yanıt zaman aşımı → belirsiz. Kapanış teyidi borsada 0 görür, yereli mark'ta temizler.
+    Sonraki dakika `orderStatus` filled 0,27272: reduce-only dolum defterdeki pozisyondan (0) fazla uygulanmaz → defter 0 (−0,27272 short DEĞİL)."""
     sim = ZamanAsimiBorsa(ulasti=True, asili=0)
     m, sim, saat, _ = kur_gercek(tmp_path, monkeypatch, sim)
     m.baslat()

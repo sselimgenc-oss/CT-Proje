@@ -27,7 +27,7 @@ class G7Sim(BorsaSim):
 
 
 def fund_satir(t, coin, usdc):
-    return {"time": t, "hash": "0x0", "delta": {"type": "funding", "coin": coin, "usdc": str(usdc), "szi": "0.27273", "fundingRate": "0.0001"}}
+    return {"time": t, "hash": "0x0", "delta": {"type": "funding", "coin": coin, "usdc": str(usdc), "szi": "0.27272", "fundingRate": "0.0001"}}
 
 
 def fark(m, sim):
@@ -37,7 +37,7 @@ def fark(m, sim):
 def ac(tmp_path, monkeypatch, fee=None):
     sim = G7Sim()
     if fee is not None:
-        sim.fills = [{"coin": "BTC", "oid": 1, "fee": str(fee), "sz": "0.27273", "px": "100.0"}]
+        sim.fills = [{"coin": "BTC", "oid": 1, "fee": str(fee), "sz": "0.27272", "px": "100.0"}]
     m, sim, saat, _ = kur_gercek(tmp_path, monkeypatch, sim)
     sim.trader_poz[adr(1)] = {"BTC": 300.0}                                   # trader pozisyonu açık kalır: senkron kapanışı tetiklenmez
     m.baslat()
@@ -45,13 +45,13 @@ def ac(tmp_path, monkeypatch, fee=None):
 
 
 def test_gercek_ucret_tahmin_yerine_yazilir_altin_ornek(tmp_path, monkeypatch):
-    """300 BTC açılışı (hesap 100.000 $ → oran 0,3 → 27,273 $ = 0,27273 BTC × 100). Tahmin: 27,273 × 0,00045 = 0,01227285; HL gerçek fee 0,012 $ → defterde 0,012."""
+    """300 BTC açılışı (hesap 100.000 $ → oran 0,3 → 27,273 $ = 0,27272 BTC × 100). Tahmin: 27,273 × 0,00045 = 0,01227285; HL gerçek fee 0,012 $ → defterde 0,012."""
     m, sim, saat = ac(tmp_path, monkeypatch, fee=0.012)
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
-    assert m.hesap.ucret[adr(1)] == pytest.approx(0.01227285, abs=1e-12) and m.ucret_tahmin_say == 1       # Denetim-6 (O9): emir kilidi içinde yalnız TAHMİN (ağ çağrısı yok)
+    assert m.hesap.ucret[adr(1)] == pytest.approx(0.0122724, abs=1e-12) and m.ucret_tahmin_say == 1       # Denetim-6 (O9): emir kilidi içinde yalnız TAHMİN (ağ çağrısı yok)
     saat.ms += 60_000
     m.dakika()                                                                                             # dakikalık bakım (kilit dışı okuma) gerçek fee ile düzeltir
-    assert m.hesap.ucret[adr(1)] == pytest.approx(0.012, abs=1e-12) and m.hesap.ucret[adr(1)] != pytest.approx(0.01227285, abs=1e-9)
+    assert m.hesap.ucret[adr(1)] == pytest.approx(0.012, abs=1e-12) and m.hesap.ucret[adr(1)] != pytest.approx(0.0122724, abs=1e-9)
     assert m.ucret_gercek_usd == pytest.approx(0.012) and m.ucret_tahmin_say == 0
     z = m.ozet()
     assert z["ucret_gercek_usd"] == pytest.approx(0.012) and z["ucret_tahmin_say"] == 0 and z["funding_gercek_usd"] == 0.0
@@ -60,7 +60,7 @@ def test_gercek_ucret_tahmin_yerine_yazilir_altin_ornek(tmp_path, monkeypatch):
 def test_gercek_ucret_yoksa_tahmine_duser_ucret_tahmin_kaydi(tmp_path, monkeypatch):
     m, sim, saat = ac(tmp_path, monkeypatch, fee=None)
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
-    assert m.hesap.ucret[adr(1)] == pytest.approx(0.27273 * 100 * 0.00045, rel=1e-6)
+    assert m.hesap.ucret[adr(1)] == pytest.approx(0.27272 * 100 * 0.00045, rel=1e-6)
     assert m.ucret_tahmin_say == 1 and m.ucret_gercek_usd == 0.0
     from tests.test_canli_motor import kayitlar
     assert len(kayitlar(tmp_path, "ucret_tahmin")) == 1

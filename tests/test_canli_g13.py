@@ -8,7 +8,7 @@ from tests.test_canli_motor import SAAT, adr, kadro, kayitlar, olay, satir
 from tests.test_canli_t4b import BorsaSim, _maske_temizle, kur_gercek  # noqa: F401 (autouse fixture)
 
 A, B = adr(1), adr(2)
-PAY = 0.27273          # trader 300 BTC / 100.000 $ hesap → oran 0,3 → slot 90,9 $ × 0,3 = 27,27 $ / 100 $ = 0,27273 BTC (test_canli_t4b ile aynı)
+PAY = 0.27272          # trader 300 BTC / 100.000 $ hesap → oran 0,3 → slot 90,9 $ × 0,3 = 27,27 $ / 100 $ = 0,27272 BTC (test_canli_t4b ile aynı)
 
 
 # ------------------------------------------------------------------------------------------------ sahte borsanın kendi testi
@@ -37,10 +37,10 @@ def test_sahte_borsa_red_doluluk_tuketmez():
 
 # ------------------------------------------------------------------------------------------------ _kirp altın örnekleri
 @pytest.mark.parametrize("yerel,k,beklenen", [
-    (0.27273, 0.0, 0.0),                # HL tasfiye: pay yok
-    (0.27273, -0.27273, 0.0),           # HL 0, diğer 0,27273 → k negatif: ters yön emir YOK (eski kod 0,27273 ALIŞ gönderirdi)
-    (0.27273, 0.02727, 0.02727),        # HL 0,3 − diğer 0,27273
-    (0.27273, 0.4, 0.27273),            # pay yerelden büyük: yerel kadar
+    (0.27272, 0.0, 0.0),                # HL tasfiye: pay yok
+    (0.27272, -0.27272, 0.0),           # HL 0, diğer 0,27272 → k negatif: ters yön emir YOK (eski kod 0,27272 ALIŞ gönderirdi)
+    (0.27272, 0.02728, 0.02728),        # HL 0,3 − diğer 0,27272
+    (0.27272, 0.4, 0.27272),            # pay yerelden büyük: yerel kadar
     (-0.5, -0.2, -0.2),                 # short: işaret yerelin
     (-0.5, 0.2, 0.0),
     (0.0, 0.3, 0.0),
@@ -72,8 +72,8 @@ def ozdeslik(m):
 
 @pytest.mark.parametrize("hl_btc", [0.0, 0.1])
 def test_g13_hl_tasfiye_iki_trader_kapanis_emirsiz_defterden_duser(tmp_path, monkeypatch, hl_btc):
-    """A ve B 0,27273 BTC long (HL 0,54546). HL coin pozisyonunu tasfiye eder (0) ya da 0,1'e indirir (k = 0,1 − 0,27273 < 0). A kapatır →
-    0 emir; A defterden mark 110 ile düşülür: realize = 0,27273 × (110 − 100) = 2,7273 $; B dokunulmaz; kuyruk boş; kapanis_eksik yok; harici_kapanis kaydı + alarm.
+    """A ve B 0,27272 BTC long (HL 0,54544). HL coin pozisyonunu tasfiye eder (0) ya da 0,1'e indirir (k = 0,1 − 0,27272 < 0). A kapatır →
+    0 emir; A defterden mark 110 ile düşülür: realize = 0,27272 × (110 − 100) = 2,7273 $; B dokunulmaz; kuyruk boş; kapanis_eksik yok; harici_kapanis kaydı + alarm.
     Özdeşlik: yerel özsermaye öncesi = sonrası (açık K/Z 2,7273 realize'a geçer)."""
     m, sim, saat, tgp = kur_iki(tmp_path, monkeypatch)
     sim.poz["BTC"] = hl_btc
@@ -97,17 +97,17 @@ def test_g13_hl_tasfiye_iki_trader_kapanis_emirsiz_defterden_duser(tmp_path, mon
 
 
 def test_g13_kismi_hl_0_3_kapanis_payla_kirpilir(tmp_path, monkeypatch):
-    """HL 0,3 (defter 0,54546). A kapatır: k = 0,3 − 0,27273 = 0,02727 → TEK reduce-only SATIŞ 0,02727 (eski kod da 0,02727 gönderirdi ama sonra yerel 0,24546 kalırdı
-    → yeniden k = 0,27273 − 0,27273 = 0 → eski kod 0 sayar; yeni kod harici_kapanis ile 0,24546'yı mark'ta düşer). HL sonrası 0,27273 = B'nin payı."""
+    """HL 0,3 (defter 0,54544). A kapatır: k = 0,3 − 0,27272 = 0,02728 → TEK reduce-only SATIŞ 0,02728 (eski kod da 0,02728 gönderirdi ama sonra yerel 0,24544 kalırdı
+    → yeniden k = 0,27272 − 0,27272 = 0 → eski kod 0 sayar; yeni kod harici_kapanis ile 0,24544'yı mark'ta düşer). HL sonrası 0,27272 = B'nin payı."""
     m, sim, saat, tgp = kur_iki(tmp_path, monkeypatch)
     sim.poz["BTC"] = 0.3
     n0 = len(sim.siparisler)
     m.olay_isle(olay("a:2", A, "BTC", "A", 300, 100.0, 300.0, saat))
     yeni = sim.siparisler[n0:]
-    assert len(yeni) == 1 and yeni[0]["is_buy"] is False and yeni[0]["reduce_only"] and yeni[0]["sz"] == pytest.approx(0.02727, abs=1e-9) and not yeni[0].get("red")
+    assert len(yeni) == 1 and yeni[0]["is_buy"] is False and yeni[0]["reduce_only"] and yeni[0]["sz"] == pytest.approx(0.02728, abs=1e-9) and not yeni[0].get("red")
     assert sim.poz["BTC"] == pytest.approx(PAY, abs=1e-9) and m.hesap.sz(A, "BTC") == 0.0 and m.hesap.sz(B, "BTC") == pytest.approx(PAY)
     ev = kayitlar(tmp_path, "harici_kapanis")
-    assert len(ev) == 1 and ev[0]["yerel_sz"] == pytest.approx(PAY - 0.02727, abs=1e-9) and ev[0]["borsa_pay_sz"] == 0.0
+    assert len(ev) == 1 and ev[0]["yerel_sz"] == pytest.approx(PAY - 0.02728, abs=1e-9) and ev[0]["borsa_pay_sz"] == 0.0
     assert not m.kapanis_kuyrugu and m.sayac["kapanis_eksik"] == 0
 
 
@@ -123,7 +123,7 @@ def test_g13_tek_trader_normal_kapanis_harici_yok(tmp_path, monkeypatch):
 
 # ------------------------------------------------------------------------------------------------ G-2: DUR borsadaki defter dışı pozisyonu da kapatır
 def test_g2_dur_borsadaki_defter_disi_eth_kapanir_mesaj_yalniz_duzken(tmp_path, monkeypatch):
-    """Defter: A 0,27273 BTC. Borsa: ayrıca −0,5 ETH (defterde yok; elle/yetim). DUR → BTC kapanır (defter), ETH için reduce-only ALIŞ 0,5 (5 bant denemesi dolmaz)
+    """Defter: A 0,27272 BTC. Borsa: ayrıca −0,5 ETH (defterde yok; elle/yetim). DUR → BTC kapanır (defter), ETH için reduce-only ALIŞ 0,5 (5 bant denemesi dolmaz)
     → "DÜZLEŞMEDİ … ETH -0.5", motor durmaz, "Tüm pozisyonlar kapandı" YOK. Sonraki dakika ETH dolar → borsa düz → "Tüm pozisyonlar kapandı"."""
     sim = BorsaSim(doluluk=(1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0))
     m, sim, saat, tgp = kur_gercek(tmp_path, monkeypatch, sim)

@@ -768,7 +768,12 @@ def baslama_sayaci(durum_yolu: Path) -> int:
     onceki = json.loads(durum_yolu.read_text(encoding="utf-8")).get("baslama", 0) if durum_yolu.exists() else None
     sayi = 0 if onceki is None else int(onceki) + 1
     durum_yolu.parent.mkdir(parents=True, exist_ok=True)
-    durum_yolu.write_text(json.dumps({"baslama": sayi}), encoding="utf-8")
+    gecici = durum_yolu.with_name(durum_yolu.name + ".tmp")                     # D-14: atomik yazım (geçici dosya + fsync + os.replace); yarım dosya sayacı bozmaz
+    with gecici.open("w", encoding="utf-8") as f:
+        f.write(json.dumps({"baslama": sayi}))
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(gecici, durum_yolu)
     return sayi
 
 

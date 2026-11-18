@@ -227,6 +227,7 @@ def test_g19_ust_duzey_hl_err_neden_ve_ham():
 
     class ClientError(Exception):
         error_message = "Insufficient margin"
+        status_code = 400                                               # gerçek SDK `ClientError.status_code`
     c = yu.GercekYurutucu(SahteExchange(hata=ClientError(400, None, "Insufficient margin")), meta_post, RULES).emir("BTC", "B", 11.0)
     assert c.durum == "red" and c.ham == {"istisna": "ClientError", "metin": "Insufficient margin"}
 

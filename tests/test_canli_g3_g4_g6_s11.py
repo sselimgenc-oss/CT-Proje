@@ -175,7 +175,8 @@ def test_s11_hip3_dex_tablosu_yalniz_canli_hip3_kopya_acikken():
     assert acik.emir("xyz:AAPL", "B", 11.0).dolu_mu and sayac == ["xyz"]
 
 
-def test_s11_sdk_perp_dexs_yalniz_hip3_kopya_acikken(monkeypatch):
+def test_s11_sdk_perp_dexs_her_zaman_acilis_kapisi_hip3_kopyada(monkeypatch):
+    """2. denetim D-4: SDK varlık tablosu (`perp_dexs`) `canli_hip3_kopya` kapalıyken de HIP-3 dex'lerini içerir (HIP-3 pozisyonu kapatılabilsin); AÇILIŞ kapısı `canli_hip3_kopya`da (yukarıdaki test)."""
     kurulan = {}
 
     class SahteEx:
@@ -194,6 +195,6 @@ def test_s11_sdk_perp_dexs_yalniz_hip3_kopya_acikken(monkeypatch):
     istek = []
     post = lambda y: istek.append(y) or [None, {"name": "xyz"}]                         # noqa: E731
     yu.gercek_yurutucu_olustur(post, {**RULES, "canli_hip3_kopya": False}, ortam)
-    assert kurulan["perp_dexs"] is None and istek == []
+    assert kurulan["perp_dexs"] == ["", "xyz"] and istek == [{"type": "perpDexs"}]
     yu.gercek_yurutucu_olustur(post, {**RULES, "canli_hip3_kopya": True}, ortam)
     assert kurulan["perp_dexs"] == ["", "xyz"]
