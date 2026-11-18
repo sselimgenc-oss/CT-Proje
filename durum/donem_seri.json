@@ -2,13 +2,13 @@
  "bas_ms": 1794828600000,
  "btc_donem_fiyat": 64642.0,
  "doluluk": {
-  "brut_ms": 777973310254.7872,
-  "kapasite_ms": 2013992794.0,
-  "nakit_ms": 105287877.71915032,
-  "net_ms": 137880548083.6937,
-  "slot_ms": 2013992794.0,
-  "son_ms": 1795019233004,
-  "sure_ms": 183090254
+  "brut_ms": 782757087147.387,
+  "kapasite_ms": 2023901000.0,
+  "nakit_ms": 105711493.31007905,
+  "net_ms": 138437621787.97815,
+  "slot_ms": 2023901000.0,
+  "son_ms": 1795020133750,
+  "sure_ms": 183991000
  },
  "donem": "2026-11-16T11:30:00Z",
  "emir_sayac": {
@@ -16,14 +16,14 @@
    "bant_ici": 6787,
    "gec_acilis": 8,
    "hip3_atlandi": 2083,
-   "min_emir_atlandi": 1924,
-   "slot_tavani": 4427,
+   "min_emir_atlandi": 1958,
+   "slot_tavani": 4521,
    "spot_atlandi": 14,
-   "ters_netlesme": 240,
+   "ters_netlesme": 267,
    "trader_hesap_yok": 3
   },
-  "atlanan": 15486,
-  "emir": 144,
+  "atlanan": 15641,
+  "emir": 145,
   "yuvarlanan": 14
  },
  "gunler": [
@@ -38,9 +38,9 @@
    "ozsermaye_usd": 10018.0461
   },
   {
-   "btc": 62508.5,
+   "btc": 62367.5,
    "gun": "2026-11-18",
-   "ozsermaye_usd": 10027.9763
+   "ozsermaye_usd": 10025.1196
   }
  ],
  "kasa_usd": 10000.0,
@@ -82,7 +82,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": -76.4172,
+   "net_usd": -78.4007,
    "sonuc": null
   },
   {
@@ -102,7 +102,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": -15.1816,
+   "net_usd": -25.3425,
    "sonuc": null
   },
   {
@@ -112,7 +112,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": 16.7845,
+   "net_usd": 14.7928,
    "sonuc": null
   },
   {
@@ -142,7 +142,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "kor_gevsetildi",
    "katman": "yedek",
-   "net_usd": 0.7675,
+   "net_usd": 8.1558,
    "sonuc": null
   },
   {
@@ -152,7 +152,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "kor_gevsetildi",
    "katman": "yedek",
-   "net_usd": 36.3038,
+   "net_usd": 40.1948,
    "sonuc": null
   }
  ]
