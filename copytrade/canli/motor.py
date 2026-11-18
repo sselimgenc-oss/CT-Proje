@@ -128,6 +128,22 @@ def portfolio_son_deger(post: Callable[[dict], Any], adres: str) -> float:
     raise ValueError("portfolio: gün serisi yok")
 
 
+def anlik_kaldirac_hesapla(poz: dict[str, float] | None, marks: dict[str, float], hesap_usd: float | None) -> float | None:
+    """Trader'ın anlık kaldıracı (x) = açık perp nosyoneli (Σ |boyut| × mark) / trader hesap değeri (`hesap_degeri_oku` ile AYNI payda: perp accountValue + spot USDC).
+    Yalnız bilgi/kayıt (işlem etkisi yok). Pozisyon listesi, payda ya da herhangi bir coinin mark'ı yoksa None (bilinmiyor; 0 sayılmaz). Pozisyonsuz hesap = 0,0x."""
+    if poz is None or not hesap_usd or hesap_usd <= 0 or not math.isfinite(hesap_usd):
+        return None
+    notional = 0.0
+    for coin, sz in poz.items():
+        if not sz:
+            continue
+        mark = marks.get(coin)
+        if not mark:
+            return None
+        notional += abs(float(sz)) * float(mark)
+    return notional / hesap_usd
+
+
 def hesap_degeri_oku(post: Callable[[dict], Any], adres: str, dexler: list[str] | None) -> float | None:
     """G-6: `dexler` None (dex listesi bilinmiyor) → None (kısmi toplam YOK; çağıran hesabı bilinmiyor sayar). Hesap değeri ($), hesap tipine göre (K-65 eki 13.11, Fable denetimi):
     - klasik: TÜM perp dex'lerin `marginSummary.accountValue` toplamı + spot USDC `total` (K‑35 tek payda; radar lider tablosu `accountValue` ile aynı tanım);
@@ -551,6 +567,8 @@ class Motor:
         self._snap: dict[str, tuple[float, float]] = {}        # G-14/G-17b: yalnız snapshot (canlı değil) görülen kimlik -> (önce, sonra); aynı dolum sonra dolgu/rest ile gelirse poz_tr ikinci kez değişmez, emir bu değerlerle
         self.poz_tr: dict[str, dict[str, float]] = {a: dict(c) for a, c in (m.get("poz_tr") or {}).items()}       # trader işaretli pozisyonları (coin birimi)
         self.hesap_tr: dict[str, dict] = dict(m.get("hesap_tr") or {})                                              # adres -> {deger, ms}
+        self.kaldirac_tr: dict[str, dict] = dict(m.get("kaldirac_tr") or {})                                          # adres -> {anlik_kaldirac, hesap_usd, ms}: yalnız pano/bilgi (işlem etkisi yok)
+        self._golge_acik: dict[str, list[str]] = {a: list(k) for a, k in (m.get("golge_acik") or {}).items()}          # adres -> şu an doğru olan gölge kuralları (yalnız durum değişiminde kayıt)
         self.donem_seri: dict = _oku(durum_dizin / "donem_seri.json") or {}     # F-06: dönem boyu UTC gün sonu özsermaye + BTC serisi (pano 15 gün kırpmasından bağımsız, kalıcı)
         self.btc_donem: dict | None = m.get("btc_donem")          # BTC al-tut: {donem, bas_ms, fiyat, kaynak, okundu_ms}; dönem başında BİR kez okunur, motor.json'da kalıcı
         self.son_olay_ms: int = int(m.get("son_olay_ms", 0))
@@ -679,7 +697,7 @@ class Motor:
         self.niyet.sikistir(int(self.rules["canli_islenen_sakla"]))
 
     def _motor_json(self) -> dict:
-        return {"islenen": self.islenen, "poz_tr": self.poz_tr, "poz_tr_ms": {f"{a}|{c}": ms for (a, c), ms in self._poz_tr_ms.items()}, "poz_tr_senk_ms": self._poz_tr_senk_ms, "hesap_tr": self.hesap_tr, "son_olay_ms": self.son_olay_ms,
+        return {"islenen": self.islenen, "poz_tr": self.poz_tr, "poz_tr_ms": {f"{a}|{c}": ms for (a, c), ms in self._poz_tr_ms.items()}, "poz_tr_senk_ms": self._poz_tr_senk_ms, "hesap_tr": self.hesap_tr, "kaldirac_tr": self.kaldirac_tr, "golge_acik": self._golge_acik, "son_olay_ms": self.son_olay_ms,
                 "ozet_gunu": self._ozet_gunu, "ozet_oz": self._ozet_oz, "ozet_emir": self._ozet_emir, "kip": self.kip, "kasa_usd": self.kasa, "kasa_ayar_usd": self.kasa_ayar, "vardiya": self.vardiya_id, "yazildi_ms": self.saat_ms(),
                 "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "hl_onceki": list(self._hl_onceki) if self._hl_onceki else None, "hl_sicrama": self._hl_sicrama, "hl_sicrama_ms": self._hl_sicrama_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.kalici_offset,
                 "son_funding_ms": self.son_funding_ms, "funding_kimlik": self.funding_kimlik[-500:], "funding_gercek_usd": self.funding_gercek_usd, "ucret_gercek_usd": self.ucret_gercek_usd, "ucret_tahmin_say": self.ucret_tahmin_say,
@@ -799,6 +817,45 @@ class Motor:
     def hesap_uygula(self, degerler: dict[str, float], simdi: int) -> None:
         for adres, d in degerler.items():
             self.hesap_tr[adres] = {"deger": d, "ms": simdi}
+
+    GOLGE_KURALLAR = (("A_hesap_5k", "golge_hesap_alt_usd"), ("B_kaldirac_5x", "golge_kaldirac_uyari"), ("B_kaldirac_20x", "golge_kaldirac_cikar"))
+
+    def golge_kural_adimi(self, simdi: int) -> None:
+        """Gölge kurallar (Fable, YALNIZ KAYIT; emir/kadro/karar yoluna girmez): her dakika saha + inen traderlar için anlık kaldıraç ve hesap değeri `kaldirac_tr`ye yazılır (pano gösterir);
+        A: hesap < `golge_hesap_alt_usd`; B1: kaldıraç > `golge_kaldirac_uyari`; B2: kaldıraç > `golge_kaldirac_cikar`. `golge_kural` olayı yalnız kural başladığında/bittiğinde (durum değişimi) yazılır.
+        Veri bilinmiyorsa (hesap/pozisyon/mark yok) o kuralın durumu değişmez."""
+        adresler = [*self.saha.uyeler, *self.saha.inen]
+        for adres in list(self._golge_acik):
+            if adres not in adresler:
+                del self._golge_acik[adres]
+        for adres in adresler:
+            c = self.hesap_tr.get(adres)
+            hesap = float(c["deger"]) if c and c.get("deger") is not None else None
+            kald = anlik_kaldirac_hesapla(self.poz_tr.get(adres), self.marks, hesap)
+            self.kaldirac_tr[adres] = {"anlik_kaldirac": kald, "hesap_usd": hesap, "ms": simdi}
+            acik = self._golge_acik.get(adres, [])
+            yeni = list(acik)
+            for kural, anahtar in self.GOLGE_KURALLAR:
+                esik = self.rules.get(anahtar)
+                deger = hesap if kural == "A_hesap_5k" else kald
+                if esik is None or deger is None:
+                    continue
+                dogru = deger < float(esik) if kural == "A_hesap_5k" else deger > float(esik)
+                if dogru and kural not in yeni:
+                    yeni.append(kural)
+                    durum = "basladi"
+                elif not dogru and kural in yeni:
+                    yeni.remove(kural)
+                    durum = "bitti"
+                else:
+                    continue
+                self.kayit({"olay": "golge_kural", "kural": kural, "adres": adres, "hesap_usd": hesap, "anlik_kaldirac": kald, "esik": float(esik), "durum": durum})
+            if yeni:
+                self._golge_acik[adres] = yeni
+            else:
+                self._golge_acik.pop(adres, None)
+        for adres in [a for a in self.kaldirac_tr if a not in adresler]:
+            del self.kaldirac_tr[adres]
 
     def trader_pozlari_oku(self, adres: str, dexler: list[str] | None = None) -> bool:
         try:
@@ -1966,7 +2023,7 @@ class Motor:
                 ("kadro", lambda: self._kadro_uygula(kadro, simdi)), ("senkron", lambda: (self.senkron_uygula(senkron), self.hesap_uygula(hesaplar, simdi)) if senkron is not None else None),
                 ("telegram", lambda: self._komutlar(komutlar)), ("ajan_suresi", lambda: self.ajan_suresi_uygula(ajan, simdi)), ("ozet", lambda: self._gunluk_ozet(simdi)),
                 ("emir_ozeti", lambda: self.emir_ozeti(simdi)), ("btc_donem", lambda: self.btc_donem_uygula(btc)), ("donem_seri", lambda: self.donem_seri_guncelle(simdi)),
-                ("tur_kaydi", lambda: self._tur_kaydi(simdi)),
+                ("tur_kaydi", lambda: self._tur_kaydi(simdi)), ("golge_kural", lambda: self.golge_kural_adimi(simdi)),          # yalnız kayıt + pano verisi; karar yolunda değil
                 ("durum_yaz", self.durum_yaz),                                     # G-12b: disk dolu / salt okunur → dakikalık görev ölmez; kayıt + alarm
             ]
             for ad, f in adimlar:
