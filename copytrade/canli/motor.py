@@ -538,8 +538,14 @@ class Motor:
         self.dur_bekliyor: bool = bool(m.get("dur_bekliyor", False))
         self.hl_ofset: float | None = m.get("hl_ofset")          # gerçek kip: HL hesap değeri − yerel özsermaye (ilk okuma); risk temeli = HL değeri − ofset
         self.ledger_son_ms: int | None = m.get("ledger_son_ms")   # gerçek kip: kendi hesabımızın yatırma/çekme kaydında en son işlenen satırın zamanı (ms, UTC)
+        self._hl_onceki = self._onceki_oku(m.get("hl_onceki")) if self.kip == "gercek" else None            # K-1 (2. denetim): sıçrama hafızası diskten (yeniden başlatmada son kayıtlı HL − ofset / yerel özsermaye ile kıyas)
+        self._hl_sicrama = bool(m.get("hl_sicrama", False)) if self.kip == "gercek" else False
+        self._hl_sicrama_ms = int(m.get("hl_sicrama_ms", 0) or 0) if self.kip == "gercek" else 0
         if self._donem_eski is not None:                          # S-3: yeni dönemde ofset ilk HL okumasında yeniden kurulur (kasa artırımı için yapılan yatırma ofsete İKİNCİ kez girmez → kalıcı 200 $ mutabakat farkı yok)
             self.hl_ofset, self.ledger_son_ms = None, None
+            self._hl_onceki, self._hl_sicrama = None, False
+        if self.kip == "gercek":
+            self.risk.bayrak("ofset", False)                      # K-1: diskteki bayrak BAYAT sayılır; açılışta (`ilk_mutabakat`) temizlenip yeniden değerlendirilir
         self.hl_oz: float | None = None
         self.hl_oz_ms: int = 0
         self._hl_son_okuma: tuple | None = None                         # Denetim-8 (D5): (son hl_oku sonucu, okumanın başladığı saat_ms)
@@ -602,7 +608,7 @@ class Motor:
     def _motor_json(self) -> dict:
         return {"islenen": self.islenen, "poz_tr": self.poz_tr, "poz_tr_ms": {f"{a}|{c}": ms for (a, c), ms in self._poz_tr_ms.items()}, "poz_tr_senk_ms": self._poz_tr_senk_ms, "hesap_tr": self.hesap_tr, "son_olay_ms": self.son_olay_ms,
                 "ozet_gunu": self._ozet_gunu, "ozet_oz": self._ozet_oz, "ozet_emir": self._ozet_emir, "kip": self.kip, "kasa_usd": self.kasa, "kasa_ayar_usd": self.kasa_ayar, "vardiya": self.vardiya_id, "yazildi_ms": self.saat_ms(),
-                "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.kalici_offset,
+                "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "hl_onceki": list(self._hl_onceki) if self._hl_onceki else None, "hl_sicrama": self._hl_sicrama, "hl_sicrama_ms": self._hl_sicrama_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.kalici_offset,
                 "son_funding_ms": self.son_funding_ms, "funding_kimlik": self.funding_kimlik[-500:], "funding_gercek_usd": self.funding_gercek_usd, "ucret_gercek_usd": self.ucret_gercek_usd, "ucret_tahmin_say": self.ucret_tahmin_say,
                 "ucret_bekleyen": self.ucret_bekleyen[-500:], "btc_donem": self.btc_donem, "mutabakat_tutan": self.mutabakat_tutan, "yetim_ilk": self.yetim_ilk}
 
@@ -1545,6 +1551,8 @@ class Motor:
         """Risk temeli (K‑37 §2). Sanal: yerel defter (funding dahil). GERÇEK: HL `accountValue` (tüm perp dex + spot USDC) − ofset (ofset = ilk okumada HL değeri − yerel özsermaye; kasa < hesap ise
         fazla bakiye riske girmez). HL değeri `3 × canli_mutabakat_sn`den eskiyse yerel değer kullanılır (mutabakat zaten alarm verir)."""
         yerel = self.yerel_ozsermaye()
+        if self.kip == "gercek" and self._ofset_dogrulanmadi:
+            return yerel                                       # K-1: ofset (yatırma/çekme) doğrulanmadı → risk yerel defterle (çekimden etkilenmez); yalnız açılış bayrağı `ofset` kapalı
         if self.kip == "gercek" and self.hl_oz is not None and self.hl_ofset is not None and self.saat_ms() - self.hl_oz_ms <= 3 * float(self.rules["canli_mutabakat_sn"]) * 1000:
             return self.hl_oz - self.hl_ofset
         return yerel
@@ -1593,27 +1601,62 @@ class Motor:
         """Gerçek kip (ağ; kilitsiz): kendi hesabımızın `userNonFundingLedgerUpdates` satırları (sayfalı), `ledger_son_ms`ten sonrası. İlk çağrıda yalnız başlangıç anı sabitlenir (ilk ofset zaten ilk HL okumasından)."""
         if self.ledger_son_ms is None:
             self.ledger_son_ms = simdi
+            self._ledger_okundu = True                     # ilk kurulum: ofset zaten bu HL okumasından; doğrulanacak bir şey yok
             return None
         try:
-            return ledger_sayfala(self.post, os.environ.get("HL_HESAP_ADRESI", ""), self.ledger_son_ms + 1)
+            sonuc = ledger_sayfala(self.post, os.environ.get("HL_HESAP_ADRESI", ""), self.ledger_son_ms + 1)
         except Exception as hata:                          # noqa: BLE001
+            self._ledger_okundu = False
             self.kayit({"olay": "ledger_okuma_hata", "tur": type(hata).__name__})
             return None
+        self._ledger_okundu = True
+        return sonuc
+
+    # Hesap değerini (perp + spot USDC) DEĞİŞTİREN ledger türleri (2. denetim K-1 eki). Yön, satırdaki `user` (gönderen) / `destination` (alan) adresinin kendi adresimizle eşleşmesinden; eşleşme yoksa
+    # sayılmaz (atlanan olarak kaydedilir, açıklanamayan fark `_hl_sicrama_denetle`ye kalır). `accountClassTransfer` (perp ↔ spot) toplam hesap değerini değiştirmez; `vault*`/`rewardsClaim` alan biçimi doğrulanmadığı için SAYILMAZ.
+    LEDGER_DIS_PARA = ("deposit", "withdraw")
+    LEDGER_TRANSFER = ("internalTransfer", "subAccountTransfer", "send", "spotTransfer")
+
+    def _ledger_net(self, s: dict) -> float | None:
+        """Ledger satırının HESABIMIZ üzerindeki net USDC etkisi ($; + giren / − çıkan); sayılmayan / yönü bilinmeyen / USDC olmayan satır: None."""
+        d = s.get("delta") or {}
+        tur = d.get("type")
+        try:
+            if tur in self.LEDGER_DIS_PARA:
+                tutar = float(d.get("usdc") or 0.0)
+                return tutar if tur == "deposit" else -tutar
+            if tur in self.LEDGER_TRANSFER:
+                if tur in ("send", "spotTransfer") and str(d.get("token", "USDC")).split(":")[0] != "USDC":
+                    return None                                     # USDC olmayan token hesap değerine (perp + spot USDC) girmez
+                tutar = float(d.get("usdc") if d.get("usdc") is not None else d.get("amount") or 0.0)
+                ben = os.environ.get("HL_HESAP_ADRESI", "").strip().lower()
+                gonderen, alan = str(d.get("user") or "").lower(), str(d.get("destination") or "").lower()
+                if not ben or gonderen == alan:
+                    return None
+                if alan == ben:
+                    return tutar
+                if gonderen == ben:
+                    return -tutar
+        except (TypeError, ValueError):
+            return None
+        return None
 
     def ofset_yenile(self, satirlar: list[dict] | None, simdi: int) -> bool:
-        """#5: yeni yatırma/çekme (`deposit`/`withdraw`) satırı görülünce `hl_ofset += net` (net = yatırma − çekme, HL hesabı $). HL − yerel FARKI KORUNUR (birikmiş gerçek funding/kayma/ücret farkı silinmez;
-        günlük/zirve freni ve mutabakat bayrağı çalışmaya devam eder). Yalnız HL değeri okunmadan ÖNCE gerçekleşmiş satırlar (`zaman ≤ hl_oz_ms`) işlenir; sonrakiler bir sonraki okumaya kalır.
-        `internalTransfer`/`send`/`subAccountTransfer` vb. SAYILMAZ (kasa dışına/içine dış para değil; sayılırsa ofset yanlış kayar), yalnız `ofset_atlanan_tur` olarak kaydedilir (bilgi).
-        HL hesabında kasa ayarı kadar para tutulursa ofset 0 olur."""
+        """#5: yeni yatırma/çekme (`deposit`/`withdraw`) ve (2. denetim K-1 eki) hesap değerini değiştiren transfer satırları (`internalTransfer`/`subAccountTransfer`/`send`/`spotTransfer` USDC; yön `user`/`destination`) görülünce
+        `hl_ofset += net` (net = giren − çıkan, HL hesabı $). HL − yerel FARKI KORUNUR (birikmiş gerçek funding/kayma/ücret farkı silinmez; günlük/zirve freni ve mutabakat bayrağı çalışmaya devam eder). Yalnız HL değeri okunmadan
+        ÖNCE gerçekleşmiş satırlar (`zaman ≤ hl_oz_ms`) işlenir; sonrakiler bir sonraki okumaya kalır. Yönü/tutarı belirlenemeyen ya da hesap değerini değiştirmeyen türler (`accountClassTransfer`, `vault*` …) sayılmaz,
+        yalnız `ofset_atlanan_tur` olarak kaydedilir (bilgi); açıklanamayan fark `_hl_sicrama_denetle`ye kalır. HL hesabında kasa ayarı kadar para tutulursa ofset 0 olur."""
         if self.kip != "gercek" or not satirlar or self.hl_oz is None or self.ledger_son_ms is None or self.hl_ofset is None:
             return False
-        yeni, atlanan = [], {}
+        yeni: list[tuple[dict, float]] = []
+        atlanan: dict[str, int] = {}
         for s in satirlar:
             z, tur = s.get("time"), (s.get("delta") or {}).get("type")
             if not isinstance(z, (int, float)) or not self.ledger_son_ms < z <= self.hl_oz_ms:
                 continue
-            if tur in ("deposit", "withdraw"):
-                yeni.append(s)
+            net_s = self._ledger_net(s) if tur in (*self.LEDGER_DIS_PARA, *self.LEDGER_TRANSFER) else None
+            if net_s is not None:
+                yeni.append((s, net_s))
             else:
                 atlanan[str(tur)] = atlanan.get(str(tur), 0) + 1
         if atlanan:
@@ -1621,12 +1664,51 @@ class Motor:
         if not yeni:
             self.ledger_son_ms = int(max([self.ledger_son_ms] + [s["time"] for s in satirlar if isinstance(s.get("time"), (int, float)) and s["time"] <= self.hl_oz_ms]))
             return False
-        net = sum(float(s["delta"].get("usdc") or 0.0) * (1 if s["delta"]["type"] == "deposit" else -1) for s in yeni)
+        net = sum(n for _, n in yeni)
         eski = self.hl_ofset
         self.hl_ofset = eski + net
         self.ledger_son_ms = int(max(s["time"] for s in satirlar if isinstance(s.get("time"), (int, float)) and s["time"] <= self.hl_oz_ms))
         self.kayit({"olay": "ofset_yenilendi", "eski": eski, "yeni": self.hl_ofset, "net_usd": net, "satir": len(yeni)})
         return True
+
+    _ofset_dogrulanmadi = False                             # K-1: ofset (yatırma/çekme kaydı) henüz doğrulanmadı → risk yerel defterle, açılış bayrağı `ofset`
+    _ledger_okundu = True                                   # son `ledger_oku` başarılı mı (ilk kurulum dahil)
+    _ledger_hata_say = 0                                    # ardışık başarısız ledger okuması (3'te alarm, sonra saatte bir)
+
+    @staticmethod
+    def _onceki_oku(v: Any) -> tuple[float, float] | None:
+        try:
+            a, b = float(v[0]), float(v[1])
+        except (TypeError, ValueError, IndexError, KeyError):
+            return None
+        return (a, b) if math.isfinite(a) and math.isfinite(b) else None
+
+    def _ofset_bayrak(self, aktif: bool) -> None:
+        self._ofset_dogrulanmadi = aktif
+        self.risk.bayrak("ofset", aktif)
+
+    def _ofset_adimi(self, ledger: list[dict] | None, denendi: bool, simdi: int) -> None:
+        """K-1 (2. denetim; yalnız gerçek kip): ledger satırlarını ofsete uygular (`ofset_yenile`), sonra ofset doğrulanmışlığını yönetir. Bu turda ledger okunmadıysa (`denendi` False) durum değişmez. Ledger okundu
+        (boş liste dahil; HL değeri daha önce okunmuş olmalı: ofset o değerle tutarlı) → doğrulandı: `ofset` açılış bayrağı kalkar, risk yeniden HL − ofset temelinde. Ledger okunamadı → doğrulanmadı: risk yerel defterle sürer (ertelenmez), açılış bayrağı `ofset` (DUR yok);
+        3. ardışık başarısızlıkta alarm, sonra saatte bir."""
+        if self.kip != "gercek":
+            return
+        self.ofset_yenile(ledger, simdi)
+        if not denendi or self.hl_oz is None:
+            return
+        if self._ledger_okundu:
+            self._ledger_hata_say = 0
+            if self._ofset_dogrulanmadi or self.risk.acilis_durdu.get("ofset"):
+                self._ofset_bayrak(False)
+                self.kayit({"olay": "ofset_dogrulandi", "ofset": self.hl_ofset})
+            return
+        self._ledger_hata_say += 1
+        if not self._ofset_dogrulanmadi:
+            self.kayit({"olay": "ofset_dogrulanmadi", "ardisik": self._ledger_hata_say})
+        self._ofset_bayrak(True)
+        if self._ledger_hata_say >= 3 and self._aralik_mi("ofset_alarm", simdi, 3600):
+            self.tg.gonder(tg.alarm("ALARM: yatırma/çekme kaydı okunamıyor", f"Ledger okuması {self._ledger_hata_say} kez üst üste başarısız. Hesap değerindeki yatırma/çekme doğrulanamıyor: yeni pozisyon açılmıyor; "
+                                    "risk yerel defter özsermayesiyle sürüyor (DUR yok). Okuma düzelince kalkar."))
 
     def funding_bekliyor(self, simdi: int) -> bool:
         return self.kip == "sanal" and self.son_funding_saat is not None and simdi // 3_600_000 > self.son_funding_saat and any(self.hesap.poz.values())
@@ -1765,7 +1847,8 @@ class Motor:
         kaldirac = (self.maks_kaldirac_tablosu()[0] if self.kip == "gercek" and float(self.rules.get("canli_min_azami_kaldirac", 0) or 0) > 0
                     and self._aralik_mi("kaldirac_tablo", simdi, 3600 if self._hl_maks_kaldirac else 60) else None)       # Denetim-4a: azami kaldıraç tablosu (saatte bir; boşsa dakikada bir)
         fgercek = self.funding_gercek_oku(simdi)                                # G7: gerçek kip, saatte bir; sanalda None
-        ledger = self.ledger_oku(simdi) if hl else None                          # gerçek kip: yatırma/çekme kaydı (#5)
+        denendi = bool(hl) or (self.kip == "gercek" and self._ofset_dogrulanmadi)
+        ledger = self.ledger_oku(simdi) if denendi else None      # gerçek kip: yatırma/çekme kaydı (#5); ofset doğrulanmadıysa HL koşulundan bağımsız HER dakika denenir (K-1)
         ajan = self.ajan_suresi_oku(simdi)                                       # G-19: gerçek kip, günde bir: API cüzdanı `validUntil`
         btc = self.btc_donem_oku(simdi)                                          # BTC al-tut kıyası: dönem başı BTC fiyatı (yalnız eksikse; salt okur info)
         with self._lock:
@@ -1779,7 +1862,7 @@ class Motor:
                 ("belirsiz", lambda: self.belirsiz_coz(simdi)),                    # G-1: sonucu belirsiz emirler risk/mutabakattan ÖNCE deftere
                 ("ucret_duzelt", lambda: self.ucret_uygula(ucretler, simdi)),      # Denetim-6 (O9): tahmini ücret → HL fee (okuma kilit dışında yapıldı)
                 ("tasfiye", lambda: self._tasfiye(simdi)), ("funding", lambda: self.funding_uygula(oranlar, simdi)), ("funding_gercek", lambda: self.funding_gercek_uygula(fgercek, simdi)),
-                ("hl_ozsermaye", lambda: self.hl_uygula(hl[1], simdi, self._hl_okuma_ms(hl, simdi)) if hl else None), ("ofset", lambda: self.ofset_yenile(ledger, simdi)),
+                ("hl_ozsermaye", lambda: self.hl_uygula(hl[1], simdi, self._hl_okuma_ms(hl, simdi)) if hl else None), ("ofset", lambda: self._ofset_adimi(ledger, denendi, simdi)),
                 ("hl_sicrama", lambda: self._hl_sicrama_denetle(simdi) if hl else None), ("risk", lambda: self._risk(simdi)), ("felaket_stop", lambda: self._felaket_stop(simdi)),
                 ("borsa_stop", lambda: self.borsa_stop_esitle(stop_acik, simdi) if stop_acik is not False else None), ("anlik_saha", lambda: self._anlik(simdi)),
                 ("inen", lambda: self.karar_uygula(self.saha.inenleri_kapat(simdi), simdi)), ("mutabakat", lambda: self._mutabakat(simdi, hl)), ("kapanis_kuyrugu", lambda: self._kuyruk_isle(simdi)),
@@ -2024,8 +2107,8 @@ class Motor:
         Yerel defter dolum/mark/funding değişimini içerir; köprü yatırma/çekme ofsette. Geriye kalan büyük fark ledger'da sayılmayan transfer (internalTransfer/send/subAccountTransfer),
         HL tasfiyesi vb. |açıklanmayan| > kasa × `canli_hl_sicrama_oran` (0,10) → mutabakat bayrağı + alarm ve BU okumada özsermaye riski (günlük/zirve → DUR) ertelenir. Sonraki okuma
         sıçramasızsa erteleme kalkar: düşüş gerçekse DUR o adımda olur."""
-        if self.kip != "gercek" or self.hl_oz is None or self.hl_ofset is None:
-            return
+        if self.kip != "gercek" or self.hl_oz is None or self.hl_ofset is None or self._ofset_dogrulanmadi:
+            return                                                                              # K-1: ofset doğrulanmadıysa HL − ofset anlamsız (karşılaştırma yapılmaz, önceki okuma korunur)
         net, yerel = self.hl_oz - self.hl_ofset, self.yerel_ozsermaye()
         onceki, self._hl_onceki = self._hl_onceki, (net, yerel)
         self._hl_sicrama = False
@@ -2392,7 +2475,7 @@ class Motor:
             sorunlar = poz_farki(bizim, hl_poz, self.marks, self.kasa, float(self.rules["canli_mutabakat_oran"]))
             if not hl_gecerli:                                                                 # Denetim-8 (D3): geçersiz HL değeri → özsermaye karşılaştırması yapılamaz (sorun + ayrı `hl_deger` bayrağı)
                 sorunlar = [*sorunlar, {"neden": "hl_deger_gecersiz"}]
-            else:
+            elif not self._ofset_dogrulanmadi:                                                   # K-1: ofset doğrulanmadıysa özsermaye karşılaştırması anlamsız (`ofset` bayrağı açılışı zaten kapatır)
                 fark = abs((hl_deger - (self.hl_ofset or 0.0)) - self.yerel_ozsermaye())          # yerel defter ↔ HL özsermaye farkı (K‑37 §2)
                 if fark > self.kasa * float(self.rules["canli_mutabakat_oran"]):
                     sorunlar = [*sorunlar, {"neden": "ozsermaye_farki", "fark_usd": fark}]
@@ -2947,9 +3030,19 @@ class Motor:
         mids = self.mids_al()
         self._hl_okuma_imza = self._poz_imza()
         hl = self.hl_oku()
+        if self.kip == "gercek":
+            self._ofset_bayrak(True)                       # K-1: açılışta ofset doğrulanmamış sayılır (diskteki bayrak bayat); HL + ledger okununca kalkar
+        ledger = self.ledger_oku(simdi) if (hl and self.kip == "gercek") else None             # K-1: motor kapalıyken yapılan yatırma/çekme ofsete açılışta girer
         stop_acik = self.acik_emir_oku() if self._aralik_mi("borsa_stop", simdi, float(self.rules["canli_borsa_stop_sn"])) else False
         with self._lock:
             self.mids_uygula(mids, simdi)
+            if self.kip == "gercek" and hl:
+                for ad, f in (("ilk_hl_ozsermaye", lambda: self.hl_uygula(hl[1], simdi, self._hl_okuma_ms(hl, simdi))), ("ilk_ofset", lambda: self._ofset_adimi(ledger, True, simdi)),
+                              ("ilk_hl_sicrama", lambda: self._hl_sicrama_denetle(simdi))):          # mutabakat karşılaştırmasından ÖNCE: ofset yenilenir, son kayıtlı özsermaye ile kıyas
+                    try:
+                        f()
+                    except Exception as hata:              # noqa: BLE001
+                        self.kayit({"olay": "adim_hata", "adim": ad, "tur": type(hata).__name__, "mesaj": str(hata)[:160], "ardisik": 1})
             for ad, f in (("ilk_mutabakat", lambda: self._mutabakat(simdi, hl)), ("ilk_borsa_stop", lambda: self.borsa_stop_esitle(stop_acik, simdi) if stop_acik is not False else None)):
                 try:
                     f()
