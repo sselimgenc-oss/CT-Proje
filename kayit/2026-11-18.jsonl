@@ -384,3 +384,12 @@
 {"zaman_ms":1794992184388,"olay":"tur","ozsermaye_usd":9977.458}
 {"zaman_ms":1794992433673,"olay":"funding","saat":498609,"saat_adet":1,"funding_usd":-0.03480308970541461,"toplam_funding_usd":0.4226145938543411}
 {"zaman_ms":1794992722748,"olay":"telegram","metin":"🧾 Son 1 saat (11:05–12:05 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 9.976,81 $ · bugün 🔴 −41,23 $ (−%0,4) · başlangıçtan 🔴 −23,19 $ (−%0,2)","acik":true}
+{"zaman_ms":1794993059285,"olay":"tur","ozsermaye_usd":9976.7307}
+{"zaman_ms":1794993602469,"olay":"saha_uyari","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","neden":"bugun_kadroda_yok"}
+{"zaman_ms":1794993602470,"olay":"telegram","metin":"⚠️ Hafta içi uyarı (çıkış yok, pazar değerlendirilir): 0x6d2667…\n↳ bugünkü radar kadrosunda yok","acik":true}
+{"zaman_ms":1794993602470,"olay":"saha_uyari","adres":"0x9eb42f017e793512e4734f8785de605c4cb3a24e","neden":"bugun_kadroda_yok"}
+{"zaman_ms":1794993602471,"olay":"telegram","metin":"⚠️ Hafta içi uyarı (çıkış yok, pazar değerlendirilir): 0x9eb42f…\n↳ bugünkü radar kadrosunda yok","acik":true}
+{"zaman_ms":1794993602471,"olay":"saha_uyari","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","neden":"radar_eledi:soguyan"}
+{"zaman_ms":1794993602471,"olay":"telegram","metin":"⚠️ Hafta içi uyarı (çıkış yok, pazar değerlendirilir): 0xc30c7e…\n↳ radar_eledi:soguyan","acik":true}
+{"zaman_ms":1794993602471,"olay":"saha_uyari","adres":"0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a","neden":"bugun_kadroda_yok"}
+{"zaman_ms":1794993602471,"olay":"telegram","metin":"⚠️ Hafta içi uyarı (çıkış yok, pazar değerlendirilir): 0xe69acc…\n↳ bugünkü radar kadrosunda yok","acik":true}
