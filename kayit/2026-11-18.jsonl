@@ -377,3 +377,5 @@
 {"zaman_ms":1794988054168,"olay":"emir_yok","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1794988053858,"gorme_ms":1794988054167,"yas_ms":310}
 {"zaman_ms":1794988767724,"olay":"tur","ozsermaye_usd":9972.4779}
 {"zaman_ms":1794988833418,"olay":"funding","saat":498608,"saat_adet":1,"funding_usd":-0.01243849689748858,"toplam_funding_usd":0.4574176835597556}
+{"zaman_ms":1794989122857,"olay":"telegram","metin":"🧾 Son 1 saat (10:05–11:05 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 4 (≈3 ayrı işlem)\n   • kural gereği 4: 4 toplu emir bekliyor (fark küçük)\n   • kaçırılan 0 (geç görülen / veri yok)\n💰 Kasa: 9.974,11 $ · bugün 🔴 −43,93 $ (−%0,4) · başlangıçtan 🔴 −25,89 $ (−%0,3)","acik":true}
+{"zaman_ms":1794989617896,"olay":"tur","ozsermaye_usd":9976.2151}
