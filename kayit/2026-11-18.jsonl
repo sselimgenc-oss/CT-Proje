@@ -189,3 +189,5 @@
 {"zaman_ms":1794965412502,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"BTC","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1794965412066,"gorme_ms":1794965412501,"yas_ms":436}
 {"zaman_ms":1794965417910,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1794965417589,"gorme_ms":1794965417909,"yas_ms":321}
 {"zaman_ms":1794965417910,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1794965417589,"gorme_ms":1794965417909,"yas_ms":321}
+{"zaman_ms":1794965516384,"olay":"telegram","metin":"🧾 Son 1 saat (03:31–04:31 TSİ): 2 emir · sanal\n➕ açılış 1 · ⬆️ artırma 0 · ⬇️ azaltma 1 · ✖️ kapanış 0\n🏆 En büyük: 45,4 $ (SOL, AL) · 0xdebd49…\n⏭️ Kopyalanmayan trader dolumu: 43 (≈19 ayrı işlem)\n   • kural gereği 43: 35 toplu emir bekliyor (fark küçük) · 8 slot tavanı\n   • kaçırılan 0 (geç görülen ","acik":true}
+{"zaman_ms":1794965780900,"olay":"tur","ozsermaye_usd":10010.1999}
