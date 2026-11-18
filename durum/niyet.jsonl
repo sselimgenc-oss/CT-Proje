@@ -212,3 +212,7 @@
 {"t":"sonuc","cloid":"0xc4108453551d6dd2fb571f3384779da4","durum":"dolu","ms":1794960920567,"sz":15.17314809261908,"px":1.6549,"ucret":0.01129951925031389}
 {"t":"niyet","kimlik":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a:671608761223613","eylem":"artir","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"BTC","yon":"B","usd":149.016796,"reduce_only":false,"cloid":"0x21088474acf5feaa15eae1fc3aaf3faa","ms":1794961814873}
 {"t":"sonuc","cloid":"0x21088474acf5feaa15eae1fc3aaf3faa","durum":"dolu","ms":1794961815037,"sz":0.0022999968520565585,"px":64789.99999999999,"ucret":0.06705755822013498}
+{"t":"niyet","kimlik":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e:650044356262472","eylem":"azalt","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"CAKE","yon":"A","usd":19.224993,"reduce_only":true,"cloid":"0x20d9ea7314ac68b24d2e9f680190e573","ms":1794962330381}
+{"t":"sonuc","cloid":"0x20d9ea7314ac68b24d2e9f680190e573","durum":"dolu","ms":1794962330537,"sz":11.633179839056652,"px":1.6518,"ucret":0.0086470589061692}
+{"t":"niyet","kimlik":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a:1001917206463900","eylem":"ac","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","yon":"B","usd":45.406005,"reduce_only":false,"cloid":"0x77b19e9103fa24693a864c58137d70da","ms":1794962714445}
+{"t":"sonuc","cloid":"0x77b19e9103fa24693a864c58137d70da","durum":"dolu","ms":1794962714608,"sz":0.6046716677464308,"px":75.092,"ucret":0.02043270219348674}
