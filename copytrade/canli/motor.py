@@ -56,26 +56,62 @@ AGIRLIK = {"allMids": 2, "l2Book": 2, "clearinghouseState": 2, "perpDexs": 20, "
 
 
 class GuvenliLimiter(RateLimiter):
-    """Birden çok iş parçacığı (olay işleme, dakikalık bakım, dinleyici REST) aynı hız sınırını paylaşır: `acquire` kilitli (sıraya girer)."""
+    """Birden çok iş parçacığı (olay işleme, dakikalık bakım, dinleyici REST) aynı hız sınırını paylaşır: `acquire` kilitli (sıraya girer).
+    2. denetim O-3: PAYLAŞILAN 429 SOĞUMASI — herhangi bir istemci 429 alınca `sogut(sn)` çağırır; soğuma bitmeden hiçbir iş parçacığı istek atmaz (normal istemci bekler; "hızlı" istemci, kilit altı okumalar,
+    `azami_bekleme` verdiği için BEKLEMEDEN `RateLimitError` alır). Saat/uyku taban sınıfın `clock`/`sleep`ı (testte enjekte)."""
 
     def __init__(self, *a: Any, **k: Any) -> None:
         super().__init__(*a, **k)
         self._kilit = threading.Lock()
+        self._soguma_bit = 0.0                 # `clock()` zaman ekseninde soğumanın bitişi
+        self._soguma_kilit = threading.Lock()
 
-    def acquire(self, weight: int) -> None:
-        with self._kilit:
-            super().acquire(weight)
+    def sogut(self, sn: float) -> None:
+        with self._soguma_kilit:
+            self._soguma_bit = max(self._soguma_bit, self.clock() + max(0.0, float(sn)))
+
+    def soguma_kalan(self) -> float:
+        with self._soguma_kilit:
+            return max(0.0, self._soguma_bit - self.clock())
+
+    def acquire(self, weight: int, azami_bekleme: float | None = None, soguma_atla: bool = False) -> None:
+        kalan = 0.0 if soguma_atla else self.soguma_kalan()
+        if kalan > 0:
+            if azami_bekleme is not None:
+                raise RateLimitError(f"paylaşılan 429 soğuması sürüyor ({kalan:.1f} sn): hızlı okuma beklemeden vazgeçti")
+            self.sleep(kalan)                  # bir kez bekler (soğuma o arada uzarsa taban sınıf zaten ağırlık bütçesini bekler)
+        if azami_bekleme is None:
+            with self._kilit:
+                super().acquire(weight)
+            return
+        if not self._kilit.acquire(timeout=azami_bekleme):             # başka iş parçacığı ağırlık bütçesi için uyuyor: hızlı okuma sırada beklemez
+            raise RateLimitError("istemci tarafı hız sınırı kilidi meşgul: hızlı okuma beklemeden vazgeçti")
+        try:
+            super().acquire(weight, azami_bekleme)
+        finally:
+            self._kilit.release()
 
 
 def rest_post_olustur(rules: dict, istemci: PublicClient | None = None) -> Callable[[dict], Any]:
     """Motorun TÜM REST istekleri (kural 7: `tarama.PublicClient`): ortak ağırlık sınırı `canli_api_agirlik_dk`, 429 (5 yeniden deneme, `Retry-After`) ve 5xx / ağ hatasında 3 yeniden deneme.
-    Duman testinde (gerçek HL) açılışta ardışık `clearinghouseState` okumaları HTTP 429 aldı → bu sınırlayıcı eklendi."""
+    Duman testinde (gerçek HL) açılışta ardışık `clearinghouseState` okumaları HTTP 429 aldı → bu sınırlayıcı eklendi.
+    Kilit altı okumalar için KISA MERDİVENLİ eş: `rest_post_hizli_olustur` (2. denetim O-3)."""
     c = istemci or PublicClient(limiter=GuvenliLimiter(limit=int(rules["canli_api_agirlik_dk"])), yeniden_bekleme=KAPI_YENIDEN_BEKLEME)
 
     def post(yuk: dict) -> Any:
         return c.info(yuk, weight=AGIRLIK.get(str(yuk.get("type")), 20))
     post.stats = getattr(c, "stats", None)                 # type: ignore[attr-defined] — rapor için istek / 429 sayaçları (T6 §3)
+    post.istemci = c                                        # type: ignore[attr-defined] — hızlı eşin oturum/sınırlayıcıyı paylaşması için
     return post
+
+
+def rest_post_hizli_olustur(post: Callable[[dict], Any]) -> Callable[[dict], Any]:
+    """`rest_post_olustur` sonucunun oturumunu ve (paylaşılan 429 soğumalı) sınırlayıcısını kullanan KISA MERDİVENLİ eş (429'da ≤ 2 sn bir deneme, ağda ≤ 1 sn bir deneme, 4 sn zaman aşımı; soğuma sürüyorsa
+    BEKLEMEDEN hata): motorun KİLİT ALTI okumaları için (`Motor.post_hizli`). Test sahtesi (`istemci` yok) → aynı `post`."""
+    c = getattr(post, "istemci", None)
+    if not isinstance(c, PublicClient):
+        return post
+    return rest_post_olustur({}, PublicClient(session=c.session, limiter=c.limiter, sleep=c.sleep, hizli=True))
 
 
 def hesap_soyutlama(post: Callable[[dict], Any], adres: str) -> str:
@@ -432,8 +468,10 @@ class Motor:
     """Olay işleme + periyodik görevler. `post`: HL info (REST); `yurutucu`: emir arka ucu; `kadro_oku()`: kadro.json sözlüğü ya da None; `saat_ms`: enjekte (testte sahte)."""
 
     def __init__(self, rules: dict, yurutucu: Yurutucu, post: Callable[[dict], Any], telegram: tg.Telegram, durum_dizin: Path, kayit_dizin: Path,
-                 kadro_oku: Callable[[], dict | None], saat_ms: Callable[[], int] | None = None, vardiya_id: str = "yerel") -> None:
+                 kadro_oku: Callable[[], dict | None], saat_ms: Callable[[], int] | None = None, vardiya_id: str = "yerel",
+                 post_hizli: Callable[[dict], Any] | None = None) -> None:
         self.rules, self.yurutucu, self.post, self.tg = rules, yurutucu, post, telegram
+        self._post_hizli = post_hizli                              # O-3: KİLİT ALTI REST okumaları kısa merdivenli istemciyle (verilmezse `post` izlenir: testler/sahte)
         self.durum_dizin, self.kadro_oku = durum_dizin, kadro_oku
         self.saat_ms = saat_ms or (lambda: int(time.time() * 1000))
         self.kayit = Kayit(kayit_dizin, self.saat_ms)
@@ -571,6 +609,14 @@ class Motor:
         self._adim_ardisik: dict[str, int] = {}   # M-2: dakikalık adım adı -> üst üste hata sayısı (başarıda silinir)
         self._lock = threading.RLock()            # olay işleme (tüketici iş parçacığı) ile dakikalık bakım aynı durumu değiştirir: tek seferde biri
 
+    @property
+    def post_hizli(self) -> Callable[[dict], Any]:
+        return self._post_hizli or self.post
+
+    @post_hizli.setter
+    def post_hizli(self, f: Callable[[dict], Any] | None) -> None:
+        self._post_hizli = f
+
     # ------------------------------------------------------------------ kilit (vardiya devri: çift emir yok)
     def kilit_al(self) -> None:
         """`durum/kilit.json`: başka bir vardiya `canli_kilit_dk` içinde nabız attıysa BAŞLAMAZ (çift emir yok). Temiz kapanışta bırakılır; çökme/zaman aşımında nabız eskir ve sonraki vardiya devralır."""
@@ -704,7 +750,7 @@ class Motor:
         if c and not zorla and not (taze_sart and bayat):
             return float(c["deger"])
         try:
-            deger = hesap_degeri_oku(self.post, adres, self._dexler())
+            deger = hesap_degeri_oku(self.post_hizli, adres, self._dexler())
             self.hesap_tr[adres] = {"deger": deger, "ms": simdi_ms}
             return deger
         except Exception as hata:                          # noqa: BLE001
@@ -730,7 +776,7 @@ class Motor:
     def trader_pozlari_oku(self, adres: str, dexler: list[str] | None = None) -> bool:
         try:
             okuma_ms = self.saat_ms()
-            self.poz_tr[adres] = clearinghouse_pozisyonlari(self.post, adres, dexler if dexler is not None else self._dexler())
+            self.poz_tr[adres] = clearinghouse_pozisyonlari(self.post_hizli, adres, dexler if dexler is not None else self._dexler())
             self._poz_tr_senk_isaretle(adres, okuma_ms)
             return True
         except Exception as hata:                          # noqa: BLE001
@@ -745,7 +791,7 @@ class Motor:
             return
         bas = int(simdi_ms - float(self.rules["canli_islem_yok_saat"]) * 3_600_000)
         try:
-            satirlar = self.post({"type": "userFillsByTime", "user": adres, "startTime": bas}) or []
+            satirlar = self.post_hizli({"type": "userFillsByTime", "user": adres, "startTime": bas}) or []
             zamanlar = [int(r["time"]) for r in satirlar if isinstance(r, dict) and r.get("time") is not None]
         except Exception as hata:                          # noqa: BLE001
             self.kayit({"olay": "son_islem_okuma_hata", "adres": adres, "tur": type(hata).__name__})
@@ -756,7 +802,7 @@ class Motor:
         """HIP-3 perp dex adları. Başarılı okuma süreç boyunca önbellekte; HATA önbelleğe ALINMAZ (G-6): istisna yükselir, bir sonraki çağrı yeniden okur.
         Çağıranlar hatayı yakalar (hesap değeri bilinmiyor → açılış `trader_hesap_yok`; pozisyon okunamadı) — eksik dex listesiyle kısmi toplam/pozisyon ASLA üretilmez."""
         if getattr(self, "_dex_adlari", None) is None:
-            self._dex_adlari = perp_dex_names(self.post({"type": "perpDexs"}))
+            self._dex_adlari = perp_dex_names(self.post_hizli({"type": "perpDexs"}))
         return self._dex_adlari
 
     def _dexler_guvenli(self) -> list[str]:
@@ -1040,7 +1086,7 @@ class Motor:
         if self.kip != "gercek":
             return yerel, False
         try:
-            hl = clearinghouse_pozisyonlari(self.post, os.environ.get("HL_HESAP_ADRESI", ""), self._dexler())
+            hl = clearinghouse_pozisyonlari(self.post_hizli, os.environ.get("HL_HESAP_ADRESI", ""), self._dexler())
         except Exception as hata:                          # noqa: BLE001
             self.kayit({"olay": "kapanis_borsa_okuma_hata", "tur": type(hata).__name__})
             return yerel, False
@@ -1048,7 +1094,7 @@ class Motor:
             mk0 = self._mark_kapanis(adres, coin)
             if not mk0 or abs(yerel) * mk0 > float(self.rules["canli_kapanis_toz_usd"]):
                 try:
-                    hl2: dict[str, float] | None = clearinghouse_pozisyonlari(self.post, os.environ.get("HL_HESAP_ADRESI", ""), self._dexler())
+                    hl2: dict[str, float] | None = clearinghouse_pozisyonlari(self.post_hizli, os.environ.get("HL_HESAP_ADRESI", ""), self._dexler())
                 except Exception as hata:                  # noqa: BLE001
                     self.kayit({"olay": "kapanis_borsa_okuma_hata", "tur": type(hata).__name__, "asama": "teyit"})
                     hl2 = None
@@ -1234,7 +1280,7 @@ class Motor:
         """G-2: gerçek kipte borsada (clearinghouseState, tüm dex) defterin KARŞILAMADIĞI pay: coin → işaretli sz (= `_kirp(hl, hl − defter toplamı)`; toz üstü).
         Defterde hiç olmayan coin (ör. elle açılmış ETH) tamamıyla buraya düşer. Okuma hatası → None (düz SAYILMAZ)."""
         try:
-            hl = clearinghouse_pozisyonlari(self.post, os.environ.get("HL_HESAP_ADRESI", ""), self._dexler())
+            hl = clearinghouse_pozisyonlari(self.post_hizli, os.environ.get("HL_HESAP_ADRESI", ""), self._dexler())
         except Exception as hata:                          # noqa: BLE001
             self.kayit({"olay": "borsa_yetim_okuma_hata", "tur": type(hata).__name__})
             return None
@@ -1363,7 +1409,7 @@ class Motor:
     def _borsa_acik_mi(self) -> bool | None:
         """Y-1: kendi HL hesabımızda (tüm perp dex) açık pozisyon var mı. Okunamazsa None (çağıran güvenli tarafı seçer: kapanış modu)."""
         try:
-            hl = clearinghouse_pozisyonlari(self.post, os.environ.get("HL_HESAP_ADRESI", ""), self._dexler())
+            hl = clearinghouse_pozisyonlari(self.post_hizli, os.environ.get("HL_HESAP_ADRESI", ""), self._dexler())
         except Exception as hata:                          # noqa: BLE001
             self.kayit({"olay": "borsa_yetim_okuma_hata", "tur": type(hata).__name__})
             return None
@@ -2218,7 +2264,7 @@ class Motor:
         """Denetim-1 (O2): borsa stopu açık emirlerde görünmüyor. Borsadaki net pozisyon aynı yönde ve (≥ %98) aynı miktarda duruyorsa "duruyor" (stop dışarıda iptal/sorunlu; pozisyon
         KAPATILMAZ); küçülmüş/kapanmış/ters → "kucuk" (mevcut tetiklendi akışı); okunamadı → "bilinmiyor" (kapatılmaz). Döner (durum, borsa_sz)."""
         try:
-            hl = clearinghouse_pozisyonlari(self.post, os.environ.get("HL_HESAP_ADRESI", ""), self._dexler())
+            hl = clearinghouse_pozisyonlari(self.post_hizli, os.environ.get("HL_HESAP_ADRESI", ""), self._dexler())
         except Exception as hata:                          # noqa: BLE001
             self.kayit({"olay": "borsa_stop_kayip_okuma_hata", "tur": type(hata).__name__, "coin": coin})
             return "bilinmiyor", None
@@ -2762,7 +2808,7 @@ class Motor:
         if not adres:
             return None
         try:
-            r = self.post({"type": "userFillsByTime", "user": adres, "startTime": max(0, int(bas_ms) - 5000)})
+            r = self.post_hizli({"type": "userFillsByTime", "user": adres, "startTime": max(0, int(bas_ms) - 5000)})
         except Exception as hata:                          # noqa: BLE001
             self.kayit({"olay": "dolum_okuma_hata", "tur": type(hata).__name__})
             return None
@@ -2799,7 +2845,7 @@ class Motor:
             ek: dict[str, Any] = {}
             if self.kip == "gercek":
                 try:
-                    r = self.post({"type": "orderStatus", "user": os.environ.get("HL_HESAP_ADRESI", ""), "oid": n["cloid"]})
+                    r = self.post_hizli({"type": "orderStatus", "user": os.environ.get("HL_HESAP_ADRESI", ""), "oid": n["cloid"]})
                     if (r or {}).get("status") == "order":
                         emir = r["order"]
                         durum = str(emir.get("status", "?"))
@@ -2889,7 +2935,7 @@ class Motor:
                     if simdi - int(b.get("ms", 0)) < bekle_ms:
                         continue
                     try:
-                        y = self.post({"type": "orderStatus", "user": os.environ.get("HL_HESAP_ADRESI", ""), "oid": cloid})
+                        y = self.post_hizli({"type": "orderStatus", "user": os.environ.get("HL_HESAP_ADRESI", ""), "oid": cloid})
                     except Exception as hata:                  # noqa: BLE001 - ağ yok: girdi kalır, sonraki dakika yeniden
                         b["deneme"] = int(b.get("deneme", 0)) + 1
                         self.kayit({"olay": "belirsiz_sorgu_hata", "cloid": cloid, "coin": n["coin"], "deneme": b["deneme"], "tur": type(hata).__name__})
@@ -3727,8 +3773,11 @@ def acilis_hl_denetle(rules: dict, kip: str, post: Callable[[dict], Any], sk: di
     return kasa, hl_deger
 
 
-def _motor_calistir(args: argparse.Namespace, rules: dict, kip: str, post: Callable[[dict], Any], kadro_oku: Callable[[], dict | None], tgram: tg.Telegram, sk: dict) -> int:
+def _motor_calistir(args: argparse.Namespace, rules: dict, kip: str, post: Callable[[dict], Any], kadro_oku: Callable[[], dict | None], tgram: tg.Telegram, sk: dict,
+                    post_hizli: Callable[[dict], Any] | None = None) -> int:
     """Açılış + ana döngü. Çıkış kodları: 0 temiz; 1 beklenmedik (systemd yeniden başlatır); 3 kalıcı (yeniden başlatılmaz); 75 geçici HL/ağ (yeniden başlatılır) — G-15."""
+    post_hizli = post_hizli or post
+
     def bildir(m: str) -> None:
         print(f"açılış: {m}", file=sys.stderr)
     try:
@@ -3744,7 +3793,7 @@ def _motor_calistir(args: argparse.Namespace, rules: dict, kip: str, post: Calla
     except (KipHatasi, ValueError) as hata:
         return _baslamadi(tgram, hata, CIKIS_KALICI)
     try:
-        yur: Yurutucu = acilis_yeniden_dene(lambda: gercek_yurutucu_olustur(post, rules), bildir=bildir) if kip == "gercek" else SanalYurutucu(post, rules)
+        yur: Yurutucu = acilis_yeniden_dene(lambda: gercek_yurutucu_olustur(post_hizli, rules), bildir=bildir) if kip == "gercek" else SanalYurutucu(post_hizli, rules)
     except HlOkunamadi as hata:
         return _baslamadi(tgram, hata, CIKIS_GECICI)
     except AnahtarYok as hata:
@@ -3752,7 +3801,7 @@ def _motor_calistir(args: argparse.Namespace, rules: dict, kip: str, post: Calla
     except (RuntimeError, ValueError) as hata:                     # SDK kurulu değil / anahtar biçimi bozuk: metin anahtar içerebilir, yalnız tür adı
         return _baslamadi(tgram, KipHatasi(f"gerçek yürütücü kurulamadı ({type(hata).__name__})"), CIKIS_KALICI)
     try:
-        motor = Motor(rules, yur, post, tgram, args.durum_dizin, args.kayit_dizin or (args.durum_dizin / "kayit"), kadro_oku, vardiya_id=args.vardiya)
+        motor = Motor(rules, yur, post, tgram, args.durum_dizin, args.kayit_dizin or (args.durum_dizin / "kayit"), kadro_oku, vardiya_id=args.vardiya, **({"post_hizli": post_hizli} if post_hizli is not post else {}))
     except DurumBozuk as hata:                                      # Denetim-2: bozuk/eksik durum (gerçek kip) → kalıcı çıkış + alarm; stop iptali hiç çağrılmaz
         return _baslamadi(tgram, hata, CIKIS_KALICI)
     motor.radar_surum_gerekli = radar_surum_oku()
@@ -3822,7 +3871,7 @@ def main(argv: list[str] | None = None) -> int:
             except KipHatasi as hata:
                 return _baslamadi(tgram, hata, CIKIS_KALICI)
         try:
-            return _motor_calistir(args, rules, kip, post, kadro_oku, tgram, sk)
+            return _motor_calistir(args, rules, kip, post, kadro_oku, tgram, sk, rest_post_hizli_olustur(post))
         except Exception as hata:                                       # noqa: BLE001 - beklenmedik: iz günlüğe, kısa alarm (yalnız tür adı), 1 (systemd yeniden başlatır)
             import traceback
             traceback.print_exc()
