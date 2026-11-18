@@ -370,3 +370,8 @@
 {"zaman_ms":1794985517717,"olay":"telegram","metin":"🧾 Son 1 saat (09:04–10:05 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 9.993,52 $ · bugün 🔴 −24,52 $ (−%0,2) · başlangıçtan 🔴 −6,48 $ (−%0,1)","acik":true}
 {"zaman_ms":1794986206842,"olay":"tur","ozsermaye_usd":9984.5909}
 {"zaman_ms":1794987053438,"olay":"tur","ozsermaye_usd":9987.3124}
+{"zaman_ms":1794987901951,"olay":"tur","ozsermaye_usd":9983.683}
+{"zaman_ms":1794988027412,"olay":"emir_yok","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1794988027170,"gorme_ms":1794988027412,"yas_ms":242}
+{"zaman_ms":1794988028683,"olay":"emir_yok","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1794988028384,"gorme_ms":1794988028683,"yas_ms":299}
+{"zaman_ms":1794988054168,"olay":"emir_yok","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1794988053858,"gorme_ms":1794988054167,"yas_ms":310}
+{"zaman_ms":1794988054168,"olay":"emir_yok","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1794988053858,"gorme_ms":1794988054167,"yas_ms":310}
