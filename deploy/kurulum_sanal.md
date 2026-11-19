@@ -80,6 +80,25 @@ sudo systemctl start sg-sanal sg-sanal-yayim.timer sg-sanal-pano.timer
 ```
 Yerel durum korunur (geri yükleme olmaz). **Yeni dönem** (`copytrade/canli/DONEM` değişti): `sudo bash …/sanal_mod.sh <mevcut mod>` (eski durumu arşivler), sonra başlat; motor sıfırdan başlar ve dönem başına kadar bekler.
 
+## 6b. Otomatik güncelleme (saatlik)
+`sg-sanal-guncelle.timer` her saat (±5 dk) `deploy/sanal_guncelle.sh`'ı root olarak çalıştırır; elle §6 yapmak gerekmez.
+- **Kapı:** `origin/main` yeni commit'i varsa ve GitHub CI'ı yeşilse (`test` ve `canli_sdk` kontrolleri var ve hepsi `success`; genel API, anahtarsız) uygulanır. Yeşil değil/yok/bekliyorsa hiçbir şey yapılmaz (günlüğe neden yazılır, bir sonraki saatte yeniden bakılır). CI PR'da koştuğundan, birleştirme commit'inde kontrol yoksa PR ucunun (2. ebeveyn) kontrolleri okunur.
+- **Yalnız fast-forward** (`git merge --ff-only`); depo tarihi değişmişse reddeder ve CRIT yollar.
+- **Sıra:** zamanlayıcılar + `sg-sanal` durur (son durum yayımlanır) → merge → `pip install --require-hashes` (yalnız `requirements-canli.lock` değiştiyse) → birim dosyaları (yalnız değiştiyse) + `daemon-reload` → duman testi (`sg-sanal-kontrol`, günlükte `"tamam": true`) → servisler başlar → ~60 sn sonra `sg-sanal` aktif ve yeniden başlamamış mı.
+- **Hata:** herhangi bir adımda `git reset --hard <önceki>`, kilit paketleri/birimler eski haline, servisler yeniden başlar, Telegram `[CT] CRIT`. Bozuk commit bir daha denenmez (yeni commit gelene kadar).
+- **Telegram:** `/etc/sg-sanal-telegram.env` (yoksa sessiz). Başarı: `[CT] INFO  Sunucu güncellendi: eski7→yeni7 (konu)`.
+- **Yerel durum:** `durum/ kayit/ pano/` depoda izlenmez, git dokunmaz; gelen commit bunları izlemeye başlarsa güncelleme reddedilir. Servis önceden durdurulmuşsa güncelleme onu başlatmaz.
+- **Kilit:** aynı anda iki güncelleme koşmaz (`flock /run/sg-sanal-guncelle.lock`). Durum dosyaları: `/var/lib/sg-sanal-guncelle/` (root'a ait).
+- **Güvenlik notu:** betik root çalışır ve depodan (CI'dan geçen `main`) gelir; `main` koruması (§2) bu yüzden önemli: sunucudaki `sgsanal` hesabı ele geçerse depo dosyaları root'a yükselmek için kullanılabilir.
+
+**Tek seferlik açma** (root kabuğunda tek satır; bekleyen güncellemeleri hemen uygular, `--no-block` ile hemen döner; izlemek için `journalctl -u sg-sanal-guncelle -f -o cat`):
+```bash
+mkdir -p /var/lib/sg-sanal-guncelle && sudo -u sgsanal git -C /var/lib/sg-sanal/depo rev-parse HEAD > /var/lib/sg-sanal-guncelle/uygulanan_sha && sudo -u sgsanal git -C /var/lib/sg-sanal/depo pull --ff-only && cp /var/lib/sg-sanal/depo/deploy/sg-sanal*.service /var/lib/sg-sanal/depo/deploy/sg-sanal*.timer /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now sg-sanal-guncelle.timer && systemctl start --no-block sg-sanal-guncelle && echo OTO-GUNCELLEME-ACIK
+```
+(İlk satır, çekmeden ÖNCEKİ sürümü "çalışan sürüm" diye kaydeder; böylece çekilen kod hemen duman testi + yeniden başlatmayla uygulanır, hata olursa o sürüme dönülür.)
+
+**Elle geri alma** (iki adım: `evet` onayı; sonra otomatik güncelleme DONDURULUR): `sudo bash /var/lib/sg-sanal/depo/deploy/sanal_geri_al.sh <sha>` (sha sunucudaki depoda olmalı; `git -C /var/lib/sg-sanal/depo log --oneline -10`). Dondurmayı kaldırma: `sudo rm /var/lib/sg-sanal-guncelle/dondur`. Kapatma: `sudo systemctl disable --now sg-sanal-guncelle.timer`.
+
 ## 7. Sorun giderme
 - `journalctl -u sg-sanal -n 100 -o cat`, `systemctl status sg-sanal sg-sanal-yayim.timer sg-sanal-pano.timer`.
 - Yayım: `sudo systemctl start sg-sanal-yayim; journalctl -u sg-sanal-yayim -n 20 -o cat` ("Permission denied (publickey)" = deploy anahtarı eklenmemiş/yazma izni yok).
