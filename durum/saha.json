@@ -1960,7 +1960,7 @@
    "giris_sira": 13,
    "hesap_giris_usd": 125217.348369,
    "sira_ust": 0,
-   "son_islem_ms": 1795086360196
+   "son_islem_ms": 1795101600593
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": {
    "giris_ms": 1794828602613,
@@ -1988,7 +1988,7 @@
    "giris_sira": 20,
    "hesap_giris_usd": 1250138.58593679,
    "sira_ust": 0,
-   "son_islem_ms": 1795100739070
+   "son_islem_ms": 1795101676039
   },
   "0x9eb42f017e793512e4734f8785de605c4cb3a24e": {
    "giris_ms": 1794828602613,
@@ -2002,14 +2002,14 @@
    "giris_sira": 12,
    "hesap_giris_usd": 1114416.615588,
    "sira_ust": 0,
-   "son_islem_ms": 1795100127668
+   "son_islem_ms": 1795101511881
   },
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": {
    "giris_ms": 1794828602613,
    "giris_sira": 18,
    "hesap_giris_usd": 325053.469196,
    "sira_ust": 0,
-   "son_islem_ms": 1795097478003
+   "son_islem_ms": 1795101011590
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": {
    "giris_ms": 1794828602613,
