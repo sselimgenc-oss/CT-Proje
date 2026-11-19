@@ -272,3 +272,9 @@
 {"zaman_ms":1795061047219,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","hesap_usd":340792.02202,"anlik_kaldirac":5.002015306126972,"esik":5.0,"durum":"basladi"}
 {"zaman_ms":1795061622483,"olay":"tur","ozsermaye_usd":10014.3067}
 {"zaman_ms":1795062486921,"olay":"tur","ozsermaye_usd":10009.7181}
+{"zaman_ms":1795062768716,"olay":"tasfiye","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"VVV","tasfiye_px":22.688907118715484,"mark":22.6975,"pnl":-14.967037209260356}
+{"zaman_ms":1795062770840,"olay":"telegram","metin":"💥 TASFİYE (sanal) (sanal · deneme parası)\n━━━━━━━━━━━━━━\nVVV pozisyonu (trader 0x2d29c0…) 22.6889 fiyatında tasfiye oldu (piyasa 22.6975).","acik":true}
+{"zaman_ms":1795063348086,"olay":"tur","ozsermaye_usd":10007.361}
+{"zaman_ms":1795063593058,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"HYPE","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795063592677,"gorme_ms":1795063593057,"yas_ms":381}
+{"zaman_ms":1795063593528,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"HYPE","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795063593155,"gorme_ms":1795063593528,"yas_ms":373}
+{"zaman_ms":1795063594014,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"HYPE","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795063593577,"gorme_ms":1795063594014,"yas_ms":437}

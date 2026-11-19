@@ -389,12 +389,6 @@
     "giris": 0.0944077204143719,
     "kaldirac": 3.0,
     "sz": -698.3164635395817
-   },
-   "VVV": {
-    "acilis_ms": 1794850824858,
-    "giris": 19.85279372887605,
-    "kaldirac": 3.0,
-    "sz": -5.277305647538908
    }
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": {},
@@ -575,7 +569,7 @@
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": {}
  },
  "realize": {
-  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 0.0,
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": -14.967037209260356,
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 0.0,
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": -0.08645851069459667,
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 66.57819233470582,
@@ -601,7 +595,16 @@
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 909.0909090909091
  },
  "son_niyet_cloid": "0x84b0787758b90dae005a85bda307f188",
- "tasfiyeler": [],
+ "tasfiyeler": [
+  {
+   "adres": "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89",
+   "coin": "VVV",
+   "mark": 22.6975,
+   "pnl": -14.967037209260356,
+   "tasfiye_px": 22.688907118715484,
+   "zaman_ms": 1795062768716
+  }
+ ],
  "ucret": {
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 0.6155898751552012,
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 0.0,
