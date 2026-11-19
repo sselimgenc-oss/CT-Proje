@@ -21,7 +21,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from copytrade.canli import kaynak, kural_maliyet, rejim_sonuc, secim_gercek
+from copytrade.canli import hafta_paketi, kaynak, kural_maliyet, rejim_sonuc, secim_gercek
 from copytrade.canli import sert_sinirlar as sert
 from copytrade.canli.ogrenme_adaptor import takma_ad
 
@@ -305,7 +305,8 @@ def yaz_gerekirse(motor: Any, ortam: dict | None = None) -> bool:
         son = getattr(motor, "_gunluk_ozet_yazim", None)            # (ms, ozet_gunu) — süreç içi; yeniden başlatmada hemen yazar
         if son is not None and simdi - son[0] < SAATLIK_MS and getattr(motor, "_ozet_gunu", None) == son[1]:
             return False
-        _yaz(Path(motor.durum_dizin) / "paylasim" / DOSYA, olustur(motor, ortam))
+        veri = olustur(motor, ortam)
+        _yaz(Path(motor.durum_dizin) / "paylasim" / DOSYA, veri)
         try:                                                         # rejim/duygu x sonuç raporu (aynı an; kendi hatası günlük özeti bozmaz)
             rejim_sonuc.yaz(motor)
         except Exception as hata:                                    # noqa: BLE001
@@ -318,6 +319,11 @@ def yaz_gerekirse(motor: Any, ortam: dict | None = None) -> bool:
             kural_maliyet.yaz(motor)
         except Exception as hata:                                    # noqa: BLE001
             motor.kayit({"olay": "kural_maliyet_hata", "tur": type(hata).__name__})
+        try:                                                         # haftalık veri paketi: günlük geçmiş damgası + Cumartesi 21:00 TSİ sonrası haftada bir CT_HAFTA_<Pazar>.md (yalnız bilgi)
+            hafta_paketi.kaydet(Path(motor.durum_dizin), veri)
+            hafta_paketi.yaz_gerekirse(motor)
+        except Exception as hata:                                    # noqa: BLE001
+            motor.kayit({"olay": "hafta_paketi_hata", "tur": type(hata).__name__})
         motor._gunluk_ozet_yazim = (simdi, getattr(motor, "_ozet_gunu", None))
         return True
     except Exception as hata:                                        # noqa: BLE001
