@@ -29,6 +29,7 @@ def test_altin_drift_orani():
 
 def test_drift_30dk_sonra_tek_uyari_toparlaninca_bitti_ve_hiz_siniri(tmp_path):
     m, saat, tgp, a = hazir(tmp_path)
+    m.rules["kopya_drift_telegram"] = True                          # ayrı uyarı yolu (üretimde 19.11'den beri kapalı)
     t = saat()
     m.kopya_drift_adimi(t)                                          # biz 0, ideal 90,9 → drift 1,0: sayaç başlar
     m.kopya_drift_adimi(t + 29 * DK)
@@ -82,3 +83,12 @@ def test_slot_toplam_tavani_baglayinca_yanlis_alarm_yok(tmp_path):
     for dk in (0, 31, 62):
         m.kopya_drift_adimi(saat() + dk * DK)
     assert not kayitlar(tmp_path, "kopya_drift") and not any("Kopya sapması" in x for x in m.tg.gonderilen)
+
+
+def test_drift_telegram_uretimde_kapali_olay_surer(tmp_path):
+    m, saat, tgp, a = hazir(tmp_path)
+    assert m.rules.get("kopya_drift_telegram") is False
+    t = saat()
+    m.kopya_drift_adimi(t)
+    m.kopya_drift_adimi(t + 31 * DK)
+    assert kayitlar(tmp_path, "kopya_drift") and not any("Kopya sapması" in x for x in m.tg.gonderilen)

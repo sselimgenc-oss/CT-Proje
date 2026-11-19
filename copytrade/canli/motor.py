@@ -1277,7 +1277,7 @@ class Motor:
                     kd["aktif"] = True
                     dk = round((simdi - int(kd["bas_ms"])) / DAKIKA)
                     self.kayit({"olay": "kopya_drift", "coin": coin, "biz_usd": round(b, 2), "ideal_usd": round(i, 2), "drift": round(drift, 3), "sure_dk": dk})
-                    if simdi - self.kopya_drift_tg_ms.get(coin, -10**15) >= tg_aralik:
+                    if self.rules.get("kopya_drift_telegram", True) and simdi - self.kopya_drift_tg_ms.get(coin, -10**15) >= tg_aralik:
                         self.kopya_drift_tg_ms[coin] = simdi
                         self.tg.gonder(tg.alarm(f"Kopya sapması: {coin}", f"Bizim pozisyon ≈ {tg.tr_isaretli(b, 0)} $, ideal kopya ≈ {tg.tr_isaretli(i, 0)} $ (fark %{round(drift * 100)}), "
                                                 f"{dk} dk'dır sürüyor. Yalnız bilgi; işlem etkisi yok.", ikon="⚠️"))

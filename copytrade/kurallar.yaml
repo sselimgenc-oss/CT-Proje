@@ -237,6 +237,7 @@ karsi_olgu_azami_saat: 72               # saat (hayali pozisyon trader kapatmazs
 kopya_drift_esik: 0.25                  # oran (|biz − ideal| / ideal nosyonel bundan BÜYÜKSE drift; yalnız kayıt/uyarı, işlem etkisi yok)
 kopya_drift_sure_dk: 30                 # dakika (drift bu kadar sürerse tek uyarı; yalnız kayıt/uyarı, işlem etkisi yok)
 kopya_drift_min_usd: 50                 # $ (ideal nosyonel bundan küçük coinler izlenmez; yalnız kayıt/uyarı, işlem etkisi yok)
+kopya_drift_telegram: false            # bool (19.11 kullanıcı: ayrı Telegram uyarısı KAPALI; olay kaydı sürer, düzeltilmiş hâli saatlik özete gelecek)
 kopya_drift_tg_saat: 6                  # saat (aynı coin için Telegram uyarısı en çok bu aralıkta bir; yalnız kayıt/uyarı, işlem etkisi yok)
 
 # Ortak öğrenme (kullanıcı kararı 19.11; docs/ORTAK_OGRENME_CT.md): her kapanan kopya işlemi kaydedilir, dersler YALNIZ riski azaltır (emekli = yeni açılış yok; çarpan 0,5–1,0). Yalnız sanal kip; sert sınırlara dokunmaz
