@@ -461,3 +461,5 @@
 {"zaman_ms":1795080376556,"olay":"tur","ozsermaye_usd":9989.5905}
 {"zaman_ms":1795081213516,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795081213241,"gorme_ms":1795081213516,"yas_ms":275}
 {"zaman_ms":1795081243922,"olay":"tur","ozsermaye_usd":9988.6016}
+{"zaman_ms":1795082094298,"olay":"tur","ozsermaye_usd":9986.9294}
+{"zaman_ms":1795082485876,"olay":"funding","saat":498634,"saat_adet":1,"funding_usd":-0.007070119969139599,"toplam_funding_usd":0.28821262017423227}
