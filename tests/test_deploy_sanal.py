@@ -157,7 +157,7 @@ def test_baslat_yeni_donemde_eski_durum_yuklenmez_ve_mod_dal_cifti_zorunlu(tmp_p
     r = _baslat(c, "uretim", GECIS_BEKLE_SN="1")
     assert r.returncode == 0 and "YENİ DÖNEM" in r.stdout and not (c / "durum/motor.json").exists()
     assert (c / "durum/donem.txt").read_text().strip() == "2026-01-02T00:00:00Z"
-    for mod, dal in (("deneme", "canli-durum"), ("deneme", "canli-durum-sunucu"), ("uretim", "canli-durum-sunucu")):   # deneme modu kaldırıldı (19.11): her çift kalıcı hata
+    for mod, dal in (("deneme", "canli-durum"), ("deneme", "canli-durum-eski"), ("uretim", "canli-durum-eski")):   # deneme modu kaldırıldı (19.11): her çift kalıcı hata
         r = subprocess.run(["bash", str(DEPLOY / "sanal_baslat.sh")], env=_env(SANAL_DEPO=str(c), SUNUCU_MOD=mod, VERI_DALI=dal), capture_output=True, text=True)
         assert r.returncode == 3 and "geçersiz mod/dal" in r.stderr
 
@@ -185,8 +185,8 @@ def test_yayimla_uretim_canli_durum_dalina_yazar_deneme_reddedilir(tmp_path):
     assert r.returncode == 0, r.stderr
     dosyalar = subprocess.run(["git", "ls-tree", "-r", "--name-only", "canli-durum"], cwd=bare, capture_output=True, text=True).stdout.split()
     assert {"durum/ozet.json", "durum/kilit.json", "pano/index.html", "pano/OZET.md", "kayit/2026-11-19.jsonl"} <= set(dosyalar)
-    assert "canli-durum-sunucu" not in subprocess.run(["git", "branch", "--list"], cwd=bare, capture_output=True, text=True).stdout
-    for mod, dal in (("deneme", "canli-durum"), ("deneme", "canli-durum-sunucu"), ("uretim", "canli-durum-sunucu")):   # deneme kaldırıldı / çapraz çift: ret
+    assert "canli-durum-eski" not in subprocess.run(["git", "branch", "--list"], cwd=bare, capture_output=True, text=True).stdout
+    for mod, dal in (("deneme", "canli-durum"), ("deneme", "canli-durum-eski"), ("uretim", "canli-durum-eski")):   # deneme kaldırıldı / çapraz çift: ret
         r = subprocess.run(["bash", str(DEPLOY / "sanal_yayimla.sh")], cwd=calisma, env=_env(SUNUCU_MOD=mod, VERI_DALI=dal, **ortak), capture_output=True, text=True)
         assert r.returncode == 1 and "Geçersiz mod/dal" in r.stderr
 
@@ -197,7 +197,7 @@ def test_pano_cf_mod_pano_adi_ciftini_zorlar_ve_secretsiz_yayimlamaz(tmp_path):
     e = dict(SANAL_DEPO=str(tmp_path), PANO_SON=str(tmp_path / "son.sha"))
     r = subprocess.run(["bash", str(DEPLOY / "sanal_pano_cf.sh")], env=_env(SUNUCU_MOD="deneme", PANO_ISIM="sg-pano", **e), capture_output=True, text=True)
     assert r.returncode == 3 and "geçersiz mod/pano adı" in r.stderr                                    # deneme modu kaldırıldı (19.11)
-    for mod, isim in (("deneme", "sg-pano-sunucu"), ("uretim", "sg-pano-sunucu")):
+    for mod, isim in (("deneme", "sg-pano-eski"), ("uretim", "sg-pano-eski")):
         r = subprocess.run(["bash", str(DEPLOY / "sanal_pano_cf.sh")], env=_env(SUNUCU_MOD=mod, PANO_ISIM=isim, **e), capture_output=True, text=True)
         assert r.returncode == 3 and "geçersiz mod/pano adı" in r.stderr
     r = subprocess.run(["bash", str(DEPLOY / "sanal_pano_cf.sh")], env=_env(SUNUCU_MOD="uretim", PANO_ISIM="sg-pano", **e), capture_output=True, text=True)

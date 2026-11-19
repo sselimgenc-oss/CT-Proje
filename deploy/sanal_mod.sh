@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Sunucu SANAL motoru: mod değiştirme (root olarak): sudo bash /var/lib/sg-sanal/depo/deploy/sanal_mod.sh uretim
-#   (Eski "deneme" modu — ayrı dal canli-durum-sunucu / pano sg-pano-sunucu — 19.11 tam geçişle kaldırıldı.)
+#   (Eski "deneme" modu — ayrı veri dalı ve ayrı pano — 19.11 tam geçişle kaldırıldı; dal ve Worker silindi.)
 #   uretim = veri dalı canli-durum, pano sg-pano (Actions vardiyası KAPALI olmalı: GitHub → Settings → Variables → SUNUCU_AKTIF=evet)
 # Yapar: servisleri durdurur (durdururken son yayım yapılır) → yerel durumu SİLMEDEN arşive taşır (/var/lib/sg-sanal/arsiv/<tarih>-<eski mod>) → /etc/sg-sanal-mod.env (sırsız) yazar. Servisi BAŞLATMAZ.
 # Başlatma: sudo systemctl enable --now sg-sanal sg-sanal-yayim.timer sg-sanal-pano.timer (uretim ilk açılışta Actions vardiyası bitene kadar bekler: sanal_baslat.sh geçiş kapısı).
