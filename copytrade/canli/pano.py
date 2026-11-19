@@ -39,6 +39,12 @@ def yuzde(v: float | None, isaretli: bool = True) -> str:
     return "—" if v is None else (tr_yuzde(v) if isaretli else "%" + tr_sayi(v * 100))
 
 
+def duygu_metni(ozet: dict) -> tuple[str, str]:
+    """Piyasa duygusu (Fear & Greed; yalnız kayıt, işlem etkisi yok): ('25', 'Extreme Fear') ya da ('—', 'yalnız kayıt')."""
+    d = ozet.get("duygu") or {}
+    return (str(d["deger"]), str(d["sinif"])) if d.get("deger") is not None and d.get("sinif") else ("—", "yalnız kayıt")
+
+
 def btc_metni(ozet: dict) -> tuple[str, str]:
     """Başarı ölçütü kıyası (31.12: ayda ≥ %4 VE BTC al-tut'tan iyi): motorun `ozet.json` `btc_al_tut_getiri` / `btc_fark` alanları (aynı dönemde BTC al-tut getirisi; fark = getiri − BTC).
     Döner ("BTC al-tut: +%x,x", "fark: +%x,x"); veri yoksa "—"."""
@@ -155,7 +161,8 @@ def pano_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], isab
          "| kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |", "|---|---|---|---|---|---|",
          f"| {usd(kasa)} | {usd(oz)} | {yuzde(gun_getiri)} | {yuzde(hafta)}{'' if hafta is not None else ' (geçmiş < 7 gün)'} | {yuzde(ozet.get('getiri'))} | {yuzde(-dusus if dusus is not None else None)} |", "",
          f"Başarı kıyası (aynı dönemde): toplam {yuzde(ozet.get('getiri'))} · {' · '.join(btc_metni(ozet))} · {' · '.join(hedef_metni(ozet))}", "",
-         f"Komisyon (dönem): {' · '.join(komisyon_metni(kayitlar, ozet, donem_seri))} _(ücret işlem hacmine bağlıdır, emir sayısına değil)_", ""]
+         f"Komisyon (dönem): {' · '.join(komisyon_metni(kayitlar, ozet, donem_seri))} _(ücret işlem hacmine bağlıdır, emir sayısına değil)_", "",
+         f"Piyasa duygusu (Fear & Greed 0-100; yalnız kayıt, işlem etkisi yok): {' · '.join(duygu_metni(ozet))}", ""]
     # açık pozisyonlar: ozet['acik'] (mark'lı) varsa K/Z ile, yoksa hesap.json'dan giriş fiyatıyla
     s += ["## Açık pozisyonlar", ""]
     acik = ozet.get("acik")
@@ -790,7 +797,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     ust_hucre = [hucre("Özsermaye", tl(oz), "", f"kasa {tr_sayi(kasa, 0)} $"), hucre("Bugün", tyuz(gun), renk(gun), (tl(oz - float(gun_basi), True) + " · UTC gün başına göre") if gun_basi is not None else ""),
                  *([hucre("Bu hafta", tyuz(hafta), renk(hafta), "son 7 gün")] if hafta_goster else []),
                  hucre("Başlangıçtan beri", tyuz(ozet.get("getiri")), renk(ozet.get("getiri")), tl(oz - kasa, True) + " · komisyon " + komisyon_metni(kayitlar, ozet, ds)[0].removeprefix("ödenen ücret: ") + " (" + komisyon_metni(kayitlar, ozet, ds)[1] + ")"),
-                 hucre("BTC al-tut (aynı dönem)", btc_metni(ozet)[0].removeprefix("BTC al-tut: "), renk(ozet.get("btc_al_tut_getiri")), btc_metni(ozet)[1]),
+                 hucre("BTC al-tut (aynı dönem)", btc_metni(ozet)[0].removeprefix("BTC al-tut: "), renk(ozet.get("btc_al_tut_getiri")), btc_metni(ozet)[1] + ((" · duygu " + " ".join(duygu_metni(ozet))) if ozet.get("duygu") else "")),
                  hucre("Aylık eşdeğer", hedef_metni(ozet)[0].removeprefix("aylık eşdeğer: "), renk(ozet.get("aylik_esdeger")), hedef_metni(ozet)[1]),
                  hucre("Zirveden düşüş", tyuz(-dusus if dusus is not None else None), renk(-dusus if dusus is not None else None), f"motor zirvesi {tl(float(zirve))}" if zirve else ""),
                  hucre("Açık pozisyon", str(len(acik)), "", f"brüt {tl(sum(q.get('usd') or 0 for q in acik))}"),

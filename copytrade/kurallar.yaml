@@ -221,6 +221,13 @@ golge_kaldirac_cikar: 20                # x (anlık kaldıraç bundan BÜYÜKSE 
 # ML Otonom rejim etiketi (yalnız kayıt, işlem etkisi yok): motor `rejim_degisti` olayı ve emir olaylarındaki `rejim` alanını yazar.
 rejim_kaynak_url: "https://trader-pano.sselimgenc-c18.workers.dev/rejim.json"                    # URL (boşsa kapalı; ağ çağrısı yapılmaz). Yayın: ML Otonom rejim.json (belirtim: rejim-yayini-spec)
 rejim_okuma_dk: 30                      # dakika (yalnız kayıt, işlem etkisi yok)
+# Haber / duygu etiketi (yalnız kayıt, işlem etkisi yok): `emir` olaylarına `duygu` + `haber` (o coin), `duygu_degisti` olayı; ton etiketi KABA anahtar kelime sayımıdır
+haber_aktif: true                       # false ise ağ çağrısı yapılmaz (yalnız kayıt, işlem etkisi yok)
+haber_okuma_dk: 60                      # dakika (yalnız kayıt, işlem etkisi yok)
+haber_kaynaklar:                        # herkese açık RSS (anahtarsız); 24 sa içinde coin'i anan başlıklar sayılır
+  - "https://www.coindesk.com/arc/outboundfeeds/rss/"
+  - "https://cointelegraph.com/rss"
+duygu_kaynak_url: "https://api.alternative.me/fng/?limit=1"      # Crypto Fear & Greed (0-100); boşsa duygu okunmaz
 
 # Alınmayan sinyal kaydı + kopya drift alarmı (yalnız kayıt/uyarı, işlem etkisi yok)
 karsi_olgu_azami_saat: 72               # saat (hayali pozisyon trader kapatmazsa bu sürede kapanır; yalnız kayıt/uyarı, işlem etkisi yok)

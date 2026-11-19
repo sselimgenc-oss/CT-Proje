@@ -36,7 +36,7 @@ from copytrade.canli.mutabakat import poz_farki, sanal_tutarlilik
 from copytrade.canli.niyet import Niyet, cloid_uret
 from copytrade.canli.ogrenme_adaptor import Ogrenme
 from copytrade.canli import borsa_stop, izleme
-from copytrade.canli import rejim
+from copytrade.canli import haber, rejim
 from copytrade.canli import sert_sinirlar as sert
 from copytrade.canli.borsa_stop import BorsaStop
 from copytrade.canli.risk import Risk, coin_tavan_usd, gun
@@ -583,6 +583,7 @@ class Motor:
         self.donem_seri: dict = _oku(durum_dizin / "donem_seri.json") or {}     # F-06: dönem boyu UTC gün sonu özsermaye + BTC serisi (pano 15 gün kırpmasından bağımsız, kalıcı)
         self.btc_donem: dict | None = m.get("btc_donem")          # BTC al-tut: {donem, bas_ms, fiyat, kaynak, okundu_ms}; dönem başında BİR kez okunur, motor.json'da kalıcı
         self.rejim_anlik: dict = m.get("rejim_anlik") or {}          # ML rejim etiketi (rejim.py): son okuma {gecerli_son_ms, rejimler}; yalnız kayıt, işlem etkisi yok
+        self.haber_anlik: dict = m.get("haber_anlik") or {}          # haber/duygu etiketi (haber.py): önbellek; yalnız kayıt, işlem etkisi yok
         self.rejim_4h_son: dict = m.get("rejim_4h_son") or {}        # coin -> son kaydedilen 4h rejimi (`rejim_degisti` tekilleştirme)
         self.son_olay_ms: int = int(m.get("son_olay_ms", 0))
         self._poz_tr_ms: dict[tuple[str, str], int] = {}              # (adres, coin) -> poz_tr'yi son güncelleyen trader dolum zamanı (kuyruktan düşen olayın geç uygulanması yeniyi ezmesin)
@@ -774,7 +775,7 @@ class Motor:
                 "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "hl_onceki": list(self._hl_onceki) if self._hl_onceki else None, "hl_sicrama": self._hl_sicrama, "hl_sicrama_ms": self._hl_sicrama_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.kalici_offset,
                 "son_funding_ms": self.son_funding_ms, "funding_kimlik": self.funding_kimlik[-500:], "funding_gercek_usd": self.funding_gercek_usd, "ucret_gercek_usd": self.ucret_gercek_usd, "ucret_tahmin_say": self.ucret_tahmin_say,
                 "ucret_bekleyen": self.ucret_bekleyen[-500:], "btc_donem": self.btc_donem, "mutabakat_tutan": self.mutabakat_tutan, "yetim_ilk": self.yetim_ilk, "sahipsiz_ilk": self.sahipsiz_ilk,
-                "rejim_anlik": self.rejim_anlik, "rejim_4h_son": self.rejim_4h_son,
+                "rejim_anlik": self.rejim_anlik, "rejim_4h_son": self.rejim_4h_son, "haber_anlik": self.haber_anlik,
                 "karsi_olgu": self.karsi_olgu, "karsi_olgu_gun": self.karsi_olgu_gun, "kopya_drift": self.kopya_drift, "kopya_drift_tg_ms": self.kopya_drift_tg_ms}
 
     def _hesap_yaz(self) -> None:
@@ -944,6 +945,14 @@ class Motor:
                 continue
             self.kayit({"olay": "rejim_degisti", "coin": coin, "onceki": self.rejim_4h_son.get(coin), "yeni": r4, "1d": z.get("1d")})
             self.rejim_4h_son[coin] = r4
+
+    def haber_adimi(self, simdi: int) -> None:
+        """Haber/duygu etiketi (YALNIZ KAYIT, işlem etkisi yok): `haber_okuma_dk` dakikada bir; sınıf değişince `duygu_degisti`. Mantık haber.py'de."""
+        if not self.rules.get("haber_aktif") or not self._aralik_mi("haber", simdi, float(self.rules.get("haber_okuma_dk", 60)) * 60):
+            return
+        self.haber_anlik, olaylar = haber.guncelle(self.rules, self.haber_anlik, simdi)
+        for o in olaylar:
+            self.kayit(o)
 
     def trader_pozlari_oku(self, adres: str, dexler: list[str] | None = None) -> bool:
         try:
@@ -1358,7 +1367,7 @@ class Motor:
         self.kayit({"olay": "emir", "kip": self.kip, "adres": adres, "coin": o.coin, "eylem": eylem, "yon": yon, "usd_istenen": usd, "usd_dolan": d.usd_dolan, "sz": d.sz,
                     "reduce_only": reduce_only, "pnl_usd": (round(pnl, 6) if pnl is not None else None), "durum": d.durum, "red_neden": d.neden, "boyut_neden": neden, "trader_px": o.px, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
                     "emir_ms": emir_ms, "dolum_ms": dolum_ms, "referans_px": d.referans_px, "dolum_px": d.px, "kayma_ref": d.kayma_oran, "kayma_trader": kayma_trader, "ucret": d.ucret,
-                    "gec_goruldu": gec, "kaynak": o.kaynak, "bant": bant, "cloid": cloid, "rejim": rejim.coin_rejimi(self.rejim_anlik, o.coin, self.saat_ms()), "funding_usd": round(self.hesap.funding.get(adres, 0.0), 6),
+                    "gec_goruldu": gec, "kaynak": o.kaynak, "bant": bant, "cloid": cloid, "rejim": rejim.coin_rejimi(self.rejim_anlik, o.coin, self.saat_ms()), **haber.emir_alanlari(self.haber_anlik, o.coin, self.saat_ms()), "funding_usd": round(self.hesap.funding.get(adres, 0.0), 6),
                     **({"defter": d.defter} if self.kip == "gercek" and getattr(d, "defter", None) else {}),       # S-12: emir anı defteri (yalnız gerçek kip; gercek_sanal_karsilastir)
                     **({"ham": maskele(json.dumps(d.ham, ensure_ascii=False, default=str))[:300]} if d.durum in ("red", "belirsiz") and d.ham else {}),       # G-19: red → HL ham yanıtı (300 karakter)
                     **{k: (round(v, 8) if isinstance(v, float) else v) for k, v in (self._boyut_girdi or {}).items()}})
@@ -2239,7 +2248,7 @@ class Motor:
                 ("telegram", lambda: self._komutlar(komutlar)), ("ajan_suresi", lambda: self.ajan_suresi_uygula(ajan, simdi)), ("ozet", lambda: self._gunluk_ozet(simdi)), ("haftalik", lambda: self._haftalik_ozet(simdi)),
                 ("emir_ozeti", lambda: self.emir_ozeti(simdi)), ("btc_donem", lambda: self.btc_donem_uygula(btc)), ("donem_seri", lambda: self.donem_seri_guncelle(simdi)),
                 ("ogrenme", lambda: self.ogrenme.adim(simdi)), ("tur_kaydi", lambda: self._tur_kaydi(simdi)), ("golge_kural", lambda: self.golge_kural_adimi(simdi)), ("karsi_olgu", lambda: self.karsi_olgu_adimi(simdi)), ("kopya_drift", lambda: self.kopya_drift_adimi(simdi)),          # yalnız kayıt + pano verisi; karar yolunda değil
-                ("rejim", lambda: self.rejim_adimi(simdi)),                        # ML rejim etiketi: yalnız kayıt, işlem etkisi yok
+                ("haber", lambda: self.haber_adimi(simdi)), ("rejim", lambda: self.rejim_adimi(simdi)),                        # ML rejim etiketi: yalnız kayıt, işlem etkisi yok
                 ("durum_yaz", self.durum_yaz),                                     # G-12b: disk dolu / salt okunur → dakikalık görev ölmez; kayıt + alarm
             ]
             for ad, f in adimlar:
@@ -3084,7 +3093,7 @@ class Motor:
                 mk = self.marks.get(coin) or p.giris
                 acik.append({"adres": adres, "coin": coin, "sz": p.sz, "giris": p.giris, "mark": mk, "usd": abs(p.sz) * mk, "kz_usd": p.sz * (mk - p.giris)})
         stats = getattr(self.post, "stats", None) or {}
-        return {"acik": acik, "rest_istek": stats.get("istek"), "rest_429": stats.get("429"), "ogrenme": self.ogrenme.pano()}
+        return {"acik": acik, "rest_istek": stats.get("istek"), "rest_429": stats.get("429"), "ogrenme": self.ogrenme.pano(), "duygu": haber.duygu_ozet(self.haber_anlik, self.saat_ms())}
 
     def _gunluk_metin(self) -> str:
         """Günlük rapor metni (`/rapor` ve zamanlı özet ortak; durum değiştirmez)."""
