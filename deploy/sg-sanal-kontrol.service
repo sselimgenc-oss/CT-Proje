@@ -13,6 +13,8 @@ WorkingDirectory=/var/lib/sg-sanal/depo
 EnvironmentFile=/etc/sg-sanal-mod.env
 Environment=HOME=/var/lib/sg-sanal
 ExecStart=/var/lib/sg-sanal/venv/bin/python -u -m copytrade.canli.motor --kontrol --kip sanal --sanal-kasa-usd 10000 --kadro-dali ${KADRO_DALI} --durum-dizin durum --rapor kontrol.json
+# Kaynak sınırı
+MemoryMax=400M
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict

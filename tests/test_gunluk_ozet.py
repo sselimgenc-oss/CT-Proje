@@ -8,6 +8,7 @@ import pytest
 
 from copytrade.canli import gunluk_ozet as go
 from copytrade.canli import motor as mt
+from copytrade.canli import telegram as tg
 from copytrade.canli.ogrenme_adaptor import takma_ad
 from tests.test_canli_motor import adr, kadro, kur, satir
 
@@ -84,7 +85,42 @@ def test_rejim_drift_ogrenme(tmp_path):
     gun = o["gun"]
     (m.ogrenme.dizin).mkdir(parents=True, exist_ok=True)
     m.ogrenme.ders_yolu.write_text(json.dumps({"a": {"status": "alive", "born": gun}, "b": {"status": "alive", "born": "2000-01-01"}, "c": {"status": "retired", "born": "2000-01-01"}}), encoding="utf-8")
-    assert {k: v for k, v in go.olustur(m, {})["ogrenme"].items() if k != "filtre_aktif"} == {"aktif_ders": 2, "yeni_ders": 1, "emekli_ders": 1}
+    etki = ("filtre_atlanan", "filtre_karsi_olgu_pnl", "ders_kucultulen", "ders_engellenen")      # öğrenme etkisi alanları ayrı testte (aşağıda)
+    assert {k: v for k, v in go.olustur(m, {})["ogrenme"].items() if k != "filtre_aktif" and k not in etki} == {"aktif_ders": 2, "yeni_ders": 1, "emekli_ders": 1}
+
+
+def test_ogrenme_etki_sayimlari_ve_ozet_alanlari(tmp_path):
+    m, _ = _motor(tmp_path)
+    for _ in range(3):
+        m.kayit({"olay": "ml_filtre_atla", "kurulum": "T_aaaaaa", "coin": "BTC"})
+    m.kayit({"olay": "karsi_olgu_kapandi", "neden": "ml_filtre_atla", "pnl_usd": -10.0})
+    m.kayit({"olay": "karsi_olgu_kapandi", "neden": "ml_filtre_atla", "pnl_usd": -2.5})
+    m.kayit({"olay": "karsi_olgu_kapandi", "neden": "hip3_atlandi", "pnl_usd": 50.0})          # ML değil: sayılmaz
+    m.kayit({"olay": "emir_yok", "neden": "ders_emekli", "eylem": "ac"})
+    m.kayit({"olay": "emir_yok", "neden": "ders_emekli", "eylem": "artir"})
+    m.kayit({"olay": "emir_yok", "neden": "bant_ici", "eylem": "ac"})                          # ders değil: sayılmaz
+    beklenen = {"filtre_atlanan": 3, "filtre_karsi_olgu_pnl": -12.5, "ders_kucultulen": None, "ders_engellenen": 2}
+    assert go.gunluk_etki(m) == beklenen
+    og = go.olustur(m, {})["ogrenme"]
+    assert {k: og[k] for k in beklenen} == beklenen and og["filtre_aktif"] is True
+
+
+def test_ogrenme_etki_kapanmamis_karsi_olgu_null(tmp_path):
+    m, _ = _motor(tmp_path)
+    m.kayit({"olay": "ml_filtre_atla", "kurulum": "T_aaaaaa", "coin": "BTC"})                  # skip var, kapanan karşı-olgu yok
+    assert go.gunluk_etki(m)["filtre_karsi_olgu_pnl"] is None and go.gunluk_etki(m)["filtre_atlanan"] == 1
+
+
+def test_ogrenme_satiri_ve_gunluk_rapor(tmp_path):
+    assert tg.ogrenme_satiri({"filtre_atlanan": 3, "filtre_karsi_olgu_pnl": -12.0, "ders_kucultulen": None, "ders_engellenen": 0}) == "🧠 Öğrenme: filtre 3 sinyal atladı (karşı-olgu −12,00 $)"
+    assert tg.ogrenme_satiri({"filtre_atlanan": 0, "filtre_karsi_olgu_pnl": None, "ders_kucultulen": None, "ders_engellenen": 1}) == "🧠 Öğrenme: ders 1 işlemi engelledi"
+    assert tg.ogrenme_satiri({"filtre_atlanan": 0, "filtre_karsi_olgu_pnl": None, "ders_kucultulen": None, "ders_engellenen": 0}) is None
+    assert tg.ogrenme_satiri(None) is None
+    ozet = {"filtre_atlanan": 3, "filtre_karsi_olgu_pnl": -12.0, "ders_kucultulen": None, "ders_engellenen": 0}
+    metin = tg.msg_gunluk("sanal", 1000.0, 1000.0, 1000.0, 0, 1, 11, [], None, None, ozet)
+    assert "🧠 Öğrenme: filtre 3 sinyal atladı (karşı-olgu −12,00 $)" in metin.splitlines()
+    assert "Öğrenme" not in tg.msg_gunluk("sanal", 1000.0, 1000.0, 1000.0, 0, 1, 11, [], None, None, None)
+    assert "Öğrenme" not in tg.msg_gunluk("sanal", 1000.0, 1000.0, 1000.0, 0, 1, 11, [], None, None, {"filtre_atlanan": 0, "filtre_karsi_olgu_pnl": None, "ders_kucultulen": None, "ders_engellenen": 0})
 
 
 @pytest.mark.parametrize("kip,ortam,beklenen", [
@@ -126,3 +162,11 @@ def test_yayim_betikleri_dosyayi_kopyalar():
     for yol in (".github/scripts/canli_yayimla.sh", "deploy/sanal_yayimla.sh"):
         s = (ROOT / yol).read_text(encoding="utf-8")
         assert "kadro_yon_v1.json" in s and "gunluk_ozet_v1.json" in s
+
+
+def test_saglik_kaynak_alanlari_eklendi(tmp_path):
+    m, _ = _motor(tmp_path)
+    o = go.olustur(m)
+    assert {"ram_mb", "ram_tepe_mb", "disk_bos_gb", "yuk_1dk"} <= set(o["saglik"]) and {"son_nabiz", "hata_sayisi_gun"} <= set(o["saglik"])
+    m.durum_yaz()
+    assert "kaynak" in json.loads((m.durum_dizin / "motor.json").read_text(encoding="utf-8"))

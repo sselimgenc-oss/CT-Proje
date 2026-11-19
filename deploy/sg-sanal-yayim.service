@@ -18,6 +18,9 @@ Environment="GIT_SSH_COMMAND=ssh -i /var/lib/sg-sanal/.ssh/id_ed25519 -o Identit
 Environment=YAYIM_KILIT=/var/lib/sg-sanal/yayim.lock
 ExecStart=/bin/bash /var/lib/sg-sanal/depo/deploy/sanal_yayimla.sh
 TimeoutStartSec=20min
+# Kaynak sınırı
+MemoryMax=300M
+Nice=5
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict

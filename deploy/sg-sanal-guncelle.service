@@ -12,4 +12,6 @@ StateDirectory=sg-sanal-guncelle
 StateDirectoryMode=0700
 TimeoutStartSec=20min
 Nice=10
+# Kaynak sınırı (pip kurulumu dahil)
+MemoryMax=400M
 PrivateTmp=true

@@ -37,7 +37,7 @@ from copytrade.canli.niyet import Niyet, cloid_uret
 from copytrade.canli.ogrenme_adaptor import Ogrenme
 from copytrade.canli import borsa_stop, izleme
 from copytrade.canli import haber, rejim
-from copytrade.canli import gunluk_ozet
+from copytrade.canli import gunluk_ozet, kaynak
 from copytrade.canli import sert_sinirlar as sert
 from copytrade.canli.borsa_stop import BorsaStop
 from copytrade.canli.risk import Risk, coin_tavan_usd, gun
@@ -670,6 +670,7 @@ class Motor:
             self.tg.maske = [sahip]
         if hasattr(yurutucu, "saat_ms"):
             yurutucu.saat_ms = self.saat_ms
+        self._kaynak: dict | None = None            # sunucu kaynak ölçümü (kaynak.olc); dakikada en çok bir yenilenir, motor.json'da "kaynak"
         self._adim_ardisik: dict[str, int] = {}   # M-2: dakikalık adım adı -> üst üste hata sayısı (başarıda silinir)
         self._lock = threading.RLock()            # olay işleme (tüketici iş parçacığı) ile dakikalık bakım aynı durumu değiştirir: tek seferde biri
 
@@ -715,6 +716,11 @@ class Motor:
         _yaz(d / "risk.json", self.risk.to_json())
         if self.kip == "gercek":
             _yaz(d / "borsa_stop.json", self.borsa_stop.to_json())
+        if self._aralik_mi("kaynak", int(self.saat_ms()), 60):
+            try:
+                self._kaynak = {**kaynak.olc(d), "olc_ms": int(self.saat_ms())}
+            except Exception:                                          # noqa: BLE001  ölçüm hiçbir zaman durum yazımını bozmaz
+                self._kaynak = None
         _yaz(d / "motor.json", self._motor_json())
         if self.donem_seri:
             _yaz(d / "donem_seri.json", self.donem_seri)
@@ -778,7 +784,7 @@ class Motor:
                 "son_funding_ms": self.son_funding_ms, "funding_kimlik": self.funding_kimlik[-500:], "funding_gercek_usd": self.funding_gercek_usd, "ucret_gercek_usd": self.ucret_gercek_usd, "ucret_tahmin_say": self.ucret_tahmin_say,
                 "ucret_bekleyen": self.ucret_bekleyen[-500:], "btc_donem": self.btc_donem, "mutabakat_tutan": self.mutabakat_tutan, "yetim_ilk": self.yetim_ilk, "sahipsiz_ilk": self.sahipsiz_ilk,
                 "rejim_anlik": self.rejim_anlik, "rejim_4h_son": self.rejim_4h_son, "haber_anlik": self.haber_anlik,
-                "karsi_olgu": self.karsi_olgu, "karsi_olgu_gun": self.karsi_olgu_gun, "kopya_drift": self.kopya_drift, "kopya_drift_tg_ms": self.kopya_drift_tg_ms}
+                "karsi_olgu": self.karsi_olgu, "karsi_olgu_gun": self.karsi_olgu_gun, "kopya_drift": self.kopya_drift, "kopya_drift_tg_ms": self.kopya_drift_tg_ms, "kaynak": self._kaynak}
 
     def _hesap_yaz(self) -> None:
         """hesap.json atomik yazılır; gerçek kipte önce son sağlam sürüm `hesap.json.bak` (Denetim-2)."""
@@ -3127,7 +3133,7 @@ class Motor:
         """Günlük rapor metni (`/rapor` ve zamanlı özet ortak; durum değiştirmez)."""
         oz = self.ozsermaye()
         return tg.msg_gunluk(self.kip, self.kasa, oz, self._ozet_oz if self._ozet_oz is not None else self.kasa, self._ozet_emir, len(self.saha.uyeler), self.saha.n,
-                             self.pano_ek()["acik"], self.hesap.funding_toplam() if self.kip == "sanal" else None, self.karsi_olgu_gun or None)
+                             self.pano_ek()["acik"], self.hesap.funding_toplam() if self.kip == "sanal" else None, self.karsi_olgu_gun or None, gunluk_ozet.gunluk_etki(self))
 
     def _gunluk_ozet(self, simdi: int) -> None:
         d = datetime.fromtimestamp(simdi / 1000, UTC)

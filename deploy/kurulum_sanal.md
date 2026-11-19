@@ -88,6 +88,7 @@ Yerel durum korunur (geri yükleme olmaz). **Yeni dönem** (`copytrade/canli/DON
 - **Hata:** herhangi bir adımda `git reset --hard <önceki>`, kilit paketleri/birimler eski haline, servisler yeniden başlar, Telegram `[CT] CRIT`. Bozuk commit bir daha denenmez (yeni commit gelene kadar).
 - **Telegram:** `/etc/sg-sanal-telegram.env` (yoksa sessiz). Başarı: `[CT] INFO  Sunucu güncellendi: eski7→yeni7 (konu)`.
 - **Yerel durum:** `durum/ kayit/ pano/` depoda izlenmez, git dokunmaz; gelen commit bunları izlemeye başlarsa güncelleme reddedilir. Servis önceden durdurulmuşsa güncelleme onu başlatmaz.
+- **Birim sınırları ve bakım:** `sg-sanal*.service` içindeki bellek/CPU sınırları (`MemoryHigh/Max`, `Nice`, `CPUQuota`) da birim dosyası değiştiğinde bu adımda kopyalanır, `daemon-reload` olur ve `sg-sanal` yeniden başlar; ayrıca elle işlem gerekmez (elle §6 izleniyorsa `cp` + `daemon-reload` + `restart sg-sanal` gerekir). Haftada bir (`$DURUM/bakim_sn` damgası) `git gc --auto` + `git worktree prune` de burada çalışır. Ölçüm: `durum/motor.json` içindeki `kaynak` (ram_mb, ram_tepe_mb, cgroup_mb, yuk_1dk, disk_bos_gb) ve günlük özetin `saglik` alanı.
 - **Kilit:** aynı anda iki güncelleme koşmaz (`flock /run/sg-sanal-guncelle.lock`). Durum dosyaları: `/var/lib/sg-sanal-guncelle/` (root'a ait).
 - **Güvenlik notu:** betik root çalışır ve depodan (CI'dan geçen `main`) gelir; `main` koruması (§2) bu yüzden önemli: sunucudaki `sgsanal` hesabı ele geçerse depo dosyaları root'a yükselmek için kullanılabilir.
 
