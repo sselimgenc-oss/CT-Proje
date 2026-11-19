@@ -42,7 +42,7 @@ def yuzde(v: float | None, isaretli: bool = True) -> str:
 
 
 def duygu_metni(ozet: dict) -> tuple[str, str]:
-    """Piyasa duygusu (Fear & Greed; yalnız kayıt, işlem etkisi yok): ('25', 'Extreme Fear') ya da ('—', 'yalnız kayıt')."""
+    """Piyasa duygusu (Fear & Greed; sanalda uçta yeni açılışı atlatır, gerçekte yalnız kayıt): ('25', 'Extreme Fear') ya da ('—', 'yalnız kayıt')."""
     d = ozet.get("duygu") or {}
     return (str(d["deger"]), str(d["sinif"])) if d.get("deger") is not None and d.get("sinif") else ("—", "yalnız kayıt")
 
@@ -164,7 +164,7 @@ def pano_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], isab
          f"| {usd(kasa)} | {usd(oz)} | {yuzde(gun_getiri)} | {yuzde(hafta)}{'' if hafta is not None else ' (geçmiş < 7 gün)'} | {yuzde(ozet.get('getiri'))} | {yuzde(-dusus if dusus is not None else None)} |", "",
          f"Başarı kıyası (aynı dönemde): toplam {yuzde(ozet.get('getiri'))} · {' · '.join(btc_metni(ozet))} · {' · '.join(hedef_metni(ozet))}", "",
          f"Komisyon (dönem): {' · '.join(komisyon_metni(kayitlar, ozet, donem_seri))} _(ücret işlem hacmine bağlıdır, emir sayısına değil)_", "",
-         f"Piyasa duygusu (Fear & Greed 0-100; yalnız kayıt, işlem etkisi yok): {' · '.join(duygu_metni(ozet))}", ""]
+         f"Piyasa duygusu (Fear & Greed 0-100; sanalda ≥75 yeni long, ≤25 yeni short atlatır; gerçekte yalnız kayıt): {' · '.join(duygu_metni(ozet))}", ""]
     # açık pozisyonlar: ozet['acik'] (mark'lı) varsa K/Z ile, yoksa hesap.json'dan giriş fiyatıyla
     s += ["## Açık pozisyonlar", ""]
     acik = ozet.get("acik")

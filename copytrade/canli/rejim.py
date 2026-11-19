@@ -1,4 +1,4 @@
-"""ML Otonom rejim etiketi okuyucusu: YALNIZ KAYIT, işlem etkisi yok.
+"""ML Otonom rejim etiketi okuyucusu: sanalda motor yeni açılışı filtreler (rejim_ters, K-73), gerçek kipte yalnız kayıt.
 
 Kaynak: sibling projenin yayımladığı salt-okunur `rejim.json` (belirtim: sürüm 1, 19.11.2026).
 Her hata (ağ, zaman aşımı, bozuk biçim, bayat veri, boş adres) sessizce "bilinmiyor" sayılır:

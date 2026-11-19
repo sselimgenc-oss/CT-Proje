@@ -227,10 +227,13 @@ sanal_golge_kurallar_etkin: true        # bool, K-73: yalnız sanal kip; false =
 rejim_kaynak_url: "https://trader-pano-acik.sselimgenc-c18.workers.dev/rejim.json"                    # URL (boşsa kapalı; ağ çağrısı yapılmaz). Yayın: ML Otonom rejim.json (belirtim: rejim-yayini-spec)
 rejim_okuma_dk: 30                      # dakika
 sanal_rejim_filtre: true                # bool, K-73: SANAL kipte 1d ve 4h rejimi ikisi de giriş yönüne TERS (long/trend_down, short/trend_up) ise yeni açılış/artırma atlanır (rejim_ters); bilinmeyen etiket = atlama yok; gerçek kip etkilenmez
-# Haber / duygu etiketi (kayıt; K-73: sanalda sanal_haber_filtre ile açılış filtresi): `emir` olaylarına `duygu` + `haber` (o coin), `duygu_degisti` olayı; ton etiketi KABA anahtar kelime sayımıdır
+# Haber / duygu etiketi (kayıt; K-73: sanalda sanal_haber_filtre ve sanal_duygu_filtre ile açılış filtresi): `emir` olaylarına `duygu` + `haber` (o coin), `duygu_degisti` olayı; ton etiketi KABA anahtar kelime sayımıdır
 haber_aktif: true                       # false ise ağ çağrısı yapılmaz (haber filtresi de bilgisiz kalır)
 sanal_haber_filtre: true                # bool, K-73: SANAL kipte coin haber tonu giriş yönüne ters (long/negatif, short/pozitif) ve 24 sa başlık sayısı >= sanal_haber_min_baslik ise yeni açılış/artırma atlanır (haber_ters); gerçek kip etkilenmez
 sanal_haber_min_baslik: 2               # adet (haber_ters için asgari 24 sa başlık sayısı)
+sanal_duygu_filtre: true                # bool, K-73: SANAL kipte Fear&Greed >= duygu_ust iken yeni long, <= duygu_alt iken yeni short açılış/artırma atlanır (duygu_ters); değer yok/bayat = atlama yok; gerçek kip etkilenmez
+duygu_ust: 75                           # endeks (0-100; bu değer ve üstü = aşırı açgözlülük: yeni long yok)
+duygu_alt: 25                           # endeks (0-100; bu değer ve altı = aşırı korku: yeni short yok)
 haber_okuma_dk: 60                      # dakika
 haber_kaynaklar:                        # herkese açık RSS (anahtarsız); 24 sa içinde coin'i anan başlıklar sayılır
   - "https://www.coindesk.com/arc/outboundfeeds/rss/"
