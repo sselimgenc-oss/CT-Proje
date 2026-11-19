@@ -1,7 +1,7 @@
 {
  "sema": "ct.secim_gercek.v1",
  "proje": "CT",
- "uretim": "2026-11-19T21:02:14Z",
+ "uretim": "2026-11-19T22:02:31Z",
  "degisken": "form_sirasi_gercek_pnl_spearman",
  "pencere_gun": 14,
  "gunler": [
@@ -45,7 +45,7 @@
     {
      "takma_ad": "T_2e4035",
      "form": 18.75,
-     "islem": 7,
+     "islem": 8,
      "pnl": 0.4,
      "ucret": 0.08,
      "net_pnl": 0.32

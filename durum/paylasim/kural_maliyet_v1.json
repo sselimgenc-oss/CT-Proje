@@ -1,12 +1,12 @@
 {
  "sema": "ct.kural_maliyet.v1",
  "proje": "CT",
- "uretim": "2026-11-19T21:02:14Z",
+ "uretim": "2026-11-19T22:02:31Z",
  "pencere_gun": 7,
  "satirlar": [
   {
    "neden": "bant_ici",
-   "olay_adedi": 7856,
+   "olay_adedi": 7947,
    "trader_sayisi": 8,
    "karsi_olgu_kapanan_n": 0,
    "karsi_olgu_kapanan_pnl": 0.0,
@@ -17,47 +17,47 @@
   },
   {
    "neden": "slot_tavani",
-   "olay_adedi": 6201,
+   "olay_adedi": 6420,
    "trader_sayisi": 5,
    "karsi_olgu_kapanan_n": 0,
    "karsi_olgu_kapanan_pnl": 0.0,
    "karsi_olgu_acik_n": 11,
-   "karsi_olgu_acik_pnl": 2.69,
-   "toplam_karsi_olgu_pnl": 2.69,
+   "karsi_olgu_acik_pnl": 1.31,
+   "toplam_karsi_olgu_pnl": 1.31,
    "hayali_nosyonel": 599.7
   },
   {
    "neden": "hip3_atlandi",
-   "olay_adedi": 3646,
+   "olay_adedi": 3943,
    "trader_sayisi": 6,
    "karsi_olgu_kapanan_n": 3,
    "karsi_olgu_kapanan_pnl": -7.87,
-   "karsi_olgu_acik_n": 6,
-   "karsi_olgu_acik_pnl": -10.88,
-   "toplam_karsi_olgu_pnl": -18.75,
-   "hayali_nosyonel": 993.3
+   "karsi_olgu_acik_n": 15,
+   "karsi_olgu_acik_pnl": -10.11,
+   "toplam_karsi_olgu_pnl": -17.98,
+   "hayali_nosyonel": 1057.93
   },
   {
    "neden": "min_emir_atlandi",
-   "olay_adedi": 2535,
+   "olay_adedi": 2552,
    "trader_sayisi": 5,
    "karsi_olgu_kapanan_n": 0,
    "karsi_olgu_kapanan_pnl": 0.0,
    "karsi_olgu_acik_n": 1,
-   "karsi_olgu_acik_pnl": -0.01,
-   "toplam_karsi_olgu_pnl": -0.01,
+   "karsi_olgu_acik_pnl": -0.02,
+   "toplam_karsi_olgu_pnl": -0.02,
    "hayali_nosyonel": 0.93
   },
   {
    "neden": "ters_netlesme",
-   "olay_adedi": 1032,
+   "olay_adedi": 1051,
    "trader_sayisi": 7,
    "karsi_olgu_kapanan_n": 0,
    "karsi_olgu_kapanan_pnl": 0.0,
-   "karsi_olgu_acik_n": 2,
-   "karsi_olgu_acik_pnl": 0.97,
-   "toplam_karsi_olgu_pnl": 0.97,
-   "hayali_nosyonel": 253.72
+   "karsi_olgu_acik_n": 3,
+   "karsi_olgu_acik_pnl": 0.42,
+   "toplam_karsi_olgu_pnl": 0.42,
+   "hayali_nosyonel": 255.7
   },
   {
    "neden": "spot_atlandi",
@@ -96,13 +96,13 @@
  "vurgu": {
   "slot_tavani": {
    "neden": "slot_tavani",
-   "olay_adedi": 6201,
+   "olay_adedi": 6420,
    "trader_sayisi": 5,
    "karsi_olgu_kapanan_n": 0,
    "karsi_olgu_kapanan_pnl": 0.0,
    "karsi_olgu_acik_n": 11,
-   "karsi_olgu_acik_pnl": 2.69,
-   "toplam_karsi_olgu_pnl": 2.69,
+   "karsi_olgu_acik_pnl": 1.31,
+   "toplam_karsi_olgu_pnl": 1.31,
    "hayali_nosyonel": 599.7
   }
  },
