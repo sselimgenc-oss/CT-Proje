@@ -740,7 +740,7 @@ TSI = timezone(timedelta(hours=3))
 # S-13: atlanan sinyal etiketlerinin TEK kaynağı (Telegram + pano). `min_emir_atlandi` eşiği `radar_min_emir_usd` (11 $) ile aynı; test bunu denetler.
 ATLA_TR = {"gec_acilis": "geç görülen açılış", "spot_atlandi": "spot coin", "hip3_atlandi": "HIP-3 coin", "ters_netlesme": "ters netleşme (K‑41)", "trader_hesap_yok": "trader hesabı okunamadı",
            "hesap_yok": "trader hesap değeri kullanılamadı", "slot_tavani": "slot tavanı", "marj_yok": "marj yok", "coin_tavani": "coin tavanı", "min_nosyonel": "çok küçük emir",
-           "min_emir_atlandi": "çok küçük (< 11 $)", "bant_ici": "toplu emir bekliyor (fark küçük)", "inen_trader": "ayrılan trader (yeni alım yok)", "ders_emekli": "ders: trader emekli (yeni alım yok)", "ml_filtre_atla": "ML filtresi (düşük puan)", "rejim_ters": "piyasa yönüne ters", "haber_ters": "haber akışı ters", "hesap_kucuk": "trader hesabı küçük", "kaldirac_cok_yuksek": "trader kaldıracı çok yüksek", "iz_suren_koruma": "iz süren koruma", "patlama_freni": "patlama freni", "dur": "motor durdu",
+           "min_emir_atlandi": "çok küçük (< 11 $)", "bant_ici": "toplu emir bekliyor (fark küçük)", "inen_trader": "ayrılan trader (yeni alım yok)", "ders_emekli": "ders: trader emekli (yeni alım yok)", "ml_filtre_atla": "ML filtresi (düşük puan)", "rejim_ters": "piyasa yönüne ters", "haber_ters": "haber akışı ters", "duygu_ters": "piyasa duygusu ters", "hesap_kucuk": "trader hesabı küçük", "kaldirac_cok_yuksek": "trader kaldıracı çok yüksek", "iz_suren_koruma": "iz süren koruma", "patlama_freni": "patlama freni", "dur": "motor durdu",
            "gunluk_kayip": "günlük kayıp freni", "mutabakat": "mutabakat farkı", "elle_dur": "elle duraklatma", "kasa_siniri": "kasa sınırı", "belirsiz": "belirsiz emir bekleniyor", "stop_korumasiz": "stopsuz pozisyon kapatıldı (geçici)",
            "kapanis_eksik": "kapanış eksik", "kaldirac_dusuk": "azami kaldıraç düşük (< 5x)", "kaldirac_bilinmiyor": "azami kaldıraç okunamadı", "mark_eski": "fiyat verisi eski",
            "hl_deger": "HL hesap değeri geçersiz"}
@@ -831,6 +831,14 @@ def msg_sanal_saatlik_bos(bas_ms: int, bit_ms: int, sure_dk: float, atlanan: dic
         isaret = lambda x: "🟢" if x >= 0 else "🔻"        # noqa: E731
         satirlar.append(f"💰 Kasa: {tr_sayi(oz)} $ · bugün {isaret(gun)} {tr_isaretli(gun)} $ ({_yuzde1(gun / kasa)}) · başlangıçtan {isaret(top)} {tr_isaretli(top)} $ ({_yuzde1(top / kasa)})")
     return "\n".join(satirlar)
+
+
+def msg_filtre_hata(sayi: int) -> str:
+    """Sanal açılış filtresi tekrarlayan hata uyarısı (başına gonder() "[CT] " ekler)."""
+    return (f"⚠️ Sanal filtre 1 saatte {sayi} kez hata verdi\n"
+            "Bazı yeni alımlar filtre kontrolü yapılamadan geçti.\n"
+            "Alımlar filtresiz sürüyor, hata kaydediliyor.\n"
+            "Senden bir şey gerekmiyor.")
 
 
 def sade_ad(ad: str) -> str:

@@ -7,8 +7,10 @@ Type=oneshot
 User=sgsanal
 Group=sgsanal
 EnvironmentFile=-/etc/sg-sanal-telegram.env
+Environment=ALARM_DURUM_DIZIN=/var/lib/sg-sanal/depo/durum
 ExecStart=/bin/bash /var/lib/sg-sanal/depo/deploy/alarm.sh sg-sanal
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
+ReadWritePaths=/var/lib/sg-sanal/depo/durum

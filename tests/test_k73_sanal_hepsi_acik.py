@@ -266,3 +266,78 @@ def test_iz_zirve_yeniden_baslatmada_korunur(tmp_path):
     assert m2.hesap.poz[adr(1)]["BTC"].zirve_kar >= 0.19
     _fiyat(m2, saat2, g * 0.999)
     assert m2.hesap.sz(adr(1), "BTC") == 0.0
+
+
+# ---------------------------------------------------------------- 2b) duygu (Fear & Greed)
+def _duygu(m, saat, deger, ms=None):
+    m.haber_anlik = {**(m.haber_anlik or {}), "duygu": {"deger": deger, "sinif": "x", "ms": saat() if ms is None else ms}}
+
+
+def test_duygu_ters_long_80_ve_short_20_atlanir_sanal(tmp_path):
+    m, saat = _motor(tmp_path)
+    _duygu(m, saat, 80)
+    s = _ac(m, saat)
+    assert (s.karar, s.neden) == ("atlandi", "duygu_ters") and m.neden_say["duygu_ters"] == 1
+    assert _ac(m, saat, "A", no="x:2").karar == "emir"             # 80'de short serbest
+    m2, saat2 = _motor(tmp_path / "b")
+    _duygu(m2, saat2, 20)
+    assert _ac(m2, saat2, "A").neden == "duygu_ters"
+    assert _ac(m2, saat2, "B", no="x:2").karar == "emir"           # 20'de long serbest
+    assert tg.ATLA_TR["duygu_ters"] == "piyasa duygusu ters"
+
+
+def test_duygu_gercekte_ve_kapanista_ve_eksik_degerde_etkisiz(tmp_path):
+    m, saat = _motor(tmp_path)
+    _duygu(m, saat, 80)
+    m.kip = "gercek"
+    assert m._sanal_acilis_filtresi(adr(1), "BTC", True, saat()) == (None, 1.0)
+    m2, saat2 = _motor(tmp_path / "b")
+    assert _ac(m2, saat2).karar == "emir"                          # değer yok
+    _duygu(m2, saat2, 90, ms=saat2() - 27 * 3600 * 1000)           # bayat
+    assert m2._sanal_acilis_filtresi(adr(1), "BTC", True, saat2()) == (None, 1.0)
+    m3, saat3 = _motor(tmp_path / "c")
+    assert _ac(m3, saat3).karar == "emir"
+    _duygu(m3, saat3, 95)                                          # kapanış engellenmez
+    s = m3.olay_isle(olay("x:2", adr(1), "BTC", "A", 300, 100.0, 300.0, saat3))[0]
+    assert s.eylem == "kapat" and s.karar == "emir"
+    m4, saat4 = _motor(tmp_path / "d", sanal_duygu_filtre=False)
+    _duygu(m4, saat4, 95)
+    assert _ac(m4, saat4).karar == "emir"
+
+
+# ---------------------------------------------------------------- filtre hata uyarısı
+def _hata_yap(m, saat, monkeypatch):
+    def patla(*a, **k):
+        raise ValueError("deneme")
+    monkeypatch.setattr(mt.rejim, "coin_rejimi", patla)
+    assert m._sanal_acilis_filtresi(adr(1), "BTC", True, saat()) == (None, 1.0)      # hata açılışı engellemez
+
+
+def _uyarilar(m):
+    return [x for x in m.tg.gonderilen if "Sanal filtre" in x]
+
+
+def test_filtre_hata_uyarisi_3_hatada_ve_6_saatte_bir(tmp_path, monkeypatch):
+    m, saat = _motor(tmp_path)
+    for _ in range(2):
+        _hata_yap(m, saat, monkeypatch)
+        saat.ms += 60_000
+    assert not _uyarilar(m)
+    _hata_yap(m, saat, monkeypatch)
+    u = _uyarilar(m)
+    assert len(u) == 1 and u[0].startswith("⚠️") and len(u[0].splitlines()) <= 5 and "Senden bir şey gerekmiyor" in u[0]
+    saat.ms += 60_000
+    _hata_yap(m, saat, monkeypatch)
+    assert len(_uyarilar(m)) == 1                                  # 6 saat içinde tekrar yok
+    saat.ms += 7 * 3600_000
+    for _ in range(3):
+        _hata_yap(m, saat, monkeypatch)
+    assert len(_uyarilar(m)) == 2                                  # 6 saat sonra yine
+
+
+def test_filtre_hata_uyarisi_pencere_disi_hatalar_sayilmaz(tmp_path, monkeypatch):
+    m, saat = _motor(tmp_path)
+    for _ in range(3):
+        _hata_yap(m, saat, monkeypatch)
+        saat.ms += 40 * 60_000                                     # aralık 40 dk: 1 saatte en çok 2 hata
+    assert not _uyarilar(m)
