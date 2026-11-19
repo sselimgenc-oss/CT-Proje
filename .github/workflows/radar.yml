@@ -100,6 +100,21 @@ jobs:
         run: |
           # 7 gün önceki havuz+kadro (veri dalından) için arada geçen 7 günün kopya getirisi; en çok 30 dk, hata tarama işini bozmaz (eksik yazılır). İlk ölçüm 2026-11-12.
           python -u -m copytrade.radar_isabet --cikti radar --veri-dali "$VERI_DALI" --ozet-md radar/ISABET_OZET.md
+      - name: Aşırı uydurma raporu (PBO, yalnız bilgi)
+        env:
+          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
+        run: |
+          # Faz 2 (docs/HOLDOUT_PBO.md): isabet verisinden aday seçim yöntemleri için CSCV PBO + deflated Sharpe; radar/<tarih>/pbo.json + ISABET_OZET.md'ye tek satır. Hata radar yayımını engellemez (::error:: basılır).
+          python -u -m copytrade.pbo_rapor --kok radar --veri-dali "$VERI_DALI" --cikti radar --ozet-md radar/ISABET_OZET.md
+      - name: Holdout mührü (append-only)
+        env:
+          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
+        run: |
+          # holdout_bas (kurallar.yaml) sonrası havuz_ilk/kadro_ilk/isabet dosyalarının SHA-256'sı radar/holdout/manifest.json'a yalnız eklenir; değişen dosya ::error:: ile görünür. Yayım radar_yayimla.sh'de.
+          # Holdout kullanımı (tarih | amaç | not | tekrar) main'deki copytrade/radar/HOLDOUT_KULLANIM.txt dosyasına PR ile yazılır; her koşu yeni satırları manifest'e işler (aynı tarih+amaç bir kez).
+          ek=()
+          if [ -f copytrade/radar/HOLDOUT_KULLANIM.txt ]; then ek+=(--kullanim-dosya copytrade/radar/HOLDOUT_KULLANIM.txt); fi
+          python -u -m copytrade.holdout_muhur muhurla --kok radar --manifest radar/holdout/manifest.json --veri-dali "$VERI_DALI" "${ek[@]}"
       - name: Özet
         if: ${{ always() && hashFiles('radar/OZET.md') != '' }}
         run: |
