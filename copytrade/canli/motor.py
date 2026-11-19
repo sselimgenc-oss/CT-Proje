@@ -36,7 +36,7 @@ from copytrade.canli.mutabakat import poz_farki, sanal_tutarlilik
 from copytrade.canli.niyet import Niyet, cloid_uret
 from copytrade.canli.ogrenme_adaptor import Ogrenme
 from copytrade.canli import borsa_stop, izleme
-from copytrade.canli import haber, rejim
+from copytrade.canli import haber, rejim, rejim_sonuc
 from copytrade.canli import gunluk_ozet, kaynak
 from copytrade.canli import sert_sinirlar as sert
 from copytrade.canli.borsa_stop import BorsaStop
@@ -1371,10 +1371,17 @@ class Motor:
         if d.px and o.px:
             ham = (d.px - o.px) / o.px
             kayma_trader = ham if yon == "B" else -ham
+        onceki_poz = self.hesap.poz.get(adres, {}).get(o.coin)
+        onceki_ctx = onceki_poz.giris_ctx if onceki_poz is not None and abs(onceki_poz.sz) > 1e-12 else None      # kapanış kaydına taşınacak giriş damgası (uygula pozisyonu siler)
         pnl = None                                          # pano §C3: bu dolumun gerçekleşen K/Z'si (ücret hariç; yalnız azaltma/kapanışta anlamlı)
         if d.dolu_mu:
             try:
                 pnl = self.hesap.uygula(adres, o.coin, yon, d.sz, d.px, d.ucret, dolum_ms)
+                if onceki_poz is None or abs(onceki_poz.sz) <= 1e-12:           # yeni pozisyon: giriş anı rejim/duygu damgası (yalnız bilgi)
+                    yeni_poz = self.hesap.poz.get(adres, {}).get(o.coin)
+                    if yeni_poz is not None:
+                        yeni_poz.giris_ctx = rejim_sonuc.giris_ctx(self.rejim_anlik, self.haber_anlik, o.coin, dolum_ms)
+                        onceki_ctx = yeni_poz.giris_ctx
             except ValueError as hata:                      # defter reddi: kayda geçer, motor çökmez
                 self.kayit({"olay": "defter_hata", "adres": adres, "coin": o.coin, "hata": str(hata)[:120]})
             if self.kip == "gercek":                        # G7: gerçek fee mi tahmin mi (sanal kip değişmez)
@@ -1396,7 +1403,7 @@ class Motor:
         self.kayit({"olay": "emir", "kip": self.kip, "adres": adres, "coin": o.coin, "eylem": eylem, "yon": yon, "usd_istenen": usd, "usd_dolan": d.usd_dolan, "sz": d.sz,
                     "reduce_only": reduce_only, "pnl_usd": (round(pnl, 6) if pnl is not None else None), "durum": d.durum, "red_neden": d.neden, "boyut_neden": neden, "trader_px": o.px, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
                     "emir_ms": emir_ms, "dolum_ms": dolum_ms, "referans_px": d.referans_px, "dolum_px": d.px, "kayma_ref": d.kayma_oran, "kayma_trader": kayma_trader, "ucret": d.ucret,
-                    "gec_goruldu": gec, "kaynak": o.kaynak, "bant": bant, "cloid": cloid, "rejim": rejim.coin_rejimi(self.rejim_anlik, o.coin, self.saat_ms()), **haber.emir_alanlari(self.haber_anlik, o.coin, self.saat_ms()), "funding_usd": round(self.hesap.funding.get(adres, 0.0), 6),
+                    "gec_goruldu": gec, "kaynak": o.kaynak, "bant": bant, "cloid": cloid, "giris_ctx": onceki_ctx, "rejim": rejim.coin_rejimi(self.rejim_anlik, o.coin, self.saat_ms()), **haber.emir_alanlari(self.haber_anlik, o.coin, self.saat_ms()), "funding_usd": round(self.hesap.funding.get(adres, 0.0), 6),
                     **({"defter": d.defter} if self.kip == "gercek" and getattr(d, "defter", None) else {}),       # S-12: emir anı defteri (yalnız gerçek kip; gercek_sanal_karsilastir)
                     **({"ham": maskele(json.dumps(d.ham, ensure_ascii=False, default=str))[:300]} if d.durum in ("red", "belirsiz") and d.ham else {}),       # G-19: red → HL ham yanıtı (300 karakter)
                     **{k: (round(v, 8) if isinstance(v, float) else v) for k, v in (self._boyut_girdi or {}).items()}})

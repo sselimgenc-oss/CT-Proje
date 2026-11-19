@@ -20,7 +20,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from copytrade.canli import kaynak
+from copytrade.canli import kaynak, rejim_sonuc
 from copytrade.canli import sert_sinirlar as sert
 from copytrade.canli.ogrenme_adaptor import takma_ad
 
@@ -204,6 +204,10 @@ def yaz_gerekirse(motor: Any, ortam: dict | None = None) -> bool:
         if son is not None and simdi - son[0] < SAATLIK_MS and getattr(motor, "_ozet_gunu", None) == son[1]:
             return False
         _yaz(Path(motor.durum_dizin) / "paylasim" / DOSYA, olustur(motor, ortam))
+        try:                                                         # rejim/duygu x sonuç raporu (aynı an; kendi hatası günlük özeti bozmaz)
+            rejim_sonuc.yaz(motor)
+        except Exception as hata:                                    # noqa: BLE001
+            motor.kayit({"olay": "rejim_sonuc_hata", "tur": type(hata).__name__})
         motor._gunluk_ozet_yazim = (simdi, getattr(motor, "_ozet_gunu", None))
         return True
     except Exception as hata:                                        # noqa: BLE001
