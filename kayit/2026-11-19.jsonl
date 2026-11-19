@@ -545,3 +545,5 @@
 {"zaman_ms":1795088665752,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795088665484,"gorme_ms":1795088665751,"yas_ms":268}
 {"zaman_ms":1795088665752,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795088665484,"gorme_ms":1795088665751,"yas_ms":268}
 {"zaman_ms":1795088946626,"olay":"tur","ozsermaye_usd":9983.3343}
+{"zaman_ms":1795089613585,"olay":"funding","saat":498636,"saat_adet":1,"funding_usd":0.0008167911593161667,"toplam_funding_usd":0.27152687621192123}
+{"zaman_ms":1795089794782,"olay":"tur","ozsermaye_usd":9984.1662}
