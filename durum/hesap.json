@@ -494,7 +494,7 @@
    },
    "TAO": {
     "acilis_ms": 1795119004082,
-    "giris": 193.7256993194039,
+    "giris": 193.3148977597551,
     "giris_ctx": {
      "duygu": "Extreme Fear",
      "duygu_deger": 10,
@@ -502,7 +502,7 @@
      "r4h": null
     },
     "kaldirac": 3.0,
-    "sz": -0.2807352749701515
+    "sz": -0.3382576539767853
    },
    "TRX": {
     "acilis_ms": 1794835626512,
@@ -643,7 +643,7 @@
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 909.0909090909091,
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 909.0909090909091
  },
- "son_niyet_cloid": "0x878de2897064e0a2a4a80069bf8a8bd9",
+ "son_niyet_cloid": "0x0ce071cadd07dacfc2f9874d49a9bec3",
  "tasfiyeler": [
   {
    "adres": "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89",
@@ -659,7 +659,7 @@
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 0.0,
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 0.326080770490458,
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 1.1966286638722594,
-  "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": 0.8455333828153965,
+  "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": 0.850485455662888,
   "0x9eb42f017e793512e4734f8785de605c4cb3a24e": 0.0,
   "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": 0.0,
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": 0.7919148121143241,
