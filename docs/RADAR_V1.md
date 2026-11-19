@@ -144,7 +144,7 @@ Kasa 1.000 $'da kalır; artırım ancak hepsi sağlanırsa **önerilir**:
 ## 8. Kilit ve değişiklik
 - **v1.1 (K-53, 09.11, kullanıcı kararı):** R0'a 30 g pnl > 0 kapısı; R1'e kopya kapanan işlem ≥ 10 (`kopya_islem_az`; 14.11 radar hunisiyle 0 = kapalı); R2'de H ağırlığı 0 (diğerleri /0,80); önceki kadro üyeleri R0 dışına düşse de R1'den geçirilir (nedene bağlı çıkış). Bu sürüm kurulduktan sonra kurallar yine kilitlidir.
 - Tüm eşik ve ağırlıklar **v1'de donar**, `kurallar.yaml` `radar_*` anahtarlarında tek yerde (kodda sayı sabiti yok).
-- 28 günlük canlı değerlendirme bitmeden ayar değişmez (aşırı uydurma koruması). Değişiklik yeni sürüm olur (v1.1), eski seri silinmez.
+- ~~28 günlük canlı değerlendirme bitmeden ayar değişmez.~~ K-71 (19.11): kilit kaldırıldı; ayar kullanıcı kararıyla istendiği zaman değişebilir. Değişiklik yeni sürüm olur, eski seri silinmez.
 - Veri/kod hatası düzeltmesi serbesttir; sonuç sayılarını değiştiriyorsa PR'da eski ↔ yeni yan yana.
 - **v1.1 ağırlık öğrenme (28 günden sonra, K‑27):** R2 ağırlıkları §7b verisinden öğrenilir (hedef `sonraki_7g`; Spearman + ridge). Kapılar:
   ileri sınama (ilk %70 öğren, son %30 ölç) ileri rho ≤ 0,05 ise ağırlık **yazılmaz**; geçerse v1 ağırlıklarıyla harmanlanır, öğrenilenin payı

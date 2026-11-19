@@ -6,7 +6,7 @@ Son güncelleme: 2026-11-19, lider Claude. Son karar: kullanıcı.
 Kullanıcının asıl modeli: **Form Radarı** (`docs/RADAR_V1.md`, v1.1 kuralları K-53). Her gün son 7 günün formuna göre kadro:
 **İlk 11 sahada, 19 yedek** (toplam 30). Form düşen çıkar, yükselen girer. "Geçmiş değil, şimdi + gelecek."
 - Şu an yalnız **sanal** (GitHub Actions vardiyası). Gerçek para yok; geçiş yalnız kullanıcı kararıyla.
-- **Süre ve karar noktası yok (K-71, kullanıcı kararı 19.11):** sanal dönemin bitiş tarihi yok, canlı tarihi yok; kullanıcı bildirene kadar sanal sürer. Otomatik "dur/devam" noktaları (K-46 02–03.12, 31.12 değerlendirmesi), tarih ve işlem sayısı şartları kalktı; proje zarar etse de devam eder, kullanıcı geliştirir. Gerçek paraya geçişin zamanı ve şekli yalnız kullanıcının kararı.
+- **Süre ve karar noktası yok (K-71, kullanıcı kararı 19.11):** sanal dönemin bitiş tarihi yok, canlı tarihi yok; kullanıcı bildirene kadar sanal sürer. Otomatik "dur/devam" noktaları (K-46 02–03.12, 31.12 değerlendirmesi), tarih ve işlem sayısı şartları kalktı; proje zarar etse de devam eder, kullanıcı geliştirir. Gerçek paraya geçişin zamanı ve şekli yalnız kullanıcının kararı. 28 günlük strateji kilidi de kalktı: ayarlar kullanıcı kararıyla istendiği zaman değişebilir (yeni sürüm olarak).
 - Ölçüm ve raporlama sürer (bilgi amaçlı): ayda %4 ve BTC al-tut karşılaştırması, isabet ölçümü. Kayıp tahammülü: kasa zirveden %20 (kilit sistemde).
 - Kapanan yollar (kodları repodan silindi): D+ (sabit kadro), K-65 seçim vetoları, elle çıkarma listesi, walk-forward seçim doğrulaması, Revizyon 1. Sebep: geçmiş performansa göre seçim rastgeleden iyi çıkmadı (K-65 sonu); kullanıcı özgün Form Radarı'na döndü.
 

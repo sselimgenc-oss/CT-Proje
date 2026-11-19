@@ -349,4 +349,4 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - Kaldırılan işlem sayısı şartları: RADAR §7 madde 1 (≥ 28 gün canlı, ≥ 100 kapanmış işlem).
 - Kalan: ölçüm ve raporlama (isabet, %4/ay ve BTC karşılaştırması bilgi olarak), risk kilitleri (zirveden %20, günlük frenler) ve tüm güvenlik kuralları. Gerçek paraya geçişin zamanı ve şekli yalnız kullanıcının kararı.
 - Kod: bu şartlara bağlı otomatik durdurma kodda yok (K-46 ve 31.12 yalnız belge kuralıydı); kod değişikliği gerekmedi.
-- Açık soru: AGENTS.md kural 5 (strateji eşikleri ilk 28 gün değişmez) ayrı bir aşırı uyum korumasıdır; kaldırılıp kaldırılmayacağı kullanıcıya soruldu, şimdilik yerinde.
+- 28 günlük strateji kilidi (AGENTS.md kural 5) de kaldırıldı (kullanıcı kararı 19.11, seçenek b): strateji ayarları kullanıcı kararı ve onaylı süreçle istendiği zaman değişebilir; değişiklik yeni sürüm olur, eski seri silinmez.
