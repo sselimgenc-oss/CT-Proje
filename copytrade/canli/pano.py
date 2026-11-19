@@ -1362,6 +1362,8 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     rejim_eski = bool(rejim_anlik) and rejim_anlik.get("gecerli_son_ms") is not None and simdi_ms > int(rejim_anlik["gecerli_son_ms"])
     haber_eski = bool(haber_anlik) and bool(haber_anlik.get("duygu")) and haber_mod.duygu_ozet(haber_anlik, simdi_ms) is None
     sorunlar = [b for b in sg if b.seviye in ("KRITIK", "UYARI")]
+    mesaj = lambda b: re.sub(r"\s*\([^)]*\.(?:json|jsonl|yml|py|sh)[^)]*\)", "", b.mesaj)                         # noqa: E731  dosya adı görünmesin
+
     # ---- ÖZET
     if durdu or r_sinif == "eks":
         gorev = "Risk freni devrede, yeni işlem açılmıyor; nedeni için TEKNİK sekmesine bakın."
@@ -1382,7 +1384,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
         k_acik = '<div class="bos">Açık işlem yok</div>'
     k_son = ("".join(_bugun_satiri(r) for r in kap[:3]) + '<label for="t3" class="ln">tümü →</label>') if kap else '<div class="bos">veri birikiyor: henüz kapanan işlem yok</div>'
     if sorunlar:
-        isik = ("eks", "Teknik sorun: " + sorunlar[0].mesaj + (f" (+{len(sorunlar) - 1} sorun daha)" if len(sorunlar) > 1 else "") + " — ayrıntı TEKNİK sekmesinde")
+        isik = ("eks", "Teknik sorun: " + mesaj(sorunlar[0]) + (f" (+{len(sorunlar) - 1} sorun daha)" if len(sorunlar) > 1 else "") + " — ayrıntı TEKNİK sekmesinde")
     elif rejim_eski or haber_eski:
         isik = ("bk", " · ".join([*(["Rejim verisi güncel değil"] if rejim_eski else []), *(["Haber verisi güncel değil"] if haber_eski else [])]))
     else:
@@ -1434,7 +1436,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     ogrenme_html = (_sayfa_kart("Ders öğrenmesi", ders_karti(og, True), "tam") + _sayfa_kart("Son 5 ders", son_dersler) + _sayfa_kart("Makine öğrenmesi", ml_karti(og, True), "tam") + _sayfa_kart("Makine öğrenmesinin son 5 kararı", ml_kararlar))
     # ---- TEKNİK
     tur = lambda b: b.seviye                                                                                          # noqa: E731
-    sg_satir = "".join(f'<div class="s {"eks" if tur(b) == "KRITIK" else ("bk" if tur(b) == "UYARI" else "so")}">{esc(b.mesaj)}</div>' for b in sorted(sg, key=lambda b: ("KRITIK", "UYARI", "BILGI").index(b.seviye))) or '<div class="s art">Sorun yok</div>'
+    sg_satir = "".join(f'<div class="s {"eks" if tur(b) == "KRITIK" else ("bk" if tur(b) == "UYARI" else "so")}">{esc(mesaj(b))}</div>' for b in sorted(sg, key=lambda b: ("KRITIK", "UYARI", "BILGI").index(b.seviye))) or '<div class="s art">Sorun yok</div>'
     sg_rozet = _rozet({"SAGLIKLI": "art", "UYARI": "bk", "KRITIK": "eks"}[sg_durum], {"SAGLIKLI": "sorun yok", "UYARI": "uyarı var", "KRITIK": "acil"}[sg_durum])
     saglik_kv = _kv([("WS kopma", str(din.get("kopma", "—"))), ("REST 429", str(ozet.get("rest_429", "—"))), ("Vardiya süresi", f"{tr_sayi(float(ozet.get('sure_dk') or 0) / 60, 1)} sa")])
     deg = [v for _, v in seri][-300:]

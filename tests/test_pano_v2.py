@@ -152,3 +152,8 @@ def test_acik_satir_ayrintilari_ve_bos_veri():
     assert "1 sa 30 dk" in n2 and "başa baş" in n2 and "1.440,00 (girişten %20 aleyhe)" in n2 and "3x" in n2
     bos = pano.html_olustur({"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0}, {}, {}, [], [], SIMDI)
     assert "Açık işlem yok" in bos and "veri birikiyor" in bos and "Ne yapmalıyım?" in bos
+
+
+def test_saglik_mesajinda_dosya_adi_gorunmez():
+    g = gorunur(pano.html_olustur({"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "yazildi_ms": SIMDI, "vardiya": "v"}, {}, {}, [], [], SIMDI))
+    assert ".json" not in g and ".py" not in g and ".yml" not in g
