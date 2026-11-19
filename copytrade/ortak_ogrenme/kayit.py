@@ -1,4 +1,4 @@
-# Kaynak: sselimgenc-oss/SG-Github-AB-proje trader/paket/ortak_ogrenme/kayit.py @ af68a02 (kopya; değiştirme, güncelleme kaynaktan)
+# Kaynak: sselimgenc-oss/SG-Github-AB-proje trader/paket/ortak_ogrenme/kayit.py @ 84f6cad (kopya; değiştirme, güncelleme kaynaktan)
 """Ortak aday kaydi (spec bolum 1): Aday, JSON donusumu, JSONL okuma/atomik yazma."""
 from __future__ import annotations
 

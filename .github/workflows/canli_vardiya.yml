@@ -99,7 +99,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install websockets==15.0.1 PyYAML==6.0.3 requests==2.34.2
+      - run: pip install websockets==15.0.1 PyYAML==6.0.3 requests==2.34.2 numpy==2.5.4   # numpy: ortak öğrenme filtresi (yoksa filtre kapalı, motor çalışır)
       - id: geri
         name: Durumu veri dalından geri yükle (dönem kuralı)
         run: bash .github/scripts/donem_geri.sh

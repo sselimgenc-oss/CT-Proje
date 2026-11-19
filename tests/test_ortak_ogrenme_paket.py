@@ -16,7 +16,7 @@ def dt(g, s=12):
 
 
 def test_surum_ve_kayit_gidis_donus(tmp_path):
-    assert SURUM == "1.0.0"
+    assert SURUM == "1.1.0"
     a = aday(1, dt(16), -2.0, ozellikler={"kaldirac": 3.0}, etiketler=("coin:BTC",), cikis={"exit_reason": "x"})
     assert aday_from_dict(aday_to_dict(a)) == a and aday_to_dict(a)["ts"] == "2027-01-16T12:00:00Z"
     yol = tmp_path / "a.jsonl"

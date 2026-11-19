@@ -45,10 +45,27 @@ Not: emekli yapılan trader'ın yeni açılışları kopyalanmadığı için o k
 Her anahtarın yanında açıklama var. Gerçek kipte (`kip: gercek`) öğrenme çalışmaz.
 
 ## Kod haritası
-- `copytrade/ortak_ogrenme/` — kaynaktan kopya (SG-Github-AB-proje `trader/paket/ortak_ogrenme` @ af68a02). **Değiştirilmez**, güncelleme kaynaktan.
+- `copytrade/ortak_ogrenme/` — kaynaktan kopya (SG-Github-AB-proje `trader/paket/ortak_ogrenme` @ 84f6cad (SURUM 1.1.0)). **Değiştirilmez**, güncelleme kaynaktan.
 - `copytrade/canli/ogrenme_adaptor.py` — CT'ye özgü çeviri ve uygulama (tek yer).
 - Motor temas noktaları (birkaç satır): `Hesap.dinleyici` (dolum bildirimi), `_emir_isle` (emekli engeli + çarpan), dakikalık adım `ogrenme`, `hafta_degisimi` karşılığı.
-- Testler: `tests/test_ogrenme_adaptor.py`, `tests/test_ortak_ogrenme_paket.py`.
+- Testler: `tests/test_ogrenme_adaptor.py`, `tests/test_ogrenme_filtre.py`, `tests/test_ortak_ogrenme_paket*.py`.
 
 ## Dönem sıfırlanınca
 Yeni dönemde `donem_geri.sh` durumu yüklemez; öğrenme kayıtları da sıfırdan başlar (eski veri veri dalı geçmişinde arşivlidir).
+
+## Parça 2 (paket 1.1.0): karne, drift, ML filtresi
+
+**Karne ve sanal kasa (yalnız rapor).** Her trader (takma ad) için kapanan işlem sayısı, ortalama R ve "sanal kasa" (1.000 $ başlangıç, her işlemde %1 × R) hesaplanır; `durum/ogrenme/karne.json`'a ve `pano/OZET.md`'ye ("Ortak öğrenme karnesi") yazılır. Sanal kasa gerçek kasayla ilgisizdir, yalnız trader kalitesini karşılaştırır.
+
+**Drift (CUSUM; yalnız uyarı).** Bir trader'ın kapanan işlemleri üst üste beklenenden kötüyse (en az 20 işlem) `kurulum_drift` olayı ve **tek** Telegram UYARI gider (aynı alarm tekrar bildirilmez). Kopyalama değişmez. Eşikler ML projesinin R ölçeğine göre ayarlıdır; CT'de R ölçeği farklı olduğundan alarm yalnız bilgi olarak okunur.
+
+**ML filtresi (AKTİF, sanal kip).** Trader başına küçük bir ridge-lojistik model, bir işlemin kârlı bitme olasılığını **karar anında bilinen** özelliklerden tahmin eder: saat, haftanın günü, hafta sonu mu, trader'ın anlık kaldıracı, trader hesabının büyüklüğü ve pozisyonunun hesaba oranı.
+Yeni açılış/artırmanın puanı modelin eşiğinin (taban kâr oranının %90'ı) altındaysa emir **atlanır** (`ml_filtre_atla`; ayrıca "alınmayan sinyal" kaydına düşer, böylece filtre haklı mıydı sonradan görülür).
+- Yalnız atlar; boyutu asla artırmaz. Kapanış/azaltma hiçbir zaman filtrelenmez.
+- **Model yok, süresi (21 gün) dolmuş ya da numpy kurulu değilse filtre her şeyi geçirir** ve `ml_filtre_yok` kaydı düşer (aynı trader için en çok 6 saatte bir).
+- **Veri koruması:** bir trader için en az 50 etiketli (kapanmış) işlem yoksa model eğitilmez (`ogrenme_filtre_min_n`). Tek sınıflı veri (hep kazanç / hep kayıp) de eğitilmez.
+- **Eğitim takvimi:** saatlik adımda; model yoksa ya da 7 günden eskiyse yeniden eğitilir (21 günlük son kullanmadan çok önce); ayrıca haftalık kadro değişiminden sonraki ilk saatlik adımda (pazar) zorla yenilenir. Eski model `.prev.json` olarak yedeklenir; paket hash ve gidiş-dönüş doğrulamasıyla yazılır.
+- Modeller `durum/ogrenme/filtre/<takma_ad>.json` (adres yok) olarak veri dalında yayımlanır, vardiyalar arası kalıcıdır.
+- **numpy:** yalnız filtre numpy ister. `requirements-canli.txt` ve `requirements-canli.lock`'a `numpy==2.5.4` (hash'li, sürüm ≥ 2 hafta eski) eklendi; vardiya iş akışının `pip install` satırına da eklendi. Diğer tüm modüller numpy'sız içe aktarılır (`tests/test_canli_numpysiz.py`).
+- Anahtarlar: `ogrenme_filtre_aktif`, `ogrenme_filtre_min_n`, `ogrenme_filtre_egitim_gun`, `ogrenme_filtre_log_saat`.
+- Not: artırma (zaten açık pozisyona ekleme) de aynı özelliklerle puanlanır; eğitim satırı pozisyon bazlıdır (açılış anı özellikleri → pozisyonun net R'si).

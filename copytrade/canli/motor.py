@@ -1108,6 +1108,9 @@ class Motor:
                              "biz_poz_usd": biz_usd, "biz_slot_toplam_usd": slot_toplam, "hedef_usd": hedef}
         if emir_usd <= 0:
             return self._atla(o, adres, eylem, "atlandi", neden)
+        if acilis and self.ogrenme.filtre_kontrol(adres, o.coin, simdi, {"trader_hesap_usd": hesap_usd, "trader_poz_usd": abs(trader_sonra) * o.px,      # ortak öğrenme ML filtresi: yalnız ATLAR (counterfactual'a `_atla` yazar)
+                                                  "trader_kaldirac": (self.kaldirac_tr.get(adres) or {}).get("anlik_kaldirac")}):
+            return self._atla(o, adres, eylem, "atlandi", "ml_filtre_atla")
         if acilis:
             emir_usd, kn = self.risk.coin_tavani(emir_usd, self.hesap.brut_coin(o.coin, self.marks))
             if emir_usd <= 0:
@@ -3049,7 +3052,7 @@ class Motor:
                 mk = self.marks.get(coin) or p.giris
                 acik.append({"adres": adres, "coin": coin, "sz": p.sz, "giris": p.giris, "mark": mk, "usd": abs(p.sz) * mk, "kz_usd": p.sz * (mk - p.giris)})
         stats = getattr(self.post, "stats", None) or {}
-        return {"acik": acik, "rest_istek": stats.get("istek"), "rest_429": stats.get("429")}
+        return {"acik": acik, "rest_istek": stats.get("istek"), "rest_429": stats.get("429"), "ogrenme": self.ogrenme.pano()}
 
     def _gunluk_ozet(self, simdi: int) -> None:
         d = datetime.fromtimestamp(simdi / 1000, UTC)

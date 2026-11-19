@@ -1,4 +1,4 @@
-# Kaynak: sselimgenc-oss/SG-Github-AB-proje trader/paket/ortak_ogrenme/ders.py @ af68a02 (kopya; değiştirme, güncelleme kaynaktan)
+# Kaynak: sselimgenc-oss/SG-Github-AB-proje trader/paket/ortak_ogrenme/ders.py @ 84f6cad (kopya; değiştirme, güncelleme kaynaktan)
 """Aday ders yasam dongusu (spec bolum 3). Durum dosyasi JSON; atomik yazim."""
 from __future__ import annotations
 
