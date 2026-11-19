@@ -20,6 +20,7 @@ from datetime import UTC, datetime, timedelta, timezone
 from html import escape as esc
 from pathlib import Path
 
+from copytrade import surum_karsilastirma
 from copytrade.canli.telegram import ATLA_TR, KACIRILAN_NEDENLER, kip_adi, tr_isaretli, tr_sayi, tr_yuzde
 from copytrade.saglik import durum as saglik_durum, kontrol as saglik_kontrol, ozet_metin as saglik_metin
 
@@ -134,7 +135,7 @@ def pencere24(kayitlar: list[dict], simdi_ms: int) -> list[dict]:
 
 
 def pano_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], isabetler: list[dict], gecmis: list[dict], simdi_ms: int, donem_seri: dict | None = None,
-                 kadro: dict | None = None) -> tuple[str, list[dict]]:
+                 kadro: dict | None = None, surum_gun: dict[str, str] | None = None, pbo: dict | None = None) -> tuple[str, list[dict]]:
     """Saf fonksiyon. Döner (Markdown, güncel özsermaye geçmişi)."""
     kasa, oz = float(ozet.get("kasa_usd") or 0.0), float(ozet.get("ozsermaye_usd") or 0.0)
     gecmis_yeni = gecmis_guncelle(gecmis, oz, simdi_ms)
@@ -203,6 +204,9 @@ def pano_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], isab
                      f"{yuzde(i.get('fark_ilk11_havuz'))} | {yuzde(i.get('fark_ilk11_elenen'))} | {g['ilk11']['n']}/{g['havuz_geri']['n']}/{g['elenen']['n']} |")
     else:
         s += [isabet_yok_metni(ozet)]
+    if pbo:
+        s += ["", pbo_satiri(pbo)]
+    s += [""] + surum_karsilastirma.md_bolum(surum_karsilastirma.karsilastir(kayitlar, surum_gun))
     s += donem_md(donem_seri or {}, kadro or {})
     return "\n".join(s) + "\n", gecmis_yeni
 
@@ -217,6 +221,13 @@ def _tsi(ms: int, bicim: str = "%d.%m %H:%M") -> str:
 
 
 # ------------------------------------------------------------------------------------------------------------------------------ dönem boyu (pano 14.11; kaynak durum/donem_seri.json)
+def pbo_satiri(pbo: dict) -> str:
+    """Son `radar/<tarih>/pbo.json` tek satır (hesap `copytrade.pbo_rapor`da; burada yalnız biçim)."""
+    if pbo.get("durum") != "tamam":
+        return f"PBO (aşırı uydurma olasılığı, bilgi): yetersiz veri — {pbo.get('neden', '')}"
+    return f"PBO (aşırı uydurma olasılığı, bilgi): {pbo['pbo']:.2f} (T={pbo.get('kullanilan_t')} gün, {len(pbo.get('adaylar', []))} aday; ≥ 0,5 = seçim üstünlüğü sınamada korunmuyor)"
+
+
 def isabet_yok_metni(ozet: dict) -> str:
     """Seçim isabeti henüz yoksa: ilk ölçüm dönem başından 7 gün sonra (isabet 7 gün önceki havuzu ölçer); dönem bilinmiyorsa yalnız açıklama. Sabit tarih yok."""
     from copytrade.canli.motor import donem_ms
@@ -574,7 +585,7 @@ def _maruziyet_html(acik: list[dict], kasa: float, oz: float, kaldirac: float, c
 
 
 def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecmis: list[dict], simdi_ms: int, kadro: dict | None = None, saha_durum: dict | None = None, hesap_tr: dict | None = None, havuz: dict | None = None, kurallar: dict | None = None,
-                 donem_seri: dict | None = None, isabetler: list[dict] | None = None, kaldirac_tr: dict | None = None) -> str:
+                 donem_seri: dict | None = None, isabetler: list[dict] | None = None, kaldirac_tr: dict | None = None, surum_gun: dict[str, str] | None = None) -> str:
     """Telefonda/bilgisayarda açılan tek dosyalık koyu "terminal" paneli (`pano/index.html`; kullanıcının Cloudflare Workers statik sayfası `sg-pano` `canli-durum` dalının `pano/` klasörünü gösterir, salt okunur): rakam şeridi, özsermaye/düşüş/günlük K-Z grafikleri, pozisyon dağılımı, pozisyon ve işlem tabloları; DÖNEM sekmesi (14.11): dönem eğrisi, trader katkısı, İlk 11 ↔ Yedek, giriş/çıkış geçmişi, doluluk, emir oranları, radar hunisi, seçim isabeti (`donem_seri`, `kadro.huni`, `isabetler`).
     Saf fonksiyon; yeni hesap yok (özet + kayıtlardan yalnız toplama/dizme). Dış kaynak/JS yok; tüm metin HTML kaçışlı."""
     kasa, oz = float(ozet.get("kasa_usd") or 0.0), float(ozet.get("ozsermaye_usd") or 0.0)
@@ -849,6 +860,7 @@ input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler sectio
 <section class="n6 izgara">
 <div class="p g3"><div class="pb">Trader katkısı <span>dönem boyu · kapanmış slotlar dahil</span></div>{_katki_html(so)}</div>
 <div class="p"><div class="pb">Seçim isabeti <span>son 7 ölçüm</span></div>{_isabet_html(isabetler or [], ozet)}</div>
+<div class="p"><div class="pb">Sürüm karşılaştırma <span>v4 taban ↔ v4+ML fiili</span></div>{surum_karsilastirma.html_tablo(surum_karsilastirma.karsilastir(kayitlar, surum_gun))}</div>
 <div class="p"><div class="pb">İlk 11 ↔ Yedek <span>dönem katkısı</span></div><div class="pi">{_ilk_yedek_html(so)}</div></div>
 <div class="p"><div class="pb">Saha doluluğu <span>dönem boyu</span></div><div class="pi">{'<div class="s">slot-gün doluluk <b>' + esc(yuzde(dol, False)) + '</b> · nakitte kalan <b>' + esc(yuzde(nakit, False)) + '</b></div><div class="ha">' + tr_sayi(dol_gun, 1) + ' gün ölçüldü (motorun çalıştığı süre); nakit = 1 − brüt pozisyon / özsermaye, zaman ağırlıklı</div>' if dol is not None else VERI_YOK.format("doluluk kaydı birikiyor")}</div></div>
 <div class="p"><div class="pb">Emir oranları <span>dönem boyu</span></div><div class="pi">{'<div class="s">atlanan sinyal <b>' + esc(yuzde(at_or, False)) + '</b> · yuvarlanan emir <b>' + esc(yuzde(yv_or, False)) + '</b></div><div class="ha">emir ' + str(sy.get("emir", 0)) + ' · atlanan ' + str(sy.get("atlanan", 0)) + ' · yuvarlanan ' + str(sy.get("yuvarlanan", 0)) + '</div>' if at_or is not None else VERI_YOK.format("dönemde henüz sinyal yok")}</div></div>
@@ -914,6 +926,21 @@ def isabetleri_oku(dal: str | None, son: int = 7) -> list[dict]:
     return cikti
 
 
+def pbo_oku(dal: str | None) -> dict | None:
+    """Veri dalındaki en son `radar/<tarih>/pbo.json` (copytrade.pbo_rapor); yoksa None."""
+    if not dal:
+        return None
+    ls = subprocess.run(["git", "ls-tree", "-r", "--name-only", f"origin/{dal}"], capture_output=True, text=True)
+    yollar = sorted(y for y in ls.stdout.splitlines() if y.startswith("radar/") and y.endswith("/pbo.json"))
+    if not yollar:
+        return None
+    s = subprocess.run(["git", "show", f"origin/{dal}:{yollar[-1]}"], capture_output=True, text=True)
+    try:
+        return json.loads(s.stdout) if s.returncode == 0 and s.stdout.strip() else None
+    except ValueError:
+        return None
+
+
 def kadro_oku(dal: str | None) -> dict | None:
     """Veri dalından (`origin/<dal>`) güncel `radar/son/kadro.json`; yoksa None."""
     if not dal:
@@ -953,13 +980,14 @@ def main(argv: list[str] | None = None) -> int:
     gecmis = json.loads(args.gecmis.read_text(encoding="utf-8")) if args.gecmis.is_file() else []
     kayitlar = kayitlari_oku(args.kayit)
     isabetler, ds, kadro = isabetleri_oku(args.isabet_dali), _json(args.durum / "donem_seri.json"), kadro_oku(args.isabet_dali)
-    md, yeni = pano_olustur(ozet, _json(args.durum / "risk.json"), _json(args.durum / "hesap.json"), kayitlar, isabetler, gecmis, int(time.time() * 1000), ds, kadro)
+    sg = surum_karsilastirma.surum_gun_oku(args.isabet_dali, sorted({datetime.fromtimestamp(k["zaman_ms"] / 1000, UTC).date().isoformat() for k in kayitlar if isinstance(k.get("zaman_ms"), int | float)}))
+    md, yeni = pano_olustur(ozet, _json(args.durum / "risk.json"), _json(args.durum / "hesap.json"), kayitlar, isabetler, gecmis, int(time.time() * 1000), ds, kadro, sg, pbo_oku(args.isabet_dali))
     args.cikti.parent.mkdir(parents=True, exist_ok=True)
     args.cikti.write_text(md, encoding="utf-8")
     args.gecmis.write_text(json.dumps(yeni, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     if args.html:
         args.html.write_text(html_olustur(ozet, _json(args.durum / "risk.json"), _json(args.durum / "hesap.json"), kayitlar, yeni, int(time.time() * 1000), kadro, _json(args.durum / "saha.json"), _json(args.durum / "motor.json").get("hesap_tr"), havuz_oku(args.isabet_dali, kadro),
-                                               donem_seri=ds, isabetler=isabetler, kaldirac_tr=_json(args.durum / "motor.json").get("kaldirac_tr")), encoding="utf-8")
+                                               donem_seri=ds, isabetler=isabetler, kaldirac_tr=_json(args.durum / "motor.json").get("kaldirac_tr"), surum_gun=sg), encoding="utf-8")
     print(md)
     return 0
 

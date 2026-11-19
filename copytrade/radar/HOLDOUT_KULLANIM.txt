@@ -1,0 +1,3 @@
+# Holdout kullanım defteri (docs/HOLDOUT_PBO.md). Holdout verisine (holdout_bas sonrası mühürlü radar çıktıları) her bakışta BİR satır eklenir; satır PR ile gelir.
+# Biçim: YYYY-MM-DD | amaç | kısa not | tekrar   (not ve tekrar isteğe bağlı; aynı amaçla ikinci bakış için satır sonuna `| tekrar` yazılır)
+# Radar koşusu yeni satırları radar/holdout/manifest.json "kullanim" listesine işler (aynı tarih+amaç bir kez). Henüz kullanım yok.

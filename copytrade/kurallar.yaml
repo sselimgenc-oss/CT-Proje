@@ -213,6 +213,9 @@ isabet_elenen_ust: 30                   # kişi (kopya aşamasına varıp elenen
 isabet_butce_dk: 30                     # dakika (isabet adımı süre bütçesi; aşılırsa eksik yazılır, tarama bozulmaz)
 isabet_kotu_gecikme_dk: 3               # dakika (kötü senaryo gecikmesi)
 isabet_kotu_kayma_carpan: 2             # kat (kötü senaryo: maliyet_kayma bu kadar katı)
+# Aşırı uydurma koruması (Faz 2; docs/HOLDOUT_PBO.md): yalnız RAPOR/mühür, karar koduna ve radar_* eşiklerine dokunmaz
+holdout_bas: "2026-11-20"               # YYYY-MM-DD (bu tarihten itibaren radar günlük çıktıları mühürlenir; holdout yalnız bir kez değerlendirilir; metin olarak yazılır)
+pbo_s: 8                                # blok (PBO/CSCV: dönemler bu kadar eşit bloğa bölünür, çift olmalı; T < 2×S ise "yetersiz veri")
 para_hareketi_isaret_payi: 0.2          # oran (T6 §2, bilgi: net yatırma / hafta başı sermaye bunun üstündeyse raporda işaretlenir; kapıyı DEĞİŞTİRMEZ)
 # Gölge kurallar (Fable 18.11; yalnız kayıt, işlem etkisi yok): motor `golge_kural` olayı yazar (kural başlayınca/bitince), emir/kadro değişmez
 golge_hesap_alt_usd: 5000               # $ (trader hesap değeri bundan KÜÇÜKSE A_hesap_5k)

@@ -25,6 +25,9 @@ mkdir -p "$archive/isabet"
 for d in radar/????-??-??; do
   if [ -s "$d/isabet.json" ]; then mkdir -p "$archive/isabet/$(basename "$d")"; cp "$d/isabet.json" "$archive/isabet/$(basename "$d")/"; fi
 done
+# Faz 2 (docs/HOLDOUT_PBO.md): PBO raporu (bilgi) ve holdout mühür manifesti (append-only; copytrade.holdout_muhur yeni halini yazdı) da yayımlanır.
+if [ -s "$tarih_klasoru/pbo.json" ]; then cp "$tarih_klasoru/pbo.json" "$archive/pbo.json"; fi
+if [ -s radar/holdout/manifest.json ]; then cp radar/holdout/manifest.json "$archive/holdout_manifest.json"; fi
 # GitHub 100 MB sınırı için yayımlanan her dosya 90 MB altında olmalı.
 for f in "$archive"/*.json "$archive"/isabet/*/isabet.json; do
   [ -f "$f" ] || continue
@@ -44,6 +47,8 @@ fi
 mkdir -p "radar/$gun" radar/son
 cp "$archive/havuz.json" "$archive/kadro.json" "radar/$gun/"
 cp "$archive/kadro.json" radar/son/kadro.json
+if [ -f "$archive/pbo.json" ]; then cp "$archive/pbo.json" "radar/$gun/pbo.json"; git add -f "radar/$gun/pbo.json"; fi
+if [ -f "$archive/holdout_manifest.json" ]; then mkdir -p radar/holdout; cp "$archive/holdout_manifest.json" radar/holdout/manifest.json; git add -f radar/holdout/manifest.json; fi
 if [ ! -e "radar/$gun/kadro_ilk.json" ] && ! git cat-file -e "HEAD:radar/$gun/kadro.json" 2>/dev/null; then
   # Günün ilk yayımı (veri dalında o günün kadrosu henüz yok): ilk kadro + aynı koşunun havuzu korunur; aynı günün sonraki yayımları bu iki dosyaya dokunmaz.
   # Bu değişiklikten ÖNCE yayımlanmış bir günde (kadro.json var, kadro_ilk.json yok) ikinci yayım kadro_ilk.json YAZMAZ (yanlış "ilk" olurdu); isabet onu git geçmişinden kurar.
@@ -60,8 +65,20 @@ for f in "$archive"/isabet/*/isabet.json; do
 done
 # 90 gün tutma: tarihli klasörlerden eski olanları sil (YYYY-MM-DD sözlük sırası = tarih sırası).
 sinir="$(date -u -d '90 days ago' +%F)"
+# Faz 2: holdout mührü (radar/holdout/manifest.json) dosyaları SAKLAMADAN MUAFTIR: eski klasörde yalnız manifest'in andığı dosyalar (havuz_ilk/kadro_ilk/isabet) kalır, gerisi silinir (veri küçük).
+# (Manifest `sort_keys` ile yazılır: her mühür girdisinde "dosya" satırı "tarih" satırından önce gelir; python adımı token'sız betikte çağrılmaz, G-23.)
+muaf=""
+if [ -f radar/holdout/manifest.json ]; then
+  muaf="$(awk '/^ "muhurler":/ {m=1; next} /^ "[a-z_]+":/ {m=0} m && /"dosya":/ {gsub(/[",]/, "", $2); d=$2} m && /"tarih":/ {gsub(/[",]/, "", $2); print "radar/" $2 "/" d}' radar/holdout/manifest.json)"
+fi
 for d in radar/????-??-??; do
-  if [[ "$(basename "$d")" < "$sinir" ]]; then git rm -rq --ignore-unmatch "$d"; rm -rf "$d"; fi
+  if [[ "$(basename "$d")" < "$sinir" ]]; then
+    for f in "$d"/*; do
+      [ -e "$f" ] || continue
+      if printf '%s\n' "$muaf" | grep -qxF "$f"; then continue; fi
+      git rm -rq --ignore-unmatch "$f"; rm -rf "$f"
+    done
+  fi
 done
 git add -f "radar/$gun/havuz.json" "radar/$gun/kadro.json" radar/son/kadro.json
 if git diff --cached --quiet; then exit 0; fi
