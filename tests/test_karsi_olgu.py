@@ -93,3 +93,78 @@ def test_gunluk_ozet_ve_ozet_md_satiri(tmp_path):
     gun_ms = (saat() // 86_400_000 + 1) * 86_400_000 + (int(m.rules["canli_ozet_saat_utc"]) + 1) * 3_600_000
     m._gunluk_ozet(gun_ms)
     assert any("Alınmayan sinyal" in x for x in m.tg.gonderilen) and m.karsi_olgu_gun == {}
+
+
+def _hedef_sabit(m, usd=100.0):
+    """Hedef nosyoneli sabit (test): her coin için hayali pozisyon açılabilsin; trader durumu bağımsız."""
+    m._hedef_usd = lambda adres, coin, mk: usd
+
+
+def _saat_basi(saat):
+    """Şu anın bir sonraki tam saat başı (ms): kova sınırı testleri için."""
+    return (saat() // SAAT + 1) * SAAT
+
+
+def test_slot_tavani_ayni_saatte_tek_kayit(tmp_path):
+    m, saat, _ = hazir(tmp_path)
+    _hedef_sabit(m)
+    h0 = _saat_basi(saat)
+    saat.ms = h0 + 60_000                                             # saat başından 1 dk sonra
+    o = olay("a:1", adr(1), HIP3, "B", 300, 100.0, 0.0, saat)
+    for _ in range(3):
+        m._karsi_olgu_ac(o, adr(1), "slot_tavani")
+    assert len(m.karsi_olgu) == 1
+    assert list(m.karsi_olgu) == [f"{adr(1)}|{HIP3}|slot_tavani|{h0 // SAAT}"]
+
+
+def test_slot_tavani_sonraki_saatte_ikinci_kayit(tmp_path):
+    m, saat, _ = hazir(tmp_path)
+    _hedef_sabit(m)
+    h0 = _saat_basi(saat)
+    o = olay("a:1", adr(1), HIP3, "B", 300, 100.0, 0.0, saat)
+    saat.ms = h0 + 60_000
+    m._karsi_olgu_ac(o, adr(1), "slot_tavani")
+    m._karsi_olgu_ac(o, adr(1), "slot_tavani")
+    saat.ms = h0 + SAAT + 60_000                                      # bir sonraki saat dilimi
+    m._karsi_olgu_ac(o, adr(1), "slot_tavani")
+    assert len(m.karsi_olgu) == 2
+
+
+def test_diger_neden_hala_adres_coin_basina_tek_kayit(tmp_path):
+    m, saat, _ = hazir(tmp_path)
+    _hedef_sabit(m)
+    h0 = _saat_basi(saat)
+    o = olay("a:1", adr(1), HIP3, "B", 300, 100.0, 0.0, saat)
+    for dilim in range(3):
+        saat.ms = h0 + dilim * SAAT + 60_000
+        m._karsi_olgu_ac(o, adr(1), "hip3_atlandi")
+    assert list(m.karsi_olgu) == [f"{adr(1)}|{HIP3}"]                 # 2 parçalı anahtar, tek kayıt
+
+
+def test_sik_azami_sinirı_ve_diger_neden_etkilenmez(tmp_path):
+    m, saat, _ = hazir(tmp_path, kurallar={"karsi_olgu_sik_azami": 2})
+    _hedef_sabit(m)
+    for coin in (HIP3, "xyz:SILVER", "xyz:OIL"):                       # üçü de aynı saat dilimi
+        m._karsi_olgu_ac(olay("a:1", adr(1), coin, "B", 300, 100.0, 0.0, saat), adr(1), "slot_tavani")
+    assert len(m.karsi_olgu) == 2                                     # sık azami 2: üçüncüsü eklenmez
+    m._karsi_olgu_ac(olay("a:1", adr(1), HIP3, "B", 300, 100.0, 0.0, saat), adr(1), "hip3_atlandi")
+    assert f"{adr(1)}|{HIP3}" in m.karsi_olgu and len(m.karsi_olgu) == 3   # sık dolsa da diğer neden yazılır
+
+
+def test_sik_kapanis_ve_eski_iki_parcali_anahtar(tmp_path):
+    m, saat, _ = hazir(tmp_path)
+    _hedef_sabit(m)
+    m.poz_tr[adr(1)] = {HIP3: 5.0}                                    # trader pozisyonda: açık kalır
+    m._karsi_olgu_ac(olay("a:1", adr(1), HIP3, "B", 300, 100.0, 0.0, saat), adr(1), "slot_tavani")
+    m.karsi_olgu_adimi(saat())
+    assert len(m.karsi_olgu) == 1
+    m.poz_tr[adr(1)] = {HIP3: 0.0}                                    # trader kapattı → 4 parçalı anahtar kapanır
+    m.karsi_olgu_adimi(saat())
+    assert not m.karsi_olgu
+    e = kayitlar(tmp_path, "karsi_olgu_kapandi")[0]
+    assert (e["coin"], e["neden"], e["kapanis"]) == (HIP3, "slot_tavani", "trader_kapadi")
+    # eski (2 parçalı) kalıcı anahtar hâlâ yüklenip kapanır
+    m.karsi_olgu[f"{adr(1)}|{HIP3}"] = {"yon": "B", "hayali_usd": 10.0, "giris": 100.0, "neden": "hip3_atlandi", "ms": saat(), "son_pnl": 0.0}
+    m.karsi_olgu_adimi(saat())
+    assert not m.karsi_olgu
+    assert kayitlar(tmp_path, "karsi_olgu_kapandi")[1]["coin"] == HIP3

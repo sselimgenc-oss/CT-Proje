@@ -1191,10 +1191,19 @@ class Motor:
         return usd if poz > 0 else -usd
 
     def _karsi_olgu_ac(self, o: Olay, adres: str, neden: str) -> None:
-        """Alınmayan sinyal (counterfactual; YALNIZ KAYIT): atlanan açılış/artırma için "hayali pozisyon" (hedef − mevcut kopya, işaretli yönde). (adres, coin) başına tek kayıt (ilk atlanan kalır); en çok 500 açık."""
-        anahtar = f"{adres}|{o.coin}"
-        if anahtar in self.karsi_olgu or len(self.karsi_olgu) >= 500:
-            return
+        """Alınmayan sinyal (counterfactual; YALNIZ KAYIT): atlanan açılış/artırma için "hayali pozisyon" (hedef − mevcut kopya, işaretli yönde). (adres, coin) başına tek kayıt (ilk atlanan kalır); en çok 500 açık.
+        `karsi_olgu_sik_nedenler` (ör. slot_tavani; YALNIZ KAYIT): anahtar `adres|coin|neden|kova` (kova = saat/`karsi_olgu_sik_aralik_dk` dilimi) → (adres, coin) başına dilim başına bir kayıt; bu nedenlerin toplam kaydı `karsi_olgu_sik_azami` ile sınırlı, genel 500 sınırı aynen geçerli."""
+        sik_nedenler = set(self.rules.get("karsi_olgu_sik_nedenler") or [])
+        if neden in sik_nedenler:
+            kova = int(self.saat_ms() // (float(self.rules["karsi_olgu_sik_aralik_dk"]) * 60_000))
+            anahtar = f"{adres}|{o.coin}|{neden}|{kova}"
+            sik_acik = sum(1 for v in self.karsi_olgu.values() if v.get("neden") in sik_nedenler)
+            if anahtar in self.karsi_olgu or sik_acik >= int(self.rules["karsi_olgu_sik_azami"]) or len(self.karsi_olgu) >= 500:
+                return
+        else:
+            anahtar = f"{adres}|{o.coin}"
+            if anahtar in self.karsi_olgu or len(self.karsi_olgu) >= 500:
+                return
         mk = self.mark(o.coin, o.px) or o.px
         hedef = self._hedef_usd(adres, o.coin, mk)
         if not hedef:
@@ -1211,7 +1220,8 @@ class Motor:
         azami = float(self.rules.get("karsi_olgu_azami_saat", 72)) * 3_600_000
         for anahtar in list(self.karsi_olgu):
             k = self.karsi_olgu[anahtar]
-            adres, _, coin = anahtar.partition("|")
+            parca = anahtar.split("|")                                  # 2 parçalı (adres|coin) ve 4 parçalı (adres|coin|neden|kova) anahtar: ikisi de okunur
+            adres, coin = parca[0], parca[1]
             mk = self.marks.get(coin)
             if mk:
                 k["son_pnl"] = izleme.hayali_pnl(k["yon"], k["hayali_usd"], k["giris"], mk)
