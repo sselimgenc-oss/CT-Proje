@@ -438,8 +438,20 @@ def msg_yardim() -> str:
             "Sunucuya taşınınca bu gecikme kalkar.")
 
 
-def msg_haftalik(kip: str, kasa: float, oz: float, onceki_oz: float | None, btc: float | None, onceki_btc: float | None, emir: int, slotlar: list[tuple[str, float]]) -> str:
-    """Haftalık özet (Pazar 21:10 TSİ; yalnız rapor): hafta K/Z, BTC kıyası, emir sayısı, slot K/Z'ye göre en iyi/en kötü trader. `onceki_oz` None → ilk özet: başlangıçtan (kasa)."""
+def rejim_satiri(tablo: list[dict] | None) -> str | None:
+    """Haftalık 1g rejim tablosundan tek satır (`rejim_sonuc.topla(...)["rejim_1d"]`): en iyi/en kötü rejim toplam PnL'e göre; "bilinmiyor" ve boş kovalar hariç. Bilinen kova yoksa None (satır atlanır)."""
+    bilinen = [r for r in (tablo or []) if isinstance(r, dict) and r.get("etiket") != "bilinmiyor" and int(r.get("n") or 0) >= 1]
+    if not bilinen:
+        return None
+    iyi, kotu = max(bilinen, key=lambda r: float(r["toplam_pnl"])), min(bilinen, key=lambda r: float(r["toplam_pnl"]))
+    return (f"🧭 Rejim (7g): en iyi {iyi['etiket']} 1g {tr_isaretli(float(iyi['toplam_pnl']))} $ (n={int(iyi['n'])}), "
+            f"en kötü {kotu['etiket']} 1g {tr_isaretli(float(kotu['toplam_pnl']))} $ (n={int(kotu['n'])})")
+
+
+def msg_haftalik(kip: str, kasa: float, oz: float, onceki_oz: float | None, btc: float | None, onceki_btc: float | None, emir: int, slotlar: list[tuple[str, float]],
+                 rejim: list[dict] | None = None) -> str:
+    """Haftalık özet (Pazar 21:10 TSİ; yalnız rapor): hafta K/Z, BTC kıyası, emir sayısı, slot K/Z'ye göre en iyi/en kötü trader. `onceki_oz` None → ilk özet: başlangıçtan (kasa).
+    `rejim` (opsiyonel, 1g rejim satırları): bilinen kova varsa tek satır "🧭 Rejim (7g)" eklenir; None ise eski çıktı aynen kalır."""
     ilk = onceki_oz is None
     fark = oz - (kasa if ilk else onceki_oz)
     satirlar = [f"🗓️ Haftalık özet ({kip_adi(kip)})", AYRAC,
@@ -454,6 +466,9 @@ def msg_haftalik(kip: str, kasa: float, oz: float, onceki_oz: float | None, btc:
         satirlar += [f"🏆 En iyi trader: {kisa(en_iyi[0])} · {tr_isaretli(en_iyi[1])} $ (slot K/Z)", f"🔻 En kötü trader: {kisa(en_kotu[0])} · {tr_isaretli(en_kotu[1])} $ (slot K/Z)"]
     else:
         satirlar.append("👥 Sahada trader yok")
+    rejim_s = rejim_satiri(rejim)
+    if rejim_s:
+        satirlar.append(rejim_s)
     return "\n".join(satirlar)
 
 
