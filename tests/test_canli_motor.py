@@ -289,12 +289,14 @@ class SahteHL:
 class SahteTG:
     def __init__(self, guncellemeler=None, hata=False):
         self.gonderilen, self.guncellemeler, self.hata = [], list(guncellemeler or []), hata
+        self.ham: list[str] = []                       # giden metnin ham hali ("[CT] <ÖNEM>" başlığı dahil; ortak Telegram standardı)
 
     def __call__(self, url, yuk):
         if self.hata:
             raise ConnectionError(f"boom {url}")
         if url.endswith("sendMessage"):
-            self.gonderilen.append(yuk["text"])
+            self.ham.append(yuk["text"])
+            self.gonderilen.append(re.sub(r"^\[CT\] (INFO|WARN|CRIT)\n", "", yuk["text"]))      # testler başlıksız gövdeyi karşılaştırır; başlık ayrı testte doğrulanır
             return {"ok": True}
         sonuc, self.guncellemeler = self.guncellemeler, []
         return {"ok": True, "result": sonuc}
@@ -306,6 +308,15 @@ TOKEN, CHAT = "123456789:AAH-gizli-token-DEGERI_xxxxxxxxxxxxxxxxxxx", "4242"
 def tg_mesaj(uid, metin, chat=CHAT, kimden=None, tarih=None):
     """Telegram güncellemesi: gerçek biçim (chat.id, from.id, date). `tarih` varsayılan: motor başlangıcından SONRA."""
     return {"update_id": uid, "message": {"chat": {"id": int(chat)}, "from": {"id": int(kimden if kimden is not None else chat)}, "date": time.time() + 60 if tarih is None else tarih, "text": metin}}
+
+
+def onayli_komut(m, tgp, uid, komut):
+    """İki adımlı onay (ortak Telegram standardı): komut gelir → bot kod ister → kod yanıtlanır → komut uygulanır. Her adım bir `dakika()`."""
+    tgp.guncellemeler.append(tg_mesaj(uid, komut))
+    m.dakika()
+    kod = next(re.search(r"yazın: (\d{4})", x).group(1) for x in reversed(tgp.gonderilen) if "yazın:" in x)
+    tgp.guncellemeler.append(tg_mesaj(uid + 1, kod))
+    m.dakika()
 
 
 def kur(tmp_path, kadro_=None, kasa=1000.0, hl=None, tgp=None, saat=None, kurallar=None):
@@ -417,6 +428,10 @@ def test_kapat_komutu_hepsini_kapatir_dur_dosyasi_yeniden_baslatma_engeli(tmp_pa
     assert not m.dur_istendi and not (tmp_path / "durum" / "DUR").exists()                    # yabancı sohbetten /kapat kabul edilmedi
     tgp.guncellemeler.append(guncelleme)
     m.dakika()
+    assert not m.dur_istendi and any("onayı" in x for x in tgp.gonderilen)                    # 1. adım: yalnız kod istendi, HİÇBİR ŞEY kapanmadı
+    kod = next(re.search(r"yazın: (\d{4})", x).group(1) for x in reversed(tgp.gonderilen) if "yazın:" in x)
+    tgp.guncellemeler.append(tg_mesaj(6, kod))
+    m.dakika()
     assert m.dur_istendi and (tmp_path / "durum" / "DUR").exists() and m.hesap.sz(adr(1), "BTC") == pytest.approx(0.0, abs=1e-9)
     assert any(x["olay"] == "dur" and x["neden"] == "komut" for x in kayitlar(tmp_path)) and any(x.startswith("🛑 DUR:") for x in tgp.gonderilen)
     m2, *_ = kur(tmp_path)
@@ -476,9 +491,10 @@ def test_dur_ve_devam_telegramdan_gelir(tmp_path):
     m.baslat()
     tgp.guncellemeler.append(tg_mesaj(10, "/dur"))
     m.dakika()
+    assert not m.risk.acilis_durdu.get("elle_dur")                                             # kod gelmeden uygulanmaz
+    onayli_komut(m, tgp, 12, "/dur")                                                           # eski ad /dur = /durdur (iki adımlı)
     assert m.risk.acilis_durdu["elle_dur"]
-    tgp.guncellemeler.append(tg_mesaj(11, "/devam"))
-    m.dakika()
+    onayli_komut(m, tgp, 14, "/devam")
     assert not m.risk.acilis_durdu["elle_dur"]
 
 
@@ -486,8 +502,7 @@ def test_devam_kapat_sonrasi_motoru_acmaz(tmp_path):
     m, hl, saat, tgp = kur(tmp_path, tgp=SahteTG([]))
     m.baslat()
     m.dur_tetikle("komut")
-    tgp.guncellemeler.append(tg_mesaj(20, "/devam"))
-    m.dakika()
+    onayli_komut(m, tgp, 20, "/devam")
     assert m.risk.dur and any("Motor kapalı" in x for x in tgp.gonderilen)
 
 
@@ -578,8 +593,8 @@ def test_telegram_komutlari_yalniz_yapilandirilmis_sohbetten_ve_biçim():
     assert t.komutlari_al() == ["/durum"] and t.offset == 4
     acik = [{"coin": "BTC", "sz": 0.5, "usd": 1234.0, "kz_usd": 12.34}, {"coin": "ETH", "sz": -2.0, "usd": 80.0, "kz_usd": -1.5}]
     assert tg.msg_gunluk("sanal", 1000, 1012.5, 1000.0, 58, 9, 11, acik, -0.12) == (
-        "☀️ Günaydın! Dünün sonucu (sanal · deneme parası)\n━━━━━━━━━━━━━━\n📈 Son 24 saat: +12,50 $ (+%1,25)\n💰 Kasa şimdi: 1.012,50 $ (başlangıç 1.000 $)\n🏁 Başlangıçtan beri: +%1,25\n━━━━━━━━━━━━━━\n"
-        "🧾 Dün 58 emir verildi · 👥 takipte 9/11 trader\n💸 Funding (sanal): −0,12 $\n📌 Açık pozisyonlar (2):\n🟩 BTC · 1.234 $ · uzun · +12,34 $\n🟥 ETH · 80 $ · kısa · −1,50 $")
+        "📋 Günlük rapor (sanal · deneme parası)\n━━━━━━━━━━━━━━\n📈 Son 24 saat: +12,50 $ (+%1,25)\n💰 Kasa şimdi: 1.012,50 $ (başlangıç 1.000 $)\n🏁 Başlangıçtan beri: +%1,25\n━━━━━━━━━━━━━━\n"
+        "🧾 Bugün 58 emir verildi · 👥 takipte 9/11 trader\n💸 Funding (sanal): −0,12 $\n📌 Açık pozisyonlar (2):\n🟩 BTC · 1.234 $ · uzun · +12,34 $\n🟥 ETH · 80 $ · kısa · −1,50 $")
     assert tg.kisa(adr(255)) == "0x000000…"
 
 
@@ -864,7 +879,7 @@ def test_telegram_arka_planda_gonderilir_emir_hatti_beklemez():
     assert _t.monotonic() - bas < 0.5 and gonderildi == []                  # çağıran beklemedi
     beklet.set()
     t._havuz.shutdown(wait=True)
-    assert gonderildi == ["merhaba"]
+    assert gonderildi == ["[CT] INFO\nmerhaba"]                              # ortak standart: ilk satır proje etiketi + önem
 
 
 def test_rest_post_agirliklar_ve_ortak_hiz_siniri():

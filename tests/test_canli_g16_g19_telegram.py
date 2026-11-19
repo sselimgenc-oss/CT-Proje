@@ -17,21 +17,22 @@ from tests.test_canli_yurutucu import SahteExchange, dolu, meta_post
 # ================================================================================================ G-16: komutlar
 def test_g16_komut_adi_ilk_sozcuk_kapat_hemen_yurutulur(tmp_path):
     assert tg.komut_adi("/kapat hemen") == "/kapat" and tg.komut_adi("  /DURUM@sg_bot  şimdi") == "/durum" and tg.komut_adi("") == ""
-    tgp = SahteTG([tg_mesaj(1, "/kapat hemen")])
+    tgp = SahteTG([tg_mesaj(1, "/kapat hemen"), tg_mesaj(2, "4321")])         # eski ad /kapat = /hepsini_kapat; iki adımlı onay kodu aynı partide
     m, hl, saat, _ = kur(tmp_path, tgp=tgp)
+    m.tg.kod_uret = lambda: "4321"
     m.baslat()
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     m.dakika()
     assert m.risk.dur and any(k["olay"] == "dur" and k["neden"] == "komut" for k in kayitlar(tmp_path))          # "/kapat hemen" = /kapat: YÜRÜTÜLDÜ
-    assert "🛑 /kapat alındı (sanal · deneme parası): tüm pozisyonlar reduce-only kapatılıyor; bitince ayrı mesaj gelecek." in tgp.gonderilen
+    assert "🛑 /hepsini_kapat alındı (sanal · deneme parası): tüm pozisyonlar reduce-only kapatılıyor; bitince ayrı mesaj gelecek." in tgp.gonderilen
     assert m.hesap.sz(adr(1), "BTC") == 0.0
 
 
 def test_g16_bilinmeyen_komut_yanit_alir_yurutulmez():
-    t = tg.Telegram(TOKEN, CHAT, SahteTG([tg_mesaj(1, "/stop"), tg_mesaj(2, "/yardim lütfen")]))
+    t = tg.Telegram(TOKEN, CHAT, SahteTG([tg_mesaj(1, "/stop"), tg_mesaj(2, "/yardimm lütfen")]))
     assert t.komutlari_al() == []
-    assert t.gonderilen == ["❓ Bilinmeyen komut: /stop. Geçerli komutlar: /dur /devam /kapat /durum\n"
-                            "❓ Bilinmeyen komut: /yardim. Geçerli komutlar: /dur /devam /kapat /durum"]
+    assert t.gonderilen == ["❓ Bilinmeyen komut: /stop. Geçerli komutlar: /durum /rapor /durdur /devam /hepsini_kapat /yardim\n"
+                            "❓ Bilinmeyen komut: /yardimm. Geçerli komutlar: /durum /rapor /durdur /devam /hepsini_kapat /yardim"]
     t.post.guncellemeler.append(tg_mesaj(1, "/stop"))                     # aynı update yeniden gelse ikinci yanıt yok
     t.komutlari_al()
     assert len(t.gonderilen) == 1
@@ -50,12 +51,13 @@ def test_g16_15_dakikadan_eski_komut_yurutulmez_ama_yanit_alir():
 
 
 def test_g16_offset_yalniz_komutlar_bitince_kalici(tmp_path):
-    tgp = SahteTG([tg_mesaj(10, "/dur")])
+    tgp = SahteTG([tg_mesaj(10, "/dur"), tg_mesaj(11, "4321")])            # /dur (= /durdur) + iki adımlı onay kodu aynı partide
     m, hl, saat, _ = kur(tmp_path, tgp=tgp)
+    m.tg.kod_uret = lambda: "4321"
     m.baslat()
     motor_json = lambda: json.loads((tmp_path / "durum" / "motor.json").read_text(encoding="utf-8"))        # noqa: E731
     komutlar = m.tg.komutlari_al()                                        # `dakika`: ağ okuması kilitsiz
-    assert komutlar == ["/dur"] and m.tg.offset == 11 and m.tg.kalici_offset == 0
+    assert komutlar == ["/durdur"] and m.tg.offset == 12 and m.tg.kalici_offset == 0
     m.durum_yaz()                                                         # olay iş parçacığı araya girip motor.json yazarsa: offset İLERLEMEZ
     assert motor_json()["tg_offset"] == 0
     # burada çökme olursa: yeniden açılışta komut tekrar okunur, yürütülmez ama "İŞLENMEDİ" yanıtı gider (iz bırakmadan kaybolmaz)
@@ -64,9 +66,9 @@ def test_g16_offset_yalniz_komutlar_bitince_kalici(tmp_path):
     t2.offset = motor_json()["tg_offset"]
     assert t2.komutlari_al() == [] and len(t2.gonderilen) == 1 and "/dur 2 dk önce geldi, motor o sırada kapalıydı; İŞLENMEDİ" in t2.gonderilen[0]
     m._komutlar(komutlar)                                                 # komut yürütüldü → onay → kalıcı
-    assert m.risk.acilis_durdu["elle_dur"] and m.tg.kalici_offset == 11
+    assert m.risk.acilis_durdu["elle_dur"] and m.tg.kalici_offset == 12
     m.durum_yaz()
-    assert motor_json()["tg_offset"] == 11
+    assert motor_json()["tg_offset"] == 12
 
 
 def test_g16_dakika_akisi_offset_ve_hata_halinde_de_onay(tmp_path):
@@ -150,7 +152,7 @@ def test_g18_gercek_kip_dolmayan_emir_sesli_altin_ornek():
     m = tg.msg_emir(a, "BTC", "A", 27.30, None, None, "red", "gercek", "kapat", "hl_err: User or API Wallet 0xabc does not exist.")
     assert m == ("🚨 [GERÇEK] EMİR REDDEDİLDİ — BTC kapat 27,30 $\n"
                  "neden: hl_err: User or API Wallet 0xabc does not exist.\n"
-                 "Kapanış daha geniş bantla yeniden denenecek; olmazsa kuyruğa alınır ve dakikada bir denenir. Tekrarlarsa: /kapat ya da HL web.\n"
+                 "Kapanış daha geniş bantla yeniden denenecek; olmazsa kuyruğa alınır ve dakikada bir denenir. Tekrarlarsa: /hepsini_kapat ya da HL web.\n"
                  "↳ Trader 0x123456… · SAT")
     gece = tg.Telegram(TOKEN, CHAT, SahteTG(), sessiz_utc=(21, 5), saat_s=lambda: 1_800_000_000 - 1_800_000_000 % 86400 + 2 * 3600)     # 02:00 UTC
     assert not gece.sessiz_mi(m) and gece.sessiz_mi("🟢 BTC AL: 27 $")                                     # 🚨 gece de sesli; dolu emir sessiz

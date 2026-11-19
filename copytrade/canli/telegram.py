@@ -11,14 +11,24 @@ import json
 import os
 from datetime import datetime, timezone
 import re
+import secrets
 import threading
 import time
 from datetime import timedelta
 from typing import Any, Callable
 
 ONEMLI_ONEKLER = ("ALARM", "DUR", "TASFİYE", "🚨", "🛑", "💥")          # her zaman sesli
-KOMUTLAR = ("/dur", "/devam", "/baslat", "/kapat", "/durum")
-GECERLI_KOMUT_METNI = "/dur /devam /kapat /durum"          # bilinmeyen komut yanıtında gösterilir (`/baslat` = `/devam` eş adı, listelenmez)
+PROJE_ETIKETI = "[CT]"                    # ortak Telegram standardı (docs/TELEGRAM.md): her mesajın İLK satırı "[CT] INFO|WARN|CRIT"
+KOMUTLAR = ("/durum", "/rapor", "/yardim", "/start", "/durdur", "/devam", "/hepsini_kapat")      # standart komut adları (motora iki adımlı onaydan sonra bu adlarla gider)
+ESKI_AD = {"/dur": "/durdur", "/kapat": "/hepsini_kapat", "/baslat": "/devam"}        # eski adlar eş ad olarak çalışır (anlamları değişmedi)
+YOK_KOMUTLAR = ("/kurulumlar", "/ders", "/kademe", "/kademe_devam", "/onayla", "/reddet")        # ortak standartta var, CT'de yok: "henüz yok" yanıtı
+IKI_ADIMLI = ("/durdur", "/devam", "/hepsini_kapat")      # riskli komutlar: 4 haneli kod + 120 sn
+ONAY_SURE_S = 120.0
+GECERLI_KOMUT_METNI = "/durum /rapor /durdur /devam /hepsini_kapat /yardim"          # bilinmeyen komut yanıtında gösterilir (eski adlar /dur /kapat /baslat eş ad, listelenmez)
+HIZ_LIMITI_DK = 15                        # standart: dakikada en çok 15 mesaj (fazlası kuyrukta bekler, kaybolmaz)
+INFO_OMUR_S = 24 * 3600.0                 # standart: 24 saatten eski INFO mesajı atılır
+TEKRAR_PENCERE_S = 300.0                  # standart: aynı uyarı (WARN/CRIT, aynı metin / anahtar) bu sürede bir kez
+MESAJ_AZAMI = 3500                        # standart: mesaj başına en çok karakter
 KACIRILAN_PENCERE_S = 15 * 60          # G-16: bundan eski (ya da motor başlamadan önce gelmiş) komut YÜRÜTÜLMEZ; "işlenmedi, yeniden gönder" yanıtı alır
 YENIDEN_BEKLEME_S = (2.0, 5.0, 15.0)   # G-18: önemli mesaj (ONEMLI_ONEKLER) gönderilemezse bu beklemelerle 3 kez daha denenir
 RETRY_AFTER_TAVAN_S = 60.0             # G-18: 429 `retry_after` en çok bu kadar beklenir (gönderim iş parçacığı kilitlenmesin)
@@ -49,6 +59,24 @@ def komut_kapali_mi(deger: Any) -> bool:
     """S-22: `TELEGRAM_KOMUT` = 'kapali' / 'kapalı' / 'KAPALI' / 'KAPALİ' → komut okuma kapalı (Türkçe ı/İ ASCII i sayılır)."""
     s = str(deger or "").strip().replace("İ", "i").replace("I", "i").replace("ı", "i").lower()
     return s == "kapali"
+
+
+def onem_duzeyi(metin: str) -> str:
+    """Standart önem düzeyi (INFO/WARN/CRIT) metnin ilk satırından: önemli önekler (ALARM, 🚨, 🛑, 💥 ...) CRIT; UYARI/⚠️/⏸️/📭/❓ WARN; geri kalanı INFO."""
+    ilk = metin.split("\n", 1)[0]
+    if metin.startswith(ONEMLI_ONEKLER) or "ALARM" in ilk:
+        return "CRIT"
+    if "UYARI" in ilk or ilk.startswith(("⚠️", "⏸️", "📭", "❓", "🔻", "🧮")):
+        return "WARN"
+    return "INFO"
+
+
+def mesaj_kirp(metin: str, azami: int = MESAJ_AZAMI) -> str:
+    """Standart: ≤ 3500 karakter; sığmazsa SONDAN kısaltılır (ilk satırlar = başlık/kritik satır sabit kalır)."""
+    if len(metin) <= azami:
+        return metin
+    ek = "\n…(kısaltıldı)"
+    return metin[:azami - len(ek)] + ek
 
 
 def kisa(adres: str) -> str:
@@ -112,6 +140,10 @@ class Telegram:
         self.hata_sayisi = 0
         self.gonderilen: list[str] = []
         self._havuz = None
+        self._bekleyen: dict | None = None             # iki adımlı onay: {komut, kod, bitis (s), kim}; bellekte (yeniden başlatmada düşer: komut yeniden gönderilir)
+        self.kod_uret: Callable[[], str] = lambda: f"{secrets.randbelow(9000) + 1000}"      # 4 haneli kod (testte enjekte)
+        self._gonderim_zamanlari: list[float] = []     # hız sınırı penceresi (son gönderim saatleri)
+        self._son_gonderim: dict[str, float] = {}      # tekrar önleme: anahtar -> son gönderim saati
         # G-18: yeniden deneme beklemesi ve gerçek kip emir tamponu yalnız arka planda (motor) ya da açıkça verilince; eşzamanlı yol (test, --kontrol) tek deneme / anında gönderim
         self._yeniden = arka_plan or uyku is not None
         self.uyku = uyku or time.sleep
@@ -160,8 +192,9 @@ class Telegram:
         if liste and bicim is not None:
             self.gonder(bicim(liste))
 
-    def gonder(self, metin: str) -> bool:
-        """Mesaj gönderir; hata motoru DURDURMAZ (sayılır). Token günlüğe/hata metnine ASLA yazılmaz."""
+    def gonder(self, metin: str, onem: str | None = None, anahtar: str | None = None) -> bool:
+        """Mesaj gönderir; hata motoru DURDURMAZ (sayılır). Token günlüğe/hata metnine ASLA yazılmaz. `onem`: INFO/WARN/CRIT (yoksa metinden çıkarılır); `anahtar`: tekrar önleme
+        anahtarı (yoksa WARN/CRIT için metnin kendisi). Giden mesajın ilk satırı `[CT] <ÖNEM>` olur (kayda/`gonderilen`e düz metin yazılır)."""
         metin = kip_etiketle(metin, self.kip)
         for m in self.maske:
             metin = re.sub(re.escape(m), "[hesap]", metin, flags=re.I)
@@ -170,10 +203,11 @@ class Telegram:
             self.kayit({"olay": "telegram", "metin": metin[:300], "acik": self.acik})
         if not self.acik:
             return False
+        oge = (metin, onem or onem_duzeyi(metin), anahtar, float(self.saat_s()))
         if self._havuz is not None:
-            self._havuz.submit(self._gonder_sync, metin)
+            self._havuz.submit(self._gonder_sync, *oge)
             return True
-        return self._gonder_sync(metin)
+        return self._gonder_sync(*oge)
 
     def sessiz_mi(self, metin: str) -> bool:
         if self.sessiz_utc is None or metin.startswith(ONEMLI_ONEKLER):
@@ -182,17 +216,47 @@ class Telegram:
         bas, bit = self.sessiz_utc
         return (bas <= saat < bit) if bas < bit else (saat >= bas or saat < bit)
 
-    def _gonder_sync(self, metin: str) -> bool:
+    def _hiz_bekle(self) -> None:
+        """Standart: dakikada en çok `HIZ_LIMITI_DK` mesaj. Doluysa en eski gönderimin 60 sn dolmasına dek beklenir (mesaj kaybolmaz, kuyrukta kalır)."""
+        while True:
+            simdi = float(self.saat_s())
+            self._gonderim_zamanlari = [t for t in self._gonderim_zamanlari if simdi - t < 60.0]
+            if len(self._gonderim_zamanlari) < HIZ_LIMITI_DK:
+                return
+            bekle = self._gonderim_zamanlari[0] + 60.0 - simdi
+            if self.kayit:
+                self.kayit({"olay": "telegram_hiz_siniri", "bekle_sn": round(max(bekle, 0.0), 1)})
+            self.uyku(max(bekle, 0.0))
+            self._gonderim_zamanlari.pop(0)             # beklendi: en eski gönderim pencereden çıktı sayılır (sahte saatte de ilerler)
+
+    def _gonder_sync(self, metin: str, onem: str = "INFO", anahtar: str | None = None, kuyruga_s: float | None = None) -> bool:
         """G-18: önemli mesaj (ONEMLI_ONEKLER) gönderilemezse 2/5/15 sn beklemeyle 3 kez daha denenir; 429'da en az `retry_after` (≤ 60 sn) beklenir, önemsiz mesaj da 429'da bir kez
         yeniden denenir. Önemli mesaj eşzamanlı yolda da bekleyerek yeniden denenir (en çok ≈22 sn + HTTP süreleri; motor kilidi altında çağrılmaz: motor gönderimi arka plan havuzunda); önemsiz mesaj eşzamanlı yolda tek deneme. `hata_sayisi` yalnız son başarısızlıkta artar."""
+        simdi0 = float(self.saat_s())
+        if onem == "INFO" and kuyruga_s is not None and simdi0 - kuyruga_s > INFO_OMUR_S:      # standart: 24 saatten eski INFO atılır
+            if self.kayit:
+                self.kayit({"olay": "telegram_eski_info_atildi", "yas_sn": round(simdi0 - kuyruga_s)})
+            return False
+        anahtar = anahtar if anahtar is not None else (metin if onem != "INFO" else None)
+        if anahtar is not None:
+            son = self._son_gonderim.get(anahtar)
+            if son is not None and simdi0 - son < TEKRAR_PENCERE_S:                            # standart: aynı uyarı kısa sürede bir kez
+                if self.kayit:
+                    self.kayit({"olay": "telegram_tekrar_atlandi", "onem": onem})
+                return False
+        self._hiz_bekle()
+        gidecek = mesaj_kirp(f"{PROJE_ETIKETI} {onem}\n{metin}")
         plan = list(YENIDEN_BEKLEME_S) if metin.startswith(ONEMLI_ONEKLER) else []      # önemli mesaj eşzamanlı yolda da yeniden denenir (sağlık/açılış/başlamadı alarmı: kilit altında DEĞİL; motor gönderimi zaten arka plan havuzunda)
         deneme = 0
         while True:
             deneme += 1
             try:
-                yanit = self.post(self._url("sendMessage"), {"chat_id": self.chat_id, "text": metin[:4000], "disable_notification": self.sessiz_mi(metin)})
+                yanit = self.post(self._url("sendMessage"), {"chat_id": self.chat_id, "text": gidecek, "disable_notification": self.sessiz_mi(metin)})
                 if isinstance(yanit, dict) and yanit.get("ok") is False and int(yanit.get("error_code") or 0) == 429:
                     raise CokIstek(_retry_after(yanit))
+                self._gonderim_zamanlari.append(float(self.saat_s()))
+                if anahtar is not None:
+                    self._son_gonderim[anahtar] = float(self.saat_s())
                 return True
             except Exception as hata:                  # noqa: BLE001 - ağ/HTTP hatası; ayrıntı (URL'de token var) yazılmaz
                 ra = hata.retry_after if isinstance(hata, CokIstek) else None
@@ -225,6 +289,23 @@ class Telegram:
             return True                                         # sanal kip: eski davranış (grup üyesi)
         return str(kimden.get("id", "")) == self.chat_id
 
+    def _kod_isle(self, kod: str, tarih: float, kim: str) -> tuple[str | None, str | None]:
+        """Onay kodu yanıtı. Döner (yürütülecek komut | None, yanıt metni | None). Süre MESAJ tarihine göre (vardiya gecikmesi kullanıcıyı haksız yere düşürmesin); yanlış kod / süre
+        dolması bekleyen onayı iptal eder (hiçbir şey olmaz, bot söyler). Her sonuç denetim kaydına yazılır."""
+        b = self._bekleyen
+        if b is None:
+            return None, "ℹ️ Bekleyen onay yok (süresi dolmuş ya da motor yeniden başlamış olabilir). İşlem yapılmadı; komutu yeniden gönderin."
+        self._bekleyen = None
+        if tarih > float(b["bitis"]):
+            sonuc, yanit = "sure_doldu", f"⏱️ {b['komut']} onay kodunun süresi ({int(ONAY_SURE_S)} sn) doldu. İŞLEM YAPILMADI; gerekirse komutu yeniden gönderin."
+        elif kod != b["kod"]:
+            sonuc, yanit = "yanlis_kod", f"❌ {b['komut']}: kod yanlış. İŞLEM YAPILMADI; gerekirse komutu yeniden gönderin."
+        else:
+            sonuc, yanit = "onaylandi", None
+        if self.kayit:
+            self.kayit({"olay": "telegram_onay_sonuc", "komut": b["komut"], "sonuc": sonuc, "kim": kim, "istenen_kim": b.get("kim")})
+        return (b["komut"] if sonuc == "onaylandi" else None), yanit
+
     def komutlari_al(self) -> list[str]:
         """Yeni komutları (`KOMUTLAR`; komut adı = İLK sözcük, '/kapat hemen' → '/kapat') döner; yalnız `chat_id`'den gelenler; offset ilerler.
         G-16: bilinmeyen komut → geçerli komutları listeleyen yanıt; motor başlamadan önce ya da `KACIRILAN_PENCERE_S`'den (15 dk) önce gelmiş komut YÜRÜTÜLMEZ, "İŞLENMEDİ" yanıtı
@@ -245,8 +326,10 @@ class Telegram:
         for u in (yanit or {}).get("result", []):
             self.offset = max(self.offset, int(u.get("update_id", 0)) + 1)
             m = u.get("message") or {}
-            metin = komut_adi(m.get("text", ""))
-            if not metin.startswith("/"):
+            ham = str(m.get("text", "") or "").strip()
+            metin = ESKI_AD.get(komut_adi(ham), komut_adi(ham))          # eski ad → standart ad (/dur→/durdur, /kapat→/hepsini_kapat, /baslat→/devam)
+            kod_mu = bool(re.fullmatch(r"\d{4}", ham))
+            if not metin.startswith("/") and not kod_mu:
                 continue
             if not self.yetkili_mi(m):
                 self.yetkisiz_sayisi += 1
@@ -255,6 +338,22 @@ class Telegram:
                 continue
             uid = int(u.get("update_id", 0))
             tarih = float(m.get("date", 0) or 0)
+            kim = str((m.get("from") or {}).get("id", ""))
+            if kod_mu:                                                  # iki adımlı onay: 2. adım (4 haneli kod yanıtı)
+                if tarih < self.baslangic_s or uid in self._yanitlanan:
+                    continue
+                self._yanitlanan.add(uid)
+                onaylanan, yanit_m = self._kod_isle(ham, tarih, kim)
+                if onaylanan:
+                    komutlar.append(onaylanan)
+                if yanit_m:
+                    yanitlar.append(yanit_m)
+                continue
+            if metin in YOK_KOMUTLAR or metin in ("/yardim", "/start"):     # yalnız yanıt (motorda iş yok); her update'e bir kez
+                if uid not in self._yanitlanan:
+                    self._yanitlanan.add(uid)
+                    yanitlar.append(msg_yardim() if metin in ("/yardim", "/start") else msg_yok_komut(metin))
+                continue
             if metin not in KOMUTLAR:
                 if self.kayit:
                     self.kayit({"olay": "telegram_bilinmeyen_komut", "komut": metin[:20]})
@@ -268,7 +367,14 @@ class Telegram:
                     self.kayit({"olay": "telegram_eski_komut", "komut": metin[:20], "yas_sn": round(simdi - tarih)})
                 if uid not in self._yanitlanan:
                     self._yanitlanan.add(uid)
-                    yanitlar.append(msg_komut_islenmedi(metin, simdi - tarih, once_basladi))      # yalnız yanıt verilir; eski komut ASLA yürütülmez
+                    yanitlar.append(msg_komut_islenmedi(komut_adi(ham), simdi - tarih, once_basladi))      # yalnız yanıt verilir; eski komut ASLA yürütülmez
+                continue
+            if metin in IKI_ADIMLI:                                     # 1. adım: ne olacağını söyle, kod iste; komut KOD gelene dek yürütülmez
+                kod = self.kod_uret()
+                self._bekleyen = {"komut": metin, "kod": kod, "bitis": simdi + ONAY_SURE_S, "kim": kim}
+                if self.kayit:
+                    self.kayit({"olay": "telegram_onay_istendi", "komut": metin, "kim": kim, "sure_sn": int(ONAY_SURE_S)})
+                yanitlar.append(msg_onay_iste(metin, kod, self.kip))
                 continue
             komutlar.append(metin)
         if komutlar and self._bekleyen_offset is None:
@@ -306,8 +412,53 @@ def msg_komut_islenmedi(komut: str, yas_sn: float, motor_kapaliydi: bool) -> str
     return f"📭 {komut} {dk} dk önce geldi, {neden}; İŞLENMEDİ. Hâlâ istiyorsan yeniden gönder."
 
 
+ONAY_ACIKLAMA = {"/durdur": "YENİ girişler ve artırmalar durur; açık pozisyonlar trader'ı izlemeye ve azaltmaya/kapatmaya devam eder.",
+                 "/devam": "Elle duraklatma kalkar (başka bir risk engeli sürüyorsa yeni işlemler yine kapalı kalır).",
+                 "/hepsini_kapat": "TÜM pozisyonlar reduce-only kapatılır ve motor durur (yeniden açmak sunucudan yapılır)."}
+
+
+def msg_onay_iste(komut: str, kod: str, kip: str | None = None) -> str:
+    kip_s = f" ({kip_adi(kip)})" if kip else ""
+    return (f"🔐 {komut} onayı{kip_s}\n{AYRAC}\nNe olacak: {ONAY_ACIKLAMA.get(komut, 'komut uygulanır')}\n"
+            f"Onaylamak için {int(ONAY_SURE_S)} sn içinde şu 4 haneli kodu yanıt olarak yazın: {kod}\nVazgeçmek için hiçbir şey yazmayın; yanlış kod ya da süre dolarsa işlem yapılmaz.")
+
+
+def msg_yok_komut(komut: str) -> str:
+    return f"ℹ️ {komut}: CT'de henüz yok. Geçerli komutlar: {GECERLI_KOMUT_METNI}"
+
+
+def msg_yardim() -> str:
+    return ("📖 CT komutları\n" + AYRAC + "\n/durum · anlık durum\n/rapor · günlük raporu hemen gönderir\n"
+            "/durdur · yeni girişleri durdurur (açık pozisyonlar kalır) [kod ister; eski adı /dur]\n/devam · duraklatmayı kaldırır [kod ister]\n"
+            "/hepsini_kapat · tüm pozisyonları kapatır, motoru durdurur (acil) [kod ister; eski adı /kapat]\n/yardim, /start · bu liste\n"
+            "Riskli komutlar iki adımlıdır: bot ne olacağını yazar, 4 haneli kod verir; kodu 120 sn içinde yanıtlayın.\n"
+            "Henüz CT'de olmayanlar: /kurulumlar /ders /kademe /kademe_devam /onayla /reddet.\n"
+            "⏳ Not: CT şimdilik GitHub Actions vardiya zincirinde çalışıyor: komutlara yarım dakikada bir bakılır, ama vardiyalar arası geçişte "
+            "(birkaç dk; zincir koparsa daha uzun) cevap GECİKEBİLİR; gecikirse onay kodunun süresi dolabilir, komutu yeniden gönderin. "
+            "Sunucuya taşınınca bu gecikme kalkar.")
+
+
+def msg_haftalik(kip: str, kasa: float, oz: float, onceki_oz: float | None, btc: float | None, onceki_btc: float | None, emir: int, slotlar: list[tuple[str, float]]) -> str:
+    """Haftalık özet (Pazar 21:10 TSİ; yalnız rapor): hafta K/Z, BTC kıyası, emir sayısı, slot K/Z'ye göre en iyi/en kötü trader. `onceki_oz` None → ilk özet: başlangıçtan (kasa)."""
+    ilk = onceki_oz is None
+    fark = oz - (kasa if ilk else onceki_oz)
+    satirlar = [f"🗓️ Haftalık özet ({kip_adi(kip)})", AYRAC,
+                f"{'📈' if fark >= 0 else '📉'} {'Başlangıçtan beri' if ilk else 'Hafta'}: {tr_isaretli(fark)} $ ({tr_yuzde(fark / kasa)})"]
+    if btc and onceki_btc:
+        satirlar.append(f"₿ BTC al-tut: {tr_yuzde(btc / onceki_btc - 1)}" + (f" · fark {tr_yuzde(fark / kasa - (btc / onceki_btc - 1))}" if not ilk else ""))
+    else:
+        satirlar.append("₿ BTC kıyası: bu hafta için veri yok")
+    satirlar.append(f"🧾 Hafta içi {emir} emir")
+    if slotlar:
+        en_iyi, en_kotu = max(slotlar, key=lambda x: x[1]), min(slotlar, key=lambda x: x[1])
+        satirlar += [f"🏆 En iyi trader: {kisa(en_iyi[0])} · {tr_isaretli(en_iyi[1])} $ (slot K/Z)", f"🔻 En kötü trader: {kisa(en_kotu[0])} · {tr_isaretli(en_kotu[1])} $ (slot K/Z)"]
+    else:
+        satirlar.append("👥 Sahada trader yok")
+    return "\n".join(satirlar)
+
+
 def msg_kapat_alindi(kip: str) -> str:
-    return f"🛑 /kapat alındı ({kip_adi(kip)}): tüm pozisyonlar reduce-only kapatılıyor; bitince ayrı mesaj gelecek."
+    return f"🛑 /hepsini_kapat alındı ({kip_adi(kip)}): tüm pozisyonlar reduce-only kapatılıyor; bitince ayrı mesaj gelecek."
 
 
 # ---------------------------------------------------------------------------------------------- mesaj biçimleri (sade Türkçe, emojili)
@@ -349,8 +500,8 @@ def msg_saha(tur: str, adres: str, neden: str, sira: int | None = None) -> str:
 
 
 DURUM_BUYUK = {"red": "REDDEDİLDİ", "dolmadi": "DOLMADI", "kismi": "KISMEN DOLDU", "belirsiz": "SONUCU BELİRSİZ"}
-SONRAKI_ADIM = {"kapat": "Kapanış daha geniş bantla yeniden denenecek; olmazsa kuyruğa alınır ve dakikada bir denenir. Tekrarlarsa: /kapat ya da HL web.",
-                "azalt": "Azaltma bir sonraki dakikada yeniden denenecek. Tekrarlarsa: /kapat ya da HL web.",
+SONRAKI_ADIM = {"kapat": "Kapanış daha geniş bantla yeniden denenecek; olmazsa kuyruğa alınır ve dakikada bir denenir. Tekrarlarsa: /hepsini_kapat ya da HL web.",
+                "azalt": "Azaltma bir sonraki dakikada yeniden denenecek. Tekrarlarsa: /hepsini_kapat ya da HL web.",
                 "ac": "Pozisyon açılmadı (yeniden denenmez).", "artir": "Artırma yapılmadı (yeniden denenmez)."}
 
 
@@ -378,13 +529,13 @@ def msg_emir(adres: str, coin: str, yon: str, usd: float, px: float | None, kaym
 
 
 def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_sayisi: int, saha: int, n: int, acik: list[dict], funding_usd: float | None = None) -> str:
-    """Sabah 09:00 TSİ: DÜNÜN sonucu = son özetten (≈24 saat) bu yana. `onceki_oz`: önceki özetteki özsermaye (ilk özette kasa). `acik`: {coin, sz, usd, kz_usd}."""
+    """Günlük rapor (21:00 TSİ, ortak standart): son özetten (≈24 saat) bu yana. `onceki_oz`: önceki özetteki özsermaye (ilk özette kasa). `acik`: {coin, sz, usd, kz_usd}."""
     fark = ozsermaye - onceki_oz
-    satirlar = [f"☀️ Günaydın! Dünün sonucu ({kip_adi(kip)})", AYRAC,
+    satirlar = [f"📋 Günlük rapor ({kip_adi(kip)})", AYRAC,
                 f"{'📈' if fark >= 0 else '📉'} Son 24 saat: {tr_isaretli(fark)} $ ({tr_yuzde(fark / kasa)})",
                 f"💰 Kasa şimdi: {tr_sayi(ozsermaye)} $ (başlangıç {tr_sayi(kasa, 0)} $)",
                 f"🏁 Başlangıçtan beri: {tr_yuzde(ozsermaye / kasa - 1)}", AYRAC,
-                f"🧾 Dün {emir_sayisi} emir verildi · 👥 takipte {saha}/{n} trader"]
+                f"🧾 Bugün {emir_sayisi} emir verildi · 👥 takipte {saha}/{n} trader"]
     if funding_usd is not None:
         satirlar.append(f"💸 Funding (sanal): {tr_isaretli(funding_usd)} $")
     if acik:
