@@ -271,3 +271,4 @@
 {"zaman_ms":1795060821149,"olay":"funding","saat":498628,"saat_adet":1,"funding_usd":-0.030932741327406137,"toplam_funding_usd":0.31464066218542985}
 {"zaman_ms":1795061047219,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","hesap_usd":340792.02202,"anlik_kaldirac":5.002015306126972,"esik":5.0,"durum":"basladi"}
 {"zaman_ms":1795061622483,"olay":"tur","ozsermaye_usd":10014.3067}
+{"zaman_ms":1795062486921,"olay":"tur","ozsermaye_usd":10009.7181}
