@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # SUNUCU SÜRÜMÜ (deploy/sanal_yayimla.sh): .github/scripts/canli_yayimla.sh'ten türetildi; Actions'a özgü kısımlar (GITHUB_ACTIONS zorunluluğu, YAYIM_TOKEN) çıkarıldı; sunucuda push kimliği SSH deploy anahtarıdır (GIT_SSH_COMMAND; sır repoda/ortam dosyasında DEĞİL, yalnız sunucuda).
-# Dal izni: deneme ↔ canli-durum-sunucu, uretim ↔ canli-durum (SUNUCU_MOD). Çalışma dizini = depo klonu (motorun --durum-dizin durum / --kayit-dizin kayit dizinleri orada). Canlı motor durumunu veri dalına (VERI_DALI: canli-durum | canli-durum-deneme) yazar: durum/*.json, durum/niyet.jsonl (çift emir koruması, vardiyalar arası kalıcı), durum/DUR (varsa), pano/OZET.md + pano/gecmis.json (T6 günlük rapor, varsa), kayit/<tarih>.jsonl.
+# Dal izni: yalnız uretim ↔ canli-durum (SUNUCU_MOD; eski deneme modu kaldırıldı). Çalışma dizini = depo klonu (motorun --durum-dizin durum / --kayit-dizin kayit dizinleri orada). Canlı motor durumunu veri dalına (VERI_DALI: canli-durum) yazar: durum/*.json, durum/niyet.jsonl (çift emir koruması, vardiyalar arası kalıcı), durum/DUR (varsa), pano/OZET.md + pano/gecmis.json (T6 günlük rapor, varsa), kayit/<tarih>.jsonl.
 # AYRI git worktree'de çalışır: motorun çalıştığı çalışma dizini DEĞİŞMEZ (arka planda 15 dk'da bir çağrılır). Kayıt 14 günden eskisi silinir. Kök commit yalnız dal ilk kez oluşurken (orphan).
 set -euo pipefail
-mod="${SUNUCU_MOD:?SUNUCU_MOD gerekli (deneme|uretim)}"
+mod="${SUNUCU_MOD:?SUNUCU_MOD gerekli (uretim)}"
 veri_dali="${VERI_DALI:-canli-durum}"
-case "$mod:$veri_dali" in deneme:canli-durum-sunucu|uretim:canli-durum) ;; *) echo "Geçersiz mod/dal: $mod / $veri_dali (deneme=canli-durum-sunucu, uretim=canli-durum)" >&2; exit 1 ;; esac
+case "$mod:$veri_dali" in uretim:canli-durum) ;; *) echo "Geçersiz mod/dal: $mod / $veri_dali (yalnız uretim=canli-durum)" >&2; exit 1 ;; esac
 kaynak="$(pwd)"
 # Cloudflare pano yayını BU betikte DEĞİL: deploy/sanal_pano_cf.sh (ayrı birim; Cloudflare anahtarını yalnız o görür).
 # S-18: arka plan yayımı (15 dk döngü) ile vardiya sonu yayımı AYNI ANDA koşmasın: tek yazar kilidi (flock; iş makinesinde, çalışma dizini dışında). Bekleme tavanı YAYIM_KILIT_SN (600 sn).

@@ -1,4 +1,4 @@
-# Cloudflare Workers pano yayını (deneme: sg-pano-sunucu; uretim: sg-pano). Cloudflare anahtarı YALNIZ bu birimde (/etc/sg-sanal-pano.env). Zamanlayıcı: sg-sanal-pano.timer (60 sn; içerik değişmediyse yayımlamaz).
+# Cloudflare Workers pano yayını (sg-pano). Cloudflare anahtarı YALNIZ bu birimde (/etc/sg-sanal-pano.env). Zamanlayıcı: sg-sanal-pano.timer (60 sn; içerik değişmediyse yayımlamaz).
 [Unit]
 Description=sg-arge sanal pano yayimi (Cloudflare)
 After=network-online.target

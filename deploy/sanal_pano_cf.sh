@@ -2,14 +2,14 @@
 # Sunucu SANAL motoru: Cloudflare Workers pano yayını (sg-sanal-pano.timer, dakikada bir). .github/scripts/pano_cf_yayimla.sh'in sunucu karşılığı.
 # Kaynak: depo klonundaki pano/index.html (sanal_yayimla.sh her 15 dk yeniden üretir; Actions'taki veri dalı okumasıyla aynı içerik). İçerik DEĞİŞTİYSE yayımlanır (sha256; son yayım: /var/lib/sg-sanal/pano_son.sha).
 # Ortam: /etc/sg-sanal-mod.env (SUNUCU_MOD, PANO_ISIM) + /etc/sg-sanal-pano.env (CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID; yalnız bu birimde; HL/Telegram/git anahtarı burada YOK).
-# Güvence: deneme ↔ sg-pano-sunucu (canlı panoya DOKUNMAZ), uretim ↔ sg-pano. Çift uyuşmazsa çıkış 3. İki Cloudflare secret'ı yoksa yayım yapılmaz (çıkış 0).
+# Güvence: yalnız uretim ↔ sg-pano (eski deneme modu kaldırıldı). Çift uyuşmazsa çıkış 3. İki Cloudflare secret'ı yoksa yayım yapılmaz (çıkış 0).
 set -euo pipefail
 cd "${SANAL_DEPO:-/var/lib/sg-sanal/depo}"
 mod="${SUNUCU_MOD:?SUNUCU_MOD gerekli}"
 isim="${PANO_ISIM:?PANO_ISIM gerekli}"
 case "$mod:$isim" in
-  deneme:sg-pano-sunucu|uretim:sg-pano) ;;
-  *) echo "HATA: geçersiz mod/pano adı ($mod / $isim): deneme=sg-pano-sunucu, uretim=sg-pano" >&2; exit 3 ;;
+  uretim:sg-pano) ;;
+  *) echo "HATA: geçersiz mod/pano adı ($mod / $isim): yalnız uretim=sg-pano geçerli" >&2; exit 3 ;;
 esac
 if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
   echo "Cloudflare secret'ları yok: pano yayını yapılmaz"
