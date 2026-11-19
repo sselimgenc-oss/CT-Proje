@@ -51,6 +51,7 @@ for f in hesap.json saha.json risk.json motor.json kilit.json ozet.json niyet.js
   if [ -f "$kaynak/durum/$f" ]; then cp "$kaynak/durum/$f" "$work/durum/$f"; fi
 done
 if [ -f "$kaynak/durum/paylasim/kadro_yon_v1.json" ]; then mkdir -p "$work/durum/paylasim"; cp "$kaynak/durum/paylasim/kadro_yon_v1.json" "$work/durum/paylasim/kadro_yon_v1.json"; fi
+if [ -d "$kaynak/durum/ogrenme" ]; then mkdir -p "$work/durum/ogrenme"; for f in adaylar.jsonl notlar.jsonl ders.json uygulama.json izler.json; do if [ -f "$kaynak/durum/ogrenme/$f" ]; then cp "$kaynak/durum/ogrenme/$f" "$work/durum/ogrenme/$f"; fi; done; fi    # ortak öğrenme (takma adlı, adres YOK)
 if [ -d "$kaynak/kayit" ]; then cp -r "$kaynak/kayit/." "$work/kayit/"; fi
 if [ -s "$kaynak/pano/OZET.md" ]; then mkdir -p "$work/pano"; cp "$kaynak/pano/OZET.md" "$work/pano/OZET.md"; fi
 if [ -s "$kaynak/pano/index.html" ]; then mkdir -p "$work/pano"; cp "$kaynak/pano/index.html" "$work/pano/index.html"; fi

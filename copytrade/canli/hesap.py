@@ -37,6 +37,7 @@ class Hesap:
         self.tasfiyeler: list[dict] = []
         self.funding: dict[str, float] = {}          # adres -> girişten beri funding ($, işaretli: + alınan / − ödenen; sanal kip)
         self.son_niyet_cloid: str | None = None      # son UYGULANAN niyetin cloid'i (t4b #3: yeniden başlatmada bundan sonraki sonuçlu niyetler oynatılır)
+        self.dinleyici = None                        # ortak öğrenme: uygula() sonrası çağrılan fonksiyon (serileşmez; motor bağlar)
         self.kapanmis_net = 0.0                      # sahadan çıkıp kaydı silinen üyelerin net K/Z'si (özsermaye sürekliliği)
         self.belirsiz: dict[str, dict] = {}         # G-1: cloid -> {ms, deneme, adres, coin} (Y-2: adres/coin yeni girdilerde); emri gönderilip yanıtı alınamayan (sonucu BELİRSİZ) niyetler. `son_niyet_cloid` ile AYNI atomik
                                                      # yazımda tutulur: çözülünce dolum deftere TEK kez uygulanır ve buradan silinir (oynatma bu niyetleri atlar: işaretçi zaten geçti)
@@ -93,6 +94,7 @@ class Hesap:
         signed = sz if yon == "B" else -sz
         poz = self.poz.setdefault(adres, {}).get(coin)
         pnl = 0.0
+        yeni_poz = poz is None or abs(poz.sz) < EPS                      # ortak öğrenme dinleyicisi için (yalnız bildirim; hesabı etkilemez)
         if poz is None or abs(poz.sz) < EPS:
             self.poz[adres][coin] = Poz(signed, px, zaman_ms, self.kaldirac)
         elif poz.sz * signed > 0:                                        # artırma: ağırlıklı ortalama giriş
@@ -109,6 +111,15 @@ class Hesap:
                 del self.poz[adres][coin]
         self.realize[adres] = self.realize.get(adres, 0.0) + pnl
         self.ucret[adres] = self.ucret.get(adres, 0.0) + ucret
+        if self.dinleyici is not None:                                   # ortak öğrenme: dolum bildirimi (hata hesabı bozmaz)
+            try:
+                p2 = self.poz.get(adres, {}).get(coin)
+                ref = p2 if p2 is not None else poz                      # kapanmışsa silinen pozisyon nesnesi (açılış zamanı/kaldıraç için)
+                self.dinleyici({"adres": adres, "coin": coin, "yon": yon, "sz": sz, "px": px, "pnl": pnl, "ucret": ucret, "ms": zaman_ms, "yeni": yeni_poz,
+                                "kapandi": p2 is None, "poz_sz": 0.0 if p2 is None else p2.sz, "acilis_ms": zaman_ms if ref is None else ref.acilis_ms,
+                                "kaldirac": self.kaldirac if ref is None else ref.kaldirac})
+            except Exception:                                            # noqa: BLE001
+                pass
         return pnl
 
     def ucret_duzelt(self, adres: str, delta: float) -> None:
