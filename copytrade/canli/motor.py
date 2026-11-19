@@ -34,9 +34,9 @@ from copytrade.canli.hesap import Hesap
 from copytrade.canli.kadro import Karar, Saha, kadro_taze_mi
 from copytrade.canli.mutabakat import poz_farki, sanal_tutarlilik
 from copytrade.canli.niyet import Niyet, cloid_uret
-from copytrade.canli import borsa_stop
+from copytrade.canli import borsa_stop, izleme
 from copytrade.canli.borsa_stop import BorsaStop
-from copytrade.canli.risk import Risk, gun
+from copytrade.canli.risk import Risk, coin_tavan_usd, gun
 from copytrade.canli.yurutucu import AnahtarYok, Dolum, SanalYurutucu, Yurutucu, gercek_yurutucu_olustur, ucret_eslestir
 from copytrade.dinleyici import Ayar, Dinleyici, Izlenen, Olay, clearinghouse_ayristir, clearinghouse_pozisyonlari, clearinghouse_yuk, coin_listesi, rest_dolumlar, rest_post_fabrikasi, ws_baglan
 from copytrade.hl_ortak import spot_usdc
@@ -588,6 +588,10 @@ class Motor:
         self.yetim_ilk: dict[str, dict] = {k: dict(v) for k, v in (m.get("yetim_ilk") or {}).items() if isinstance(v, dict)}      # Denetim-5 (K-68): defter dışı borsa fazlası, coin -> {ms (ilk görülme), mark (o andaki mark; stop referansı, SABİT), sz (son işaretli fazla)}; kesintisiz sürerse `canli_yetim_kapat_sn` sonra kapatılır
         self._hl_maks_kaldirac: dict[str, float] = {}               # Denetim-4: gerçek kip kaldıraç süzgeci için HL coin başına azami kaldıraç (yalnız bellek)
         self.baslama_ms: int = self.saat_ms()
+        self.karsi_olgu: dict[str, dict] = {k: dict(v) for k, v in (m.get("karsi_olgu") or {}).items() if isinstance(v, dict)}       # alınmayan sinyal (yalnız kayıt): "adres|coin" -> {yon, hayali_usd, giris, neden, ms, son_pnl}
+        self.karsi_olgu_gun: dict[str, list[float]] = {k: [float(x) for x in v] for k, v in (m.get("karsi_olgu_gun") or {}).items() if isinstance(v, list) and len(v) == 2}      # günlük özet: neden -> [adet, hayali K/Z $]
+        self.kopya_drift: dict[str, dict] = {k: dict(v) for k, v in (m.get("kopya_drift") or {}).items() if isinstance(v, dict)}        # coin -> {bas_ms, aktif}: eşik üstü drift (yalnız uyarı)
+        self.kopya_drift_tg_ms: dict[str, int] = {k: int(v) for k, v in (m.get("kopya_drift_tg_ms") or {}).items()}                  # coin -> son Telegram uyarısı (hız sınırı)
         self.marks: dict[str, float] = {}
         self.mark_ms: dict[str, int] = {}
         self.sayac = {"emir": 0, "dolu": 0, "kismi": 0, "dolmadi": 0, "red": 0, "atlandi": 0, "engel": 0, "gec_goruldu": 0, "gec_acilis": 0, "kapanis_eksik": 0, "min_nosyonel": 0, "funding_oran_yok": 0}
@@ -755,7 +759,8 @@ class Motor:
                 "ozet_gunu": self._ozet_gunu, "ozet_oz": self._ozet_oz, "ozet_emir": self._ozet_emir, "kip": self.kip, "kasa_usd": self.kasa, "kasa_ayar_usd": self.kasa_ayar, "vardiya": self.vardiya_id, "yazildi_ms": self.saat_ms(),
                 "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "hl_onceki": list(self._hl_onceki) if self._hl_onceki else None, "hl_sicrama": self._hl_sicrama, "hl_sicrama_ms": self._hl_sicrama_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.kalici_offset,
                 "son_funding_ms": self.son_funding_ms, "funding_kimlik": self.funding_kimlik[-500:], "funding_gercek_usd": self.funding_gercek_usd, "ucret_gercek_usd": self.ucret_gercek_usd, "ucret_tahmin_say": self.ucret_tahmin_say,
-                "ucret_bekleyen": self.ucret_bekleyen[-500:], "btc_donem": self.btc_donem, "mutabakat_tutan": self.mutabakat_tutan, "yetim_ilk": self.yetim_ilk, "sahipsiz_ilk": self.sahipsiz_ilk}
+                "ucret_bekleyen": self.ucret_bekleyen[-500:], "btc_donem": self.btc_donem, "mutabakat_tutan": self.mutabakat_tutan, "yetim_ilk": self.yetim_ilk, "sahipsiz_ilk": self.sahipsiz_ilk,
+                "karsi_olgu": self.karsi_olgu, "karsi_olgu_gun": self.karsi_olgu_gun, "kopya_drift": self.kopya_drift, "kopya_drift_tg_ms": self.kopya_drift_tg_ms}
 
     def _hesap_yaz(self) -> None:
         """hesap.json atomik yazılır; gerçek kipte önce son sağlam sürüm `hesap.json.bak` (Denetim-2)."""
@@ -1120,6 +1125,120 @@ class Motor:
             self._azalt_kuyruga(adres, o.coin, hedef, neden, simdi, mk or o.px)
         return s
 
+    def _hedef_usd(self, adres: str, coin: str, mk: float) -> float | None:
+        """Kopya hedefi ($, işaretli; `boyut.hedef_emir` ile aynı mantık: slot × trader nosyonel / trader hesap, coin tavanı `radar_slot_tavan_carpan` × slot). Ağ yok: önbellekteki hesap değeri; bilinmiyorsa None."""
+        c = self.hesap_tr.get(adres)
+        hesap = float(c["deger"]) if c and c.get("deger") else 0.0
+        poz = self.poz_tr.get(adres, {}).get(coin, 0.0)
+        if hesap <= 0 or mk <= 0:
+            return None
+        slot = float(self.hesap.slot_bas.get(adres, self.saha.slot))
+        usd = min(slot * abs(poz) * mk / hesap, float(self.rules["radar_slot_tavan_carpan"]) * slot)
+        return usd if poz > 0 else -usd
+
+    def _karsi_olgu_ac(self, o: Olay, adres: str, neden: str) -> None:
+        """Alınmayan sinyal (counterfactual; YALNIZ KAYIT): atlanan açılış/artırma için "hayali pozisyon" (hedef − mevcut kopya, işaretli yönde). (adres, coin) başına tek kayıt (ilk atlanan kalır); en çok 500 açık."""
+        anahtar = f"{adres}|{o.coin}"
+        if anahtar in self.karsi_olgu or len(self.karsi_olgu) >= 500:
+            return
+        mk = self.mark(o.coin, o.px) or o.px
+        hedef = self._hedef_usd(adres, o.coin, mk)
+        if not hedef:
+            return
+        yon = "B" if hedef > 0 else "A"
+        biz = self.hesap.sz(adres, o.coin) * mk
+        usd = abs(hedef) - (abs(biz) if biz * hedef > 0 else 0.0)
+        if usd <= 0:
+            return
+        self.karsi_olgu[anahtar] = {"yon": yon, "hayali_usd": usd, "giris": mk, "neden": neden, "ms": self.saat_ms(), "son_pnl": 0.0}
+
+    def karsi_olgu_adimi(self, simdi: int) -> None:
+        """Dakikalık (YALNIZ KAYIT): hayali pozisyonları mark'a göre değerler; trader o coini kapatınca (poz_tr 0 / ters yön) ya da `karsi_olgu_azami_saat` dolunca kapatır → `karsi_olgu_kapandi`."""
+        azami = float(self.rules.get("karsi_olgu_azami_saat", 72)) * 3_600_000
+        for anahtar in list(self.karsi_olgu):
+            k = self.karsi_olgu[anahtar]
+            adres, _, coin = anahtar.partition("|")
+            mk = self.marks.get(coin)
+            if mk:
+                k["son_pnl"] = izleme.hayali_pnl(k["yon"], k["hayali_usd"], k["giris"], mk)
+            poz = self.poz_tr.get(adres, {}).get(coin, 0.0)
+            bitti = abs(poz) < 1e-9 or (poz > 0) != (k["yon"] == "B")
+            kapanis = "trader_kapadi" if bitti else ("sure_doldu" if simdi - int(k["ms"]) >= azami else None)
+            if kapanis is None:
+                continue
+            del self.karsi_olgu[anahtar]
+            g = self.karsi_olgu_gun.setdefault(str(k["neden"]), [0.0, 0.0])
+            g[0] += 1
+            g[1] += k["son_pnl"]
+            self.kayit({"olay": "karsi_olgu_kapandi", "coin": coin, "neden": k["neden"], "yon": k["yon"], "hayali_usd": round(k["hayali_usd"], 2), "pnl_usd": round(k["son_pnl"], 4),
+                        "sure_sa": round((simdi - int(k["ms"])) / 3_600_000, 2), "kapanis": kapanis})
+
+    def _ideal_kopya(self) -> dict[str, float]:
+        """İdeal kopya nosyoneli (coin -> işaretli $): saha traderlarının hedefleri, motorun UYGULADIĞI sınırlarla: coin başına 3 × slot (`_hedef_usd`), min emir (`radar_min_emir_yuvarla_alt` altı açılmaz, 11 $ altı 11 $'a),
+        sığ coin tavanı (K-62), trader başına slot toplam tavanı (K-35; orantılı küçültme), coin brüt tavanı (`coin_tavan_usd`), toplam marj tavanı (özsermaye × `canli_marj_kaldirac`; orantılı küçültme). Ağ yok; YALNIZ okuma."""
+        r = self.rules
+        minimum, alt = float(r["radar_min_emir_usd"]), float(r.get("radar_min_emir_yuvarla_alt", 0.0) or 0.0)
+        ideal: dict[str, float] = {}
+        for adres in self.saha.uyeler:
+            slot = float(self.hesap.slot_bas.get(adres, self.saha.slot))
+            hedefler: dict[str, float] = {}
+            for coin in self.poz_tr.get(adres, {}):
+                mk = self.marks.get(coin)
+                h = self._hedef_usd(adres, coin, mk) if mk else None
+                if not h:
+                    continue
+                u = abs(h)
+                if u < minimum - 1e-9:
+                    u = 0.0 if u < alt - 1e-9 else minimum
+                u = boyut.sig_coin_kirp(r, u, 0.0, self.coin_hacmi(coin), slot)[0]
+                if u > 0:
+                    hedefler[coin] = u if h > 0 else -u
+            toplam, tavan = sum(abs(v) for v in hedefler.values()), float(r["radar_slot_tavan_carpan"]) * slot
+            olcek = min(1.0, tavan / toplam) if toplam > 0 else 1.0
+            for coin, v in hedefler.items():
+                ideal[coin] = ideal.get(coin, 0.0) + v * olcek
+        tavan_coin = coin_tavan_usd(r, self.kasa)
+        for coin in ideal:
+            if abs(ideal[coin]) > tavan_coin:
+                ideal[coin] = tavan_coin if ideal[coin] > 0 else -tavan_coin
+        marj = sum(abs(v) for v in ideal.values()) / float(r["canli_marj_kaldirac"])
+        oz = self.ozsermaye()
+        if marj > oz > 0:
+            ideal = {c: v * oz / marj for c, v in ideal.items()}
+        return ideal
+
+    def kopya_drift_adimi(self, simdi: int) -> None:
+        """Kopya drift alarmı (YALNIZ UYARI): coin başına bizim nosyonel ↔ ideal kopya (saha traderlarının hedef toplamı); drift > `kopya_drift_esik` `kopya_drift_sure_dk` dk sürerse `kopya_drift` kaydı +
+        Telegram uyarısı (coin başına `kopya_drift_tg_saat` saatte en çok bir); düzelince `kopya_drift_bitti`. İdeal nosyonel < `kopya_drift_min_usd` ise izlenmez."""
+        esik, sure = float(self.rules.get("kopya_drift_esik", 0.25)), float(self.rules.get("kopya_drift_sure_dk", 30)) * DAKIKA
+        min_usd, tg_aralik = float(self.rules.get("kopya_drift_min_usd", 50)), float(self.rules.get("kopya_drift_tg_saat", 6)) * 3_600_000
+        ideal = self._ideal_kopya()
+        biz: dict[str, float] = {}
+        for cs in self.hesap.poz.values():
+            for coin, p in cs.items():
+                biz[coin] = biz.get(coin, 0.0) + p.sz * (self.marks.get(coin) or p.giris)
+        for coin in set(self.kopya_drift) | set(ideal):
+            i, b = ideal.get(coin, 0.0), biz.get(coin, 0.0)
+            drift = izleme.drift_orani(b, i, min_usd)
+            kd = self.kopya_drift.get(coin)
+            r = self.rules                                        # bant: motorun emir vermediği fark (`bant_ici`) drift sayılmaz (artırma / azaltma bandı)
+            bant = max(float(r["canli_bant_usd"]), float(r["canli_bant_oran"]) * abs(i)) if abs(b) < abs(i) else max(float(r["canli_bant_azalt_usd"]), float(r["canli_bant_azalt_oran"]) * abs(i))
+            if abs(i) >= min_usd and drift > esik and abs(b - i) >= bant:
+                if kd is None:
+                    kd = self.kopya_drift[coin] = {"bas_ms": simdi, "aktif": False}
+                if not kd["aktif"] and simdi - int(kd["bas_ms"]) >= sure:
+                    kd["aktif"] = True
+                    dk = round((simdi - int(kd["bas_ms"])) / DAKIKA)
+                    self.kayit({"olay": "kopya_drift", "coin": coin, "biz_usd": round(b, 2), "ideal_usd": round(i, 2), "drift": round(drift, 3), "sure_dk": dk})
+                    if simdi - self.kopya_drift_tg_ms.get(coin, -10**15) >= tg_aralik:
+                        self.kopya_drift_tg_ms[coin] = simdi
+                        self.tg.gonder(tg.alarm(f"Kopya sapması: {coin}", f"Bizim pozisyon ≈ {tg.tr_isaretli(b, 0)} $, ideal kopya ≈ {tg.tr_isaretli(i, 0)} $ (fark %{round(drift * 100)}), "
+                                                f"{dk} dk'dır sürüyor. Yalnız bilgi; işlem etkisi yok.", ikon="⚠️"))
+            elif kd is not None:
+                del self.kopya_drift[coin]
+                if kd["aktif"]:
+                    self.kayit({"olay": "kopya_drift_bitti", "coin": coin, "biz_usd": round(b, 2), "ideal_usd": round(i, 2), "drift": round(drift, 3), "sure_dk": round((simdi - int(kd["bas_ms"])) / DAKIKA)})
+
     def _say_neden(self, neden: str) -> None:
         if neden and neden not in ("tamam", "tam_kapanis"):
             self.neden_say[neden] = self.neden_say.get(neden, 0) + 1
@@ -1136,6 +1255,11 @@ class Motor:
             ad[adres] = ad.get(adres, 0) + 1
         self.kayit({"olay": "emir_yok", "adres": adres, "coin": o.coin, "eylem": eylem, "karar": karar, "neden": neden, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
                     "yas_ms": self.saat_ms() - o.zaman_ms})
+        if eylem in ("ac", "artir") and neden != "bant_ici":
+            try:
+                self._karsi_olgu_ac(o, adres, neden)
+            except Exception as hata:                      # noqa: BLE001
+                self.kayit({"olay": "karsi_olgu_hata", "tur": type(hata).__name__, "mesaj": str(hata)[:160]})       # yalnız muhasebe: karar yolunu ASLA etkilemez
         return Sonuc(adres, o.coin, eylem, karar, neden)
 
     def _yurut(self, o: Olay, adres: str, eylem: str, yon: str, usd: float, reduce_only: bool, acik_sz: float | None, neden: str, gec: bool, simdi: int,
@@ -2077,7 +2201,7 @@ class Motor:
                 ("kadro", lambda: self._kadro_uygula(kadro, simdi)), ("senkron", lambda: (self.senkron_uygula(senkron), self.hesap_uygula(hesaplar, simdi)) if senkron is not None else None),
                 ("telegram", lambda: self._komutlar(komutlar)), ("ajan_suresi", lambda: self.ajan_suresi_uygula(ajan, simdi)), ("ozet", lambda: self._gunluk_ozet(simdi)),
                 ("emir_ozeti", lambda: self.emir_ozeti(simdi)), ("btc_donem", lambda: self.btc_donem_uygula(btc)), ("donem_seri", lambda: self.donem_seri_guncelle(simdi)),
-                ("tur_kaydi", lambda: self._tur_kaydi(simdi)), ("golge_kural", lambda: self.golge_kural_adimi(simdi)),          # yalnız kayıt + pano verisi; karar yolunda değil
+                ("tur_kaydi", lambda: self._tur_kaydi(simdi)), ("golge_kural", lambda: self.golge_kural_adimi(simdi)), ("karsi_olgu", lambda: self.karsi_olgu_adimi(simdi)), ("kopya_drift", lambda: self.kopya_drift_adimi(simdi)),          # yalnız kayıt + pano verisi; karar yolunda değil
                 ("durum_yaz", self.durum_yaz),                                     # G-12b: disk dolu / salt okunur → dakikalık görev ölmez; kayıt + alarm
             ]
             for ad, f in adimlar:
@@ -2925,7 +3049,8 @@ class Motor:
         self._ozet_gunu = d.date().isoformat()
         oz = self.ozsermaye()
         self.tg.gonder(tg.msg_gunluk(self.kip, self.kasa, oz, self._ozet_oz if self._ozet_oz is not None else self.kasa, self._ozet_emir, len(self.saha.uyeler), self.saha.n,
-                                     self.pano_ek()["acik"], self.hesap.funding_toplam() if self.kip == "sanal" else None))
+                                     self.pano_ek()["acik"], self.hesap.funding_toplam() if self.kip == "sanal" else None, self.karsi_olgu_gun or None))
+        self.karsi_olgu_gun = {}
         self._ozet_oz, self._ozet_emir = oz, 0
 
     # ------------------------------------------------------------------ özet

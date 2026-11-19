@@ -170,6 +170,15 @@ def pano_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], isab
           f"- emir {len(emirler)} · dolum {len(dolumlar)} · kayma p50 {yuzde(kaymalar[len(kaymalar) // 2] if kaymalar else None)} / max {yuzde(kaymalar[-1] if kaymalar else None)} (n={len(kaymalar)})",
           f"- funding {usd(funding24, True)} · ücret {usd(ucret24)}", "",
           "_gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun günlük kayıp tanımı); hafta/toplam kasaya göre; zirveden düşüş motorun zirvesine göre._", ""]
+    ko = [k for k in k24 if k.get("olay") == "karsi_olgu_kapandi"]
+    if ko:
+        neden_ko: dict[str, list[float]] = {}
+        for k in ko:
+            g = neden_ko.setdefault(str(k.get("neden") or "?"), [0, 0.0])
+            g[0] += 1
+            g[1] += float(k.get("pnl_usd") or 0.0)
+        s += ["## Alınmayan sinyaller (hayali, 24 sa; işlem etkisi yok)", "", f"- {len(ko)} kapandı · toplam {usd(sum(g[1] for g in neden_ko.values()), True)}"
+              + " · " + " · ".join(f"{ad} {int(g[0])} ({usd(g[1], True)})" for ad, g in sorted(neden_ko.items(), key=lambda kv: -abs(kv[1][1]))), ""]
     saha = [k for k in k24 if k.get("olay") in ("saha_giris", "saha_dus")]
     s += ["## Saha değişiklikleri (24 sa)", ""] + ([f"- {gun_str(k['zaman_ms'])} {datetime.fromtimestamp(k['zaman_ms'] / 1000, UTC):%H:%M} {'giriş' if k['olay'] == 'saha_giris' else 'çıkış'} {kisa(k['adres'])} — {k.get('neden', '')}" for k in saha] or ["değişiklik yok"])
     riskler = [k for k in k24 if k.get("olay") in RISK_OLAYLARI]
