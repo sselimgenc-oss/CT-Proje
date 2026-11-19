@@ -409,3 +409,7 @@
 {"zaman_ms":1795074610878,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795074610585,"gorme_ms":1795074610877,"yas_ms":293}
 {"zaman_ms":1795075221803,"olay":"funding","saat":498632,"saat_adet":1,"funding_usd":0.01619109174948043,"toplam_funding_usd":0.29645935504547716}
 {"zaman_ms":1795075253830,"olay":"tur","ozsermaye_usd":9994.8673}
+{"zaman_ms":1795075447133,"olay":"telegram","metin":"🧾 Son 1 saat (10:03–11:04 TSİ): 2 emir · sanal\n➕ açılış 1 · ⬆️ artırma 1 · ⬇️ azaltma 0 · ✖️ kapanış 0\n🏆 En büyük: 160 $ (BTC, AL) · 0xdebd49…\n⏭️ Kopyalanmayan trader dolumu: 72 (≈5 ayrı işlem)\n   • kural gereği 72: 68 slot tavanı · 4 toplu emir bekliyor (fark küçük)\n   • kaçırılan 0 (geç görülen / ","acik":true}
+{"zaman_ms":1795075811260,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795075810827,"gorme_ms":1795075811259,"yas_ms":433}
+{"zaman_ms":1795076102935,"olay":"tur","ozsermaye_usd":9999.7762}
+{"zaman_ms":1795076120156,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"BTC","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795076119844,"gorme_ms":1795076120156,"yas_ms":312}
