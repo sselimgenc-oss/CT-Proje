@@ -60,7 +60,7 @@ sudo -e /etc/sg-sanal-pano.env                                        # iki sat�
 CLOUDFLARE_API_TOKEN=<Workers düzenleme izinli API token>
 CLOUDFLARE_ACCOUNT_ID=<hesap kimliği>
 ```
-Telegram isteğe bağlı (kullanıcı kararı 08.11: varsayılan KAPALI; dosya yoksa tüm kanallar sessiz). Açılacaksa `/etc/sg-sanal-telegram.env` (izin 600, sahibi `sgsanal`): `TELEGRAM_BOT_TOKEN=…`, `TELEGRAM_CHAT_ID=…`, ve DENEME modunda ayrıca `TELEGRAM_KOMUT=kapali` (Actions motoru aynı botun komutlarını okuyor olabilir; tek tüketici kuralı). Üretimde Actions kapalı olduğundan `TELEGRAM_KOMUT` satırı silinir ve servis yeniden başlatılır.
+Telegram: şu an Actions'ta açık; sunucu üretim moduna geçince açık olmalı (deneme modunda kapalı, çift mesaj olmasın; dosya yoksa tüm kanallar sessiz). Açılacaksa `/etc/sg-sanal-telegram.env` (izin 600, sahibi `sgsanal`): `TELEGRAM_BOT_TOKEN=…`, `TELEGRAM_CHAT_ID=…`, ve DENEME modunda ayrıca `TELEGRAM_KOMUT=kapali` (Actions motoru aynı botun komutlarını okuyor olabilir; tek tüketici kuralı). Üretimde Actions kapalı olduğundan `TELEGRAM_KOMUT` satırı silinir ve servis yeniden başlatılır.
 
 ## 5. Açılış kontrolü ve başlatma
 ```bash

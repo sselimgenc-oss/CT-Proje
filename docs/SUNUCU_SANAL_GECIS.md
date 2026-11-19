@@ -31,7 +31,7 @@ Kısaca: şimdi sanal (kâğıt üstü) işlem motoru GitHub'ın bedava makinele
    CLOUDFLARE_ACCOUNT_ID=...
    ```
    (Kaydet: nano'da Ctrl+O, Enter, Ctrl+X.) Bunu boş bırakırsanız motor çalışır ama pano güncellenmez.
-8. **Telegram (isteğe bağlı; şimdilik KAPALI kalır, 08.11 kararınız).** Sunucudan bildirim istiyorsanız aynı biçimde `/etc/sg-sanal-telegram.env` dosyasına `TELEGRAM_BOT_TOKEN=...` ve `TELEGRAM_CHAT_ID=...` yazın. İstemiyorsanız hiçbir şey yapmayın.
+8. **Telegram (şu an Actions'ta AÇIK; sunucuya geçince de açık olmalı).** Deneme modunda sunucu Telegram'a yazmaz (çift mesaj olmasın); geçişte açılır. Bunun için aynı biçimde `/etc/sg-sanal-telegram.env` dosyasına `TELEGRAM_BOT_TOKEN=...` ve `TELEGRAM_CHAT_ID=...` yazın. Bu dosya yoksa sunucu sessiz kalır.
 9. **2–3 gün sonra karar:** doğrulama raporumu (B bölümü) okuyup "geçelim" ya da "bekleyelim" deyin. "Geçelim" derseniz:
 10. **GitHub'da tek ayar:** depo → **Settings → Secrets and variables → Actions → Variables** → New repository variable: Ad `SUNUCU_AKTIF`, Değer `evet`. (Bu, Actions vardiyasını kapatır.) Hemen ardından bana "yaptım" yazın; sunucuyu "üretim" moda ben geçiririm (ya da komutu siz yapıştırırsınız).
 
