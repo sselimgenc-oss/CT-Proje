@@ -554,7 +554,7 @@ JSON üst düzey: `n_istenen` (adet), `kasa_usd` ($; `--kasa-usd`, yoksa `canli_
 
 ## 19.11 akşam eklenen alanlar ve dosyalar (YALNIZ BİLGİ; işlem/limit etkisi yok; #666–#675)
 
-- `durum/motor.json` → `kaynak` (#666, `copytrade/canli/kaynak.py`): `{rss_mb, rss_tepe_mb, cgroup_mb, cgroup_tepe_mb, yuk_1dk, disk_bos_gb, olc_ms}`; ölçülemeyen alan `null`; en çok dakikada bir yenilenir. Panoda "Sunucu kaynakları" kartı (#672).
+- `durum/motor.json` → `kaynak` (#666, `copytrade/canli/kaynak.py`): `{ram_mb, ram_tepe_mb, cgroup_mb, cgroup_tepe_mb, yuk_1dk, disk_bos_gb, disk_toplam_gb, olc_ms}`; ölçülemeyen alan `null`; en çok dakikada bir yenilenir. Panoda "Sunucu kaynakları" kartı (#672).
 - `gunluk_ozet_v1.json` → `saglik` yeni alanları: `ram_mb`, `ram_tepe_mb` (MB), `disk_bos_gb` (GB), `yuk_1dk` (#666); `yeniden_baslama_1s` (son 1 saatte sg-sanal yeniden başlama adedi), `oom_son` (bool; son saatte OOM) — kaynak `/var/lib/sg-sanal/saglik_sunucu.json` (saatlik, `sanal_guncelle.sh` `alarm_kontrol`; 3 saatten eskiyse `null`) (#674).
 - `gunluk_ozet_v1.json` → `ogrenme` yeni alanları (#666, #667): `filtre_atlanan` (bugünkü `ml_filtre_atla` adedi), `filtre_karsi_olgu_pnl` ($ hayali; bugün KAPANAN ML karşı-olgularının toplamı, yoksa `null`), `ders_engellenen` (`emir_yok` neden `ders_emekli` adedi), `ders_kucultulen` (dolan açılış/artırma emirlerinde `ders_carpan` < 1 adedi; alanı taşıyan kayıt yoksa `null`). Günlük Telegram "🧠 Öğrenme" satırı bunlardan.
 - `emir` kaydı → `ders_carpan` (#667; yukarıda §Emir kaydı) ve `giris_ctx` (#668): `{r1d, r4h, duygu, duygu_deger}` açılış anı rejim/duygu damgası; kapanış emri silinmeden önceki giriş damgasını taşır. Kalıcı yeri `hesap.json` `Poz.giris_ctx` (eski durumlarda yok).
