@@ -218,3 +218,10 @@ para_hareketi_isaret_payi: 0.2          # oran (T6 §2, bilgi: net yatırma / ha
 golge_hesap_alt_usd: 5000               # $ (trader hesap değeri bundan KÜÇÜKSE A_hesap_5k)
 golge_kaldirac_uyari: 5                 # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_5x; yalnız kayıt, işlem etkisi yok)
 golge_kaldirac_cikar: 20                # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_20x; yalnız kayıt, işlem etkisi yok)
+
+# Alınmayan sinyal kaydı + kopya drift alarmı (yalnız kayıt/uyarı, işlem etkisi yok)
+karsi_olgu_azami_saat: 72               # saat (hayali pozisyon trader kapatmazsa bu sürede kapanır; yalnız kayıt/uyarı, işlem etkisi yok)
+kopya_drift_esik: 0.25                  # oran (|biz − ideal| / ideal nosyonel bundan BÜYÜKSE drift; yalnız kayıt/uyarı, işlem etkisi yok)
+kopya_drift_sure_dk: 30                 # dakika (drift bu kadar sürerse tek uyarı; yalnız kayıt/uyarı, işlem etkisi yok)
+kopya_drift_min_usd: 50                 # $ (ideal nosyonel bundan küçük coinler izlenmez; yalnız kayıt/uyarı, işlem etkisi yok)
+kopya_drift_tg_saat: 6                  # saat (aynı coin için Telegram uyarısı en çok bu aralıkta bir; yalnız kayıt/uyarı, işlem etkisi yok)

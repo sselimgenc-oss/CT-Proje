@@ -377,7 +377,7 @@ def msg_emir(adres: str, coin: str, yon: str, usd: float, px: float | None, kaym
     return ilk + nedeni + (f"\n↳ Fiyat {px:.6g}" if px else "") + (f" · trader'a göre fark {kayma * 1e4:+.1f} bp" if kayma is not None else "")
 
 
-def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_sayisi: int, saha: int, n: int, acik: list[dict], funding_usd: float | None = None) -> str:
+def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_sayisi: int, saha: int, n: int, acik: list[dict], funding_usd: float | None = None, karsi_olgu: dict[str, list[float]] | None = None) -> str:
     """Sabah 09:00 TSİ: DÜNÜN sonucu = son özetten (≈24 saat) bu yana. `onceki_oz`: önceki özetteki özsermaye (ilk özette kasa). `acik`: {coin, sz, usd, kz_usd}."""
     fark = ozsermaye - onceki_oz
     satirlar = [f"☀️ Günaydın! Dünün sonucu ({kip_adi(kip)})", AYRAC,
@@ -387,6 +387,9 @@ def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_s
                 f"🧾 Dün {emir_sayisi} emir verildi · 👥 takipte {saha}/{n} trader"]
     if funding_usd is not None:
         satirlar.append(f"💸 Funding (sanal): {tr_isaretli(funding_usd)} $")
+    if karsi_olgu:
+        n, k = sum(int(v[0]) for v in karsi_olgu.values()), sum(v[1] for v in karsi_olgu.values())
+        satirlar.append(f"🔍 Alınmayan sinyal (hayali, işlem yok): {n} kapandı · {tr_isaretli(k)} $ — " + " · ".join(f"{ad} {int(v[0])}/{tr_isaretli(v[1])}" for ad, v in sorted(karsi_olgu.items(), key=lambda kv: -abs(kv[1][1]))[:3]))
     if acik:
         satirlar.append(f"📌 Açık pozisyonlar ({len(acik)}):")
         for x in sorted(acik, key=lambda x: -x["usd"])[:6]:
