@@ -82,7 +82,7 @@ def test_hata_karar_yolunu_bozmaz(tmp_path):
 
 def test_gunluk_ozet_ve_ozet_md_satiri(tmp_path):
     metin = tg.msg_gunluk("sanal", 1000.0, 1000.0, 1000.0, 0, 1, 11, [], None, {"hip3_atlandi": [2, 3.5], "min_emir_atlandi": [1, -1.0]})
-    assert "Alınmayan sinyal" in metin and "3 kapandı" in metin and "+2,50 $" in metin and "hip3_atlandi 2/+3,50" in metin
+    assert "Alınmayan sinyal" in metin and "3 kapandı" in metin and "+2,50 $" in metin and "HIP-3 coin 2/+3,50" in metin and "hip3_atlandi" not in metin and "min_emir_atlandi" not in metin      # 19.11 orkestratör: günlük mesajda kod adı yok, sade etiket
     assert "Alınmayan" not in tg.msg_gunluk("sanal", 1000.0, 1000.0, 1000.0, 0, 1, 11, [], None, None)
     simdi = 1_800_000_000_000
     ev = [{"olay": "karsi_olgu_kapandi", "zaman_ms": simdi - 1000, "neden": "hip3_atlandi", "pnl_usd": 3.5}, {"olay": "karsi_olgu_kapandi", "zaman_ms": simdi - 2000, "neden": "min_emir_atlandi", "pnl_usd": -1.0}]

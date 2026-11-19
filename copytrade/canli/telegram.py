@@ -589,7 +589,7 @@ def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_s
     satirlar.append(risk_satiri(dur, bayraklar))
     if karsi_olgu:
         kn, kk = sum(int(v[0]) for v in karsi_olgu.values()), sum(v[1] for v in karsi_olgu.values())
-        satirlar.append(f"🔍 Alınmayan sinyal (hayali, işlem yok): {kn} kapandı · {tr_isaretli(kk)} $ — " + " · ".join(f"{ad} {int(v[0])}/{tr_isaretli(v[1])}" for ad, v in sorted(karsi_olgu.items(), key=lambda kv: -abs(kv[1][1]))[:3]))
+        satirlar.append(f"🔍 Alınmayan sinyal (hayali, işlem yok): {kn} kapandı · {tr_isaretli(kk)} $ — " + " · ".join(f"{ATLA_TR.get(ad, ad).replace(' (K‑41)', '')} {int(v[0])}/{tr_isaretli(v[1])}" for ad, v in sorted(karsi_olgu.items(), key=lambda kv: -abs(kv[1][1]))[:3]))
     if (og := ogrenme_satiri(ogrenme)):
         satirlar.append(og)
     if saglik:
