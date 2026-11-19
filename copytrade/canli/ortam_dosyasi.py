@@ -19,7 +19,7 @@ from pathlib import Path
 AD_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 ADRES_RE = re.compile(r"0x[0-9a-fA-F]{40}")
 ANAHTAR_RE = re.compile(r"(0x)?[0-9a-fA-F]{64}")
-KASA_UST_USD = 1000.0                     # $ (AGENTS.md K‑22; kurallar.yaml canli_kasa_ust_usd ile aynı — test denetler)
+from copytrade.canli.sert_sinirlar import GERCEK_KASA_UST_USD as KASA_UST_USD          # $ (K-72 sert sabit 1.500; kurallar.yaml canli_kasa_ust_usd ile aynı — test denetler)
 
 TURLER: dict[str, dict[str, set[str]]] = {
     "motor": {"zorunlu": {"HL_API_CUZDAN_ANAHTARI", "HL_HESAP_ADRESI"}, "izinli": {"HL_API_CUZDAN_ANAHTARI", "HL_HESAP_ADRESI", "CANLI_KIP", "CANLI_KASA_USD", "TELEGRAM_KOMUT"}},

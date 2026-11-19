@@ -104,8 +104,8 @@ radar_payda_zaman: true                 # bool, B8 hata düzeltmesi (08.11 seçi
 radar_veri_hatasi_pay_max: 0.10         # oran, R-2: `veri_hatasi` satırı bu payı AŞAN koşu eksik sayılır (kadro yazılmaz, çıkış 2, son/ güncellenmez); tam %10 tamdır
 # ---- Canlı boyut (K-28, K-30; RADAR_V1.md §5/§5b): tek yer copytrade/boyut.py. Birim: $ (kasa = sanal/gerçek kopya kasası, kopya_$) ----
 canli_kasa_usd: 1000                    # $ (kullanıcı ayarı; üst sınır 1.000, AGENTS.md)
-canli_kasa_ust_usd: 1000                # $ (GERÇEK para güvenlik üst sınırı, K-22/K-26; gerçek kipte aşan kasa reddedilir)
-canli_sanal_kasa_ust_usd: 10000         # $ (K-66 kullanıcı 14.11: YALNIZ sanal kip `--sanal-kasa-usd` üst sınırı; sanal 10.000 $, saha 11 × ~909 $ — seçimi boyut kısıtı olmadan ölçmek için. Gerçek kip sınırı yukarıdaki 1.000 $, değişmez)
+canli_kasa_ust_usd: 1500                # $ (GERÇEK para güvenlik üst sınırı, K-22/K-26, K-72 kullanıcı 19.11: 1.500; kodda da sert sabit `sert_sinirlar.py`; gerçek kipte aşan kasa reddedilir; seçili kasa canli_kasa_usd/CANLI_KASA_USD)
+canli_sanal_kasa_ust_usd: 10000         # $ (K-66 kullanıcı 14.11: YALNIZ sanal kip `--sanal-kasa-usd` üst sınırı; sanal 10.000 $, saha 11 × ~909 $ — seçimi boyut kısıtı olmadan ölçmek için. Gerçek kip sınırı yukarıdaki 1.500 $, K-72)
 radar_kasa_usd: 10000                   # $ (K-66, 14.11 denetim D-01: radar oynatması (R1/R2 kopya, ayna, son 72 sa), kadro ve isabet bu kasa ölçeğinde; motorun sanal kasasıyla AYNI (canli_vardiya.yml --sanal-kasa-usd). Gerçek para anlamı YOK; canli_kasa_usd/canli_kasa_ust_usd değişmez)
 basari_aylik_hedef: 0.04                # oran/ay (K-66 başarı ölçütü 31.12: aylık eşdeğer getiri ≥ bu VE aynı dönemde BTC al-tut'tan iyi; F-06 pano 'hedef %4/ay')
 canli_hl_deger_ust_usd: 1500            # $ (gerçek kip AÇILIŞ / --kontrol: HL hesap değeri tavanı; kârlı günden sonra yeniden başlatma takılmasın. Kasa yine min(CANLI_KASA_USD, HL) ≤ canli_kasa_ust_usd; K‑22)
@@ -218,3 +218,10 @@ para_hareketi_isaret_payi: 0.2          # oran (T6 §2, bilgi: net yatırma / ha
 golge_hesap_alt_usd: 5000               # $ (trader hesap değeri bundan KÜÇÜKSE A_hesap_5k)
 golge_kaldirac_uyari: 5                 # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_5x; yalnız kayıt, işlem etkisi yok)
 golge_kaldirac_cikar: 20                # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_20x; yalnız kayıt, işlem etkisi yok)
+
+# Alınmayan sinyal kaydı + kopya drift alarmı (yalnız kayıt/uyarı, işlem etkisi yok)
+karsi_olgu_azami_saat: 72               # saat (hayali pozisyon trader kapatmazsa bu sürede kapanır; yalnız kayıt/uyarı, işlem etkisi yok)
+kopya_drift_esik: 0.25                  # oran (|biz − ideal| / ideal nosyonel bundan BÜYÜKSE drift; yalnız kayıt/uyarı, işlem etkisi yok)
+kopya_drift_sure_dk: 30                 # dakika (drift bu kadar sürerse tek uyarı; yalnız kayıt/uyarı, işlem etkisi yok)
+kopya_drift_min_usd: 50                 # $ (ideal nosyonel bundan küçük coinler izlenmez; yalnız kayıt/uyarı, işlem etkisi yok)
+kopya_drift_tg_saat: 6                  # saat (aynı coin için Telegram uyarısı en çok bu aralıkta bir; yalnız kayıt/uyarı, işlem etkisi yok)

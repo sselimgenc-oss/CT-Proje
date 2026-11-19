@@ -1,0 +1,45 @@
+# SANAL motor, sürekli (DigitalOcean sunucusu; GitHub Actions 4 saatlik vardiya zincirinin yerine). Ubuntu 24.04. Kurulum: deploy/kurulum_sanal.md, kullanıcı adımları: docs/SUNUCU_SANAL_GECIS.md.
+# Cüzdan/anahtar YOK: sanal kip HL'ye yalnız okuma yapar (allMids, kadro, funding). `--kip sanal --sanal-kasa-usd 10000` (K-66); gerçek kip bu birimde açılamaz (CANLI_KIP/HL_* yüklenmez).
+# Mod (/etc/sg-sanal-mod.env, sırsız): SUNUCU_MOD=deneme|uretim, VERI_DALI, PANO_ISIM, KADRO_DALI. Telegram isteğe bağlı: /etc/sg-sanal-telegram.env (kullanıcı kararı 08.11: varsayılan kapalı; dosya yoksa kanal sessiz).
+# Çalışma dizini = depo klonu: motor durum/ kayit/ dizinlerini orada (Actions düzeniyle aynı) tutar; sanal_yayimla.sh aynı dizinden veri dalına yayımlar. Kadro: motor radar dalından raw.githubusercontent.com ile okur (git gerekmez).
+# Çıkış kodları (G-15): 3 = kalıcı neden → yeniden BAŞLATILMAZ + OnFailure alarmı; 75 / 1 = geçici/beklenmedik → artan beklemeyle (30 sn → 10 dk) yeniden başlatılır.
+[Unit]
+Description=sg-arge sanal motor (Form Radari v1, surekli)
+After=network-online.target
+Wants=network-online.target
+OnFailure=sg-sanal-alarm.service
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=sgsanal
+Group=sgsanal
+WorkingDirectory=/var/lib/sg-sanal/depo
+EnvironmentFile=/etc/sg-sanal-mod.env
+EnvironmentFile=-/etc/sg-sanal-telegram.env
+Environment=HOME=/var/lib/sg-sanal
+Environment=PATH=/var/lib/sg-sanal/venv/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHON=/var/lib/sg-sanal/venv/bin/python
+Environment=VARDIYA_ID=sunucu
+Environment="GIT_SSH_COMMAND=ssh -i /var/lib/sg-sanal/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/var/lib/sg-sanal/.ssh/known_hosts"
+# İlk açılışta (yerel durum yok): geçiş kapısı + veri dalından geri yükleme (en çok 5 sa: yeni dönem beklemesi dahil)
+TimeoutStartSec=5h
+ExecStartPre=/bin/bash /var/lib/sg-sanal/depo/deploy/sanal_baslat.sh
+ExecStart=/var/lib/sg-sanal/venv/bin/python -u -m copytrade.canli.motor --kip sanal --sanal-kasa-usd 10000 --kadro-dali ${KADRO_DALI} --durum-dizin durum --kayit-dizin kayit --vardiya ${VARDIYA_ID}
+# Durdurmada motor temiz kapanır (kilit "bırakıldı") ve SON durum veri dalına yayımlanır (hata olursa servis hatası sayılmaz: '-')
+ExecStopPost=-/bin/bash /var/lib/sg-sanal/depo/deploy/sanal_yayimla.sh
+Restart=on-failure
+RestartSec=30
+RestartSteps=5
+RestartMaxDelaySec=600
+RestartPreventExitStatus=3
+TimeoutStopSec=180
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sg-sanal
+
+[Install]
+WantedBy=multi-user.target

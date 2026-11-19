@@ -375,7 +375,7 @@ def test_ortam_dogru_dosyalar_ve_ayirma_kurallari():
     assert any("OLAMAZ" in x for x in od.denetle("TELEGRAM_BOT_TOKEN=1:a\nTELEGRAM_CHAT_ID=1\nHL_API_CUZDAN_ANAHTARI=0x" + "ab" * 32 + "\n", "telegram"))
     assert any("OLAMAZ" in x for x in od.denetle("HL_API_CUZDAN_ANAHTARI=0x1\n", "yayim"))
     assert any("taşınmalı" in x for x in od.denetle(motor + "TELEGRAM_BOT_TOKEN=1:a\n", "motor"))
-    assert any("1000" in x for x in od.denetle(motor.replace("CANLI_KASA_USD=300", "CANLI_KASA_USD=1500"), "motor"))
+    assert any("1500" in x for x in od.denetle(motor.replace("CANLI_KASA_USD=300", "CANLI_KASA_USD=1500.01"), "motor"))
     assert any("zorunlu" in x for x in od.denetle(motor.replace("CANLI_KASA_USD=300\n", ""), "motor"))
     assert od.KASA_UST_USD == float(load_rules()["canli_kasa_ust_usd"])
 
