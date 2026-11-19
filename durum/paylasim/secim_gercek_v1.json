@@ -1,0 +1,69 @@
+{
+ "sema": "ct.secim_gercek.v1",
+ "proje": "CT",
+ "uretim": "2026-11-19T20:05:47Z",
+ "degisken": "form_sirasi_gercek_pnl_spearman",
+ "pencere_gun": 14,
+ "gunler": [
+  {
+   "gun": "2026-11-19",
+   "kadro_gunu": "2026-11-19",
+   "ilk11_n": 11,
+   "kadro_n": 17,
+   "kopyalanan_n": 4,
+   "yedek_n": 6,
+   "durum": "tamam",
+   "rho": -0.8,
+   "p": 0.9583,
+   "yontem": "tam",
+   "toplam_net_pnl": -2.39,
+   "traderlar": [
+    {
+     "takma_ad": "T_b4c6ee",
+     "form": 37.89,
+     "islem": 1,
+     "pnl": 0.0,
+     "ucret": 0.01,
+     "net_pnl": -0.01
+    },
+    {
+     "takma_ad": "T_e7ae5a",
+     "form": 35.16,
+     "islem": 4,
+     "pnl": -2.55,
+     "ucret": 0.18,
+     "net_pnl": -2.73
+    },
+    {
+     "takma_ad": "T_574595",
+     "form": 20.7,
+     "islem": 1,
+     "pnl": 0.0,
+     "ucret": 0.0,
+     "net_pnl": -0.0
+    },
+    {
+     "takma_ad": "T_2e4035",
+     "form": 18.75,
+     "islem": 6,
+     "pnl": 0.4,
+     "ucret": 0.06,
+     "net_pnl": 0.35
+    }
+   ]
+  }
+ ],
+ "toplu": {
+  "durum": "tamam",
+  "gun_n": 1,
+  "rho_ort": -0.8,
+  "p": 0.948,
+  "r": 1000
+ },
+ "notlar": [
+  "Yalnız bilgi: seçim/eşik/limit değiştirmez.",
+  "Değişken: gerçek kopya PnL'i yalnız sahadaki traderlar için var; 'rastgele 11' karşılaştırması yapılamaz (yedek için varsayımsal PnL yok). Bunun yerine form puanı sırası ile gerçek net PnL sırasının Spearman ilişkisi.",
+  "rho > 0: yüksek form puanlı trader o gün daha çok kazandırmış. p tek yönlü permütasyon; küçük örneklem, günler bağımsız değil.",
+  "Kayıt penceresi: 4 gün; form geçmişi: 1 kadro günü; net = gerçekleşen K/Z - ücret."
+ ]
+}

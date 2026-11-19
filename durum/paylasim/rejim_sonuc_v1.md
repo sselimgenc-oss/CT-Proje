@@ -1,4 +1,4 @@
-# CT rejim ve duygu x işlem sonucu (son 7 gün, 2026-11-19T20:05:28Z)
+# CT rejim ve duygu x işlem sonucu (son 7 gün, 2026-11-19T20:05:47Z)
 
 ## Rejim (1g)
 

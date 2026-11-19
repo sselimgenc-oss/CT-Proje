@@ -1,14 +1,14 @@
 {
  "sema": "ortak.gunluk_ozet.v1",
  "proje": "CT",
- "uretim": "2026-11-19T20:05:28Z",
+ "uretim": "2026-11-19T20:05:46Z",
  "gun": "2026-11-19",
  "mod": "sanal",
  "kasa": {
   "baslangic": 10000.0,
-  "simdi": 9994.8,
-  "gun_pnl": -27.69,
-  "toplam_pnl": -5.2,
+  "simdi": 9994.7,
+  "gun_pnl": -27.79,
+  "toplam_pnl": -5.3,
   "zirveden_dusus_yuzde": 0.54
  },
  "islem": {
@@ -23,7 +23,7 @@
   {
    "ad": "T_0c2447",
    "gun_pnl": 9.28,
-   "toplam_pnl": -19.36,
+   "toplam_pnl": -21.02,
    "islem": 8
   },
   {
@@ -41,13 +41,13 @@
   {
    "ad": "T_99f0d4",
    "gun_pnl": -0.3,
-   "toplam_pnl": 79.81,
+   "toplam_pnl": 80.34,
    "islem": 5
   },
   {
    "ad": "T_2e4035",
    "gun_pnl": 0.35,
-   "toplam_pnl": 15.66,
+   "toplam_pnl": 15.41,
    "islem": 6
   },
   {
@@ -59,19 +59,19 @@
   {
    "ad": "T_b4c6ee",
    "gun_pnl": -0.01,
-   "toplam_pnl": 8.31,
+   "toplam_pnl": 9.36,
    "islem": 1
   },
   {
    "ad": "T_e7ae5a",
    "gun_pnl": -2.73,
-   "toplam_pnl": 25.66,
+   "toplam_pnl": 27.35,
    "islem": 4
   },
   {
    "ad": "T_7bb402",
    "gun_pnl": -26.07,
-   "toplam_pnl": -115.09,
+   "toplam_pnl": -116.57,
    "islem": 19
   },
   {
@@ -83,7 +83,7 @@
   {
    "ad": "T_574595",
    "gun_pnl": -0.0,
-   "toplam_pnl": 0.22,
+   "toplam_pnl": 0.23,
    "islem": 1
   }
  ],
@@ -106,16 +106,50 @@
   "kaldirac_ayar": 3.0
  },
  "saglik": {
-  "son_nabiz": "2026-11-19T20:05:28Z",
+  "son_nabiz": "2026-11-19T20:05:46Z",
   "hata_sayisi_gun": 0,
-  "ram_mb": 69.6,
-  "ram_tepe_mb": 72.4,
+  "ram_mb": 44.3,
+  "ram_tepe_mb": 44.8,
   "disk_bos_gb": 63.7,
-  "yuk_1dk": 0.02
+  "yuk_1dk": 0.24,
+  "yeniden_baslama_1s": null,
+  "oom_son": null
  },
  "notlar": [
   "drift uyarısı aktif",
   "hesaplar.gun_pnl = bugün gerçekleşen K/Z - ücret (açık pozisyon değişimi yok)"
+ ],
+ "alinmayan_neden": [
+  {
+   "neden": "slot_tavani",
+   "adet": 1092,
+   "karsi_olgu_kapanan": 0,
+   "karsi_olgu_pnl": null
+  },
+  {
+   "neden": "bant_ici",
+   "adet": 1018,
+   "karsi_olgu_kapanan": 0,
+   "karsi_olgu_pnl": null
+  },
+  {
+   "neden": "hip3_atlandi",
+   "adet": 610,
+   "karsi_olgu_kapanan": 3,
+   "karsi_olgu_pnl": -7.87
+  },
+  {
+   "neden": "min_emir_atlandi",
+   "adet": 412,
+   "karsi_olgu_kapanan": 0,
+   "karsi_olgu_pnl": null
+  },
+  {
+   "neden": "ters_netlesme",
+   "adet": 146,
+   "karsi_olgu_kapanan": 0,
+   "karsi_olgu_pnl": null
+  }
  ],
  "kopya_kalite": {
   "n": 44,
