@@ -34,3 +34,15 @@ def _rejim_agsiz(monkeypatch):
         raise OSError("testte ağ yok")
 
     monkeypatch.setattr(_rejim, "_getir_varsayilan", _yok)
+
+
+@pytest.fixture(autouse=True)
+def _haber_agsiz(monkeypatch):
+    """Testlerde haber/duygu kaynaklarına ağ çağrısı yapılmaz (üretim `haber_aktif` açık; okuma testleri sahte getiriciyle)."""
+    import copytrade.canli.haber as _haber
+
+    def _yok(url):
+        raise OSError("testte ağ yok")
+
+    monkeypatch.setattr(_haber, "_getir_json", _yok)
+    monkeypatch.setattr(_haber, "_getir_metin", _yok)

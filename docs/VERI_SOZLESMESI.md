@@ -542,3 +542,9 @@ JSON üst düzey: `n_istenen` (adet), `kasa_usd` ($; `--kasa-usd`, yoksa `canli_
 - **Y-3 sg-nabiz:** worker değişkeni `NABIZ_KAYNAK` (metin; dal adı ya da https ham kök; boş/geçersiz → `canli-durum`). Elle sorgu yanıtı yeni alanlar `kip` (`ozet.kip`; null = okunamadı), `kaynak_ozel` (bool: varsayılan dışı kaynak); `kaynak` {`kilit`, `ozet`, `donem`} etkin adresler.
 - **Y-5:** gerçek kip açılışında `openOrders` (tüm perp dex) okunur; `cloid`'i `niyet.jsonl` niyet satırlarında olmayan (ya da cloid'siz) açık emir → çıkış 3 ("niyet kaydında olmayan N açık emir"). Hesap kilidi: durum dizininin ÜST dizininde `motor-<hesap adresi küçük harf>.lock` (`flock`; içerik pid); aynı hesapla başka durum dizini → çıkış 3 ("hesap kilidi dolu"). `motor.lock` (durum dizini) aynen sürer.
 - **Y-7:** gerçek emir limit fiyatı: 5 anlamlı basamak adımı en çok 1 (≥ 100.000 $ fiyatta tam sayı), ondalık ≤ 6 − szDecimals; alış limiti ≥ en iyi ask, satış limiti ≤ en iyi bid (gerekirse bant bir tick aşılır). Kayıt alanı değişmedi.
+
+## Haber / duygu etiketi (19.11; `copytrade/canli/haber.py`; YALNIZ KAYIT, işlem etkisi yok)
+
+- `emir` kaydı: `duygu` = `{deger: 0-100 tam sayı (Crypto Fear & Greed, alternative.me), sinif: metin}` ya da null; `haber` = `{coin: {adet_24s: sayı, ton: "pozitif"|"negatif"|"notr"|null}}` (yalnız emrin coin i; RSS başlıkları, son 24 saat, UTC; önbellek yoksa null).
+- `duygu_degisti` olayı: `{onceki, yeni, deger}` (sınıf değişince). `ozet.json` `duygu` alanı pano satırı içindir.
+- Ton KABA bir anahtar kelime sayımıdır (İngilizce başlık); bilgi amaçlıdır. Kaynaklar `kurallar.yaml` `haber_*` / `duygu_kaynak_url`; önbellek `motor.json` `haber_anlik`.
