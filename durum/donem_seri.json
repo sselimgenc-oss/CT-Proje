@@ -2,27 +2,27 @@
  "bas_ms": 1794828600000,
  "btc_donem_fiyat": 64642.0,
  "doluluk": {
-  "brut_ms": 1099813943840.5054,
-  "kapasite_ms": 2590712894.0,
-  "nakit_ms": 125590763.84875552,
-  "net_ms": 195079014119.44894,
-  "slot_ms": 2590712894.0,
-  "son_ms": 1795071662104,
-  "sure_ms": 235519354
+  "brut_ms": 1106587408673.2834,
+  "kapasite_ms": 2602233942.0,
+  "nakit_ms": 125960413.9780272,
+  "net_ms": 195189284263.11758,
+  "slot_ms": 2602233942.0,
+  "son_ms": 1795072709472,
+  "sure_ms": 236566722
  },
  "donem": "2026-11-16T11:30:00Z",
  "emir_sayac": {
   "atlama_neden": {
-   "bant_ici": 6845,
+   "bant_ici": 6849,
    "gec_acilis": 8,
    "hip3_atlandi": 2912,
    "min_emir_atlandi": 2017,
-   "slot_tavani": 4791,
+   "slot_tavani": 4815,
    "spot_atlandi": 14,
    "ters_netlesme": 970,
    "trader_hesap_yok": 3
   },
-  "atlanan": 17560,
+  "atlanan": 17588,
   "emir": 168,
   "yuvarlanan": 16
  },
@@ -43,9 +43,9 @@
    "ozsermaye_usd": 10022.4878
   },
   {
-   "btc": 63792.5,
+   "btc": 63605.5,
    "gun": "2026-11-19",
-   "ozsermaye_usd": 9993.9064
+   "ozsermaye_usd": 9994.1151
   }
  ],
  "kasa_usd": 10000.0,
@@ -87,7 +87,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": -82.9826,
+   "net_usd": -86.5216,
    "sonuc": null
   },
   {
@@ -107,7 +107,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": 8.5749,
+   "net_usd": 4.435,
    "sonuc": null
   },
   {
@@ -117,7 +117,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": 30.1268,
+   "net_usd": 27.9916,
    "sonuc": null
   },
   {
@@ -147,7 +147,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "kor_gevsetildi",
    "katman": "yedek",
-   "net_usd": -20.448,
+   "net_usd": -15.2442,
    "sonuc": null
   },
   {
@@ -157,7 +157,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "kor_gevsetildi",
    "katman": "yedek",
-   "net_usd": -7.0839,
+   "net_usd": -2.265,
    "sonuc": null
   }
  ]
