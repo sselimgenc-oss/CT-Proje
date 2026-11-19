@@ -25,6 +25,9 @@ mkdir -p "$archive/isabet"
 for d in radar/????-??-??; do
   if [ -s "$d/isabet.json" ]; then mkdir -p "$archive/isabet/$(basename "$d")"; cp "$d/isabet.json" "$archive/isabet/$(basename "$d")/"; fi
 done
+# Faz 2 (docs/HOLDOUT_PBO.md): PBO raporu (bilgi) ve holdout mühür manifesti (append-only; copytrade.holdout_muhur yeni halini yazdı) da yayımlanır.
+if [ -s "$tarih_klasoru/pbo.json" ]; then cp "$tarih_klasoru/pbo.json" "$archive/pbo.json"; fi
+if [ -s radar/holdout/manifest.json ]; then cp radar/holdout/manifest.json "$archive/holdout_manifest.json"; fi
 # GitHub 100 MB sınırı için yayımlanan her dosya 90 MB altında olmalı.
 for f in "$archive"/*.json "$archive"/isabet/*/isabet.json; do
   [ -f "$f" ] || continue
@@ -44,6 +47,8 @@ fi
 mkdir -p "radar/$gun" radar/son
 cp "$archive/havuz.json" "$archive/kadro.json" "radar/$gun/"
 cp "$archive/kadro.json" radar/son/kadro.json
+if [ -f "$archive/pbo.json" ]; then cp "$archive/pbo.json" "radar/$gun/pbo.json"; git add -f "radar/$gun/pbo.json"; fi
+if [ -f "$archive/holdout_manifest.json" ]; then mkdir -p radar/holdout; cp "$archive/holdout_manifest.json" radar/holdout/manifest.json; git add -f radar/holdout/manifest.json; fi
 if [ ! -e "radar/$gun/kadro_ilk.json" ] && ! git cat-file -e "HEAD:radar/$gun/kadro.json" 2>/dev/null; then
   # Günün ilk yayımı (veri dalında o günün kadrosu henüz yok): ilk kadro + aynı koşunun havuzu korunur; aynı günün sonraki yayımları bu iki dosyaya dokunmaz.
   # Bu değişiklikten ÖNCE yayımlanmış bir günde (kadro.json var, kadro_ilk.json yok) ikinci yayım kadro_ilk.json YAZMAZ (yanlış "ilk" olurdu); isabet onu git geçmişinden kurar.
