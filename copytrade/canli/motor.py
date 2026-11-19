@@ -4,7 +4,7 @@ Akış: `dinleyici.py` WebSocket (trades + userFills; İlk 11'in sahadaki adresl
 → yürütücü (`yurutucu.py`: sanal l2Book yürüyüşü / gerçek HL SDK) → hesap (`hesap.py`) → kayıt JSONL + Telegram. Saha kararları `kadro.py` (kadro.json, her 5 dk).
 
 Kip güvencesi (G4): varsayılan SANAL. `gercek` YALNIZ sunucu ortamında `CANLI_KIP=gercek` + `HL_API_CUZDAN_ANAHTARI`/`HL_HESAP_ADRESI` ile (`kurallar.yaml canli_kip` yalnız `sanal`; depodan gerçek kip açılamaz) ve ASLA GitHub Actions'ta (`GITHUB_ACTIONS=true` + `CANLI_*` → ret).
-Kasa: sanal kip `canli_kasa_usd` (yaml) ya da `--sanal-kasa-usd` (yalnız sanal; 0 < kasa ≤ `canli_sanal_kasa_ust_usd` (K-66: 10.000 $); ayrı durum dizini/veri dalı, ör. 300 $ paralel seri `canli-durum-300`); gerçek kip `CANLI_KASA_USD` ortam değişkeni ($, zorunlu; üst sınır `canli_kasa_ust_usd` = 1.000 $ — AGENTS.md): sınır aşılırsa yeni açılış yok + alarm.
+Kasa: sanal kip `canli_kasa_usd` (yaml) ya da `--sanal-kasa-usd` (yalnız sanal; 0 < kasa ≤ `canli_sanal_kasa_ust_usd` (K-66: 10.000 $); ayrı durum dizini/veri dalı, ör. 300 $ paralel seri `canli-durum-300`); gerçek kip `CANLI_KASA_USD` ortam değişkeni ($, zorunlu; üst sınır `canli_kasa_ust_usd` = 1.500 $ — AGENTS.md, K-72): sınır aşılırsa yeni açılış yok + alarm.
 T4b (K‑37): kapanış teyidi + yeniden deneme (`kapanis_kuyrugu`), emir öncesi niyet kaydı + cloid (`niyet.py`), gerçek kipte risk temeli HL özsermayesi, sanal kipte funding, gecikmiş AÇILIŞ yok
 (`gec_acilis`: olay yaşı > `canli_olay_stale_sn`; kapanış/azaltma yaşa bakmaz), öncelikli kuyruk (kapat/azalt önce), kendi hesap adresimiz kayıt/Telegram'a yazılmaz.
 `DUR` dosyası varken motor başlamaz (elle silinmeden yeniden açılmaz).
@@ -35,6 +35,7 @@ from copytrade.canli.kadro import Karar, Saha, kadro_taze_mi
 from copytrade.canli.mutabakat import poz_farki, sanal_tutarlilik
 from copytrade.canli.niyet import Niyet, cloid_uret
 from copytrade.canli import borsa_stop, izleme
+from copytrade.canli import sert_sinirlar as sert
 from copytrade.canli.borsa_stop import BorsaStop
 from copytrade.canli.risk import Risk, coin_tavan_usd, gun
 from copytrade.canli.yurutucu import AnahtarYok, Dolum, SanalYurutucu, Yurutucu, gercek_yurutucu_olustur, ucret_eslestir
@@ -193,10 +194,10 @@ _GECICI_HATALAR: tuple[type[BaseException], ...] = (HlOkunamadi, OSError, RateLi
 
 
 def kasa_ust(rules: dict, kip: str) -> float:
-    """Kasa üst sınırı ($): GERÇEK kip `canli_kasa_ust_usd` (1.000 $, K‑22/K‑26; değişmez); sanal kip `canli_sanal_kasa_ust_usd` (K-66: 10.000 $, yalnız sanal; anahtar yoksa gerçek sınır)."""
+    """Kasa üst sınırı ($): GERÇEK kip `canli_kasa_ust_usd` (1.500 $ sert sınır, K‑72); sanal kip `canli_sanal_kasa_ust_usd` (K-66: 10.000 $, yalnız sanal; anahtar yoksa gerçek sınır)."""
     gercek = float(rules["canli_kasa_ust_usd"])
     if kip == "gercek":
-        return gercek
+        return sert.etkin_kasa_ust(rules)                  # K-72: min(yaml, 1.500 $ sert sabit)
     return float(rules.get("canli_sanal_kasa_ust_usd", gercek))
 
 
@@ -222,6 +223,10 @@ def kasa_belirle(rules: dict, kip: str, ortam: dict | None = None, sanal_kasa: f
         return sanal_kasa_dogrula(rules, kip, sanal_kasa), "arg"
     if kip != "gercek":
         return float(rules["canli_kasa_usd"]), "yaml"
+    try:
+        sert.gercek_kip_dogrula(rules)                     # K-72: yaml sert sınırı aşarsa gerçek kip başlamaz
+    except ValueError as hata:
+        raise KipHatasi(f"sert sınır aşıldı: {hata}") from hata
     ham = str(ortam.get("CANLI_KASA_USD", "")).strip()
     if not ham:
         raise KipHatasi("gercek kip için CANLI_KASA_USD ortam değişkeni ($) gerekli")
@@ -229,7 +234,7 @@ def kasa_belirle(rules: dict, kip: str, ortam: dict | None = None, sanal_kasa: f
         kasa = float(ham)
     except ValueError as hata:
         raise KipHatasi(f"CANLI_KASA_USD sayı değil: {ham[:20]}") from hata
-    ust = float(rules["canli_kasa_ust_usd"])
+    ust = kasa_ust(rules, "gercek")
     if not math.isfinite(kasa) or kasa <= 0 or kasa > ust + 1e-9:
         raise KipHatasi(f"CANLI_KASA_USD 0 < kasa <= {ust:g} $ olmalı: {ham[:20]}")
     return kasa, "ortam"

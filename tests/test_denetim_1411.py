@@ -24,7 +24,7 @@ URETIM = load_rules_asil()                       # dosyadaki gerçek değerler (
 # ================================================================================================ D-01: radar kasası
 def test_d01_uretim_radar_kasasi_motor_sanal_kasasiyla_ayni_gercek_para_degismez():
     assert URETIM["radar_kasa_usd"] == 10000 and URETIM["canli_sanal_kasa_ust_usd"] == 10000
-    assert URETIM["canli_kasa_usd"] == 1000 and URETIM["canli_kasa_ust_usd"] == 1000                      # gerçek para sınırı değişmez
+    assert URETIM["canli_kasa_usd"] == 1000 and URETIM["canli_kasa_ust_usd"] == 1500                      # gerçek para sınırı 1.500 $ (K-72)
     wf = (ROOT / ".github/workflows/canli_vardiya.yml").read_text(encoding="utf-8")
     sanal = re.findall(r"--sanal-kasa-usd (\d+(?:\.\d+)?)", wf)
     assert sanal and all(float(x) == float(URETIM["radar_kasa_usd"]) for x in sanal)                     # motor sanal kasası = radar kasası

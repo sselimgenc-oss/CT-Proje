@@ -616,7 +616,7 @@ def test_kasa_siniri_asan_kasada_motor_baslamaz(tmp_path):
     with pytest.raises(mt.KipHatasi):
         m.baslat()
     r = __import__("copytrade.canli.risk", fromlist=["Risk"]).Risk(RULES, 1000.0)
-    assert r.kasa_siniri_asildi(1500.0) is True
+    assert r.kasa_siniri_asildi(1500.01) is True
 
 
 def test_kontrol_emir_gondermez_rapor_yazar(tmp_path):

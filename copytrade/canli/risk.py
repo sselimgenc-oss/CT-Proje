@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from copytrade import boyut
+from copytrade.canli import sert_sinirlar as sert
 
 DAKIKA = 60_000
 
@@ -91,7 +92,7 @@ class Risk:
 
     def kasa_siniri_asildi(self, kasa_usd: float, ust_usd: float | None = None) -> bool:
         """`ust_usd` verilmezse gerçek para sınırı `canli_kasa_ust_usd` (sıkı varsayılan); motor sanal kipte K-66 sanal sınırını verir."""
-        ust = float(self.rules["canli_kasa_ust_usd"] if ust_usd is None else ust_usd)
+        ust = float(sert.etkin_kasa_ust(self.rules) if ust_usd is None else ust_usd)          # K-72: varsayılan = min(yaml, 1.500 $ sert)
         asildi = float(kasa_usd) > ust + 1e-9
         self.acilis_durdu["kasa_siniri"] = asildi
         return asildi
