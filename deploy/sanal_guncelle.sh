@@ -3,6 +3,7 @@
 # Akış: git fetch (sgsanal) -> origin/main == HEAD ise çık -> origin/main commit'inin CI'ı YEŞİL mi (GitHub genel API, kimliksiz; `test` ve `canli_sdk` var + hepsi completed/success)? değilse çık (günlüğe neden)
 #   -> yalnız fast-forward -> servisleri durdur (durdururken son durum yayımlanır) -> git merge --ff-only -> pip (yalnız kilit dosyası değiştiyse; --require-hashes) -> birim dosyaları (yalnız değiştiyse) + daemon-reload
 #   -> duman testi: sg-sanal-kontrol "tamam": true -> servisleri başlat, ~60 sn sonra sg-sanal aktif mi. Haftada bir (bakim): git gc --auto + worktree prune.
+# Sunucu dayanıklılık alarmı (alarm_kontrol): her çalışmada, tüm erken çıkışlardan (dondurma, aynı sha, CI) ÖNCE; hata güncellemeyi bozmaz. Son 1 saatte >2 yeniden başlama veya OOM-kill -> [CT] CRIT (tür başına 6 saatte bir); düzelince tek [CT] INFO.
 # HERHANGİ bir hata: git reset --hard <önceki sha>, kilit/birimler geri, servisler yeniden başlar, Telegram [CT] CRIT. Başarıda [CT] INFO.
 # Yerel durum (durum/ kayit/ pano/ depoda İZLENMEZ) git tarafından silinmez; yine de gelen commit bu yolları izlemeye başlarsa güncelleme REDDEDİLİR.
 # Sır: yalnız /etc/sg-sanal-telegram.env'den (token curl'e stdin ile verilir; argv/günlüğe girmez). Betik kendini geçici kopyadan çalıştırır (git merge çalışan dosyayı değiştirmesin).
@@ -25,6 +26,9 @@ TG_API="${SANAL_TG_API:-https://api.telegram.org}"
 API="${GUNCELLE_API:-https://api.github.com}"
 SYSTEMCTL="${SANAL_SYSTEMCTL:-systemctl}"
 JOURNALCTL="${SANAL_JOURNALCTL:-journalctl}"
+SAGLIK_JSON="${SANAL_SAGLIK_JSON:-$SERIT/saglik_sunucu.json}"      # günlük özet (gunluk_ozet.py) okur; sgsanal okuyabilsin diye 644
+ALARM_SINIR="${SANAL_ALARM_YENIDEN_SINIR:-2}"                       # son 1 saatte bundan FAZLA yeniden başlama = alarm
+ALARM_ARA_SN="${SANAL_ALARM_ARA_SN:-21600}"                         # aynı alarm türü en çok 6 saatte bir
 KILIT="${SANAL_GUNCELLE_KILIT:-/run/sg-sanal-guncelle.lock}"
 BEKLE="${GUNCELLE_BEKLE_SN:-60}"
 HEDEF="${SANAL_HEDEF_SHA:-}"                                       # elle geri alma kipi (sanal_geri_al.sh)
@@ -140,6 +144,44 @@ geri_al() {   # $1 = neden
   exit 1
 }
 
+alarm_kontrol() {   # sg-sanal son 1 saatte >ALARM_SINIR kez yeniden başladı mı / OOM-kill oldu mu. Durum: $DURUM/alarm_yeniden, $DURUM/alarm_oom (içinde son gönderim epoch'u; dosya var = alarm aktif). Hata hiçbir şeyi bozmaz.
+  [ -z "$HEDEF" ] || return 0
+  local j sayi oom=0 sonuc simdi t son aktif var=0 mesaj toplam kt temiz
+  j="$("$JOURNALCTL" -u sg-sanal --since=-1h -o cat --no-pager 2>/dev/null)" || { log "alarm: günlük okunamadı; atlandı"; return 0; }
+  sayi="$(printf '%s\n' "$j" | grep -c 'Scheduled restart job' || true)"
+  [[ "$sayi" =~ ^[0-9]+$ ]] || sayi=0
+  if printf '%s\n' "$j" | grep -Eiq "Failed with result 'oom-kill'|killed by the OOM killer"; then oom=1; fi
+  sonuc="$("$SYSTEMCTL" show -p Result --value sg-sanal 2>/dev/null || true)"
+  if [ "$sonuc" = "oom-kill" ]; then oom=1; fi
+  toplam="$("$SYSTEMCTL" show -p NRestarts --value sg-sanal 2>/dev/null || true)"; [[ "$toplam" =~ ^[0-9]+$ ]] || toplam=null
+  simdi="$(date +%s)"
+  # günlük özet için küçük JSON (atomik yaz)
+  if kt="$(mktemp "$SAGLIK_JSON.XXXXXX" 2>/dev/null)"; then
+    printf '{"zaman": %s, "yeniden_baslama_1s": %s, "oom_son": %s, "nrestarts_toplam": %s}\n' "$simdi" "$sayi" "$([ "$oom" = 1 ] && echo true || echo false)" "$toplam" > "$kt" \
+      && chmod 644 "$kt" && mv -f -- "$kt" "$SAGLIK_JSON" || rm -f -- "$kt"
+  fi
+  for t in yeniden oom; do
+    aktif=0
+    if [ "$t" = yeniden ]; then if [ "$sayi" -gt "$ALARM_SINIR" ]; then aktif=1; fi; else aktif=$oom; fi
+    if [ "$aktif" = 1 ]; then
+      var=1
+      son="$(cat "$DURUM/alarm_$t" 2>/dev/null || echo 0)"; [[ "$son" =~ ^[0-9]+$ ]] || son=0
+      if [ ! -f "$DURUM/alarm_$t" ] || [ $((simdi - son)) -ge "$ALARM_ARA_SN" ]; then
+        if [ "$t" = yeniden ]; then mesaj="Sunucu motoru son 1 saatte ${sayi} kez yeniden başladı (sınır ${ALARM_SINIR}). Bellek tavanı: OOM $([ "$oom" = 1 ] && echo evet || echo hayır)."
+        else mesaj="Sunucu motoru bellek tavanında OOM ile öldürüldü (MemoryMax). Son 1 saatte yeniden başlama: ${sayi}."; fi
+        printf '%s\n' "$simdi" > "$DURUM/alarm_$t"
+        bildir CRIT "$mesaj"
+      fi
+    fi
+  done
+  if [ "$var" = 0 ]; then
+    temiz=0
+    for t in yeniden oom; do if [ -f "$DURUM/alarm_$t" ]; then temiz=1; rm -f -- "$DURUM/alarm_$t"; fi; done
+    if [ "$temiz" = 1 ]; then bildir INFO "Sunucu motoru düzeldi: son 1 saatte yeniden başlama sınırın altında (${sayi}, sınır ${ALARM_SINIR}), OOM yok."; fi
+  fi
+  return 0
+}
+
 mkdir -p "$DURUM" || exit 1
 exec 9>"$KILIT"
 if [ -n "$HEDEF" ]; then
@@ -148,6 +190,7 @@ else
   flock -n 9 || { log "başka bir güncelleme sürüyor; çıkılıyor"; exit 0; }
 fi
 
+alarm_kontrol || log "UYARI: alarm kontrolü başarısız (güncelleme etkilenmez)"
 if [ -z "$HEDEF" ] && [ -s "$DURUM/dondur" ]; then log "otomatik güncelleme DONDURULMUŞ ($(head -c 12 "$DURUM/dondur")); kaldırmak için: rm $DURUM/dondur"; exit 0; fi
 [ -d "$DEPO/.git" ] || { log "depo yok: $DEPO"; exit 1; }
 

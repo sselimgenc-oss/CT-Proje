@@ -283,9 +283,9 @@ def sunucu(tmp_path):
     (birim / "sg-sanal.service").write_text("[Service]\n# v1\n")
     (bin_ / "systemctl").write_text(
         '#!/usr/bin/env bash\necho "systemctl $*" >> "$CAGRI_LOG"\n'
-        'case "$1" in is-active) exit 0;; show) echo 0; exit 0;; esac\n'
+        'case "$1" in is-active) exit 0;; show) case "$*" in *Result*) echo "${SHOW_RESULT:-success}";; *) echo 0;; esac; exit 0;; esac\n'
         'if [ "$1" = start ] && [ "$2" = sg-sanal-kontrol ]; then exit "${KONTROL_RC:-0}"; fi\nexit 0\n')
-    (bin_ / "journalctl").write_text('#!/usr/bin/env bash\nif [ "${KONTROL_TAMAM:-1}" = 1 ]; then echo \'  "tamam": true,\'; else echo \'  "tamam": false,\'; fi\n')
+    (bin_ / "journalctl").write_text('#!/usr/bin/env bash\ncase " $* " in *" -u sg-sanal "*) [ -n "${JOURNAL_SANAL:-}" ] && printf "%b" "$JOURNAL_SANAL"; exit 0;; esac\nif [ "${KONTROL_TAMAM:-1}" = 1 ]; then echo \'  "tamam": true,\'; else echo \'  "tamam": false,\'; fi\n')
     (bin_ / "curl").write_text(
         '#!/usr/bin/env bash\necho "curl $*" >> "$CAGRI_LOG"\n'
         'if [ "$1" != "-sSL" ]; then cat >/dev/null; for a in "$@"; do case "$a" in text=*) echo "TG:$a" >> "$CAGRI_LOG";; esac; done; exit 0; fi\n'
@@ -296,7 +296,7 @@ def sunucu(tmp_path):
     tg.write_text("TELEGRAM_BOT_TOKEN=SIRTOKEN123\nTELEGRAM_CHAT_ID=42\n")
     ci_json = tmp_path / "ci.json"
     ortak = _env(PATH=f"{bin_}:{os.environ['PATH']}", SANAL_DEPO=str(depo), SANAL_SERIT=str(tmp_path / "serit"), SANAL_DURUM_DIZIN=str(durum), SANAL_BIRIM_DIZIN=str(birim),
-                 SANAL_KULLANICI="", SANAL_TG_ENV=str(tg), SANAL_GUNCELLE_KILIT=str(tmp_path / "k.lock"), GUNCELLE_REPO="o/r", GUNCELLE_BEKLE_SN="0", CI_JSON=str(ci_json), CAGRI_LOG=str(log))
+                 SANAL_KULLANICI="", SANAL_TG_ENV=str(tg), SANAL_GUNCELLE_KILIT=str(tmp_path / "k.lock"), GUNCELLE_REPO="o/r", GUNCELLE_BEKLE_SN="0", CI_JSON=str(ci_json), CAGRI_LOG=str(log), SANAL_SAGLIK_JSON=str(tmp_path / "saglik.json"))
     s = _Sunucu()
 
     def ci(*runlar):
@@ -416,3 +416,70 @@ def test_canli_ve_dinleyici_birimlerine_sinir_eklenmedi():
 def test_guncelle_haftalik_git_bakimi():
     s = GUNCELLE.read_text(encoding="utf-8")
     assert "gc --auto" in s and "worktree prune" in s and "bakim_sn" in s and "604800" in s
+
+
+# ------------------------------------------------------------------------------------------------ sunucu dayanıklılık alarmı (alarm_kontrol)
+def _yeniden(n):
+    return "Scheduled restart job, restart counter is at 1.\n" * n
+
+
+def _tg(sunucu):
+    satirlar, cikti = sunucu.log.read_text().splitlines(), []
+    for i, s in enumerate(satirlar):                                                                  # sahte curl mesajı ilk satıra keser: sonraki satır metindir
+        if s.startswith("TG:"):
+            cikti.append(s + " " + (satirlar[i + 1] if i + 1 < len(satirlar) else ""))
+    return cikti
+
+
+def test_alarm_yeniden_baslama_siniri_tek_crit_ve_6_saat_siniri(sunucu):
+    r = sunucu.calistir(JOURNAL_SANAL=_yeniden(2))                                                  # sınır 2: tam 2 alarm DEĞİL
+    assert r.returncode == 0 and _tg(sunucu) == []
+    r = sunucu.calistir(JOURNAL_SANAL=_yeniden(4))
+    assert r.returncode == 0, r.stdout
+    tg = _tg(sunucu)
+    assert len(tg) == 1 and "[CT] CRIT" in tg[0] and "4 kez yeniden başladı (sınır 2)" in tg[0] and "OOM hayır" in tg[0]
+    assert "SIRTOKEN123" not in sunucu.log.read_text()
+    sunucu.calistir(JOURNAL_SANAL=_yeniden(5))                                                      # 6 saat dolmadan tekrar YOK
+    assert len(_tg(sunucu)) == 1
+    (sunucu.durum / "alarm_yeniden").write_text(str(int(time.time()) - 7 * 3600) + "\n")           # 6 saat geçti
+    sunucu.calistir(JOURNAL_SANAL=_yeniden(5))
+    assert len(_tg(sunucu)) == 2
+    json_ = json.loads((sunucu.ortak["SANAL_SAGLIK_JSON"] and Path(sunucu.ortak["SANAL_SAGLIK_JSON"])).read_text())
+    assert json_["yeniden_baslama_1s"] == 5 and json_["oom_son"] is False
+
+
+def test_alarm_duzeldi_tek_info_ve_durum_temizlenir(sunucu):
+    sunucu.calistir(JOURNAL_SANAL=_yeniden(3))
+    assert len(_tg(sunucu)) == 1 and (sunucu.durum / "alarm_yeniden").exists()
+    sunucu.calistir(JOURNAL_SANAL=_yeniden(1))
+    tg = _tg(sunucu)
+    assert len(tg) == 2 and "[CT] INFO" in tg[1] and "düzeldi" in tg[1] and not (sunucu.durum / "alarm_yeniden").exists()
+    sunucu.calistir()                                                                               # tekrar düzeldi mesajı YOK
+    assert len(_tg(sunucu)) == 2
+
+
+def test_alarm_oom_crit_gunlukten_ve_systemctl_sonucundan(sunucu):
+    sunucu.calistir(JOURNAL_SANAL="sg-sanal.service: Failed with result 'oom-kill'.\n")
+    tg = _tg(sunucu)
+    assert len(tg) == 1 and "[CT] CRIT" in tg[0] and "OOM" in tg[0]
+    sunucu.calistir(JOURNAL_SANAL="x\n")                                                           # düzeldi
+    assert len(_tg(sunucu)) == 2
+    sunucu.calistir(SHOW_RESULT="oom-kill")                                                         # systemctl Result=oom-kill
+    assert len(_tg(sunucu)) == 3 and "OOM" in _tg(sunucu)[2]
+
+
+def test_alarm_commit_olmasa_da_calisir_donmusken_de_ve_guncellemeyi_bozmaz(sunucu):
+    (sunucu.durum).mkdir(exist_ok=True)
+    (sunucu.durum / "dondur").write_text("x\n")                                                     # donmuş: erken çıkış, alarm yine çalışır
+    r = sunucu.calistir(JOURNAL_SANAL=_yeniden(9))
+    assert r.returncode == 0 and len(_tg(sunucu)) == 1 and "systemctl stop" not in sunucu.log.read_text()
+    (sunucu.durum / "dondur").unlink()
+    yeni = sunucu.yeni_commit("v2")
+    sunucu.ci(*YESIL)
+    r = sunucu.calistir(JOURNAL_SANAL=_yeniden(9), SANAL_SAGLIK_JSON="/yok/dizin/x.json")           # JSON yazılamasa da güncelleme sürer
+    assert r.returncode == 0 and sunucu.head() == yeni
+
+
+def test_alarm_betik_statik():
+    s = GUNCELLE.read_text(encoding="utf-8")
+    assert s.index("\nalarm_kontrol ||") < s.index('-s "$DURUM/dondur"') and "21600" in s and "oom-kill" in s
