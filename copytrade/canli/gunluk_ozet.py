@@ -75,13 +75,15 @@ def ogrenme_etki(kayitlar: list[dict]) -> dict:
     """Öğrenme katmanının bugünkü etkisi (YALNIZ OKUMA; günlük kayıt satırlarından, yeni sayım mantığı yok):
     - `filtre_atlanan`: `ml_filtre_atla` olayı sayısı (ML filtresinin atladığı açılış sinyalleri).
     - `filtre_karsi_olgu_pnl`: bugün KAPANAN `karsi_olgu_kapandi` kayıtlarından neden `ml_filtre_atla` olanların `pnl_usd` toplamı ($, hayali). Kapanış anahtarı (adres|coin) kayıtta yok; neden ile eşleşir. Hiç kapanan yoksa null.
-    - `ders_kucultulen`: null. Motor açılış anındaki ders çarpanını (0,5–1,0) kayda yazmıyor; mevcut kayıtlardan çıkarılamaz.
+    - `ders_kucultulen`: dolan (`usd_dolan` > 0) açılış/artırma `emir` kayıtlarından `ders_carpan` < 1 olanların sayısı (ders slotu küçülttü). Alanı taşıyan kayıt yoksa (eski kayıtlar) null.
     - `ders_engellenen`: `emir_yok` olaylarında neden `ders_emekli` olan (emekli dersle engellenen açılış) sayısı."""
     filtre = sum(1 for k in kayitlar if k.get("olay") == "ml_filtre_atla")
     pnl = [_say(k.get("pnl_usd")) for k in kayitlar if k.get("olay") == "karsi_olgu_kapandi" and k.get("neden") == "ml_filtre_atla"]
     kapali = [p for p in pnl if p is not None]
+    carpanli = [_say(k.get("ders_carpan")) for k in kayitlar if k.get("olay") == "emir" and "ders_carpan" in k and (_say(k.get("usd_dolan")) or 0.0) > 0]
+    carpanli = [c for c in carpanli if c is not None]
     engel = sum(1 for k in kayitlar if k.get("olay") == "emir_yok" and k.get("neden") == "ders_emekli")
-    return {"filtre_atlanan": filtre, "filtre_karsi_olgu_pnl": round(sum(kapali), 2) if kapali else None, "ders_kucultulen": None, "ders_engellenen": engel}
+    return {"filtre_atlanan": filtre, "filtre_karsi_olgu_pnl": round(sum(kapali), 2) if kapali else None, "ders_kucultulen": sum(1 for c in carpanli if c < 1.0) if carpanli else None, "ders_engellenen": engel}
 
 
 def gunluk_etki(motor: Any) -> dict:

@@ -170,3 +170,19 @@ def test_saglik_kaynak_alanlari_eklendi(tmp_path):
     assert {"ram_mb", "ram_tepe_mb", "disk_bos_gb", "yuk_1dk"} <= set(o["saglik"]) and {"son_nabiz", "hata_sayisi_gun"} <= set(o["saglik"])
     m.durum_yaz()
     assert "kaynak" in json.loads((m.durum_dizin / "motor.json").read_text(encoding="utf-8"))
+
+
+def test_ogrenme_etki_ders_kucultulen_emir_kaydindan(tmp_path):
+    m, _ = _motor(tmp_path)
+    m.kayit({"olay": "emir", "eylem": "ac", "usd_dolan": 40.0, "ders_carpan": 0.5})             # ders küçülttü, doldu: sayılır
+    m.kayit({"olay": "emir", "eylem": "artir", "usd_dolan": 20.0, "ders_carpan": 0.8})          # sayılır
+    m.kayit({"olay": "emir", "eylem": "ac", "usd_dolan": 50.0, "ders_carpan": 1.0})             # çarpan 1: sayılmaz
+    m.kayit({"olay": "emir", "eylem": "ac", "usd_dolan": 0.0, "ders_carpan": 0.5})              # dolmadı: sayılmaz
+    m.kayit({"olay": "emir", "eylem": "kapat", "usd_dolan": 30.0, "ders_carpan": None})         # kapanış: çarpan yok
+    assert go.gunluk_etki(m)["ders_kucultulen"] == 2
+
+
+def test_ogrenme_etki_ders_carpani_olmayan_eski_kayit_null(tmp_path):
+    m, _ = _motor(tmp_path)
+    m.kayit({"olay": "emir", "eylem": "ac", "usd_dolan": 40.0})                                 # eski kayıt: alan yok
+    assert go.gunluk_etki(m)["ders_kucultulen"] is None
