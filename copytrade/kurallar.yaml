@@ -234,6 +234,9 @@ duygu_kaynak_url: "https://api.alternative.me/fng/?limit=1"      # Crypto Fear &
 
 # Alınmayan sinyal kaydı + kopya drift alarmı (yalnız kayıt/uyarı, işlem etkisi yok)
 karsi_olgu_azami_saat: 72               # saat (hayali pozisyon trader kapatmazsa bu sürede kapanır; yalnız kayıt/uyarı, işlem etkisi yok)
+karsi_olgu_sik_nedenler: [slot_tavani]  # neden listesi (yalnız kayıt, işlem etkisi yok): bu nedenler (adres, coin) başına her dilimde bir kez kaydedilir; diğer nedenler (adres, coin) başına tek kayıt kalır
+karsi_olgu_sik_aralik_dk: 60            # dakika (yalnız kayıt, işlem etkisi yok): sık nedenlerde örnekleme dilimi; saat başına bir kayıt
+karsi_olgu_sik_azami: 300               # adet (yalnız kayıt, işlem etkisi yok): sık nedenlerin aynı anda açık karşı-olgu üst sınırı; genel 500 sınırı ayrıca geçerli
 kopya_drift_esik: 0.25                  # oran (|biz − ideal| / ideal nosyonel bundan BÜYÜKSE drift; yalnız kayıt/uyarı, işlem etkisi yok)
 kopya_drift_sure_dk: 30                 # dakika (drift bu kadar sürerse `kopya_drift` kaydı; yalnız kayıt/bilgi, işlem etkisi yok)
 kopya_drift_min_usd: 50                 # $ (ideal nosyonel bundan küçük coinler izlenmez; yalnız kayıt/uyarı, işlem etkisi yok)
