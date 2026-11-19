@@ -36,7 +36,7 @@ from copytrade.canli.mutabakat import poz_farki, sanal_tutarlilik
 from copytrade.canli.niyet import Niyet, cloid_uret
 from copytrade.canli.ogrenme_adaptor import Ogrenme
 from copytrade.canli import borsa_stop, izleme
-from copytrade.canli import haber, rejim, rejim_sonuc
+from copytrade.canli import haber, rejim, rejim_sonuc, secim_gercek
 from copytrade.canli import gunluk_ozet, kaynak
 from copytrade.canli import sert_sinirlar as sert
 from copytrade.canli.borsa_stop import BorsaStop
@@ -3017,6 +3017,10 @@ class Motor:
                 return
         if kadro is not None:
             self._son_kadro = kadro
+            try:                                               # yalnız bilgi: günün ilk11 form puanı (secim_gercek raporu için)
+                secim_gercek.kadro_kaydet(self, kadro, simdi)
+            except Exception as hata:                          # noqa: BLE001
+                self.kayit({"olay": "secim_gercek_hata", "tur": type(hata).__name__})
             self._kadro_kasa_denetle(kadro, simdi)
         kararlar, durum = self.saha.degerlendir(self._son_kadro, simdi)
         eksik = self.saha.eksik if durum == "ok" else None
