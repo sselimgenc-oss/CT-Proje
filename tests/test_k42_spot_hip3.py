@@ -38,7 +38,8 @@ def test_spot_acilis_atlanir_sanal_ve_sayac_kayit_ozet(tmp_path):
 
 
 def test_hip3_acilis_atlanir_varsayilan_kapali(tmp_path):
-    m, saat = _motor(tmp_path)
+    """K-73 (kullanıcı kararı 19.11 gece): sanalda varsayılan AÇIK (`sanal_hip3_kopya`); bu test atlama yolunu sanal bayrağı kapatarak sınar. Gerçek kip `canli_hip3_kopya=false` kalır."""
+    m, saat = _motor(tmp_path, sanal_hip3_kopya=False)
     assert m.rules["canli_hip3_kopya"] is False
     s = m.olay_isle(olay("a:1", adr(1), "xyz:GOLD", "B", 300, 100.0, 0.0, saat))
     assert [(x.eylem, x.karar, x.neden) for x in s] == [("ac", "atlandi", "hip3_atlandi")]
@@ -48,15 +49,15 @@ def test_hip3_acilis_atlanir_varsayilan_kapali(tmp_path):
 
 
 def test_hip3_bayrak_acikken_acilir(tmp_path):
-    m, saat = _motor(tmp_path, canli_hip3_kopya=True)
+    m, saat = _motor(tmp_path, sanal_hip3_kopya=True)                                       # K-73: sanalda anahtar `sanal_hip3_kopya`
     s = m.olay_isle(olay("a:1", adr(1), "xyz:GOLD", "B", 300, 100.0, 0.0, saat))
     assert s[0].karar == "emir" and m.hesap.sz(adr(1), "xyz:GOLD") > 0 and m.ozet()["hip3_atlandi"] == 0
 
 
 def test_hip3_acik_pozisyonun_azaltma_ve_kapanisi_engellenmez(tmp_path):
-    m, saat = _motor(tmp_path, canli_hip3_kopya=True)
+    m, saat = _motor(tmp_path, sanal_hip3_kopya=True)
     m.olay_isle(olay("a:1", adr(1), "xyz:GOLD", "B", 600, 100.0, 0.0, saat))                 # K-38: hedef tabanlı azaltma; 11 $ altına inmesin diye 600
-    m.rules["canli_hip3_kopya"] = False                                                     # bayrak kapandı; açık sanal pozisyon duruyor
+    m.rules["sanal_hip3_kopya"] = False                                                     # bayrak kapandı; açık sanal pozisyon duruyor
     ilk = m.hesap.sz(adr(1), "xyz:GOLD")
     s = m.olay_isle(olay("a:2", adr(1), "xyz:GOLD", "A", 200, 100.0, 600.0, saat))          # azaltma (hedef 400/600 → fark ≈ 18 $ ≥ 11 $)
     assert s[0].eylem == "azalt" and s[0].karar == "emir" and 0 < m.hesap.sz(adr(1), "xyz:GOLD") < ilk
@@ -94,7 +95,7 @@ def test_eski_risk_json_yeni_coin_bicimi_okunur_ve_davranis_sabit():
 
 
 def test_ozet_trader_basina_spot_hip3_atlanan_sayac(tmp_path):
-    m, saat = _motor(tmp_path)
+    m, saat = _motor(tmp_path, sanal_hip3_kopya=False)                                      # K-73: sanalda HIP-3 varsayılan açık; sayaç için kapatılır
     m.olay_isle(olay("a:1", adr(1), "xyz:GOLD", "B", 300, 100.0, 0.0, saat))
     m.olay_isle(olay("a:2", adr(1), "xyz:GOLD", "B", 300, 100.0, 300.0, saat))
     m.olay_isle(olay("a:3", adr(1), "@142", "B", 300, 100.0, 0.0, saat))

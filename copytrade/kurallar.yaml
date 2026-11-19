@@ -128,14 +128,15 @@ radar_soguyor_saat: 72                  # saat (form sürüyor mu penceresi)
 radar_soguyor_min_getiri: -0.02         # oran (son 72 sa kopya getirisi bunun ALTINDAYSA puanlanmaz; sınır dahil geçer)
 radar_kadro_toplam: 30                  # kişi (İlk 11 + Yedek 19)
 radar_kadro_ilk: 11                     # kişi (İlk katman)
-radar_hip3_kopya: false                 # bool, K‑43: motorla aynı davranış (K‑28 tutarlılık düzeltmesi); true = eski v1 davranışı; kullanıcı onayına sunuldu. false = R1 kopya oynatmasında HIP‑3 (dex:COIN) dolumlarının TAMAMI atlanır (motor K‑42 gibi); eşik/ağırlık/yöntem DEĞİL
+radar_hip3_kopya: true                  # bool, K‑43 → K-73 (kullanıcı kararı 19.11 gece: sanalda her özellik açık): true = R1 kopya oynatmasında HIP‑3 (dex:COIN) dolumları da kopyalanır (motor `sanal_hip3_kopya` ile tutarlı; radar çıktısı bugün YALNIZ sanal motorda kullanılır). GERÇEK kipe geçmeden ÖNCE yeniden değerlendirilmeli (false'a dön); false = HIP‑3 dolumları atlanır
 radar_surum: "v4"                       # M-09 (kullanıcı kararı 14.11): radar hunisi + M-02/M-03/M-06/M-07 sonrası v3 → v4 (eski v3 kadrosu uygulanmaz). K-66 Form Radarı: RADAR_V1 + v1.1 seçim kuralları (K-53), D+ (v2) yerine; kadro.json `radar_surum` alanına yazılır, motor `canli/RADAR_SURUM` ile eşleştirir
 radar_tutma_onceki_kadro: true          # bool, v1.1 nedene bağlı çıkış: önceki kadro üyeleri R0 ilk N dışına düşse de R1'den geçirilir (geçen kalır); false = v1
 radar_ay_pnl_pozitif: true              # bool, v1.1 S1: R0 (ve tutma) için lider tablosu 30 g pnl > 0 (pencere yoksa geçer); false = v1
 radar_min_kopya_islem: 0                # işlem, v1.1 S2: R1 kopya kapanan işlem sayısı >= bu (`kopya_islem_az`; sınır dahil); 0 = kapalı (v1). Radar hunisi (kullanıcı 14.11): 10 → 0 (RADAR_V1 §3'te yoktu; şans riski kural 8 aynen). t önceliği (taslak) Fable denetimiyle REDDEDİLDİ
 # ---- Canlı motor (T4; RADAR_V1.md §5, §5b, §6; K-29, K-30, K-33). Oranlar kesir; süre adıyla; $ = kasa ölçeği (kopya_$) ----
 canli_kip: sanal                        # yalnız sanal (G4: gercek yazılırsa motor KipHatasi; gerçek kip YALNIZ sunucuda CANLI_KIP=gercek + CANLI_KASA_USD ortamıyla, Actions'ta ASLA)
-canli_hip3_kopya: false                # K‑42: false = HIP‑3 (dex:COIN) yeni açılış/artırma iki kipte de atlanır (hip3_atlandi); kapanış/azaltma hep serbest. Gerçek kipte SDK perp_dexs gelmeden true YAPMA
+canli_hip3_kopya: false                # K‑42: GERÇEK kip: false = HIP‑3 (dex:COIN) yeni açılış/artırma atlanır (hip3_atlandi); kapanış/azaltma hep serbest. Gerçek kipte SDK perp_dexs gelmeden true YAPMA. Sanal kip bunu KULLANMAZ (aşağıdaki sanal_hip3_kopya)
+sanal_hip3_kopya: true                  # bool, K-73: SANAL kipte HIP‑3 açılışı kopyalanır (kullanıcı kararı 19.11 gece); gerçek kip etkilenmez
 canli_kadro_dali: radar                 # kadro.json'un okunduğu veri dalı (radar/son/kadro.json); dal doğrulamasında radar-deneme
 canli_kadro_aralik_sn: 300              # sn (kadro.json okuma sıklığı)
 canli_kadro_eski_saat: 36               # saat (kosu_ms bundan eskiyse kadro bayat: yeni giriş yok, düşme kuralları çalışır, alarm günde 1)
@@ -217,16 +218,20 @@ isabet_kotu_kayma_carpan: 2             # kat (kötü senaryo: maliyet_kayma bu 
 holdout_bas: "2026-11-20"               # YYYY-MM-DD (bu tarihten itibaren radar günlük çıktıları mühürlenir; holdout yalnız bir kez değerlendirilir; metin olarak yazılır)
 pbo_s: 8                                # blok (PBO/CSCV: dönemler bu kadar eşit bloğa bölünür, çift olmalı; T < 2×S ise "yetersiz veri")
 para_hareketi_isaret_payi: 0.2          # oran (T6 §2, bilgi: net yatırma / hafta başı sermaye bunun üstündeyse raporda işaretlenir; kapıyı DEĞİŞTİRMEZ)
-# Gölge kurallar (Fable 18.11; yalnız kayıt, işlem etkisi yok): motor `golge_kural` olayı yazar (kural başlayınca/bitince), emir/kadro değişmez
-golge_hesap_alt_usd: 5000               # $ (trader hesap değeri bundan KÜÇÜKSE A_hesap_5k)
-golge_kaldirac_uyari: 5                 # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_5x; yalnız kayıt, işlem etkisi yok)
-golge_kaldirac_cikar: 20                # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_20x; yalnız kayıt, işlem etkisi yok)
-# ML Otonom rejim etiketi (yalnız kayıt, işlem etkisi yok): motor `rejim_degisti` olayı ve emir olaylarındaki `rejim` alanını yazar.
+# Gölge kurallar (Fable 18.11): motor `golge_kural` olayı yazar (kural başlayınca/bitince). K-73: SANAL kipte `sanal_golge_kurallar_etkin` ile açılış/artırmayı etkiler (A, B20: atla; B5: boyut x0,5); gerçek kipte yalnız kayıt
+golge_hesap_alt_usd: 5000               # $ (trader hesap değeri bundan KÜÇÜKSE A_hesap_5k; sanalda yeni açılış atlanır: hesap_kucuk)
+golge_kaldirac_uyari: 5                 # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_5x; sanalda yeni açılış/artırma boyutu x0,5)
+golge_kaldirac_cikar: 20                # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_20x; sanalda yeni açılış atlanır: kaldirac_cok_yuksek)
+sanal_golge_kurallar_etkin: true        # bool, K-73: yalnız sanal kip; false = gölge kurallar yalnız kayıt
+# ML Otonom rejim etiketi (kayıt; K-73: sanalda sanal_rejim_filtre ile açılış filtresi): motor `rejim_degisti` olayı ve emir olaylarındaki `rejim` alanını yazar.
 rejim_kaynak_url: "https://trader-pano-acik.sselimgenc-c18.workers.dev/rejim.json"                    # URL (boşsa kapalı; ağ çağrısı yapılmaz). Yayın: ML Otonom rejim.json (belirtim: rejim-yayini-spec)
-rejim_okuma_dk: 30                      # dakika (yalnız kayıt, işlem etkisi yok)
-# Haber / duygu etiketi (yalnız kayıt, işlem etkisi yok): `emir` olaylarına `duygu` + `haber` (o coin), `duygu_degisti` olayı; ton etiketi KABA anahtar kelime sayımıdır
-haber_aktif: true                       # false ise ağ çağrısı yapılmaz (yalnız kayıt, işlem etkisi yok)
-haber_okuma_dk: 60                      # dakika (yalnız kayıt, işlem etkisi yok)
+rejim_okuma_dk: 30                      # dakika
+sanal_rejim_filtre: true                # bool, K-73: SANAL kipte 1d ve 4h rejimi ikisi de giriş yönüne TERS (long/trend_down, short/trend_up) ise yeni açılış/artırma atlanır (rejim_ters); bilinmeyen etiket = atlama yok; gerçek kip etkilenmez
+# Haber / duygu etiketi (kayıt; K-73: sanalda sanal_haber_filtre ile açılış filtresi): `emir` olaylarına `duygu` + `haber` (o coin), `duygu_degisti` olayı; ton etiketi KABA anahtar kelime sayımıdır
+haber_aktif: true                       # false ise ağ çağrısı yapılmaz (haber filtresi de bilgisiz kalır)
+sanal_haber_filtre: true                # bool, K-73: SANAL kipte coin haber tonu giriş yönüne ters (long/negatif, short/pozitif) ve 24 sa başlık sayısı >= sanal_haber_min_baslik ise yeni açılış/artırma atlanır (haber_ters); gerçek kip etkilenmez
+sanal_haber_min_baslik: 2               # adet (haber_ters için asgari 24 sa başlık sayısı)
+haber_okuma_dk: 60                      # dakika
 haber_kaynaklar:                        # herkese açık RSS (anahtarsız); 24 sa içinde coin'i anan başlıklar sayılır
   - "https://www.coindesk.com/arc/outboundfeeds/rss/"
   - "https://cointelegraph.com/rss"
@@ -258,4 +263,10 @@ ogrenme_filtre_aktif: true              # kapatma anahtarı (false: filtre eğit
 ogrenme_filtre_min_n: 20                # adet (bir trader için en az bu kadar kapanan etiketli işlem yoksa model EĞİTİLMEZ)
 ogrenme_filtre_egitim_gun: 3            # gün (model bu yaştan eskiyse saatlik adımda yeniden eğitilir; ayrıca haftalık kadro değişiminde zorla; 21 günlük son kullanmadan çok önce)
 ogrenme_filtre_log_saat: 6              # saat (aynı trader için `ml_filtre_yok` kaydı en çok bu aralıkta bir)
+sanal_ogrenme_drift_eylem: true        # bool, K-73: SANAL kipte CUSUM drift alarmı → filtre bir sonraki saatlik adımda yeniden eğitilir + kurulumun slot çarpanı min(mevcut, 0,5) (haftalık kadro değişiminde biter); olay `drift_eylem`
 ogrenme_drift_telegram: false           # CUSUM drift Telegram UYARISI (varsayılan KAPALI: eşikler CT için kalibre değil; olay `kurulum_drift` + OZET karnesi yine yazılır)
+# K-73/8 iz süren koruma (YALNIZ sanal kip): pozisyon kârı (girişe göre, yön + mark) zirvesi %15'e ulaşınca stop girişe (başa baş), %30'a ulaşınca +%15 kâra çekilir; kâr stopa inerse pozisyon kapanır (iz_suren_koruma). Sabit kâr al YOK; %20 felaket stopu aynen sürer
+sanal_iz_suren: true                    # bool (gerçek kipte devre dışı)
+iz_basabas_oran: 0.15                   # oran (zirve kâr bu kadar olunca stop = giriş)
+iz_kilit_oran: 0.30                     # oran (zirve kâr bu kadar olunca stop = iz_kilit_seviye)
+iz_kilit_seviye: 0.15                   # oran (kilit stopunun kâr seviyesi)
