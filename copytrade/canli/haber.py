@@ -1,10 +1,10 @@
-"""Haber / duygu etiketi: YALNIZ KAYIT, işlem etkisi yok (kullanıcı kararı 19.11.2026).
+"""Haber / duygu etiketi: emir kaydına yazılır; K-73: SANALda motor bunlarla yeni açılışı atlatır (haber_ters, duygu_ters), GERÇEK kipte yalnız kayıt (kullanıcı kararı 19.11.2026).
 
 Kaynaklar (ücretsiz, anahtarsız):
 - Piyasa duygusu: alternative.me Crypto Fear & Greed Index (`/fng/?limit=1`) -> `{deger 0-100, sinif}`.
 - Haber: herkese açık RSS (CoinDesk, Cointelegraph); stdlib `xml.etree`, yeni bağımlılık yok. Son 24 saatte coin'i anan başlık sayısı.
 
-UYARI: ton etiketi KABA bir anahtar kelime sayımıdır (İngilizce başlık, bağlam/olumsuzlama anlaşılmaz). Yalnız bilgi amaçlıdır; karar yoluna girmez.
+UYARI: ton etiketi KABA bir anahtar kelime sayımıdır (İngilizce başlık, bağlam/olumsuzlama anlaşılmaz). Gerçek kipte yalnız bilgidir (karar yoluna girmez); sanalda `_sanal_acilis_filtresi` kullanır.
 Her hata (ağ, zaman aşımı, bozuk XML/JSON) sessizce yutulur: son önbellek korunur; fonksiyonlar istisna fırlatmaz.
 """
 from __future__ import annotations

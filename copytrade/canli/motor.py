@@ -671,6 +671,7 @@ class Motor:
         if hasattr(yurutucu, "saat_ms"):
             yurutucu.saat_ms = self.saat_ms
         self._kaynak: dict | None = None            # sunucu kaynak ölçümü (kaynak.olc); dakikada en çok bir yenilenir, motor.json'da "kaynak"
+        self._filtre_hata_zaman: dict[str, list[int]] = {}   # sanal filtre hata türü -> son hata zamanları (ms; 1 saatlik pencere, uyarı için)
         self._adim_ardisik: dict[str, int] = {}   # M-2: dakikalık adım adı -> üst üste hata sayısı (başarıda silinir)
         self._lock = threading.RLock()            # olay işleme (tüketici iş parçacığı) ile dakikalık bakım aynı durumu değiştirir: tek seferde biri
 
@@ -955,7 +956,7 @@ class Motor:
             self.rejim_4h_son[coin] = r4
 
     def haber_adimi(self, simdi: int) -> None:
-        """Haber/duygu etiketi (YALNIZ KAYIT, işlem etkisi yok): `haber_okuma_dk` dakikada bir; sınıf değişince `duygu_degisti`. Mantık haber.py'de."""
+        """Haber/duygu etiketi (kayıt; sanalda `_sanal_acilis_filtresi` haber/duygu ile açılışı atlatır, gerçek kipte yalnız kayıt): `haber_okuma_dk` dakikada bir; sınıf değişince `duygu_degisti`. Mantık haber.py'de."""
         if not self.rules.get("haber_aktif") or not self._aralik_mi("haber", simdi, float(self.rules.get("haber_okuma_dk", 60)) * 60):
             return
         self.haber_anlik, olaylar = haber.guncelle(self.rules, self.haber_anlik, simdi)
@@ -1110,7 +1111,7 @@ class Motor:
 
     def _sanal_acilis_filtresi(self, adres: str, coin: str, yon_long: bool, simdi: int) -> tuple[str | None, float]:
         """K-73 (kullanıcı kararı 19.11 gece): YALNIZ sanal kip, YALNIZ açılış/artırma. Döner (atlama nedeni | None, slot çarpanı). Kapanış/azaltma için ÇAĞRILMAZ; gerçek kipte (neden None, 1.0).
-        Bayraklar `kurallar.yaml`: sanal_rejim_filtre, sanal_haber_filtre (+ sanal_haber_min_baslik), sanal_golge_kurallar_etkin. Bilinmeyen veri (etiket/haber/hesap yok) = atlama yok."""
+        Bayraklar `kurallar.yaml`: sanal_rejim_filtre, sanal_haber_filtre (+ sanal_haber_min_baslik), sanal_duygu_filtre (+ duygu_ust/duygu_alt), sanal_golge_kurallar_etkin. Bilinmeyen veri (etiket/haber/hesap yok) = atlama yok."""
         if self.kip != "sanal":
             return None, 1.0
         r = self.rules
@@ -1124,6 +1125,12 @@ class Motor:
                 h = (haber.emir_alanlari(self.haber_anlik, coin, simdi).get("haber") or {}).get(coin) or {}
                 if h.get("ton") == ("negatif" if yon_long else "pozitif") and int(h.get("adet_24s") or 0) >= int(r.get("sanal_haber_min_baslik", 2)):
                     return "haber_ters", 1.0
+            if r.get("sanal_duygu_filtre", False):
+                d = haber.duygu_ozet(self.haber_anlik, simdi)                      # yok/bayat = None = atlama yok
+                if d is not None:
+                    v = float(d["deger"])
+                    if (yon_long and v >= float(r.get("duygu_ust", 75))) or (not yon_long and v <= float(r.get("duygu_alt", 25))):
+                        return "duygu_ters", 1.0
             if r.get("sanal_golge_kurallar_etkin", False):
                 acik = self._golge_acik.get(adres, [])
                 if "A_hesap_5k" in acik:
@@ -1133,8 +1140,16 @@ class Motor:
                 if "B_kaldirac_5x" in acik:
                     return None, 0.5
         except Exception as hata:                      # noqa: BLE001
-            self.kayit({"olay": "sanal_filtre_hata", "tur": type(hata).__name__, "mesaj": str(hata)[:160]})          # filtre hatası açılışı engellemez (yalnız kayıt)
+            self.kayit({"olay": "sanal_filtre_hata", "tur": type(hata).__name__, "mesaj": str(hata)[:160]})          # filtre hatası açılışı engellemez; tekrarlarsa Telegram uyarısı
+            self._filtre_hata_uyar(type(hata).__name__, simdi)
         return None, 1.0
+
+    def _filtre_hata_uyar(self, tur: str, simdi: int) -> None:
+        """Aynı filtre hatası 1 saatte >= 3 kez olursa Telegram ⚠️ uyarısı (aynı uyarı en çok 6 saatte bir). Hata açılışı engellemez."""
+        z = [t for t in self._filtre_hata_zaman.get(tur, []) if simdi - t < 3_600_000] + [simdi]
+        self._filtre_hata_zaman[tur] = z
+        if len(z) >= 3 and self._aralik_mi("filtre_hata_uyari:" + tur, simdi, 6 * 3600):
+            self.tg.gonder(tg.msg_filtre_hata(len(z)), "WARN", "sanal_filtre_hata:" + tur)
 
     def _emir_isle(self, o: Olay, adres: str, eylem: str, once: float, sonra: float, biz_sz: float, simdi: int, gec: bool) -> Sonuc:
         acilis = eylem in ("ac", "artir")
@@ -1164,7 +1179,7 @@ class Motor:
         if acilis and self.hesap.ters_yonlu_var(adres, o.coin, "B" if sonra > 0 else "A", self.marks, float(self.rules["canli_kapanis_toz_usd"])):          # K‑41: başka trader'dan ters yönlü kopya pozisyonu var → net küçülmesin, açılış yok
             return self._atla(o, adres, eylem, "atlandi", "ters_netlesme")
         golge_carpan = None
-        if acilis and self.kip == "sanal":                          # K-73: sanalda rejim/haber/gölge kurallar işlem etkiler (yalnız SKIP/KÜÇÜLT; kapanış/azaltma hiç girmez)
+        if acilis and self.kip == "sanal":                          # K-73: sanalda rejim/haber/duygu/gölge kurallar işlem etkiler (yalnız SKIP/KÜÇÜLT; kapanış/azaltma hiç girmez)
             f_neden, golge_carpan = self._sanal_acilis_filtresi(adres, o.coin, sonra > 0, simdi)
             if f_neden:
                 return self._atla(o, adres, eylem, "atlandi", f_neden)
@@ -2336,7 +2351,7 @@ class Motor:
                 ("telegram", lambda: self._komutlar(komutlar)), ("ajan_suresi", lambda: self.ajan_suresi_uygula(ajan, simdi)), ("ozet", lambda: self._gunluk_ozet(simdi)), ("haftalik", lambda: self._haftalik_ozet(simdi)),
                 ("emir_ozeti", lambda: self.emir_ozeti(simdi)), ("btc_donem", lambda: self.btc_donem_uygula(btc)), ("donem_seri", lambda: self.donem_seri_guncelle(simdi)),
                 ("ogrenme", lambda: self.ogrenme.adim(simdi)), ("tur_kaydi", lambda: self._tur_kaydi(simdi)), ("golge_kural", lambda: self.golge_kural_adimi(simdi)), ("karsi_olgu", lambda: self.karsi_olgu_adimi(simdi)), ("kopya_drift", lambda: self.kopya_drift_adimi(simdi)),          # yalnız kayıt + pano verisi; karar yolunda değil
-                ("haber", lambda: self.haber_adimi(simdi)), ("rejim", lambda: self.rejim_adimi(simdi)),                        # ML rejim etiketi: yalnız kayıt, işlem etkisi yok
+                ("haber", lambda: self.haber_adimi(simdi)), ("rejim", lambda: self.rejim_adimi(simdi)),                        # ML rejim etiketi: sanalda açılış filtresi (sanal_rejim_filtre), gerçek kipte yalnız kayıt
                 ("durum_yaz", self.durum_yaz),                                     # G-12b: disk dolu / salt okunur → dakikalık görev ölmez; kayıt + alarm
             ]
             for ad, f in adimlar:

@@ -135,5 +135,5 @@ def test_pano_md_ve_html_duygu_satiri():
 
     ozet = {"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "acik": [], "duygu": {"deger": 25, "sinif": "Extreme Fear"}}
     md, _ = pano.pano_olustur(ozet, {}, {}, [], [], [], SIMDI)
-    assert "Piyasa duygusu (Fear & Greed 0-100; yalnız kayıt, işlem etkisi yok): 25 · Extreme Fear" in md
+    assert "Piyasa duygusu (Fear & Greed 0-100; sanalda ≥75 yeni long, ≤25 yeni short atlatır; gerçekte yalnız kayıt): 25 · Extreme Fear" in md
     assert "duygu 25 Extreme Fear" in pano.html_olustur(ozet, {}, {}, [], [], SIMDI, None, None)
