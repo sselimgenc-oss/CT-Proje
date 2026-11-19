@@ -509,6 +509,8 @@ Adresler trader'ların halka açık adresleridir; API anahtarı, hesap adresimiz
 - `biz_slot_toplam_usd`: bizim o trader slotundaki TÜM coinlerin toplam nosyoneli, **$ (kopya ölçeği)** (K‑35 tavanı için).
 - `hedef_usd`: hedef nosyonel = `min(slot_usd × |trader_poz_sonra| × trader_px / trader_hesap_usd, radar_slot_tavan_carpan × slot_usd)`, **$ (kopya ölçeği)**; hesap bilinmiyorsa `null`.
 - `ders_carpan`: açılış/artırmada ortak öğrenme ders çarpanı (0,5–1,0; ders yoksa 1,0; `slot_usd` bu çarpanla küçültülmüş hâlidir), azaltma/kapanışta `null` (19.11). Günlük özet `ogrenme.ders_kucultulen` bundan sayılır.
+- `gunluk_ozet_v1.json` → `alinmayan_neden` (19.11, yalnız bilgi): bugünün (UTC gün) kayıtlarından, neden başına dizi `[{neden, adet, karsi_olgu_kapanan, karsi_olgu_pnl}]`, adet azalan. `adet` = `emir_yok` nedeni (adet, kopya ölçeği değil; ML atlamaları `ml_filtre_atla` olayı ile çift sayılmaz, büyük olan alınır); `karsi_olgu_kapanan` = bugün kapanan `karsi_olgu_kapandi` adedi; `karsi_olgu_pnl` = bu kapanışların `pnl_usd` toplamı, **$ (hayali; ücret/kayma yok)**, kapanan yoksa `null`. Neden yoksa `"?"`.
+
 Oranlar yoktur; hepsi mutlak sayıdır (adet ya da $). Zaman: UTC ms alanları değişmedi.
 - `kor_kirpildi` kaydı (K‑44 ile) yalnız durum DEĞİŞİNCE yazılır: imza = (aday, kadro `kosu_ms`, karar anındaki TAM saha) (B11; değiştirmede üye başına değişen `uyeler`/kalan imzaya girmez); aynı durumun 5 dk'lık tekrarı yazılmaz. `uyeler` alanı: kontrol edilen küme (değiştirmede çıkacak üye hariç).
 
