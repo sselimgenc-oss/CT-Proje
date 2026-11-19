@@ -611,6 +611,8 @@ class Motor:
         self._ozet_gunu: str | None = m.get("ozet_gunu")
         self._ozet_oz: float | None = m.get("ozet_oz")              # önceki günlük özetteki özsermaye ("dünün sonucu" bundan hesaplanır)
         self._ozet_emir = int(m.get("ozet_emir", 0))               # önceki özetten beri emir sayısı
+        self._hafta_gunu: str | None = m.get("hafta_gunu")         # haftalık özet (Pazar 18:10 UTC = 21:10 TSİ): son gönderim günü; yalnız RAPOR, işlem mantığına girmez
+        self._hafta_taban: dict | None = m.get("hafta_taban")      # {oz, btc, emir}: önceki haftalık özetteki özsermaye / BTC mark / emir sayacı
         self._emir_tampon: list[dict] = []                 # Telegram: emirler dakikalık adımda TEK özet mesajına toplanır
         self._atla_tampon: dict[str, int] = {}             # Telegram sanal saatlik özet: pencerede atlanan sinyaller (neden -> adet)
         self._atla_islem: set[tuple[str, str, int]] = set()  # S-13: atlanan dolumların ayrı işlemleri (adres, coin, trader_dolum_ms // 1000)
@@ -768,7 +770,7 @@ class Motor:
 
     def _motor_json(self) -> dict:
         return {"islenen": self.islenen, "poz_tr": self.poz_tr, "poz_tr_ms": {f"{a}|{c}": ms for (a, c), ms in self._poz_tr_ms.items()}, "poz_tr_senk_ms": self._poz_tr_senk_ms, "hesap_tr": self.hesap_tr, "kaldirac_tr": self.kaldirac_tr, "golge_acik": self._golge_acik, "son_olay_ms": self.son_olay_ms,
-                "ozet_gunu": self._ozet_gunu, "ozet_oz": self._ozet_oz, "ozet_emir": self._ozet_emir, "kip": self.kip, "kasa_usd": self.kasa, "kasa_ayar_usd": self.kasa_ayar, "vardiya": self.vardiya_id, "yazildi_ms": self.saat_ms(),
+                "ozet_gunu": self._ozet_gunu, "ozet_oz": self._ozet_oz, "ozet_emir": self._ozet_emir, "hafta_gunu": self._hafta_gunu, "hafta_taban": self._hafta_taban, "kip": self.kip, "kasa_usd": self.kasa, "kasa_ayar_usd": self.kasa_ayar, "vardiya": self.vardiya_id, "yazildi_ms": self.saat_ms(),
                 "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "hl_onceki": list(self._hl_onceki) if self._hl_onceki else None, "hl_sicrama": self._hl_sicrama, "hl_sicrama_ms": self._hl_sicrama_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.kalici_offset,
                 "son_funding_ms": self.son_funding_ms, "funding_kimlik": self.funding_kimlik[-500:], "funding_gercek_usd": self.funding_gercek_usd, "ucret_gercek_usd": self.ucret_gercek_usd, "ucret_tahmin_say": self.ucret_tahmin_say,
                 "ucret_bekleyen": self.ucret_bekleyen[-500:], "btc_donem": self.btc_donem, "mutabakat_tutan": self.mutabakat_tutan, "yetim_ilk": self.yetim_ilk, "sahipsiz_ilk": self.sahipsiz_ilk,
@@ -2234,7 +2236,7 @@ class Motor:
                 ("inen", lambda: self.karar_uygula(self.saha.inenleri_kapat(simdi), simdi)), ("sahipsiz", lambda: self._sahipsiz_tara(simdi)),
                 ("hl_izle", lambda: self._hl_izle(hl_zamani, hl, simdi)), ("mutabakat", lambda: self._mutabakat(simdi, hl)), ("kapanis_kuyrugu", lambda: self._kuyruk_isle(simdi)),
                 ("kadro", lambda: self._kadro_uygula(kadro, simdi)), ("senkron", lambda: (self.senkron_uygula(senkron), self.hesap_uygula(hesaplar, simdi)) if senkron is not None else None),
-                ("telegram", lambda: self._komutlar(komutlar)), ("ajan_suresi", lambda: self.ajan_suresi_uygula(ajan, simdi)), ("ozet", lambda: self._gunluk_ozet(simdi)),
+                ("telegram", lambda: self._komutlar(komutlar)), ("ajan_suresi", lambda: self.ajan_suresi_uygula(ajan, simdi)), ("ozet", lambda: self._gunluk_ozet(simdi)), ("haftalik", lambda: self._haftalik_ozet(simdi)),
                 ("emir_ozeti", lambda: self.emir_ozeti(simdi)), ("btc_donem", lambda: self.btc_donem_uygula(btc)), ("donem_seri", lambda: self.donem_seri_guncelle(simdi)),
                 ("ogrenme", lambda: self.ogrenme.adim(simdi)), ("tur_kaydi", lambda: self._tur_kaydi(simdi)), ("golge_kural", lambda: self.golge_kural_adimi(simdi)), ("karsi_olgu", lambda: self.karsi_olgu_adimi(simdi)), ("kopya_drift", lambda: self.kopya_drift_adimi(simdi)),          # yalnız kayıt + pano verisi; karar yolunda değil
                 ("rejim", lambda: self.rejim_adimi(simdi)),                        # ML rejim etiketi: yalnız kayıt, işlem etkisi yok
@@ -3030,25 +3032,31 @@ class Motor:
             self.tg.gonder(tg.alarm("ALARM: API cüzdanı HL'de yok", "API cüzdanı HL agent listesinde bulunamadı (süresi dolmuş ya da iptal edilmiş olabilir).\nEmirler reddedilir; yeni API cüzdanı gerekli. Acil durumda HL web'den pozisyonları kapatın."))
 
     def _komutlari_yurut(self, komutlar: list[str]) -> None:
+        """Standart komut adları (`tg.KOMUTLAR`); riskli olanlar (/durdur /devam /hepsini_kapat) buraya YALNIZ iki adımlı onaydan sonra gelir (`tg.komutlari_al`). Eski adlar eş ad."""
         for k in komutlar:
-            if k == "/kapat":                                                  # eski /dur: tüm pozisyonları kapat, motor durur (DUR dosyası)
+            k = tg.ESKI_AD.get(k, k)
+            if k in tg.IKI_ADIMLI:
+                self.kayit({"olay": "komut_yurutuldu", "komut": k})            # denetim izi: onaylanan komutun uygulanışı
+            if k == "/hepsini_kapat":                                          # eski /kapat: tüm pozisyonları kapat, motor durur (DUR dosyası)
                 self.tg.gonder(tg.msg_kapat_alindi(self.kip))                  # G-16: anında alındı yanıtı (kapanış sonucu ayrı mesajla)
                 self.dur_tetikle("komut")
-            elif k == "/dur":                                                  # yeni /dur: yalnız yeni giriş/artırma durur; çıkış/azaltma serbest, pozisyonlar trader'ı izlemeye devam eder
+            elif k == "/durdur":                                               # eski /dur: yalnız yeni giriş/artırma durur; çıkış/azaltma serbest, pozisyonlar trader'ı izlemeye devam eder
                 self._duraklat(True)
-            elif k in ("/devam", "/baslat"):
+            elif k == "/devam":
                 self._duraklat(False)
             elif k == "/durum":
                 self.tg.gonder(self.durum_metni())
+            elif k == "/rapor":                                                # günlük raporu hemen gönder (özet durumunu/sayaçlarını DEĞİŞTİRMEZ)
+                self.tg.gonder(self._gunluk_metin())
 
     def _duraklat(self, ac: bool) -> None:
         """Elle duraklatma (`risk.acilis_durdu['elle_dur']`; kalıcı: `risk.json`). Kapanış/azaltma `acilis_izni`nden geçmediği için DURAKLATMADAN etkilenmez."""
         if not ac and self.risk.dur:
-            self.tg.gonder(tg.alarm("Motor kapalı", "Motor `/kapat` ile durduruldu; yeniden açmak sunucudan yapılır. `/devam` bunu açmaz."))
+            self.tg.gonder(tg.alarm("Motor kapalı", "Motor `/hepsini_kapat` ile durduruldu; yeniden açmak sunucudan yapılır. `/devam` bunu açmaz."))
             return
         self.risk.bayrak("elle_dur", ac)
         self.kayit({"olay": "elle_dur" if ac else "elle_devam"})
-        self.tg.gonder(tg.alarm("Yeni işlemler duraklatıldı", "Yeni pozisyon açılmaz, artırılmaz. Açık pozisyonlar trader'ı izlemeye ve azaltmaya/kapatmaya devam eder.\nAçmak için /devam.", "⏸️") if ac
+        self.tg.gonder(tg.alarm("Yeni işlemler duraklatıldı", "Yeni pozisyon açılmaz, artırılmaz. Açık pozisyonlar trader'ı izlemeye ve azaltmaya/kapatmaya devam eder.\nAçmak için /devam (kod ister).", "⏸️") if ac
                        else tg.alarm("Duraklatma kaldırıldı", self._devam_govde(), "▶️"))
         self.durum_yaz()
 
@@ -3078,16 +3086,40 @@ class Motor:
         stats = getattr(self.post, "stats", None) or {}
         return {"acik": acik, "rest_istek": stats.get("istek"), "rest_429": stats.get("429"), "ogrenme": self.ogrenme.pano()}
 
+    def _gunluk_metin(self) -> str:
+        """Günlük rapor metni (`/rapor` ve zamanlı özet ortak; durum değiştirmez)."""
+        oz = self.ozsermaye()
+        return tg.msg_gunluk(self.kip, self.kasa, oz, self._ozet_oz if self._ozet_oz is not None else self.kasa, self._ozet_emir, len(self.saha.uyeler), self.saha.n,
+                             self.pano_ek()["acik"], self.hesap.funding_toplam() if self.kip == "sanal" else None, self.karsi_olgu_gun or None)
+
     def _gunluk_ozet(self, simdi: int) -> None:
         d = datetime.fromtimestamp(simdi / 1000, UTC)
         if d.hour < int(self.rules["canli_ozet_saat_utc"]) or self._ozet_gunu == d.date().isoformat():
             return
         self._ozet_gunu = d.date().isoformat()
         oz = self.ozsermaye()
-        self.tg.gonder(tg.msg_gunluk(self.kip, self.kasa, oz, self._ozet_oz if self._ozet_oz is not None else self.kasa, self._ozet_emir, len(self.saha.uyeler), self.saha.n,
-                                     self.pano_ek()["acik"], self.hesap.funding_toplam() if self.kip == "sanal" else None, self.karsi_olgu_gun or None))
+        self.tg.gonder(self._gunluk_metin())
         self.karsi_olgu_gun = {}
         self._ozet_oz, self._ozet_emir = oz, 0
+
+    def haftalik_metin(self) -> str:
+        """Haftalık özet (yalnız rapor): hafta K/Z, BTC kıyası, emir sayısı, slot K/Z'ye göre en iyi/en kötü trader (şu anki slotta; slot girişinden beri, ücret/funding dahil)."""
+        oz, btc = self.ozsermaye(), self.marks.get("BTC")
+        taban = self._hafta_taban or {}
+        slotlar = []
+        for adres in self.saha.uyeler:
+            so = self.hesap.slot_ozsermaye(adres, self.marks)
+            if so is not None:
+                slotlar.append((adres, so - self.hesap.slot_bas[adres]))
+        return tg.msg_haftalik(self.kip, self.kasa, oz, taban.get("oz"), btc, taban.get("btc"), self.sayac["emir"] - int(taban.get("emir", 0)), slotlar)
+
+    def _haftalik_ozet(self, simdi: int) -> None:
+        d = datetime.fromtimestamp(simdi / 1000, UTC)
+        if d.weekday() != 6 or (d.hour, d.minute) < (18, 10) or self._hafta_gunu == d.date().isoformat():
+            return
+        self._hafta_gunu = d.date().isoformat()
+        self.tg.gonder(self.haftalik_metin())
+        self._hafta_taban = {"oz": self.ozsermaye(), "btc": self.marks.get("BTC"), "emir": self.sayac["emir"]}
 
     # ------------------------------------------------------------------ özet
     def ozet(self) -> dict[str, Any]:

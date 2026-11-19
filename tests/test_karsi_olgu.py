@@ -90,6 +90,6 @@ def test_gunluk_ozet_ve_ozet_md_satiri(tmp_path):
     assert "Alınmayan sinyaller" in md and "2 kapandı" in md and "hip3_atlandi 1" in md
     m, saat, tgp = hazir(tmp_path)
     m.karsi_olgu_gun = {"hip3_atlandi": [1, 2.0]}
-    gun_ms = (saat() // 86_400_000 + 1) * 86_400_000 + 12 * 3_600_000
+    gun_ms = (saat() // 86_400_000 + 1) * 86_400_000 + (int(m.rules["canli_ozet_saat_utc"]) + 1) * 3_600_000
     m._gunluk_ozet(gun_ms)
     assert any("Alınmayan sinyal" in x for x in m.tg.gonderilen) and m.karsi_olgu_gun == {}
