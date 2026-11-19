@@ -12,6 +12,7 @@ HIP3 = "xyz:GOLD"
 
 
 def hazir(tmp_path, **k):
+    k["kurallar"] = {"sanal_hip3_kopya": False, **(k.get("kurallar") or {})}          # K-73: sanalda HIP-3 artık açık; bu testler atlanan açılış için HIP-3'ü örnek alır → bayrak kapatılır
     m, hl, saat, tgp = kur(tmp_path, **k)
     m.baslat()
     m.hesap_tr[adr(1)] = {"deger": 100_000.0, "ms": saat()}

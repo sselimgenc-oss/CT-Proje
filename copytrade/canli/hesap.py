@@ -20,6 +20,7 @@ class Poz:
     acilis_ms: int
     kaldirac: float = 3.0
     giris_ctx: dict | None = None   # açılış anı rejim/duygu damgası (yalnız bilgi; rejim_sonuc raporu)
+    zirve_kar: float = 0.0          # K-73 iz süren koruma (yalnız sanal): girişe göre en yüksek kâr oranı (artırmada ortalama giriş değişince sıfırlanır); hesap.json ile kalıcı
 
 
 def tasfiye_fiyati(yon_long: bool, giris: float, kaldirac: float, azami_kaldirac: float | None) -> float:
@@ -102,6 +103,7 @@ class Hesap:
             toplam = abs(poz.sz) + abs(signed)
             poz.giris = (poz.giris * abs(poz.sz) + px * abs(signed)) / toplam
             poz.sz += signed
+            poz.zirve_kar = 0.0                                          # ortalama giriş değişti: eski zirve geçersiz
         else:                                                            # azaltma / kapanış
             kapanan = min(abs(poz.sz), abs(signed))
             if abs(signed) > abs(poz.sz) + 1e-9:

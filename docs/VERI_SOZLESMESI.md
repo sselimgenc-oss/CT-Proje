@@ -552,7 +552,9 @@ JSON üst düzey: `n_istenen` (adet), `kasa_usd` ($; `--kasa-usd`, yoksa `canli_
 - `duygu_degisti` olayı: `{onceki, yeni, deger}` (sınıf değişince). `ozet.json` `duygu` alanı pano satırı içindir.
 - Ton KABA bir anahtar kelime sayımıdır (İngilizce başlık); bilgi amaçlıdır. Kaynaklar `kurallar.yaml` `haber_*` / `duygu_kaynak_url`; önbellek `motor.json` `haber_anlik`.
 
-## 19.11 akşam eklenen alanlar ve dosyalar (YALNIZ BİLGİ; işlem/limit etkisi yok; #666–#675)
+## 19.11 akşam eklenen alanlar ve dosyalar (çoğu YALNIZ BİLGİ; #666–#675; K-73 ile işlem etkisi olanlar aşağıdaki not)
+
+- **K-73 (kullanıcı kararı 19.11 gece, YALNIZ sanal kip):** rejim (`rejim_ters`), haber (`haber_ters`), gölge kurallar (`hesap_kucuk`, `kaldirac_cok_yuksek`; B5 boyut x0,5) artık yeni açılış/artırmayı ATLATIR/KÜÇÜLTÜR; hepsi `emir_yok` neden olarak kaydedilir (alinmayan_neden, karşı-olgu, kural maliyeti). `emir` kaydına `golge_carpan` (B5: 0.5, yoksa null). HIP-3 sanalda açık (`sanal_hip3_kopya`). Drift alarmı sanalda `drift_eylem` olayı yazar (`egit_zorla`, çarpan <= 0.5). Yeni kapanış nedeni `iz_suren_koruma` (olay `iz_suren_koruma`: giris, mark, kar, zirve_kar, stop_kar, kapandi); `hesap.json` `Poz.zirve_kar` (eski durumlarda yok = 0). Gerçek kip değişmez; kapanış/azaltma hiçbir yeni kuralla engellenmez.
 
 - `durum/motor.json` → `kaynak` (#666, `copytrade/canli/kaynak.py`): `{ram_mb, ram_tepe_mb, cgroup_mb, cgroup_tepe_mb, yuk_1dk, disk_bos_gb, disk_toplam_gb, olc_ms}`; ölçülemeyen alan `null`; en çok dakikada bir yenilenir. Panoda "Sunucu kaynakları" kartı (#672).
 - `gunluk_ozet_v1.json` → `saglik` yeni alanları: `ram_mb`, `ram_tepe_mb` (MB), `disk_bos_gb` (GB), `yuk_1dk` (#666); `yeniden_baslama_1s` (son 1 saatte sg-sanal yeniden başlama adedi), `oom_son` (bool; son saatte OOM) — kaynak `/var/lib/sg-sanal/saglik_sunucu.json` (saatlik, `sanal_guncelle.sh` `alarm_kontrol`; 3 saatten eskiyse `null`) (#674).
