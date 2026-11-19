@@ -218,3 +218,6 @@ para_hareketi_isaret_payi: 0.2          # oran (T6 §2, bilgi: net yatırma / ha
 golge_hesap_alt_usd: 5000               # $ (trader hesap değeri bundan KÜÇÜKSE A_hesap_5k)
 golge_kaldirac_uyari: 5                 # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_5x; yalnız kayıt, işlem etkisi yok)
 golge_kaldirac_cikar: 20                # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_20x; yalnız kayıt, işlem etkisi yok)
+# ML Otonom rejim etiketi (yalnız kayıt, işlem etkisi yok): motor `rejim_degisti` olayı ve emir olaylarındaki `rejim` alanını yazar.
+rejim_kaynak_url: ""                    # URL (boşsa kapalı; ağ çağrısı yapılmaz). Yayın: ML Otonom rejim.json (belirtim: rejim-yayini-spec)
+rejim_okuma_dk: 30                      # dakika (yalnız kayıt, işlem etkisi yok)
