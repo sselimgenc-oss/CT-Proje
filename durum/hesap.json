@@ -554,6 +554,12 @@
    }
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": {
+   "BTC": {
+    "acilis_ms": 1795073414864,
+    "giris": 63553.0,
+    "kaldirac": 3.0,
+    "sz": 0.0025163405326977806
+   },
    "ETH": {
     "acilis_ms": 1794958511618,
     "giris": 1797.2856398883905,
@@ -589,7 +595,7 @@
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 909.0909090909091,
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 909.0909090909091
  },
- "son_niyet_cloid": "0x32f8a9087f7a402dcdd6ba409a5c781f",
+ "son_niyet_cloid": "0x46d3d04340e6343ef13605f4eff743cb",
  "tasfiyeler": [
   {
    "adres": "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89",
@@ -610,7 +616,7 @@
   "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": 0.0,
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": 0.7839781221170464,
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": 0.6810311520019676,
-  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 5.079186059504074,
+  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 5.151150504947617,
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 0.0
  }
 }
