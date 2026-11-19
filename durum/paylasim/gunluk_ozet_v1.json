@@ -1,15 +1,15 @@
 {
  "sema": "ortak.gunluk_ozet.v1",
  "proje": "CT",
- "uretim": "2026-11-19T15:36:35Z",
+ "uretim": "2026-11-19T16:36:53Z",
  "gun": "2026-11-19",
  "mod": "sanal",
  "kasa": {
   "baslangic": 10000.0,
-  "simdi": 9980.6,
-  "gun_pnl": -41.89,
-  "toplam_pnl": -19.4,
-  "zirveden_dusus_yuzde": 0.68
+  "simdi": 9991.17,
+  "gun_pnl": -31.31,
+  "toplam_pnl": -8.83,
+  "zirveden_dusus_yuzde": 0.58
  },
  "islem": {
   "gun_acilan": 6,
@@ -17,13 +17,13 @@
   "kazanan": 0,
   "kaybeden": 1,
   "acik_pozisyon": 31,
-  "alinmayan_sinyal": 1959
+  "alinmayan_sinyal": 2395
  },
  "hesaplar": [
   {
    "ad": "T_0c2447",
    "gun_pnl": -0.1,
-   "toplam_pnl": -16.15,
+   "toplam_pnl": -9.97,
    "islem": 5
   },
   {
@@ -41,14 +41,14 @@
   {
    "ad": "T_99f0d4",
    "gun_pnl": -0.3,
-   "toplam_pnl": 72.69,
+   "toplam_pnl": 73.82,
    "islem": 5
   },
   {
    "ad": "T_2e4035",
-   "gun_pnl": 0.12,
-   "toplam_pnl": 18.88,
-   "islem": 4
+   "gun_pnl": 0.35,
+   "toplam_pnl": 16.79,
+   "islem": 6
   },
   {
    "ad": "T_9934d6",
@@ -59,19 +59,19 @@
   {
    "ad": "T_b4c6ee",
    "gun_pnl": 0,
-   "toplam_pnl": -3.84,
+   "toplam_pnl": -5.6,
    "islem": 0
   },
   {
    "ad": "T_e7ae5a",
    "gun_pnl": -2.73,
-   "toplam_pnl": 16.12,
+   "toplam_pnl": 17.9,
    "islem": 4
   },
   {
    "ad": "T_7bb402",
    "gun_pnl": -20.35,
-   "toplam_pnl": -106.81,
+   "toplam_pnl": -101.47,
    "islem": 17
   },
   {
@@ -83,18 +83,18 @@
   {
    "ad": "T_574595",
    "gun_pnl": -0.0,
-   "toplam_pnl": 0.12,
+   "toplam_pnl": 0.11,
    "islem": 1
   }
  ],
  "ogrenme": {
-  "aktif_ders": null,
-  "yeni_ders": null,
-  "emekli_ders": null,
+  "aktif_ders": 0,
+  "yeni_ders": 0,
+  "emekli_ders": 0,
   "filtre_aktif": true
  },
  "rejim": null,
- "drift_uyari": false,
+ "drift_uyari": true,
  "limitler": {
   "gunluk_kayip_yuzde": 5.0,
   "kaldirac_tavan": 5,
@@ -102,10 +102,11 @@
   "kaldirac_ayar": 3.0
  },
  "saglik": {
-  "son_nabiz": "2026-11-19T15:36:35Z",
+  "son_nabiz": "2026-11-19T16:36:53Z",
   "hata_sayisi_gun": 0
  },
  "notlar": [
+  "drift uyarısı aktif",
   "hesaplar.gun_pnl = bugün gerçekleşen K/Z - ücret (açık pozisyon değişimi yok)"
  ]
 }

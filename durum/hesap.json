@@ -386,6 +386,12 @@
     "kaldirac": 3.0,
     "sz": 0.6646160383401449
    },
+   "PAXG": {
+    "acilis_ms": 1795106461389,
+    "giris": 3680.6,
+    "kaldirac": 3.0,
+    "sz": 0.002988643156007173
+   },
    "PURR": {
     "acilis_ms": 1794869904875,
     "giris": 0.0944077204143719,
@@ -607,7 +613,7 @@
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 909.0909090909091,
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 909.0909090909091
  },
- "son_niyet_cloid": "0xa5095ef431a9f7f2c73655f48a506ba2",
+ "son_niyet_cloid": "0x923fcbf6aac51bf3c0c195df74a210a2",
  "tasfiyeler": [
   {
    "adres": "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89",
@@ -619,7 +625,7 @@
   }
  ],
  "ucret": {
-  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 0.6685153544323362,
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 0.6734653544323362,
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 0.0,
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 0.326080770490458,
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 1.1966286638722594,

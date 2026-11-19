@@ -374,3 +374,5 @@
 {"t":"sonuc","cloid":"0xbb903ffbf191dff1988892e5c839dd23","durum":"dolu","ms":1795105111635,"sz":80.76866850490242,"px":0.30953,"ucret":0.011250146683045102}
 {"t":"niyet","kimlik":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e:1032125976342598","eylem":"azalt","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"WLFI","yon":"B","usd":25.445442,"reduce_only":true,"cloid":"0xa5095ef431a9f7f2c73655f48a506ba2","ms":1795105726394}
 {"t":"sonuc","cloid":"0xa5095ef431a9f7f2c73655f48a506ba2","durum":"dolu","ms":1795105726625,"sz":551.8062610677833,"px":0.046113,"ucret":0.011450448952478412}
+{"t":"niyet","kimlik":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:143477655709870","eylem":"ac","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"PAXG","yon":"B","usd":11.0,"reduce_only":false,"cloid":"0x923fcbf6aac51bf3c0c195df74a210a2","ms":1795106461162}
+{"t":"sonuc","cloid":"0x923fcbf6aac51bf3c0c195df74a210a2","durum":"dolu","ms":1795106461389,"sz":0.002988643156007173,"px":3680.6,"ucret":0.0049499999999999995}
