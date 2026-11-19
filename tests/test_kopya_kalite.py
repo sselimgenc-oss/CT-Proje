@@ -72,7 +72,7 @@ def test_pano_karti_var_ve_bos_veri_aciklamasi():
     from copytrade.canli import pano
     ozet = {"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0}
     bos = pano.html_olustur(ozet, {}, {}, [], [], 1_793_900_000_000)
-    assert "Kopya kalitesi" in bos and "dolan emir yok" in bos
+    assert "Kopya kalitesi" in bos and "veri birikiyor" in bos
     kayit = {"olay": "emir", "zaman_ms": 1_793_899_000_000, "coin": "BTC", "yon": "B", "eylem": "ac", "durum": "dolu", "usd_dolan": 10.0,
              "trader_dolum_ms": 1_793_898_000_000, "dolum_ms": 1_793_898_400_000, "gorme_ms": 1_793_898_100_000, "kayma_trader": 0.0002}
     dolu = pano.html_olustur(ozet, {}, {}, [kayit], [], 1_793_900_000_000)

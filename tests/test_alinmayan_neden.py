@@ -63,9 +63,9 @@ def test_olustur_alinmayan_neden_alani_kopya_kaliteden_once(tmp_path):
 
 
 def test_pano_karti_altin_ve_bos():
-    assert pano._alinmayan_neden_html([]) == '<div class="bos">veri yok</div>'
+    assert pano._alinmayan_neden_html([]) == pano.BIRIKIYOR
     html = pano._alinmayan_neden_html(go.alinmayan_neden(ALTIN))
-    assert "KARŞI-OLGU PnL $" in html
+    assert "ALINSAYDI K/Z $" in html
     assert "toplu emir bekliyor (fark küçük)" in html                              # etiketler telegram.ATLA_TR'den
     assert "ML filtresi (düşük puan)" in html
     assert "−12,00" not in html and "−12,50 $" in html                             # ml_filtre_atla karşı-olgu toplamı −12,50 $
