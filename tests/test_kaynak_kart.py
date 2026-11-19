@@ -22,7 +22,7 @@ def _tam() -> dict:
 def test_tam_veri_altin_ornek():
     h = pano._kaynak_html(_tam())
     assert "RAM: 512 MB · tepe 640 MB" in h
-    assert "cgroup bellek: 812 MB" in h
+    assert "bellek (servis): 812 MB" in h
     assert "yük (1 dk): 0,42 · disk boş: 12,5 GB" in h
     assert "ölçüm zamanı: 19.11 10:00 TSİ" in h
     assert "veri yok" not in h
@@ -33,7 +33,7 @@ def test_kismi_null_tire_gosterir():
     k.update({"ram_mb": None, "cgroup_mb": None, "yuk_1dk": None, "olc_ms": None})
     h = pano._kaynak_html(k)
     assert "RAM: — · tepe 640 MB" in h                       # ölçülemeyen alan "—", diğer alanlar yerinde
-    assert "cgroup bellek: —" in h
+    assert "bellek (servis): —" in h
     assert "yük (1 dk): — · disk boş: 12,5 GB" in h
     assert "ölçüm zamanı: —" in h
     assert "veri yok" not in h

@@ -112,3 +112,9 @@ def test_yeni_kart_3_ile_6_rakam_tek_aciklama(baslik):
 def test_alinmayan_karti_k41_atilir():
     h = pano._alinmayan_neden_html([{"neden": "ters_netlesme", "adet": 2, "karsi_olgu_kapanan": 1, "karsi_olgu_pnl": 3.0}])
     assert "ters netleşme" in h and "K‑41" not in h
+
+
+def test_bilinmeyen_neden_kodu_ham_gorunmez_diger_yazar():
+    from copytrade.canli import pano
+    h = pano._alinmayan_neden_html([{"neden": "yeni_teknik_kod", "adet": 3, "karsi_olgu_kapanan": 0, "karsi_olgu_pnl": None}])
+    assert "diğer" in h and "yeni_teknik_kod" not in h and "ALINSAYDI K/Z" in h

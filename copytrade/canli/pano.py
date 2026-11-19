@@ -487,7 +487,7 @@ def _atlanan_html(k24: list[dict]) -> str:
     if not sayim:
         return '<div class="bos">Son 24 saatte atlanan sinyal yok</div>'
     toplam = sum(sayim.values())
-    return "".join(f'<div class="s"><b>{n}</b> × {esc(ATLA_TR.get(neden, neden))}{" (kaçırılan)" if neden in KACIRILAN_NEDENLER else ""} <span class="so">(%{n / toplam * 100:.0f})</span></div>'
+    return "".join(f'<div class="s"><b>{n}</b> × {esc(_neden_tr(neden))}{" (kaçırılan)" if neden in KACIRILAN_NEDENLER else ""} <span class="so">(%{n / toplam * 100:.0f})</span></div>'
                    for neden, n in sayim.most_common())
 
 
@@ -536,7 +536,7 @@ def _rejim_sonuc_html(rs: dict | None) -> str:
             isabet = r.get("isabet_yuzde")
             isabet_metni = "—" if isabet is None else "%" + tr_sayi(float(isabet), 0)
             top = pnl_hucre(r.get("toplam_pnl"), True)
-            govde += (f'<tr><td>{esc(str(r.get("etiket", "?")))}</td><td class="sg">{int(r.get("n") or 0)}</td><td class="sg">{int(r.get("kazanan") or 0)}</td>'
+            govde += (f'<tr><td>{esc(REJIM_TR.get(str(r.get("etiket", "?")), str(r.get("etiket", "?"))))}</td><td class="sg">{int(r.get("n") or 0)}</td><td class="sg">{int(r.get("kazanan") or 0)}</td>'
                       f'<td class="sg">{isabet_metni}</td><td class="sg">{top}</td><td class="sg">{pnl_hucre(r.get("ortalama_pnl"))}</td></tr>')
         if not govde:
             govde = '<tr><td colspan="6">veri birikiyor</td></tr>'
@@ -628,11 +628,11 @@ def _alinmayan_neden_html(satirlar: list[dict]) -> str:
     """Pano kartı "Alınmayan sinyaller (24 sa)" (yalnız bilgi): neden | adet | karşı-olgu PnL $ (hayali). Satır yoksa "veri birikiyor"."""
     if not satirlar:
         return BIRIKIYOR
-    govde = "".join(f'<tr><td>{esc(_sade(ATLA_TR.get(r["neden"], r["neden"])))}</td><td class="sg">{r["adet"]}</td>'
+    govde = "".join(f'<tr><td>{esc(_neden_tr(r["neden"]))}</td><td class="sg">{r["adet"]}</td>'
                     f'<td class="sg {"art" if (r["karsi_olgu_pnl"] or 0) >= 0 else "eks"}">{esc(tl2(r["karsi_olgu_pnl"], True))}</td></tr>'
                     for r in satirlar)
-    return (f'<div class="tw"><table><tr><th>NEDEN</th><th class="sg">ADET</th><th class="sg">KARŞI-OLGU PnL $</th></tr>{govde}</table></div>'
-            '<div class="ha" style="padding:6px 11px">Karşı-olgu PnL: atlanan sinyalin hayali K/Z\'si (ücret ve kayma yok). Kapanmayan karşı-olgu sayılmaz.</div>')
+    return (f'<div class="tw"><table><tr><th>NEDEN</th><th class="sg">ADET</th><th class="sg">ALINSAYDI K/Z $</th></tr>{govde}</table></div>'
+            '<div class="ha" style="padding:6px 11px">Alınsaydı K/Z: atlanan sinyal alınsaydı ne olurdu (hayali; ücret ve kayma yok). Henüz kapanmayanlar sayılmaz.</div>')
 
 
 def _kopya_kalite_html(satirlar: list[dict]) -> str:
@@ -643,14 +643,23 @@ def _kopya_kalite_html(satirlar: list[dict]) -> str:
     if not q["n"]:
         return BIRIKIYOR
     ad, az = q["ac_artir"], q["azalt_kapat"]
-    return (f'<div class="mt">gecikme (trader dolumundan sonra): medyan {sn(q["gecikme_ms_medyan"])} · p90 {sn(q["gecikme_ms_p90"])}</div>'
+    return (f'<div class="mt">gecikme (trader dolumundan sonra): medyan {sn(q["gecikme_ms_medyan"])} · en yavaş %10 {sn(q["gecikme_ms_p90"])}</div>'
             f'<div class="mt">görme (trader dolumundan sonra): medyan {sn(q["gorme_ms_medyan"])}</div>'
-            f'<div class="mt">kayma: medyan {bp(q["kayma_bps_medyan"])} · p90 {bp(q["kayma_bps_p90"])} (+ aleyhe)</div>'
+            f'<div class="mt">kayma: medyan {bp(q["kayma_bps_medyan"])} · en kötü %10 {bp(q["kayma_bps_p90"])} (+ aleyhe)</div>'
             f'<div class="mt">açılış/artırma: {ad["n"]} dolum · kayma medyan {bp(ad["kayma_bps_medyan"])}</div>'
             f'<div class="mt">azaltma/kapanış: {az["n"]} dolum · kayma medyan {bp(az["kayma_bps_medyan"])}</div>')
 
 
 BIRIKIYOR = '<div class="bos">veri birikiyor</div>'
+
+
+REJIM_TR = {"trend_up": "yükseliş", "trend_down": "düşüş", "range": "yatay", "unclear": "belirsiz", "bilinmiyor": "bilinmiyor",
+            "Extreme Fear": "aşırı korku", "Fear": "korku", "Neutral": "nötr", "Greed": "açgözlülük", "Extreme Greed": "aşırı açgözlülük"}
+
+
+def _neden_tr(neden: str) -> str:
+    """Atlama nedeni → sade Türkçe etiket (`ATLA_TR`); sözlükte olmayan teknik kod ham görünmez: "diğer" (Fable 19.11)."""
+    return _sade(ATLA_TR.get(neden, "diğer"))
 
 
 def _sade(etiket: str) -> str:
@@ -698,7 +707,7 @@ def _kural_maliyet_html(km: dict | None) -> str:
     v = ((km.get("vurgu") or {}).get("slot_tavani")) or next((r for r in satirlar if r.get("neden") == "slot_tavani"), None)
     ilk = ("Slot tavanı", "yok" if not v else f'{int(v.get("olay_adedi") or 0)} sinyal · {int(v.get("trader_sayisi") or 0)} trader · {tl2(v.get("toplam_karsi_olgu_pnl"), True)}')
     digerleri = sorted((r for r in satirlar if r.get("neden") != "slot_tavani"), key=lambda r: -abs(float(r.get("toplam_karsi_olgu_pnl") or 0.0)))[:2]
-    return _kart([ilk, *[(_sade(ATLA_TR.get(r["neden"], r["neden"])), f'{int(r.get("olay_adedi") or 0)} sinyal · {tl2(r.get("toplam_karsi_olgu_pnl"), True)}') for r in digerleri]],
+    return _kart([ilk, *[(_neden_tr(r["neden"]), f'{int(r.get("olay_adedi") or 0)} sinyal · {tl2(r.get("toplam_karsi_olgu_pnl"), True)}') for r in digerleri]],
                  f"Son {gun} günde kurallar yüzünden alınmayan sinyallerin hayali K/Z toplamı (alt sınır; yalnız bilgi).")
 
 
@@ -708,8 +717,8 @@ def _secim_rastgele_html(isabetler: list[dict] | None, sg: dict | None) -> str:
     if ok:
         r = ok[-1]
         yz = r.get("yuzdelik")
-        return _kart([("Seçilen 11 (7 gün sonrası ort.)", tr_yuzde(float(r["secilen_ortalama"]))),
-                      ("Rastgele 11 (ortanca)", tr_yuzde(float(r["rastgele_medyan"]))),
+        return _kart([("Seçilen 11 · son ölçüm (7 gün sonrası ort.)", tr_yuzde(float(r["secilen_ortalama"]))),
+                      ("Rastgele 11 · son ölçüm (ortanca)", tr_yuzde(float(r["rastgele_medyan"]))),
                       ("Seçimin sırası (50 = şans)", "—" if yz is None else tr_sayi(float(yz), 0)),
                       ("Şansla olma ihtimali", "—" if r.get("p") is None else "%" + tr_sayi(float(r["p"]) * 100, 0)),
                       ("Ölçülen gün", str(len(ok)))],
@@ -734,7 +743,7 @@ def _kaynak_html(kaynak: dict | None, saglik: dict | None = None) -> str:
     olc = kaynak.get("olc_ms")
     zaman = "—" if olc is None else f"{_tsi(int(olc))} TSİ"
     return (f'<div class="mt">RAM: {mb(kaynak.get("ram_mb"))} · tepe {mb(kaynak.get("ram_tepe_mb"))}</div>'
-            f'<div class="mt">cgroup bellek: {mb(kaynak.get("cgroup_mb"))}</div>'
+            f'<div class="mt">bellek (servis): {mb(kaynak.get("cgroup_mb"))}</div>'
             f'<div class="mt">yük (1 dk): {yuk(kaynak.get("yuk_1dk"))} · disk boş: {gb(kaynak.get("disk_bos_gb"))}</div>'
             f'<div class="mt">ölçüm zamanı: {zaman}</div>' + "".join(sunucu))
 
@@ -1020,7 +1029,7 @@ input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler sectio
 <div class="p"><div class="pb">Sermaye ve maruziyet <span>dönem boyu</span></div><div class="pi">{_maruziyet_ozet_html(mo)}</div></div>
 <div class="p"><div class="pb">Öğrenme etkisi <span>bugün · yalnız bilgi</span></div><div class="pi">{ogrenme_html}</div></div>
 <div class="p"><div class="pb">Kural maliyeti <span>son 7 gün · alınmayan sinyal</span></div><div class="pi">{kural_html}</div></div>
-<div class="p"><div class="pb">Alınmayan sinyaller (24 sa) <span>neden · karşı-olgu PnL (hayali)</span></div><div class="pi">{alinmayan_html}</div></div>
+<div class="p"><div class="pb">Alınmayan sinyaller (24 sa) <span>neden · alınsaydı K/Z (hayali)</span></div><div class="pi">{alinmayan_html}</div></div>
 <div class="p g3"><div class="pb">Rejim ve duygu × sonuç <span>son 7 gün · kapanan işlemler</span></div><div class="pi">{_rejim_sonuc_html(rejim_sonuc)}</div></div>
 <div class="p"><div class="pb">Kopya kalitesi <span>24 sa · dolan emir · trader dolumuna göre</span></div><div class="pi">{kopya_html}</div></div>
 <div class="p"><div class="pb">Seçim × rastgele <span>seçilen 11 ↔ rastgele 11</span></div><div class="pi">{secim_html}</div></div>
