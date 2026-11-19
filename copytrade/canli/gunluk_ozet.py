@@ -16,6 +16,7 @@ import json
 import os
 import re
 import tempfile
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -183,6 +184,24 @@ def _kaynak_saglik(motor: Any) -> dict:
     return {k: o.get(k) for k in ("ram_mb", "ram_tepe_mb", "disk_bos_gb", "yuk_1dk")}
 
 
+SUNUCU_SAGLIK_YOL = "/var/lib/sg-sanal/saglik_sunucu.json"        # deploy/sanal_guncelle.sh saatlik yazar (sunucu dışında yok -> alanlar null)
+SUNUCU_SAGLIK_ESKI_SN = 3 * 3600                                   # bundan eski ölçüm bayat sayılır (null)
+
+
+def _sunucu_saglik(ortam: dict | None = None) -> dict:
+    """Sunucu dayanıklılık alanları (yeni, ek): yeniden_baslama_1s (son 1 saatte sg-sanal yeniden başlama), oom_son (son 1 saatte OOM-kill). Dosya yok/bayat/bozuk -> None. Hata yutulur."""
+    bos = {"yeniden_baslama_1s": None, "oom_son": None}
+    try:
+        yol = (ortam if ortam is not None else os.environ).get("SG_SAGLIK_SUNUCU") or SUNUCU_SAGLIK_YOL
+        d = json.loads(Path(yol).read_text(encoding="utf-8"))
+        if not isinstance(d, dict) or time.time() - float(d["zaman"]) > SUNUCU_SAGLIK_ESKI_SN:
+            return bos
+        n, oom = d.get("yeniden_baslama_1s"), d.get("oom_son")
+        return {"yeniden_baslama_1s": n if isinstance(n, int) and not isinstance(n, bool) else None, "oom_son": oom if isinstance(oom, bool) else None}
+    except Exception:                                              # noqa: BLE001
+        return bos
+
+
 def olustur(motor: Any, ortam: dict | None = None) -> dict:
     """Günlük özet sözlüğü (saf okuma; durum değiştirmez)."""
     simdi = int(motor.saat_ms())
@@ -224,7 +243,7 @@ def olustur(motor: Any, ortam: dict | None = None) -> dict:
         "hesaplar": hesaplar, "ogrenme": _ogrenme(motor, gun, kayitlar), "rejim": _rejim_btc(motor), "drift_uyari": drift,
         "limitler": {"gunluk_kayip_yuzde": round((yaml_kayip if yaml_kayip is not None else sert.GUNLUK_KAYIP_UST_ORAN) * 100, 2), "kaldirac_tavan": sert.KALDIRAC_UST, "durdu_mu": durdu,
                      "kaldirac_ayar": _say(motor.rules.get("canli_marj_kaldirac"))},
-        "saglik": {"son_nabiz": _iso(simdi), "hata_sayisi_gun": sum(1 for k in kayitlar if k.get("olay") == "adim_hata"), **_kaynak_saglik(motor)},
+        "saglik": {"son_nabiz": _iso(simdi), "hata_sayisi_gun": sum(1 for k in kayitlar if k.get("olay") == "adim_hata"), **_kaynak_saglik(motor), **_sunucu_saglik(ortam)},
         "notlar": notlar[:5],
         "kopya_kalite": kopya_kalite(kayitlar),
     }
