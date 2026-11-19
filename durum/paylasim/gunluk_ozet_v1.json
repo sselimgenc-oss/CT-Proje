@@ -1,30 +1,30 @@
 {
  "sema": "ortak.gunluk_ozet.v1",
  "proje": "CT",
- "uretim": "2026-11-19T16:36:53Z",
+ "uretim": "2026-11-19T17:37:00Z",
  "gun": "2026-11-19",
  "mod": "sanal",
  "kasa": {
   "baslangic": 10000.0,
-  "simdi": 9991.17,
-  "gun_pnl": -31.31,
-  "toplam_pnl": -8.83,
-  "zirveden_dusus_yuzde": 0.58
+  "simdi": 9973.66,
+  "gun_pnl": -48.83,
+  "toplam_pnl": -26.34,
+  "zirveden_dusus_yuzde": 0.75
  },
  "islem": {
-  "gun_acilan": 6,
-  "gun_kapanan": 1,
+  "gun_acilan": 7,
+  "gun_kapanan": 2,
   "kazanan": 0,
-  "kaybeden": 1,
+  "kaybeden": 2,
   "acik_pozisyon": 31,
-  "alinmayan_sinyal": 2395
+  "alinmayan_sinyal": 2648
  },
  "hesaplar": [
   {
    "ad": "T_0c2447",
    "gun_pnl": -0.1,
-   "toplam_pnl": -9.97,
-   "islem": 5
+   "toplam_pnl": -8.67,
+   "islem": 6
   },
   {
    "ad": "T_c2c3cf",
@@ -41,13 +41,13 @@
   {
    "ad": "T_99f0d4",
    "gun_pnl": -0.3,
-   "toplam_pnl": 73.82,
+   "toplam_pnl": 63.98,
    "islem": 5
   },
   {
    "ad": "T_2e4035",
    "gun_pnl": 0.35,
-   "toplam_pnl": 16.79,
+   "toplam_pnl": 19.52,
    "islem": 6
   },
   {
@@ -59,20 +59,20 @@
   {
    "ad": "T_b4c6ee",
    "gun_pnl": 0,
-   "toplam_pnl": -5.6,
+   "toplam_pnl": -7.05,
    "islem": 0
   },
   {
    "ad": "T_e7ae5a",
    "gun_pnl": -2.73,
-   "toplam_pnl": 17.9,
+   "toplam_pnl": 11.81,
    "islem": 4
   },
   {
    "ad": "T_7bb402",
-   "gun_pnl": -20.35,
-   "toplam_pnl": -101.47,
-   "islem": 17
+   "gun_pnl": -26.07,
+   "toplam_pnl": -105.62,
+   "islem": 19
   },
   {
    "ad": "T_664206",
@@ -83,7 +83,7 @@
   {
    "ad": "T_574595",
    "gun_pnl": -0.0,
-   "toplam_pnl": 0.11,
+   "toplam_pnl": 0.1,
    "islem": 1
   }
  ],
@@ -102,7 +102,7 @@
   "kaldirac_ayar": 3.0
  },
  "saglik": {
-  "son_nabiz": "2026-11-19T16:36:53Z",
+  "son_nabiz": "2026-11-19T17:37:00Z",
   "hata_sayisi_gun": 0
  },
  "notlar": [
