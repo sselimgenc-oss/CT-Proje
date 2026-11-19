@@ -43,9 +43,9 @@ def test_msg_haftalik_rejim_satiri_sonda():
 
 # ---------------------------------------------------------------- Pano kartı
 def test_pano_rejim_karti_veri_yoksa_veri_yok():
-    assert "veri yok" in pano._rejim_sonuc_html(None)
-    assert "veri yok" in pano._rejim_sonuc_html({})
-    assert "veri yok" in pano._rejim_sonuc_html({"tablolar": {"rejim_1d": [], "rejim_4h": [], "duygu": []}})
+    assert "veri birikiyor" in pano._rejim_sonuc_html(None)
+    assert "veri birikiyor" in pano._rejim_sonuc_html({})
+    assert "veri birikiyor" in pano._rejim_sonuc_html({"tablolar": {"rejim_1d": [], "rejim_4h": [], "duygu": []}})
 
 
 def test_pano_rejim_karti_uc_tablo_ve_kacis():
@@ -62,4 +62,4 @@ def test_pano_html_rejim_karti_kwarg_ile_gelir_ve_kwarg_yoksa_veri_yok():
     h = pano.html_olustur(ozet, {}, {}, [], [], 1_800_000_000_000, rejim_sonuc=RS)
     assert "Rejim ve duygu × sonuç" in h and "trend_up" in h
     h0 = pano.html_olustur(ozet, {}, {}, [], [], 1_800_000_000_000)
-    assert "Rejim ve duygu × sonuç" in h0 and "veri yok" in h0
+    assert "Rejim ve duygu × sonuç" in h0 and "veri birikiyor" in h0

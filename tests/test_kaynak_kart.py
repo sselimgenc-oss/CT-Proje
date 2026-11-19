@@ -51,4 +51,4 @@ def test_tum_alanlar_null_kart_yine_render_edilir():
 def test_kaynak_yoksa_veri_yok():
     for kaynak in (None, {}, "bozuk"):
         h = pano._kaynak_html(kaynak)  # type: ignore[arg-type]
-        assert h == '<div class="mt">veri yok</div>'
+        assert h == pano.BIRIKIYOR

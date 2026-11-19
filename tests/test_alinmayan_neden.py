@@ -63,7 +63,7 @@ def test_olustur_alinmayan_neden_alani_kopya_kaliteden_once(tmp_path):
 
 
 def test_pano_karti_altin_ve_bos():
-    assert pano._alinmayan_neden_html([]) == '<div class="bos">veri yok</div>'
+    assert pano._alinmayan_neden_html([]) == pano.BIRIKIYOR
     html = pano._alinmayan_neden_html(go.alinmayan_neden(ALTIN))
     assert "KARŞI-OLGU PnL $" in html
     assert "toplu emir bekliyor (fark küçük)" in html                              # etiketler telegram.ATLA_TR'den
