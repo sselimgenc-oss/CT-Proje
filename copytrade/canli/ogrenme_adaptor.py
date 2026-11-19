@@ -31,6 +31,7 @@ VARSAYILAN = {
     "ogrenme_aktif": True, "ogrenme_r_birim_oran": 0.02, "ogrenme_shrink_n": 10, "ogrenme_min_n": 3,
     "ogrenme_agirlik_etki_r": 1.0, "ogrenme_emekli_etki_r": 3.0, "ogrenme_fren_esik_r": 10.0, "ogrenme_geri_alma_r": 3.0, "ogrenme_degerlendirme_dk": 60,
     "ogrenme_filtre_aktif": True, "ogrenme_filtre_min_n": 50, "ogrenme_filtre_egitim_gun": 7, "ogrenme_filtre_log_saat": 6, "ogrenme_drift_telegram": False,
+    "sanal_ogrenme_drift_eylem": True,
 }
 BEKLEYEN_OMUR_MS = 15 * 60_000               # karar anı özellikleri: açılış dolumu bu süre içinde gelmezse atılır
 
@@ -99,7 +100,7 @@ class Ogrenme:
         self._modeller: dict[str, tuple[dict, datetime] | None] = {}     # alias -> (paket, son_kullanma) | None
         self._filtre_log: dict[str, int] = {}
         self._pano: list[dict] = []
-        self.uyg: dict[str, Any] = {"emekli": {}, "carpan": {}, "emekli_kullanilan": [], "geri_alinan": {}, "son_ms": 0, "egit_zorla": False, "drift_uyari": {}}
+        self.uyg: dict[str, Any] = {"emekli": {}, "carpan": {}, "emekli_kullanilan": [], "geri_alinan": {}, "son_ms": 0, "egit_zorla": False, "drift_uyari": {}, "drift_carpan": {}}
         if self.aktif:
             self.iz = _oku(self.iz_yolu)
             self.uyg.update({a: v for a, v in _oku(self.uyg_yolu).items() if a in self.uyg})
@@ -176,10 +177,21 @@ class Ogrenme:
         try:
             if not self.aktif:
                 return 1.0
-            c = self.uyg["carpan"].get(takma_ad(adres))
-            return 1.0 if c is None else max(AGIRLIK_ALT, min(AGIRLIK_UST, float(c["deger"])))
+            alias = takma_ad(adres)
+            c = self.uyg["carpan"].get(alias)
+            w = 1.0 if c is None else float(c["deger"])
+            d = self.uyg["drift_carpan"].get(alias)                   # K-73: drift eylemi çarpanı (ders çarpanıyla min alınır)
+            if d is not None:
+                w = min(w, float(d["deger"]))
+            return max(AGIRLIK_ALT, min(AGIRLIK_UST, w))
         except Exception:                                         # noqa: BLE001
             return 1.0
+
+    def agirlik_alias(self, alias: str) -> float:
+        c = self.uyg["carpan"].get(alias)
+        d = self.uyg["drift_carpan"].get(alias)
+        w = min(1.0 if c is None else float(c["deger"]), 1.0 if d is None else float(d["deger"]))
+        return max(AGIRLIK_ALT, min(AGIRLIK_UST, w))
 
     def hafta_degisti(self) -> None:
         """Haftalık kadro değişimi: "emekli" kayıtları biter (bu dersler bir daha emekli yaptırmaz; yalnız çarpan olarak sürer)."""
@@ -191,6 +203,7 @@ class Ogrenme:
                 self.uyg["emekli_kullanilan"] = sorted(set(self.uyg["emekli_kullanilan"]) | set(e.get("kimlikler", [])))
                 self._kayit(olay="ders_geri_alindi", kurulum=a, neden="hafta_degisimi", tur="emekli")
             self.uyg["emekli"] = {}
+            self.uyg["drift_carpan"] = {}                         # K-73: drift çarpanı da haftalık kadro değişiminde biter
             self.uyg["egit_zorla"] = True                         # haftalık kadro değişimi: filtre bir sonraki saatlik adımda yeniden eğitilir
             _atomik_yaz(self.uyg_yolu, self.uyg)
         except Exception as hata:                                 # noqa: BLE001
@@ -328,6 +341,12 @@ class Ogrenme:
                 continue
             self.uyg["drift_uyari"][alias] = son
             self._kayit(olay="kurulum_drift", kurulum=alias, n=d["n"], alarm_indeksi=son, S=round(float(d["S"]), 4))
+            if self.k["sanal_ogrenme_drift_eylem"]:                       # K-73 (kullanıcı kararı 19.11 gece): sanalda drift işlem etkiler: filtre yeniden eğitilir + slot çarpanı <= 0.5
+                eski = self.agirlik_alias(alias)
+                yeni_c = max(AGIRLIK_ALT, min(AGIRLIK_UST, min(eski, 0.5)))
+                self.uyg["egit_zorla"] = True
+                self.uyg["drift_carpan"][alias] = {"deger": yeni_c, "ms": int(simdi)}
+                self._kayit(olay="drift_eylem", kurulum=alias, egit_zorla=True, carpan_once=round(eski, 4), carpan=yeni_c)
             if self.gonder and self.k["ogrenme_drift_telegram"]:          # varsayılan KAPALI: eşikler CT için kalibre değil (yalnız olay + OZET)
                 try:
                     self.gonder(tg.alarm("UYARI: trader performansı bozuluyor (drift)", f"{alias}: son {d['n']} kapanan işlemde CUSUM alarmı (işlem #{son}).\nYalnız uyarı; kopyalama değişmedi.", "⚠️"))

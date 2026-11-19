@@ -90,6 +90,7 @@ def test_slot_toplam_tavani_baglayinca_yanlis_alarm_yok(tmp_path):
 def test_hip3_eski_pozisyon_ve_ters_yon_ideale_girmez(tmp_path):
     """ETH vakası: bizde a uzun tutulu; b kısa (K-41 ters netleşme → açılmadı) → ideale girmez; HIP-3 ve eski (dolumu görülmemiş) pozisyon da hariç; tutulmayan ama aynı yönlü c girer."""
     m, saat, _, a = hazir(tmp_path, n=3)
+    m.rules["sanal_hip3_kopya"] = False                            # K-73: sanalda HIP-3 varsayılan açık; bu test HIP-3'ün ideale girmediği durumu sınar
     b, c = adr(2), adr(3)
     for x in (b, c):
         m.hesap_tr[x] = {"deger": 100_000.0, "ms": saat()}

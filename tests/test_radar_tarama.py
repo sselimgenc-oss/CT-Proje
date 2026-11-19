@@ -636,7 +636,7 @@ def _hip3_senaryo(tmp_path, rules):
 
 
 def test_radar_hip3_kopya_true_ikisi_de_kopyalanir_eski_v1_davranisi(tmp_path):
-    assert RULES["radar_hip3_kopya"] is False                                     # K‑43: varsayılan = HIP‑3 hariç
+    assert RULES["radar_hip3_kopya"] is True                                      # K-73 (kullanıcı kararı 19.11 gece): sanalda HIP‑3 dahil (kasıtlı kural değişikliği)
     s = _hip3_senaryo(tmp_path, {**RULES1, "radar_hip3_kopya": True})
     assert s["ayna_getiri_7g"] == pytest.approx(0.003372727, abs=1e-8) and s["kopya_getiri_7g"] == pytest.approx(0.00326226, abs=1e-7)
     assert s["hip3_nosyonel_pay"] == pytest.approx(20_500 / 22_600) and s["islem_sayisi"] == 2 and s["gecti"] is True
@@ -649,8 +649,9 @@ def test_radar_hip3_kopya_false_yalniz_perp_kopyalanir_trader_olculeri_degismez(
     assert s["likit_pay"] == 1.0 and s["gecti"] is True
 
 
-def test_radar_hip3_kopya_ve_canli_hip3_kopya_varsayilanlari_ayni():
-    assert RULES["radar_hip3_kopya"] is RULES["canli_hip3_kopya"] is False         # iki anahtar ayrışmasın (K‑43)
+def test_radar_hip3_kopya_ve_sanal_hip3_kopya_varsayilanlari_ayni():
+    assert RULES["radar_hip3_kopya"] is RULES["sanal_hip3_kopya"] is True          # K-73: radar sanal motorla tutarlı; gerçek kip canli_hip3_kopya=false kalır
+    assert RULES["canli_hip3_kopya"] is False
 
 
 def test_ozet_md_gecti_11den_azsa_uyari_satiri(tmp_path):
@@ -674,7 +675,7 @@ def test_hip3_nosyonel_pay_uc_durumlar():
 
 def test_kural_ust_bool_false_gercekten_false_olur():
     yeni, uygulanan = r.kural_ust_uygula(RULES, ["radar_hip3_kopya=false"])
-    assert yeni["radar_hip3_kopya"] is False and uygulanan == {"radar_hip3_kopya": False} and RULES["radar_hip3_kopya"] is False
+    assert yeni["radar_hip3_kopya"] is False and uygulanan == {"radar_hip3_kopya": False} and RULES["radar_hip3_kopya"] is True      # K-73: yaml varsayılanı true
     assert r.kural_ust_uygula(RULES, ["radar_hip3_kopya=true"])[0]["radar_hip3_kopya"] is True
     with pytest.raises(ValueError):
         r.kural_ust_uygula(RULES, ["radar_hip3_kopya=hayir"])
