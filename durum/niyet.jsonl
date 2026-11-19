@@ -362,3 +362,11 @@
 {"t":"sonuc","cloid":"0x2399bbe907c727a67c98b86531239c01","durum":"dolu","ms":1795098781599,"sz":93.92421958789966,"px":0.31226,"ucret":0.013197949563832896}
 {"t":"niyet","kimlik":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e:90188427582420","eylem":"artir","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"AERO","yon":"B","usd":11.287782,"reduce_only":false,"cloid":"0x164f22637113e3c08fc130fd6f913f05","ms":1795100136413}
 {"t":"sonuc","cloid":"0x164f22637113e3c08fc130fd6f913f05","durum":"dolu","ms":1795100136640,"sz":26.244552612499252,"px":0.4301,"ucret":0.005079501935386167}
+{"t":"niyet","kimlik":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e:145816203879679","eylem":"azalt","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"LIT","yon":"B","usd":11.865389,"reduce_only":true,"cloid":"0x4d2ddd50a4129928f17d5bd42a903294","ms":1795102469402}
+{"t":"sonuc","cloid":"0x4d2ddd50a4129928f17d5bd42a903294","durum":"dolu","ms":1795102471314,"sz":4.087777953554666,"px":2.8996,"ucret":0.0053338144293572}
+{"t":"niyet","kimlik":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e:785729674229076","eylem":"artir","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"AERO","yon":"B","usd":19.420048,"reduce_only":false,"cloid":"0x62dba0c18777f4ccfba02c22520fd3f0","ms":1795102476377}
+{"t":"sonuc","cloid":"0x62dba0c18777f4ccfba02c22520fd3f0","durum":"red","ms":1795102479378,"sz":0.0,"px":null,"ucret":0.0}
+{"t":"niyet","kimlik":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e:677359315253954","eylem":"ac","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"LINK","yon":"A","usd":19.420048,"reduce_only":false,"cloid":"0xe52ee1abdcb889d9e7de2a092562d61f","ms":1795102479469}
+{"t":"sonuc","cloid":"0xe52ee1abdcb889d9e7de2a092562d61f","durum":"red","ms":1795102482469,"sz":0.0,"px":null,"ucret":0.0}
+{"t":"niyet","kimlik":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e:925145798335173","eylem":"artir","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"AERO","yon":"B","usd":20.132592,"reduce_only":false,"cloid":"0xf833351800a345d359b70faee95e84d0","ms":1795102506442}
+{"t":"sonuc","cloid":"0xf833351800a345d359b70faee95e84d0","durum":"dolu","ms":1795102506561,"sz":47.14451055390249,"px":0.42704,"ucret":0.009059666304122334}
