@@ -222,7 +222,7 @@ golge_hesap_alt_usd: 5000               # $ (trader hesap değeri bundan KÜÇÜ
 golge_kaldirac_uyari: 5                 # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_5x; yalnız kayıt, işlem etkisi yok)
 golge_kaldirac_cikar: 20                # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_20x; yalnız kayıt, işlem etkisi yok)
 # ML Otonom rejim etiketi (yalnız kayıt, işlem etkisi yok): motor `rejim_degisti` olayı ve emir olaylarındaki `rejim` alanını yazar.
-rejim_kaynak_url: "https://trader-pano.sselimgenc-c18.workers.dev/rejim.json"                    # URL (boşsa kapalı; ağ çağrısı yapılmaz). Yayın: ML Otonom rejim.json (belirtim: rejim-yayini-spec)
+rejim_kaynak_url: "https://trader-pano-acik.sselimgenc-c18.workers.dev/rejim.json"                    # URL (boşsa kapalı; ağ çağrısı yapılmaz). Yayın: ML Otonom rejim.json (belirtim: rejim-yayini-spec)
 rejim_okuma_dk: 30                      # dakika (yalnız kayıt, işlem etkisi yok)
 # Haber / duygu etiketi (yalnız kayıt, işlem etkisi yok): `emir` olaylarına `duygu` + `haber` (o coin), `duygu_degisti` olayı; ton etiketi KABA anahtar kelime sayımıdır
 haber_aktif: true                       # false ise ağ çağrısı yapılmaz (yalnız kayıt, işlem etkisi yok)
