@@ -29,7 +29,7 @@ def _acilis(monkeypatch, hl_deger):
 
 
 def test_k22_kurallar_hl_tavani_1500_kasa_siniri_1000_ayri():
-    assert RULES["canli_hl_deger_ust_usd"] == 1500 and RULES["canli_kasa_ust_usd"] == 1000 and mt.hl_deger_ust(RULES) == 1500.0
+    assert RULES["canli_hl_deger_ust_usd"] == 1500 and RULES["canli_kasa_ust_usd"] == 1500 and mt.hl_deger_ust(RULES) == 1500.0
     assert mt.hl_deger_ust({"canli_kasa_ust_usd": 1000}) == 1000.0                     # anahtar yoksa eski (sıkı) davranış
 
 

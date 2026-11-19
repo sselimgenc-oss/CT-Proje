@@ -26,7 +26,7 @@ def test_kasa_belirle_gercek_ortam_zorunlu_sanalda_yok_sayilir():
     assert mt.kasa_belirle(rules, "sanal", {"CANLI_KASA_USD": "300"}) == (1000.0, "yaml")             # sanal seri 1.000 $ kalır
     assert mt.kasa_belirle(rules, "gercek", {"CANLI_KASA_USD": "300"}) == (300.0, "ortam")
     assert mt.kasa_belirle(rules, "gercek", {"CANLI_KASA_USD": " 1000 "}) == (1000.0, "ortam")
-    for kotu in (None, "", "abc", "0", "-5", "1000.01", "nan", "inf"):
+    for kotu in (None, "", "abc", "0", "-5", "1500.01", "nan", "inf"):
         with pytest.raises(mt.KipHatasi):
             mt.kasa_belirle(rules, "gercek", {} if kotu is None else {"CANLI_KASA_USD": kotu})
 

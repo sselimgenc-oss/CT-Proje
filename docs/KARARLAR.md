@@ -350,3 +350,9 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - Kalan: ölçüm ve raporlama (isabet, %4/ay ve BTC karşılaştırması bilgi olarak), risk kilitleri (zirveden %20, günlük frenler) ve tüm güvenlik kuralları. Gerçek paraya geçişin zamanı ve şekli yalnız kullanıcının kararı.
 - Kod: bu şartlara bağlı otomatik durdurma kodda yok (K-46 ve 31.12 yalnız belge kuralıydı); kod değişikliği gerekmedi.
 - 28 günlük strateji kilidi (AGENTS.md kural 5) de kaldırıldı (kullanıcı kararı 19.11, seçenek b): strateji ayarları kullanıcı kararı ve onaylı süreçle istendiği zaman değişebilir; değişiklik yeni sürüm olur, eski seri silinmez.
+
+## K-72 — Gerçek para sert sınırları koda gömüldü (kullanıcı kararı 19.11; Fable önerisi: CT 3x kalır)
+- Sınırlar `copytrade/canli/sert_sinirlar.py` içinde sabit; yanlış `kurallar.yaml` aşamaz. Yalnız GERÇEK kip; sanal kip (10.000 $ sanal sınır) değişmez.
+- Kasa üst sınırı 1.000 → **1.500 $** (`canli_kasa_ust_usd: 1500`; etkin sınır = min(yaml, 1.500)). Seçili kasa `canli_kasa_usd` 1.000 $ olarak kalır (kasa seçimi kullanıcının sonraki kararı). `canli_hl_deger_ust_usd` 1.500 kalır (kasa sınırı değil, yeniden başlatma tavanı; ayrı sert sınır yok).
+- Günlük kayıp ≤ %5: `canli_gunluk_kayip_oran` > 0,05 ise gerçek kip başlamaz (KipHatasi, çıkış 3; `--kontrol` da hata verir).
+- Kaldıraç ∈ [1, 5]x: `canli_marj_kaldirac` dışındaysa gerçek kip başlamaz. CT 3x kalır: 5x izole tasfiye (≈ −%17-19) bizim %20/%22 stoplarımızdan önce gelir. K-67 `canli_min_azami_kaldirac` (coin filtresi) ayrı, değişmedi.

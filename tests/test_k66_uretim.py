@@ -17,7 +17,7 @@ def test_k66_kurallar_dosyada():
     assert (r["canli_slot_dusus_oran"], r["canli_bekleme_gun"], r["canli_islem_yok_saat"]) == (0.20, 14, 72)             # slot stop %20 korunur; bekleme / işlem yok RADAR_V1 §5
     assert (r["canli_gunluk_kayip_oran"], r["canli_zirve_dusus_oran"]) == (0.05, 0.20)                                   # risk kilitleri değişmez
     assert (r["radar_kadro_toplam"], r["radar_kadro_ilk"], r["radar_pencere_saat"], r["radar_surum"]) == (30, 11, 168, "v4")
-    assert (r["canli_kasa_ust_usd"], r["canli_sanal_kasa_ust_usd"]) == (1000, 10000)                                        # gerçek para ≤ 1.000 $ (K-22/K-26)
+    assert (r["canli_kasa_ust_usd"], r["canli_sanal_kasa_ust_usd"]) == (1500, 10000)                                        # gerçek para ≤ 1.000 $ (K-22/K-26)
     assert boyut.saha_sayisi(10000.0, r) == 11 and boyut.slot_usd(10000.0, r) == pytest.approx(10000.0 / 11)
     assert boyut.saha_sayisi(1000.0, r) == 5 and boyut.slot_usd(1000.0, r) == pytest.approx(200.0)
     assert mt.radar_surum_oku() == "v4"                                    # M-09 (14.11)
@@ -26,20 +26,20 @@ def test_k66_kurallar_dosyada():
 
 def test_k66_sanal_kasa_2200_gercek_kasa_1000_ustu_reddedilir():
     r = load_rules_asil()
-    assert mt.kasa_ust(r, "gercek") == 1000.0 and mt.kasa_ust(r, "sanal") == 10000.0
+    assert mt.kasa_ust(r, "gercek") == 1500.0 and mt.kasa_ust(r, "sanal") == 10000.0
     assert mt.kasa_belirle(r, "sanal", {}, 2200) == (2200.0, "arg")
     with pytest.raises(mt.KipHatasi):
         mt.kasa_belirle(r, "sanal", {}, 10000.01)
     assert mt.kasa_belirle(r, "gercek", {"CANLI_KASA_USD": "1000"}) == (1000.0, "ortam")
-    for kotu in ("1000.01", "2200"):                                                                       # sanal sınır gerçek kipe sızmaz
+    for kotu in ("1500.01", "2200"):                                                                       # sanal sınır gerçek kipe sızmaz
         with pytest.raises(mt.KipHatasi, match="CANLI_KASA_USD"):
             mt.kasa_belirle(r, "gercek", {"CANLI_KASA_USD": kotu})
     with pytest.raises(mt.KipHatasi, match="yalnız sanal kipte"):
         mt.kasa_belirle(r, "gercek", {"CANLI_KASA_USD": "1000"}, 2200)
     from copytrade.canli.risk import Risk
     risk = Risk(r, 2200.0)
-    assert risk.kasa_siniri_asildi(2200.0) is True                                                         # varsayılan = gerçek para sınırı (sıkı)
-    assert risk.kasa_siniri_asildi(2200.0, mt.kasa_ust(r, "sanal")) is False and risk.kasa_siniri_asildi(1000.01, mt.kasa_ust(r, "gercek")) is True
+    assert risk.kasa_siniri_asildi(1500.01) is True                                                         # varsayılan = gerçek para sınırı (sıkı)
+    assert risk.kasa_siniri_asildi(2200.0, mt.kasa_ust(r, "sanal")) is False and risk.kasa_siniri_asildi(1500.01, mt.kasa_ust(r, "gercek")) is True
 
 
 def test_k66_gercek_kipte_1000_ustu_kasa_ile_motor_baslamaz(tmp_path):

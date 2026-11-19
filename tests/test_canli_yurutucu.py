@@ -336,7 +336,7 @@ def test_zirveden_yuzde_20_dusus_dur_tetikler():
 
 def test_kasa_siniri_ve_bayrak():
     r = rk.Risk(RULES, 1000.0)
-    assert r.kasa_siniri_asildi(1000.0) is False and r.kasa_siniri_asildi(1000.01) is True
+    assert r.kasa_siniri_asildi(1500.0) is False and r.kasa_siniri_asildi(1500.01) is True
     assert r.acilis_izni("a", "BTC", True, T0) == (False, "kasa_siniri")
     r.kasa_siniri_asildi(1000.0)
     r.bayrak("mutabakat", True)
