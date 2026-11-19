@@ -639,9 +639,24 @@ def _kopya_kalite_html(satirlar: list[dict]) -> str:
             f'<div class="mt">azaltma/kapanış: {az["n"]} dolum · kayma medyan {bp(az["kayma_bps_medyan"])}</div>')
 
 
+def _kaynak_html(kaynak: dict | None) -> str:
+    """Pano kartı "Sunucu kaynakları" (yalnız bilgi): motor.json "kaynak" (copytrade/canli/kaynak.py). Ölçüm yoksa "veri yok"; ölçülemeyen alan "—"."""
+    if not isinstance(kaynak, dict) or not kaynak:
+        return '<div class="mt">veri yok</div>'
+    mb = lambda v: "—" if v is None else f"{tr_sayi(float(v), 0)} MB"            # noqa: E731
+    gb = lambda v: "—" if v is None else f"{tr_sayi(float(v), 1)} GB"            # noqa: E731
+    yuk = lambda v: "—" if v is None else tr_sayi(float(v), 2)                   # noqa: E731
+    olc = kaynak.get("olc_ms")
+    zaman = "—" if olc is None else f"{_tsi(int(olc))} TSİ"
+    return (f'<div class="mt">RAM: {mb(kaynak.get("ram_mb"))} · tepe {mb(kaynak.get("ram_tepe_mb"))}</div>'
+            f'<div class="mt">cgroup bellek: {mb(kaynak.get("cgroup_mb"))}</div>'
+            f'<div class="mt">yük (1 dk): {yuk(kaynak.get("yuk_1dk"))} · disk boş: {gb(kaynak.get("disk_bos_gb"))}</div>'
+            f'<div class="mt">ölçüm zamanı: {zaman}</div>')
+
+
 def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecmis: list[dict], simdi_ms: int, kadro: dict | None = None, saha_durum: dict | None = None, hesap_tr: dict | None = None, havuz: dict | None = None, kurallar: dict | None = None,
                  donem_seri: dict | None = None, isabetler: list[dict] | None = None, kaldirac_tr: dict | None = None, surum_gun: dict[str, str] | None = None,
-                 rejim_sonuc: dict | None = None) -> str:
+                 rejim_sonuc: dict | None = None, kaynak: dict | None = None) -> str:
     """Telefonda/bilgisayarda açılan tek dosyalık koyu "terminal" paneli (`pano/index.html`; kullanıcının Cloudflare Workers statik sayfası `sg-pano` `canli-durum` dalının `pano/` klasörünü gösterir, salt okunur): rakam şeridi, özsermaye/düşüş/günlük K-Z grafikleri, pozisyon dağılımı, pozisyon ve işlem tabloları; DÖNEM sekmesi (14.11): dönem eğrisi, trader katkısı, İlk 11 ↔ Yedek, giriş/çıkış geçmişi, doluluk, emir oranları, radar hunisi, seçim isabeti (`donem_seri`, `kadro.huni`, `isabetler`).
     Saf fonksiyon; yeni hesap yok (özet + kayıtlardan yalnız toplama/dizme). Dış kaynak/JS yok; tüm metin HTML kaçışlı."""
     kasa, oz = float(ozet.get("kasa_usd") or 0.0), float(ozet.get("ozsermaye_usd") or 0.0)
@@ -824,6 +839,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     mut = (f'<div class="mt">Kartların toplamı <b class="{renk(toplam_net)}">{esc(tl(toplam_net, True))}</b> + kapanmış slotlar <b>{esc(tl(float(hesap.get("kapanmis_net") or 0.0), True))}</b> = '
            f'<b>{esc(tl(toplam_net + float(hesap.get("kapanmis_net") or 0.0), True))}</b> (başlangıçtan beri özsermaye farkı {esc(tl(oz - kasa, True))}){" · bazı K/Z bilinmiyor, toplam eksik" if net_eksik else ""}</div>') if slot_bas else ""
     kopya_html = _kopya_kalite_html(k24)
+    kaynak_html = _kaynak_html(kaynak)
     atlanan_html, kapanan_html, maliyet_html = _atlanan_html(k24), _kapanan_html(kayitlar), _maliyet_html(kayitlar, oz, kasa, gecmis, kip)
     from copytrade.canli.risk import coin_tavan_usd
     maruziyet_html = _maruziyet_html(acik, kasa, oz, float(hesap.get("kaldirac") or 3.0), float(kurallar["canli_coin_tavan_oran"]),
@@ -938,6 +954,7 @@ input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler sectio
 <div class="p g2"><div class="pb">Kapanan işlemler <span>{esc(donem_etiketi(donem))} (UTC)</span></div>{kapanan_html}</div>
 <div class="p g3"><div class="pb">Maliyet dökümü <span>ücret · kayma · funding</span></div>{maliyet_html}</div>
 <div class="p"><div class="pb">Kopya kalitesi <span>24 sa · dolan emir · trader dolumuna göre</span></div><div class="pi">{kopya_html}</div></div>
+<div class="p"><div class="pb">Sunucu kaynakları <span>motor ölçümü · yalnız bilgi</span></div><div class="pi">{kaynak_html}</div></div>
 </section>
 <section class="n5 izgara">
 <div class="p g3"><div class="pb">Takip edilen ilk 11 ve yedekler <span>radar {kadro_tarih} TSİ · dokun → bize ne verdi</span></div><div class="pi kl">{f'<div class="mt" style="margin:0 0 10px">{motor_satiri}</div>' if motor_satiri else ""}{kadro_html}{mut}</div></div>
@@ -1047,7 +1064,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.html:
         args.html.write_text(html_olustur(ozet, _json(args.durum / "risk.json"), _json(args.durum / "hesap.json"), kayitlar, yeni, int(time.time() * 1000), kadro, _json(args.durum / "saha.json"), _json(args.durum / "motor.json").get("hesap_tr"), havuz_oku(args.isabet_dali, kadro),
                                                donem_seri=ds, isabetler=isabetler, kaldirac_tr=_json(args.durum / "motor.json").get("kaldirac_tr"), surum_gun=sg,
-                                               rejim_sonuc=_json(args.durum / "paylasim" / "rejim_sonuc_v1.json")), encoding="utf-8")
+                                               rejim_sonuc=_json(args.durum / "paylasim" / "rejim_sonuc_v1.json"), kaynak=_json(args.durum / "motor.json").get("kaynak")), encoding="utf-8")
     print(md)
     return 0
 
