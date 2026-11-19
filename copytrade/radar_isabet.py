@@ -34,7 +34,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable
 
-from copytrade import radar_tarama
+from copytrade import radar_rastgele, radar_tarama
 from copytrade.defter import HOUR
 from copytrade.kurallar import load_rules
 from copytrade.olcut import perp_fills
@@ -212,7 +212,7 @@ def isabet_olustur(tarih: str, havuz: dict, kadro: dict, secim: dict, olcum: dic
             "ic": ic_iyi, "ic_kotu": ic_kotu, "ic_n": ic_n,
             "fark_ilk11_havuz": _fark(ilk, havuz_iyi), "fark_ilk11_havuz_kotu": _fark(ilk_k, havuz_kotu),
             "fark_ilk11_elenen": _fark(ilk, elenen), "fark_ilk11_elenen_kotu": _fark(ilk_k, elenen_k),
-            "satirlar": satirlar,
+            "satirlar": satirlar, "rastgele_karsilastirma": radar_rastgele.karsilastir(satirlar, tarih),     # bilgi: seçilen ilk11 vs aynı havuzdan rastgele 11'ler
             **({"ek_gruplar": [g for g in EK_GRUPLAR if g in gruplar], "ek_kaynak": secim.get("ek_kaynak"), "eksik_ek": eksik_ek} if any(g in gruplar for g in EK_GRUPLAR) else {})}
 
 

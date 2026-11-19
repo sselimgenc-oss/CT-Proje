@@ -106,6 +106,12 @@ jobs:
         run: |
           # Faz 2 (docs/HOLDOUT_PBO.md): isabet verisinden aday seçim yöntemleri için CSCV PBO + deflated Sharpe; radar/<tarih>/pbo.json + ISABET_OZET.md'ye tek satır. Hata radar yayımını engellemez (::error:: basılır).
           python -u -m copytrade.pbo_rapor --kok radar --veri-dali "$VERI_DALI" --cikti radar --ozet-md radar/ISABET_OZET.md
+      - name: Seçim rastgeleye karşı (yalnız bilgi)
+        env:
+          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
+        run: |
+          # Seçilen İlk 11'in sonraki_7g ortalaması vs aynı havuzdan (ilk11 ∪ havuz_geri) rastgele 11'ler (R=1000, sabit tohum); radar/<tarih>/rastgele_karsilastirma.json + ISABET_OZET.md tablosu. Seçimi etkilemez; hata yayımı engellemez.
+          python -u -m copytrade.radar_rastgele --kok radar --veri-dali "$VERI_DALI" --cikti radar --ozet-md radar/ISABET_OZET.md
       - name: Holdout mührü (append-only)
         env:
           VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
