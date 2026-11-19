@@ -65,8 +65,20 @@ for f in "$archive"/isabet/*/isabet.json; do
 done
 # 90 gün tutma: tarihli klasörlerden eski olanları sil (YYYY-MM-DD sözlük sırası = tarih sırası).
 sinir="$(date -u -d '90 days ago' +%F)"
+# Faz 2: holdout mührü (radar/holdout/manifest.json) dosyaları SAKLAMADAN MUAFTIR: eski klasörde yalnız manifest'in andığı dosyalar (havuz_ilk/kadro_ilk/isabet) kalır, gerisi silinir (veri küçük).
+# (Manifest `sort_keys` ile yazılır: her mühür girdisinde "dosya" satırı "tarih" satırından önce gelir; python adımı token'sız betikte çağrılmaz, G-23.)
+muaf=""
+if [ -f radar/holdout/manifest.json ]; then
+  muaf="$(awk '/^ "muhurler":/ {m=1; next} /^ "[a-z_]+":/ {m=0} m && /"dosya":/ {gsub(/[",]/, "", $2); d=$2} m && /"tarih":/ {gsub(/[",]/, "", $2); print "radar/" $2 "/" d}' radar/holdout/manifest.json)"
+fi
 for d in radar/????-??-??; do
-  if [[ "$(basename "$d")" < "$sinir" ]]; then git rm -rq --ignore-unmatch "$d"; rm -rf "$d"; fi
+  if [[ "$(basename "$d")" < "$sinir" ]]; then
+    for f in "$d"/*; do
+      [ -e "$f" ] || continue
+      if printf '%s\n' "$muaf" | grep -qxF "$f"; then continue; fi
+      git rm -rq --ignore-unmatch "$f"; rm -rf "$f"
+    done
+  fi
 done
 git add -f "radar/$gun/havuz.json" "radar/$gun/kadro.json" radar/son/kadro.json
 if git diff --cached --quiet; then exit 0; fi

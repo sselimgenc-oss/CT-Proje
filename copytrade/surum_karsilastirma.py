@@ -7,7 +7,8 @@ ve filtre durumuna göre günlük K/Z serisine ayırır.
 - **Sürüm** = olay günündeki kadronun `radar_surum`'u (`surum_gun`: {YYYY-MM-DD: sürüm}; motor K-39 ile günün ilk kadrosunu uygular → `kadro_ilk.json`). Olayda `surum` alanı varsa o geçerli;
   hiçbiri yoksa "?".
 
-Not (yazım anı): motor kodunda `ml_filtre_atla` / `ders_emekli` nedenleri HENÜZ yok; bunlar gelene dek iki seri birebir aynıdır (hayali bileşen 0) ve rapor bunu açıkça söyler.
+Motor (`canli/motor.py` `_atla`) bu nedenleri yazar: `ml_filtre_atla` (ortak öğrenme ML filtresi, karar `atlandi`) ve `ders_emekli` (emekli trader'ın yeni açılışı, karar `engel`); ikisi de `emir_yok` +
+`karsi_olgu_kapandi` kaydı üretir. Hiç atlama olmadığı dönemde iki seri aynıdır ve rapor bunu açıkça söyler.
 Birimler: $ = motorun sanal kasası ölçeği (`canli_kasa_usd`).
 """
 from __future__ import annotations

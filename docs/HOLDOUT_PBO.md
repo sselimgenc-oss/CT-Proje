@@ -10,7 +10,7 @@ Kapsam: **yalnız raporlama** (Faz 2). Strateji, `radar_*` eşikleri ve emir kar
 - **Nasıl:** `radar.yml` içinde "Holdout mührü" adımı, her dosyanın SHA-256 parmak izini `radar/holdout/manifest.json`'a yazar (`radar` dalı; yayım `radar_yayimla.sh`).
 - **Yalnız eklenir (append-only):** manifest'teki kayıtlar bir zincirle bağlıdır; eski bir kaydı değiştirmek/silmek zinciri bozar ve yakalanır. Mühürlü bir dosya sonradan değişirse mühür **ezilmez**, `ihlaller` listesine yazılır ve iş günlüğünde `::error::HOLDOUT İHLALİ` görünür (radar yayımı yine de durmaz; bu bir bilgi/koruma katmanıdır).
 - **Kontrol:** `python -m copytrade.holdout_muhur dogrula --veri-dali radar` (sorun varsa çıkış kodu 1).
-- **Saklama notu:** radar dalı tarihli klasörleri 90 gün tutar. Silinen dosyanın parmak izi manifest'te kalır; 90 günden eski eksikler ihlal sayılmaz (`saklama_disi`). Holdout dosyalarının 90 günden uzun saklanması istenirse `radar_yayimla.sh` saklama kuralı ayrıca (kullanıcı kararıyla) değiştirilmelidir.
+- **Saklama:** radar dalı tarihli klasörleri 90 gün tutar, ancak manifest'in andığı mühürlü dosyalar bu silmeden MUAFTIR (`radar_yayimla.sh`; klasörde yalnız onlar kalır). Yine de 90 günden eski eksik dosya ihlal sayılmaz (`saklama_disi`; eski veri dalı koşuları için).
 
 ### Tek kullanım kuralı
 
@@ -38,4 +38,4 @@ Kural 6 gereği eski ve yeni sürüm yan yana gösterilir; yalnız rapordur (pan
 - **v4+ML (fiili):** motorun gerçekten yaptığı kapanış işlemleri, net K/Z = gerçekleşen − ücret (pano "Kapanan işlemler" ile aynı tanım), UTC günlük.
 - **v4 taban (ML/ders yokmuş gibi):** fiili + ML veya ders yüzünden **atlanan** sinyallerin hayali K/Z'si (motorun `karsi_olgu_kapandi` kaydı; nedenler `ml_filtre_atla`, `ders_emekli`). Hayali K/Z ücret ve kayma içermez, yani taban biraz iyimserdir.
 - **Sürüm:** olayın gününde uygulanan kadronun `radar_surum`'u (veri dalında `kadro_ilk.json`).
-- **Bugünkü durum:** motor kodunda `ml_filtre_atla` ve `ders_emekli` nedenleri henüz yok; bunlar eklenene dek iki seri birebir aynıdır ve rapor bunu yazar. Motor bu nedenleri yazmaya başlayınca (ve karşı-olgu kaydı açılınca) tablo kendiliğinden ayrışır; ek kod gerekmez.
+- **ML/ders:** motor `ml_filtre_atla` (ML filtresi) ve `ders_emekli` (emekli trader) nedenleriyle atladığı sinyalleri kaydeder; taban serisi bunların hayali K/Z'sini ekler. Hiç atlama yoksa iki seri aynıdır ve rapor bunu yazar.
