@@ -567,3 +567,9 @@
 {"zaman_ms":1795094458466,"olay":"telegram","metin":"🧾 Son 1 saat (15:20–16:20 TSİ): 5 emir · sanal\n➕ açılış 1 · ⬆️ artırma 4 · ⬇️ azaltma 0 · ✖️ kapanış 0\n🏆 En büyük: 385 $ (HYPE, SAT) · 0x6d2667…\n⏭️ Kopyalanmayan trader dolumu: 5 (≈1 ayrı işlem)\n   • kural gereği 5: 5 toplu emir bekliyor (fark küçük)\n   • kaçırılan 0 (geç görülen / veri yok)\n💵 Tutar","acik":true}
 {"zaman_ms":1795094947041,"olay":"tur","ozsermaye_usd":9978.3728}
 {"zaman_ms":1795095022436,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"BTC","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795095022148,"gorme_ms":1795095022435,"yas_ms":288}
+{"zaman_ms":1795095617526,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795095617222,"gorme_ms":1795095617526,"yas_ms":304}
+{"zaman_ms":1795095811838,"olay":"tur","ozsermaye_usd":9978.864}
+{"zaman_ms":1795095915972,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795095915694,"gorme_ms":1795095915972,"yas_ms":278}
+{"zaman_ms":1795096211215,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795096210946,"gorme_ms":1795096211215,"yas_ms":269}
+{"zaman_ms":1795096211215,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795096210946,"gorme_ms":1795096211215,"yas_ms":269}
+{"zaman_ms":1795096211216,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795096210946,"gorme_ms":1795096211215,"yas_ms":270}
