@@ -19,6 +19,7 @@ class Poz:
     giris: float              # ortalama giriş fiyatı
     acilis_ms: int
     kaldirac: float = 3.0
+    giris_ctx: dict | None = None   # açılış anı rejim/duygu damgası (yalnız bilgi; rejim_sonuc raporu)
 
 
 def tasfiye_fiyati(yon_long: bool, giris: float, kaldirac: float, azami_kaldirac: float | None) -> float:

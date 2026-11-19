@@ -43,7 +43,7 @@ mkdir -p "$work/durum" "$work/kayit"
 for f in hesap.json saha.json risk.json motor.json kilit.json ozet.json niyet.jsonl DUR donem.txt donem_seri.json; do
   if [ -f "$kaynak/durum/$f" ]; then cp "$kaynak/durum/$f" "$work/durum/$f"; fi
 done
-for f in kadro_yon_v1.json gunluk_ozet_v1.json; do if [ -f "$kaynak/durum/paylasim/$f" ]; then mkdir -p "$work/durum/paylasim"; cp "$kaynak/durum/paylasim/$f" "$work/durum/paylasim/$f"; fi; done
+for f in kadro_yon_v1.json gunluk_ozet_v1.json rejim_sonuc_v1.json rejim_sonuc_v1.md; do if [ -f "$kaynak/durum/paylasim/$f" ]; then mkdir -p "$work/durum/paylasim"; cp "$kaynak/durum/paylasim/$f" "$work/durum/paylasim/$f"; fi; done
 if [ -d "$kaynak/kayit" ]; then cp -r "$kaynak/kayit/." "$work/kayit/"; fi
 if [ -s "$kaynak/pano/OZET.md" ]; then mkdir -p "$work/pano"; cp "$kaynak/pano/OZET.md" "$work/pano/OZET.md"; fi
 if [ -s "$kaynak/pano/index.html" ]; then mkdir -p "$work/pano"; cp "$kaynak/pano/index.html" "$work/pano/index.html"; fi
