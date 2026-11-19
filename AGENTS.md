@@ -44,7 +44,7 @@ Belgeler ve durum notları Türkçe, kısa ve maddeli.
    çıktıya (sayı, ekran görüntüsü, rapor) bakar ve akıl sağlığını kontrol eder (ör. getiri milyonlarca % olamaz, sanal kasa 1.000 $
 
 ## Sadeleştirme kuralları (kullanıcı kararı 2026-10-30; K‑10; kural 4 K‑11 ile kaldırıldı)
-5. **Strateji kilitli.** `RADAR_V1.md` eşik ve ağırlıkları ilk 28 günlük canlı dönem bitmeden değişmez; değişiklik lider + kullanıcı kararıyla yeni sürüm olur.
+5. **Strateji değişikliği yalnız onaylı süreçle.** (K-71, 19.11: 28 günlük kilit kaldırıldı.) `RADAR_V1.md` eşik ve ağırlıkları kullanıcı kararıyla istendiği zaman değişebilir; değişiklik lider + kullanıcı kararıyla yeni sürüm olur, eski seri silinmez. Ajanlar kendiliğinden eşik/ağırlık değiştirmez.
 6. **Hesap değişikliği yan yana.** Kopya hesabını değiştiren iş eski seriyi silmez/yeniden yazmaz; yeni sürüm (v2) yanında yayımlanır.
    PR'da eski ↔ yeni sayılar yan yana; açıklanamayan fark varsa birleştirilmez. Altın örnek testi zorunlu.
 7. **Her iş tek yerde.** Aynı hesap ikinci bir yerde yazılmaz: veri bir kez çekilir, hesap yalnız motorda yapılır, ekranlar

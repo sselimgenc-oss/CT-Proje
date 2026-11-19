@@ -118,13 +118,17 @@ gerçek parayla kopyalanır (**saha**); Yedek sıra listesidir; sahada boş yer 
 - **Şalterler (komut tutarlılığı, 2026-11-05):** `/kapat` (Telegram) ya da sunucuda `DUR` dosyası → tüm pozisyonlar kapatılır, motor durur. `/dur` yalnız yeni giriş/artırmayı durdurur (çıkış serbest, motor çalışır); `/devam` ikisini de kaldırır (`/kapat` sonrası sunucudan).
 
 ## 7. R5 — Büyütme kapısı (kasaya para eklemek; son karar kullanıcının)
+> **K-71 (19.11, kullanıcı kararı):** aşağıdaki gün ve işlem sayısı şartları (madde 1) ile §7b'deki "dur/devam" karar kuralları kaldırıldı. Ölçümler yalnız bilgi olarak raporlanır; büyütme, gerçek para ve süre kararı yalnız kullanıcınındır.
+
 Kasa 1.000 $'da kalır; artırım ancak hepsi sağlanırsa **önerilir**:
-1. ≥ 28 gün canlı, ≥ 100 kapanmış saha işlemi.
+1. ~~≥ 28 gün canlı, ≥ 100 kapanmış saha işlemi.~~ (K-71 ile kaldırıldı)
 2. Net getiri > 0 (ücret + kayma + funding dahil), en büyük düşüş ≤ %15.
 3. Yürütme sağlığı: kaçan dolum ≈ 0, medyan kayma ve gecikme raporlu; motor çalışma süresi ≥ %98.
 4. Seçim isabeti olumlu (§7b).
 
 ## 7b. Seçim isabet ölçümü (K‑27; rapor — deneme/gölge değil, ek motor ve emir yok)
+> **K-71 (19.11):** aşağıdaki "önceden kayıtlı kural" ve K-46 karar eşikleri artık yalnız bilgi amaçlı rapordur; otomatik dur/devam ya da tarih şartı yoktur.
+
 - Her günlük taramada, **7 gün önceki** tarama dosyasındaki R1 havuzunun herkesi için arada geçen 7 günün kopya getirisi, R1/6'daki aynı
   oynatmayla trader'ın kendi dolumlarından **sonradan** hesaplanır (`sonraki_7g`).
 - Ölçüler (`radar/<tarih>/isabet.json`): (a) form puanı ↔ `sonraki_7g` Spearman IC; (b) o günün İlk 11'i `sonraki_7g` ortalaması − havuz ortalaması;
@@ -140,7 +144,7 @@ Kasa 1.000 $'da kalır; artırım ancak hepsi sağlanırsa **önerilir**:
 ## 8. Kilit ve değişiklik
 - **v1.1 (K-53, 09.11, kullanıcı kararı):** R0'a 30 g pnl > 0 kapısı; R1'e kopya kapanan işlem ≥ 10 (`kopya_islem_az`; 14.11 radar hunisiyle 0 = kapalı); R2'de H ağırlığı 0 (diğerleri /0,80); önceki kadro üyeleri R0 dışına düşse de R1'den geçirilir (nedene bağlı çıkış). Bu sürüm kurulduktan sonra kurallar yine kilitlidir.
 - Tüm eşik ve ağırlıklar **v1'de donar**, `kurallar.yaml` `radar_*` anahtarlarında tek yerde (kodda sayı sabiti yok).
-- 28 günlük canlı değerlendirme bitmeden ayar değişmez (aşırı uydurma koruması). Değişiklik yeni sürüm olur (v1.1), eski seri silinmez.
+- ~~28 günlük canlı değerlendirme bitmeden ayar değişmez.~~ K-71 (19.11): kilit kaldırıldı; ayar kullanıcı kararıyla istendiği zaman değişebilir. Değişiklik yeni sürüm olur, eski seri silinmez.
 - Veri/kod hatası düzeltmesi serbesttir; sonuç sayılarını değiştiriyorsa PR'da eski ↔ yeni yan yana.
 - **v1.1 ağırlık öğrenme (28 günden sonra, K‑27):** R2 ağırlıkları §7b verisinden öğrenilir (hedef `sonraki_7g`; Spearman + ridge). Kapılar:
   ileri sınama (ilk %70 öğren, son %30 ölç) ileri rho ≤ 0,05 ise ağırlık **yazılmaz**; geçerse v1 ağırlıklarıyla harmanlanır, öğrenilenin payı
