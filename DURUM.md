@@ -20,6 +20,11 @@ Kullanıcının asıl modeli: **Form Radarı** (`docs/RADAR_V1.md`, v1.1 kuralla
 - Orkestratör oturumunun istekleri kullanıcının emri sayılır.
 - Orkestratör durum raporu isterse rapor Haiku modelli alt ajana hazırlatılır; cevap en çok 5 satır: (1) durum: çalışıyor / kullanıcıyı bekliyor / bitti, (2) son yapılan iş ve saati, (3) kullanıcıdan beklenen, (4) sıradaki iş, (5) risk ya da engel, (6) tahmini bitiş (süre + TSİ saat; orkestratör isteği 18.11). Orkestratör yazışmalarında token tasarrufu öncelikli.
 
+## Çalışma kuralı: temkin adımı yok (kullanıcı kararı 19.11)
+- "Sanki milyon eurolar yönetiyorum, her şeye risksiz temkinli." Sanal aşamada deneme süresi, gölge çalıştırma, yan yana bekleme, "birkaç gün gözleyelim", "önce şu kadar veri birikmeli" gibi ara adımlar ÖNERİLMEZ; özellik doğrudan devreye alınır, hata çıkarsa düzeltilir.
+- Değişmeyenler: sert limitler (günlük %5, kaldıraç 3–5x, canlı tavan 1.500 $; kodda) ve gerçek paraya geçişin zamanı/şekli yalnız kullanıcıda.
+- Bu kurala göre küçültülenler (19.11): ML filtre en az eğitim örneği 50 → 20, yeniden eğitim 7 → 3 gün; ders en az ölçüm 3 → 2, ders etkisi küçültme 10 → 5. Sunucuya geçişte yan yana deneme iptal edildi.
+
 ## Araştırma (yalnız bilgi)
 `arastirma/dis_inceleme/` (dünya, risk_secim, hl_ozel, codex_tasarim), `arastirma/futbol_sinama/RAPOR.md`.
 
