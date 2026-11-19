@@ -64,3 +64,5 @@
 {"zaman_ms":1795051828030,"olay":"telegram","metin":"🧾 Son 1 saat (03:30–04:30 TSİ): 5 emir · sanal\n➕ açılış 0 · ⬆️ artırma 5 · ⬇️ azaltma 0 · ✖️ kapanış 0\n🏆 En büyük: 146 $ (SOL, SAT) · 0xdebd49…\n⏭️ Kopyalanmayan trader dolumu: 1 (≈1 ayrı işlem)\n   • kural gereği 1: 1 toplu emir bekliyor (fark küçük)\n   • kaçırılan 0 (geç görülen / veri yok)\n💵 Tutar ","acik":true}
 {"zaman_ms":1795052148730,"olay":"emir_yok","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"XRP","eylem":"azalt","karar":"atlandi","neden":"min_emir_atlandi","trader_dolum_ms":1795052148357,"gorme_ms":1795052148730,"yas_ms":373}
 {"zaman_ms":1795052173371,"olay":"tur","ozsermaye_usd":10047.1578}
+{"zaman_ms":1795053034904,"olay":"tur","ozsermaye_usd":10039.9748}
+{"zaman_ms":1795053608822,"olay":"funding","saat":498626,"saat_adet":1,"funding_usd":-0.08912411003603758,"toplam_funding_usd":0.3928541005317023}
