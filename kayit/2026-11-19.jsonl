@@ -533,3 +533,15 @@
 {"zaman_ms":1795087218943,"olay":"kacan_tamamlandi","adet":1,"bas_ms":1795086910277}
 {"zaman_ms":1795087293102,"olay":"tur","ozsermaye_usd":9993.4455}
 {"zaman_ms":1795088088274,"olay":"tur","ozsermaye_usd":9991.7063}
+{"zaman_ms":1795088660003,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795088659683,"gorme_ms":1795088660003,"yas_ms":320}
+{"zaman_ms":1795088660003,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795088659683,"gorme_ms":1795088660003,"yas_ms":320}
+{"zaman_ms":1795088660004,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795088659683,"gorme_ms":1795088660003,"yas_ms":321}
+{"zaman_ms":1795088665751,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795088665484,"gorme_ms":1795088665751,"yas_ms":267}
+{"zaman_ms":1795088665751,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795088665484,"gorme_ms":1795088665751,"yas_ms":267}
+{"zaman_ms":1795088665752,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795088665484,"gorme_ms":1795088665751,"yas_ms":268}
+{"zaman_ms":1795088665752,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795088665484,"gorme_ms":1795088665751,"yas_ms":268}
+{"zaman_ms":1795088665752,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795088665484,"gorme_ms":1795088665751,"yas_ms":268}
+{"zaman_ms":1795088665752,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795088665484,"gorme_ms":1795088665751,"yas_ms":268}
+{"zaman_ms":1795088665752,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795088665484,"gorme_ms":1795088665751,"yas_ms":268}
+{"zaman_ms":1795088665752,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"XRP","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795088665484,"gorme_ms":1795088665751,"yas_ms":268}
+{"zaman_ms":1795088946626,"olay":"tur","ozsermaye_usd":9983.3343}
