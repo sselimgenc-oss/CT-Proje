@@ -20,3 +20,17 @@ if not hasattr(_k, "load_rules_asil"):
         return r
 
     _k.load_rules = _test_kurallari
+
+
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _rejim_agsiz(monkeypatch):
+    """Testlerde ML rejim yayınına ağ çağrısı yapılmaz (üretim `rejim_kaynak_url` dolu; okuma testleri sahte getiriciyle)."""
+    import copytrade.canli.rejim as _rejim
+
+    def _yok(url):
+        raise OSError("testte ağ yok")
+
+    monkeypatch.setattr(_rejim, "_getir_varsayilan", _yok)

@@ -180,6 +180,12 @@ def pano_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], isab
             g[1] += float(k.get("pnl_usd") or 0.0)
         s += ["## Alınmayan sinyaller (hayali, 24 sa; işlem etkisi yok)", "", f"- {len(ko)} kapandı · toplam {usd(sum(g[1] for g in neden_ko.values()), True)}"
               + " · " + " · ".join(f"{ad} {int(g[0])} ({usd(g[1], True)})" for ad, g in sorted(neden_ko.items(), key=lambda kv: -abs(kv[1][1]))), ""]
+    og = ozet.get("ogrenme")
+    if og:                                                                       # ortak öğrenme karnesi (takma adlı; sanal kasa = 1.000 $ başlangıç, işlem başına %1 × R; yalnız rapor)
+        s += ["## Ortak öğrenme karnesi (sanal)", "", "| kurulum | aday | ort R | sanal kasa | getiri | en derin | drift | ders | filtre |", "|---|---|---|---|---|---|---|---|---|"]
+        s += [f"| {r['kurulum']} | {r['alinan']} | {r['ort_r'] if r['ort_r'] is None else format(r['ort_r'], '+.2f')} | {usd(r['kasa'])} | {yuzde(r['getiri_pct'] / 100.0)} | {r['en_derin_pct']:.1f}% | {r['drift']} | "
+              f"{'emekli' if r.get('emekli') else (('x' + format(r['carpan'], 'g')) if r.get('carpan') else '—')} | {'var' if r.get('filtre') else 'yok'} |" for r in og]
+        s += [""]
     saha = [k for k in k24 if k.get("olay") in ("saha_giris", "saha_dus")]
     s += ["## Saha değişiklikleri (24 sa)", ""] + ([f"- {gun_str(k['zaman_ms'])} {datetime.fromtimestamp(k['zaman_ms'] / 1000, UTC):%H:%M} {'giriş' if k['olay'] == 'saha_giris' else 'çıkış'} {kisa(k['adres'])} — {k.get('neden', '')}" for k in saha] or ["değişiklik yok"])
     riskler = [k for k in k24 if k.get("olay") in RISK_OLAYLARI]
