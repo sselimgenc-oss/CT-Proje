@@ -65,6 +65,7 @@ jobs:
           ONCEKI_VARDIYA: ${{ inputs.onceki_vardiya }}
           YEDEK_CRON: "37 */4 * * *"
           GH_TOKEN: ${{ github.token }}
+          SUNUCU_AKTIF: ${{ github.ref == 'refs/heads/main' && vars.SUNUCU_AKTIF || '' }}   # sunucu geçişi: `evet` iken vardiya HİÇ başlamaz (docs/SUNUCU_SANAL_GECIS.md); geri alma: değişkeni `hayir` yap
         run: bash .github/scripts/zamanlama_kontrol.sh canli
       - name: Alarm (Telegram, kontrol başarısız)
         if: ${{ failure() }}
