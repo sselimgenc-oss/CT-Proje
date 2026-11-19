@@ -1,10 +1,10 @@
-# CT kadro seçimi x gerçek kopya PnL (form sırası, 2026-11-19T20:05:47Z)
+# CT kadro seçimi x gerçek kopya PnL (form sırası, 2026-11-19T21:02:14Z)
 
 Toplu: 1 gün, ortalama rho = -0.800, p = 0.948 (tek yönlü).
 
 | Gün | Kopyalanan / Kadro | rho | p | Net PnL $ | Durum |
 |---|---:|---:|---:|---:|---|
-| 2026-11-19 | 4 / 17 | -0.800 | 0.958 | -2.39 | tamam (tam) |
+| 2026-11-19 | 4 / 17 | -0.800 | 0.958 | -2.42 | tamam (tam) |
 
 Notlar:
 
