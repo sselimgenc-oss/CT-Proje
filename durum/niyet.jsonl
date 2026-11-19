@@ -392,3 +392,11 @@
 {"t":"sonuc","cloid":"0x878de2897064e0a2a4a80069bf8a8bd9","durum":"dolu","ms":1795122912930,"sz":0.12132299153245475,"px":1755.815083703236,"ucret":0.09585933233970782}
 {"t":"niyet","kimlik":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e:629937943915132","eylem":"artir","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"TAO","yon":"A","usd":11.004606,"reduce_only":false,"cloid":"0x0ce071cadd07dacfc2f9874d49a9bec3","ms":1795123263549}
 {"t":"sonuc","cloid":"0x0ce071cadd07dacfc2f9874d49a9bec3","durum":"dolu","ms":1795123263785,"sz":0.05752237900663384,"px":191.31,"ucret":0.004952072847491604}
+{"t":"niyet","kimlik":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a:429126839752703","eylem":"azalt","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","yon":"A","usd":206.069841,"reduce_only":true,"cloid":"0xb4498ba037050f1d7b9b8160fddff944","ms":1795124112317}
+{"t":"sonuc","cloid":"0xb4498ba037050f1d7b9b8160fddff944","durum":"dolu","ms":1795124112647,"sz":0.1184173318463171,"px":1740.2,"ucret":0.09273142839553246}
+{"t":"niyet","kimlik":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a:638776835550837","eylem":"ac","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","yon":"A","usd":49.585081,"reduce_only":false,"cloid":"0x865aa0e6ccad479167e9908833f39f10","ms":1795124117497}
+{"t":"sonuc","cloid":"0x865aa0e6ccad479167e9908833f39f10","durum":"dolu","ms":1795124117792,"sz":0.6866788609514045,"px":72.21,"ucret":0.022313286247185413}
+{"t":"niyet","kimlik":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a:721355744546880","eylem":"artir","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","yon":"A","usd":113.121909,"reduce_only":false,"cloid":"0x5fb7ff5181f30fe8cb25f7e05ad72604","ms":1795124117823}
+{"t":"sonuc","cloid":"0x5fb7ff5181f30fe8cb25f7e05ad72604","durum":"dolu","ms":1795124118093,"sz":1.5670676031277488,"px":72.187,"ucret":0.05090485908014226}
+{"t":"niyet","kimlik":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a:687243982992060","eylem":"artir","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","yon":"A","usd":162.479966,"reduce_only":false,"cloid":"0x4eb0558a73b634188a80eca60f7342bd","ms":1795124412804}
+{"t":"sonuc","cloid":"0x4eb0558a73b634188a80eca60f7342bd","durum":"dolu","ms":1795124413040,"sz":2.2522555319451585,"px":72.141,"ucret":0.07311598484852506}

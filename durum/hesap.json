@@ -601,7 +601,19 @@
     "giris": 1797.8162576392604,
     "giris_ctx": null,
     "kaldirac": 3.0,
-    "sz": 0.47256762835970645
+    "sz": 0.35415029651338936
+   },
+   "SOL": {
+    "acilis_ms": 1795124117792,
+    "giris": 72.16751262721476,
+    "giris_ctx": {
+     "duygu": "Extreme Fear",
+     "duygu_deger": 10,
+     "r1d": "trend_down",
+     "r4h": "trend_down"
+    },
+    "kaldirac": 3.0,
+    "sz": -4.506001996024311
    }
   },
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": {},
@@ -625,7 +637,7 @@
   "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": 0.0,
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": 0.19224696491078086,
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": -2.548556710487537,
-  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": -95.12365171467393,
+  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": -101.94641521528511,
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 0.0,
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 0.0
  },
@@ -643,7 +655,7 @@
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 909.0909090909091,
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 909.0909090909091
  },
- "son_niyet_cloid": "0x0ce071cadd07dacfc2f9874d49a9bec3",
+ "son_niyet_cloid": "0x4eb0558a73b634188a80eca60f7342bd",
  "tasfiyeler": [
   {
    "adres": "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89",
@@ -664,7 +676,7 @@
   "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": 0.0,
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": 0.7919148121143241,
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": 0.6810311520019676,
-  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 5.440440248924293,
+  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 5.679505807495678,
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 0.0,
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 0.0049499999999999995
  }
