@@ -7,7 +7,10 @@ if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
   echo "alarm: Telegram anahtarı yok; atlandı (birim: ${BIRIM})"
   exit 0
 fi
-METIN="ALARM: ${BIRIM} servisi düştü ($(hostname 2>/dev/null || echo sunucu), $(date -u +%Y-%m-%dT%H:%MZ)). Sistem işlem kopyalamıyor olabilir: journalctl -u ${BIRIM}"
+METIN="[CT] CRIT
+Servis durdu: ${BIRIM} ($(date -u +%H:%M) UTC). Sistem işlem kopyalamıyor olabilir.
+Sunucu servisi yeniden başlatmayı deniyor.
+Sorun sürerse sunucuya bakman gerekebilir."
 if printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "${TELEGRAM_BOT_TOKEN}" | curl -sS -f --max-time 20 --config - \
      --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" --data-urlencode "text=${METIN}" -o /dev/null 2>/dev/null; then
   echo "alarm: gönderildi (${BIRIM})"

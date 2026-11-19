@@ -28,6 +28,8 @@ GECERLI_KOMUT_METNI = "/durum /rapor /durdur /devam /hepsini_kapat /yardim"     
 HIZ_LIMITI_DK = 15                        # standart: dakikada en çok 15 mesaj (fazlası kuyrukta bekler, kaybolmaz)
 INFO_OMUR_S = 24 * 3600.0                 # standart: 24 saatten eski INFO mesajı atılır
 TEKRAR_PENCERE_S = 300.0                  # standart: aynı uyarı (WARN/CRIT, aynı metin / anahtar) bu sürede bir kez
+UYARI_ARA_S = 6 * 3600.0                  # kullanıcı standardı: aynı uyarı en çok 6 saatte bir (`Telegram.uyar`); düzelince TEK "Düzeldi" (`Telegram.duzeldi`)
+BASTIRILAN_TURLER = frozenset({"saha_giris", "saha_cikis", "saha_uyari", "saatlik_bos"})      # KOD ANAHTARI: bu türler Telegram'a GİTMEZ; kayda `tg_bastirildi` (tür ile) yazılır, tespit/kayıt/pano sürer. Geri açmak için `Telegram.bastirilan` kümesinden çıkarın
 MESAJ_AZAMI = 3500                        # standart: mesaj başına en çok karakter
 KACIRILAN_PENCERE_S = 15 * 60          # G-16: bundan eski (ya da motor başlamadan önce gelmiş) komut YÜRÜTÜLMEZ; "işlenmedi, yeniden gönder" yanıtı alır
 YENIDEN_BEKLEME_S = (2.0, 5.0, 15.0)   # G-18: önemli mesaj (ONEMLI_ONEKLER) gönderilemezse bu beklemelerle 3 kez daha denenir
@@ -66,7 +68,7 @@ def onem_duzeyi(metin: str) -> str:
     ilk = metin.split("\n", 1)[0]
     if metin.startswith(ONEMLI_ONEKLER) or "ALARM" in ilk:
         return "CRIT"
-    if "UYARI" in ilk or ilk.startswith(("⚠️", "⏸️", "📭", "❓", "🔻", "🧮")):
+    if "UYARI" in ilk or ilk.startswith(("⚠️", "⏸️", "📭", "❓", "🔻", "🧮", "🔐")):
         return "WARN"
     return "INFO"
 
@@ -130,6 +132,8 @@ class Telegram:
         self.komut_kapali = komut_kapali_mi(ortam.get("TELEGRAM_KOMUT", ""))      # G4: tek getUpdates tüketicisi (sunucu); kapalıysa yalnız gönderim (S-22: "kapalı" da)
         self.kayit = kayit
         self.sessiz_utc, self.saat_s = sessiz_utc, saat_s or time.time          # gece (UTC saat aralığı) önemsiz mesajlar sessiz (bildirim sesi yok); alarmlar HER ZAMAN sesli
+        self.bastirilan: set[str] = set(BASTIRILAN_TURLER)      # bastırılan mesaj türleri (kayda yazılır, gitmez)
+        self._uyari_son: dict[str, float] = {}                 # `uyar` anahtarı -> son gönderim zamanı (düzelince silinir)
         self.offset = 0
         self._bekleyen_offset: int | None = None       # G-16: yürütülmemiş komut taşıyan partiden ÖNCEKİ offset; `onayla()`ya dek motor.json'a bu yazılır
         self.kip: str | None = None                    # S-22: motor kurar; alarm başlığına kip etiketi eklenir
@@ -192,9 +196,31 @@ class Telegram:
         if liste and bicim is not None:
             self.gonder(bicim(liste))
 
-    def gonder(self, metin: str, onem: str | None = None, anahtar: str | None = None) -> bool:
+    def uyar(self, anahtar: str, metin: str, onem: str | None = None) -> bool:
+        """Ortak uyarı yardımcısı: aynı `anahtar` en çok `UYARI_ARA_S` (6 saat) bir kez gider; sürerken tekrarlar kayda `telegram_tekrar_atlandi` yazar. Gönderilen uyarı `duzeldi` ile kapatılır."""
+        simdi = float(self.saat_s())
+        son = self._uyari_son.get(anahtar)
+        if son is not None and simdi - son < UYARI_ARA_S:
+            if self.kayit:
+                self.kayit({"olay": "telegram_tekrar_atlandi", "onem": onem or "WARN", "anahtar": anahtar, "pencere_sn": UYARI_ARA_S})
+            return False
+        self._uyari_son[anahtar] = simdi
+        return self.gonder(metin, onem, anahtar=anahtar)
+
+    def duzeldi(self, anahtar: str, metin: str) -> bool:
+        """`uyar(anahtar)` ile uyarılmış bir sorun düzelince TEK "Düzeldi" mesajı (INFO, sessiz); uyarı hiç verilmediyse ya da zaten kapatıldıysa hiçbir şey gitmez."""
+        if self._uyari_son.pop(anahtar, None) is None:
+            return False
+        self._son_gonderim.pop(anahtar, None)                      # düzelmiş sorun yeniden olursa 5 dk tekrar penceresi uyarıyı yutmasın
+        return self.gonder(metin, "INFO")
+
+    def gonder(self, metin: str, onem: str | None = None, anahtar: str | None = None, tur: str | None = None) -> bool:
         """Mesaj gönderir; hata motoru DURDURMAZ (sayılır). Token günlüğe/hata metnine ASLA yazılmaz. `onem`: INFO/WARN/CRIT (yoksa metinden çıkarılır); `anahtar`: tekrar önleme
         anahtarı (yoksa WARN/CRIT için metnin kendisi). Giden mesajın ilk satırı `[CT] <ÖNEM>` olur (kayda/`gonderilen`e düz metin yazılır)."""
+        if tur is not None and tur in self.bastirilan:             # bastırılan tür: gönderilmez, kayda yazılır (tespit silinmedi)
+            if self.kayit:
+                self.kayit({"olay": "tg_bastirildi", "tur": tur, "metin": metin[:200]})
+            return False
         metin = kip_etiketle(metin, self.kip)
         for m in self.maske:
             metin = re.sub(re.escape(m), "[hesap]", metin, flags=re.I)
@@ -251,7 +277,7 @@ class Telegram:
         while True:
             deneme += 1
             try:
-                yanit = self.post(self._url("sendMessage"), {"chat_id": self.chat_id, "text": gidecek, "disable_notification": self.sessiz_mi(metin)})
+                yanit = self.post(self._url("sendMessage"), {"chat_id": self.chat_id, "text": gidecek, "disable_notification": onem == "INFO" or self.sessiz_mi(metin)})
                 if isinstance(yanit, dict) and yanit.get("ok") is False and int(yanit.get("error_code") or 0) == 429:
                     raise CokIstek(_retry_after(yanit))
                 self._gonderim_zamanlari.append(float(self.saat_s()))
@@ -391,12 +417,15 @@ def _varsayilan_zamanlayici(sn: float, f: Callable[[], None]) -> Any:
     return t
 
 
+ALARM_BASLIKLARI = ("🚨", "🛑", "💥", "⏸️", "▶️", "✅", "ℹ️", "⚠️", "ALARM", "UYARI", "BİLGİ", "TASFİYE", "DUR")
+
+
 def kip_etiketle(metin: str, kip: str | None) -> str:
-    """S-22: `alarm()` biçimli mesajın (ilk satır + AYRAÇ) başlığına kip eklenir: '🚨 ALARM: x (GERÇEK PARA)'. Başlıkta kip zaten varsa (emir/durum/günlük özet) dokunulmaz."""
+    """S-22: `alarm()` biçimli çok satırlı mesajın başlığına kısa kip eklenir: '🚨 ALARM: x (GERÇEK PARA)'. Başlıkta kip zaten varsa dokunulmaz."""
     if not kip:
         return metin
     ilk, ayr, kalan = metin.partition("\n")
-    if not kalan.startswith(AYRAC) or kip_adi(kip) in ilk or "[GERÇEK]" in ilk or "[sanal]" in ilk:
+    if not kalan or not ilk.startswith(ALARM_BASLIKLARI) or "(sanal" in ilk or "(GERÇEK" in ilk or "[GERÇEK]" in ilk or "[sanal]" in ilk:
         return metin
     return f"{ilk} ({kip_adi(kip)}){ayr}{kalan}"
 
@@ -525,7 +554,7 @@ def msg_emir_gercek_sorun(coin: str, eylem: str, usd: float, durum: str, neden: 
     '🚨 [GERÇEK] EMİR REDDEDİLDİ — BTC kapat 27,30 $\\nneden: hl_err: …\\nKapanış … yeniden denenecek …'."""
     satirlar = [f"🚨 [GERÇEK] EMİR {DURUM_BUYUK.get(durum, durum.upper())} — {coin} {eylem or 'emir'} {tr_sayi(usd)} $"]
     if neden:
-        satirlar.append(f"neden: {neden[:200]}")
+        satirlar.append(f"neden: {sade_ad(neden[:200])}")
     if eylem in SONRAKI_ADIM:
         satirlar.append(SONRAKI_ADIM[eylem])
     return "\n".join(satirlar)
@@ -623,17 +652,21 @@ def msg_emir_ozeti(kip: str, emirler: list[dict], dakika: float) -> str:
     sorunlu = [e for e in emirler if e["durum"] != "dolu"]
     satirlar: list[str] = []
     if kip == "gercek" and sorunlu:                    # G-18: birleşik mesajda da sorunlu emir varsa 🚨 başta (gece sesli); her sorunlu emir ayrı satır + neden
-        satirlar += [msg_emir_gercek_sorun(e["coin"], e.get("eylem", ""), e["usd"], e["durum"], e.get("neden", "")).splitlines()[0] + (f" · {e['neden'][:120]}" if e.get("neden") else "")
-                     for e in sorunlu]
+        satirlar += [msg_emir_gercek_sorun(e["coin"], e.get("eylem", ""), e["usd"], e["durum"], e.get("neden", "")).splitlines()[0] + (f" · {sade_ad(e['neden'][:120])}" if e.get("neden") else "")
+                     for e in sorunlu[:1]]
+        if len(sorunlu) > 1:
+            satirlar[-1] += f" (+{len(sorunlu) - 1} sorunlu emir daha)"
     satirlar.append(f"🧾 {'Son birkaç saniyede' if dakika < 1 else f'Son {dakika:.0f} dakikada'} {len(emirler)} emir ({kip_adi(kip)})")
-    for (adres, coin, yon, eylem), liste in sorted(gruplar.items(), key=lambda kv: -sum(x["usd"] for x in kv[1])):
+    sirali_g = sorted(gruplar.items(), key=lambda kv: -sum(x["usd"] for x in kv[1]))
+    yer = 5 - len(satirlar)                                              # `[CT]` satırıyla en çok 6 satır: sığmayan gruplar tek "… ve N daha" satırında sayılır
+    fazla = len(sirali_g) - (yer - 1) if len(sirali_g) > yer else 0
+    for (adres, coin, yon, eylem), liste in sirali_g[:yer - 1 if fazla else len(sirali_g)]:
         toplam = sum(x["usd"] for x in liste)
         eksik = sum(1 for x in liste if x["durum"] != "dolu")
         satirlar.append(f"{'🟢 AL' if yon == 'B' else '🔴 SAT'} {coin}: {tr_sayi(toplam, 0)} $" + (f" ({len(liste)} emir)" if len(liste) > 1 else "")
                         + f" · {kisa(adres)} {EYLEM_TR.get(eylem, 'işlem yaptı')}" + (f" · ⚠️ {eksik} tanesi tam dolmadı" if eksik else ""))
-    kaymalar = [abs(x["kayma"]) * 1e4 for x in emirler if x.get("kayma") is not None]
-    if kaymalar:
-        satirlar.append(f"↳ Trader'a göre ortalama fark {sum(kaymalar) / len(kaymalar):.1f} bp (küçük = iyi)")
+    if fazla:
+        satirlar.append(f"… ve {fazla} işlem grubu daha")
     return "\n".join(satirlar)
 
 
@@ -699,30 +732,22 @@ def drift_satiri(drift: dict[str, float]) -> str:
 
 def msg_sanal_saatlik(bas_ms: int, bit_ms: int, sure_dk: float, emirler: list[dict], atlanan: dict[str, int], kasa_bilgi: tuple[float, float, float] | None = None,
                       atla_islem: int | None = None, atla_adres: dict[str, dict[str, int]] | None = None, drift_satir: str = "") -> str:
-    """SANAL kip saatlik özet (tek mesaj). `emirler`: {adres, coin, yon, usd ($, sanal 1.000 $ kopya ölçeği), durum, eylem, kayma (oran)}; `atlanan`: neden -> adet. Emir yoksa '' (mesaj gönderilmez). `kasa_bilgi` = (özsermaye $, gün başı özsermaye $, başlangıç kasası $) — pano ile aynı tanım: yüzdeler kasaya göre.
-    `atla_islem`: atlanan dolumların ayrı işlem sayısı; `atla_adres`: neden -> {adres: adet} (S-13, `atlanan_satirlari`)."""
+    """SANAL kip emir partisi (tek mesaj, en çok 3 satır): kaç emir, ne tür (açılış/artırma/azaltma/kapanış), kasa özeti. Emir yoksa '' (mesaj gönderilmez).
+    `atlanan`/`atla_islem`/`atla_adres`/`drift_satir` imzada kalır ama mesaja GİRMEZ (kopyalanmayan dolumlar ve kopya sapması yalnız kayıt/pano; kullanıcı standardı: tekrar eden bilgi mesajı yok)."""
     if not emirler:
         return ""
     sure = f"{int(sure_dk // 60)} saat" if sure_dk >= 60 and sure_dk % 60 == 0 else f"{sure_dk:.0f} dk"
     say = {k: sum(1 for e in emirler if e.get("eylem") == k) for k in ("ac", "artir", "azalt", "kapat")}
-    en = max(emirler, key=lambda e: e["usd"])
-    satirlar = [f"🧾 Son {sure} ({_tsi_saat(bas_ms)}–{_tsi_saat(bit_ms)} TSİ): {len(emirler)} emir · sanal",
-                f"➕ açılış {say['ac']} · ⬆️ artırma {say['artir']} · ⬇️ azaltma {say['azalt']} · ✖️ kapanış {say['kapat']}",
-                f"🏆 En büyük: {tr_sayi(en['usd'], 0 if en['usd'] >= 100 else 1)} $ ({en['coin']}, {'AL' if en['yon'] == 'B' else 'SAT'}) · {kisa(en['adres'])}"]
-    satirlar += atlanan_satirlari(atlanan, atla_islem, atla_adres)
+    ad = {"ac": "açılış", "artir": "artırma", "azalt": "azaltma", "kapat": "kapanış"}
+    tur = ", ".join(f"{say[k]} {ad[k]}" for k in ("ac", "artir", "azalt", "kapat") if say[k])
+    satirlar = [f"🧾 Son {sure}: {len(emirler)} emir" + (f" ({tur})" if tur else "") + " · sanal"]
     eksik = sum(1 for e in emirler if e["durum"] != "dolu")
     if eksik:
         satirlar.append(f"⚠️ {eksik} emir tam dolmadı")
-    toplam = f"💵 Tutar toplamı: {tr_sayi(sum(e['usd'] for e in emirler), 0)} $"
-    kaymalar = [abs(e["kayma"]) for e in emirler if e.get("kayma") is not None]
-    satirlar.append(toplam + (f" · kayma ort. %{tr_sayi(sum(kaymalar) / len(kaymalar) * 100, 3)}" if kaymalar else ""))
-    if drift_satir:
-        satirlar.append(drift_satir)
     if kasa_bilgi is not None and kasa_bilgi[2] > 0:
         oz, gun_basi, kasa = kasa_bilgi
-        gun, top = oz - gun_basi, oz - kasa
-        isaret = lambda x: "🟢" if x >= 0 else "🔴"        # noqa: E731
-        satirlar.append(f"💰 Kasa: {tr_sayi(oz)} $ · bugün {isaret(gun)} {tr_isaretli(gun)} $ ({_yuzde1(gun / kasa)}) · başlangıçtan {isaret(top)} {tr_isaretli(top)} $ ({_yuzde1(top / kasa)})")
+        gun = oz - gun_basi
+        satirlar.append(f"💰 Kasa: {tr_sayi(oz)} $ · bugün {'🟢' if gun >= 0 else '🔴'} {tr_isaretli(gun)} $ ({_yuzde1(gun / kasa)})")
     return "\n".join(satirlar)
 
 
@@ -742,6 +767,21 @@ def msg_sanal_saatlik_bos(bas_ms: int, bit_ms: int, sure_dk: float, atlanan: dic
     return "\n".join(satirlar)
 
 
-def alarm(baslik: str, govde: str, ikon: str = "🚨") -> str:
-    """Sorun mesajı: ikon + başlık, ayraç, sade açıklama. Her zaman sesli (`ONEMLI_ONEKLER`)."""
-    return f"{ikon} {baslik}\n{AYRAC}\n{govde}"
+def sade_ad(ad: str) -> str:
+    """Kod adını okunur yapar: 'ajan_suresi' → 'ajan suresi' (mesajda alt çizgili kod adı kalmaz)."""
+    return re.sub(r"[A-Za-z]+(?:_[A-Za-z]+)+", lambda m: m.group(0).replace("_", " "), str(ad))
+
+
+SENDEN_YOK = "Senden bir şey gerekmiyor."
+
+
+def alarm(baslik: str, govde: str, ikon: str = "🚨", senden: str | None = SENDEN_YOK) -> str:
+    """Sorun mesajı: ikon + başlık (ne oldu), sade açıklama (ne yapılıyor), son satır 'senden bir şey gerekiyor mu' (`senden`: None → eklenmez; çağıran kendi eylem satırını gövdeye yazmıştır).
+    Geri tırnak ve kod adları ayıklanır. Her zaman sesli (`ONEMLI_ONEKLER`) ya da WARN; en çok 4 satır (+ `[CT]` etiketi)."""
+    metin = f"{ikon} {baslik}\n{govde}".replace("`", "")
+    return metin + (f"\n{senden}" if senden else "")
+
+
+def duzeldi_metni(baslik: str, govde: str) -> str:
+    """Tek 'Düzeldi' mesajı (INFO, sessiz): '✅ Düzeldi: <başlık>' + gövde."""
+    return f"✅ Düzeldi: {baslik}\n{govde}"

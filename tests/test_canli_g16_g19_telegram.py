@@ -151,7 +151,7 @@ def test_g18_gercek_kip_dolmayan_emir_sesli_altin_ornek():
     a = "0x1234567890abcdef"
     m = tg.msg_emir(a, "BTC", "A", 27.30, None, None, "red", "gercek", "kapat", "hl_err: User or API Wallet 0xabc does not exist.")
     assert m == ("🚨 [GERÇEK] EMİR REDDEDİLDİ — BTC kapat 27,30 $\n"
-                 "neden: hl_err: User or API Wallet 0xabc does not exist.\n"
+                 "neden: hl err: User or API Wallet 0xabc does not exist.\n"
                  "Kapanış daha geniş bantla yeniden denenecek; olmazsa kuyruğa alınır ve dakikada bir denenir. Tekrarlarsa: /hepsini_kapat ya da HL web.\n"
                  "↳ Trader 0x123456… · SAT")
     gece = tg.Telegram(TOKEN, CHAT, SahteTG(), sessiz_utc=(21, 5), saat_s=lambda: 1_800_000_000 - 1_800_000_000 % 86400 + 2 * 3600)     # 02:00 UTC
@@ -191,7 +191,7 @@ def test_g18_gercek_kip_emir_mesajlari_tamponda_birlesir(tmp_path):
     yeni = tgp.gonderilen[once:]
     assert len(yeni) == 1
     satirlar = yeni[0].splitlines()
-    assert satirlar[0].startswith("🚨 [GERÇEK] EMİR REDDEDİLDİ — ETH ac ") and satirlar[0].endswith(" · hl_err: Invalid nonce")
+    assert satirlar[0].startswith("🚨 [GERÇEK] EMİR REDDEDİLDİ — ETH ac ") and satirlar[0].endswith(" · hl err: Invalid nonce")
     assert satirlar[1] == "🧾 Son birkaç saniyede 2 emir (GERÇEK PARA)" and not t.sessiz_mi(yeni[0])
     m.olay_isle(olay("a:3", adr(1), "BTC", "B", 300, 100.0, 300.0, saat))
     m.emir_ozeti(m.saat_ms(), zorla=True)                                                                  # vardiya sonu: tampon beklemeden gider
@@ -339,8 +339,7 @@ def test_s13_motor_ayri_islem_sayisi_adres_coin_saniye(tmp_path):
     m.olay_isle(olay("a:6", adr(1), "@142", "B", 100, 100.0, 400.0, saat, yas_ms=3000))         # farklı saniye
     saat.ms += SAAT
     m.emir_ozeti(saat())
-    oz = [x for x in tgp.gonderilen if "Kopyalanmayan trader dolumu" in x]
-    assert len(oz) == 1 and "⏭️ Kopyalanmayan trader dolumu: 3 (≈2 ayrı işlem)\n   • kural gereği 3: 3 spot coin\n   • kaçırılan 0 (geç görülen / veri yok)" in oz[0]
+    assert not [x for x in tgp.gonderilen if "Kopyalanmayan" in x]                           # kullanıcı standardı: kopyalanmayan dolum özeti Telegram'a gitmez (pano/kayıt)
     assert m._atla_islem == set() and m._atla_adres == {}
 
 
@@ -359,7 +358,7 @@ def test_s22_alarm_basligina_kip_etiketi(tmp_path):
     t = tg.Telegram(TOKEN, CHAT, SahteTG())
     t.kip = "gercek"
     t.gonder(tg.alarm("ALARM: kasa sınırı aşıldı", "Kasa 1.200 $."))
-    assert t.gonderilen[-1] == "🚨 ALARM: kasa sınırı aşıldı (GERÇEK PARA)\n━━━━━━━━━━━━━━\nKasa 1.200 $."
+    assert t.gonderilen[-1] == "🚨 ALARM: kasa sınırı aşıldı (GERÇEK PARA)\nKasa 1.200 $.\nSenden bir şey gerekmiyor."
     t.gonder(tg.msg_durum("gercek", 300.0, 300.0, 9, 11, 0, 0, 0, False))              # başlıkta kip zaten var: dokunulmaz
     assert t.gonderilen[-1].startswith("📊 Anlık durum (GERÇEK PARA)\n") and t.gonderilen[-1].count("GERÇEK PARA") == 1
     t.gonder("🟢 düz mesaj")

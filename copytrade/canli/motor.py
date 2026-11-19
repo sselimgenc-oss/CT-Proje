@@ -1710,7 +1710,7 @@ class Motor:
             self.dur_istendi = True
             self._dur_yaz_atomik(self.risk.dur_neden or "dur", self.saat_ms(), False)
             self.kayit({"olay": "dur_tamam"})
-            self.tg.gonder(tg.alarm("Motor durdu", "Tüm pozisyonlar kapandı (borsada teyitli 0).\nYeniden açmak için `durum/DUR` dosyası elle silinmeli.", "🛑"))
+            self.tg.gonder(tg.alarm("Motor durdu", "Tüm pozisyonlar kapandı (borsada teyitli 0).", "🛑", senden="Yeniden açmak için sunucuda elle işlem gerekir; hazır olunca söyleyin."))
             self.durum_yaz()
 
     # ------------------------------------------------------------------ saha kararlarının uygulanması
@@ -1728,22 +1728,22 @@ class Motor:
                 if giris_hesap is not None and k.adres in self.saha.uyeler:        # pano §C1: trader hesap değeri GİRİŞTE bir kez saklanır (canlı kopya koruması = bizim slot getirimiz ↔ trader'ın hesap getirisi)
                     self.saha.uyeler[k.adres]["hesap_giris_usd"] = float(giris_hesap)
                 self.kayit({"olay": "saha_giris", "adres": k.adres, "neden": k.neden, "yerine": k.yerine, "slot_usd": self.saha.slot})
-                self.tg.gonder(tg.msg_saha("giriş", k.adres, k.neden + (f" (yerine {tg.kisa(k.yerine)})" if k.yerine else "")))
+                self.tg.gonder(tg.msg_saha("giriş", k.adres, k.neden + (f" (yerine {tg.kisa(k.yerine)})" if k.yerine else "")), tur="saha_giris")      # panoda; Telegram'a gitmez (tg.BASTIRILAN_TURLER)
             elif k.tur == "dus":
                 self.kayit({"olay": "saha_dus", "adres": k.adres, "neden": k.neden, "sonuc": k.sonuc})
                 self._kozmetik("donem_slot_cikis", self.donem_slot_cikis, k.adres, k.neden, k.sonuc, simdi)       # kozmetik: istisnası sonraki kararları (inen_kapat) atlatmaz (2. denetim O-2)
-                self.tg.gonder(tg.msg_saha("çıkış", k.adres, f"{k.neden}{' (sonuçla, 14 gün bekleme)' if k.sonuc else ' (sonuç dışı)'}"))
+                self.tg.gonder(tg.msg_saha("çıkış", k.adres, f"{k.neden}{' (sonuçla, 14 gün bekleme)' if k.sonuc else ' (sonuç dışı)'}"), tur="saha_cikis")
             elif k.tur == "inen_kapat":
                 self._adres_kapat(k.adres, "inen_24sa" if not k.neden.startswith("inen_") else k.neden, simdi)
                 self._kozmetik("slot_net_guncelle", self._slot_net_guncelle, k.adres)           # pano (14.11): slot silinmeden son net
                 self.hesap.slot_kapat(k.adres)
             elif k.tur == "uyari":                                               # haftalık kadro (16.11): hafta içi form/radar uyarısı; çıkış YOK
                 self.kayit({"olay": "saha_uyari", "adres": k.adres, "neden": k.neden})
-                self.tg.gonder(tg.msg_saha("uyarı", k.adres, k.neden))
+                self.tg.gonder(tg.msg_saha("uyarı", k.adres, k.neden), tur="saha_uyari")
             elif k.tur == "hafta_degisimi":
                 self.ogrenme.hafta_degisti()                                     # ortak öğrenme: "emekli" kayıtları haftalık kadro değişiminde biter
                 self.kayit({"olay": "hafta_degisimi", "hafta": k.neden, "saha": list(self.saha.uyeler), "inen": list(self.saha.inen)})
-                self.tg.gonder(f"🔄 Haftalık kadro değişimi ({k.neden} haftası): sahada {len(self.saha.uyeler)} trader; yedeğe inenlerin pozisyonları trader kapatana kadar izleniyor")
+                self.tg.gonder(f"🔄 Haftalık kadro değişti\nSahada {len(self.saha.uyeler)} trader var" + (f"; {len(self.saha.inen)} trader yedeğe indi, pozisyonları kapanana kadar izleniyor." if self.saha.inen else ".") + f"\n{tg.SENDEN_YOK}")
             elif k.tur == "giris_atlandi":
                 imza = (self.saha.son_kosu_ms, tuple(sorted(k.saha if k.saha is not None else (k.kor_kirpildi or []))))
                 if self._kor_imza.get(k.adres) != imza:                          # B11: imza = (kadro koşusu, adayın karşılaştığı TAM saha); değiştirmede üye başına değişen `kalan` imzaya girmez → aynı durum bir kez yazılır
@@ -1780,7 +1780,7 @@ class Motor:
             return True
         except OSError as hata:
             self.kayit({"olay": "dur_yazim_hata", "neden": neden, "tur": type(hata).__name__})
-            self.tg.gonder(tg.alarm("DUR dosyası YAZILAMADI", f"`durum/DUR` yazılamadı ({type(hata).__name__}). Risk kaydı `dur` açık; sunucuyu kontrol et.", "🚨"))
+            self.tg.gonder(tg.alarm("Durdurma kilidi yazılamadı", f"Durdurma kilidi diske yazılamadı ({type(hata).__name__}); risk kaydında durdurma açık, yeni işlem yok.", "🚨", senden="Sunucuyu kontrol etmen gerekiyor."))
             return False
 
     def _borsa_acik_mi(self) -> bool | None:
@@ -1804,7 +1804,7 @@ class Motor:
             e.pop("sonraki_ms", None)                       # eski geri çekilme beklemesi (≤ 30 dk) DUR'da uygulanmaz
         self.kayit({"olay": "dur_yeniden_kapanis", "neden": neden, "kuyruk": len(self.kapanis_kuyrugu), "yerel_poz": sayi, "borsa_acik": borsa_acik})
         ek = "; borsada defter dışı açık pozisyon var" if borsa_acik else ("; borsa okunamadı (düz teyidi yok)" if borsa_acik is None and not sayi else "")
-        self.tg.gonder(tg.alarm(f"DUR yarım kalmıştı: {neden}", f"Motor yeniden başladı; {sayi} açık pozisyon kapanış kuyruğuna alındı{ek}.\nYeni pozisyon açılmıyor; hepsi kapanınca motor durur.", "🛑"))
+        self.tg.gonder(tg.alarm(f"DUR yarım kalmıştı: {tg.sade_ad(neden)}", f"Motor yeniden başladı; {sayi} açık pozisyon kapanış kuyruğuna alındı{ek}.\nYeni pozisyon açılmıyor; hepsi kapanınca motor durur.", "🛑"))
 
     def dur_tetikle(self, neden: str) -> None:
         """Tüm pozisyonları reduce‑only kapat (teyitli), `DUR` yaz, alarm. Motor ancak TÜM pozisyonlar teyitli 0 olunca durur; düzleşmeyen varsa `kapanis_kuyrugu` dakikalık yeniden dener
@@ -1838,11 +1838,11 @@ class Motor:
             self._dur_yaz_atomik(neden, simdi, False)
         self.kayit({"olay": "dur", "neden": neden, "kapatilan": kapatilan, "kalan": kalan, "borsa_fazla": fazla})
         if duz:
-            self.tg.gonder(tg.alarm(f"DUR: {neden}", f"{kapatilan} pozisyon kapatıldı, motor durdu.\nYeniden açmak için `durum/DUR` dosyası elle silinmeli.", "🛑"))
+            self.tg.gonder(tg.alarm(f"DUR: {tg.sade_ad(neden)}", f"{kapatilan} pozisyon kapatıldı, motor durdu.", "🛑", senden="Yeniden açmak için sunucuda elle işlem gerekir; hazır olunca söyleyin."))
             self._dur_bitir_mi()
         else:
             ek = "" if fazla == {} else (f"; borsada defter dışı açık: {', '.join(f'{c} {v:g}' for c, v in list(fazla.items())[:5])}" if fazla else "; borsa okunamadı (düz teyidi yok)")
-            self.tg.gonder(tg.alarm(f"DUR: {neden}", f"{kapatilan} pozisyon kapandı, {kalan} pozisyon DÜZLEŞMEDİ{ek}.\nYeniden denenecek; hepsi kapanınca motor durur.", "🛑"))
+            self.tg.gonder(tg.alarm(f"DUR: {tg.sade_ad(neden)}", f"{kapatilan} pozisyon kapandı, {kalan} pozisyon DÜZLEŞMEDİ{ek}.\nYeniden denenecek; hepsi kapanınca motor durur.", "🛑"))
         self.durum_yaz()
 
     # ------------------------------------------------------------------ periyodik görevler
@@ -2011,11 +2011,12 @@ class Motor:
             if not self.risk.acilis_durdu.get("hl_deger"):
                 self.risk.bayrak("hl_deger", True)
                 self.kayit({"olay": "hl_deger_gecersiz", "deger": str(deger)[:24]})
-                self.tg.gonder(tg.alarm("ALARM: HL hesap değeri geçersiz", "HL'den gelen hesap değeri sayı değil / negatif. Yeni pozisyon açılmıyor; değer düzelince kalkar."))
+                self.tg.uyar("hl_deger", tg.alarm("ALARM: HL hesap değeri geçersiz", "HL'den gelen hesap değeri sayı değil / negatif. Yeni pozisyon açılmıyor; değer düzelince kalkar."))
             return False
         if self.risk.acilis_durdu.get("hl_deger"):
             self.risk.bayrak("hl_deger", False)
             self.kayit({"olay": "hl_deger_duzeldi"})
+            self.tg.duzeldi("hl_deger", tg.duzeldi_metni("HL hesap değeri", "Yeni pozisyonlar yeniden serbest."))
         self.hl_oz, self.hl_oz_ms = d, (simdi if okuma_ms is None else okuma_ms)
         if self.hl_ofset is None:
             self.hl_ofset = d - self.yerel_ozsermaye()
@@ -2125,14 +2126,15 @@ class Motor:
             if self._ofset_dogrulanmadi or self.risk.acilis_durdu.get("ofset"):
                 self._ofset_bayrak(False)
                 self.kayit({"olay": "ofset_dogrulandi", "ofset": self.hl_ofset})
+                self.tg.duzeldi("ofset", tg.duzeldi_metni("yatırma/çekme kaydı okunuyor", "Yeni pozisyonlar yeniden serbest."))
             return
         self._ledger_hata_say += 1
         if not self._ofset_dogrulanmadi:
             self.kayit({"olay": "ofset_dogrulanmadi", "ardisik": self._ledger_hata_say})
         self._ofset_bayrak(True)
-        if self._ledger_hata_say >= 3 and self._aralik_mi("ofset_alarm", simdi, 3600):
-            self.tg.gonder(tg.alarm("ALARM: yatırma/çekme kaydı okunamıyor", f"Ledger okuması {self._ledger_hata_say} kez üst üste başarısız. Hesap değerindeki yatırma/çekme doğrulanamıyor: yeni pozisyon açılmıyor; "
-                                    "risk yerel defter özsermayesiyle sürüyor (DUR yok). Okuma düzelince kalkar."))
+        if self._ledger_hata_say >= 3:
+            self.tg.uyar("ofset", tg.alarm("ALARM: yatırma/çekme kaydı okunamıyor", f"Hesap hareketi okuması {self._ledger_hata_say} kez üst üste başarısız; yatırma/çekme doğrulanamıyor.\n"
+                                           "Yeni pozisyon açılmıyor; risk yerel defterle sürüyor. Okuma düzelince kendiliğinden kalkar."))
 
     def funding_bekliyor(self, simdi: int) -> bool:
         return self.kip == "sanal" and self.son_funding_saat is not None and simdi // 3_600_000 > self.son_funding_saat and any(self.hesap.poz.values())
@@ -2306,10 +2308,10 @@ class Motor:
                     n = self._adim_ardisik[ad] = self._adim_ardisik.get(ad, 0) + 1
                     self.kayit({"olay": "adim_hata", "adim": ad, "tur": type(hata).__name__, "mesaj": str(hata)[:160], "ardisik": n})
                     if ad == "durum_yaz" and self._aralik_mi("durum_yaz_alarm", simdi, 3600):
-                        self.tg.gonder(tg.alarm("ALARM: durum diske yazılamıyor", f"Dakikalık durum kaydı başarısız ({type(hata).__name__}).\nYeniden başlatmada son durum kaybolabilir; disk/izinleri kontrol edin."))
+                        self.tg.gonder(tg.alarm("ALARM: durum diske yazılamıyor", f"Dakikalık durum kaydı başarısız ({type(hata).__name__}).\nYeniden başlatmada son durum kaybolabilir.", senden="Sunucuda disk alanı ve izinlere bakman gerekiyor."))
                     elif ad != "durum_yaz" and (n == ADIM_ALARM_ARDISIK or (n > ADIM_ALARM_ARDISIK and n % 60 == 0)):      # M-2: aynı adım üst üste 3 kez → alarm (sonra saatte bir)
-                        self.tg.gonder(tg.alarm(f"ALARM: '{ad}' adımı hata veriyor", f"Dakikalık '{ad}' adımı üst üste {n} kez başarısız ({type(hata).__name__}: {str(hata)[:100]}).\n"
-                                                "Bu adımın koruması (risk/mutabakat/kapanış) çalışmıyor olabilir; kayıtları kontrol edin."))
+                        self.tg.gonder(tg.alarm(f"ALARM: '{tg.sade_ad(ad)}' adımı hata veriyor", f"Dakikalık '{tg.sade_ad(ad)}' adımı üst üste {n} kez başarısız ({type(hata).__name__}).\n"
+                                                "Bu adımın koruması çalışmıyor olabilir; bekçi gerekirse motoru yeniden başlatır."))
 
     def _btc_donem_gecerli(self) -> dict | None:
         b = self.btc_donem
@@ -2502,16 +2504,16 @@ class Motor:
         islem, adresler = len(self._atla_islem), self._atla_adres
         self._atla_islem, self._atla_adres = set(), {}
         adaylar = self._drift_adaylari(simdi)
-        satir = tg.drift_satiri(adaylar)
+        if adaylar:                                                     # kopya sapması satırı artık mesajda yok (yalnız bilgi): kayda yazılır, damga ilerler (6 saatte bir)
+            self.kayit({"olay": "tg_bastirildi", "tur": "kopya_sapmasi", "metin": tg.drift_satiri(adaylar)})
+            for c in adaylar:
+                self.kopya_drift_tg_ms[c] = simdi
         metin = tg.msg_sanal_saatlik(bas, simdi, round((simdi - bas) / DAKIKA) if zorla else dk, emirler, atlanan,
-                                     (self.ozsermaye(), self.risk.gun_basi, self.kasa) if emirler else None, islem, adresler, satir)
-        if not metin and not zorla and self.rules.get("canli_telegram_sanal_bos_mesaj", False):
-            metin = tg.msg_sanal_saatlik_bos(bas, simdi, dk, atlanan, (self.ozsermaye(), self.risk.gun_basi, self.kasa), islem, adresler, satir)
+                                     (self.ozsermaye(), self.risk.gun_basi, self.kasa) if emirler else None, islem, adresler, "")
         if metin:
             self.tg.gonder(metin)
-            if satir:
-                for c in adaylar:
-                    self.kopya_drift_tg_ms[c] = simdi
+        elif not zorla:                                                 # emirsiz "sistem çalışıyor" mesajı bastırılır; kayda `tg_bastirildi` yazılır
+            self.tg.gonder(tg.msg_sanal_saatlik_bos(bas, simdi, dk, atlanan, (self.ozsermaye(), self.risk.gun_basi, self.kasa), islem, adresler, ""), tur="saatlik_bos")
 
     def _tasfiye(self, simdi: int) -> None:
         if self.kip != "sanal":
@@ -2552,8 +2554,8 @@ class Motor:
         self._hl_sicrama, self._hl_sicrama_ms = True, simdi
         self.risk.bayrak("mutabakat", True)
         self.kayit({"olay": "hl_sicrama", "aciklanmayan_usd": round(aciklanmayan, 4), "esik_usd": round(esik, 4), "hl_net_usd": round(net, 4), "yerel_usd": round(yerel, 4)})
-        self.tg.gonder(tg.alarm("ALARM: HL özsermayesinde açıklanamayan sıçrama", f"İki okuma arasında {tg.tr_sayi(aciklanmayan)} $ (sınır {tg.tr_sayi(esik)} $); dolum/yatırma/çekme açıklamıyor.\n"
-                                "Transfer (send/alt hesap) ya da HL tasfiyesi olabilir. Yeni pozisyon açılmıyor; risk freni bir okuma ertelendi. HL ekranını kontrol edin."))
+        self.tg.gonder(tg.alarm("ALARM: HL özsermayesinde açıklanamayan sıçrama", f"İki okuma arasında {tg.tr_sayi(aciklanmayan)} $ (sınır {tg.tr_sayi(esik)} $); işlem/yatırma/çekme açıklamıyor.\n"
+                                "Yeni pozisyon açılmıyor; risk freni bir okuma ertelendi.", senden="HL ekranına bakıp transfer ya da tasfiye var mı kontrol etmen gerekiyor."))
 
     def _risk(self, simdi: int) -> None:
         self._dur_kurtar(simdi)
@@ -2564,8 +2566,9 @@ class Motor:
                 eski = self.risk.zirve_yenile(oz)
                 self.kayit({"olay": "zirve_yenilendi", "eski_zirve": eski, "yeni_zirve": oz, "gerekce": "dur_sonrasi_ilk_risk"})
         if self.risk.kasa_siniri_asildi(self.kasa, kasa_ust(self.rules, self.kip)):
-            if self._aralik_mi("kasa_alarm", simdi, 3600):
-                self.tg.gonder(tg.alarm("ALARM: kasa sınırı aşıldı", f"Kasa {tg.tr_sayi(self.kasa, 0)} $ > sınır {tg.tr_sayi(kasa_ust(self.rules, self.kip), 0)} $.\nYeni pozisyon açılmıyor."))
+            self.tg.uyar("kasa_siniri", tg.alarm("ALARM: kasa sınırı aşıldı", f"Kasa {tg.tr_sayi(self.kasa, 0)} $ > sınır {tg.tr_sayi(kasa_ust(self.rules, self.kip), 0)} $.\nYeni pozisyon açılmıyor."))
+        else:
+            self.tg.duzeldi("kasa_siniri", tg.duzeldi_metni("kasa sınırı", "Kasa sınırın altına indi; yeni pozisyonlar serbest."))
         if self._hl_sicrama and simdi - self._hl_sicrama_ms <= 3 * float(self.rules["canli_mutabakat_sn"]) * 1000:      # S-6: açıklanmayan sıçrama → bu okumada DUR yok (bayrak + alarm verildi)
             self.kayit({"olay": "risk_ertelendi", "neden": "hl_sicrama", "ozsermaye": oz})
             return
@@ -2606,13 +2609,13 @@ class Motor:
                 if not self.risk.acilis_durdu.get("hl_okunamiyor"):
                     self.kayit({"olay": "hl_okunamiyor", "ardisik": self._hl_ardisik})
                 self.risk.bayrak("hl_okunamiyor", True)
-                if self._aralik_mi("hl_okunamiyor_alarm", simdi, 3600):
-                    self.tg.gonder(tg.alarm("ALARM: HL okunamıyor", f"{self._hl_ardisik} ardışık HL okuması başarısız. Risk yerel defterle sürüyor; yeni pozisyon açılmıyor (okuma düzelince kalkar)."))
+                self.tg.uyar("hl_okunamiyor", tg.alarm("ALARM: HL okunamıyor", f"{self._hl_ardisik} ardışık HL okuması başarısız. Risk yerel defterle sürüyor; yeni pozisyon açılmıyor (okuma düzelince kalkar)."))
             return
         self._hl_ardisik = 0
         if self.risk.acilis_durdu.get("hl_okunamiyor"):
             self.risk.bayrak("hl_okunamiyor", False)
             self.kayit({"olay": "hl_okunuyor"})
+            self.tg.duzeldi("hl_okunamiyor", tg.duzeldi_metni("HL okuması", "Yeni pozisyonlar yeniden serbest."))
 
     def _sahipsiz_tara(self, simdi: int) -> None:
         """2. denetim O-2 (K-70; her iki kip): defterde açık pozisyonu olup ne `saha.uyeler` ne `saha.inen`de olan adres ("sahipsiz": kozmetik adım istisnası / saha durumu kaybı sonrası trader'ı izlenmeyen pozisyon; olayı atlanır,
@@ -2678,7 +2681,7 @@ class Motor:
             return
         neden = r.dur_neden or "dur_kurtarma"
         self.kayit({"olay": "dur_kurtarma", "neden": neden, "dur_bekliyor": self.dur_bekliyor})
-        self.tg.gonder(tg.alarm("ALARM: DUR kurtarılıyor", f"Risk kaydında DUR ({neden}) açık ama `durum/DUR` dosyası yok (adım hatası / yazım hatası / çökme).\nDUR yeniden tetikleniyor: pozisyonlar kapatılacak.", "🛑"))
+        self.tg.gonder(tg.alarm("ALARM: DUR kurtarılıyor", f"Risk kaydında durdurma ({tg.sade_ad(neden)}) açık ama durdurma kilidi yok (yazım hatası / çökme olabilir).\nDurdurma yeniden başlatılıyor: pozisyonlar kapatılacak.", "🛑"))
         self.dur_tetikle(neden)
 
     def _felaket_stop(self, simdi: int) -> None:
@@ -2994,10 +2997,10 @@ class Motor:
         self.risk.bayrak("mutabakat", bool(sorunlar))
         if sorunlar and not onceki:
             self.kayit({"olay": "mutabakat_alarm", "sorunlar": sorunlar[:10]})
-            self.tg.gonder(tg.alarm("ALARM: kayıtlar uyuşmuyor (mutabakat)", f"{len(sorunlar)} sorun bulundu ({sorunlar[0].get('neden')}).\nYeni pozisyon açılmıyor."))
+            self.tg.gonder(tg.alarm("ALARM: kayıtlar uyuşmuyor (mutabakat)", f"{len(sorunlar)} sorun bulundu ({tg.sade_ad(sorunlar[0].get('neden'))}).\nYeni pozisyon açılmıyor."))
         elif not sorunlar and onceki:
             self.kayit({"olay": "mutabakat_duzeldi"})
-            self.tg.gonder(tg.alarm("Mutabakat düzeldi", "Yeni pozisyonlar yeniden serbest.", "✅"))
+            self.tg.gonder(tg.duzeldi_metni("kayıtlar uyuşuyor (mutabakat)", "Yeni pozisyonlar yeniden serbest."), "INFO")
 
     def _kadro_al(self, simdi: int) -> tuple[bool, dict | None]:
         """Aralık dolduysa `kadro.json` okunur (ağ; kilitsiz). Döner (okundu, kadro|None)."""
@@ -3063,7 +3066,7 @@ class Motor:
         self._kasa_uyari = k
         self.kayit({"olay": "kadro_kasa_farkli", "kadro_kasa_usd": k, "motor_kasa_usd": float(self.kasa)})
         self.tg.gonder(tg.alarm("UYARI: kadro kasası farklı", f"Radar kadrosu {tg.tr_sayi(k, 0)} $ kasa ölçeğinde seçildi; motor kasası {tg.tr_sayi(float(self.kasa), 0)} $.\n"
-                                "Kadro uygulanıyor (durdurma yok); radar_kasa_usd ile motor sanal kasasını eşitleyin.", "⚠️"))
+                                "Kadro uygulanıyor, durdurma yok.", "⚠️", senden="Radar kasa ayarıyla motor kasasını eşitlemen gerekiyor."))
 
     def _kadro(self, simdi: int) -> None:
         self._kadro_uygula(self._kadro_al(simdi), simdi)
@@ -3092,9 +3095,9 @@ class Motor:
             if kalan_gun <= esik_gun:
                 tarih = datetime.fromtimestamp(int(okuma["valid_until"]) / 1000, UTC).strftime("%d.%m.%Y %H:%M UTC")
                 durum = "süresi DOLDU" if kalan_gun <= 0 else f"süresi {kalan_gun:.1f} gün sonra bitiyor"
-                self.tg.gonder(tg.alarm("ALARM: API cüzdanı süresi", f"HL API cüzdanının {durum} ({tarih}).\nSüre dolunca her emir (kapanışlar da) reddedilir. Yeni API cüzdanı oluşturup sunucuya kaydedin, sonra motoru yeniden başlatın."))
+                self.tg.uyar("api_cuzdani_doldu" if kalan_gun <= 0 else "api_cuzdani_yakin", tg.alarm("ALARM: API cüzdanı süresi", f"HL API cüzdanının {durum} ({tarih}).\nSüre dolunca her emir (kapanışlar da) reddedilir.", senden="Yeni API cüzdanı oluşturup sunucuya kaydetmen ve motoru yeniden başlatman gerekiyor."))
         elif okuma.get("durum") == "listede_yok" and not okuma.get("agent_rol"):
-            self.tg.gonder(tg.alarm("ALARM: API cüzdanı HL'de yok", "API cüzdanı HL agent listesinde bulunamadı (süresi dolmuş ya da iptal edilmiş olabilir).\nEmirler reddedilir; yeni API cüzdanı gerekli. Acil durumda HL web'den pozisyonları kapatın."))
+            self.tg.uyar("api_cuzdani_yok", tg.alarm("ALARM: API cüzdanı HL'de yok", "API cüzdanı HL listesinde bulunamadı (süresi dolmuş ya da iptal edilmiş olabilir). Emirler reddedilir.", senden="Yeni API cüzdanı gerekiyor; acil durumda HL sitesinden pozisyonları kapat."))
 
     def _komutlari_yurut(self, komutlar: list[str]) -> None:
         """Standart komut adları (`tg.KOMUTLAR`); riskli olanlar (/durdur /devam /hepsini_kapat) buraya YALNIZ iki adımlı onaydan sonra gelir (`tg.komutlari_al`). Eski adlar eş ad."""
@@ -3117,12 +3120,12 @@ class Motor:
     def _duraklat(self, ac: bool) -> None:
         """Elle duraklatma (`risk.acilis_durdu['elle_dur']`; kalıcı: `risk.json`). Kapanış/azaltma `acilis_izni`nden geçmediği için DURAKLATMADAN etkilenmez."""
         if not ac and self.risk.dur:
-            self.tg.gonder(tg.alarm("Motor kapalı", "Motor `/hepsini_kapat` ile durduruldu; yeniden açmak sunucudan yapılır. `/devam` bunu açmaz."))
+            self.tg.gonder(tg.alarm("Motor kapalı", "Motor /hepsini_kapat ile durduruldu; /devam bunu açmaz.", senden="Yeniden açmak için sunucuda elle işlem gerekir."))
             return
         self.risk.bayrak("elle_dur", ac)
         self.kayit({"olay": "elle_dur" if ac else "elle_devam"})
-        self.tg.gonder(tg.alarm("Yeni işlemler duraklatıldı", "Yeni pozisyon açılmaz, artırılmaz. Açık pozisyonlar trader'ı izlemeye ve azaltmaya/kapatmaya devam eder.\nAçmak için /devam (kod ister).", "⏸️") if ac
-                       else tg.alarm("Duraklatma kaldırıldı", self._devam_govde(), "▶️"))
+        self.tg.gonder(tg.alarm("Yeni işlemler duraklatıldı", "Yeni pozisyon açılmaz, artırılmaz; açık pozisyonlar izlenmeye devam eder.", "⏸️", senden="Açmak istediğinde /devam yaz (kod ister).") if ac
+                       else tg.alarm("Duraklatma kaldırıldı", self._devam_govde(), "▶️", senden=None))
         self.durum_yaz()
 
     def _devam_govde(self) -> str:
@@ -3263,7 +3266,7 @@ class Motor:
             # Denetim-3: DUR dosyası HİÇ yazılmamış (kozmetik adım istisnası / yazım hatası / çökme) — operatör silmedi. Sessiz sıfırlama (zirve de sıfırlanır) DUR'u kaybettirirdi:
             # DUR korunur, ilk risk adımında `_dur_kurtar` yeniden tetikler.
             self.kayit({"olay": "dur_korundu", "neden": self.risk.dur_neden, "gerekce": "DUR dosyası hiç yazılmamış; risk.dur korunuyor"})
-            self.tg.gonder(tg.alarm("ALARM: DUR korunuyor", f"Risk kaydında DUR ({self.risk.dur_neden}) açık ama `durum/DUR` hiç yazılmamış; sıfırlanmadı. İlk risk adımında pozisyonlar kapatılacak.", "🛑"))
+            self.tg.gonder(tg.alarm("ALARM: DUR korunuyor", f"Risk kaydında durdurma ({tg.sade_ad(self.risk.dur_neden)}) açık ama durdurma kilidi hiç yazılmamış; sıfırlanmadı.\nİlk risk adımında pozisyonlar kapatılacak.", "🛑"))
         elif not self.dur_dosyasi.exists() and self.risk.dur:                                    # DUR dosyası tek yetkili: dosya yoksa risk.json'daki bayat dur sıfırlanır
             self.kayit({"olay": "dur_sifirlandi", "neden": self.risk.dur_neden, "gerekce": "DUR dosyası yok"})
             self.risk.dur, self.risk.dur_neden, self.risk.dur_dosya = False, None, False

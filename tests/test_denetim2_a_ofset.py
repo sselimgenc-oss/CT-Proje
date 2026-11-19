@@ -111,7 +111,7 @@ def test_ledger_okunamadi_acilis_bayragi_ofset_dur_yok_risk_yerel_3_hatada_alarm
     assert m2.risk.acilis_durdu["ofset"] is False and m2.hl_ofset == pytest.approx(-300.0) and m2.ozsermaye() == pytest.approx(1000.0) and not m2.risk.dur
 
 
-def test_ofset_alarmi_saatte_bir_yinelenir(tmp_path, monkeypatch):
+def test_ofset_alarmi_6_saatte_bir_yinelenir(tmp_path, monkeypatch):
     sim = HataliLedgerSim(deger=1000.0)
     m, sim, saat, _ = _calisan(tmp_path, monkeypatch, sim)
     sim.ledger_hata = True
@@ -120,7 +120,7 @@ def test_ofset_alarmi_saatte_bir_yinelenir(tmp_path, monkeypatch):
     for _ in range(125):
         saat.ms += 60_000
         m2.dakika()
-    assert sum("okunamıyor" in x for x in tgp2.gonderilen) == 3                  # 3. dakikada, +60 dk, +120 dk
+    assert sum("okunamıyor" in x for x in tgp2.gonderilen) == 1                  # 3. dakikada; aynı uyarı 6 saatte bir (ortak `Telegram.uyar`)
 
 
 @pytest.mark.parametrize("satir,net", [

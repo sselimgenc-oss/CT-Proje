@@ -46,19 +46,27 @@ as_user() {
 }
 g() { as_user git -C "$DEPO" "$@"; }
 
-bildir() {   # $1 = INFO|CRIT, $2 = metin. Token/chat yoksa sessizce atlanır; token hiçbir yere basılmaz.
-  local tok chat
+BASTIR_INFO="${SANAL_TG_BASTIR_INFO:-1}"   # 1 = rutin INFO (sunucu güncellendi / elle geri alındı) Telegram'a GİTMEZ, yalnız günlüğe "tg_bastirildi" yazılır; 0 = gönderilir (sessiz)
+
+bildir() {   # $1 = INFO|WARN|CRIT, $2 = metin. INFO sessiz gider (disable_notification=true); WARN/CRIT normal sesli. Token/chat yoksa sessizce atlanır; token hiçbir yere basılmaz.
+  local tok chat sessiz=false
+  [ "$1" = INFO ] && sessiz=true
   [ -r "$TG_ENV" ] || { log "telegram ortam dosyası yok; bildirim atlandı"; return 0; }
   tok="$(sed -n 's/^TELEGRAM_BOT_TOKEN=//p' "$TG_ENV" | tail -n1 | tr -d "\"'\r")"
   chat="$(sed -n 's/^TELEGRAM_CHAT_ID=//p' "$TG_ENV" | tail -n1 | tr -d "\"'\r")"
   if [ -z "$tok" ] || [ -z "$chat" ]; then log "telegram anahtarı yok; bildirim atlandı"; return 0; fi
   if printf 'url = "%s/bot%s/sendMessage"\n' "$TG_API" "$tok" | curl -sS -f --max-time 20 --config - \
-       --data-urlencode "chat_id=$chat" --data-urlencode "text=[CT] $1"$'\n'"$2" -o /dev/null 2>/dev/null; then
+       --data-urlencode "chat_id=$chat" --data-urlencode "disable_notification=$sessiz" --data-urlencode "text=[CT] $1"$'\n'"$2" -o /dev/null 2>/dev/null; then
     log "bildirim gönderildi ($1)"
   else
     log "bildirim gönderilemedi ($1)"
   fi
   return 0
+}
+
+bildir_rutin() {   # $1 = metin. Rutin INFO (güncelleme tamam): varsayılan Telegram'a GİTMEZ (pano/günlük); SANAL_TG_BASTIR_INFO=0 ile sessiz gönderilir.
+  if [ "$BASTIR_INFO" = 1 ]; then log "tg_bastirildi: sunucu_guncellendi ($1)"; return 0; fi
+  bildir INFO "$1"
 }
 
 ci_durum() {   # $1 = sha -> yesil | yok | kirmizi:<neden>
@@ -140,7 +148,9 @@ geri_al() {   # $1 = neden
   sleep "$BEKLE"
   motor_saglam || motor_durum="DEĞİL (elle bakın: journalctl -u sg-sanal)"
   printf '%s\n' "$yeni" > "$DURUM/kotu_sha"
-  bildir CRIT "Sunucu güncellemesi BAŞARISIZ: ${neden}. ${yeni:0:7} geri alındı -> ${onceki:0:7}. Motor: ${motor_durum}. Bu commit tekrar denenmeyecek."
+  bildir CRIT "Sunucu güncellemesi başarısız oldu (${neden}).
+Eski sürüm geri yüklendi; motor: ${motor_durum}. Bu sürüm tekrar denenmeyecek.
+Senden bir şey gerekmiyor; yeni sürüm gelince otomatik denenir."
   exit 1
 }
 
@@ -167,8 +177,12 @@ alarm_kontrol() {   # sg-sanal son 1 saatte >ALARM_SINIR kez yeniden başladı m
       var=1
       son="$(cat "$DURUM/alarm_$t" 2>/dev/null || echo 0)"; [[ "$son" =~ ^[0-9]+$ ]] || son=0
       if [ ! -f "$DURUM/alarm_$t" ] || [ $((simdi - son)) -ge "$ALARM_ARA_SN" ]; then
-        if [ "$t" = yeniden ]; then mesaj="Sunucu motoru son 1 saatte ${sayi} kez yeniden başladı (sınır ${ALARM_SINIR}). Bellek tavanı: OOM $([ "$oom" = 1 ] && echo evet || echo hayır)."
-        else mesaj="Sunucu motoru bellek tavanında OOM ile öldürüldü (MemoryMax). Son 1 saatte yeniden başlama: ${sayi}."; fi
+        if [ "$t" = yeniden ]; then mesaj="Sunucu motoru son 1 saatte ${sayi} kez yeniden başladı (sınır ${ALARM_SINIR}); bellek taşması $([ "$oom" = 1 ] && echo oldu || echo olmadı).
+Sunucu motoru kendiliğinden yeniden başlatıyor.
+Sorun sürerse sunucuya bakman gerekebilir."
+        else mesaj="Sunucu motoru bellek tavanını aşıp öldürüldü; son 1 saatte ${sayi} kez yeniden başladı.
+Sunucu motoru kendiliğinden yeniden başlatıyor.
+Sorun sürerse sunucuya bakman gerekebilir."; fi
         printf '%s\n' "$simdi" > "$DURUM/alarm_$t"
         bildir CRIT "$mesaj"
       fi
@@ -177,7 +191,8 @@ alarm_kontrol() {   # sg-sanal son 1 saatte >ALARM_SINIR kez yeniden başladı m
   if [ "$var" = 0 ]; then
     temiz=0
     for t in yeniden oom; do if [ -f "$DURUM/alarm_$t" ]; then temiz=1; rm -f -- "$DURUM/alarm_$t"; fi; done
-    if [ "$temiz" = 1 ]; then bildir INFO "Sunucu motoru düzeldi: son 1 saatte yeniden başlama sınırın altında (${sayi}, sınır ${ALARM_SINIR}), OOM yok."; fi
+    if [ "$temiz" = 1 ]; then bildir INFO "Düzeldi: sunucu motoru artık kararlı (son 1 saatte ${sayi} yeniden başlama).
+Senden bir şey gerekmiyor."; fi
   fi
   return 0
 }
@@ -223,7 +238,9 @@ else
   if [ -s "$DURUM/kotu_sha" ] && [ "$(cat "$DURUM/kotu_sha")" = "$yeni" ]; then log "${yeni:0:7} daha önce başarısız oldu ve geri alındı; yeni commit beklenir"; exit 0; fi
   if ! g merge-base --is-ancestor "$head" "$yeni"; then
     log "origin/main HEAD'in ileri sarması DEĞİL (fast-forward yok); reddedildi"
-    if [ "$(cat "$DURUM/reddedilen" 2>/dev/null)" != "$yeni:ff" ]; then printf '%s\n' "$yeni:ff" > "$DURUM/reddedilen"; bildir CRIT "Sunucu güncellemesi REDDEDİLDİ: origin/main ${yeni:0:7} fast-forward değil (depo tarihi değişmiş olabilir). Elle bakın."; fi
+    if [ "$(cat "$DURUM/reddedilen" 2>/dev/null)" != "$yeni:ff" ]; then printf '%s\n' "$yeni:ff" > "$DURUM/reddedilen"; bildir CRIT "Sunucu güncellemesi reddedildi: yeni sürümün geçmişi sunucudakiyle uyuşmuyor.
+Hiçbir şey değiştirilmedi; motor eski sürümle çalışıyor.
+Senden: depo geçmişinin neden değiştiğine bakman gerekiyor."; fi
     exit 0
   fi
   ci="$(ci_durum "$yeni")"
@@ -238,7 +255,9 @@ fi
 # durum/ kayit/ pano/ yerel durumdur: gelen commit bunları izlemeye başlarsa dokunma
 if [ -n "$(g diff --name-only "$head" "$yeni" -- durum kayit pano)" ]; then
   log "hedef commit durum/ kayit/ pano/ yollarını içeriyor; yerel durum korunsun diye REDDEDİLDİ"
-  if [ "$(cat "$DURUM/reddedilen" 2>/dev/null)" != "$yeni:durum" ]; then printf '%s\n' "$yeni:durum" > "$DURUM/reddedilen"; bildir CRIT "Sunucu güncellemesi REDDEDİLDİ: ${yeni:0:7} durum/kayit yollarını izliyor (yerel durum riski). Elle bakın."; fi
+  if [ "$(cat "$DURUM/reddedilen" 2>/dev/null)" != "$yeni:durum" ]; then printf '%s\n' "$yeni:durum" > "$DURUM/reddedilen"; bildir CRIT "Sunucu güncellemesi reddedildi: yeni sürüm sunucunun yerel durum dosyalarına dokunuyor.
+Hiçbir şey değiştirilmedi; motor eski sürümle çalışıyor.
+Senden: bu sürümün düzeltilmesini istemen gerekiyor."; fi
   exit 0
 fi
 
@@ -265,6 +284,6 @@ motor_saglam || geri_al "sg-sanal ${BEKLE} sn sonra aktif değil"
 
 printf '%s\n' "$yeni" > "$DURUM/uygulanan_sha"
 rm -f "$DURUM/kotu_sha" "$DURUM/reddedilen"; rm -rf "$YEDEK"
-if [ -n "$HEDEF" ]; then bildir INFO "Sunucu elle geri alındı: ${onceki:0:7}→${yeni:0:7} (${konu})"; else bildir INFO "Sunucu güncellendi: ${onceki:0:7}→${yeni:0:7} (${konu})"; fi
+if [ -n "$HEDEF" ]; then bildir_rutin "Sunucu elle geri alındı: ${onceki:0:7}→${yeni:0:7} (${konu})"; else bildir_rutin "Sunucu güncellendi: ${onceki:0:7}→${yeni:0:7} (${konu})"; fi
 log "tamam: ${yeni:0:7}"
 exit 0

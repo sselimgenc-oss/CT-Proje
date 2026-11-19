@@ -364,7 +364,7 @@ def test_uctan_uca_altin_ornek_acilis_azaltma_kapanis(tmp_path):
     assert m.sayac["emir"] == 3 and len(m.kayma_trader) == 3
     assert not any("Son " in x and "emir (" in x for x in tgp.gonderilen)                                         # emirler ayrı ayrı gitmez; biriktirilir
     m.emir_ozeti(saat(), zorla=True)
-    assert any("Son 15 dakikada 3 emir (sanal · deneme parası)" in x for x in tgp.gonderilen) and any("Yeni trader takibe alındı" in x for x in tgp.gonderilen)
+    assert any("Son 15 dakikada 3 emir (sanal · deneme parası)" in x for x in tgp.gonderilen) and not any("Yeni trader takibe alındı" in x for x in tgp.gonderilen)
 
 
 def test_kucuk_acilis_11_dolara_yuvarlanir_ve_trader_hesap_yoksa_atlanir(tmp_path):
@@ -579,6 +579,7 @@ def test_telegram_token_kayda_ve_hatalara_yazilmaz_ve_hata_motoru_durdurmaz(tmp_
     m, hl, saat, _ = kur(tmp_path, tgp=SahteTG(hata=True))
     m.baslat()
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))                       # Telegram hatasında emir yine işlendi
+    m.tg.gonder("ALARM: deneme\nTelegram hata verirse de motor durmaz.")
     assert m.tg.hata_sayisi >= 1 and m.sayac["emir"] == 1
     for f in (tmp_path / "kayit").glob("*") if (tmp_path / "kayit").exists() else []:
         assert TOKEN not in f.read_text(encoding="utf-8") and "AAH-gizli" not in f.read_text(encoding="utf-8")
@@ -1068,7 +1069,7 @@ def test_telegram_mesajlari_sade_turkce_altin_ornek():
     assert tg.msg_durum("sanal", 1000.71, 1000.0, 9, 11, 3, 8, 0, False) == (
         "📊 Anlık durum (sanal · deneme parası)\n━━━━━━━━━━━━━━\n💰 Özsermaye 1.000,71 $ (kasaya göre +%0,07)\n👥 Takipte 9/11 trader · 3 tanesi ayrılıyor (pozisyonları kapanıyor)\n📌 Açık pozisyon: 8\n🧾 Bu turda emir: 0\n🛡️ Risk: normal, motor çalışıyor")
     assert tg.tr_sayi(1234567.891) == "1.234.567,89" and tg.tr_yuzde(-0.0125) == "−%1,25"
-    assert tg.alarm("ALARM: kasa sınırı aşıldı", "Kasa 1.200 $ > sınır 1.000 $.") == "🚨 ALARM: kasa sınırı aşıldı\n━━━━━━━━━━━━━━\nKasa 1.200 $ > sınır 1.000 $."
+    assert tg.alarm("ALARM: kasa sınırı aşıldı", "Kasa 1.200 $ > sınır 1.000 $.") == "🚨 ALARM: kasa sınırı aşıldı\nKasa 1.200 $ > sınır 1.000 $.\nSenden bir şey gerekmiyor."
 
 
 def test_telegram_emir_ozeti_toplar_tek_mesaj_ayni_satir_birlesir():
@@ -1081,8 +1082,7 @@ def test_telegram_emir_ozeti_toplar_tek_mesaj_ayni_satir_birlesir():
         "🧾 Son 5 dakikada 4 emir (sanal · deneme parası)\n"
         "🟢 AL BTC: 35 $ · 0xf43a34… pozisyon açtı\n"                                                              # büyükten küçüğe sıralı
         "🟢 AL ETH: 25 $ (2 emir) · 0xf43a34… pozisyonunu artırdı\n"
-        "🟢 AL NEAR: 11 $ · 0xf43a34… pozisyon açtı · ⚠️ 1 tanesi tam dolmadı\n"
-        "↳ Trader'a göre ortalama fark 0.6 bp (küçük = iyi)")
+        "🟢 AL NEAR: 11 $ · 0xf43a34… pozisyon açtı · ⚠️ 1 tanesi tam dolmadı")
     assert tg.msg_emir_ozeti("sanal", emirler[:1], 5).startswith("🟢 ETH AL: 12,0 $")                               # tek emir: ayrıntılı biçim
 
 
@@ -1242,7 +1242,7 @@ def test_dur_dosyasi_yazilamazsa_alarm_ve_kayit_sessiz_gecilmez(tmp_path):
     m.baslat()
     (tmp_path / "durum" / "DUR.tmp").mkdir()                                                   # geçici dosya yazılamaz (dizin engeli) → OSError
     m.dur_tetikle("komut")
-    assert kayitlar(tmp_path, "dur_yazim_hata") and any("DUR dosyası YAZILAMADI" in x for x in tgp.gonderilen) and m.risk.dur
+    assert kayitlar(tmp_path, "dur_yazim_hata") and any("Durdurma kilidi yazılamadı" in x for x in tgp.gonderilen) and m.risk.dur
 
 
 

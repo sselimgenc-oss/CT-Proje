@@ -147,7 +147,8 @@ def test_d02_motor_uctan_uca_r1_elenen_kayit_telegram_ve_bekleme(tmp_path):
     dus = kayitlar(tmp_path, "saha_dus")
     assert [(d["adres"], d["neden"], d["sonuc"]) for d in dus] == [(adr(3), "r1_elendi", True)]
     assert m.saha.bekleme[adr(3)] > saat() + 13 * GUN
-    assert any("R1" in x and "sonuçla" in x for x in tgp.gonderilen)
+    assert not any("R1" in x and "sonuçla" in x for x in tgp.gonderilen)                     # saha çıkışı Telegram'a gitmez (panoda); kayda tg_bastirildi
+    assert any(k["tur"] == "saha_cikis" and "R1" in k["metin"] and "sonuçla" in k["metin"] for k in kayitlar(tmp_path, "tg_bastirildi"))
 
 
 # ================================================================================================ BTC al-tut kıyası
