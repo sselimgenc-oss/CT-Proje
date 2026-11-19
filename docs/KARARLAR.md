@@ -343,3 +343,10 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - **D-11 (yalnız kapanış modu):** gerçek kipte HL > `canli_hl_deger_ust_usd` (1.500 $) iken yeniden başlatmada borsada açık pozisyon varsa motor başlar ama YENİ AÇILIŞ YOK (`kapanis_modu` bayrağı + alarm; kapanış, borsa stopu, trader kapanış takibi çalışır). Pozisyon yoksa bugünkü ret (çıkış 3).
 - **D-2 yapılmadı:** `set_expires_after` borsa stoplarını bozar (Fable); `belirsiz_coz` bunun yerine yalnız açık `unknownOid` yanıtını ve iki ardışık okumada "emir yok" sayar.
 
+## K-71 — Süre, tarih ve işlem sayısı şartları kaldırıldı (kullanıcı kesin kararı 19.11, orkestratör üzerinden)
+- Sanal dönemin bitiş tarihi yok, canlı tarihi yok; kullanıcı bildirene kadar sanal test sürer.
+- Kaldırılan otomatik karar noktaları: K-46 kontrol noktası (02–03.12 dur/devam ve 19.11 "üst sınır < 0 ise dur"), K-66'daki 31.12 değerlendirmesi ("ayda ≥ %4 ve BTC'den iyi değilse gerçek para yok"), K-62/K-66 tarih şartları (K-62 ↔ K-66 çelişkisi böylece kalktı). Proje zarar etse de devam eder; kullanıcı geliştirir.
+- Kaldırılan işlem sayısı şartları: RADAR §7 madde 1 (≥ 28 gün canlı, ≥ 100 kapanmış işlem).
+- Kalan: ölçüm ve raporlama (isabet, %4/ay ve BTC karşılaştırması bilgi olarak), risk kilitleri (zirveden %20, günlük frenler) ve tüm güvenlik kuralları. Gerçek paraya geçişin zamanı ve şekli yalnız kullanıcının kararı.
+- Kod: bu şartlara bağlı otomatik durdurma kodda yok (K-46 ve 31.12 yalnız belge kuralıydı); kod değişikliği gerekmedi.
+- Açık soru: AGENTS.md kural 5 (strateji eşikleri ilk 28 gün değişmez) ayrı bir aşırı uyum korumasıdır; kaldırılıp kaldırılmayacağı kullanıcıya soruldu, şimdilik yerinde.

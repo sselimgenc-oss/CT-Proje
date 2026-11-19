@@ -118,13 +118,17 @@ gerçek parayla kopyalanır (**saha**); Yedek sıra listesidir; sahada boş yer 
 - **Şalterler (komut tutarlılığı, 2026-11-05):** `/kapat` (Telegram) ya da sunucuda `DUR` dosyası → tüm pozisyonlar kapatılır, motor durur. `/dur` yalnız yeni giriş/artırmayı durdurur (çıkış serbest, motor çalışır); `/devam` ikisini de kaldırır (`/kapat` sonrası sunucudan).
 
 ## 7. R5 — Büyütme kapısı (kasaya para eklemek; son karar kullanıcının)
+> **K-71 (19.11, kullanıcı kararı):** aşağıdaki gün ve işlem sayısı şartları (madde 1) ile §7b'deki "dur/devam" karar kuralları kaldırıldı. Ölçümler yalnız bilgi olarak raporlanır; büyütme, gerçek para ve süre kararı yalnız kullanıcınındır.
+
 Kasa 1.000 $'da kalır; artırım ancak hepsi sağlanırsa **önerilir**:
-1. ≥ 28 gün canlı, ≥ 100 kapanmış saha işlemi.
+1. ~~≥ 28 gün canlı, ≥ 100 kapanmış saha işlemi.~~ (K-71 ile kaldırıldı)
 2. Net getiri > 0 (ücret + kayma + funding dahil), en büyük düşüş ≤ %15.
 3. Yürütme sağlığı: kaçan dolum ≈ 0, medyan kayma ve gecikme raporlu; motor çalışma süresi ≥ %98.
 4. Seçim isabeti olumlu (§7b).
 
 ## 7b. Seçim isabet ölçümü (K‑27; rapor — deneme/gölge değil, ek motor ve emir yok)
+> **K-71 (19.11):** aşağıdaki "önceden kayıtlı kural" ve K-46 karar eşikleri artık yalnız bilgi amaçlı rapordur; otomatik dur/devam ya da tarih şartı yoktur.
+
 - Her günlük taramada, **7 gün önceki** tarama dosyasındaki R1 havuzunun herkesi için arada geçen 7 günün kopya getirisi, R1/6'daki aynı
   oynatmayla trader'ın kendi dolumlarından **sonradan** hesaplanır (`sonraki_7g`).
 - Ölçüler (`radar/<tarih>/isabet.json`): (a) form puanı ↔ `sonraki_7g` Spearman IC; (b) o günün İlk 11'i `sonraki_7g` ortalaması − havuz ortalaması;

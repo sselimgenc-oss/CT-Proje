@@ -461,6 +461,10 @@ def _yedekle(yol: Path) -> None:
         pass
 
 
+def _iso_z(ms: int) -> str:
+    return datetime.fromtimestamp(ms / 1000, tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def _yaz(yol: Path, veri: Any) -> None:
     yol.parent.mkdir(parents=True, exist_ok=True)
     gecici = yol.with_suffix(yol.suffix + ".tmp")
@@ -695,6 +699,56 @@ class Motor:
         if self.donem_seri:
             _yaz(d / "donem_seri.json", self.donem_seri)
         self.niyet.sikistir(int(self.rules["canli_islenen_sakla"]))
+        try:                                                           # paylaşım verisi (salt okur, bilgi amaçlı): hata dakika döngüsüne ve durum yazımına ASLA yansımaz
+            _yaz(d / "paylasim" / "kadro_yon_v1.json", self.kadro_yon_ozet(self.saat_ms()))
+        except Exception as hata:                                      # noqa: BLE001
+            self.kayit({"olay": "kadro_yon_yazim_hata", "tur": type(hata).__name__})
+
+    def kadro_yon_ozet(self, simdi: int) -> dict:
+        """Kopya kadrosunun (YALNIZ saha üyeleri) coin bazında toplu pozisyon yönü; başka projelerin okuması için (`durum/paylasim/kadro_yon_v1.json`, veri dalında `durum/paylasim/`).
+        Şema `ct.kadro_yon.v1` (docs/PAYLASIM_KADRO_YON.md). Alanlar:
+        sema, uretildi_utc (ISO8601 Z), kadro_surumu (kadro.json `radar_surum`; yoksa null), kadro_kosu_utc (kadro.json `kosu_ms` ISO Z; yoksa null),
+        saha_trader_sayisi (int, inen hariç), kip ("sanal"/"gercek"),
+        coinler: [{coin, long_trader, short_trader, net_yon ("long"/"short"/"notr": trader sayısı çoğunluğu, eşitse nominal işareti, o da 0 ise notr),
+        nominal_long_usd, nominal_short_usd, net_nominal_usd (trader pozisyon büyüklüğü × mark, $; mark yoksa null), veri_yasi_sn (trader pozisyon okumalarının en eskisi, sn; bilinmiyorsa null)}] — |net_nominal_usd| azalan (null sonda),
+        notlar. Trader adresi, bizim bakiye/özsermaye/kasa, emir bilgisi İÇERMEZ. Trader pozisyonlarının toplamıdır; bizim pozisyonumuz değildir; yatırım tavsiyesi değildir."""
+        uyeler = set(self.saha.uyeler)
+        coinler: dict[str, dict] = {}
+        for adres in uyeler:
+            for coin, sz in (self.poz_tr.get(adres) or {}).items():
+                if not sz:
+                    continue
+                c = coinler.setdefault(coin, {"lt": 0, "st": 0, "nl": 0.0, "ns": 0.0, "ms": []})
+                mark = self.marks.get(coin)
+                if sz > 0:
+                    c["lt"] += 1
+                else:
+                    c["st"] += 1
+                if mark:
+                    c["nl" if sz > 0 else "ns"] += abs(sz) * mark
+                ms = self._poz_tr_ms.get((adres, coin)) or self._poz_tr_senk_ms.get(adres)
+                if ms:
+                    c["ms"].append(int(ms))
+        satirlar = []
+        for coin, c in coinler.items():
+            net = round(c["nl"] - c["ns"], 2) if self.marks.get(coin) else None
+            if c["lt"] != c["st"]:
+                yon = "long" if c["lt"] > c["st"] else "short"
+            else:
+                yon = "long" if (net or 0) > 0 else "short" if (net or 0) < 0 else "notr"
+            satirlar.append({"coin": coin, "long_trader": c["lt"], "short_trader": c["st"], "net_yon": yon,
+                             "nominal_long_usd": round(c["nl"], 2) if self.marks.get(coin) else None,
+                             "nominal_short_usd": round(c["ns"], 2) if self.marks.get(coin) else None,
+                             "net_nominal_usd": net,
+                             "veri_yasi_sn": round(max(0, simdi - min(c["ms"])) / 1000, 1) if c["ms"] else None})
+        satirlar.sort(key=lambda r: (r["net_nominal_usd"] is None, -abs(r["net_nominal_usd"] or 0), r["coin"]))
+        kd = self._son_kadro or {}
+        kosu = kd.get("kosu_ms")
+        return {"sema": "ct.kadro_yon.v1", "uretildi_utc": _iso_z(simdi),
+                "kadro_surumu": str(kd["radar_surum"]) if kd.get("radar_surum") is not None else None,
+                "kadro_kosu_utc": _iso_z(int(kosu)) if kosu else None,
+                "saha_trader_sayisi": len(uyeler), "kip": self.kip, "coinler": satirlar,
+                "notlar": "Trader pozisyonlarının toplamı (kopya kadrosu). Bizim hesabımızın pozisyonu DEĞİL. Yatırım tavsiyesi değil."}
 
     def _motor_json(self) -> dict:
         return {"islenen": self.islenen, "poz_tr": self.poz_tr, "poz_tr_ms": {f"{a}|{c}": ms for (a, c), ms in self._poz_tr_ms.items()}, "poz_tr_senk_ms": self._poz_tr_senk_ms, "hesap_tr": self.hesap_tr, "kaldirac_tr": self.kaldirac_tr, "golge_acik": self._golge_acik, "son_olay_ms": self.son_olay_ms,
