@@ -298,6 +298,7 @@ baslat_hepsi || geri_al "servisler başlatılamadı"
 sleep "$BEKLE"
 motor_saglam || geri_al "sg-sanal ${BEKLE} sn sonra aktif değil"
 
+[ -f "$BIRIM_DIZIN/sg-sanal-ikinci-alarm.timer" ] && { "$SYSTEMCTL" enable --now sg-sanal-ikinci-alarm.timer >/dev/null 2>&1 || log "ikinci alarm zamanlayıcısı açılamadı"; }   # bot durdu 20 dk ikinci mesaj (elle kurulum gerekmesin)
 printf '%s\n' "$yeni" > "$DURUM/uygulanan_sha"
 rm -f "$DURUM/kotu_sha" "$DURUM/reddedilen"; rm -rf "$YEDEK"
 if [ -n "$HEDEF" ]; then
