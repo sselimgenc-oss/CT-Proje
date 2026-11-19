@@ -161,7 +161,7 @@ def test_main_hata_olursa_tarama_bozulmaz_eksik_dosyaya_yazilir(monkeypatch, tmp
 def test_varsayilan_tarih_gec_baslayan_havuzu_ertesi_gun_yakalar(monkeypatch):
     from copytrade import radar_isabet as ri
     gun = ri.GUN_MS
-    d = {"2026-11-05": {"kosu_ms": 1793860000000}}                   # havuz 11-05 07:19 UTC'de koşmuş (geç başlayan koşu)
+    d = {"2026-11-05": {"kosu_ms": 1793860000000, "sema": ri.radar_tarama.SEMA}}      # havuz 11-05 07:19 UTC'de koşmuş (geç başlayan koşu)
     monkeypatch.setattr(ri, "git_oku", lambda dal, yol: d.get(yol.split("/")[1]) if yol.endswith("havuz.json") else None)
     kural = {"isabet_pencere_gun": 7}
     sabah = int(1793860000000 + 7 * gun - 6 * 3600 * 1000)           # 11-12 01:19 UTC: pencere dolmadı → bugün−7 (11-05) denenir, calistir None döner
@@ -298,3 +298,16 @@ def test_m10_sonraki_7g_penceresi_kadro_yayim_anindan_baslar(monkeypatch):
     assert ri.calistir(cli, havuz, kadro, "2026-11-04", BAS + 7 * GUN + 3_600_000, RULES, log=lambda *_: None) is None
     i = ri.calistir(cli, havuz, kadro, "2026-11-04", BAS + 8 * GUN, RULES, log=lambda *_: None)
     assert (i["pencere_bas_ms"], i["pencere_bit_ms"], i["pencere_bas_kaynak"]) == (yayim, yayim + 7 * GUN, "kadro_olusturma") and cli.cagri[0][1:] == (yayim, yayim + 7 * GUN)
+
+
+def test_varsayilan_tarih_eski_sema_havuzu_secmez(monkeypatch):
+    """19.11 arıza: eski D+ havuzları (secim-d-havuz-v1) hiç isabet.json almadığı için her gün seçilip atlanıyor, Form Radarı günlerini kilitliyordu."""
+    from copytrade import radar_isabet as ri
+    gun = ri.GUN_MS
+    bas = 1795219200000                                              # 2026-11-21 00:00 UTC
+    d = {"2026-11-11": {"kosu_ms": bas - 10 * gun, "sema": "secim-d-havuz-v1"},
+         "2026-11-12": {"kosu_ms": bas - 9 * gun, "sema": "secim-d-havuz-v1"},
+         "2026-11-13": {"kosu_ms": bas - 8 * gun, "sema": "secim-d-havuz-v1"},
+         "2026-11-14": {"kosu_ms": bas - 7 * gun, "sema": ri.radar_tarama.SEMA}}
+    monkeypatch.setattr(ri, "git_oku", lambda dal, yol: d.get(yol.split("/")[1]) if yol.endswith("havuz.json") else None)
+    assert ri.varsayilan_tarih(bas + 3600 * 1000, {"isabet_pencere_gun": 7}, "radar") == "2026-11-14"
