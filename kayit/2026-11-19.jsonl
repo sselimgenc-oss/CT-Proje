@@ -281,3 +281,11 @@
 {"zaman_ms":1795063641409,"olay":"telegram","metin":"🧾 Son 1 saat (06:46–07:47 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 8 (≈4 ayrı işlem)\n   • kural gereği 8: 4 slot tavanı · 4 ters netleşme (K‑41)\n   • kaçırılan 0 (geç görülen / veri yok)\n💰 Kasa: 10.003,67 $ · bugün 🔴 −18,82 $ (−%0,2) · başlangıçtan 🟢 +3,67 $ (%0,0)","acik":true}
 {"zaman_ms":1795064218150,"olay":"tur","ozsermaye_usd":10004.0617}
 {"zaman_ms":1795064408769,"olay":"funding","saat":498629,"saat_adet":1,"funding_usd":-0.014054539847463361,"toplam_funding_usd":0.3005861223379665}
+{"zaman_ms":1795064782105,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"BTC","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795064781743,"gorme_ms":1795064782104,"yas_ms":362}
+{"zaman_ms":1795064782134,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"BTC","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795064781809,"gorme_ms":1795064782133,"yas_ms":325}
+{"zaman_ms":1795064782134,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"BTC","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795064781809,"gorme_ms":1795064782133,"yas_ms":325}
+{"zaman_ms":1795064782293,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"BTC","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795064781947,"gorme_ms":1795064782293,"yas_ms":346}
+{"zaman_ms":1795064782294,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"BTC","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795064781947,"gorme_ms":1795064782293,"yas_ms":347}
+{"zaman_ms":1795065081217,"olay":"tur","ozsermaye_usd":10006.514}
+{"zaman_ms":1795065312106,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795065311816,"gorme_ms":1795065312106,"yas_ms":290}
+{"zaman_ms":1795065312107,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795065311816,"gorme_ms":1795065312106,"yas_ms":291}
