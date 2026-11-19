@@ -37,6 +37,7 @@ from copytrade.canli.niyet import Niyet, cloid_uret
 from copytrade.canli.ogrenme_adaptor import Ogrenme
 from copytrade.canli import borsa_stop, izleme
 from copytrade.canli import rejim
+from copytrade.canli import gunluk_ozet
 from copytrade.canli import sert_sinirlar as sert
 from copytrade.canli.borsa_stop import BorsaStop
 from copytrade.canli.risk import Risk, coin_tavan_usd, gun
@@ -721,6 +722,7 @@ class Motor:
             _yaz(d / "paylasim" / "kadro_yon_v1.json", self.kadro_yon_ozet(self.saat_ms()))
         except Exception as hata:                                      # noqa: BLE001
             self.kayit({"olay": "kadro_yon_yazim_hata", "tur": type(hata).__name__})
+        gunluk_ozet.yaz_gerekirse(self)                                # ortak günlük özet (paylasim/gunluk_ozet_v1.json; saatlik + günlük rapor anı; hata yutulur)
 
     def kadro_yon_ozet(self, simdi: int) -> dict:
         """Kopya kadrosunun (YALNIZ saha üyeleri) coin bazında toplu pozisyon yönü; başka projelerin okuması için (`durum/paylasim/kadro_yon_v1.json`, veri dalında `durum/paylasim/`).
