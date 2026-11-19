@@ -401,13 +401,14 @@ def calistir(client: Any, havuz: dict, kadro: dict, tarih: str, simdi_ms: int, r
 
 def varsayilan_tarih(simdi_ms: int, rules: dict, dal: str, geri_gun: int = 3) -> str:
     """Ölçülecek havuz tarihi: penceresi (`kosu_ms` + 7 gün) DOLMUŞ ve `isabet.json` henüz yazılmamış en eski havuz (son `geri_gun` gün içinde); yoksa bugün − 7.
+    Form Radarı dışı şemalı havuzlar (ör. eski D+ `secim-d-havuz-v1`, 09–13.11) aday sayılmaz: hiç isabet.json almadıkları için seçiciyi her gün kilitliyorlardı (19.11 arıza).
     Koşu geç başladıysa (kosu_ms 07:19) tam 7. gündeki sabah koşusunda pencere dolmamış olabilir; ölçüm ertesi gün yakalanır (Opus denetimi, 05.11)."""
     bugun = datetime.fromtimestamp(simdi_ms / 1000, UTC).date()
     pencere = int(rules["isabet_pencere_gun"])
     for k in range(geri_gun, -1, -1):
         t = (bugun - timedelta(days=pencere + k)).isoformat()
         havuz = git_oku(dal, f"radar/{t}/havuz.json")
-        if havuz and not git_oku(dal, f"radar/{t}/isabet.json") and simdi_ms >= pencere_basi(havuz, git_oku(dal, f"radar/{t}/kadro.json"))[0] + pencere * GUN_MS:
+        if havuz and havuz.get("sema") == radar_tarama.SEMA and not git_oku(dal, f"radar/{t}/isabet.json") and simdi_ms >= pencere_basi(havuz, git_oku(dal, f"radar/{t}/kadro.json"))[0] + pencere * GUN_MS:
             return t
     return (bugun - timedelta(days=pencere)).isoformat()
 
