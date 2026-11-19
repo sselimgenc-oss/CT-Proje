@@ -593,8 +593,8 @@ def test_telegram_komutlari_yalniz_yapilandirilmis_sohbetten_ve_biçim():
     assert t.komutlari_al() == ["/durum"] and t.offset == 4
     acik = [{"coin": "BTC", "sz": 0.5, "usd": 1234.0, "kz_usd": 12.34}, {"coin": "ETH", "sz": -2.0, "usd": 80.0, "kz_usd": -1.5}]
     assert tg.msg_gunluk("sanal", 1000, 1012.5, 1000.0, 58, 9, 11, acik, -0.12) == (
-        "📋 Günlük rapor (sanal · deneme parası)\n━━━━━━━━━━━━━━\n📈 Son 24 saat: +12,50 $ (+%1,25)\n💰 Kasa şimdi: 1.012,50 $ (başlangıç 1.000 $)\n🏁 Başlangıçtan beri: +%1,25\n━━━━━━━━━━━━━━\n"
-        "🧾 Bugün 58 emir verildi · 👥 takipte 9/11 trader\n💸 Funding (sanal): −0,12 $\n📌 Açık pozisyonlar (2):\n🟩 BTC · 1.234 $ · uzun · +12,34 $\n🟥 ETH · 80 $ · kısa · −1,50 $")
+        "📋 Günlük rapor (sanal · deneme parası)\n━━━━━━━━━━━━━━\n💰 Kasa şimdi: 1.012,50 $ (başlangıç 1.000 $) · başlangıçtan beri +%1,25\n📈 Son 24 saat: +12,50 $ (+%1,25) · 💸 funding (sanal) −0,12 $\n"
+        "🧾 Bugün 58 emir · 👥 takipte 9/11 trader\n📌 Açık pozisyon: 2 (K/Z: 🟩 BTC +12,34 $ · 🟥 ETH −1,50 $)\n🛡️ Risk: normal, motor çalışıyor\nAyrıntı: pano")
     assert tg.kisa(adr(255)) == "0x000000…"
 
 

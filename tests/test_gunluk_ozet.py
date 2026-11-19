@@ -205,3 +205,31 @@ def test_ogrenme_etki_ders_carpani_olmayan_eski_kayit_null(tmp_path):
     m, _ = _motor(tmp_path)
     m.kayit({"olay": "emir", "eylem": "ac", "usd_dolan": 40.0})                                 # eski kayıt: alan yok
     assert go.gunluk_etki(m)["ders_kucultulen"] is None
+
+
+def _dolu_gunluk(**kw):
+    """Her satırın tetiklendiği tam dolu günlük rapor girdisi (en uzun durum)."""
+    acik = [{"coin": c, "sz": 1.0, "usd": 1000.0 - i * 10, "kz_usd": (-1.0) ** i} for i, c in enumerate(["BTC", "ETH", "SOL", "HYPE", "DOGE", "AVAX", "LINK", "ARB"])]
+    args = dict(kip="sanal", kasa=1000.0, ozsermaye=1012.5, onceki_oz=1000.0, emir_sayisi=58, saha=9, n=11, acik=acik, funding_usd=-0.12,
+                karsi_olgu={"hip3_atlandi": [2, 3.5], "min_emir_atlandi": [1, -1.0]}, ogrenme={"filtre_atlanan": 3, "filtre_karsi_olgu_pnl": -12.0, "ders_kucultulen": 1, "ders_engellenen": 0},
+                dur=False, bayraklar=["gunluk_kayip", "mutabakat", "elle_dur", "fren", "kasa_siniri"], saglik=["Telegram gönderim hatası 2", "borsa istek sınırı (429) 5"])
+    args.update(kw)
+    return tg.msg_gunluk(**args)
+
+
+def test_gunluk_rapor_en_fazla_12_satir_ve_ayrinti_son_satir():
+    metin = _dolu_gunluk()
+    satirlar = metin.splitlines()
+    assert len(satirlar) <= 12, metin
+    assert satirlar[-1] == "Ayrıntı: pano" and satirlar[0].startswith("📋 Günlük rapor (sanal")
+    assert "Kasa şimdi: 1.012,50 $" in satirlar[2] and "Son 24 saat: +12,50 $" in metin
+    assert "Yeni işlemler kapalı" in metin and "Günlük kayıp freni" in metin and "Mutabakat farkı" in metin
+    assert "🩺 Sağlık (bu oturum): Telegram gönderim hatası 2 · borsa istek sınırı (429) 5" in satirlar
+
+
+def test_gunluk_rapor_risk_durumu_ve_sagliksiz_sade():
+    assert "🛑 Motor DURDURULDU" in _dolu_gunluk(dur=True)
+    sade = tg.msg_gunluk("sanal", 1000.0, 1000.0, 1000.0, 0, 1, 11, [])
+    assert "🛡️ Risk: normal, motor çalışıyor" in sade and "Açık pozisyon yok" in sade
+    assert "Sağlık" not in sade and "Alınmayan" not in sade and "Öğrenme" not in sade
+    assert sade.splitlines()[-1] == "Ayrıntı: pano" and len(sade.splitlines()) <= 12

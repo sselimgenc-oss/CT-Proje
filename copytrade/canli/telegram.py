@@ -559,29 +559,42 @@ def ogrenme_satiri(o: dict | None) -> str | None:
     return "🧠 Öğrenme: " + ", ".join(parcalar) if parcalar else None
 
 
-def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_sayisi: int, saha: int, n: int, acik: list[dict], funding_usd: float | None = None, karsi_olgu: dict[str, list[float]] | None = None, ogrenme: dict | None = None) -> str:
-    """Günlük rapor (21:00 TSİ, ortak standart): son özetten (≈24 saat) bu yana. `onceki_oz`: önceki özetteki özsermaye (ilk özette kasa). `acik`: {coin, sz, usd, kz_usd}. `karsi_olgu`: alınmayan sinyal özeti. `ogrenme`: öğrenme etkisi (satır yalnız sayı > 0 ise)."""
+def risk_satiri(dur: bool = False, bayraklar: list[str] | None = None) -> str:
+    """Günlük rapordaki tek risk satırı: durdu mu / yeni işlem kapalı mı. Etkin bayraklar BAYRAK_TR metniyle."""
+    if dur:
+        return "🛑 Motor DURDURULDU"
+    if bayraklar:
+        return "⚠️ Yeni işlemler kapalı: " + " · ".join(BAYRAK_TR.get(b, b) for b in bayraklar)
+    return "🛡️ Risk: normal, motor çalışıyor"
+
+
+def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_sayisi: int, saha: int, n: int, acik: list[dict], funding_usd: float | None = None, karsi_olgu: dict[str, list[float]] | None = None, ogrenme: dict | None = None,
+               dur: bool = False, bayraklar: list[str] | None = None, saglik: list[str] | None = None) -> str:
+    """Günlük rapor (21:00 TSİ, ortak standart; en çok ~12 satır, ayrıntı pano). Sıra: kasa → son 24 saat → emirler/takip → açık pozisyon → risk → (varsa) alınmayan sinyal, öğrenme, sağlık → 'Ayrıntı: pano'.
+    `onceki_oz`: önceki özetteki özsermaye (ilk özette kasa). `acik`: {coin, sz, usd, kz_usd}. `karsi_olgu`: alınmayan sinyal özeti. `ogrenme`: öğrenme etkisi (satır yalnız sayı > 0 ise).
+    `dur`/`bayraklar`: risk durumu (`risk_satiri`). `saglik`: YALNIZ sorun varsa dolu liste (boşsa satır yok)."""
     fark = ozsermaye - onceki_oz
     satirlar = [f"📋 Günlük rapor ({kip_adi(kip)})", AYRAC,
-                f"{'📈' if fark >= 0 else '📉'} Son 24 saat: {tr_isaretli(fark)} $ ({tr_yuzde(fark / kasa)})",
-                f"💰 Kasa şimdi: {tr_sayi(ozsermaye)} $ (başlangıç {tr_sayi(kasa, 0)} $)",
-                f"🏁 Başlangıçtan beri: {tr_yuzde(ozsermaye / kasa - 1)}", AYRAC,
-                f"🧾 Bugün {emir_sayisi} emir verildi · 👥 takipte {saha}/{n} trader"]
-    if funding_usd is not None:
-        satirlar.append(f"💸 Funding (sanal): {tr_isaretli(funding_usd)} $")
-    if karsi_olgu:
-        n, k = sum(int(v[0]) for v in karsi_olgu.values()), sum(v[1] for v in karsi_olgu.values())
-        satirlar.append(f"🔍 Alınmayan sinyal (hayali, işlem yok): {n} kapandı · {tr_isaretli(k)} $ — " + " · ".join(f"{ad} {int(v[0])}/{tr_isaretli(v[1])}" for ad, v in sorted(karsi_olgu.items(), key=lambda kv: -abs(kv[1][1]))[:3]))
-    if (og := ogrenme_satiri(ogrenme)):
-        satirlar.append(og)
+                f"💰 Kasa şimdi: {tr_sayi(ozsermaye)} $ (başlangıç {tr_sayi(kasa, 0)} $) · başlangıçtan beri {tr_yuzde(ozsermaye / kasa - 1)}",
+                f"{'📈' if fark >= 0 else '📉'} Son 24 saat: {tr_isaretli(fark)} $ ({tr_yuzde(fark / kasa)})" + (f" · 💸 funding (sanal) {tr_isaretli(funding_usd)} $" if funding_usd is not None else ""),
+                f"🧾 Bugün {emir_sayisi} emir · 👥 takipte {saha}/{n} trader"]
     if acik:
-        satirlar.append(f"📌 Açık pozisyonlar ({len(acik)}):")
-        for x in sorted(acik, key=lambda x: -x["usd"])[:6]:
-            satirlar.append(f"{'🟩' if x['kz_usd'] >= 0 else '🟥'} {x['coin']} · {tr_sayi(x['usd'], 0)} $ · {'uzun' if x['sz'] > 0 else 'kısa'} · {tr_isaretli(x['kz_usd'])} $")
-        if len(acik) > 6:
-            satirlar.append(f"… ve {len(acik) - 6} küçük pozisyon daha")
+        en = sorted(acik, key=lambda x: -x["usd"])
+        parcalar = [f"{'🟩' if x['kz_usd'] >= 0 else '🟥'} {x['coin']} {tr_isaretli(x['kz_usd'])} $" for x in en[:3]]
+        if len(acik) > 3:
+            parcalar.append(f"… +{len(acik) - 3} daha")
+        satirlar.append(f"📌 Açık pozisyon: {len(acik)} (K/Z: " + " · ".join(parcalar) + ")")
     else:
         satirlar.append("📌 Açık pozisyon yok")
+    satirlar.append(risk_satiri(dur, bayraklar))
+    if karsi_olgu:
+        kn, kk = sum(int(v[0]) for v in karsi_olgu.values()), sum(v[1] for v in karsi_olgu.values())
+        satirlar.append(f"🔍 Alınmayan sinyal (hayali, işlem yok): {kn} kapandı · {tr_isaretli(kk)} $ — " + " · ".join(f"{ATLA_TR.get(ad, ad).replace(' (K‑41)', '')} {int(v[0])}/{tr_isaretli(v[1])}" for ad, v in sorted(karsi_olgu.items(), key=lambda kv: -abs(kv[1][1]))[:3]))
+    if (og := ogrenme_satiri(ogrenme)):
+        satirlar.append(og)
+    if saglik:
+        satirlar.append("🩺 Sağlık (bu oturum): " + " · ".join(saglik))
+    satirlar.append("Ayrıntı: pano")
     return "\n".join(satirlar)
 
 

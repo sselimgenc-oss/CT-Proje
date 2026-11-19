@@ -3145,7 +3145,17 @@ class Motor:
         """Günlük rapor metni (`/rapor` ve zamanlı özet ortak; durum değiştirmez)."""
         oz = self.ozsermaye()
         return tg.msg_gunluk(self.kip, self.kasa, oz, self._ozet_oz if self._ozet_oz is not None else self.kasa, self._ozet_emir, len(self.saha.uyeler), self.saha.n,
-                             self.pano_ek()["acik"], self.hesap.funding_toplam() if self.kip == "sanal" else None, self.karsi_olgu_gun or None, gunluk_ozet.gunluk_etki(self))
+                             self.pano_ek()["acik"], self.hesap.funding_toplam() if self.kip == "sanal" else None, self.karsi_olgu_gun or None, gunluk_ozet.gunluk_etki(self),
+                             dur=bool(self.risk.dur), bayraklar=self.risk_bayraklari(), saglik=self._gunluk_saglik())
+
+    def _gunluk_saglik(self) -> list[str]:
+        """Günlük raporun sağlık satırı için YALNIZ sorunlar (boşsa satır çıkmaz): bu oturumdaki Telegram gönderim hataları, borsa 429 sınırı."""
+        sorunlar = []
+        if self.tg.hata_sayisi:
+            sorunlar.append(f"Telegram gönderim hatası {self.tg.hata_sayisi}")
+        if (r429 := self.pano_ek()["rest_429"]):
+            sorunlar.append(f"borsa istek sınırı (429) {r429}")
+        return sorunlar
 
     def _gunluk_ozet(self, simdi: int) -> None:
         d = datetime.fromtimestamp(simdi / 1000, UTC)
