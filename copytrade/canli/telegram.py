@@ -528,8 +528,24 @@ def msg_emir(adres: str, coin: str, yon: str, usd: float, px: float | None, kaym
     return ilk + nedeni + (f"\n↳ Fiyat {px:.6g}" if px else "") + (f" · trader'a göre fark {kayma * 1e4:+.1f} bp" if kayma is not None else "")
 
 
-def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_sayisi: int, saha: int, n: int, acik: list[dict], funding_usd: float | None = None, karsi_olgu: dict[str, list[float]] | None = None) -> str:
-    """Günlük rapor (21:00 TSİ, ortak standart): son özetten (≈24 saat) bu yana. `onceki_oz`: önceki özetteki özsermaye (ilk özette kasa). `acik`: {coin, sz, usd, kz_usd}. `karsi_olgu`: alınmayan sinyal özeti."""
+def ogrenme_satiri(o: dict | None) -> str | None:
+    """Öğrenme etkisi tek satırı (günlük rapor). Hepsi 0/null ise None (satır atlanır). `o`: gunluk_ozet.ogrenme_etki anahtarları."""
+    if not o:
+        return None
+    a, p = int(o.get("filtre_atlanan") or 0), o.get("filtre_karsi_olgu_pnl")
+    k, e = int(o.get("ders_kucultulen") or 0), int(o.get("ders_engellenen") or 0)
+    parcalar = []
+    if a:
+        parcalar.append(f"filtre {a} sinyal atladı" + (f" (karşı-olgu {tr_isaretli(float(p))} $)" if p is not None else ""))
+    if k:
+        parcalar.append(f"ders {k} işlemi küçülttü")
+    if e:
+        parcalar.append(f"ders {e} işlemi engelledi")
+    return "🧠 Öğrenme: " + ", ".join(parcalar) if parcalar else None
+
+
+def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_sayisi: int, saha: int, n: int, acik: list[dict], funding_usd: float | None = None, karsi_olgu: dict[str, list[float]] | None = None, ogrenme: dict | None = None) -> str:
+    """Günlük rapor (21:00 TSİ, ortak standart): son özetten (≈24 saat) bu yana. `onceki_oz`: önceki özetteki özsermaye (ilk özette kasa). `acik`: {coin, sz, usd, kz_usd}. `karsi_olgu`: alınmayan sinyal özeti. `ogrenme`: öğrenme etkisi (satır yalnız sayı > 0 ise)."""
     fark = ozsermaye - onceki_oz
     satirlar = [f"📋 Günlük rapor ({kip_adi(kip)})", AYRAC,
                 f"{'📈' if fark >= 0 else '📉'} Son 24 saat: {tr_isaretli(fark)} $ ({tr_yuzde(fark / kasa)})",
@@ -541,6 +557,8 @@ def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_s
     if karsi_olgu:
         n, k = sum(int(v[0]) for v in karsi_olgu.values()), sum(v[1] for v in karsi_olgu.values())
         satirlar.append(f"🔍 Alınmayan sinyal (hayali, işlem yok): {n} kapandı · {tr_isaretli(k)} $ — " + " · ".join(f"{ad} {int(v[0])}/{tr_isaretli(v[1])}" for ad, v in sorted(karsi_olgu.items(), key=lambda kv: -abs(kv[1][1]))[:3]))
+    if (og := ogrenme_satiri(ogrenme)):
+        satirlar.append(og)
     if acik:
         satirlar.append(f"📌 Açık pozisyonlar ({len(acik)}):")
         for x in sorted(acik, key=lambda x: -x["usd"])[:6]:
