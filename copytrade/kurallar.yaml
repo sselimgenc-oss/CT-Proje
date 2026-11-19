@@ -235,10 +235,10 @@ duygu_kaynak_url: "https://api.alternative.me/fng/?limit=1"      # Crypto Fear &
 # Alınmayan sinyal kaydı + kopya drift alarmı (yalnız kayıt/uyarı, işlem etkisi yok)
 karsi_olgu_azami_saat: 72               # saat (hayali pozisyon trader kapatmazsa bu sürede kapanır; yalnız kayıt/uyarı, işlem etkisi yok)
 kopya_drift_esik: 0.25                  # oran (|biz − ideal| / ideal nosyonel bundan BÜYÜKSE drift; yalnız kayıt/uyarı, işlem etkisi yok)
-kopya_drift_sure_dk: 30                 # dakika (drift bu kadar sürerse tek uyarı; yalnız kayıt/uyarı, işlem etkisi yok)
+kopya_drift_sure_dk: 30                 # dakika (drift bu kadar sürerse `kopya_drift` kaydı; yalnız kayıt/bilgi, işlem etkisi yok)
 kopya_drift_min_usd: 50                 # $ (ideal nosyonel bundan küçük coinler izlenmez; yalnız kayıt/uyarı, işlem etkisi yok)
-kopya_drift_telegram: false            # bool (19.11 kullanıcı: ayrı Telegram uyarısı KAPALI; olay kaydı sürer, düzeltilmiş hâli saatlik özete gelecek)
-kopya_drift_tg_saat: 6                  # saat (aynı coin için Telegram uyarısı en çok bu aralıkta bir; yalnız kayıt/uyarı, işlem etkisi yok)
+kopya_drift_tg_saat: 6                  # saat (aynı coin saatlik özetteki "Kopya sapması" satırında en çok bu aralıkta bir; AYRI Telegram mesajı yok, önem INFO)
+kopya_drift_telegram: false             # ayrı (tek coin) Telegram uyarısı KAPALI; sapma yalnız saatlik özet satırında (kod yolu kaldırıldı, bayrak main ile uyumlu)
 
 # Ortak öğrenme (kullanıcı kararı 19.11; docs/ORTAK_OGRENME_CT.md): her kapanan kopya işlemi kaydedilir, dersler YALNIZ riski azaltır (emekli = yeni açılış yok; çarpan 0,5–1,0). Yalnız sanal kip; sert sınırlara dokunmaz
 ogrenme_aktif: true                     # açık/kapalı (false: kayıt da, ders de yok). Gerçek kipte zaten çalışmaz

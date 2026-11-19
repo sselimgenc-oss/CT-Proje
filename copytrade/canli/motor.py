@@ -1221,25 +1221,43 @@ class Motor:
                         "sure_sa": round((simdi - int(k["ms"])) / 3_600_000, 2), "kapanis": kapanis})
 
     def _ideal_kopya(self) -> dict[str, float]:
-        """İdeal kopya nosyoneli (coin -> işaretli $): saha traderlarının hedefleri, motorun UYGULADIĞI sınırlarla: coin başına 3 × slot (`_hedef_usd`), min emir (`radar_min_emir_yuvarla_alt` altı açılmaz, 11 $ altı 11 $'a),
+        """İdeal kopya nosyoneli (coin -> işaretli $): CT'nin KENDİ kurallarıyla tutacağı pozisyon: saha traderlarının hedefleri; kural gereği açılmayanlar (HIP-3/spot, eski pozisyon = bizim görmediğimiz dolumla oluşmamış, K-41 ters yön) ve yönü çelişen belirsiz coinler HARİÇ. Motorun UYGULADIĞI sınırlarla: coin başına 3 × slot (`_hedef_usd`), min emir (`radar_min_emir_yuvarla_alt` altı açılmaz, 11 $ altı 11 $'a),
         sığ coin tavanı (K-62), trader başına slot toplam tavanı (K-35; orantılı küçültme), coin brüt tavanı (`coin_tavan_usd`), toplam marj tavanı (özsermaye × `canli_marj_kaldirac`; orantılı küçültme). Ağ yok; YALNIZ okuma."""
         r = self.rules
         minimum, alt = float(r["radar_min_emir_usd"]), float(r.get("radar_min_emir_yuvarla_alt", 0.0) or 0.0)
-        ideal: dict[str, float] = {}
+        hip3_acik = bool(r.get("canli_hip3_kopya", False))
+        aday: dict[str, list[tuple[str, float, bool]]] = {}          # coin -> [(adres, işaretli $, bizde ledger kaydı var mı)]
         for adres in self.saha.uyeler:
             slot = float(self.hesap.slot_bas.get(adres, self.saha.slot))
-            hedefler: dict[str, float] = {}
             for coin in self.poz_tr.get(adres, {}):
                 mk = self.marks.get(coin)
                 h = self._hedef_usd(adres, coin, mk) if mk else None
                 if not h:
                     continue
+                tutulu = abs(self.hesap.sz(adres, coin)) > EPS
+                if not tutulu and ((sinif := coin_sinifi(coin)) == "spot" or (sinif == "hip3" and not hip3_acik)):
+                    continue                                          # kural gereği açılmaz (K-42): ideal değil
+                if not tutulu and (adres, coin) not in self._poz_tr_ms:
+                    continue                                          # trader pozisyonu bizim izlediğimiz bir dolumla oluşmadı (eski pozisyon): kopyalanmaz
                 u = abs(h)
                 if u < minimum - 1e-9:
                     u = 0.0 if u < alt - 1e-9 else minimum
                 u = boyut.sig_coin_kirp(r, u, 0.0, self.coin_hacmi(coin), slot)[0]
                 if u > 0:
-                    hedefler[coin] = u if h > 0 else -u
+                    aday.setdefault(coin, []).append((adres, u if h > 0 else -u, tutulu))
+        hedefler_tr: dict[str, dict[str, float]] = {}
+        for coin, liste in aday.items():
+            if any(t for _, _, t in liste):                           # K-41: bizde tutulan yönün tersindeki trader pozisyonu kopyalanmaz (net küçülmesin) → ideale girmez
+                tutulan = sum(self.hesap.sz(a_, coin) * (self.marks.get(coin) or 1.0) for a_, _, t in liste if t)
+                yon = 1.0 if tutulan >= 0 else -1.0
+                liste = [x for x in liste if x[2] or x[1] * yon > 0]
+            elif len({x[1] > 0 for x in liste}) > 1:
+                continue                                              # hiç tutulmuyor ve yönler çelişiyor: kimin kopyalanacağı belirsiz → bu coin izlenmez (alarm yok)
+            for adres, v, _ in liste:
+                hedefler_tr.setdefault(adres, {})[coin] = v
+        ideal: dict[str, float] = {}
+        for adres, hedefler in hedefler_tr.items():
+            slot = float(self.hesap.slot_bas.get(adres, self.saha.slot))
             toplam, tavan = sum(abs(v) for v in hedefler.values()), float(r["radar_slot_tavan_carpan"]) * slot
             olcek = min(1.0, tavan / toplam) if toplam > 0 else 1.0
             for coin, v in hedefler.items():
@@ -1256,9 +1274,9 @@ class Motor:
 
     def kopya_drift_adimi(self, simdi: int) -> None:
         """Kopya drift alarmı (YALNIZ UYARI): coin başına bizim nosyonel ↔ ideal kopya (saha traderlarının hedef toplamı); drift > `kopya_drift_esik` `kopya_drift_sure_dk` dk sürerse `kopya_drift` kaydı +
-        Telegram uyarısı (coin başına `kopya_drift_tg_saat` saatte en çok bir); düzelince `kopya_drift_bitti`. İdeal nosyonel < `kopya_drift_min_usd` ise izlenmez."""
+        saatlik özette TEK satır (coin başına `kopya_drift_tg_saat` saatte en çok bir; ayrı Telegram mesajı YOK, önem INFO); düzelince `kopya_drift_bitti`. İdeal nosyonel < `kopya_drift_min_usd` ise izlenmez."""
         esik, sure = float(self.rules.get("kopya_drift_esik", 0.25)), float(self.rules.get("kopya_drift_sure_dk", 30)) * DAKIKA
-        min_usd, tg_aralik = float(self.rules.get("kopya_drift_min_usd", 50)), float(self.rules.get("kopya_drift_tg_saat", 6)) * 3_600_000
+        min_usd = float(self.rules.get("kopya_drift_min_usd", 50))
         ideal = self._ideal_kopya()
         biz: dict[str, float] = {}
         for cs in self.hesap.poz.values():
@@ -1277,14 +1295,17 @@ class Motor:
                     kd["aktif"] = True
                     dk = round((simdi - int(kd["bas_ms"])) / DAKIKA)
                     self.kayit({"olay": "kopya_drift", "coin": coin, "biz_usd": round(b, 2), "ideal_usd": round(i, 2), "drift": round(drift, 3), "sure_dk": dk})
-                    if self.rules.get("kopya_drift_telegram", True) and simdi - self.kopya_drift_tg_ms.get(coin, -10**15) >= tg_aralik:
-                        self.kopya_drift_tg_ms[coin] = simdi
-                        self.tg.gonder(tg.alarm(f"Kopya sapması: {coin}", f"Bizim pozisyon ≈ {tg.tr_isaretli(b, 0)} $, ideal kopya ≈ {tg.tr_isaretli(i, 0)} $ (fark %{round(drift * 100)}), "
-                                                f"{dk} dk'dır sürüyor. Yalnız bilgi; işlem etkisi yok.", ikon="⚠️"))
+                if kd["aktif"]:
+                    kd["drift"] = round(drift, 3)                 # saatlik özet satırı için güncel oran
             elif kd is not None:
                 del self.kopya_drift[coin]
                 if kd["aktif"]:
                     self.kayit({"olay": "kopya_drift_bitti", "coin": coin, "biz_usd": round(b, 2), "ideal_usd": round(i, 2), "drift": round(drift, 3), "sure_dk": round((simdi - int(kd["bas_ms"])) / DAKIKA)})
+
+    def _drift_adaylari(self, simdi: int) -> dict[str, float]:
+        """Saatlik özet satırına girecek aktif drift'ler (coin -> oran): son satırdan beri `kopya_drift_tg_saat` saat geçmiş olanlar. Okuma; durum değiştirmez."""
+        aralik = float(self.rules.get("kopya_drift_tg_saat", 6)) * 3_600_000
+        return {c: float(kd.get("drift", 0.0)) for c, kd in self.kopya_drift.items() if kd.get("aktif") and simdi - self.kopya_drift_tg_ms.get(c, -10**15) >= aralik}
 
     def _say_neden(self, neden: str) -> None:
         if neden and neden not in ("tamam", "tam_kapanis"):
@@ -2456,12 +2477,17 @@ class Motor:
         self._ozet_pencere_bas = simdi
         islem, adresler = len(self._atla_islem), self._atla_adres
         self._atla_islem, self._atla_adres = set(), {}
+        adaylar = self._drift_adaylari(simdi)
+        satir = tg.drift_satiri(adaylar)
         metin = tg.msg_sanal_saatlik(bas, simdi, round((simdi - bas) / DAKIKA) if zorla else dk, emirler, atlanan,
-                                     (self.ozsermaye(), self.risk.gun_basi, self.kasa) if emirler else None, islem, adresler)
+                                     (self.ozsermaye(), self.risk.gun_basi, self.kasa) if emirler else None, islem, adresler, satir)
         if not metin and not zorla and self.rules.get("canli_telegram_sanal_bos_mesaj", False):
-            metin = tg.msg_sanal_saatlik_bos(bas, simdi, dk, atlanan, (self.ozsermaye(), self.risk.gun_basi, self.kasa), islem, adresler)
+            metin = tg.msg_sanal_saatlik_bos(bas, simdi, dk, atlanan, (self.ozsermaye(), self.risk.gun_basi, self.kasa), islem, adresler, satir)
         if metin:
             self.tg.gonder(metin)
+            if satir:
+                for c in adaylar:
+                    self.kopya_drift_tg_ms[c] = simdi
 
     def _tasfiye(self, simdi: int) -> None:
         if self.kip != "sanal":
