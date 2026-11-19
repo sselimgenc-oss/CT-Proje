@@ -76,4 +76,4 @@ def test_pano_karti_var_ve_bos_veri_aciklamasi():
     kayit = {"olay": "emir", "zaman_ms": 1_793_899_000_000, "coin": "BTC", "yon": "B", "eylem": "ac", "durum": "dolu", "usd_dolan": 10.0,
              "trader_dolum_ms": 1_793_898_000_000, "dolum_ms": 1_793_898_400_000, "gorme_ms": 1_793_898_100_000, "kayma_trader": 0.0002}
     dolu = pano.html_olustur(ozet, {}, {}, [kayit], [], 1_793_900_000_000)
-    assert "Kopya kalitesi" in dolu and "medyan 400,0 sn" in dolu and "medyan 100,0 sn" in dolu and "+2,0 bp" in dolu     # 400 000 ms = 400,0 sn
+    assert "Kopya kalitesi" in dolu and "medyan 400,0 sn" in dolu and "medyan 100,0 sn" in dolu and "+0,02%" in dolu and " bp" not in dolu     # 400 000 ms = 400,0 sn

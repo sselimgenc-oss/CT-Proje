@@ -142,7 +142,7 @@ def test_b7_canli_yayimla_her_yayimda_pano_uretir_bayat_ozet_ile_uretmez(tmp_pat
     dosyalar = subprocess.run(["git", "ls-tree", "-r", "--name-only", "canli-durum-deneme"], cwd=bare, capture_output=True, text=True).stdout.split()
     assert "pano/index.html" in dosyalar and "pano/OZET.md" in dosyalar and "durum/ozet.json" in dosyalar and "pano/gecmis.json" in dosyalar
     html = subprocess.run(["git", "show", "canli-durum-deneme:pano/index.html"], cwd=bare, capture_output=True, text=True).stdout
-    assert "1.001,50 $" in html and "COPY TRADE PANOSU" in html
+    assert "1.001,50 $" in html and "Copy Trade Panosu" in html
     # bayat: yeni vardiya kimliği (88) ≠ ozet.json'daki (77) → pano dosyaları güncellenmez (eski içerik kalır), durum yayımı sürer
     (calisma / "durum" / "ozet.json").write_text(json.dumps({"kip": "sanal", "vardiya": "77", "kasa_usd": 1000.0, "ozsermaye_usd": 1234.0, "getiri": 0.234, "saha": 9, "saha_n": 11}))
     env2 = {**env, "GITHUB_RUN_ID": "88"}

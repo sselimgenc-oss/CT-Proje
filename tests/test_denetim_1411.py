@@ -222,7 +222,7 @@ def test_btc_al_tut_pano_ozet_md_ve_html(tmp_path):
     md, _ = pano.pano_olustur(ozet, {}, {}, [], [], [], T0)
     assert "BTC al-tut: −%3,2" in md and "fark: +%8,2" in md
     html = pano.html_olustur(ozet, {}, {}, [], [], T0)
-    assert "BTC al-tut (aynı dönem)" in html and "−%3,2" in html and "fark: +%8,2" in html
+    assert "BTC al-tut −%3,20" in html and "fark +%8,20" in html
     bos, _ = pano.pano_olustur({**ozet, "btc_al_tut_getiri": None, "btc_fark": None}, {}, {}, [], [], [], T0)
     assert "BTC al-tut: — · fark: —" in bos
 
@@ -339,7 +339,7 @@ def test_f06_pano_md_ve_html_aylik_ve_hedef():
     md, _ = pano.pano_olustur(ozet, {}, {}, [], [], [], T0)
     assert "aylık eşdeğer: +%6,1" in md and "hedef %4/ay: geçiyor" in md and "BTC al-tut: +%1,0" in md
     html = pano.html_olustur(ozet, {}, {}, [], [], T0)
-    assert "Aylık eşdeğer" in html and "hedef %4/ay: geçiyor" in html
+    assert "aylık eşdeğer ≥ %4" in html and "GEÇİYOR" in html
 
 
 def test_f06_yayim_betigi_donem_serisini_tasir():
@@ -385,7 +385,7 @@ def test_saha_uygun_aday_yoksa_bos_kalir_kayit_ve_pano(tmp_path):
     md, _ = pano.pano_olustur(o, {}, {}, [], [], [], T0)
     assert "saha 10/11, uygun aday yok" in md
     html = pano.html_olustur(o, {}, {}, [], [], T0)
-    assert "Saha doluluğu" in html and "10/11" in html and "uygun aday yok" in html and ("R1&#x27;i geçen trader: 42" in html or "R1'i geçen trader: 42" in html)
+    assert "Saha doluluğu" in html and "10/11" in html and "uygun aday yok" in html and "bugün radar elemesini geçen trader: 42" in html
 
 
 def test_saha_korelasyon_doldurmayi_engellemez_siradaki_girer():

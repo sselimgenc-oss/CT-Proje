@@ -128,18 +128,18 @@ def test_pano_html_donem_sekmesi_ve_kaldirilanlar():
                "gruplar": {"ilk11": {"n": 11}, "havuz_geri": {"n": 5}, "elenen": {"n": 30}}}]
     h = pano.html_olustur(ozet, {}, {}, [], [], T0 + GUN, KADRO, {"uyeler": {}, "inen": {}}, donem_seri=DS, isabetler=isabet)
     assert "İçgörüler" not in h and "Bu hafta" not in h and "Hype yakalama" not in h                           # madde 8
-    assert "SAHADA (0/5)" in h and "KADRO <em>0/5</em>" in h and "/11" not in h                               # madde 7: saha_n
-    assert 'class="sirit" style="--sm:2;--sk:4"' in h                                                          # 8 hücre: telefon 2, masaüstü 4 (boş kutu yok)
+    assert "SAHADA (0/5)" in h and "Takip edilen traderlar (0/5)" in h and "/11" not in h                               # madde 7: saha_n
+    assert 'class="sirit s6"' in h                                                                             # 6 kutulu üst şerit
     assert "Dönem eğrisi" in h and "<polyline" in h and "BTC al-tut" in h and "%4/ay hedef" in h               # 9a
     assert "Trader katkısı" in h and "sahada" in h and "+200,00 $" in h                                        # 9b
-    assert "İlk 11</b> · 2 slot" in h and "Yedek</b> · 1 slot" in h                                           # 9c
-    assert "➖ çıkış" in h and "(sonuçla)" in h                                                                # 9d
+    assert "İlk 11</b> · 2 trader" in h and "Yedek</b> · 1 trader" in h                                           # 9c
+    assert "çıkış ·" in h and "(sonuçla)" in h                                                                # 9d
     assert "%75" in h and "%40" in h                                                                           # 9e
-    assert "Evren · <b>2457</b>" in h and "≥10 işlem · <b>140</b>" in h and "islem_az" in h                    # 9f
+    assert "Evren · <b>2457</b>" in h and "≥10 işlem · <b>140</b>" in h and "az işlem" in h and "islem_az" not in h                    # 9f
     assert "atlanan sinyal <b>%25" in h and "yuvarlanan emir <b>%10" in h                                      # 9g
-    assert "+0.12" in h and "İLK11−HAVUZ" in h                                                                 # 9h
+    assert "+0,12" in h and "İLK11−HAVUZ" in h                                                                 # 9h
     bos = pano.html_olustur({**ozet, "donem": None}, {}, {}, [], [], T0, None, None)
-    assert "dönem eğrisi ilk UTC gün" in bos and "kadroda huni özeti yok" in bos and "henüz ölçüm yok" in bos and "2026-11-12" not in bos
+    assert "dönem eğrisi ilk günün sonunda çizilir" in bos and "kadroda huni özeti yok" in bos and "henüz ölçüm yok" in bos and "2026-11-12" not in bos
 
 
 def test_pano_bu_hafta_yalniz_farkliysa_ve_serit_sutunu():
@@ -148,7 +148,7 @@ def test_pano_bu_hafta_yalniz_farkliysa_ve_serit_sutunu():
     gecmis = [{"gun": "2027-01-05", "ozsermaye": 10_000.0}, {"gun": "2027-01-08", "ozsermaye": 10_100.0}]
     ozet = {"kip": "sanal", "kasa_usd": 10_000.0, "ozsermaye_usd": 10_300.0, "getiri": 0.03, "acik": []}
     h = pano.html_olustur(ozet, {}, {}, [], gecmis, T0, None, None)                                           # 7 gün önce 10.100 → hafta +%2 ≠ toplam +%3
-    assert "Bu hafta" in h and 'style="--sm:3;--sk:3"' in h
+    assert "Son 7 gün" in h and "Bu hafta" not in h
 
 
 def test_pano_md_donem_bolumu():
@@ -185,10 +185,9 @@ def test_m05_pano_karar_kutusu_isabet_ozeti_ve_kilit_isareti():
     isabet = [{"tarih": "2027-01-08", "ic": 0.2, "fark_ilk11_havuz": 0.01, "fark_ilk11_elenen": -0.01}, {"tarih": "2027-01-09", "ic": 0.0, "fark_ilk11_havuz": 0.03, "fark_ilk11_elenen": 0.03}]
     ds = {**DS, "kilitler": [{"ms": DONEM_MS + 20 * SAAT, "tur": "gunluk_kayip"}], "doluluk": {**DS["doluluk"], "brut_ms": 2500.0 * 10 * SAAT, "net_ms": 500.0 * 10 * SAAT}}
     h = pano.html_olustur(ozet, {}, {}, [], [], T0 + GUN, KADRO, None, donem_seri=ds, isabetler=isabet)
-    i_karar, i_isabet = h.index("31.12 karar kutusu"), h.index("Seçim isabeti <span>özet")
-    assert 0 < i_isabet - i_karar < 2500 and "GEÇİYOR" in h                                                  # karar kutusunun hemen yanında
-    assert "2 ölçüm · ortalama IC <b>+0.10</b>" in h and "(2/2 pozitif)" in h and "(1/2 pozitif)" in h        # (0,2 + 0) / 2; havuz farkı 2/2, elenen 1/2 pozitif
-    assert 'stroke="#ff5d5d" stroke-width="1"' in h and "Kilit olayı: 1" in h and "gölge eğri hesaplanmadı" in h
+    assert "Başarı ölçütü" in h and "GEÇİYOR" in h
+    assert "2 ölçüm · ortalama sıralama uyumu <b>+0,10</b>" in h and "(2/2 pozitif)" in h and "(1/2 pozitif)" in h        # (0,2 + 0) / 2; havuz farkı 2/2, elenen 1/2 pozitif
+    assert 'stroke="#ff5d5d" stroke-width="1"' in h and "Risk freni olayı: 1" in h and "gölge" not in h
     assert "kullanılan sermaye getirisi <b>+%10,00" in h                                                    # 250 / 2.500
 
 
