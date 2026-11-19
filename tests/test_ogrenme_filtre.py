@@ -135,7 +135,7 @@ def test_aday_ozellikleri_karar_ani_ve_sonuc_bilgisi_icermez(tmp_path):
 
 # ---------------------------------------------------------------- karne + drift
 def test_karne_pano_ve_drift_uyarisi_bir_kez(tmp_path):
-    o, olaylar, mesaj = yeni(tmp_path)
+    o, olaylar, mesaj = yeni(tmp_path, ogrenme_drift_telegram=True)
     alias = "T_aaaaaa"
     yaz_adaylar(o, alias, 20, lambda i: {}, lambda i: -1.5)                      # 20. işlemde CUSUM alarmı
     o.karne_guncelle(ms(19))
@@ -148,6 +148,13 @@ def test_karne_pano_ve_drift_uyarisi_bir_kez(tmp_path):
     assert [e["olay"] for e in olaylar].count("kurulum_drift") == 1 and len(mesaj) == 1        # aynı alarm tekrar bildirilmez
     md, _ = pano.pano_olustur({"kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "ogrenme": o.pano()}, {}, {}, [], [], [], ms(19))
     assert "## Ortak öğrenme karnesi" in md and alias in md and "uyari" in md and "0x" not in md
+
+
+def test_drift_telegram_varsayilan_kapali(tmp_path):
+    o, olaylar, mesaj = yeni(tmp_path)
+    yaz_adaylar(o, "T_aaaaaa", 20, lambda i: {}, lambda i: -1.5)
+    o.karne_guncelle(ms(19))
+    assert [e["olay"] for e in olaylar].count("kurulum_drift") == 1 and mesaj == [] and o.pano()[0]["drift"] == "uyari"
 
 
 def test_adim_hata_sarmasi_alt_adimlar_ayri(tmp_path, monkeypatch):

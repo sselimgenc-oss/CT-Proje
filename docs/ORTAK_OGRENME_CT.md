@@ -57,7 +57,7 @@ Yeni dönemde `donem_geri.sh` durumu yüklemez; öğrenme kayıtları da sıfır
 
 **Karne ve sanal kasa (yalnız rapor).** Her trader (takma ad) için kapanan işlem sayısı, ortalama R ve "sanal kasa" (1.000 $ başlangıç, her işlemde %1 × R) hesaplanır; `durum/ogrenme/karne.json`'a ve `pano/OZET.md`'ye ("Ortak öğrenme karnesi") yazılır. Sanal kasa gerçek kasayla ilgisizdir, yalnız trader kalitesini karşılaştırır.
 
-**Drift (CUSUM; yalnız uyarı).** Bir trader'ın kapanan işlemleri üst üste beklenenden kötüyse (en az 20 işlem) `kurulum_drift` olayı ve **tek** Telegram UYARI gider (aynı alarm tekrar bildirilmez). Kopyalama değişmez. Eşikler ML projesinin R ölçeğine göre ayarlıdır; CT'de R ölçeği farklı olduğundan alarm yalnız bilgi olarak okunur.
+**Drift (CUSUM; yalnız uyarı).** Bir trader'ın kapanan işlemleri üst üste beklenenden kötüyse (en az 20 işlem) `kurulum_drift` olayı yazılır; Telegram UYARI varsayılan KAPALI (`ogrenme_drift_telegram: false`; açılırsa tek mesaj). Kopyalama değişmez. Eşikler ML projesinin R ölçeğine göre ayarlıdır; CT'de R ölçeği farklı olduğundan alarm yalnız bilgi olarak okunur.
 
 **ML filtresi (AKTİF, sanal kip).** Trader başına küçük bir ridge-lojistik model, bir işlemin kârlı bitme olasılığını **karar anında bilinen** özelliklerden tahmin eder: saat, haftanın günü, hafta sonu mu, trader'ın anlık kaldıracı, trader hesabının büyüklüğü ve pozisyonunun hesaba oranı.
 Yeni açılış/artırmanın puanı modelin eşiğinin (taban kâr oranının %90'ı) altındaysa emir **atlanır** (`ml_filtre_atla`; ayrıca "alınmayan sinyal" kaydına düşer, böylece filtre haklı mıydı sonradan görülür).

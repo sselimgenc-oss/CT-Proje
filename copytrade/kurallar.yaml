@@ -241,3 +241,4 @@ ogrenme_filtre_aktif: true              # kapatma anahtarı (false: filtre eğit
 ogrenme_filtre_min_n: 50                # adet (bir trader için en az bu kadar kapanan etiketli işlem yoksa model EĞİTİLMEZ)
 ogrenme_filtre_egitim_gun: 7            # gün (model bu yaştan eskiyse saatlik adımda yeniden eğitilir; ayrıca haftalık kadro değişiminde zorla; 21 günlük son kullanmadan çok önce)
 ogrenme_filtre_log_saat: 6              # saat (aynı trader için `ml_filtre_yok` kaydı en çok bu aralıkta bir)
+ogrenme_drift_telegram: false           # CUSUM drift Telegram UYARISI (varsayılan KAPALI: eşikler CT için kalibre değil; olay `kurulum_drift` + OZET karnesi yine yazılır)

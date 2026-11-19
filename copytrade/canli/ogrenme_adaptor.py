@@ -30,7 +30,7 @@ AGIRLIK_ALT, AGIRLIK_UST = 0.5, 1.0          # sert sınır: yapılandırma ne d
 VARSAYILAN = {
     "ogrenme_aktif": True, "ogrenme_r_birim_oran": 0.02, "ogrenme_shrink_n": 10, "ogrenme_min_n": 3,
     "ogrenme_agirlik_etki_r": 1.0, "ogrenme_emekli_etki_r": 3.0, "ogrenme_fren_esik_r": 10.0, "ogrenme_geri_alma_r": 3.0, "ogrenme_degerlendirme_dk": 60,
-    "ogrenme_filtre_aktif": True, "ogrenme_filtre_min_n": 50, "ogrenme_filtre_egitim_gun": 7, "ogrenme_filtre_log_saat": 6,
+    "ogrenme_filtre_aktif": True, "ogrenme_filtre_min_n": 50, "ogrenme_filtre_egitim_gun": 7, "ogrenme_filtre_log_saat": 6, "ogrenme_drift_telegram": False,
 }
 BEKLEYEN_OMUR_MS = 15 * 60_000               # karar anı özellikleri: açılış dolumu bu süre içinde gelmezse atılır
 
@@ -328,7 +328,7 @@ class Ogrenme:
                 continue
             self.uyg["drift_uyari"][alias] = son
             self._kayit(olay="kurulum_drift", kurulum=alias, n=d["n"], alarm_indeksi=son, S=round(float(d["S"]), 4))
-            if self.gonder:
+            if self.gonder and self.k["ogrenme_drift_telegram"]:          # varsayılan KAPALI: eşikler CT için kalibre değil (yalnız olay + OZET)
                 try:
                     self.gonder(tg.alarm("UYARI: trader performansı bozuluyor (drift)", f"{alias}: son {d['n']} kapanan işlemde CUSUM alarmı (işlem #{son}).\nYalnız uyarı; kopyalama değişmedi.", "⚠️"))
                 except Exception:                                  # noqa: BLE001
