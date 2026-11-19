@@ -1,15 +1,15 @@
 {
  "sema": "ortak.gunluk_ozet.v1",
  "proje": "CT",
- "uretim": "2026-11-19T17:37:00Z",
+ "uretim": "2026-11-19T17:39:41Z",
  "gun": "2026-11-19",
  "mod": "sanal",
  "kasa": {
   "baslangic": 10000.0,
-  "simdi": 9973.66,
-  "gun_pnl": -48.83,
-  "toplam_pnl": -26.34,
-  "zirveden_dusus_yuzde": 0.75
+  "simdi": 9971.98,
+  "gun_pnl": -50.51,
+  "toplam_pnl": -28.02,
+  "zirveden_dusus_yuzde": 0.77
  },
  "islem": {
   "gun_acilan": 7,
@@ -17,13 +17,13 @@
   "kazanan": 0,
   "kaybeden": 2,
   "acik_pozisyon": 31,
-  "alinmayan_sinyal": 2648
+  "alinmayan_sinyal": 2652
  },
  "hesaplar": [
   {
    "ad": "T_0c2447",
    "gun_pnl": -0.1,
-   "toplam_pnl": -8.67,
+   "toplam_pnl": -11.25,
    "islem": 6
   },
   {
@@ -41,13 +41,13 @@
   {
    "ad": "T_99f0d4",
    "gun_pnl": -0.3,
-   "toplam_pnl": 63.98,
+   "toplam_pnl": 66.12,
    "islem": 5
   },
   {
    "ad": "T_2e4035",
    "gun_pnl": 0.35,
-   "toplam_pnl": 19.52,
+   "toplam_pnl": 18.92,
    "islem": 6
   },
   {
@@ -59,19 +59,19 @@
   {
    "ad": "T_b4c6ee",
    "gun_pnl": 0,
-   "toplam_pnl": -7.05,
+   "toplam_pnl": -6.73,
    "islem": 0
   },
   {
    "ad": "T_e7ae5a",
    "gun_pnl": -2.73,
-   "toplam_pnl": 11.81,
+   "toplam_pnl": 12.99,
    "islem": 4
   },
   {
    "ad": "T_7bb402",
    "gun_pnl": -26.07,
-   "toplam_pnl": -105.62,
+   "toplam_pnl": -107.76,
    "islem": 19
   },
   {
@@ -102,7 +102,7 @@
   "kaldirac_ayar": 3.0
  },
  "saglik": {
-  "son_nabiz": "2026-11-19T17:37:00Z",
+  "son_nabiz": "2026-11-19T17:39:41Z",
   "hata_sayisi_gun": 0
  },
  "notlar": [
