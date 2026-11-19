@@ -34,6 +34,7 @@ from copytrade.canli.hesap import Hesap
 from copytrade.canli.kadro import Karar, Saha, kadro_taze_mi
 from copytrade.canli.mutabakat import poz_farki, sanal_tutarlilik
 from copytrade.canli.niyet import Niyet, cloid_uret
+from copytrade.canli.ogrenme_adaptor import Ogrenme
 from copytrade.canli import borsa_stop, izleme
 from copytrade.canli import rejim
 from copytrade.canli import sert_sinirlar as sert
@@ -623,6 +624,9 @@ class Motor:
         self.atlanan_trader: dict[str, dict[str, int]] = {"spot_atlandi": {}, "hip3_atlandi": {}}      # K‑42 bilgi: neden -> {adres: adet}
         self.neden_say: dict[str, int] = {}          # boyut / risk nedenleri sayacı (slot_tavani, marj_yok, coin_tavani …)
         self.niyet = Niyet(durum_dizin / "niyet.jsonl")
+        self.ogrenme = Ogrenme(rules, durum_dizin / "ogrenme", self.kip, self.saat_ms, self.kayit, self.tg.gonder)      # ortak öğrenme (docs/ORTAK_OGRENME_CT.md): yalnız sanal kip; dersler yalnız riski azaltır
+        if self.ogrenme.aktif:
+            self.hesap.dinleyici = self.ogrenme.dolum
         if self._oynat_gecis:
             nl = [x["cloid"] for x in self.niyet.satirlar() if x.get("t") == "niyet"]
             self.hesap.son_niyet_cloid = nl[-1] if nl else None
@@ -1086,6 +1090,8 @@ class Motor:
         if acilis and simdi - o.zaman_ms > float(self.rules["canli_olay_stale_sn"]) * 1000:
             self.sayac["gec_acilis"] += 1
             return self._atla(o, adres, eylem, "atlandi", "gec_acilis")
+        if acilis and (ders_engel := self.ogrenme.acilis_engeli(adres)):      # ortak öğrenme: dersle emekli trader'ın YENİ açılışı yok (kapanış/azaltma serbest)
+            return self._atla(o, adres, eylem, "engel", ders_engel)
         if acilis:                                                  # K‑42: spot (`@N`, `A/B`) ve HIP‑3 (`dex:COIN`) açılışı/artırması kopyalanmaz; kapanış/azaltma ASLA engellenmez
             sinif = coin_sinifi(o.coin)
             if sinif == "spot":
@@ -1112,6 +1118,8 @@ class Motor:
             if not izin:
                 return self._atla(o, adres, eylem, "engel", neden)
         slot = self.hesap.slot_bas.get(adres, self.saha.slot)
+        if acilis:
+            slot = slot * self.ogrenme.agirlik(adres)              # ortak öğrenme: [0.5, 1.0] çarpan, yalnız açılış/artırma boyutu
         mk = self.mark(o.coin, o.px)
         biz_usd = abs(biz_sz) * (mk or o.px)
         hesap_usd = self.trader_hesap_usd(adres, simdi, taze_sart=eylem in ("ac", "artir")) if eylem in ("ac", "artir", "azalt") else 0.0
@@ -1125,6 +1133,9 @@ class Motor:
                              "biz_poz_usd": biz_usd, "biz_slot_toplam_usd": slot_toplam, "hedef_usd": hedef}
         if emir_usd <= 0:
             return self._atla(o, adres, eylem, "atlandi", neden)
+        if acilis and self.ogrenme.filtre_kontrol(adres, o.coin, simdi, {"trader_hesap_usd": hesap_usd, "trader_poz_usd": abs(trader_sonra) * o.px,      # ortak öğrenme ML filtresi: yalnız ATLAR (counterfactual'a `_atla` yazar)
+                                                  "trader_kaldirac": (self.kaldirac_tr.get(adres) or {}).get("anlik_kaldirac")}):
+            return self._atla(o, adres, eylem, "atlandi", "ml_filtre_atla")
         if acilis:
             emir_usd, kn = self.risk.coin_tavani(emir_usd, self.hesap.brut_coin(o.coin, self.marks))
             if emir_usd <= 0:
@@ -1674,6 +1685,7 @@ class Motor:
                 self.kayit({"olay": "saha_uyari", "adres": k.adres, "neden": k.neden})
                 self.tg.gonder(tg.msg_saha("uyarı", k.adres, k.neden))
             elif k.tur == "hafta_degisimi":
+                self.ogrenme.hafta_degisti()                                     # ortak öğrenme: "emekli" kayıtları haftalık kadro değişiminde biter
                 self.kayit({"olay": "hafta_degisimi", "hafta": k.neden, "saha": list(self.saha.uyeler), "inen": list(self.saha.inen)})
                 self.tg.gonder(f"🔄 Haftalık kadro değişimi ({k.neden} haftası): sahada {len(self.saha.uyeler)} trader; yedeğe inenlerin pozisyonları trader kapatana kadar izleniyor")
             elif k.tur == "giris_atlandi":
@@ -2226,7 +2238,7 @@ class Motor:
                 ("kadro", lambda: self._kadro_uygula(kadro, simdi)), ("senkron", lambda: (self.senkron_uygula(senkron), self.hesap_uygula(hesaplar, simdi)) if senkron is not None else None),
                 ("telegram", lambda: self._komutlar(komutlar)), ("ajan_suresi", lambda: self.ajan_suresi_uygula(ajan, simdi)), ("ozet", lambda: self._gunluk_ozet(simdi)), ("haftalik", lambda: self._haftalik_ozet(simdi)),
                 ("emir_ozeti", lambda: self.emir_ozeti(simdi)), ("btc_donem", lambda: self.btc_donem_uygula(btc)), ("donem_seri", lambda: self.donem_seri_guncelle(simdi)),
-                ("tur_kaydi", lambda: self._tur_kaydi(simdi)), ("golge_kural", lambda: self.golge_kural_adimi(simdi)), ("karsi_olgu", lambda: self.karsi_olgu_adimi(simdi)), ("kopya_drift", lambda: self.kopya_drift_adimi(simdi)),          # yalnız kayıt + pano verisi; karar yolunda değil
+                ("ogrenme", lambda: self.ogrenme.adim(simdi)), ("tur_kaydi", lambda: self._tur_kaydi(simdi)), ("golge_kural", lambda: self.golge_kural_adimi(simdi)), ("karsi_olgu", lambda: self.karsi_olgu_adimi(simdi)), ("kopya_drift", lambda: self.kopya_drift_adimi(simdi)),          # yalnız kayıt + pano verisi; karar yolunda değil
                 ("rejim", lambda: self.rejim_adimi(simdi)),                        # ML rejim etiketi: yalnız kayıt, işlem etkisi yok
                 ("durum_yaz", self.durum_yaz),                                     # G-12b: disk dolu / salt okunur → dakikalık görev ölmez; kayıt + alarm
             ]
@@ -3072,7 +3084,7 @@ class Motor:
                 mk = self.marks.get(coin) or p.giris
                 acik.append({"adres": adres, "coin": coin, "sz": p.sz, "giris": p.giris, "mark": mk, "usd": abs(p.sz) * mk, "kz_usd": p.sz * (mk - p.giris)})
         stats = getattr(self.post, "stats", None) or {}
-        return {"acik": acik, "rest_istek": stats.get("istek"), "rest_429": stats.get("429")}
+        return {"acik": acik, "rest_istek": stats.get("istek"), "rest_429": stats.get("429"), "ogrenme": self.ogrenme.pano()}
 
     def _gunluk_metin(self) -> str:
         """Günlük rapor metni (`/rapor` ve zamanlı özet ortak; durum değiştirmez)."""

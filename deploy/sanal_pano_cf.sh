@@ -25,6 +25,7 @@ gecici="$(mktemp -d)"
 trap 'rm -rf "$gecici"' EXIT
 mkdir "$gecici/site"                                                      # --assets=site: wrangler'ın .wrangler/ geçici dosyaları yayımlanmaz
 cp pano/index.html "$gecici/site/index.html"
+printf '/*\n  Content-Security-Policy: frame-ancestors '"'"'self'"'"' https://orkestra-kapi.sselimgenc-c18.workers.dev\n' > "$gecici/site/_headers"   # tek pano kapısı (orkestratör, 19.11): yalnız kendi alanı + kapı iframe'de açabilir
 if ( cd "$gecici" && WRANGLER_SEND_METRICS=false timeout -k 10 120 "$wrangler" deploy --assets=site --name "$isim" --compatibility-date=2026-11-01 >/dev/null ); then
   printf '%s' "$ozet:$isim" > "$son_dosya"
   echo "pano yayımlandı ($(date -u +%FT%TZ), $isim, ${ozet:0:12})"

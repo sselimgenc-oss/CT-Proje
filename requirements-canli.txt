@@ -2,3 +2,4 @@ hyperliquid-python-sdk==0.24.0   # 2026-06-04 yayın (>= 2 hafta); YALNIZ gercek
 websockets==15.0.1
 PyYAML==6.0.3
 requests==2.34.2
+numpy==2.5.4   # ortak öğrenme ridge filtresi (copytrade/ortak_ogrenme/filtre.py); yoksa filtre kapalı (her şeyi geçirir)

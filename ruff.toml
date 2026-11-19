@@ -7,3 +7,5 @@ select = ["F", "E9"]
 [lint.per-file-ignores]
 # Canlı motor (üretim) bu temizlikte DEĞİŞTİRİLMEDİ: kullanılmayan tek içe aktarma (`rest_post_fabrikasi`) ayrı, onaylı bir işte kaldırılır.
 "copytrade/canli/motor.py" = ["F401"]
+# Ortak öğrenme paketi kaynaktan AYNEN kopyadır (değiştirilmez; güncelleme kaynaktan): kullanılmayan içe aktarma (ders.py LESSON_CODES) kopyada kalır.
+"copytrade/ortak_ogrenme/*.py" = ["F401"]

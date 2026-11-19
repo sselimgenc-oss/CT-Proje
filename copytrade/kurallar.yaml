@@ -219,7 +219,7 @@ golge_hesap_alt_usd: 5000               # $ (trader hesap değeri bundan KÜÇÜ
 golge_kaldirac_uyari: 5                 # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_5x; yalnız kayıt, işlem etkisi yok)
 golge_kaldirac_cikar: 20                # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_20x; yalnız kayıt, işlem etkisi yok)
 # ML Otonom rejim etiketi (yalnız kayıt, işlem etkisi yok): motor `rejim_degisti` olayı ve emir olaylarındaki `rejim` alanını yazar.
-rejim_kaynak_url: ""                    # URL (boşsa kapalı; ağ çağrısı yapılmaz). Yayın: ML Otonom rejim.json (belirtim: rejim-yayini-spec)
+rejim_kaynak_url: "https://trader-pano.sselimgenc-c18.workers.dev/rejim.json"                    # URL (boşsa kapalı; ağ çağrısı yapılmaz). Yayın: ML Otonom rejim.json (belirtim: rejim-yayini-spec)
 rejim_okuma_dk: 30                      # dakika (yalnız kayıt, işlem etkisi yok)
 
 # Alınmayan sinyal kaydı + kopya drift alarmı (yalnız kayıt/uyarı, işlem etkisi yok)
@@ -228,3 +228,20 @@ kopya_drift_esik: 0.25                  # oran (|biz − ideal| / ideal nosyonel
 kopya_drift_sure_dk: 30                 # dakika (drift bu kadar sürerse tek uyarı; yalnız kayıt/uyarı, işlem etkisi yok)
 kopya_drift_min_usd: 50                 # $ (ideal nosyonel bundan küçük coinler izlenmez; yalnız kayıt/uyarı, işlem etkisi yok)
 kopya_drift_tg_saat: 6                  # saat (aynı coin için Telegram uyarısı en çok bu aralıkta bir; yalnız kayıt/uyarı, işlem etkisi yok)
+
+# Ortak öğrenme (kullanıcı kararı 19.11; docs/ORTAK_OGRENME_CT.md): her kapanan kopya işlemi kaydedilir, dersler YALNIZ riski azaltır (emekli = yeni açılış yok; çarpan 0,5–1,0). Yalnız sanal kip; sert sınırlara dokunmaz
+ogrenme_aktif: true                     # açık/kapalı (false: kayıt da, ders de yok). Gerçek kipte zaten çalışmaz
+ogrenme_r_birim_oran: 0.02              # oran (1R = pozisyonun en büyük nosyonelinin bu kadarı; R = net K/Z ÷ 1R)
+ogrenme_shrink_n: 10                    # adet (ders etkisi n/(n+10) ile küçültülür: az örnekle uygulama temkinli)
+ogrenme_min_n: 3                        # adet (bir ders en az bu kadar işlemle ölçülmüşse uygulanır)
+ogrenme_agirlik_etki_r: 1.0             # R (bir trader için canlı derslerin toplam etkisi bundan büyük/eşitse slot çarpanı düşer)
+ogrenme_emekli_etki_r: 3.0              # R (toplam etki bundan büyük/eşitse trader "emekli": yeni açılışı haftalık kadro değişimine dek kopyalanmaz; çarpan bu etkide 0,5'e iner)
+ogrenme_fren_esik_r: 10.0               # R (uygulanan derslerin uygulamadan sonraki toplamı bunun altına inerse HEPSİ geri alınır; paket fren_durumu)
+ogrenme_geri_alma_r: 3.0                # R (tek bir uygulanan dersin etkisi bunun altına inerse o ders geri alınır)
+ogrenme_degerlendirme_dk: 60            # dakika (ders değerlendirmesi en çok bu sıklıkta; hata motoru durdurmaz)
+# Ortak öğrenme ML filtresi (parça 2; kullanıcı kararı 19.11): trader başına ridge-lojistik; yeni açılış/artırmayı puanlar, puan eşiğin altındaysa ATLAR (`ml_filtre_atla`; alınmayan sinyal kaydına düşer). Asla artırmaz
+ogrenme_filtre_aktif: true              # kapatma anahtarı (false: filtre eğitilmez/uygulanmaz). Model yok / süresi (21 gün) dolmuş / numpy yok → her şey geçer + `ml_filtre_yok` kaydı
+ogrenme_filtre_min_n: 50                # adet (bir trader için en az bu kadar kapanan etiketli işlem yoksa model EĞİTİLMEZ)
+ogrenme_filtre_egitim_gun: 7            # gün (model bu yaştan eskiyse saatlik adımda yeniden eğitilir; ayrıca haftalık kadro değişiminde zorla; 21 günlük son kullanmadan çok önce)
+ogrenme_filtre_log_saat: 6              # saat (aynı trader için `ml_filtre_yok` kaydı en çok bu aralıkta bir)
+ogrenme_drift_telegram: false           # CUSUM drift Telegram UYARISI (varsayılan KAPALI: eşikler CT için kalibre değil; olay `kurulum_drift` + OZET karnesi yine yazılır)
