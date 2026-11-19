@@ -21,6 +21,7 @@ from html import escape as esc
 from pathlib import Path
 
 from copytrade import surum_karsilastirma
+from copytrade.canli.gunluk_ozet import kopya_kalite
 from copytrade.canli.telegram import ATLA_TR, KACIRILAN_NEDENLER, kip_adi, tr_isaretli, tr_sayi, tr_yuzde
 from copytrade.saglik import durum as saglik_durum, kontrol as saglik_kontrol, ozet_metin as saglik_metin
 
@@ -514,6 +515,38 @@ def _kapanan_html(kayitlar: list[dict]) -> str:
             '<div class="ha" style="padding:6px 11px">Her kapanış dolumu bir işlem sayılır (kısmi azaltmalar dahil); net = gerçekleşen − ücret. Kâr faktörü = toplam kâr / toplam zarar.</div>')
 
 
+def _rejim_sonuc_html(rs: dict | None) -> str:
+    """Rejim ve duygu × işlem sonucu (son 7 gün; `durum/paylasim/rejim_sonuc_v1.json`, `copytrade.canli.rejim_sonuc` yazar). Yalnız biçim; yeni hesap yok. Veri yoksa "veri yok"."""
+    tablolar = rs.get("tablolar") if isinstance(rs, dict) else None
+    if not isinstance(tablolar, dict) or not any(tablolar.get(a) for a in ("rejim_1d", "rejim_4h", "duygu")):
+        return VERI_YOK.format("veri yok (rejim × sonuç kaydı henüz birikmedi)")
+
+    def pnl_hucre(v: object, isaretli: bool = False) -> str:
+        try:
+            f = float(v)                                                                   # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return "—"
+        return esc(tl2(f, isaretli))
+
+    parca = []
+    for anahtar, ad in (("rejim_1d", "Rejim (1g)"), ("rejim_4h", "Rejim (4s)"), ("duygu", "Duygu")):
+        satirlar = tablolar.get(anahtar) or []
+        govde = ""
+        for r in satirlar:
+            isabet = r.get("isabet_yuzde")
+            isabet_metni = "—" if isabet is None else "%" + tr_sayi(float(isabet), 0)
+            top = pnl_hucre(r.get("toplam_pnl"), True)
+            govde += (f'<tr><td>{esc(str(r.get("etiket", "?")))}</td><td class="sg">{int(r.get("n") or 0)}</td><td class="sg">{int(r.get("kazanan") or 0)}</td>'
+                      f'<td class="sg">{isabet_metni}</td><td class="sg">{top}</td><td class="sg">{pnl_hucre(r.get("ortalama_pnl"))}</td></tr>')
+        if not govde:
+            govde = '<tr><td colspan="6">veri yok</td></tr>'
+        parca.append(f'<div class="ha" style="padding:6px 11px">{esc(ad)}</div>'
+                     f'<div class="tw"><table><tr><th>{esc(ad)}</th><th class="sg">İŞLEM</th><th class="sg">KAZANAN</th><th class="sg">İSABET</th><th class="sg">TOPLAM</th><th class="sg">ORT.</th></tr>{govde}</table></div>')
+    not_ = (f'<div class="ha" style="padding:6px 11px">Kapanan işlemler, pencere {int(rs.get("pencere_gun") or 7)} gün · PnL gerçekleşen K/Z (ücret hariç) · '
+            'giriş anı damgası; damgasız eski işlemler "bilinmiyor" kovasında.</div>')
+    return "".join(parca) + not_
+
+
 def tl2(v: float | None, isaretli: bool = False) -> str:
     return "—" if v is None else (tr_isaretli(v) if (isaretli or v < 0) else tr_sayi(v)) + " $"
 
@@ -591,8 +624,24 @@ def _maruziyet_html(acik: list[dict], kasa: float, oz: float, kaldirac: float, c
             f'<div class="pi"><div class="ha">Coin başına doluluk (tavan: kasanın %{tr_sayi(tavan / kasa * 100 if kasa > 0 else coin_tavan_oran * 100, 0)}\'u)</div>{cubuk}</div>')
 
 
+def _kopya_kalite_html(satirlar: list[dict]) -> str:
+    """Pano kartı "Kopya kalitesi" (yalnız bilgi): gecikme/görme/kayma özeti; girdi 24 sa kayıtları. Dolan emir yoksa açıklama."""
+    q = kopya_kalite(satirlar)
+    sn = lambda v: "—" if v is None else f"{tr_sayi(v / 1000, 1)} sn"            # noqa: E731
+    bp = lambda v: "—" if v is None else f"{tr_isaretli(v, 1)} bp"              # noqa: E731
+    if not q["n"]:
+        return '<div class="mt">dolan emir yok</div>'
+    ad, az = q["ac_artir"], q["azalt_kapat"]
+    return (f'<div class="mt">gecikme (trader dolumundan sonra): medyan {sn(q["gecikme_ms_medyan"])} · p90 {sn(q["gecikme_ms_p90"])}</div>'
+            f'<div class="mt">görme (trader dolumundan sonra): medyan {sn(q["gorme_ms_medyan"])}</div>'
+            f'<div class="mt">kayma: medyan {bp(q["kayma_bps_medyan"])} · p90 {bp(q["kayma_bps_p90"])} (+ aleyhe)</div>'
+            f'<div class="mt">açılış/artırma: {ad["n"]} dolum · kayma medyan {bp(ad["kayma_bps_medyan"])}</div>'
+            f'<div class="mt">azaltma/kapanış: {az["n"]} dolum · kayma medyan {bp(az["kayma_bps_medyan"])}</div>')
+
+
 def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecmis: list[dict], simdi_ms: int, kadro: dict | None = None, saha_durum: dict | None = None, hesap_tr: dict | None = None, havuz: dict | None = None, kurallar: dict | None = None,
-                 donem_seri: dict | None = None, isabetler: list[dict] | None = None, kaldirac_tr: dict | None = None, surum_gun: dict[str, str] | None = None) -> str:
+                 donem_seri: dict | None = None, isabetler: list[dict] | None = None, kaldirac_tr: dict | None = None, surum_gun: dict[str, str] | None = None,
+                 rejim_sonuc: dict | None = None) -> str:
     """Telefonda/bilgisayarda açılan tek dosyalık koyu "terminal" paneli (`pano/index.html`; kullanıcının Cloudflare Workers statik sayfası `sg-pano` `canli-durum` dalının `pano/` klasörünü gösterir, salt okunur): rakam şeridi, özsermaye/düşüş/günlük K-Z grafikleri, pozisyon dağılımı, pozisyon ve işlem tabloları; DÖNEM sekmesi (14.11): dönem eğrisi, trader katkısı, İlk 11 ↔ Yedek, giriş/çıkış geçmişi, doluluk, emir oranları, radar hunisi, seçim isabeti (`donem_seri`, `kadro.huni`, `isabetler`).
     Saf fonksiyon; yeni hesap yok (özet + kayıtlardan yalnız toplama/dizme). Dış kaynak/JS yok; tüm metin HTML kaçışlı."""
     kasa, oz = float(ozet.get("kasa_usd") or 0.0), float(ozet.get("ozsermaye_usd") or 0.0)
@@ -774,6 +823,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
                        f'<span class="nt {renk(net)}">{esc(tl(net, True)) if net is not None else ""}</span></summary>{ayrinti}</details>')
     mut = (f'<div class="mt">Kartların toplamı <b class="{renk(toplam_net)}">{esc(tl(toplam_net, True))}</b> + kapanmış slotlar <b>{esc(tl(float(hesap.get("kapanmis_net") or 0.0), True))}</b> = '
            f'<b>{esc(tl(toplam_net + float(hesap.get("kapanmis_net") or 0.0), True))}</b> (başlangıçtan beri özsermaye farkı {esc(tl(oz - kasa, True))}){" · bazı K/Z bilinmiyor, toplam eksik" if net_eksik else ""}</div>') if slot_bas else ""
+    kopya_html = _kopya_kalite_html(k24)
     atlanan_html, kapanan_html, maliyet_html = _atlanan_html(k24), _kapanan_html(kayitlar), _maliyet_html(kayitlar, oz, kasa, gecmis, kip)
     from copytrade.canli.risk import coin_tavan_usd
     maruziyet_html = _maruziyet_html(acik, kasa, oz, float(hesap.get("kaldirac") or 3.0), float(kurallar["canli_coin_tavan_oran"]),
@@ -863,6 +913,7 @@ input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler sectio
 <div class="p"><div class="pb">31.12 karar kutusu <span>ayda ≥ %4 ve BTC'den iyi</span></div><div class="pi">{_karar_kutusu_html(ozet)}</div></div>
 <div class="p"><div class="pb">Seçim isabeti <span>özet</span></div><div class="pi">{_isabet_ozet_html(isabetler or [], ozet)}</div></div>
 <div class="p"><div class="pb">Sermaye ve maruziyet <span>dönem boyu</span></div><div class="pi">{_maruziyet_ozet_html(mo)}</div></div>
+<div class="p g3"><div class="pb">Rejim ve duygu × sonuç <span>son 7 gün · kapanan işlemler</span></div><div class="pi">{_rejim_sonuc_html(rejim_sonuc)}</div></div>
 </section>
 <section class="n6 izgara">
 <div class="p g3"><div class="pb">Trader katkısı <span>dönem boyu · kapanmış slotlar dahil</span></div>{_katki_html(so)}</div>
@@ -886,6 +937,7 @@ input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler sectio
 <div class="p"><div class="pb">Atlanan sinyaller <span>24 sa · neden başına</span></div><div class="pi">{atlanan_html}</div></div>
 <div class="p g2"><div class="pb">Kapanan işlemler <span>{esc(donem_etiketi(donem))} (UTC)</span></div>{kapanan_html}</div>
 <div class="p g3"><div class="pb">Maliyet dökümü <span>ücret · kayma · funding</span></div>{maliyet_html}</div>
+<div class="p"><div class="pb">Kopya kalitesi <span>24 sa · dolan emir · trader dolumuna göre</span></div><div class="pi">{kopya_html}</div></div>
 </section>
 <section class="n5 izgara">
 <div class="p g3"><div class="pb">Takip edilen ilk 11 ve yedekler <span>radar {kadro_tarih} TSİ · dokun → bize ne verdi</span></div><div class="pi kl">{f'<div class="mt" style="margin:0 0 10px">{motor_satiri}</div>' if motor_satiri else ""}{kadro_html}{mut}</div></div>
@@ -994,7 +1046,8 @@ def main(argv: list[str] | None = None) -> int:
     args.gecmis.write_text(json.dumps(yeni, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     if args.html:
         args.html.write_text(html_olustur(ozet, _json(args.durum / "risk.json"), _json(args.durum / "hesap.json"), kayitlar, yeni, int(time.time() * 1000), kadro, _json(args.durum / "saha.json"), _json(args.durum / "motor.json").get("hesap_tr"), havuz_oku(args.isabet_dali, kadro),
-                                               donem_seri=ds, isabetler=isabetler, kaldirac_tr=_json(args.durum / "motor.json").get("kaldirac_tr"), surum_gun=sg), encoding="utf-8")
+                                               donem_seri=ds, isabetler=isabetler, kaldirac_tr=_json(args.durum / "motor.json").get("kaldirac_tr"), surum_gun=sg,
+                                               rejim_sonuc=_json(args.durum / "paylasim" / "rejim_sonuc_v1.json")), encoding="utf-8")
     print(md)
     return 0
 

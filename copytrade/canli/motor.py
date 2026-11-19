@@ -3162,7 +3162,12 @@ class Motor:
             so = self.hesap.slot_ozsermaye(adres, self.marks)
             if so is not None:
                 slotlar.append((adres, so - self.hesap.slot_bas[adres]))
-        return tg.msg_haftalik(self.kip, self.kasa, oz, taban.get("oz"), btc, taban.get("btc"), self.sayac["emir"] - int(taban.get("emir", 0)), slotlar)
+        simdi = self.saat_ms()
+        try:                                                                  # yalnız bilgi: rejim satırı hata verirse haftalık özet yine gider
+            rejim = rejim_sonuc.topla(rejim_sonuc.kayitlari_oku(Path(self.kayit.dizin), simdi), simdi)["rejim_1d"]
+        except Exception:                                                     # noqa: BLE001
+            rejim = None
+        return tg.msg_haftalik(self.kip, self.kasa, oz, taban.get("oz"), btc, taban.get("btc"), self.sayac["emir"] - int(taban.get("emir", 0)), slotlar, rejim=rejim)
 
     def _haftalik_ozet(self, simdi: int) -> None:
         d = datetime.fromtimestamp(simdi / 1000, UTC)
