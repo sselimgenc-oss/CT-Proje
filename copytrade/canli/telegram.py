@@ -643,8 +643,16 @@ def _tsi_saat(ms: int) -> str:
     return datetime.fromtimestamp(ms / 1000, TSI).strftime("%H:%M")
 
 
+def drift_satiri(drift: dict[str, float]) -> str:
+    """Saatlik özet için TEK kopya sapması satırı (bilgi; ayrı mesaj yok): '📐 Kopya sapması: 4 coin, en büyük ETH %411'. Boşsa ''."""
+    if not drift:
+        return ""
+    coin, oran = max(drift.items(), key=lambda kv: (kv[1], kv[0]))
+    return f"📐 Kopya sapması: {len(drift)} coin, en büyük {coin} %{round(oran * 100)} (yalnız bilgi)"
+
+
 def msg_sanal_saatlik(bas_ms: int, bit_ms: int, sure_dk: float, emirler: list[dict], atlanan: dict[str, int], kasa_bilgi: tuple[float, float, float] | None = None,
-                      atla_islem: int | None = None, atla_adres: dict[str, dict[str, int]] | None = None) -> str:
+                      atla_islem: int | None = None, atla_adres: dict[str, dict[str, int]] | None = None, drift_satir: str = "") -> str:
     """SANAL kip saatlik özet (tek mesaj). `emirler`: {adres, coin, yon, usd ($, sanal 1.000 $ kopya ölçeği), durum, eylem, kayma (oran)}; `atlanan`: neden -> adet. Emir yoksa '' (mesaj gönderilmez). `kasa_bilgi` = (özsermaye $, gün başı özsermaye $, başlangıç kasası $) — pano ile aynı tanım: yüzdeler kasaya göre.
     `atla_islem`: atlanan dolumların ayrı işlem sayısı; `atla_adres`: neden -> {adres: adet} (S-13, `atlanan_satirlari`)."""
     if not emirler:
@@ -662,6 +670,8 @@ def msg_sanal_saatlik(bas_ms: int, bit_ms: int, sure_dk: float, emirler: list[di
     toplam = f"💵 Tutar toplamı: {tr_sayi(sum(e['usd'] for e in emirler), 0)} $"
     kaymalar = [abs(e["kayma"]) for e in emirler if e.get("kayma") is not None]
     satirlar.append(toplam + (f" · kayma ort. %{tr_sayi(sum(kaymalar) / len(kaymalar) * 100, 3)}" if kaymalar else ""))
+    if drift_satir:
+        satirlar.append(drift_satir)
     if kasa_bilgi is not None and kasa_bilgi[2] > 0:
         oz, gun_basi, kasa = kasa_bilgi
         gun, top = oz - gun_basi, oz - kasa
@@ -671,11 +681,13 @@ def msg_sanal_saatlik(bas_ms: int, bit_ms: int, sure_dk: float, emirler: list[di
 
 
 def msg_sanal_saatlik_bos(bas_ms: int, bit_ms: int, sure_dk: float, atlanan: dict[str, int], kasa_bilgi: tuple[float, float, float] | None = None,
-                          atla_islem: int | None = None, atla_adres: dict[str, dict[str, int]] | None = None) -> str:
+                          atla_islem: int | None = None, atla_adres: dict[str, dict[str, int]] | None = None, drift_satir: str = "") -> str:
     """SANAL kip: pencerede emir YOK ama sistem canlı (`canli_telegram_sanal_bos_mesaj`). Tek kısa satır grubu; emir sayısı 0."""
     sure = f"{int(sure_dk // 60)} saat" if sure_dk >= 60 and sure_dk % 60 == 0 else f"{sure_dk:.0f} dk"
     satirlar = [f"🧾 Son {sure} ({_tsi_saat(bas_ms)}–{_tsi_saat(bit_ms)} TSİ): emir yok · sistem çalışıyor"]
     satirlar += atlanan_satirlari(atlanan, atla_islem, atla_adres)
+    if drift_satir:
+        satirlar.append(drift_satir)
     if kasa_bilgi is not None and kasa_bilgi[2] > 0:
         oz, gun_basi, kasa = kasa_bilgi
         gun, top = oz - gun_basi, oz - kasa
