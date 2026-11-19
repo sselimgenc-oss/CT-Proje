@@ -551,3 +551,5 @@
 {"zaman_ms":1795090847358,"olay":"telegram","metin":"🧾 Son 1 saat (14:20–15:20 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 12 (≈3 ayrı işlem)\n   • kural gereği 12: 12 slot tavanı\n   • kaçırılan 0 (geç görülen / veri yok)\n💰 Kasa: 9.982,06 $ · bugün 🔴 −40,43 $ (−%0,4) · başlangıçtan 🔴 −17,94 $ (−%0,2)","acik":true}
 {"zaman_ms":1795091542069,"olay":"tur","ozsermaye_usd":9987.6107}
 {"zaman_ms":1795092399427,"olay":"tur","ozsermaye_usd":9990.1609}
+{"zaman_ms":1795093226244,"olay":"funding","saat":498637,"saat_adet":1,"funding_usd":-0.0019287026695508178,"toplam_funding_usd":0.26959817354237037}
+{"zaman_ms":1795093258174,"olay":"tur","ozsermaye_usd":9979.5287}
