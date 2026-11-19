@@ -2,7 +2,7 @@
 # Sunucu SANAL motoru: otomatik güncelleme (root; sg-sanal-guncelle.service/.timer, saatlik). Elle geri alma: deploy/sanal_geri_al.sh <sha> (bu betiği SANAL_HEDEF_SHA ile çağırır).
 # Akış: git fetch (sgsanal) -> origin/main == HEAD ise çık -> origin/main commit'inin CI'ı YEŞİL mi (GitHub genel API, kimliksiz; `test` ve `canli_sdk` var + hepsi completed/success)? değilse çık (günlüğe neden)
 #   -> yalnız fast-forward -> servisleri durdur (durdururken son durum yayımlanır) -> git merge --ff-only -> pip (yalnız kilit dosyası değiştiyse; --require-hashes) -> birim dosyaları (yalnız değiştiyse) + daemon-reload
-#   -> duman testi: sg-sanal-kontrol "tamam": true -> servisleri başlat, ~60 sn sonra sg-sanal aktif mi.
+#   -> duman testi: sg-sanal-kontrol "tamam": true -> servisleri başlat, ~60 sn sonra sg-sanal aktif mi. Haftada bir (bakim): git gc --auto + worktree prune.
 # HERHANGİ bir hata: git reset --hard <önceki sha>, kilit/birimler geri, servisler yeniden başlar, Telegram [CT] CRIT. Başarıda [CT] INFO.
 # Yerel durum (durum/ kayit/ pano/ depoda İZLENMEZ) git tarafından silinmez; yine de gelen commit bu yolları izlemeye başlarsa güncelleme REDDEDİLİR.
 # Sır: yalnız /etc/sg-sanal-telegram.env'den (token curl'e stdin ile verilir; argv/günlüğe girmez). Betik kendini geçici kopyadan çalıştırır (git merge çalışan dosyayı değiştirmesin).
@@ -150,6 +150,19 @@ fi
 
 if [ -z "$HEDEF" ] && [ -s "$DURUM/dondur" ]; then log "otomatik güncelleme DONDURULMUŞ ($(head -c 12 "$DURUM/dondur")); kaldırmak için: rm $DURUM/dondur"; exit 0; fi
 [ -d "$DEPO/.git" ] || { log "depo yok: $DEPO"; exit 1; }
+
+bakim() {   # haftada bir hafif git bakımı (gc --auto + worktree prune); damga $DURUM/bakim_sn; hata güncellemeyi etkilemez. Kayıt budaması sanal_yayimla.sh'ta (14 gün).
+  [ -z "$HEDEF" ] || return 0
+  local simdi son
+  simdi="$(date +%s)"; son="$(cat "$DURUM/bakim_sn" 2>/dev/null || echo 0)"
+  [[ "$son" =~ ^[0-9]+$ ]] || son=0
+  [ $((simdi - son)) -ge 604800 ] || return 0
+  g gc --auto -q || log "UYARI: git gc --auto başarısız"
+  g worktree prune || log "UYARI: git worktree prune başarısız"
+  printf '%s\n' "$simdi" > "$DURUM/bakim_sn"
+  log "haftalık git bakımı yapıldı"
+}
+bakim
 
 SLUG="${GUNCELLE_REPO:-$(g remote get-url origin | sed -E 's#^.*github\.com[:/]+##; s#\.git$##')}"
 [[ "$SLUG" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { log "depo adı çıkarılamadı ($SLUG)"; exit 1; }

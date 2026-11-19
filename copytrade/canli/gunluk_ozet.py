@@ -20,6 +20,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from copytrade.canli import kaynak
 from copytrade.canli import sert_sinirlar as sert
 from copytrade.canli.ogrenme_adaptor import takma_ad
 
@@ -102,6 +103,15 @@ def _drift_uyari(motor: Any) -> bool:
     return any(isinstance(r, dict) and r.get("drift") == "uyari" for r in (satirlar or []))
 
 
+def _kaynak_saglik(motor: Any) -> dict:
+    """Sunucu kaynak alanları (yeni, ek): ram_mb, ram_tepe_mb, disk_bos_gb, yuk_1dk; ölçülemeyen None. Hata yutulur."""
+    try:
+        o = kaynak.olc(getattr(motor, "durum_dizin", None))
+    except Exception:                                                  # noqa: BLE001
+        o = {}
+    return {k: o.get(k) for k in ("ram_mb", "ram_tepe_mb", "disk_bos_gb", "yuk_1dk")}
+
+
 def olustur(motor: Any, ortam: dict | None = None) -> dict:
     """Günlük özet sözlüğü (saf okuma; durum değiştirmez)."""
     simdi = int(motor.saat_ms())
@@ -143,7 +153,7 @@ def olustur(motor: Any, ortam: dict | None = None) -> dict:
         "hesaplar": hesaplar, "ogrenme": _ogrenme(motor, gun), "rejim": _rejim_btc(motor), "drift_uyari": drift,
         "limitler": {"gunluk_kayip_yuzde": round((yaml_kayip if yaml_kayip is not None else sert.GUNLUK_KAYIP_UST_ORAN) * 100, 2), "kaldirac_tavan": sert.KALDIRAC_UST, "durdu_mu": durdu,
                      "kaldirac_ayar": _say(motor.rules.get("canli_marj_kaldirac"))},
-        "saglik": {"son_nabiz": _iso(simdi), "hata_sayisi_gun": sum(1 for k in kayitlar if k.get("olay") == "adim_hata")},
+        "saglik": {"son_nabiz": _iso(simdi), "hata_sayisi_gun": sum(1 for k in kayitlar if k.get("olay") == "adim_hata"), **_kaynak_saglik(motor)},
         "notlar": notlar[:5],
     }
     return json.loads(_ADRES.sub("[gizli]", json.dumps(veri, ensure_ascii=False)))

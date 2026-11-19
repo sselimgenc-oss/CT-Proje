@@ -384,3 +384,33 @@ def test_geri_al_onay_ister_ve_onayla_dondurur(sunucu):
     r = subprocess.run(["bash", str(GERI_AL), sunucu.v1[:7]], env=sunucu.ortak, input="evet\n", capture_output=True, text=True)
     assert r.returncode == 0, r.stdout + r.stderr
     assert sunucu.head() == sunucu.v1 and (sunucu.durum / "dondur").exists() and "elle geri alındı" in sunucu.log.read_text()
+
+
+# ------------------------------------------------------------------------------------------------ kaynak sınırları ve haftalık bakım
+def _ayar(birim: str) -> dict:
+    s = (DEPLOY / birim).read_text(encoding="utf-8")
+    return dict(re.findall(r"^(\w+)=(\S+)$", re.sub(r"(?m)^#.*$", "", s), re.M))
+
+
+
+@pytest.mark.parametrize("birim,beklenen", [
+    ("sg-sanal.service", {"MemoryHigh": "450M", "MemoryMax": "600M"}),
+    ("sg-sanal-pano.service", {"MemoryMax": "400M", "Nice": "10", "CPUQuota": "50%"}),
+    ("sg-sanal-yayim.service", {"MemoryMax": "300M", "Nice": "5"}),
+    ("sg-sanal-kontrol.service", {"MemoryMax": "400M"}),
+    ("sg-sanal-guncelle.service", {"MemoryMax": "400M"}),
+])
+def test_sanal_birimlerinde_kaynak_siniri(birim, beklenen):
+    a = _ayar(birim)
+    for k, v in beklenen.items():
+        assert a.get(k) == v, (birim, k)
+
+
+def test_canli_ve_dinleyici_birimlerine_sinir_eklenmedi():
+    for ad in ("sg-canli.service", "sg-canli-yayim.service", "sg-canli-kontrol.service", "sg-canli-alarm.service", "sg-dinleyici.service"):
+        assert not re.search(r"(?m)^(MemoryHigh|MemoryMax|CPUQuota)=", (DEPLOY / ad).read_text(encoding="utf-8")), ad
+
+
+def test_guncelle_haftalik_git_bakimi():
+    s = GUNCELLE.read_text(encoding="utf-8")
+    assert "gc --auto" in s and "worktree prune" in s and "bakim_sn" in s and "604800" in s

@@ -126,3 +126,11 @@ def test_yayim_betikleri_dosyayi_kopyalar():
     for yol in (".github/scripts/canli_yayimla.sh", "deploy/sanal_yayimla.sh"):
         s = (ROOT / yol).read_text(encoding="utf-8")
         assert "kadro_yon_v1.json" in s and "gunluk_ozet_v1.json" in s
+
+
+def test_saglik_kaynak_alanlari_eklendi(tmp_path):
+    m, _ = _motor(tmp_path)
+    o = go.olustur(m)
+    assert {"ram_mb", "ram_tepe_mb", "disk_bos_gb", "yuk_1dk"} <= set(o["saglik"]) and {"son_nabiz", "hata_sayisi_gun"} <= set(o["saglik"])
+    m.durum_yaz()
+    assert "kaynak" in json.loads((m.durum_dizin / "motor.json").read_text(encoding="utf-8"))
