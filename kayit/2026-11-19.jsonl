@@ -5307,3 +5307,5 @@
 {"zaman_ms":1795129353470,"olay":"emir_yok","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"xyz:GME","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1795129353039,"gorme_ms":1795129353469,"yas_ms":431}
 {"zaman_ms":1795129363778,"olay":"telegram","metin":"🧾 Son 1 saat (01:02–02:02 TSİ): 4 emir · sanal\n➕ açılış 1 · ⬆️ artırma 2 · ⬇️ azaltma 0 · ✖️ kapanış 1\n🏆 En büyük: 623 $ (ETH, SAT) · 0xdebd49…\n⏭️ Kopyalanmayan trader dolumu: 258 (≈176 ayrı işlem)\n   • kural gereği 258: 182 HIP-3 coin · 71 ters netleşme (K‑41) · 5 slot tavanı\n   • kaçırılan 0 (geç ","acik":true}
 {"zaman_ms":1795129840133,"olay":"tur","ozsermaye_usd":9998.467}
+{"zaman_ms":1795130752949,"olay":"tur","ozsermaye_usd":9994.8499}
+{"zaman_ms":1795131174927,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"HYPE","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795131174563,"gorme_ms":1795131174926,"yas_ms":364}
