@@ -364,7 +364,10 @@ def test_uctan_uca_altin_ornek_acilis_azaltma_kapanis(tmp_path):
     assert m.sayac["emir"] == 3 and len(m.kayma_trader) == 3
     assert not any("Son " in x and "emir (" in x for x in tgp.gonderilen)                                         # emirler ayrı ayrı gitmez; biriktirilir
     m.emir_ozeti(saat(), zorla=True)
-    assert any("Son 15 dakikada 3 emir (sanal · deneme parası)" in x for x in tgp.gonderilen) and not any("Yeni trader takibe alındı" in x for x in tgp.gonderilen)
+    assert not any("Son 15 dakikada" in x for x in tgp.gonderilen) and any(k["tur"] == "emir_ozeti" for k in kayitlar(tmp_path, "tg_bastirildi"))          # özet bastırılan tür
+    assert any(x.startswith("🟢 BTC AL açıldı · trader ") and "Giriş 100 · Tutar 27,3 $ · Stop 80" in x for x in tgp.gonderilen)              # açıldı: 2 satır
+    assert any(x.startswith("✅ BTC kapandı · trader ") or x.startswith("🔻 BTC kapandı · trader ") for x in tgp.gonderilen)
+    assert not any("Yeni trader takibe alındı" in x for x in tgp.gonderilen)
 
 
 def test_kucuk_acilis_11_dolara_yuvarlanir_ve_trader_hesap_yoksa_atlanir(tmp_path):
@@ -433,7 +436,7 @@ def test_kapat_komutu_hepsini_kapatir_dur_dosyasi_yeniden_baslatma_engeli(tmp_pa
     tgp.guncellemeler.append(tg_mesaj(6, kod))
     m.dakika()
     assert m.dur_istendi and (tmp_path / "durum" / "DUR").exists() and m.hesap.sz(adr(1), "BTC") == pytest.approx(0.0, abs=1e-9)
-    assert any(x["olay"] == "dur" and x["neden"] == "komut" for x in kayitlar(tmp_path)) and any(x.startswith("🛑 DUR:") for x in tgp.gonderilen)
+    assert any(x["olay"] == "dur" and x["neden"] == "komut" for x in kayitlar(tmp_path)) and any(x.startswith("🔴 Bot durdu") for x in tgp.gonderilen)
     m2, *_ = kur(tmp_path)
     with pytest.raises(mt.KipHatasi):
         m2.baslat()                                                                           # DUR varken başlamaz
@@ -595,7 +598,7 @@ def test_telegram_komutlari_yalniz_yapilandirilmis_sohbetten_ve_biçim():
     acik = [{"coin": "BTC", "sz": 0.5, "usd": 1234.0, "kz_usd": 12.34}, {"coin": "ETH", "sz": -2.0, "usd": 80.0, "kz_usd": -1.5}]
     assert tg.msg_gunluk("sanal", 1000, 1012.5, 1000.0, 58, 9, 11, acik, -0.12) == (
         "📋 Günlük rapor (sanal · deneme parası)\n━━━━━━━━━━━━━━\n💰 Kasa şimdi: 1.012,50 $ (başlangıç 1.000 $) · başlangıçtan beri +%1,25\n📈 Son 24 saat: +12,50 $ (+%1,25) · 💸 funding (sanal) −0,12 $\n"
-        "🧾 Bugün 58 emir · 👥 takipte 9/11 trader\n📌 Açık pozisyon: 2 (K/Z: 🟩 BTC +12,34 $ · 🟥 ETH −1,50 $)\n🛡️ Risk: normal, motor çalışıyor\nAyrıntı: pano")
+        "🧾 Bugün 58 emir · 👥 takipte 9/11 trader\n📌 Açık pozisyon: 2 (K/Z: 🟩 BTC +12,34 $ · 🔻 ETH −1,50 $)\n🛡️ Risk: normal, motor çalışıyor\nAyrıntı: pano")
     assert tg.kisa(adr(255)) == "0x000000…"
 
 
@@ -1230,7 +1233,7 @@ def test_dur_dosyasi_kapanislardan_once_yazilir_kapanis_istisnasi_dur_u_bozmaz_y
     m.dur_tetikle("zirve_dusus")
     dur = json.loads((tmp_path / "durum" / "DUR").read_text(encoding="utf-8"))
     assert dur["neden"] == "zirve_dusus" and dur["kapanis_bekliyor"] is True and not (tmp_path / "durum" / "DUR.tmp").exists()
-    assert m.risk.dur and m.dur_bekliyor and kayitlar(tmp_path, "dur_kapanis_hata") and any(x.startswith("🛑 DUR:") for x in tgp.gonderilen)
+    assert m.risk.dur and m.dur_bekliyor and kayitlar(tmp_path, "dur_kapanis_hata") and any(x.startswith("🔴 Bot durdu") for x in tgp.gonderilen)
     m2, hl2, saat2, _ = kur(tmp_path, saat=saat)
     m2.baslat()                                                                                # kapanış modu: açık pozisyon var
     assert m2.risk.dur and m2.dur_bekliyor

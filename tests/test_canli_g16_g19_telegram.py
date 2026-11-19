@@ -186,16 +186,16 @@ def test_g18_gercek_kip_emir_mesajlari_tamponda_birlesir(tmp_path):
     once = len(tgp.gonderilen)
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     m.olay_isle(olay("a:2", adr(2), "ETH", "B", 300, 2000.0, 0.0, saat))
-    assert len(tgp.gonderilen) == once and len(zamanlar) == 1 and zamanlar[0][0] == t.tampon_sn          # tek zamanlayıcı, henüz mesaj yok
+    assert len(tgp.gonderilen) == once + 1 and tgp.gonderilen[once].startswith("🟢 BTC AL açıldı · trader ") and "Giriş 100 · Tutar 27,3 $ · Stop 80" in tgp.gonderilen[once]     # açıldı: anında, ayrı, 2 satır
+    assert len(zamanlar) == 1 and zamanlar[0][0] == t.tampon_sn                                            # sorunlu (dolmayan) emir: tek zamanlayıcı, henüz mesaj yok
     zamanlar[0][1]()                                                                                       # 2,5 sn doldu
-    yeni = tgp.gonderilen[once:]
+    yeni = tgp.gonderilen[once + 1:]
     assert len(yeni) == 1
     satirlar = yeni[0].splitlines()
-    assert satirlar[0].startswith("🚨 [GERÇEK] EMİR REDDEDİLDİ — ETH ac ") and satirlar[0].endswith(" · hl err: Invalid nonce")
-    assert satirlar[1] == "🧾 Son birkaç saniyede 2 emir (GERÇEK PARA)" and not t.sessiz_mi(yeni[0])
-    m.olay_isle(olay("a:3", adr(1), "BTC", "B", 300, 100.0, 300.0, saat))
-    m.emir_ozeti(m.saat_ms(), zorla=True)                                                                  # vardiya sonu: tampon beklemeden gider
-    assert len(tgp.gonderilen) == once + 2 and tgp.gonderilen[-1].startswith("🟢 BTC AL")
+    assert satirlar[0].startswith("🚨 [GERÇEK] EMİR REDDEDİLDİ — ETH ac ") and "neden: hl err: Invalid nonce" in yeni[0] and not t.sessiz_mi(yeni[0])
+    m.olay_isle(olay("a:3", adr(1), "BTC", "B", 300, 100.0, 300.0, saat))                                   # dolu artırma: Telegram'a gitmez (kayda tg_bastirildi)
+    m.emir_ozeti(m.saat_ms(), zorla=True)
+    assert len(tgp.gonderilen) == once + 2 and any(k["tur"] == "emir_artir_azalt" for k in kayitlar(tmp_path, "tg_bastirildi"))
 
 
 def test_m3_kapanis_pozisyonla_kirpilip_tamami_dolarsa_dolu_altin_ornek():

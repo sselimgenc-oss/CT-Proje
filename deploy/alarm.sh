@@ -10,7 +10,7 @@ fi
 METIN="[CT] CRIT
 Servis durdu: ${BIRIM} ($(date -u +%H:%M) UTC). Sistem işlem kopyalamıyor olabilir.
 Sunucu servisi yeniden başlatmayı deniyor.
-Sorun sürerse sunucuya bakman gerekebilir."
+Sorun sürerse bana haber ver."
 if printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "${TELEGRAM_BOT_TOKEN}" | curl -sS -f --max-time 20 --config - \
      --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" --data-urlencode "text=${METIN}" -o /dev/null 2>/dev/null; then
   echo "alarm: gönderildi (${BIRIM})"

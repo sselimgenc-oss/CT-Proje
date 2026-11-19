@@ -137,7 +137,7 @@ def test_g2_dur_borsadaki_defter_disi_eth_kapanir_mesaj_yalniz_duzken(tmp_path, 
     eth = [x for x in yeni if x["coin"] == "ETH"]
     assert len(eth) == 5 and all(x["is_buy"] and x["reduce_only"] and x["sz"] == pytest.approx(0.5) for x in eth)
     assert sim.poz["ETH"] == pytest.approx(-0.5) and m.dur_bekliyor and not m.dur_istendi
-    assert any("DÜZLEŞMEDİ" in x and "ETH -0.5" in x for x in tgp.gonderilen) and not any("Tüm pozisyonlar kapandı" in x for x in tgp.gonderilen)
+    assert any("DÜZLEŞMEDİ" in x and "ETH -0.5" in x for x in tgp.gonderilen) and not any("Tüm pozisyonlar kapandı" in x for x in tgp.gonderilen) and any(x.startswith("🔴 Bot durdu") for x in tgp.gonderilen)
     assert kayitlar(tmp_path, "dur")[-1]["borsa_fazla"] == {"ETH": -0.5}
     saat.ms += 60_000
     m.dakika()

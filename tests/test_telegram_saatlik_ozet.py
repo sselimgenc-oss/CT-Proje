@@ -18,8 +18,22 @@ def _uc_emir_iki_atlama(m, saat):
     m.olay_isle(olay("a:5", adr(1), "@142", "B", 300, 100.0, 0.0, saat))
 
 
+def _ozet_ac(m):
+    m.tg.bastirilan.discard("emir_ozeti")                                           # özet türü varsayılan BASTIRILIR (kod anahtarı); bu testler açık haliyle biçimi/pencereyi denetler
+
+
+def test_ozet_varsayilan_bastirilir_kayda_yazilir(tmp_path):
+    m, hl, saat, tgp = kur(tmp_path)
+    m.baslat()
+    _uc_emir_iki_atlama(m, saat)
+    saat.ms += SAAT
+    m.emir_ozeti(saat())
+    assert _ozetler(tgp) == [] and any(k["tur"] == "emir_ozeti" for k in kayitlar(tmp_path, "tg_bastirildi"))
+
+
 def test_saatlik_toplama_tek_mesaj_pencere_motor_saatinden(tmp_path):
     m, hl, saat, tgp = kur(tmp_path)
+    _ozet_ac(m)
     assert float(RULES["canli_telegram_sanal_ozet_dk"]) == 60
     m.baslat()
     m.rules = {**m.rules, "canli_telegram_sanal_bos_mesaj": False}                # bu test: boş pencere sessiz (bayrak kapalı)
@@ -28,7 +42,7 @@ def test_saatlik_toplama_tek_mesaj_pencere_motor_saatinden(tmp_path):
     saat.ms += 30 * 60_000
     m.emir_ozeti(saat())
     assert _ozetler(tgp) == []                                                      # pencere dolmadı: anlık emir mesajı da yok
-    assert not any("BTC AL" in x or "BTC SAT" in x for x in tgp.gonderilen)
+    assert not any("BTC AL:" in x or "BTC SAT:" in x for x in tgp.gonderilen)
     saat.ms = bas + SAAT
     m.emir_ozeti(saat())
     oz = _ozetler(tgp)
@@ -55,6 +69,7 @@ def test_hic_emir_yok_mesaj_yok_atlanan_tek_basina_mesaj_uretmez(tmp_path):
 
 def test_vardiya_sonu_kalan_tampon_gider_kisa_pencere_dakika_yazar(tmp_path):
     m, hl, saat, tgp = kur(tmp_path)
+    _ozet_ac(m)
     m.baslat()
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     saat.ms += 25 * 60_000
@@ -65,6 +80,7 @@ def test_vardiya_sonu_kalan_tampon_gider_kisa_pencere_dakika_yazar(tmp_path):
 
 def test_sifir_eski_davranis_15_dk_ozeti(tmp_path):
     m, hl, saat, tgp = kur(tmp_path, kurallar={"canli_telegram_sanal_ozet_dk": 0})
+    _ozet_ac(m)
     m.baslat()
     _uc_emir_iki_atlama(m, saat)
     m.emir_ozeti(saat())
@@ -116,7 +132,7 @@ def test_kasa_satiri_altin_ornek_elle_hesap():
     # artı: özsermaye 1.012,60; gün başı 1.005,00; kasa 1.000 → bugün +7,60 (+%0,76 → +%0,8); başlangıçtan +12,60 (+%1,26 → +%1,3)
     assert son((1012.6, 1005.0, 1000.0)) == "💰 Kasa: 1.012,60 $ · bugün 🟢 +7,60 $ (+%0,8)"
     # eksi: özsermaye 964; gün başı 976; kasa 1.000 → bugün −12 (−%1,2); başlangıçtan −36 (−%3,6)
-    assert son((964.0, 976.0, 1000.0)) == "💰 Kasa: 964,00 $ · bugün 🔴 −12,00 $ (−%1,2)"
+    assert son((964.0, 976.0, 1000.0)) == "💰 Kasa: 964,00 $ · bugün 🔻 −12,00 $ (−%1,2)"
     # sıfır: işaretsiz %0,0 (yuvarlanınca sıfır olan −0,04 da)
     assert son((1000.0, 1000.0, 1000.0)) == "💰 Kasa: 1.000,00 $ · bugün 🟢 +0,00 $ (%0,0)"
     assert "(%0,0)" in son((999.96, 1000.0, 1000.0)) and tg._yuzde1(-0.0004) == "%0,0"
@@ -124,6 +140,7 @@ def test_kasa_satiri_altin_ornek_elle_hesap():
 
 def test_motor_ozeti_kasa_satirini_en_sona_ekler(tmp_path):
     m, hl, saat, tgp = kur(tmp_path)
+    _ozet_ac(m)
     m.baslat()
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     saat.ms += SAAT

@@ -17,7 +17,7 @@ import time
 from datetime import timedelta
 from typing import Any, Callable
 
-ONEMLI_ONEKLER = ("ALARM", "DUR", "TASFİYE", "🚨", "🛑", "💥")          # her zaman sesli
+ONEMLI_ONEKLER = ("ALARM", "DUR", "TASFİYE", "🚨", "🛑", "💥", "🔴")          # her zaman sesli
 PROJE_ETIKETI = "[CT]"                    # ortak Telegram standardı (docs/TELEGRAM.md): her mesajın İLK satırı "[CT] INFO|WARN|CRIT"
 KOMUTLAR = ("/durum", "/rapor", "/yardim", "/start", "/durdur", "/devam", "/hepsini_kapat")      # standart komut adları (motora iki adımlı onaydan sonra bu adlarla gider)
 ESKI_AD = {"/dur": "/durdur", "/kapat": "/hepsini_kapat", "/baslat": "/devam"}        # eski adlar eş ad olarak çalışır (anlamları değişmedi)
@@ -29,7 +29,7 @@ HIZ_LIMITI_DK = 15                        # standart: dakikada en çok 15 mesaj 
 INFO_OMUR_S = 24 * 3600.0                 # standart: 24 saatten eski INFO mesajı atılır
 TEKRAR_PENCERE_S = 300.0                  # standart: aynı uyarı (WARN/CRIT, aynı metin / anahtar) bu sürede bir kez
 UYARI_ARA_S = 6 * 3600.0                  # kullanıcı standardı: aynı uyarı en çok 6 saatte bir (`Telegram.uyar`); düzelince TEK "Düzeldi" (`Telegram.duzeldi`)
-BASTIRILAN_TURLER = frozenset({"saha_giris", "saha_cikis", "saha_uyari", "saatlik_bos"})      # KOD ANAHTARI: bu türler Telegram'a GİTMEZ; kayda `tg_bastirildi` (tür ile) yazılır, tespit/kayıt/pano sürer. Geri açmak için `Telegram.bastirilan` kümesinden çıkarın
+BASTIRILAN_TURLER = frozenset({"saha_giris", "saha_cikis", "saha_uyari", "saatlik_bos", "emir_ozeti", "emir_artir_azalt"})      # KOD ANAHTARI: bu türler Telegram'a GİTMEZ; kayda `tg_bastirildi` (tür ile) yazılır, tespit/kayıt/pano sürer. Geri açmak için `Telegram.bastirilan` kümesinden çıkarın
 MESAJ_AZAMI = 3500                        # standart: mesaj başına en çok karakter
 KACIRILAN_PENCERE_S = 15 * 60          # G-16: bundan eski (ya da motor başlamadan önce gelmiş) komut YÜRÜTÜLMEZ; "işlenmedi, yeniden gönder" yanıtı alır
 YENIDEN_BEKLEME_S = (2.0, 5.0, 15.0)   # G-18: önemli mesaj (ONEMLI_ONEKLER) gönderilemezse bu beklemelerle 3 kez daha denenir
@@ -68,7 +68,7 @@ def onem_duzeyi(metin: str) -> str:
     ilk = metin.split("\n", 1)[0]
     if metin.startswith(ONEMLI_ONEKLER) or "ALARM" in ilk:
         return "CRIT"
-    if "UYARI" in ilk or ilk.startswith(("⚠️", "⏸️", "📭", "❓", "🔻", "🧮", "🔐")):
+    if "UYARI" in ilk or ilk.startswith(("⚠️", "⏸️", "📭", "❓", "🧮", "🔐")):
         return "WARN"
     return "INFO"
 
@@ -417,7 +417,7 @@ def _varsayilan_zamanlayici(sn: float, f: Callable[[], None]) -> Any:
     return t
 
 
-ALARM_BASLIKLARI = ("🚨", "🛑", "💥", "⏸️", "▶️", "✅", "ℹ️", "⚠️", "ALARM", "UYARI", "BİLGİ", "TASFİYE", "DUR")
+ALARM_BASLIKLARI = ("🔴", "🚨", "🛑", "💥", "⏸️", "▶️", "✅", "ℹ️", "⚠️", "ALARM", "UYARI", "BİLGİ", "TASFİYE", "DUR")
 
 
 def kip_etiketle(metin: str, kip: str | None) -> str:
@@ -549,6 +549,54 @@ SONRAKI_ADIM = {"kapat": "Kapanış daha geniş bantla yeniden denenecek; olmazs
                 "ac": "Pozisyon açılmadı (yeniden denenmez).", "artir": "Artırma yapılmadı (yeniden denenmez)."}
 
 
+def fiyat_tr(px: float) -> str:
+    """Fiyat: anlamlı 6 hane, Türkçe ondalık: 150.25 → '150,25'."""
+    return f"{px:.6g}".replace(".", ",")
+
+
+def _kip_eki(kip: str) -> str:
+    return " (GERÇEK PARA)" if kip == "gercek" else " (sanal)"
+
+
+def msg_acildi(adres: str, coin: str, yon: str, giris: float, usd: float, stop: float | None, kip: str) -> str:
+    """Pozisyon AÇILDI (2 satır): başlık + 'Giriş · Tutar · Stop'. Trader adı panodaki gösterimle aynı (`kisa`: 0xf43a34…); coin sade (SOL, BTC)."""
+    stop_s = fiyat_tr(stop) if stop else "yok"
+    return (f"🟢 {coin} {'AL' if yon == 'B' else 'SAT'} açıldı · trader {kisa(adres)}{_kip_eki(kip)}\n"
+            f"Giriş {fiyat_tr(giris)} · Tutar {tr_sayi(usd, 0 if usd >= 100 else 1)} $ · Stop {stop_s}")
+
+
+KAPANIS_NEDEN_TR = {"felaket_stop": "stop", "borsa_stop": "stop", "borsa_stop_korumasiz": "stopsuz kaldığı için kapatıldı", "tam_kapanis": "trader kapattı",
+                    "trader_kapali_senkron": "trader kapattı", "trader_ters_senkron": "trader yön değiştirdi", "gunluk_kapat": "günlük kayıp freni",
+                    "sahipsiz_pozisyon": "sahipsiz pozisyon kuralı", "dur": "bot durduruldu", "komut": "sen kapattın (/hepsini_kapat)", "inen_24sa": "trader takipten çıktı", "inen_ters": "trader takipten çıktı"}
+
+
+def kapanis_nedeni_tr(neden: str) -> str:
+    """Kapanış nedeni, kullanıcı dilinde: stop / trader kapattı / koruma kuralı (CT'de iz süren stop yok; kural kesmeleri 'koruma kuralı')."""
+    if neden in KAPANIS_NEDEN_TR:
+        return KAPANIS_NEDEN_TR[neden]
+    return "koruma kuralı" if neden else "trader kapattı"
+
+
+def msg_kapandi(adres: str, coin: str, pnl_usd: float, pnl_oran: float | None, neden: str, kip: str) -> str:
+    """Pozisyon KAPANDI (2 satır): $ ve % sonuç + neden. Zararda 🔻 (🔴 yalnız kritik mesajlarda), kârda ✅."""
+    oran = f" ({tr_yuzde(pnl_oran)})" if pnl_oran is not None else ""
+    return (f"{'🔻' if pnl_usd < 0 else '✅'} {coin} kapandı · trader {kisa(adres)}{_kip_eki(kip)}\n"
+            f"{tr_isaretli(pnl_usd)} ${oran} · Neden: {kapanis_nedeni_tr(neden)}")
+
+
+def msg_bot_durdu(neden: str, acik_poz: int, stop_durumu: str, ek: str = "", senden: str = "Yeniden başlatmak için bana haber ver.") -> str:
+    """Ayrı 🔴 'Bot durdu' mesajı (kritik, sesli; 6 saat tekrar sınırına TAKILMAZ; en çok 5 satır + `[CT]`): neden, açık pozisyon sayısı ve stop durumu.
+    `ek`: pozisyonlar tam kapanmadıysa ayrıntı (ör. borsada kalan)."""
+    son = (f"Pozisyonlar DÜZLEŞMEDİ{ek}; yeni işlem açılmıyor, kapanış yeniden deneniyor." if (ek or acik_poz > 0) else "Tüm pozisyonlar kapandı; yeni işlem açılmıyor.")
+    return f"🔴 Bot durdu\nNeden: {sade_ad(neden)}\nAçık pozisyon: {acik_poz} · Stop: {stop_durumu}\n{son}\n{senden}"
+
+
+def msg_limit_yaklasti(kayip_oran: float, sinir_oran: float, oz: float) -> str:
+    """Günlük kayıp limitinin %80'ine gelince (günde bir kez) WARN."""
+    return (f"⚠️ Günlük kayıp limitine yaklaşıldı\nBugünkü kayıp %{tr_sayi(kayip_oran * 100, 1)} (limit %{tr_sayi(sinir_oran * 100, 0)}); özsermaye {tr_sayi(oz)} $.\n"
+            f"Limite ulaşılırsa yeni pozisyon açılmaz.\n{SENDEN_YOK}")
+
+
 def msg_emir_gercek_sorun(coin: str, eylem: str, usd: float, durum: str, neden: str = "") -> str:
     """G-18 (§5): gerçek kipte DOLU olmayan emir 🚨 ile başlar (gece de sesli). Örnek:
     '🚨 [GERÇEK] EMİR REDDEDİLDİ — BTC kapat 27,30 $\\nneden: hl_err: …\\nKapanış … yeniden denenecek …'."""
@@ -562,7 +610,7 @@ def msg_emir_gercek_sorun(coin: str, eylem: str, usd: float, durum: str, neden: 
 
 def msg_emir(adres: str, coin: str, yon: str, usd: float, px: float | None, kayma: float | None, durum: str, kip: str, eylem: str = "", neden: str = "") -> str:
     ne = "AL" if yon == "B" else "SAT"
-    ok = "🟢" if yon == "B" else "🔴"
+    ok = "🟢" if yon == "B" else "🟠"
     ilk = f"{ok} {coin} {ne}: {tr_sayi(usd, 0 if usd >= 100 else 1)} $ ({kip_adi(kip)})"
     nedeni = f"\n↳ Trader {kisa(adres)} {EYLEM_TR.get(eylem, 'işlem yaptı')}, biz de kopyaladık"
     if durum != "dolu" and kip == "gercek":
@@ -609,7 +657,7 @@ def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_s
                 f"🧾 Bugün {emir_sayisi} emir · 👥 takipte {saha}/{n} trader"]
     if acik:
         en = sorted(acik, key=lambda x: -x["usd"])
-        parcalar = [f"{'🟩' if x['kz_usd'] >= 0 else '🟥'} {x['coin']} {tr_isaretli(x['kz_usd'])} $" for x in en[:3]]
+        parcalar = [f"{'🟩' if x['kz_usd'] >= 0 else '🔻'} {x['coin']} {tr_isaretli(x['kz_usd'])} $" for x in en[:3]]
         if len(acik) > 3:
             parcalar.append(f"… +{len(acik) - 3} daha")
         satirlar.append(f"📌 Açık pozisyon: {len(acik)} (K/Z: " + " · ".join(parcalar) + ")")
@@ -663,7 +711,7 @@ def msg_emir_ozeti(kip: str, emirler: list[dict], dakika: float) -> str:
     for (adres, coin, yon, eylem), liste in sirali_g[:yer - 1 if fazla else len(sirali_g)]:
         toplam = sum(x["usd"] for x in liste)
         eksik = sum(1 for x in liste if x["durum"] != "dolu")
-        satirlar.append(f"{'🟢 AL' if yon == 'B' else '🔴 SAT'} {coin}: {tr_sayi(toplam, 0)} $" + (f" ({len(liste)} emir)" if len(liste) > 1 else "")
+        satirlar.append(f"{'🟢 AL' if yon == 'B' else '🟠 SAT'} {coin}: {tr_sayi(toplam, 0)} $" + (f" ({len(liste)} emir)" if len(liste) > 1 else "")
                         + f" · {kisa(adres)} {EYLEM_TR.get(eylem, 'işlem yaptı')}" + (f" · ⚠️ {eksik} tanesi tam dolmadı" if eksik else ""))
     if fazla:
         satirlar.append(f"… ve {fazla} işlem grubu daha")
@@ -747,7 +795,7 @@ def msg_sanal_saatlik(bas_ms: int, bit_ms: int, sure_dk: float, emirler: list[di
     if kasa_bilgi is not None and kasa_bilgi[2] > 0:
         oz, gun_basi, kasa = kasa_bilgi
         gun = oz - gun_basi
-        satirlar.append(f"💰 Kasa: {tr_sayi(oz)} $ · bugün {'🟢' if gun >= 0 else '🔴'} {tr_isaretli(gun)} $ ({_yuzde1(gun / kasa)})")
+        satirlar.append(f"💰 Kasa: {tr_sayi(oz)} $ · bugün {'🟢' if gun >= 0 else '🔻'} {tr_isaretli(gun)} $ ({_yuzde1(gun / kasa)})")
     return "\n".join(satirlar)
 
 
@@ -762,7 +810,7 @@ def msg_sanal_saatlik_bos(bas_ms: int, bit_ms: int, sure_dk: float, atlanan: dic
     if kasa_bilgi is not None and kasa_bilgi[2] > 0:
         oz, gun_basi, kasa = kasa_bilgi
         gun, top = oz - gun_basi, oz - kasa
-        isaret = lambda x: "🟢" if x >= 0 else "🔴"        # noqa: E731
+        isaret = lambda x: "🟢" if x >= 0 else "🔻"        # noqa: E731
         satirlar.append(f"💰 Kasa: {tr_sayi(oz)} $ · bugün {isaret(gun)} {tr_isaretli(gun)} $ ({_yuzde1(gun / kasa)}) · başlangıçtan {isaret(top)} {tr_isaretli(top)} $ ({_yuzde1(top / kasa)})")
     return "\n".join(satirlar)
 

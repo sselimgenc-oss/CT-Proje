@@ -128,3 +128,91 @@ def test_motor_alarm_metinlerinde_kod_adi_geri_tirnak_ve_dosya_adi_yok():
 
 def test_tg_kapsami_bastirilan_turler_kod_anahtari():
     assert {"saha_giris", "saha_cikis", "saha_uyari", "saatlik_bos"} <= set(tg.BASTIRILAN_TURLER)
+
+
+# ---------------------------------------------------------------------------------------------- koordinatör ek kuralları (a)-(g)
+def test_acildi_mesaji_2_satir_trader_adi_panodaki_ile_ayni_ve_sade_coin():
+    from copytrade.canli import pano
+    m = tg.msg_acildi(ADR, "SOL", "B", 150.25, 27.3, 120.2, "sanal")
+    satirlar = m.splitlines()
+    assert len(satirlar) == 2 and satirlar[0] == f"🟢 SOL AL açıldı · trader {pano.kisa(ADR)} (sanal)"             # trader adı = pano.kisa
+    assert satirlar[1] == "Giriş 150,25 · Tutar 27,3 $ · Stop 120,2" and "_" not in m and tg.kisa(ADR) == pano.kisa(ADR)
+    assert tg.onem_duzeyi(m) == "INFO"
+
+
+def test_kapandi_mesaji_dolar_yuzde_neden_zararda_kirmizi_ucgen_kirmizi_daire_yok():
+    z = tg.msg_kapandi(ADR, "BTC", -1.2, -0.044, "felaket_stop", "sanal")
+    assert z.splitlines() == [f"🔻 BTC kapandı · trader {tg.kisa(ADR)} (sanal)", "−1,20 $ (−%4,40) · Neden: stop"] and "🔴" not in z
+    k = tg.msg_kapandi(ADR, "ETH", 3.5, 0.02, "tam_kapanis", "gercek")
+    assert k.startswith("✅ ETH kapandı") and "+3,50 $ (+%2,00) · Neden: trader kapattı" in k and "GERÇEK PARA" in k
+    assert all(len(x.splitlines()) == 2 and "🔴" not in x and not KOD_ADI.search(x) for x in (z, k))
+    assert tg.kapanis_nedeni_tr("borsa_stop") == "stop" and tg.kapanis_nedeni_tr("trader_kapali_senkron") == "trader kapattı"
+
+
+def test_kirmizi_daire_yalniz_kritik_mesajlarda():
+    for ad, metin in _tum_ornekler().items():
+        assert "🔴" not in metin, ad
+    assert tg.onem_duzeyi(tg.msg_bot_durdu("komut", 2, "borsada duruyor")) == "CRIT"
+
+
+def test_bot_durdu_kritik_sesli_acik_pozisyon_ve_stop_6_saat_sinirina_takilmaz():
+    m = tg.msg_bot_durdu("zirve_dusus", 3, "borsada duruyor")
+    assert m.splitlines()[0] == "🔴 Bot durdu" and "Açık pozisyon: 3 · Stop: borsada duruyor" in m and not KOD_ADI.search(m) and len(m.splitlines()) + 1 <= 6
+    saat = [1_000_000.0]
+    t, post, _ = _t(saat_s=lambda: saat[0])
+    assert t.gonder(m, "CRIT", anahtar="bot_durdu:3")
+    saat[0] += 600                                                       # 10 dk sonra yeniden durursa (6 saat dolmadan) YİNE gider
+    assert t.gonder(m, "CRIT", anahtar="bot_durdu:3") and len(post.yukler) == 2
+    assert all(y["disable_notification"] is False and y["text"].startswith("[CT] CRIT\n🔴 Bot durdu") for y in post.yukler)
+
+
+def test_motor_bot_durdu_mesaji_ve_yeniden_calisinca_tek_duzeldi(tmp_path):
+    from tests.test_canli_motor import kur, olay, adr
+    m, hl, saat, tgp = kur(tmp_path)
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    m.dur_tetikle("komut")
+    durdu = [x for x in tgp.gonderilen if x.startswith("🔴 Bot durdu")]
+    assert durdu and "Açık pozisyon: 0 · Stop: gerekmiyor" in durdu[0] and "Neden: komut" in durdu[0] and not KOD_ADI.search(durdu[0])
+    assert (tmp_path / "durum" / "tg_bot_durdu").exists()
+    (tmp_path / "durum" / "DUR").unlink()                                # sorun giderildi, bot yeniden başlıyor
+    m2, hl2, saat2, tgp2 = kur(tmp_path, saat=saat)
+    m2.baslat()
+    d = [x for x in tgp2.gonderilen if "Düzeldi" in x]
+    assert len(d) == 1 and "bot yeniden çalışıyor" in d[0] and not (tmp_path / "durum" / "tg_bot_durdu").exists()
+    m3, *_r = kur(tmp_path, saat=saat)
+    m3.baslat()
+    assert not [x for x in _r[2].gonderilen if "Düzeldi" in x]           # ikinci kez Düzeldi yok
+
+
+def test_gunluk_kayip_yuzde_80_gunde_bir_uyari_ve_limit_doldu_acik_pozisyonu_soyler(tmp_path):
+    from tests.test_canli_motor import kur, olay, adr
+    m, hl, saat, tgp = kur(tmp_path)
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    simdi = saat()
+    m.risk.ozsermaye_isle(1000.0, simdi)
+    m.risk.gun_basi = 1000.0
+    sinir = float(m.rules["canli_gunluk_kayip_oran"])
+    m.ozsermaye = lambda: 1000.0 * (1 - 0.8 * sinir)                      # kayıp = limitin %80'i
+    m._risk(simdi)
+    m._risk(simdi + 60_000)
+    uy = [x for x in tgp.gonderilen if x.startswith("⚠️ Günlük kayıp limitine yaklaşıldı")]
+    assert len(uy) == 1 and tg.onem_duzeyi(uy[0]) == "WARN" and "Senden bir şey gerekmiyor." in uy[0] and len(uy[0].splitlines()) + 1 <= 6
+    m.ozsermaye = lambda: 1000.0 * (1 - sinir)                            # limit doldu
+    m._risk(simdi + 120_000)
+    dol = [x for x in tgp.gonderilen if "ALARM: günlük kayıp sınırı" in x]
+    assert len(dol) == 1 and "1 açık pozisyon izlenmeye devam ediyor" in dol[0] and "yeni pozisyon açılmıyor" in dol[0]
+
+
+def test_senden_satiri_sunucu_journalctl_dosya_adi_icermez():
+    """(e) 'Senden' satırı yalnız kodlama bilmeyenin yapabileceği şeyi söyler: motor.py `senden=` sabitleri ve sunucu betiğindeki 'Senden/Bana haber ver' satırlarında sunucu/journalctl/dosya adı yok."""
+    kok = Path(__file__).resolve().parents[1]
+    agac = ast.parse((kok / "copytrade" / "canli" / "motor.py").read_text())
+    metinler = [k.value.value for n in ast.walk(agac) if isinstance(n, ast.Call) for k in n.keywords if k.arg == "senden" and isinstance(k.value, ast.Constant) and isinstance(k.value.value, str)]
+    sh = (kok / "deploy" / "sanal_guncelle.sh").read_text() + (kok / "deploy" / "alarm.sh").read_text()
+    metinler += [s for s in sh.splitlines() if s.strip().startswith(("Senden", "Bana haber", "Sorun sürerse"))] + [tg.SENDEN_YOK]
+    assert len(metinler) > 8
+    yasak = re.compile(r"sunucu|journalctl|dosya|\.json|\.sh|durum/|systemctl|ssh", re.I)
+    for t in metinler:
+        assert not yasak.search(t) and not KOD_ADI.search(t), t

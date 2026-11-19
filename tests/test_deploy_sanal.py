@@ -442,7 +442,7 @@ def test_alarm_yeniden_baslama_siniri_tek_crit_ve_6_saat_siniri(sunucu):
     r = sunucu.calistir(JOURNAL_SANAL=_yeniden(4))
     assert r.returncode == 0, r.stdout
     tg = _tg(sunucu)
-    assert len(tg) == 1 and "[CT] CRIT" in tg[0] and "4 kez yeniden başladı (sınır 2)" in tg[0] and "bellek taşması olmadı" in tg[0] and "Senden" not in tg[0].split("\n")[0] and "Sorun sürerse sunucuya bakman" in tg[0]
+    assert len(tg) == 1 and "[CT] CRIT" in tg[0] and "4 kez yeniden başladı (sınır 2)" in tg[0] and "bellek taşması olmadı" in tg[0] and "Senden" not in tg[0].split("\n")[0] and "Sorun sürerse bana haber ver" in tg[0] and "journalctl" not in tg[0]
     assert "NS:disable_notification=false" in sunucu.log.read_text()                                  # CRIT sesli
     assert "SIRTOKEN123" not in sunucu.log.read_text()
     sunucu.calistir(JOURNAL_SANAL=_yeniden(5))                                                      # 6 saat dolmadan tekrar YOK

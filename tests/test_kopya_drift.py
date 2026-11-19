@@ -121,6 +121,7 @@ def test_belirsiz_yonlu_tutulmayan_coin_izlenmez(tmp_path):
 
 def _ozetli(tmp_path):
     m, saat, tgp, a = hazir(tmp_path)
+    m.tg.bastirilan.discard("emir_ozeti")
     t = saat()
     m.kopya_drift_adimi(t)
     m.kopya_drift_adimi(t + 31 * DK)                                # BTC drift aktif

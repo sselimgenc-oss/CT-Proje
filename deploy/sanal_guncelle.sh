@@ -179,10 +179,10 @@ alarm_kontrol() {   # sg-sanal son 1 saatte >ALARM_SINIR kez yeniden başladı m
       if [ ! -f "$DURUM/alarm_$t" ] || [ $((simdi - son)) -ge "$ALARM_ARA_SN" ]; then
         if [ "$t" = yeniden ]; then mesaj="Sunucu motoru son 1 saatte ${sayi} kez yeniden başladı (sınır ${ALARM_SINIR}); bellek taşması $([ "$oom" = 1 ] && echo oldu || echo olmadı).
 Sunucu motoru kendiliğinden yeniden başlatıyor.
-Sorun sürerse sunucuya bakman gerekebilir."
+Sorun sürerse bana haber ver."
         else mesaj="Sunucu motoru bellek tavanını aşıp öldürüldü; son 1 saatte ${sayi} kez yeniden başladı.
 Sunucu motoru kendiliğinden yeniden başlatıyor.
-Sorun sürerse sunucuya bakman gerekebilir."; fi
+Sorun sürerse bana haber ver."; fi
         printf '%s\n' "$simdi" > "$DURUM/alarm_$t"
         bildir CRIT "$mesaj"
       fi
@@ -238,9 +238,9 @@ else
   if [ -s "$DURUM/kotu_sha" ] && [ "$(cat "$DURUM/kotu_sha")" = "$yeni" ]; then log "${yeni:0:7} daha önce başarısız oldu ve geri alındı; yeni commit beklenir"; exit 0; fi
   if ! g merge-base --is-ancestor "$head" "$yeni"; then
     log "origin/main HEAD'in ileri sarması DEĞİL (fast-forward yok); reddedildi"
-    if [ "$(cat "$DURUM/reddedilen" 2>/dev/null)" != "$yeni:ff" ]; then printf '%s\n' "$yeni:ff" > "$DURUM/reddedilen"; bildir CRIT "Sunucu güncellemesi reddedildi: yeni sürümün geçmişi sunucudakiyle uyuşmuyor.
+    if [ "$(cat "$DURUM/reddedilen" 2>/dev/null)" != "$yeni:ff" ]; then printf '%s\n' "$yeni:ff" > "$DURUM/reddedilen"; bildir CRIT "Sunucu güncellemesi reddedildi: yeni sürümün geçmişi eskisiyle uyuşmuyor.
 Hiçbir şey değiştirilmedi; motor eski sürümle çalışıyor.
-Senden: depo geçmişinin neden değiştiğine bakman gerekiyor."; fi
+Bana haber ver, ben bakarım."; fi
     exit 0
   fi
   ci="$(ci_durum "$yeni")"
@@ -257,7 +257,7 @@ if [ -n "$(g diff --name-only "$head" "$yeni" -- durum kayit pano)" ]; then
   log "hedef commit durum/ kayit/ pano/ yollarını içeriyor; yerel durum korunsun diye REDDEDİLDİ"
   if [ "$(cat "$DURUM/reddedilen" 2>/dev/null)" != "$yeni:durum" ]; then printf '%s\n' "$yeni:durum" > "$DURUM/reddedilen"; bildir CRIT "Sunucu güncellemesi reddedildi: yeni sürüm sunucunun yerel durum dosyalarına dokunuyor.
 Hiçbir şey değiştirilmedi; motor eski sürümle çalışıyor.
-Senden: bu sürümün düzeltilmesini istemen gerekiyor."; fi
+Bana haber ver, ben bakarım."; fi
   exit 0
 fi
 
