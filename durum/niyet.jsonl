@@ -388,3 +388,5 @@
 {"t":"sonuc","cloid":"0x11573cb21b4673a56fd7c6fed34a9da1","durum":"dolu","ms":1795114143726,"sz":0.001672452560546464,"px":62946.0,"ucret":0.047373389494270966}
 {"t":"niyet","kimlik":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e:808562471690262","eylem":"ac","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"TAO","yon":"A","usd":54.385637,"reduce_only":false,"cloid":"0x1dc5ff8fc06b1fdfe579c0fb4483f546","ms":1795119003802}
 {"t":"sonuc","cloid":"0x1dc5ff8fc06b1fdfe579c0fb4483f546","durum":"dolu","ms":1795119004082,"sz":0.2807352749701515,"px":193.7256993194039,"ucret":0.024473536860247985}
+{"t":"niyet","kimlik":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a:850769736107109","eylem":"azalt","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","yon":"A","usd":213.020739,"reduce_only":true,"cloid":"0x878de2897064e0a2a4a80069bf8a8bd9","ms":1795122912642}
+{"t":"sonuc","cloid":"0x878de2897064e0a2a4a80069bf8a8bd9","durum":"dolu","ms":1795122912930,"sz":0.12132299153245475,"px":1755.815083703236,"ucret":0.09585933233970782}
