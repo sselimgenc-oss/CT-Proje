@@ -190,7 +190,7 @@ def test_gunluk_rapor_21_tsi_haftalik_pazar_18_10_utc(tmp_path):
 
 def test_haftalik_metin_altin_ornek():
     metin = tg.msg_haftalik("sanal", 1000.0, 1030.0, 1000.0, 105.0, 100.0, 42, [("0xaaaaaaaaaaaa", 20.0), ("0xbbbbbbbbbbbb", -5.5), ("0xcccccccccccc", 3.0)])
-    assert metin.splitlines() == ["🗓️ Haftalık özet (sanal · deneme parası)", tg.AYRAC, "📈 Hafta: +30,00 $ (+%3,00)", "₿ BTC al-tut: +%5,00 · fark −%2,00",
+    assert metin.splitlines() == ["🗓️ Haftalık özet (sanal · deneme parası)", tg.AYRAC, "💰 Özsermaye: 1.030,00 $", "📈 Hafta: +30,00 $ (+%3,00)", "📌 Açık pozisyon: —", "₿ BTC al-tut: +%5,00 · fark −%2,00",
                                   "🧾 Hafta içi 42 emir", "🏆 En iyi trader: 0xaaaaaa… · +20,00 $ (slot K/Z)", "🔻 En kötü trader: 0xbbbbbb… · −5,50 $ (slot K/Z)"]
     ilk = tg.msg_haftalik("sanal", 1000.0, 990.0, None, None, None, 3, [])
     assert "Başlangıçtan beri: −10,00 $" in ilk and "BTC kıyası: bu hafta için veri yok" in ilk and "Sahada trader yok" in ilk

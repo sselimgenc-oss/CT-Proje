@@ -13,7 +13,7 @@ if [ -n "${ALARM_DURUM_DIZIN:-}" ] && [ -r "${ALARM_DURUM_DIZIN}/hesap.json" ]; 
   POZ="$(python3 -c 'import json,sys
 d=json.load(open(sys.argv[1]))
 print(sum(len(c) for c in (d.get("poz") or {}).values()))' "${ALARM_DURUM_DIZIN}/hesap.json" 2>/dev/null || echo bilinmiyor)"
-  printf '1\n' > "${ALARM_DURUM_DIZIN}/tg_bot_durdu" 2>/dev/null || true
+  printf '%s\nservis düştü (%s)\n' "$(date +%s)" "${BIRIM}" > "${ALARM_DURUM_DIZIN}/tg_bot_durdu" 2>/dev/null || true; rm -f "${ALARM_DURUM_DIZIN}/tg_bot_durdu_2" 2>/dev/null
 fi
 case "$POZ" in 0) STOP="gerekmiyor (pozisyon yok)";; bilinmiyor) STOP="bilinmiyor";; *) STOP="bot kapalıyken yazılım stopu çalışmıyor";; esac
 METIN="[CT] 🔴 Bot durdu

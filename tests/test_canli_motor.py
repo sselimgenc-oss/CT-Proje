@@ -365,7 +365,7 @@ def test_uctan_uca_altin_ornek_acilis_azaltma_kapanis(tmp_path):
     assert not any("Son " in x and "emir (" in x for x in tgp.gonderilen)                                         # emirler ayrı ayrı gitmez; biriktirilir
     m.emir_ozeti(saat(), zorla=True)
     assert not any("Son 15 dakikada" in x for x in tgp.gonderilen) and any(k["tur"] == "emir_ozeti" for k in kayitlar(tmp_path, "tg_bastirildi"))          # özet bastırılan tür
-    assert any(x.startswith("🟢 BTC AL açıldı · trader ") and "Giriş 100 · Tutar 27,3 $ · Stop 80" in x for x in tgp.gonderilen)              # açıldı: 2 satır
+    assert any(x.startswith("🟢 BTC AL açıldı · trader ") and "Giriş 100 (trader 100 · fark %0,00) · Tutar 27,3 $ · Stop 80" in x for x in tgp.gonderilen)              # açıldı: 2 satır
     assert any(x.startswith("✅ BTC kapandı · trader ") or x.startswith("🔻 BTC kapandı · trader ") for x in tgp.gonderilen)
     assert not any("Yeni trader takibe alındı" in x for x in tgp.gonderilen)
 
@@ -597,8 +597,8 @@ def test_telegram_komutlari_yalniz_yapilandirilmis_sohbetten_ve_biçim():
     assert t.komutlari_al() == ["/durum"] and t.offset == 4
     acik = [{"coin": "BTC", "sz": 0.5, "usd": 1234.0, "kz_usd": 12.34}, {"coin": "ETH", "sz": -2.0, "usd": 80.0, "kz_usd": -1.5}]
     assert tg.msg_gunluk("sanal", 1000, 1012.5, 1000.0, 58, 9, 11, acik, -0.12) == (
-        "📋 Günlük rapor (sanal · deneme parası)\n━━━━━━━━━━━━━━\n💰 Kasa şimdi: 1.012,50 $ (başlangıç 1.000 $) · başlangıçtan beri +%1,25\n📈 Son 24 saat: +12,50 $ (+%1,25) · 💸 funding (sanal) −0,12 $\n"
-        "🧾 Bugün 58 emir · 👥 takipte 9/11 trader\n📌 Açık pozisyon: 2 (K/Z: 🟩 BTC +12,34 $ · 🔻 ETH −1,50 $)\n🛡️ Risk: normal, motor çalışıyor\nAyrıntı: pano")
+        "📋 Günlük rapor (sanal · deneme parası)\n━━━━━━━━━━━━━━\n💰 Özsermaye: 1.012,50 $ (başlangıç 1.000 $) · başlangıçtan beri +%1,25\n📈 Günün K/Z (son 24 saat): +12,50 $ (+%1,25) · 💸 funding (sanal) −0,12 $\n"
+        "📌 Açık pozisyon: 2 (K/Z: 🟩 BTC +12,34 $ · 🔻 ETH −1,50 $)\n🧾 Bugün 58 emir · 👥 takipte 9/11 trader\n🛡️ Risk: normal, motor çalışıyor\nAyrıntı: pano")                  # ilk 3 satır: özsermaye, günün K/Z'si, açık pozisyon
     assert tg.kisa(adr(255)) == "0x000000…"
 
 

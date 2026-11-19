@@ -1,0 +1,9 @@
+[Unit]
+Description=sg-arge sanal bot ikinci alarm kontrolu (5 dk)
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target

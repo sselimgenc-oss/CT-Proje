@@ -174,9 +174,11 @@ alarm_kontrol() {   # sg-sanal son 1 saatte >ALARM_SINIR kez yeniden başladı m
   if [ "$sonuc" = "oom-kill" ]; then oom=1; fi
   toplam="$("$SYSTEMCTL" show -p NRestarts --value sg-sanal 2>/dev/null || true)"; [[ "$toplam" =~ ^[0-9]+$ ]] || toplam=null
   simdi="$(date +%s)"
+  ALARM_DURUM_DIZIN="$DEPO/durum" bash "$DEPO/deploy/alarm_ikinci.sh" >/dev/null 2>&1 || true      # bot 20 dk dönmediyse ikinci sesli mesaj (5 dk'lık timer asıl yol; bu saatlik yedek)
   # günlük özet için küçük JSON (atomik yaz)
   if kt="$(mktemp "$SAGLIK_JSON.XXXXXX" 2>/dev/null)"; then
-    printf '{"zaman": %s, "yeniden_baslama_1s": %s, "oom_son": %s, "nrestarts_toplam": %s}\n' "$simdi" "$sayi" "$([ "$oom" = 1 ] && echo true || echo false)" "$toplam" > "$kt" \
+    gun_say="$(grep -c "^$(date -u +%F)$" "$DURUM/guncelleme_gunlugu" 2>/dev/null || true)"; [[ "$gun_say" =~ ^[0-9]+$ ]] || gun_say=0
+    printf '{"zaman": %s, "yeniden_baslama_1s": %s, "oom_son": %s, "nrestarts_toplam": %s, "guncelleme_bugun": %s}\n' "$simdi" "$sayi" "$([ "$oom" = 1 ] && echo true || echo false)" "$toplam" "$gun_say" > "$kt" \
       && chmod 644 "$kt" && mv -f -- "$kt" "$SAGLIK_JSON" || rm -f -- "$kt"
   fi
   for t in yeniden oom; do
@@ -298,6 +300,12 @@ motor_saglam || geri_al "sg-sanal ${BEKLE} sn sonra aktif değil"
 
 printf '%s\n' "$yeni" > "$DURUM/uygulanan_sha"
 rm -f "$DURUM/kotu_sha" "$DURUM/reddedilen"; rm -rf "$YEDEK"
-if [ -n "$HEDEF" ]; then bildir_rutin "Sunucu elle geri alındı: ${onceki:0:7}→${yeni:0:7} (${konu})"; else bildir_rutin "Sunucu güncellendi: ${onceki:0:7}→${yeni:0:7} (${konu})"; fi
+if [ -n "$HEDEF" ]; then
+  bildir INFO "Bot önceki sürüme döndürüldü"                                  # sessiz (INFO); sürüm numaraları günlükte
+  log "elle geri alındı: ${onceki:0:7}→${yeni:0:7} (${konu})"
+else
+  date -u +%F >> "$DURUM/guncelleme_gunlugu"; tail -n 200 "$DURUM/guncelleme_gunlugu" > "$DURUM/guncelleme_gunlugu.tmp" && mv -f "$DURUM/guncelleme_gunlugu.tmp" "$DURUM/guncelleme_gunlugu"      # günlük rapor: "Bot bugün N kez güncellendi"
+  bildir_rutin "Sunucu güncellendi: ${onceki:0:7}→${yeni:0:7} (${konu})"       # Telegram'a GİTMEZ (günlüğe tg_bastirildi)
+fi
 log "tamam: ${yeni:0:7}"
 exit 0

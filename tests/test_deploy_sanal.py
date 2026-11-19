@@ -386,7 +386,7 @@ def test_geri_al_onay_ister_ve_onayla_dondurur(sunucu):
     assert r.returncode == 2
     r = subprocess.run(["bash", str(GERI_AL), sunucu.v1[:7]], env=sunucu.ortak, input="evet\n", capture_output=True, text=True)
     assert r.returncode == 0, r.stdout + r.stderr
-    assert sunucu.head() == sunucu.v1 and (sunucu.durum / "dondur").exists() and "tg_bastirildi: sunucu_guncellendi (Sunucu elle geri alındı" in r.stdout
+    assert sunucu.head() == sunucu.v1 and (sunucu.durum / "dondur").exists() and "TG:text=[CT] Bot önceki sürüme döndürüldü" in sunucu.log.read_text() and "NS:disable_notification=true" in sunucu.log.read_text() and "Sunucu güncellendi" not in sunucu.log.read_text()
 
 
 # ------------------------------------------------------------------------------------------------ kaynak sınırları ve haftalık bakım
@@ -497,3 +497,12 @@ def test_alarm_bot_durdu_acik_pozisyon_sayisi_defterden(sunucu):
     sunucu.calistir(JOURNAL_SANAL=_yeniden(4))
     tg = _tg(sunucu)
     assert len(tg) == 1 and "Açık pozisyon: 2 · Stop: bot kapalıyken yazılım stopu çalışmıyor" in tg[0]
+
+
+def test_guncelleme_sayaci_saglik_jsona_yazilir_gunluk_rapor_icin(sunucu):
+    sunucu.yeni_commit("v2")
+    sunucu.ci(*YESIL)
+    assert sunucu.calistir().returncode == 0
+    assert (sunucu.durum / "guncelleme_gunlugu").read_text().split() == [time.strftime("%Y-%m-%d", time.gmtime())]
+    sunucu.calistir()                                                                               # sonraki çalışma sağlık JSON'unu yazar
+    assert json.loads(Path(sunucu.ortak["SANAL_SAGLIK_JSON"]).read_text())["guncelleme_bugun"] == 1

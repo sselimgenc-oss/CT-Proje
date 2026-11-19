@@ -137,7 +137,7 @@ def test_acildi_mesaji_2_satir_trader_adi_panodaki_ile_ayni_ve_sade_coin():
     m = tg.msg_acildi(ADR, "SOL", "B", 150.25, 27.3, 120.2, "sanal")
     satirlar = m.splitlines()
     assert len(satirlar) == 2 and satirlar[0] == f"🟢 SOL AL açıldı · trader {pano.kisa(ADR)} (sanal)"             # trader adı = pano.kisa
-    assert satirlar[1] == "Giriş 150,25 · Tutar 27,3 $ · Stop 120,2" and "_" not in m and tg.kisa(ADR) == pano.kisa(ADR)
+    assert satirlar[1] == "Giriş 150,25 · Tutar 27,3 $ · Stop 120,20" and "_" not in m and tg.kisa(ADR) == pano.kisa(ADR)
     assert tg.onem_duzeyi(m) == "INFO"
 
 
@@ -179,28 +179,30 @@ def test_motor_bot_durdu_mesaji_ve_yeniden_calisinca_tek_duzeldi(tmp_path):
     (tmp_path / "durum" / "DUR").unlink()                                # sorun giderildi, bot yeniden başlıyor
     m2, hl2, saat2, tgp2 = kur(tmp_path, saat=saat)
     m2.baslat()
+    assert not (tmp_path / "durum" / "tg_bot_durdu").exists()
+    m2.kesinti_duzeldi_bildir(dict(m2._say_gun))                         # açılış yetişmesi sonrası
     d = [x for x in tgp2.gonderilen if "Düzeldi" in x]
-    assert len(d) == 1 and "bot yeniden çalışıyor" in d[0] and not (tmp_path / "durum" / "tg_bot_durdu").exists()
-    m3, *_r = kur(tmp_path, saat=saat)
-    m3.baslat()
-    assert not [x for x in _r[2].gonderilen if "Düzeldi" in x]           # ikinci kez Düzeldi yok
+    assert len(d) == 1 and "0 dk kapalı kaldı; bu sürede kaçan işlem yok." in d[0] and d[0].startswith("✅ Düzeldi: bot yeniden çalışıyor")
+    m2.kesinti_duzeldi_bildir(dict(m2._say_gun))
+    assert len([x for x in tgp2.gonderilen if "Düzeldi" in x]) == 1       # ikinci kez Düzeldi yok
 
 
 def test_gunluk_kayip_yuzde_80_gunde_bir_uyari_ve_limit_doldu_acik_pozisyonu_soyler(tmp_path):
     from tests.test_canli_motor import kur, olay, adr
-    m, hl, saat, tgp = kur(tmp_path)
+    m, hl, saat, tgp = kur(tmp_path, kasa=10_000.0)
     m.baslat()
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     simdi = saat()
-    m.risk.ozsermaye_isle(1000.0, simdi)
-    m.risk.gun_basi = 1000.0
+    m.risk.ozsermaye_isle(10_000.0, simdi)
+    m.risk.gun_basi = 10_000.0
     sinir = float(m.rules["canli_gunluk_kayip_oran"])
-    m.ozsermaye = lambda: 1000.0 * (1 - 0.8 * sinir)                      # kayıp = limitin %80'i
+    m.ozsermaye = lambda: 10_000.0 * (1 - 0.8 * sinir)                    # sanal 10.000 $: %4 kayıp (limit %5'in %80'i) → özsermaye 9.600 $
     m._risk(simdi)
     m._risk(simdi + 60_000)
     uy = [x for x in tgp.gonderilen if x.startswith("⚠️ Günlük kayıp limitine yaklaşıldı")]
     assert len(uy) == 1 and tg.onem_duzeyi(uy[0]) == "WARN" and "Senden bir şey gerekmiyor." in uy[0] and len(uy[0].splitlines()) + 1 <= 6
-    m.ozsermaye = lambda: 1000.0 * (1 - sinir)                            # limit doldu
+    assert "özsermaye 9.600,00 $" in uy[0] and "Bugünkü kayıp %4,0 (limit %5)" in uy[0]
+    m.ozsermaye = lambda: 10_000.0 * (1 - sinir)                          # limit doldu
     m._risk(simdi + 120_000)
     dol = [x for x in tgp.gonderilen if "Günlük kayıp sınırı" in x]
     assert len(dol) == 1 and "1 açık pozisyon izlenmeye devam ediyor" in dol[0] and "yeni pozisyon açılmıyor" in dol[0]
@@ -268,3 +270,184 @@ def test_motor_kapali_bekci_ve_cokme_bot_durdu_biciminde(tmp_path):
     b.kontrol()
     bd = [x for x in tgp2.gonderilen if x.startswith("🔴 Bot durdu")]
     assert bd and "Neden: motor dondu" in bd[0] and "Açık pozisyon: 1 · Stop: bot kapalıyken yazılım stopu çalışmıyor" in bd[0] and (tmp_path / "x" / "durum" / "tg_bot_durdu").exists()
+
+
+# ---------------------------------------------------------------------------------------------- danışman düzeltmeleri (kopya doğruluğu, artırma/azaltma, bot durdu, güncelleme, işlem sınırı)
+def _kur10k(tmp_path, **kurallar):
+    from tests.test_canli_motor import kur
+    m, hl, saat, tgp = kur(tmp_path, kasa=10_000.0, kurallar=kurallar or None)
+    m.baslat()
+    return m, saat, tgp
+
+
+def test_acildi_trader_fiyati_fark_ve_gecikme_eki_yalniz_esik_asilinca():
+    m = tg.msg_acildi(ADR, "SOL", "B", 150.25, 27.3, 120.2, "sanal", trader_px=150.10)
+    assert m.splitlines()[1] == "Giriş 150,25 (trader 150,10 · fark %0,10) · Tutar 27,3 $ · Stop 120,20"
+    g = tg.msg_acildi(ADR, "SOL", "B", 150.25, 27.3, 120.2, "sanal", trader_px=150.10, gecikme_sn=45)
+    assert g.splitlines()[1].endswith("· Stop 120,20 · 45 sn geç") and len(g.splitlines()) == 2
+
+
+def test_motor_acildi_gercek_trader_fiyati_ve_esik_alti_gecikmede_ek_yok(tmp_path):
+    from tests.test_canli_motor import olay, adr
+    m, saat, tgp = _kur10k(tmp_path)
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat, yas_ms=100_000))        # 100 sn < canli_olay_stale_sn (120)
+    a = [x for x in tgp.gonderilen if x.startswith("🟢 BTC AL açıldı")]
+    assert len(a) == 1 and "(trader 100 · fark %" in a[0] and "sn geç" not in a[0] and len(a[0].splitlines()) == 2
+
+
+def test_kapandi_toplam_tutar_artirma_ve_yuzde_toplam_tutara_gore(tmp_path):
+    from tests.test_canli_motor import olay, adr
+    m, saat, tgp = _kur10k(tmp_path)
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))            # açılış
+    m.olay_isle(olay("a:2", adr(1), "BTC", "B", 300, 100.0, 300.0, saat))          # artırma
+    n_oz = len(tgp.gonderilen)
+    m.olay_isle(olay("a:3", adr(1), "BTC", "A", 600, 100.0, 600.0, saat))          # tam kapanış
+    k = [x for x in tgp.gonderilen if " BTC kapandı · trader " in x]
+    assert len(k) == 1 and len(k[0].splitlines()) == 3 and n_oz >= 1
+    ust = k[0].splitlines()
+    import re as _re
+    toplam = float(_re.search(r"Toplam tutar ([\d.,]+) \$ \(1 artırma\)", ust[2]).group(1).replace(".", "").replace(",", "."))
+    kz = float(_re.search(r"([+−])([\d.,]+) \$", ust[1]).group(0).replace("+", "").replace("−", "-").replace(" $", "").replace(".", "").replace(",", "."))
+    pct = float(_re.search(r"\(([+−])%([\d.,]+)\)", ust[1]).group(0).strip("()").replace("%", "").replace("+", "").replace("−", "-").replace(",", "."))
+    assert toplam > 40 and abs(pct - round(kz / toplam * 100, 2)) < 0.011                 # yüzde TOPLAM tutara göre
+    assert m._say_gun["artir"] == 1 and m._say_gun["ac"] == 1
+
+
+def test_trader_acti_biz_acamadik_sessiz_6_saat_ve_kural_gereji_atlananlar_gonderilmez(tmp_path):
+    from tests.test_canli_motor import olay, adr
+    m, saat, tgp = _kur10k(tmp_path)
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat, yas_ms=130_000))        # geç görülen açılış = kaçırılan
+    m.olay_isle(olay("a:2", adr(1), "BTC", "B", 300, 100.0, 0.0, saat, yas_ms=131_000))
+    k = [x for x in tgp.gonderilen if x.startswith("ℹ️ Trader açtı, biz açamadık")]
+    assert len(k) == 1 and "geç görülen açılış" in k[0] and "BTC · trader" in k[0]            # 6 saat kuralı: ikinci mesaj yok
+    m.olay_isle(olay("a:3", adr(1), "@142", "B", 300, 100.0, 0.0, saat))                       # spot = kural gereği atlanır
+    assert len([x for x in tgp.gonderilen if "biz açamadık" in x]) == 1
+    assert tg.onem_duzeyi(k[0]) == "INFO"
+
+
+def test_trader_kapatti_biz_kapatamadik_mesaji(tmp_path):
+    from tests.test_canli_motor import adr
+    m, saat, tgp = _kur10k(tmp_path)
+    m._eksik_ekle(adr(1), "BTC", "kapat", 0.0, "tam_kapanis", saat(), deneme=len(m.rules["canli_kapanis_bantlari"]))
+    k = [x for x in tgp.gonderilen if x.startswith("ℹ️ Trader kapattı, biz kapatamadık")]
+    assert len(k) == 1 and "kapanış emri doldurulamadı" in k[0]
+
+
+def test_islem_mesaji_saatlik_ust_sinir_ve_toplu_satir(tmp_path):
+    from tests.test_canli_motor import olay, adr
+    m, saat, tgp = _kur10k(tmp_path, canli_telegram_islem_saat_max=2)
+    for i, c in enumerate(("BTC", "ETH", "SOL", "ADA")):
+        m.olay_isle(olay(f"a:{i}", adr(1), c, "B", 300, 100.0, 0.0, saat))
+    assert len([x for x in tgp.gonderilen if "açıldı · trader" in x]) == 2                   # üst sınır 2
+    saat.ms += 3_600_000 + 60_000
+    m.emir_ozeti(saat())
+    toplu = [x for x in tgp.gonderilen if x.startswith("🧾 +")]
+    fazla = m._say_gun["ac"] - 2
+    assert fazla >= 1 and toplu == [f"🧾 +{fazla} işlem daha: {fazla} açılış, 0 kapanış, net +0,00 $"] and tg.onem_duzeyi(toplu[0]) == "INFO"
+    m.emir_ozeti(saat())
+    assert len([x for x in tgp.gonderilen if x.startswith("🧾 +")]) == 1
+
+
+def test_islem_mesajlari_sessiz_info(tmp_path):
+    t, post, _ = _t()
+    t.gonder(tg.msg_acildi(ADR, "SOL", "B", 150.25, 27.3, 120.2, "sanal"))
+    t.gonder(tg.msg_kapandi(ADR, "SOL", -2.0, -0.05, "felaket_stop", "sanal"))
+    t.gonder(tg.msg_islem_toplu(4, 3, -2.1))
+    t.gonder(tg.msg_kopya_hata("ac", "SOL", ADR, "geç görülen açılış"))
+    assert [y["disable_notification"] for y in post.yukler] == [True] * 4
+    assert post.yukler[2]["text"] == "[CT] 🧾 +7 işlem daha: 4 açılış, 3 kapanış, net −2,10 $"
+
+
+def test_gunluk_rapor_kopya_dogrulugu_artirma_azaltma_ve_guncelleme_ilk_3_satir():
+    acik = [{"coin": "BTC", "sz": 0.5, "usd": 1234.0, "kz_usd": 12.34}]
+    m = tg.msg_gunluk("sanal", 10_000, 10_025.0, 10_000.0, 12, 9, 11, acik, kopya_fark=0.0012, gecikme_sn=3.4, artir=5, azalt=2, guncelleme=2)
+    s = m.splitlines()
+    assert s[2].startswith("💰 Özsermaye: 10.025,00 $") and s[3].startswith("📈 Günün K/Z") and s[4].startswith("📌 Açık pozisyon")          # ilk 3 satır
+    assert "🧾 Bugün 12 emir (5 artırma, 2 azaltma)" in m and "🎯 Kopya doğruluğu: ortalama fark %0,12 · ortalama gecikme 3 sn" in m and "🔄 Bot bugün 2 kez güncellendi" in m
+    h = tg.msg_haftalik("sanal", 10_000.0, 10_100.0, 10_000.0, None, None, 5, [], acik_poz=3).splitlines()
+    assert h[2].startswith("💰 Özsermaye") and h[3].startswith("📈 Hafta") and h[4] == "📌 Açık pozisyon: 3"
+
+
+def test_motor_gunluk_metin_kopya_dogrulugu_ve_artirma_sayisi(tmp_path):
+    from tests.test_canli_motor import olay, adr
+    m, saat, tgp = _kur10k(tmp_path)
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    m.olay_isle(olay("a:2", adr(1), "BTC", "B", 300, 100.0, 300.0, saat))
+    metin = m._gunluk_metin()
+    assert "(1 artırma, 0 azaltma)" in metin
+    assert "🎯 Kopya doğruluğu: ortalama fark %" in metin and "ortalama gecikme" in metin
+
+
+def test_guncelleme_bugun_saglik_dosyasindan(tmp_path):
+    import json
+    import time as _t2
+    from copytrade.canli import gunluk_ozet
+    yol = tmp_path / "s.json"
+    yol.write_text(json.dumps({"zaman": _t2.time(), "guncelleme_bugun": 3}))
+    assert gunluk_ozet.guncelleme_bugun({"SG_SAGLIK_SUNUCU": str(yol)}) == 3
+    yol.write_text(json.dumps({"zaman": _t2.time() - 99_999, "guncelleme_bugun": 3}))
+    assert gunluk_ozet.guncelleme_bugun({"SG_SAGLIK_SUNUCU": str(yol)}) is None
+    assert gunluk_ozet.guncelleme_bugun({"SG_SAGLIK_SUNUCU": str(tmp_path / "yok.json")}) is None
+
+
+def test_duzeldi_kesinti_suresi_ve_kacan_islem_varsa_sesli(tmp_path):
+    m, saat, tgp = _kur10k(tmp_path)
+    kayit = []
+    gercek = m.tg.gonder
+    m.tg.gonder = lambda metin, onem=None, anahtar=None, tur=None: (kayit.append((metin, onem)), gercek(metin, onem, anahtar, tur))[1]
+    once = dict(m._say_gun)
+    m._kesinti = {"sn": 12 * 60}
+    m._say_gun["kapat"] += 1                                             # yetişmede trader'ın bir kapanışı bizde de uygulandı
+    m.kesinti_duzeldi_bildir(once)
+    assert kayit[-1][0].splitlines()[1] == "12 dk kapalı kaldı; bu sürede trader 1 pozisyon kapattı, bizde de kapatıldı." and kayit[-1][1] == "CRIT"      # kaçan işlem → sesli
+    m._kesinti = {"sn": 5 * 60}
+    m.kesinti_duzeldi_bildir(dict(m._say_gun))
+    assert kayit[-1][0].splitlines()[1] == "5 dk kapalı kaldı; bu sürede kaçan işlem yok." and kayit[-1][1] == "INFO"                                  # kaçan yok → sessiz
+
+
+def test_kasa_siniri_mesaji_olculen_seyin_adini_soyler(tmp_path):
+    m, saat, tgp = _kur10k(tmp_path)
+    m.kasa = 1_200.0
+    m.risk.kasa_siniri_asildi = lambda kasa, ust=None: True
+    m._risk(saat())
+    x = [t for t in tgp.gonderilen if "Kasa sınırı aşıldı" in t]
+    assert x and "Başlangıç sermayesi (kasa) 1.200 $ > izin verilen üst sınır" in x[0]
+
+
+def _ikinci(tmp_path, yas_sn, aktif=False, **ek):
+    import os as _os
+    import subprocess as _sp
+    import time as _tm
+    kok = Path(__file__).resolve().parents[1]
+    durum = tmp_path / "durum"
+    durum.mkdir(exist_ok=True)
+    (durum / "hesap.json").write_text('{"poz": {"0xa": {"BTC": {}, "ETH": {}}}}')
+    if yas_sn is not None:
+        (durum / "tg_bot_durdu").write_text(f"{int(_tm.time()) - yas_sn}\nsen /hepsini_kapat ile durdurdun\n")
+    kayit = tmp_path / "kayit.txt"
+    bin_ = tmp_path / "bin"
+    bin_.mkdir(exist_ok=True)
+    (bin_ / "curl").write_text(f'#!/bin/sh\ncat >/dev/null\nfor a in "$@"; do case "$a" in text=*) printf "%s" "$a" >> {kayit};; esac; done\nexit 0\n')
+    (bin_ / "systemctl").write_text(f'#!/bin/sh\nexit {0 if aktif else 3}\n')
+    for f in bin_.iterdir():
+        f.chmod(0o755)
+    env = {"PATH": f"{bin_}:{_os.environ['PATH']}", "ALARM_DURUM_DIZIN": str(durum), "TELEGRAM_BOT_TOKEN": "TOK123", "TELEGRAM_CHAT_ID": "42", **ek}
+    r = _sp.run(["bash", str(kok / "deploy" / "alarm_ikinci.sh")], env=env, capture_output=True, text=True)
+    return r, kayit, durum
+
+
+def test_bot_durdu_ikinci_mesaj_20_dk_sonra_orkestratore_yaz(tmp_path):
+    r, kayit, durum = _ikinci(tmp_path, 100)                              # 100 sn: henüz erken
+    assert r.returncode == 0 and not kayit.exists()
+    r, kayit, durum = _ikinci(tmp_path, 1300)                             # 21+ dk: ikinci mesaj
+    m = kayit.read_text()
+    assert m.startswith("text=[CT] 🔴 Bot hâlâ kapalı (21 dk)\nNeden: sen /hepsini_kapat ile durdurdun\nAçık pozisyon: 2 · Stop: bot kapalıyken yazılım stopu çalışmıyor\n")
+    assert m.endswith("Senden: orkestratöre 'CT botu durdu' yaz.") and (durum / "tg_bot_durdu_2").exists() and "TOK123" not in r.stdout + r.stderr
+    kayit.unlink()
+    _ikinci(tmp_path, 1300)                                               # yalnız bir kez
+    assert not kayit.exists()
+
+
+def test_bot_durdu_ikinci_mesaj_bot_calisiyorsa_yok(tmp_path):
+    r, kayit, durum = _ikinci(tmp_path, 1300, aktif=True)
+    assert not kayit.exists() and not (durum / "tg_bot_durdu_2").exists()

@@ -222,7 +222,7 @@ def test_gunluk_rapor_en_fazla_12_satir_ve_ayrinti_son_satir():
     satirlar = metin.splitlines()
     assert len(satirlar) <= 12, metin
     assert satirlar[-1] == "Ayrıntı: pano" and satirlar[0].startswith("📋 Günlük rapor (sanal")
-    assert "Kasa şimdi: 1.012,50 $" in satirlar[2] and "Son 24 saat: +12,50 $" in metin
+    assert "Özsermaye: 1.012,50 $" in satirlar[2] and "Günün K/Z (son 24 saat): +12,50 $" in satirlar[3] and satirlar[4].startswith("📌 Açık pozisyon")   # ilk 3 satır: özsermaye, günün K/Z'si, açık pozisyon
     assert "Yeni işlemler kapalı" in metin and "Günlük kayıp freni" in metin and "Mutabakat farkı" in metin
     assert "🩺 Sağlık (bu oturum): Telegram gönderim hatası 2 · borsa istek sınırı (429) 5" in satirlar
 

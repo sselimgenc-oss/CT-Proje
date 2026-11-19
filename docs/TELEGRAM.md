@@ -40,3 +40,6 @@ Kod: `copytrade/canli/telegram.py` (gönderim, komut okuma, onay), `copytrade/ca
 - Açıldı: 2 satır (başlık + Giriş · Tutar · Stop). Kapandı: $, %, neden. Zararlı kapanış 🔻; 🔴 yalnız kritik ("Bot durdu", 6 saat sınırına takılmaz).
 - Günlük kayıp limitinin %80'inde günde bir uyarı; limit dolunca açık pozisyonlara ne olduğu söylenir.
 - Bastırılan türler (`telegram.BASTIRILAN_TURLER`): Telegram'a gitmez, kayda `tg_bastirildi` yazılır: saha_giris, saha_cikis, saha_uyari, saatlik_bos, emir_ozeti, emir_artir_azalt (+ kopya_sapmasi satırı, sunucu güncellendi INFO: bash `SANAL_TG_BASTIR_INFO`).
+- Açıldı/kapandı mesajları SESSİZ; saatlik üst sınır `canli_telegram_islem_saat_max` (10), aşanlar saat sonunda "+N işlem daha" tek satırında. Kopya hatası (trader açtı/kapattı, biz yapamadık) sessiz, 6 saatte bir.
+- Bot durdu: 20 dk dönmezse ikinci sesli mesaj (`deploy/alarm_ikinci.sh`, `sg-sanal-ikinci-alarm.timer` 5 dk; sunucuda bir kez `systemctl enable --now sg-sanal-ikinci-alarm.timer`). Düzeldi: kesinti süresi + o sürede olanlar; kaçan işlem varsa sesli.
+- "Sunucu güncellendi" mesajı yok; günlük rapora "Bot bugün N kez güncellendi". Elle geri alma: sessiz "Bot önceki sürüme döndürüldü".

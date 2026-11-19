@@ -186,16 +186,17 @@ def test_g18_gercek_kip_emir_mesajlari_tamponda_birlesir(tmp_path):
     once = len(tgp.gonderilen)
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     m.olay_isle(olay("a:2", adr(2), "ETH", "B", 300, 2000.0, 0.0, saat))
-    assert len(tgp.gonderilen) == once + 1 and tgp.gonderilen[once].startswith("🟢 BTC AL açıldı · trader ") and "Giriş 100 · Tutar 27,3 $ · Stop 80" in tgp.gonderilen[once]     # açıldı: anında, ayrı, 2 satır
+    assert len(tgp.gonderilen) == once + 2 and tgp.gonderilen[once].startswith("🟢 BTC AL açıldı · trader ") and "Giriş 100 (trader 100 · fark %0,00) · Tutar 27,3 $ · Stop 80" in tgp.gonderilen[once]
+    assert tgp.gonderilen[once + 1].startswith("ℹ️ Trader açtı, biz açamadık: emir reddedildi")                 # sessiz bilgi: gerçek hata/eksik kopya     # açıldı: anında, ayrı, 2 satır
     assert len(zamanlar) == 1 and zamanlar[0][0] == t.tampon_sn                                            # sorunlu (dolmayan) emir: tek zamanlayıcı, henüz mesaj yok
     zamanlar[0][1]()                                                                                       # 2,5 sn doldu
-    yeni = tgp.gonderilen[once + 1:]
+    yeni = tgp.gonderilen[once + 2:]
     assert len(yeni) == 1
     satirlar = yeni[0].splitlines()
     assert satirlar[0].startswith("🚨 [GERÇEK] EMİR REDDEDİLDİ — ETH ac ") and "neden: hl err: Invalid nonce" in yeni[0] and not t.sessiz_mi(yeni[0])
     m.olay_isle(olay("a:3", adr(1), "BTC", "B", 300, 100.0, 300.0, saat))                                   # dolu artırma: Telegram'a gitmez (kayda tg_bastirildi)
     m.emir_ozeti(m.saat_ms(), zorla=True)
-    assert len(tgp.gonderilen) == once + 2 and any(k["tur"] == "emir_artir_azalt" for k in kayitlar(tmp_path, "tg_bastirildi"))
+    assert len(tgp.gonderilen) == once + 3 and any(k["tur"] == "emir_artir_azalt" for k in kayitlar(tmp_path, "tg_bastirildi"))
 
 
 def test_m3_kapanis_pozisyonla_kirpilip_tamami_dolarsa_dolu_altin_ornek():
