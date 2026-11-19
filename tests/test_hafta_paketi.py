@@ -1,4 +1,4 @@
-"""CT haftalık veri paketi (`copytrade/canli/hafta_paketi.py`): altın çıktı, eksik girdi uyarıları, Cumartesi-bir-kez koruması, kanca, yayım betikleri. Ağsız (radar okuyucu sahte)."""
+"""CT haftalık veri paketi (`copytrade/canli/hafta_paketi.py`): altın çıktı, eksik girdi uyarıları, Pazar-bir-kez koruması, kanca, yayım betikleri. Ağsız (radar okuyucu sahte)."""
 from __future__ import annotations
 
 import json
@@ -13,7 +13,7 @@ from copytrade.canli import motor as mt
 from tests.test_gunluk_ozet import _motor
 
 ROOT = Path(__file__).resolve().parent.parent
-PAZAR = date(2026, 11, 22)
+PAZAR = date(2026, 11, 23)                                               # rapor günü Pazartesi
 
 
 @pytest.fixture(autouse=True)
@@ -26,7 +26,7 @@ def _ms(y, a, g, s, d=0):                                          # UTC -> ms
     return int(datetime(y, a, g, s, d, tzinfo=UTC).timestamp() * 1000)
 
 
-OZET = {"sema": "ortak.gunluk_ozet.v1", "uretim": "2026-11-21T18:05:00Z", "gun": "2026-11-21", "mod": "sanal",
+OZET = {"sema": "ortak.gunluk_ozet.v1", "uretim": "2026-11-22T18:05:00Z", "gun": "2026-11-22", "mod": "sanal",
         "kasa": {"baslangic": 10000.0, "simdi": 10050.0, "gun_pnl": 5.0, "toplam_pnl": 50.0, "zirveden_dusus_yuzde": 0.7},
         "islem": {"acik_pozisyon": 12},
         "ogrenme": {"aktif_ders": 2, "yeni_ders": 0, "emekli_ders": 1, "filtre_aktif": True, "filtre_atlanan": 4, "filtre_karsi_olgu_pnl": -3.5, "ders_kucultulen": 2, "ders_engellenen": 1},
@@ -34,12 +34,12 @@ OZET = {"sema": "ortak.gunluk_ozet.v1", "uretim": "2026-11-21T18:05:00Z", "gun":
         "kopya_kalite": {"n": 40, "gecikme_ms_medyan": 500.0, "gecikme_ms_p90": 900.0, "kayma_bps_medyan": 0.1, "kayma_bps_p90": 2.0}}
 REJIM = {"tablolar": {"rejim_1d": [{"etiket": "range", "n": 4, "kazanan": 3, "isabet_yuzde": 75.0, "toplam_pnl": 8.0, "ortalama_pnl": 2.0}], "rejim_4h": [], "duygu": []}}
 SECIM = {"toplu": {"durum": "tamam", "gun_n": 3, "rho_ort": 0.12, "p": 0.31},
-         "gunler": [{"gun": "2026-11-20", "durum": "tamam", "kopyalanan_n": 5, "kadro_n": 11, "rho": 0.2, "p": 0.2, "toplam_net_pnl": 4.0}]}
+         "gunler": [{"gun": "2026-11-21", "durum": "tamam", "kopyalanan_n": 5, "kadro_n": 11, "rho": 0.2, "p": 0.2, "toplam_net_pnl": 4.0}]}
 KURAL = {"vurgu": {"slot_tavani": {"olay_adedi": 900, "trader_sayisi": 8, "toplam_karsi_olgu_pnl": 12.5, "karsi_olgu_kapanan_pnl": 10.0, "karsi_olgu_acik_pnl": 2.5, "hayali_nosyonel": 5000.0}},
          "satirlar": [{"neden": "slot_tavani", "olay_adedi": 900, "trader_sayisi": 8, "toplam_karsi_olgu_pnl": 12.5, "hayali_nosyonel": 5000.0}]}
-RADAR = [{"tarih": "2026-11-20", "gruplar": {"ilk11": {"n": 10, "ortalama": 0.01, "kar_orani": 0.6}},
+RADAR = [{"tarih": "2026-11-21", "gruplar": {"ilk11": {"n": 10, "ortalama": 0.01, "kar_orani": 0.6}},
           "rastgele_karsilastirma": {"durum": "tamam", "rastgele_medyan": 0.002, "yuzdelik": 80.0, "p": 0.2}}]
-GECMIS = {"2026-11-15": {"oz": 10000.0, "filtre_atlanan": 3, "filtre_kp": 1.0, "ders_kucultulen": 1, "ders_engellenen": 0, "kk_n": 30, "gecikme_med": 480.0, "gecikme_p90": 800.0,
+GECMIS = {"2026-11-16": {"oz": 10000.0, "filtre_atlanan": 3, "filtre_kp": 1.0, "ders_kucultulen": 1, "ders_engellenen": 0, "kk_n": 30, "gecikme_med": 480.0, "gecikme_p90": 800.0,
                          "kayma_med": 0.0, "kayma_p90": 1.0, "ram_tepe": 100.0, "rb": {"10": 0, "11": 1}, "oom": False, "oom_olculdu": True}}
 
 
@@ -53,11 +53,11 @@ def _dosyalar(d: Path, **ekle):
 def test_altin_cikti_tam_girdi(tmp_path):
     _dosyalar(tmp_path)
     md = hp.olustur(tmp_path, PAZAR, RADAR, GECMIS)
-    assert md.startswith("# CT haftalık veri paketi — 2026-11-22\n")
+    assert md.startswith("# CT haftalık veri paketi — 2026-11-23\n")
     basliklar = [s for s in md.splitlines() if s.startswith("## ")]
     assert [b[:5] for b in basliklar] == [f"## {i})" for i in range(1, 9)]
     assert "| sanal | 10000.00 | 10050.00 | +50.00 | +50.00 | 0.70 | 12 |" in md                      # haftalık = 10050 - 10000
-    assert "| 2026-11-20 | 10 | +1.00 | 0.60 | +0.20 | 80 | 0.200 |" in md                            # radar
+    assert "| 2026-11-21 | 10 | +1.00 | 0.60 | +0.20 | 80 | 0.200 |" in md                            # radar
     assert "ρ = +0.120" in md and "| Rejim 1g | range | 4 | 75.0 | +8.00 | +2.00 |" in md
     assert md.index("**Slot tavanı:** 900 olay") < md.index("| slot_tavani |")                         # slot tavanı satırı ilk
     assert "| hafta (1 gün kayıtlı) | 3 | +1.00 | 1 | 0 |" in md and "| bugün | 4 | -3.50 | 2 | 1 |" in md
@@ -83,33 +83,33 @@ def test_adres_maskelenir(tmp_path):
 
 
 def test_pazar_tarihi_ve_cumartesi_bir_kez(tmp_path):
-    assert hp.pazar_tarihi(_ms(2026, 11, 21, 18)) == PAZAR                                              # Cts 21:00 TSİ
-    assert hp.pazar_tarihi(_ms(2026, 11, 22, 5)) == PAZAR                                               # Paz 08:00 TSİ
-    assert hp.yazilacak_mi(_ms(2026, 11, 21, 17, 59), tmp_path) is None                                 # 20:59 TSİ: erken
-    assert hp.yazilacak_mi(_ms(2026, 11, 20, 18), tmp_path) is None                                     # Cuma
-    assert hp.yazilacak_mi(_ms(2026, 11, 22, 12), tmp_path) is None                                     # Pazar 15:00 TSİ: geç
-    assert hp.yazilacak_mi(_ms(2026, 11, 21, 18, 0), tmp_path) == PAZAR
-    assert hp.yazilacak_mi(_ms(2026, 11, 22, 4), tmp_path) == PAZAR                                     # yakalama (Pazar 07:00 TSİ)
-    (tmp_path / "CT_HAFTA_2026-11-22.md").write_text("x", encoding="utf-8")
-    assert hp.yazilacak_mi(_ms(2026, 11, 21, 19), tmp_path) is None                                     # haftada bir
+    assert hp.pazar_tarihi(_ms(2026, 11, 22, 18)) == PAZAR                                              # Paz 21:00 TSİ
+    assert hp.pazar_tarihi(_ms(2026, 11, 23, 5)) == PAZAR                                               # Pzt 08:00 TSİ
+    assert hp.yazilacak_mi(_ms(2026, 11, 22, 17, 59), tmp_path) is None                                 # 20:59 TSİ: erken
+    assert hp.yazilacak_mi(_ms(2026, 11, 21, 18), tmp_path) is None                                     # Cumartesi
+    assert hp.yazilacak_mi(_ms(2026, 11, 23, 12), tmp_path) is None                                     # Pazartesi 15:00 TSİ: geç
+    assert hp.yazilacak_mi(_ms(2026, 11, 22, 18, 0), tmp_path) == PAZAR
+    assert hp.yazilacak_mi(_ms(2026, 11, 23, 4), tmp_path) == PAZAR                                     # yakalama (Pazartesi 07:00 TSİ)
+    (tmp_path / "CT_HAFTA_2026-11-23.md").write_text("x", encoding="utf-8")
+    assert hp.yazilacak_mi(_ms(2026, 11, 22, 19), tmp_path) is None                                     # haftada bir
 
 
 def test_kanca_yazar_bir_kez_ve_hata_yutulur(tmp_path, monkeypatch):
     m, saat = _motor(tmp_path)
     cagri = []
     monkeypatch.setattr(hp, "radar_oku", lambda rules, bitis, **k: cagri.append(bitis) or RADAR)
-    saat.ms = _ms(2026, 11, 21, 18, 30)
+    saat.ms = _ms(2026, 11, 22, 18, 30)
     m._gunluk_ozet_yazim = None
     assert go.yaz_gerekirse(m) is True
     p = tmp_path / "durum" / "paylasim"
-    assert (p / "CT_HAFTA_2026-11-22.md").read_text(encoding="utf-8").startswith("# CT haftalık veri paketi — 2026-11-22")
-    assert (p / "CT_HAFTA_son.md").read_text(encoding="utf-8") == (p / "CT_HAFTA_2026-11-22.md").read_text(encoding="utf-8")
+    assert (p / "CT_HAFTA_2026-11-23.md").read_text(encoding="utf-8").startswith("# CT haftalık veri paketi — 2026-11-23")
+    assert (p / "CT_HAFTA_son.md").read_text(encoding="utf-8") == (p / "CT_HAFTA_2026-11-23.md").read_text(encoding="utf-8")
     assert (tmp_path / "durum" / "hafta_gecmis.json").exists() and len(cagri) == 1
     m._gunluk_ozet_yazim = None
     saat.ms += 3_600_000 + 1000
     go.yaz_gerekirse(m)
     assert len(cagri) == 1                                                                              # ikinci kez yazılmadı
-    (p / "CT_HAFTA_2026-11-22.md").unlink()
+    (p / "CT_HAFTA_2026-11-23.md").unlink()
     monkeypatch.setattr(hp, "olustur", lambda *a, **k: 1 / 0)
     m._gunluk_ozet_yazim = None
     assert go.yaz_gerekirse(m) is True                                                                  # günlük özet bozulmaz
@@ -137,8 +137,8 @@ def test_radar_oku_404_atlanir_ve_dosya_okunur(monkeypatch):
 
         def json(self):
             return self._d
-    monkeypatch.setattr(requests, "get", lambda url, timeout: R(200, {"tarih": url.split("/")[-2]}) if "2026-11-20" in url else R(404))
-    assert hp.radar_oku({"canli_kadro_repo": "a/b", "canli_kadro_dali": "radar"}, PAZAR) == [{"tarih": "2026-11-20"}]
+    monkeypatch.setattr(requests, "get", lambda url, timeout: R(200, {"tarih": url.split("/")[-2]}) if "2026-11-21" in url else R(404))
+    assert hp.radar_oku({"canli_kadro_repo": "a/b", "canli_kadro_dali": "radar"}, PAZAR) == [{"tarih": "2026-11-21"}]
 
 
 def test_yayim_betikleri_hafta_dosyalarini_kopyalar():

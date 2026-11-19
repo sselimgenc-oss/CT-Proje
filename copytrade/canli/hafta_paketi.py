@@ -1,9 +1,9 @@
-"""CT haftalık veri paketi (YALNIZ BİLGİ; karar/limit/eşik/işlem mantığına girmez): orkestratör ve danışmanın Pazar sabahı okuduğu TEK Markdown.
+"""CT haftalık veri paketi (YALNIZ BİLGİ; karar/limit/eşik/işlem mantığına girmez): orkestratör ve danışmanın Pazartesi sabahı okuduğu TEK Markdown.
 
 Girdi (hesap yeniden yapılmaz, hazır dosyalar okunur): `durum/paylasim/{gunluk_ozet,rejim_sonuc,secim_gercek,kural_maliyet}_v1.json`, radar dalı (`radar/<tarih>/isabet.json`,
 raw.githubusercontent.com; kadro okumasıyla aynı repo/dal kuralı, kısa zaman aşımı, hata = "radar verisi okunamadı") ve `durum/hafta_gecmis.json` (günlük özet damgalarından
 her yazımda güncellenen 14 günlük küçük geçmiş: haftalık kasa farkı, filtre/ders toplamı, gecikme/kayma, RAM tepe, yeniden başlama).
-Yazım: `durum/paylasim/CT_HAFTA_<YYYY-AA-GG>.md` (tarih = yaklaşan Pazar, TSİ) + `CT_HAFTA_son.md`; Cumartesi 21:00 TSİ'den sonra, haftada bir (dosya varsa tekrar yazılmaz).
+Yazım: `durum/paylasim/CT_HAFTA_<YYYY-AA-GG>.md` (tarih = yaklaşan Pazartesi, TSİ) + `CT_HAFTA_son.md`; Pazar 21:00 TSİ'den sonra, haftada bir (dosya varsa tekrar yazılmaz).
 Trader adresi yok (özet dosyaları zaten takma ad/adetle gelir; burada adres deseni ayrıca maskelenir).
 """
 from __future__ import annotations
@@ -62,10 +62,13 @@ def _tablo(baslik: list[str], satirlar: list[list[str]]) -> list[str]:
     return out + ["| " + " | ".join(s) + " |" for s in satirlar]
 
 
-def pazar_tarihi(simdi_ms: int) -> date:
-    """TSİ'de yaklaşan Pazar (bugün Pazar ise bugün)."""
+def rapor_tarihi(simdi_ms: int) -> date:
+    """TSİ'de yaklaşan Pazartesi (bugün Pazartesi ise bugün): orkestratörün haftalık raporu Pazartesi sabahı (ilk: 23.11.2026)."""
     g = datetime.fromtimestamp(simdi_ms / 1000, UTC).astimezone(TSI).date()
-    return g + timedelta(days=(6 - g.weekday()) % 7)
+    return g + timedelta(days=(0 - g.weekday()) % 7)
+
+
+pazar_tarihi = rapor_tarihi                                              # geriye uyum (eski ad)
 
 
 # ---------------------------------------------------------------------------------------------------- radar
@@ -136,7 +139,7 @@ def kaydet(durum_dizin: Path, ozet: dict) -> None:
 
 
 def _hafta_gunleri(gecmis: dict, bitis: date) -> list[tuple[str, dict]]:
-    """Bitişe (Pazar) kadar son 7 UTC gününün kayıtları (Pazar sabahı yazılırken kısmi Pazar günü dahil değil: Cumartesi dahil geri 7 gün)."""
+    """Bitişe (Pazartesi) kadar son 7 UTC gününün kayıtları (Pazar akşamı yazılırken bitiş günü hariç: Pazar dahil geri 7 gün)."""
     son = bitis - timedelta(days=1)
     alt = (son - timedelta(days=6)).isoformat()
     return [(g, gecmis[g]) for g in sorted(gecmis) if alt <= g <= son.isoformat() and isinstance(gecmis[g], dict)]
@@ -332,13 +335,13 @@ def olustur(paylasim: Path, hafta_bitis: date, radar: list[dict] | None, gecmis:
 
 # ---------------------------------------------------------------------------------------------------- zamanlama
 def yazilacak_mi(simdi_ms: int, paylasim: Path) -> date | None:
-    """Cumartesi ≥ 21:00 TSİ (ya da yakalama: Pazar 12:00 TSİ'ye kadar) ve o Pazar'ın dosyası henüz yoksa Pazar tarihi; değilse None."""
+    """Pazar ≥ 21:00 TSİ (ya da yakalama: Pazartesi 12:00 TSİ'ye kadar) ve o Pazartesi'nin dosyası henüz yoksa Pazartesi tarihi; değilse None."""
     t = datetime.fromtimestamp(simdi_ms / 1000, UTC).astimezone(TSI)
-    cts_gec = t.weekday() == 5 and t.hour >= 21
-    pazar_erken = t.weekday() == 6 and t.hour < 12
-    if not (cts_gec or pazar_erken):
+    pazar_gec = t.weekday() == 6 and t.hour >= 21
+    pzt_erken = t.weekday() == 0 and t.hour < 12
+    if not (pazar_gec or pzt_erken):
         return None
-    pazar = pazar_tarihi(simdi_ms)
+    pazar = rapor_tarihi(simdi_ms)
     return None if (Path(paylasim) / f"CT_HAFTA_{pazar.isoformat()}.md").exists() else pazar
 
 
