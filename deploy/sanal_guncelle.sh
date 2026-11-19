@@ -48,7 +48,7 @@ g() { as_user git -C "$DEPO" "$@"; }
 
 BASTIR_INFO="${SANAL_TG_BASTIR_INFO:-1}"   # 1 = rutin INFO (sunucu güncellendi / elle geri alındı) Telegram'a GİTMEZ, yalnız günlüğe "tg_bastirildi" yazılır; 0 = gönderilir (sessiz)
 
-bildir() {   # $1 = INFO|WARN|CRIT, $2 = metin. INFO sessiz gider (disable_notification=true); WARN/CRIT normal sesli. Token/chat yoksa sessizce atlanır; token hiçbir yere basılmaz.
+bildir() {   # $1 = INFO|WARN|CRIT (YALNIZ iç mantık: INFO sessiz; kullanıcıya yazılmaz), $2 = metin (ilk satır başlık; mesaj "[CT] <metin>" olur). INFO sessiz gider (disable_notification=true); WARN/CRIT normal sesli. Token/chat yoksa sessizce atlanır; token hiçbir yere basılmaz.
   local tok chat sessiz=false
   [ "$1" = INFO ] && sessiz=true
   [ -r "$TG_ENV" ] || { log "telegram ortam dosyası yok; bildirim atlandı"; return 0; }
@@ -56,7 +56,7 @@ bildir() {   # $1 = INFO|WARN|CRIT, $2 = metin. INFO sessiz gider (disable_notif
   chat="$(sed -n 's/^TELEGRAM_CHAT_ID=//p' "$TG_ENV" | tail -n1 | tr -d "\"'\r")"
   if [ -z "$tok" ] || [ -z "$chat" ]; then log "telegram anahtarı yok; bildirim atlandı"; return 0; fi
   if printf 'url = "%s/bot%s/sendMessage"\n' "$TG_API" "$tok" | curl -sS -f --max-time 20 --config - \
-       --data-urlencode "chat_id=$chat" --data-urlencode "disable_notification=$sessiz" --data-urlencode "text=[CT] $1"$'\n'"$2" -o /dev/null 2>/dev/null; then
+       --data-urlencode "chat_id=$chat" --data-urlencode "disable_notification=$sessiz" --data-urlencode "text=[CT] $2" -o /dev/null 2>/dev/null; then
     log "bildirim gönderildi ($1)"
   else
     log "bildirim gönderilemedi ($1)"
@@ -148,10 +148,19 @@ geri_al() {   # $1 = neden
   sleep "$BEKLE"
   motor_saglam || motor_durum="DEĞİL (elle bakın: journalctl -u sg-sanal)"
   printf '%s\n' "$yeni" > "$DURUM/kotu_sha"
-  bildir CRIT "Sunucu güncellemesi başarısız oldu (${neden}).
+  bildir CRIT "🚨 Sunucu güncellemesi başarısız oldu (${neden}).
 Eski sürüm geri yüklendi; motor: ${motor_durum}. Bu sürüm tekrar denenmeyecek.
 Senden bir şey gerekmiyor; yeni sürüm gelince otomatik denenir."
   exit 1
+}
+
+acik_poz() {   # sanal motorun defterindeki açık pozisyon sayısı (okunamazsa "bilinmiyor")
+  python3 -c 'import json,sys
+d=json.load(open(sys.argv[1]))
+print(sum(len(c) for c in (d.get("poz") or {}).values()))' "$DEPO/durum/hesap.json" 2>/dev/null || echo bilinmiyor
+}
+stop_metni() {   # $1 = açık pozisyon sayısı
+  case "$1" in 0) echo "gerekmiyor (pozisyon yok)";; bilinmiyor) echo "bilinmiyor";; *) echo "bot kapalıyken yazılım stopu çalışmıyor";; esac
 }
 
 alarm_kontrol() {   # sg-sanal son 1 saatte >ALARM_SINIR kez yeniden başladı mı / OOM-kill oldu mu. Durum: $DURUM/alarm_yeniden, $DURUM/alarm_oom (içinde son gönderim epoch'u; dosya var = alarm aktif). Hata hiçbir şeyi bozmaz.
@@ -177,11 +186,16 @@ alarm_kontrol() {   # sg-sanal son 1 saatte >ALARM_SINIR kez yeniden başladı m
       var=1
       son="$(cat "$DURUM/alarm_$t" 2>/dev/null || echo 0)"; [[ "$son" =~ ^[0-9]+$ ]] || son=0
       if [ ! -f "$DURUM/alarm_$t" ] || [ $((simdi - son)) -ge "$ALARM_ARA_SN" ]; then
-        if [ "$t" = yeniden ]; then mesaj="Sunucu motoru son 1 saatte ${sayi} kez yeniden başladı (sınır ${ALARM_SINIR}); bellek taşması $([ "$oom" = 1 ] && echo oldu || echo olmadı).
-Sunucu motoru kendiliğinden yeniden başlatıyor.
+        poz="$(acik_poz)"
+        if [ "$t" = yeniden ]; then mesaj="🔴 Bot durdu
+Neden: son 1 saatte ${sayi} kez yeniden başladı (sınır ${ALARM_SINIR}); bellek taşması $([ "$oom" = 1 ] && echo oldu || echo olmadı).
+Açık pozisyon: ${poz} · Stop: $(stop_metni "$poz")
+Sistem motoru kendiliğinden yeniden başlatıyor.
 Sorun sürerse bana haber ver."
-        else mesaj="Sunucu motoru bellek tavanını aşıp öldürüldü; son 1 saatte ${sayi} kez yeniden başladı.
-Sunucu motoru kendiliğinden yeniden başlatıyor.
+        else mesaj="🔴 Bot durdu
+Neden: bellek tavanı aşıldı, motor öldürüldü (son 1 saatte ${sayi} yeniden başlama).
+Açık pozisyon: ${poz} · Stop: $(stop_metni "$poz")
+Sistem motoru kendiliğinden yeniden başlatıyor.
 Sorun sürerse bana haber ver."; fi
         printf '%s\n' "$simdi" > "$DURUM/alarm_$t"
         bildir CRIT "$mesaj"
@@ -191,7 +205,7 @@ Sorun sürerse bana haber ver."; fi
   if [ "$var" = 0 ]; then
     temiz=0
     for t in yeniden oom; do if [ -f "$DURUM/alarm_$t" ]; then temiz=1; rm -f -- "$DURUM/alarm_$t"; fi; done
-    if [ "$temiz" = 1 ]; then bildir INFO "Düzeldi: sunucu motoru artık kararlı (son 1 saatte ${sayi} yeniden başlama).
+    if [ "$temiz" = 1 ]; then bildir INFO "✅ Düzeldi: bot yeniden çalışıyor (son 1 saatte ${sayi} yeniden başlama).
 Senden bir şey gerekmiyor."; fi
   fi
   return 0
@@ -238,7 +252,7 @@ else
   if [ -s "$DURUM/kotu_sha" ] && [ "$(cat "$DURUM/kotu_sha")" = "$yeni" ]; then log "${yeni:0:7} daha önce başarısız oldu ve geri alındı; yeni commit beklenir"; exit 0; fi
   if ! g merge-base --is-ancestor "$head" "$yeni"; then
     log "origin/main HEAD'in ileri sarması DEĞİL (fast-forward yok); reddedildi"
-    if [ "$(cat "$DURUM/reddedilen" 2>/dev/null)" != "$yeni:ff" ]; then printf '%s\n' "$yeni:ff" > "$DURUM/reddedilen"; bildir CRIT "Sunucu güncellemesi reddedildi: yeni sürümün geçmişi eskisiyle uyuşmuyor.
+    if [ "$(cat "$DURUM/reddedilen" 2>/dev/null)" != "$yeni:ff" ]; then printf '%s\n' "$yeni:ff" > "$DURUM/reddedilen"; bildir CRIT "🚨 Sunucu güncellemesi reddedildi: yeni sürümün geçmişi eskisiyle uyuşmuyor.
 Hiçbir şey değiştirilmedi; motor eski sürümle çalışıyor.
 Bana haber ver, ben bakarım."; fi
     exit 0
@@ -255,7 +269,7 @@ fi
 # durum/ kayit/ pano/ yerel durumdur: gelen commit bunları izlemeye başlarsa dokunma
 if [ -n "$(g diff --name-only "$head" "$yeni" -- durum kayit pano)" ]; then
   log "hedef commit durum/ kayit/ pano/ yollarını içeriyor; yerel durum korunsun diye REDDEDİLDİ"
-  if [ "$(cat "$DURUM/reddedilen" 2>/dev/null)" != "$yeni:durum" ]; then printf '%s\n' "$yeni:durum" > "$DURUM/reddedilen"; bildir CRIT "Sunucu güncellemesi reddedildi: yeni sürüm sunucunun yerel durum dosyalarına dokunuyor.
+  if [ "$(cat "$DURUM/reddedilen" 2>/dev/null)" != "$yeni:durum" ]; then printf '%s\n' "$yeni:durum" > "$DURUM/reddedilen"; bildir CRIT "🚨 Sunucu güncellemesi reddedildi: yeni sürüm sunucunun yerel durum dosyalarına dokunuyor.
 Hiçbir şey değiştirilmedi; motor eski sürümle çalışıyor.
 Bana haber ver, ben bakarım."; fi
   exit 0

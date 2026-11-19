@@ -278,7 +278,7 @@ def test_g19_ajan_suresi_gunluk_7_gun_uyari(tmp_path, monkeypatch):
     tgp = m.tg.post
     m.ajan_suresi_uygula(okuma, simdi)
     al = [x for x in tgp.gonderilen if "API cüzdanı süresi" in x]
-    assert len(al) == 1 and al[0].startswith("🚨 ALARM: API cüzdanı süresi (GERÇEK PARA)\n") and "süresi 5.0 gün sonra bitiyor" in al[0]
+    assert len(al) == 1 and al[0].startswith("🚨 API cüzdanı süresi (GERÇEK PARA)\n") and "süresi 5.0 gün sonra bitiyor" in al[0]
     m.ajan_suresi_uygula({"durum": "bulundu", "valid_until": simdi + 8 * 86_400_000}, simdi)       # 8 gün: alarm yok
     m.ajan_suresi_uygula({"durum": "bulundu", "valid_until": simdi - 1}, simdi)                    # doldu
     assert len([x for x in tgp.gonderilen if "API cüzdanı süresi" in x]) == 2 and "süresi DOLDU" in tgp.gonderilen[-1]

@@ -61,7 +61,8 @@ def test_ilk_satir_ct_onem_ve_info_sessiz_warn_crit_sesli():
     t.gonder(tg.alarm("UYARI: kadro kasası farklı", "x", "⚠️"))
     t.gonder(tg.duzeldi_metni("HL okuması", "ok"), "INFO")
     ilkler = [y["text"].split("\n")[0] for y in post.yukler]
-    assert ilkler == ["[CT] INFO", "[CT] CRIT", "[CT] WARN", "[CT] INFO"]
+    assert ilkler == ["[CT] 🧾 Son 1 saat: 2 emir · sanal", "[CT] 🚨 Kasa sınırı aşıldı", "[CT] ⚠️ Kadro kasası farklı", "[CT] ✅ Düzeldi: HL okuması"]       # seviye kelimesi yok
+    assert not any(re.search(r"\b(INFO|WARN|CRIT)\b", y["text"]) for y in post.yukler)
     assert [y["disable_notification"] for y in post.yukler] == [True, False, False, True]
 
 
@@ -70,7 +71,7 @@ def test_kritik_durdurma_mesajlari_hala_gider_ve_sesli():
     assert t.gonder(tg.alarm("Motor durdu", "Tüm pozisyonlar kapandı.", "🛑", senden="Yeniden açmak için sunucuda elle işlem gerekir."))
     assert t.gonder(tg.alarm("ALARM: günlük kayıp sınırı", "Bugün yeni pozisyon açılmıyor."))
     assert [y["disable_notification"] for y in post.yukler] == [False, False]
-    assert all(y["text"].startswith("[CT] CRIT\n") for y in post.yukler)
+    assert all(y["text"].startswith(("[CT] 🛑 ", "[CT] 🚨 ")) for y in post.yukler)
 
 
 def test_bastirilan_tur_gitmez_ama_kayda_yazilir_ve_anahtarla_geri_acilir():
@@ -97,7 +98,7 @@ def test_ayni_uyari_6_saatte_bir_ve_duzelince_tek_duzeldi():
     assert t.duzeldi("hl", d) is True                                  # tek Düzeldi
     assert t.duzeldi("hl", d) is False                                 # ikinci kez yok
     assert t.duzeldi("hic_uyarilmadi", d) is False                     # hiç uyarılmayan için de yok
-    assert len(post.yukler) == 3 and post.yukler[-1]["text"].startswith("[CT] INFO\n✅ Düzeldi") and post.yukler[-1]["disable_notification"] is True
+    assert len(post.yukler) == 3 and post.yukler[-1]["text"].startswith("[CT] ✅ Düzeldi") and post.yukler[-1]["disable_notification"] is True
     assert t.uyar("hl", w) is True                                     # düzelmiş sorun yeniden olursa hemen uyarılır
 
 
@@ -163,7 +164,7 @@ def test_bot_durdu_kritik_sesli_acik_pozisyon_ve_stop_6_saat_sinirina_takilmaz()
     assert t.gonder(m, "CRIT", anahtar="bot_durdu:3")
     saat[0] += 600                                                       # 10 dk sonra yeniden durursa (6 saat dolmadan) YİNE gider
     assert t.gonder(m, "CRIT", anahtar="bot_durdu:3") and len(post.yukler) == 2
-    assert all(y["disable_notification"] is False and y["text"].startswith("[CT] CRIT\n🔴 Bot durdu") for y in post.yukler)
+    assert all(y["disable_notification"] is False and y["text"].startswith("[CT] 🔴 Bot durdu\n") for y in post.yukler)
 
 
 def test_motor_bot_durdu_mesaji_ve_yeniden_calisinca_tek_duzeldi(tmp_path):
@@ -201,7 +202,7 @@ def test_gunluk_kayip_yuzde_80_gunde_bir_uyari_ve_limit_doldu_acik_pozisyonu_soy
     assert len(uy) == 1 and tg.onem_duzeyi(uy[0]) == "WARN" and "Senden bir şey gerekmiyor." in uy[0] and len(uy[0].splitlines()) + 1 <= 6
     m.ozsermaye = lambda: 1000.0 * (1 - sinir)                            # limit doldu
     m._risk(simdi + 120_000)
-    dol = [x for x in tgp.gonderilen if "ALARM: günlük kayıp sınırı" in x]
+    dol = [x for x in tgp.gonderilen if "Günlük kayıp sınırı" in x]
     assert len(dol) == 1 and "1 açık pozisyon izlenmeye devam ediyor" in dol[0] and "yeni pozisyon açılmıyor" in dol[0]
 
 
@@ -216,3 +217,54 @@ def test_senden_satiri_sunucu_journalctl_dosya_adi_icermez():
     yasak = re.compile(r"sunucu|journalctl|dosya|\.json|\.sh|durum/|systemctl|ssh", re.I)
     for t in metinler:
         assert not yasak.search(t) and not KOD_ADI.search(t), t
+
+
+def test_kapandi_iz_suren_koruma_nedeni_gorunur():
+    m = tg.msg_kapandi(ADR, "BTC", 4.5, 0.0, "iz_suren_koruma", "sanal")
+    assert m.splitlines()[1] == "+4,50 $ (+%0,00) · Neden: iz süren koruma" and not KOD_ADI.search(m)
+
+
+def test_motor_iz_suren_koruma_kapanisi_mesajda_iz_suren_koruma(tmp_path):
+    from tests.test_k73_sanal_hepsi_acik import _ac, _fiyat, _motor
+    m, saat = _motor(tmp_path)
+    assert _ac(m, saat).karar == "emir"
+    g = m.hesap.poz[tests_adr()]["BTC"].giris
+    _fiyat(m, saat, g * 1.16)
+    _fiyat(m, saat, g * 0.999)
+    kap = [x for x in m.tg.gonderilen if " BTC kapandı · trader " in x]
+    assert len(kap) == 1 and kap[0].endswith("Neden: iz süren koruma") and kap[0].startswith("🔻 BTC kapandı")
+
+
+def tests_adr():
+    from tests.test_canli_motor import adr
+    return adr(1)
+
+
+def test_baslik_ilk_satir_ct_ve_baslik_seviye_kelimesi_yok():
+    t, post, _ = _t()
+    t.gonder(tg.alarm("ALARM: kasa sınırı aşıldı", "x"))
+    t.gonder(tg.msg_acildi(ADR, "SOL", "B", 150.25, 27.3, 120.2, "sanal"))
+    t.gonder(tg.msg_bot_durdu("komut", 1, "borsada duruyor"))
+    assert [y["text"].split("\n")[0] for y in post.yukler] == ["[CT] 🚨 Kasa sınırı aşıldı", f"[CT] 🟢 SOL AL açıldı · trader {tg.kisa(ADR)} (sanal)", "[CT] 🔴 Bot durdu"]
+    assert [y["disable_notification"] for y in post.yukler] == [False, True, False]            # seviye iç mantıkta: INFO sessiz, kritik sesli
+
+
+def test_motor_kapali_bekci_ve_cokme_bot_durdu_biciminde(tmp_path):
+    from copytrade.canli import motor as mt
+    from tests.test_canli_motor import kur, olay, adr
+    m, hl, saat, tgp = kur(tmp_path)
+    m.baslat()
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    m.dur_tetikle("komut")
+    m._duraklat(False)                                                    # /devam, motor /hepsini_kapat ile kapalıyken
+    kapali = [x for x in tgp.gonderilen if x.startswith("🔴 Bot durdu") and "/devam bunu açmaz" in x]
+    assert kapali and "Açık pozisyon: 0 · Stop: gerekmiyor (pozisyon yok)" in kapali[0]
+    m2, _h, _s, tgp2 = kur(tmp_path / "x")
+    m2.baslat()
+    m2.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    cikis = []
+    b = mt.Bekci(m2, 180, saat=lambda: 1000.0, cik=cikis.append, alarm_bekle_sn=1.0)
+    b.son = 0.0
+    b.kontrol()
+    bd = [x for x in tgp2.gonderilen if x.startswith("🔴 Bot durdu")]
+    assert bd and "Neden: motor dondu" in bd[0] and "Açık pozisyon: 1 · Stop: bot kapalıyken yazılım stopu çalışmıyor" in bd[0] and (tmp_path / "x" / "durum" / "tg_bot_durdu").exists()

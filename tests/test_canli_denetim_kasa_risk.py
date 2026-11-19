@@ -254,17 +254,17 @@ def test_m2_ayni_adim_ust_uste_3_hata_telegram_alarmi_basarida_sayac_sifirlanir(
             raise RuntimeError("mutabakat bozuk")
 
     monkeypatch.setattr(m, "_mutabakat", bozuk)
-    baslik = "ALARM: 'mutabakat' adımı hata veriyor"
+    baslik = "'mutabakat' adımı hata veriyor"
     for i in range(2):
         saat.ms += 60_000
         m.dakika()
     assert not any(baslik in x for x in tgp.gonderilen) and m._adim_ardisik["mutabakat"] == 2
     saat.ms += 60_000
     m.dakika()
-    assert sum(baslik in x for x in tgp.gonderilen) == 1 and kayitlar(tmp_path, "adim_hata")[-1]["ardisik"] == 3
+    assert sum(baslik.lower() in x.lower() for x in tgp.gonderilen) == 1 and kayitlar(tmp_path, "adim_hata")[-1]["ardisik"] == 3
     saat.ms += 60_000
     m.dakika()                                                                                    # 4. hata: yeni alarm yok (60'ın katlarında tekrar)
-    assert sum(baslik in x for x in tgp.gonderilen) == 1
+    assert sum(baslik.lower() in x.lower() for x in tgp.gonderilen) == 1
     durum["hata"] = False
     saat.ms += 60_000
     m.dakika()
@@ -273,7 +273,7 @@ def test_m2_ayni_adim_ust_uste_3_hata_telegram_alarmi_basarida_sayac_sifirlanir(
     for i in range(2):
         saat.ms += 60_000
         m.dakika()
-    assert sum(baslik in x for x in tgp.gonderilen) == 1                                          # sayaç sıfırlandı: 2 hata alarm değil
+    assert sum(baslik.lower() in x.lower() for x in tgp.gonderilen) == 1                                          # sayaç sıfırlandı: 2 hata alarm değil
 
 
 # ================================================================================================ S-7
@@ -348,8 +348,8 @@ def test_s8_kapanis_kuyrugu_ustel_geri_cekilme_ve_gunluk_tavan_alarmi(tmp_path, 
         assert len(cagri) == n + 1
         araliklar.append((m.kapanis_kuyrugu[f"{adr(1)}|BTC"]["sonraki_ms"] - hedef) // 60_000)
     assert araliklar == [1, 2, 4, 8, 16, 30, 30]
-    baslik = "ALARM: kapanış bugün de olmadı"
-    assert sum(baslik in x for x in tgp.gonderilen) == 1                                          # günde bir kez
+    baslik = "kapanış bugün de olmadı"
+    assert sum(baslik.lower() in x.lower() for x in tgp.gonderilen) == 1                                          # günde bir kez
     k = kayitlar(tmp_path, "kuyruk_gunluk_tavan")
     assert k and k[0]["deneme"] == 3
 
@@ -364,7 +364,7 @@ def test_s8_tavan_alarmi_gunde_bir_kez(tmp_path, monkeypatch):
     for _ in range(5):
         saat.ms = max(saat(), int(m.kapanis_kuyrugu[anahtar].get("sonraki_ms", 0)))
         m._kuyruk_isle(saat())
-    assert sum("ALARM: kapanış bugün de olmadı" in x for x in tgp.gonderilen) == 1 and m.kapanis_kuyrugu[anahtar]["gun_deneme"] == 5
+    assert sum("kapanış bugün de olmadı" in x.lower() for x in tgp.gonderilen) == 1 and m.kapanis_kuyrugu[anahtar]["gun_deneme"] == 5
 
 
 def test_s8_dur_sirasinda_geri_cekilme_yok_dakikada_bir_denenir(tmp_path, monkeypatch):

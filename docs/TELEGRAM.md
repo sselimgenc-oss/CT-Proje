@@ -35,7 +35,7 @@ Kod: `copytrade/canli/telegram.py` (gönderim, komut okuma, onay), `copytrade/ca
 - Komutlara yarım dakikada bir bakılır (motor `_periyodik`, 30 sn) ve yalnız motor çalışırken; vardiya geçişinde ve "bekleme vardiyasında" cevap gecikebilir. Sunucuya taşınınca kalkar (`/yardim` metninde yazılı).
 
 ## Kullanıcı dostu mesaj kuralları (CT, 2026-11-19)
-- İlk satır `[CT] INFO|WARN|CRIT`; en çok 6 satır; kod/dosya adı ve alt çizgili kelime yok; uyarılar "ne oldu → ne yapılıyor → senden bir şey gerekiyor mu".
+- İlk satır `[CT] <başlık>` (INFO/WARN/CRIT kelimesi görünmez; yalnız iç mantıkta sessiz/sesli); en çok 6 satır; kod/dosya adı ve alt çizgili kelime yok; uyarılar "ne oldu → ne yapılıyor → senden bir şey gerekiyor mu".
 - INFO sessiz (`disable_notification: true`), WARN/CRIT sesli. Aynı uyarı 6 saatte bir (`Telegram.uyar`), düzelince tek "Düzeldi" (`Telegram.duzeldi`).
 - Açıldı: 2 satır (başlık + Giriş · Tutar · Stop). Kapandı: $, %, neden. Zararlı kapanış 🔻; 🔴 yalnız kritik ("Bot durdu", 6 saat sınırına takılmaz).
 - Günlük kayıp limitinin %80'inde günde bir uyarı; limit dolunca açık pozisyonlara ne olduğu söylenir.

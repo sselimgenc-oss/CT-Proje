@@ -511,6 +511,25 @@ def _oku_siki(yol: Path) -> dict | None:
     return veri
 
 
+def bot_durdu_gonder(tgram: tg.Telegram, durum_dizin: Path, neden: str, acik: int, stop_durumu: str, ek: str = "", son: str | None = None, senden: str | None = None) -> None:
+    """🔴 Bot durdu: sesli (CRIT), 6 saatlik tekrar sınırı yok; `durum/tg_bot_durdu` işareti yazılır → bot yeniden çalışınca `baslat` tek 'Düzeldi' yollar. Hata dışarı çıkmaz."""
+    try:
+        kw = {"senden": senden} if senden else {}
+        tgram.gonder(tg.msg_bot_durdu(neden, acik, stop_durumu, ek, son=son, **kw))                 # 🔴 öneki → CRIT (sesli); anahtar = metin (aynı metin 5 dk içinde bir kez)
+        (Path(durum_dizin) / "tg_bot_durdu").write_text("1\n")
+    except Exception:                                      # noqa: BLE001 - mesaj/işaret hatası çıkışı değiştirmez
+        pass
+
+
+def durumdan_acik_poz(durum_dizin: Path) -> int | None:
+    """Motor yokken (çökme sonrası) diskteki defterden açık pozisyon sayısı; okunamazsa None."""
+    try:
+        d = json.loads((Path(durum_dizin) / "hesap.json").read_text(encoding="utf-8"))
+        return sum(len(c) for c in (d.get("poz") or {}).values())
+    except Exception:                                      # noqa: BLE001
+        return None
+
+
 class Motor:
     """Olay işleme + periyodik görevler. `post`: HL info (REST); `yurutucu`: emir arka ucu; `kadro_oku()`: kadro.json sözlüğü ya da None; `saat_ms`: enjekte (testte sahte)."""
 
@@ -1912,23 +1931,21 @@ class Motor:
             self._bot_durdu_bildir(neden, int(kalan) + (len(fazla) if fazla else 0), kapatilan, ek)
         self.durum_yaz()
 
-    def _stop_durumu(self, acik: int) -> str:
-        """Bot durdu mesajı için stop durumu (sade): açık pozisyon yoksa 'gerekmiyor'; gerçek kipte borsa stopları / stopsuz coin sayısı; sanal kipte yazılım stopu."""
+    def _stop_durumu(self, acik: int, calisiyor: bool = True) -> str:
+        """Bot durdu mesajı için stop durumu (sade): açık pozisyon yoksa 'gerekmiyor'; gerçek kipte borsa stopları / stopsuz coin sayısı; sanal kipte yazılım stopu (bot kapalıyken çalışmaz)."""
         if acik <= 0:
             return "gerekmiyor (pozisyon yok)"
         if self.kip == "gercek":
             sayi = len(getattr(self.borsa_stop, "korumasiz", {}) or {})
             return "borsada duruyor" if sayi == 0 else f"{sayi} coinde borsa stopu eksik"
-        return "yazılım stopu aktif"
+        return "yazılım stopu aktif" if calisiyor else "bot kapalıyken yazılım stopu çalışmıyor"
 
-    def _bot_durdu_bildir(self, neden: str, acik: int, kapatilan: int | None = None, ek: str = "") -> None:
+    def _bot_durdu_bildir(self, neden: str, acik: int, kapatilan: int | None = None, ek: str = "", calisiyor: bool = True, son: str | None = None, senden: str | None = None) -> None:
         """Ayrı 🔴 'Bot durdu' mesajı: sesli, 6 saat tekrar sınırına takılmaz (doğrudan `gonder`); kalıcı işaret `durum/tg_bot_durdu` → bot yeniden çalışınca tek 'Düzeldi' (`baslat`)."""
-        metin = tg.msg_bot_durdu(neden, acik, self._stop_durumu(acik), ek)
-        self.tg.gonder(metin, "CRIT", anahtar=f"bot_durdu:{acik}")
-        try:
-            (self.dur_dosyasi.parent / "tg_bot_durdu").write_text("1\n")
-        except OSError:
-            pass
+        bot_durdu_gonder(self.tg, self.dur_dosyasi.parent, neden, acik, self._stop_durumu(acik, calisiyor), ek, son, senden)
+
+    def acik_poz_sayisi(self) -> int:
+        return sum(len(c) for c in self.hesap.poz.values())
 
     # ------------------------------------------------------------------ periyodik görevler
     def mids_al(self) -> dict[str, float] | None:
@@ -3236,7 +3253,7 @@ class Motor:
     def _duraklat(self, ac: bool) -> None:
         """Elle duraklatma (`risk.acilis_durdu['elle_dur']`; kalıcı: `risk.json`). Kapanış/azaltma `acilis_izni`nden geçmediği için DURAKLATMADAN etkilenmez."""
         if not ac and self.risk.dur:
-            self.tg.gonder(tg.alarm("Motor kapalı", "Motor /hepsini_kapat ile durduruldu; /devam bunu açmaz.", senden="Yeniden açmak için bana haber ver."))
+            self._bot_durdu_bildir("elle kapatıldı (/hepsini_kapat); /devam bunu açmaz", self.acik_poz_sayisi(), calisiyor=False)
             return
         self.risk.bayrak("elle_dur", ac)
         self.kayit({"olay": "elle_dur" if ac else "elle_devam"})
@@ -3916,7 +3933,11 @@ class Bekci:
             self.motor.kilit_yaz(True)
         except Exception:                                  # noqa: BLE001 - disk dolu olabilir: çıkış yine olur (sahip-koşu denetimi yedekte)
             pass
-        metin = tg.alarm("ALARM: motor dondu, yeniden başlatılıyor", f"Dakikalık bakım {gecen:.0f} sn'dir tamamlanmadı (sınır {self.sinir_sn:.0f} sn).\nSüreç çıkış kodu 1 ile kapanıyor; sunucu yeniden başlatır.")
+        try:
+            acik = self.motor.acik_poz_sayisi()
+            metin = tg.msg_bot_durdu(f"motor dondu ({gecen:.0f} sn'dir bakım bitmedi)", acik, self.motor._stop_durumu(acik, False), son="Yeni işlem açılmıyor; sistem motoru kendiliğinden yeniden başlatıyor.", senden=tg.SENDEN_YOK)
+        except Exception:                                  # noqa: BLE001
+            metin = tg.msg_bot_durdu(f"motor dondu ({gecen:.0f} sn'dir bakım bitmedi)", 0, "bilinmiyor", son="Yeni işlem açılmıyor; sistem motoru kendiliğinden yeniden başlatıyor.", senden=tg.SENDEN_YOK)
 
         def bildir() -> None:
             try:
@@ -3925,6 +3946,10 @@ class Bekci:
                 pass
             try:
                 self.motor.tg.gonder(metin)
+                try:
+                    (self.motor.dur_dosyasi.parent / "tg_bot_durdu").write_text("1\n")
+                except Exception:                          # noqa: BLE001
+                    pass
                 havuz = getattr(self.motor.tg, "_havuz", None)
                 if havuz is not None:
                     havuz.shutdown(wait=True)              # arka plan gönderimi bitsin (çıkış onu öldürmeden)
@@ -3950,7 +3975,12 @@ def _gorev_bitti(motor: Motor, durdur: asyncio.Event, dinleyici: Any, ad: str, g
     motor.cikis_kodu = 1
     try:
         motor.kayit({"olay": "gorev_bitti", "gorev": ad, "tur": type(hata).__name__ if hata else "beklenmedik", "mesaj": str(hata)[:160] if hata else ""})
-        motor.tg.gonder(tg.alarm("ALARM: motor görevi durdu", f"'{ad}' görevi beklenmedik biçimde bitti ({type(hata).__name__ if hata else 'beklenmedik'}).\nMotor kapanıyor (çıkış kodu 1); sunucu yeniden başlatır."))
+        neden_g = f"'{tg.sade_ad(ad)}' görevi beklenmedik biçimde bitti ({type(hata).__name__ if hata else 'beklenmedik'})"
+        son_g = "Yeni işlem açılmıyor; sistem motoru kendiliğinden yeniden başlatıyor."
+        try:
+            motor._bot_durdu_bildir(neden_g, motor.acik_poz_sayisi(), calisiyor=False, son=son_g, senden=tg.SENDEN_YOK)
+        except AttributeError:                                 # sahte/eksik motor: yine de kısa mesaj
+            motor.tg.gonder(tg.msg_bot_durdu(neden_g, 0, "bilinmiyor", son=son_g, senden=tg.SENDEN_YOK))
     finally:
         try:
             dinleyici.durdur()
@@ -4554,7 +4584,10 @@ def main(argv: list[str] | None = None) -> int:
             import traceback
             traceback.print_exc()
             try:
-                tgram.gonder(tg.alarm("ALARM: motor beklenmedik hatayla durdu", f"Hata türü {type(hata).__name__}. Çıkış kodu 1; systemd yeniden başlatacak.\njournalctl -u sg-canli"))
+                acik = durumdan_acik_poz(Path(args.durum_dizin))
+                bot_durdu_gonder(tgram, Path(args.durum_dizin), f"beklenmedik hata ({type(hata).__name__})", acik or 0,
+                                 "gerekmiyor (pozisyon yok)" if acik == 0 else ("borsada duruyor" if kip == "gercek" else "bot kapalıyken yazılım stopu çalışmıyor") if acik else "bilinmiyor",
+                                 son="Yeni işlem açılmıyor; sistem motoru kendiliğinden yeniden başlatıyor.", senden=tg.SENDEN_YOK)
             except Exception:                                           # noqa: BLE001
                 pass
             return 1

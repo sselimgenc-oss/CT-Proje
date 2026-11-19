@@ -127,7 +127,7 @@ def _sahipsiz_gercek(tmp_path, monkeypatch):
 def test_sahipsiz_pozisyon_ilk_gorulmede_alarm_600_sn_kesintisiz_sonra_kapanir_gercek(tmp_path, monkeypatch):
     m, sim, saat, tgp = _sahipsiz_gercek(tmp_path, monkeypatch)
     m._sahipsiz_tara(saat())
-    assert adr(1) in m.sahipsiz_ilk and kayitlar(tmp_path, "sahipsiz_pozisyon") and any("sahipsiz" in x for x in tgp.gonderilen)
+    assert adr(1) in m.sahipsiz_ilk and kayitlar(tmp_path, "sahipsiz_pozisyon") and any("sahipsiz" in x.lower() for x in tgp.gonderilen)
     for _ in range(9):                                                     # 9 dk: henüz yok
         saat.ms += 60_000
         m._sahipsiz_tara(saat())

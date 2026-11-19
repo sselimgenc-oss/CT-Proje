@@ -81,7 +81,7 @@ def test_d01_motor_kadro_kasasi_farkliysa_bir_kez_kayit_ve_uyari_durmaz(tmp_path
     m._kadro_uygula((True, k), saat() + 60_000)
     fark = kayitlar(tmp_path, "kadro_kasa_farkli")
     assert len(fark) == 1 and fark[0]["kadro_kasa_usd"] == 10000.0 and fark[0]["motor_kasa_usd"] == 1000.0
-    assert sum("kadro kasası farklı" in x for x in tgp.gonderilen) == 1
+    assert sum("kadro kasası farklı" in x.lower() for x in tgp.gonderilen) == 1
     assert len(m.saha.uyeler) == 3 and not m.risk.dur                                                      # kadro uygulanır, motor durmaz
     m2, _, saat2, tgp2 = kur(tmp_path / "esit", kasa=1000.0)
     m2._kadro_uygula((True, n_kadro(3, saat2() - SAAT)), saat2())                                           # kasa 1.000 = motor: kayıt yok

@@ -28,18 +28,18 @@ def test_ilk_satir_proje_etiketi_ve_onem():
     t.gonder("🧾 normal bilgi")
     t.gonder(tg.alarm("UYARI: kadro kasası farklı", "x", "⚠️"))
     t.gonder(tg.alarm("ALARM: API cüzdanı", "y"))
-    assert [x.splitlines()[0] for x in t.post.ham] == ["[CT] INFO", "[CT] WARN", "[CT] CRIT"]
-    assert t.post.ham[0] == "[CT] INFO\n🧾 normal bilgi"
+    assert [x.splitlines()[0] for x in t.post.ham] == ["[CT] 🧾 normal bilgi", "[CT] ⚠️ Kadro kasası farklı", "[CT] 🚨 API cüzdanı"]       # seviye kelimesi yok; ALARM:/UYARI: kod sözcüğü atılır
+    assert t.post.ham[0] == "[CT] 🧾 normal bilgi"
     assert tg.onem_duzeyi("🛑 DUR: x") == "CRIT" and tg.onem_duzeyi("📭 x") == "WARN" and tg.onem_duzeyi("📊 x") == "INFO"
     t.gonder("açık", onem="WARN")
-    assert t.post.ham[-1].startswith("[CT] WARN\n")
+    assert t.post.ham[-1] == "[CT] açık" and "WARN" not in t.post.ham[-1]
 
 
 def test_mesaj_3500_karakteri_asmaz_baslik_sabit_kalir():
     t = yeni()
     t.gonder("🚨 ALARM: başlık\n" + "x" * 6000)
     gidecek = t.post.ham[-1]
-    assert len(gidecek) <= 3500 and gidecek.startswith("[CT] CRIT\n🚨 ALARM: başlık\n") and gidecek.endswith("(kısaltıldı)")
+    assert len(gidecek) <= 3500 and gidecek.startswith("[CT] 🚨 Başlık\n") and gidecek.endswith("(kısaltıldı)")
     assert tg.mesaj_kirp("kısa") == "kısa"
 
 

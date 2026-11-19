@@ -18,7 +18,7 @@ from datetime import timedelta
 from typing import Any, Callable
 
 ONEMLI_ONEKLER = ("ALARM", "DUR", "TASFİYE", "🚨", "🛑", "💥", "🔴")          # her zaman sesli
-PROJE_ETIKETI = "[CT]"                    # ortak Telegram standardı (docs/TELEGRAM.md): her mesajın İLK satırı "[CT] INFO|WARN|CRIT"
+PROJE_ETIKETI = "[CT]"                    # her mesajın İLK satırı "[CT] <başlık>" (INFO/WARN/CRIT kullanıcıya GÖSTERİLMEZ; yalnız iç mantıkta sesli/sessiz için)
 KOMUTLAR = ("/durum", "/rapor", "/yardim", "/start", "/durdur", "/devam", "/hepsini_kapat")      # standart komut adları (motora iki adımlı onaydan sonra bu adlarla gider)
 ESKI_AD = {"/dur": "/durdur", "/kapat": "/hepsini_kapat", "/baslat": "/devam"}        # eski adlar eş ad olarak çalışır (anlamları değişmedi)
 YOK_KOMUTLAR = ("/kurulumlar", "/ders", "/kademe", "/kademe_devam", "/onayla", "/reddet")        # ortak standartta var, CT'de yok: "henüz yok" yanıtı
@@ -71,6 +71,21 @@ def onem_duzeyi(metin: str) -> str:
     if "UYARI" in ilk or ilk.startswith(("⚠️", "⏸️", "📭", "❓", "🧮", "🔐")):
         return "WARN"
     return "INFO"
+
+
+_BASLIK_KOD = re.compile(r"^((?:🚨|⚠️|ℹ️|🛑)\s+)?(ALARM|UYARI|BİLGİ):\s*(.*)$")
+_BASLIK_IKON = {"ALARM": "🚨", "UYARI": "⚠️", "BİLGİ": "ℹ️"}
+
+
+def baslik_sade(metin: str) -> str:
+    """Giden mesajın ilk satırı: 'ALARM:/UYARI:/BİLGİ:' kod sözcüğü atılır, ikon kalır ('🚨 ALARM: kasa sınırı aşıldı' → '🚨 Kasa sınırı aşıldı'). Seviye (INFO/WARN/CRIT) kullanıcıya yazılmaz."""
+    ilk, ayr, kalan = metin.partition("\n")
+    m = _BASLIK_KOD.match(ilk)
+    if not m:
+        return metin
+    ikon, rest = (m.group(1) or _BASLIK_IKON[m.group(2)] + " "), m.group(3)
+    bas = ("İ" if rest[:1] == "i" else rest[:1].upper()) + rest[1:]
+    return f"{ikon}{bas}{ayr}{kalan}"
 
 
 def mesaj_kirp(metin: str, azami: int = MESAJ_AZAMI) -> str:
@@ -271,7 +286,7 @@ class Telegram:
                     self.kayit({"olay": "telegram_tekrar_atlandi", "onem": onem})
                 return False
         self._hiz_bekle()
-        gidecek = mesaj_kirp(f"{PROJE_ETIKETI} {onem}\n{metin}")
+        gidecek = mesaj_kirp(f"{PROJE_ETIKETI} {baslik_sade(metin)}")
         plan = list(YENIDEN_BEKLEME_S) if metin.startswith(ONEMLI_ONEKLER) else []      # önemli mesaj eşzamanlı yolda da yeniden denenir (sağlık/açılış/başlamadı alarmı: kilit altında DEĞİL; motor gönderimi zaten arka plan havuzunda)
         deneme = 0
         while True:
@@ -567,11 +582,11 @@ def msg_acildi(adres: str, coin: str, yon: str, giris: float, usd: float, stop: 
 
 KAPANIS_NEDEN_TR = {"felaket_stop": "stop", "borsa_stop": "stop", "borsa_stop_korumasiz": "stopsuz kaldığı için kapatıldı", "tam_kapanis": "trader kapattı",
                     "trader_kapali_senkron": "trader kapattı", "trader_ters_senkron": "trader yön değiştirdi", "gunluk_kapat": "günlük kayıp freni",
-                    "sahipsiz_pozisyon": "sahipsiz pozisyon kuralı", "dur": "bot durduruldu", "komut": "sen kapattın (/hepsini_kapat)", "inen_24sa": "trader takipten çıktı", "inen_ters": "trader takipten çıktı"}
+                    "sahipsiz_pozisyon": "sahipsiz pozisyon kuralı", "iz_suren_koruma": "iz süren koruma", "dur": "bot durduruldu", "komut": "sen kapattın (/hepsini_kapat)", "inen_24sa": "trader takipten çıktı", "inen_ters": "trader takipten çıktı"}
 
 
 def kapanis_nedeni_tr(neden: str) -> str:
-    """Kapanış nedeni, kullanıcı dilinde: stop / trader kapattı / koruma kuralı (CT'de iz süren stop yok; kural kesmeleri 'koruma kuralı')."""
+    """Kapanış nedeni, kullanıcı dilinde: stop / iz süren koruma / trader kapattı; diğer kural kesmeleri 'koruma kuralı'."""
     if neden in KAPANIS_NEDEN_TR:
         return KAPANIS_NEDEN_TR[neden]
     return "koruma kuralı" if neden else "trader kapattı"
@@ -584,10 +599,10 @@ def msg_kapandi(adres: str, coin: str, pnl_usd: float, pnl_oran: float | None, n
             f"{tr_isaretli(pnl_usd)} ${oran} · Neden: {kapanis_nedeni_tr(neden)}")
 
 
-def msg_bot_durdu(neden: str, acik_poz: int, stop_durumu: str, ek: str = "", senden: str = "Yeniden başlatmak için bana haber ver.") -> str:
+def msg_bot_durdu(neden: str, acik_poz: int, stop_durumu: str, ek: str = "", senden: str = "Yeniden başlatmak için bana haber ver.", son: str | None = None) -> str:
     """Ayrı 🔴 'Bot durdu' mesajı (kritik, sesli; 6 saat tekrar sınırına TAKILMAZ; en çok 5 satır + `[CT]`): neden, açık pozisyon sayısı ve stop durumu.
     `ek`: pozisyonlar tam kapanmadıysa ayrıntı (ör. borsada kalan)."""
-    son = (f"Pozisyonlar DÜZLEŞMEDİ{ek}; yeni işlem açılmıyor, kapanış yeniden deneniyor." if (ek or acik_poz > 0) else "Tüm pozisyonlar kapandı; yeni işlem açılmıyor.")
+    son = son or (f"Pozisyonlar DÜZLEŞMEDİ{ek}; yeni işlem açılmıyor, kapanış yeniden deneniyor." if (ek or acik_poz > 0) else "Tüm pozisyonlar kapandı; yeni işlem açılmıyor.")
     return f"🔴 Bot durdu\nNeden: {sade_ad(neden)}\nAçık pozisyon: {acik_poz} · Stop: {stop_durumu}\n{son}\n{senden}"
 
 

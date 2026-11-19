@@ -296,7 +296,7 @@ class SahteTG:
             raise ConnectionError(f"boom {url}")
         if url.endswith("sendMessage"):
             self.ham.append(yuk["text"])
-            self.gonderilen.append(re.sub(r"^\[CT\] (INFO|WARN|CRIT)\n", "", yuk["text"]))      # testler başlıksız gövdeyi karşılaştırır; başlık ayrı testte doğrulanır
+            self.gonderilen.append(re.sub(r"^\[CT\] ", "", yuk["text"]))      # testler "[CT] " etiketsiz metni karşılaştırır; etiket ayrı testte doğrulanır
             return {"ok": True}
         sonuc, self.guncellemeler = self.guncellemeler, []
         return {"ok": True, "result": sonuc}
@@ -506,7 +506,7 @@ def test_devam_kapat_sonrasi_motoru_acmaz(tmp_path):
     m.baslat()
     m.dur_tetikle("komut")
     onayli_komut(m, tgp, 20, "/devam")
-    assert m.risk.dur and any("Motor kapalı" in x for x in tgp.gonderilen)
+    assert m.risk.dur and any(x.startswith("🔴 Bot durdu") and "/devam bunu açmaz" in x for x in tgp.gonderilen)
 
 
 def test_zirveden_20_dusus_dur_ve_gunluk_kayip_alarmi(tmp_path):
@@ -515,7 +515,7 @@ def test_zirveden_20_dusus_dur_ve_gunluk_kayip_alarmi(tmp_path):
     m.dakika()                                                                                # gün başı özsermaye 1.000 kaydolur
     m.hesap.realize["x"] = -50.0                                                              # −%5: günlük kayıp
     m.dakika()
-    assert m.risk.acilis_durdu["gunluk_kayip"] and any("günlük kayıp" in x for x in tgp.gonderilen) and not m.dur_istendi
+    assert m.risk.acilis_durdu["gunluk_kayip"] and any("günlük kayıp" in x.lower() for x in tgp.gonderilen) and not m.dur_istendi
     m.hesap.realize["x"] = -200.0                                                             # zirve 1.000 → 800 = −%20
     m.dakika()
     assert m.dur_istendi and m.risk.dur and (tmp_path / "durum" / "DUR").exists()
@@ -883,7 +883,7 @@ def test_telegram_arka_planda_gonderilir_emir_hatti_beklemez():
     assert _t.monotonic() - bas < 0.5 and gonderildi == []                  # çağıran beklemedi
     beklet.set()
     t._havuz.shutdown(wait=True)
-    assert gonderildi == ["[CT] INFO\nmerhaba"]                              # ortak standart: ilk satır proje etiketi + önem
+    assert gonderildi == ["[CT] merhaba"]                                     # ilk satır "[CT] " + başlık (INFO/WARN/CRIT kullanıcıya yazılmaz)
 
 
 def test_rest_post_agirliklar_ve_ortak_hiz_siniri():

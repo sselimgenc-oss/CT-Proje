@@ -67,7 +67,7 @@ def test_motor_gercek_stop_tetiklenince_defter_temizlenir_alarm(tmp_path, monkey
     saat.ms += 60_000
     m.dakika()
     assert m.hesap.sz(adr(1), "BTC") == pytest.approx(0.0, abs=1e-9) and kayitlar(tmp_path, "borsa_stop_kayip")[0]["yerel_acik"] is True
-    assert kayitlar(tmp_path, "harici_kapanis") and any("borsa stopu tetiklendi" in x for x in tgp.gonderilen) and sim.acik == []
+    assert kayitlar(tmp_path, "harici_kapanis") and any("borsa stopu tetiklendi" in x.lower() for x in tgp.gonderilen) and sim.acik == []
 
 
 def test_motor_gercek_ilk_esitlemede_yetim_stop_iptal_ve_y5_bizim_sayar(tmp_path, monkeypatch):
@@ -108,7 +108,7 @@ def test_k65_stop_30_dk_kurulamazsa_pozisyon_kapanir_yeni_acilis_durur(tmp_path,
     saat.ms += 60_000                                                               # 30 dk doldu
     m.dakika()
     assert m.hesap.sz(adr(1), "BTC") == pytest.approx(0.0, abs=1e-9)
-    assert kayitlar(tmp_path, "borsa_stop_korumasiz_kapat")[0]["coin"] == "BTC" and any("stopsuz pozisyon kapatıldı" in x for x in tgp.gonderilen)
+    assert kayitlar(tmp_path, "borsa_stop_korumasiz_kapat")[0]["coin"] == "BTC" and any("stopsuz pozisyon kapatıldı" in x.lower() for x in tgp.gonderilen)
     assert m.risk.acilis_izni(adr(1), "ETH", True, saat.ms) == (False, "stop_korumasiz")      # ceza: yeni açılış yok
     saat.ms += 21600_000                                                            # 6 sa sonra ceza kalkar
     m.dakika()

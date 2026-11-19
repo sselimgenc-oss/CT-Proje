@@ -112,7 +112,7 @@ def test_alarm_ve_saha_mesaji_sanalda_da_anlik(tmp_path):
     assert not any("Yeni trader takibe alındı" in x for x in tgp.gonderilen)              # saha girişi Telegram'a gitmez (panoda); kayda tg_bastirildi
     assert any(k["tur"] == "saha_giris" for k in kayitlar(tmp_path, "tg_bastirildi"))
     m.tg.gonder(tg.alarm("ALARM: deneme", "x"))
-    assert any(x.startswith("🚨 ALARM: deneme") for x in tgp.gonderilen)
+    assert any(x.startswith("🚨 Deneme") for x in tgp.gonderilen)
 
 
 def test_mesaj_bicimi_altin_ornek():
