@@ -122,19 +122,19 @@ def _depo(tmp_path, kilit, donem="2026-01-01T00:00:00Z", durum_donem=None):
 
 
 def _baslat(calisma, mod, **ek):
-    dal = "canli-durum-sunucu" if mod == "deneme" else "canli-durum"
+    dal = "canli-durum"
     return subprocess.run(["bash", str(DEPLOY / "sanal_baslat.sh")], env=_env(SANAL_DEPO=str(calisma), SUNUCU_MOD=mod, VERI_DALI=dal, **ek), capture_output=True, text=True)
 
 
-def test_baslat_deneme_durumu_kopyalar_kilidi_siler_ve_yerel_durum_varsa_dokunmaz(tmp_path):
-    taze = {"vardiya": "123", "nabiz_ms": int(time.time() * 1000), "birakildi": False}              # Actions vardiyası CANLI: deneme modunu engellememeli
-    c = _depo(tmp_path, taze)
-    r = _baslat(c, "deneme")
+def test_baslat_uretim_durumu_kopyalar_ve_yerel_durum_varsa_dokunmaz(tmp_path):
+    birakilmis = {"vardiya": "123", "nabiz_ms": int(time.time() * 1000), "birakildi": True}
+    c = _depo(tmp_path, birakilmis)
+    r = _baslat(c, "uretim", GECIS_BEKLE_SN="1")
     assert r.returncode == 0, r.stderr
-    assert (c / "durum/motor.json").exists() and (c / "kayit/2026-11-18.jsonl").exists() and not (c / "durum/kilit.json").exists()
+    assert (c / "durum/motor.json").exists() and (c / "kayit/2026-11-18.jsonl").exists() and (c / "durum/kilit.json").exists()
     assert (c / "durum/donem.txt").read_text().strip() == "2026-01-01T00:00:00Z"
     (c / "durum/motor.json").write_text(json.dumps({"kip": "sanal", "isaret": "yerel"}), encoding="utf-8")
-    r2 = _baslat(c, "deneme")                                                                         # yeniden başlatma: yerel durum asıl kaynak, geri yükleme YOK
+    r2 = _baslat(c, "uretim")                                                                         # yeniden başlatma: yerel durum asıl kaynak, geri yükleme YOK
     assert r2.returncode == 0 and "yerel durum var" in r2.stdout
     assert json.loads((c / "durum/motor.json").read_text())["isaret"] == "yerel"
 
@@ -154,17 +154,16 @@ def test_baslat_uretim_actions_canliysa_baslamaz_birakildiysa_baslar(tmp_path):
 
 def test_baslat_yeni_donemde_eski_durum_yuklenmez_ve_mod_dal_cifti_zorunlu(tmp_path):
     c = _depo(tmp_path / "a", {"vardiya": "1", "nabiz_ms": 0, "birakildi": True}, donem="2026-01-02T00:00:00Z", durum_donem="2026-01-01T00:00:00Z")
-    r = _baslat(c, "deneme")
+    r = _baslat(c, "uretim", GECIS_BEKLE_SN="1")
     assert r.returncode == 0 and "YENİ DÖNEM" in r.stdout and not (c / "durum/motor.json").exists()
     assert (c / "durum/donem.txt").read_text().strip() == "2026-01-02T00:00:00Z"
-    r = subprocess.run(["bash", str(DEPLOY / "sanal_baslat.sh")], env=_env(SANAL_DEPO=str(c), SUNUCU_MOD="deneme", VERI_DALI="canli-durum"), capture_output=True, text=True)
-    assert r.returncode == 3 and "geçersiz mod/dal" in r.stderr                                       # deneme ASLA üretim dalına eşlenemez (kalıcı hata)
-    r = subprocess.run(["bash", str(DEPLOY / "sanal_baslat.sh")], env=_env(SANAL_DEPO=str(c), SUNUCU_MOD="uretim", VERI_DALI="canli-durum-sunucu"), capture_output=True, text=True)
-    assert r.returncode == 3
+    for mod, dal in (("deneme", "canli-durum"), ("deneme", "canli-durum-eski"), ("uretim", "canli-durum-eski")):   # deneme modu kaldırıldı (19.11): her çift kalıcı hata
+        r = subprocess.run(["bash", str(DEPLOY / "sanal_baslat.sh")], env=_env(SANAL_DEPO=str(c), SUNUCU_MOD=mod, VERI_DALI=dal), capture_output=True, text=True)
+        assert r.returncode == 3 and "geçersiz mod/dal" in r.stderr
 
 
 # ------------------------------------------------------------------------------------------------ sanal_yayimla.sh / sanal_pano_cf.sh
-def test_yayimla_deneme_sunucu_dalina_yazar_uretim_dalina_yazamaz(tmp_path):
+def test_yayimla_uretim_canli_durum_dalina_yazar_deneme_reddedilir(tmp_path):
     bare, calisma = tmp_path / "origin.git", tmp_path / "calisma"
     subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
     calisma.mkdir()
@@ -182,12 +181,12 @@ def test_yayimla_deneme_sunucu_dalina_yazar_uretim_dalina_yazamaz(tmp_path):
     (calisma / "durum/kilit.json").write_text(json.dumps({"vardiya": "sunucu", "nabiz_ms": 1, "birakildi": False}))
     (calisma / "kayit/2026-11-19.jsonl").write_text("")
     ortak = dict(YAYIM_KILIT=str(tmp_path / "yayim.lock"), VARDIYA_ID="sunucu", PYTHON="python")
-    r = subprocess.run(["bash", str(DEPLOY / "sanal_yayimla.sh")], cwd=calisma, env=_env(SUNUCU_MOD="deneme", VERI_DALI="canli-durum-sunucu", **ortak), capture_output=True, text=True)
+    r = subprocess.run(["bash", str(DEPLOY / "sanal_yayimla.sh")], cwd=calisma, env=_env(SUNUCU_MOD="uretim", VERI_DALI="canli-durum", **ortak), capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
-    dosyalar = subprocess.run(["git", "ls-tree", "-r", "--name-only", "canli-durum-sunucu"], cwd=bare, capture_output=True, text=True).stdout.split()
+    dosyalar = subprocess.run(["git", "ls-tree", "-r", "--name-only", "canli-durum"], cwd=bare, capture_output=True, text=True).stdout.split()
     assert {"durum/ozet.json", "durum/kilit.json", "pano/index.html", "pano/OZET.md", "kayit/2026-11-19.jsonl"} <= set(dosyalar)
-    assert "canli-durum" not in subprocess.run(["git", "branch", "--list"], cwd=bare, capture_output=True, text=True).stdout.replace("canli-durum-sunucu", "")   # üretim dalı oluşmadı
-    for mod, dal in (("deneme", "canli-durum"), ("uretim", "canli-durum-sunucu")):                       # çapraz çift: ret
+    assert "canli-durum-eski" not in subprocess.run(["git", "branch", "--list"], cwd=bare, capture_output=True, text=True).stdout
+    for mod, dal in (("deneme", "canli-durum"), ("deneme", "canli-durum-eski"), ("uretim", "canli-durum-eski")):   # deneme kaldırıldı / çapraz çift: ret
         r = subprocess.run(["bash", str(DEPLOY / "sanal_yayimla.sh")], cwd=calisma, env=_env(SUNUCU_MOD=mod, VERI_DALI=dal, **ortak), capture_output=True, text=True)
         assert r.returncode == 1 and "Geçersiz mod/dal" in r.stderr
 
@@ -197,8 +196,11 @@ def test_pano_cf_mod_pano_adi_ciftini_zorlar_ve_secretsiz_yayimlamaz(tmp_path):
     (tmp_path / "pano/index.html").write_text("<html></html>")
     e = dict(SANAL_DEPO=str(tmp_path), PANO_SON=str(tmp_path / "son.sha"))
     r = subprocess.run(["bash", str(DEPLOY / "sanal_pano_cf.sh")], env=_env(SUNUCU_MOD="deneme", PANO_ISIM="sg-pano", **e), capture_output=True, text=True)
-    assert r.returncode == 3 and "geçersiz mod/pano adı" in r.stderr                                    # deneme canlı panoya (sg-pano) yazamaz
-    r = subprocess.run(["bash", str(DEPLOY / "sanal_pano_cf.sh")], env=_env(SUNUCU_MOD="deneme", PANO_ISIM="sg-pano-sunucu", **e), capture_output=True, text=True)
+    assert r.returncode == 3 and "geçersiz mod/pano adı" in r.stderr                                    # deneme modu kaldırıldı (19.11)
+    for mod, isim in (("deneme", "sg-pano-eski"), ("uretim", "sg-pano-eski")):
+        r = subprocess.run(["bash", str(DEPLOY / "sanal_pano_cf.sh")], env=_env(SUNUCU_MOD=mod, PANO_ISIM=isim, **e), capture_output=True, text=True)
+        assert r.returncode == 3 and "geçersiz mod/pano adı" in r.stderr
+    r = subprocess.run(["bash", str(DEPLOY / "sanal_pano_cf.sh")], env=_env(SUNUCU_MOD="uretim", PANO_ISIM="sg-pano", **e), capture_output=True, text=True)
     assert r.returncode == 0 and "secret'ları yok" in r.stdout
     # sahte wrangler: içerik değişince bir kez yayımlar, aynı içerikte yeniden yayımlamaz
     sahte = tmp_path / "wrangler"
@@ -206,10 +208,10 @@ def test_pano_cf_mod_pano_adi_ciftini_zorlar_ve_secretsiz_yayimlamaz(tmp_path):
     sahte.chmod(0o755)
     ek = dict(e, WRANGLER=str(sahte), CLOUDFLARE_API_TOKEN="x", CLOUDFLARE_ACCOUNT_ID="y")
     for _ in range(2):
-        r = subprocess.run(["bash", str(DEPLOY / "sanal_pano_cf.sh")], env=_env(SUNUCU_MOD="deneme", PANO_ISIM="sg-pano-sunucu", **ek), capture_output=True, text=True)
+        r = subprocess.run(["bash", str(DEPLOY / "sanal_pano_cf.sh")], env=_env(SUNUCU_MOD="uretim", PANO_ISIM="sg-pano", **ek), capture_output=True, text=True)
         assert r.returncode == 0, r.stderr
     cagrilar = (tmp_path / "cagrilar.txt").read_text().splitlines()
-    assert len(cagrilar) == 1 and "--name sg-pano-sunucu" in cagrilar[0] and "CLOUDFLARE" not in cagrilar[0]
+    assert len(cagrilar) == 1 and "--name sg-pano " in cagrilar[0] + " " and "CLOUDFLARE" not in cagrilar[0]
 
 
 # ------------------------------------------------------------------------------------------------ otomatik güncelleme (sanal_guncelle.sh / sanal_geri_al.sh)
