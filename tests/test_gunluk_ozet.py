@@ -172,6 +172,25 @@ def test_saglik_kaynak_alanlari_eklendi(tmp_path):
     assert "kaynak" in json.loads((m.durum_dizin / "motor.json").read_text(encoding="utf-8"))
 
 
+def test_saglik_sunucu_alanlari(tmp_path, monkeypatch):
+    import time
+    m, _ = _motor(tmp_path)
+    monkeypatch.delenv("SG_SAGLIK_SUNUCU", raising=False)
+    monkeypatch.setattr(go, "SUNUCU_SAGLIK_YOL", str(tmp_path / "yok.json"))
+    o = go.olustur(m)["saglik"]
+    assert o["yeniden_baslama_1s"] is None and o["oom_son"] is None                      # dosya yok -> null (alan atlanmaz)
+    assert {"son_nabiz", "hata_sayisi_gun", "ram_mb"} <= set(o)                          # mevcut alanlar değişmedi
+    f = tmp_path / "saglik_sunucu.json"
+    monkeypatch.setenv("SG_SAGLIK_SUNUCU", str(f))
+    f.write_text(json.dumps({"zaman": int(time.time()), "yeniden_baslama_1s": 4, "oom_son": True}), encoding="utf-8")
+    o = go.olustur(m)["saglik"]
+    assert o["yeniden_baslama_1s"] == 4 and o["oom_son"] is True
+    f.write_text(json.dumps({"zaman": int(time.time()) - 5 * 3600, "yeniden_baslama_1s": 4, "oom_son": True}), encoding="utf-8")   # bayat
+    assert go.olustur(m)["saglik"]["yeniden_baslama_1s"] is None
+    f.write_text("bozuk{", encoding="utf-8")
+    assert go.olustur(m)["saglik"]["oom_son"] is None
+
+
 def test_ogrenme_etki_ders_kucultulen_emir_kaydindan(tmp_path):
     m, _ = _motor(tmp_path)
     m.kayit({"olay": "emir", "eylem": "ac", "usd_dolan": 40.0, "ders_carpan": 0.5})             # ders küçülttü, doldu: sayılır
