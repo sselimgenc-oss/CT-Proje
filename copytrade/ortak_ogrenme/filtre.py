@@ -1,4 +1,4 @@
-# Kaynak: sselimgenc-oss/SG-Github-AB-proje trader/paket/ortak_ogrenme/filtre.py @ 84f6cad (kopya; değiştirme, güncelleme kaynaktan)
+# Kaynak: sselimgenc-oss/SG-Github-AB-proje trader/paket/ortak_ogrenme/filtre.py @ f6221cb (kopya; değiştirme, güncelleme kaynaktan)
 """Ortak filtre (spec parca 2 bolum 2): ridge-lojistik egitimi, JSON paket (hash, son kullanma), puan.
 
 Bu modul numpy ister; paketteki tek numpy icerigi budur. Filtre yalniz puan verir; islem engellemez.

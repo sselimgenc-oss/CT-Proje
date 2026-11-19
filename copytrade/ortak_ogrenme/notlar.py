@@ -1,4 +1,4 @@
-# Kaynak: sselimgenc-oss/SG-Github-AB-proje trader/paket/ortak_ogrenme/notlar.py @ 84f6cad (kopya; değiştirme, güncelleme kaynaktan)
+# Kaynak: sselimgenc-oss/SG-Github-AB-proje trader/paket/ortak_ogrenme/notlar.py @ f6221cb (kopya; değiştirme, güncelleme kaynaktan)
 """Kodla yazilan islem notu (spec bolum 2). ML trader_core/trade_notes.py mantiginin Aday uzerindeki hali.
 
 Ag yok, rastgelelik yok. Etiketler islem SONRASI bilgidir (hedef/olcum), ozellik degildir.

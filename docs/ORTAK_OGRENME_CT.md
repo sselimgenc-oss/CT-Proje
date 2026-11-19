@@ -45,7 +45,7 @@ Not: emekli yapılan trader'ın yeni açılışları kopyalanmadığı için o k
 Her anahtarın yanında açıklama var. Gerçek kipte (`kip: gercek`) öğrenme çalışmaz.
 
 ## Kod haritası
-- `copytrade/ortak_ogrenme/` — kaynaktan kopya (SG-Github-AB-proje `trader/paket/ortak_ogrenme` @ 84f6cad (SURUM 1.1.0)). **Değiştirilmez**, güncelleme kaynaktan.
+- `copytrade/ortak_ogrenme/` — kaynaktan kopya (SG-Github-AB-proje `trader/paket/ortak_ogrenme` @ f6221cb (SURUM 1.2.1; 1.2.x ek olarak `telegram_cekirdek` getirir, CT kullanmaz — CT kendi `copytrade/canli/telegram.py` standardını kullanır)). **Değiştirilmez**, güncelleme kaynaktan.
 - `copytrade/canli/ogrenme_adaptor.py` — CT'ye özgü çeviri ve uygulama (tek yer).
 - Motor temas noktaları (birkaç satır): `Hesap.dinleyici` (dolum bildirimi), `_emir_isle` (emekli engeli + çarpan), dakikalık adım `ogrenme`, `hafta_degisimi` karşılığı.
 - Testler: `tests/test_ogrenme_adaptor.py`, `tests/test_ogrenme_filtre.py`, `tests/test_ortak_ogrenme_paket*.py`.
