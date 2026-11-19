@@ -5309,3 +5309,9 @@
 {"zaman_ms":1795129840133,"olay":"tur","ozsermaye_usd":9998.467}
 {"zaman_ms":1795130752949,"olay":"tur","ozsermaye_usd":9994.8499}
 {"zaman_ms":1795131174927,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"HYPE","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795131174563,"gorme_ms":1795131174926,"yas_ms":364}
+{"zaman_ms":1795131469817,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:MSFT","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1795131469476,"gorme_ms":1795131469816,"yas_ms":341}
+{"zaman_ms":1795131469817,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:MSFT","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1795131469476,"gorme_ms":1795131469816,"yas_ms":341}
+{"zaman_ms":1795131495615,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:INTC","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1795131495115,"gorme_ms":1795131495614,"yas_ms":500}
+{"zaman_ms":1795131495616,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:INTC","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1795131495115,"gorme_ms":1795131495614,"yas_ms":501}
+{"zaman_ms":1795131525728,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:ANT","eylem":"ac","karar":"atlandi","neden":"hip3_atlandi","trader_dolum_ms":1795131525174,"gorme_ms":1795131525728,"yas_ms":554}
+{"zaman_ms":1795131622398,"olay":"tur","ozsermaye_usd":10000.3025}
