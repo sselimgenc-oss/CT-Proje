@@ -3133,7 +3133,7 @@ class Motor:
         """Günlük rapor metni (`/rapor` ve zamanlı özet ortak; durum değiştirmez)."""
         oz = self.ozsermaye()
         return tg.msg_gunluk(self.kip, self.kasa, oz, self._ozet_oz if self._ozet_oz is not None else self.kasa, self._ozet_emir, len(self.saha.uyeler), self.saha.n,
-                             self.pano_ek()["acik"], self.hesap.funding_toplam() if self.kip == "sanal" else None, self.karsi_olgu_gun or None)
+                             self.pano_ek()["acik"], self.hesap.funding_toplam() if self.kip == "sanal" else None, self.karsi_olgu_gun or None, gunluk_ozet.gunluk_etki(self))
 
     def _gunluk_ozet(self, simdi: int) -> None:
         d = datetime.fromtimestamp(simdi / 1000, UTC)

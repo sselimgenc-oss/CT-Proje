@@ -71,9 +71,31 @@ def _say(v: Any) -> float | None:
     return f if f == f and abs(f) != float("inf") else None
 
 
-def _ogrenme(motor: Any, gun: str) -> dict:
+def ogrenme_etki(kayitlar: list[dict]) -> dict:
+    """Öğrenme katmanının bugünkü etkisi (YALNIZ OKUMA; günlük kayıt satırlarından, yeni sayım mantığı yok):
+    - `filtre_atlanan`: `ml_filtre_atla` olayı sayısı (ML filtresinin atladığı açılış sinyalleri).
+    - `filtre_karsi_olgu_pnl`: bugün KAPANAN `karsi_olgu_kapandi` kayıtlarından neden `ml_filtre_atla` olanların `pnl_usd` toplamı ($, hayali). Kapanış anahtarı (adres|coin) kayıtta yok; neden ile eşleşir. Hiç kapanan yoksa null.
+    - `ders_kucultulen`: null. Motor açılış anındaki ders çarpanını (0,5–1,0) kayda yazmıyor; mevcut kayıtlardan çıkarılamaz.
+    - `ders_engellenen`: `emir_yok` olaylarında neden `ders_emekli` olan (emekli dersle engellenen açılış) sayısı."""
+    filtre = sum(1 for k in kayitlar if k.get("olay") == "ml_filtre_atla")
+    pnl = [_say(k.get("pnl_usd")) for k in kayitlar if k.get("olay") == "karsi_olgu_kapandi" and k.get("neden") == "ml_filtre_atla"]
+    kapali = [p for p in pnl if p is not None]
+    engel = sum(1 for k in kayitlar if k.get("olay") == "emir_yok" and k.get("neden") == "ders_emekli")
+    return {"filtre_atlanan": filtre, "filtre_karsi_olgu_pnl": round(sum(kapali), 2) if kapali else None, "ders_kucultulen": None, "ders_engellenen": engel}
+
+
+def gunluk_etki(motor: Any) -> dict:
+    """Bugünün (UTC gün) öğrenme etkisi: Telegram günlük raporu için. Hata yutulur; hata olursa tüm alanlar null/0."""
+    try:
+        gun = datetime.fromtimestamp(int(motor.saat_ms()) / 1000, UTC).date().isoformat()
+        return ogrenme_etki(_gunluk_kayitlar(motor, gun))
+    except Exception:                                                # noqa: BLE001
+        return {"filtre_atlanan": 0, "filtre_karsi_olgu_pnl": None, "ders_kucultulen": None, "ders_engellenen": 0}
+
+
+def _ogrenme(motor: Any, gun: str, kayitlar: list[dict]) -> dict:
     og = getattr(motor, "ogrenme", None)
-    bos = {"aktif_ders": None, "yeni_ders": None, "emekli_ders": None, "filtre_aktif": False}
+    bos = {"aktif_ders": None, "yeni_ders": None, "emekli_ders": None, "filtre_aktif": False, **ogrenme_etki(kayitlar)}
     if og is None or not getattr(og, "aktif", False):
         return bos
     try:
@@ -150,7 +172,7 @@ def olustur(motor: Any, ortam: dict | None = None) -> dict:
         "islem": {"gun_acilan": sum(1 for k in dolu if k.get("eylem") == "ac"), "gun_kapanan": len(kapanis),
                   "kazanan": sum(1 for k in kapanis if _say(k["pnl_usd"]) > 0), "kaybeden": sum(1 for k in kapanis if _say(k["pnl_usd"]) < 0),
                   "acik_pozisyon": sum(len(c) for c in motor.hesap.poz.values()), "alinmayan_sinyal": sum(1 for k in kayitlar if k.get("olay") == "emir_yok")},
-        "hesaplar": hesaplar, "ogrenme": _ogrenme(motor, gun), "rejim": _rejim_btc(motor), "drift_uyari": drift,
+        "hesaplar": hesaplar, "ogrenme": _ogrenme(motor, gun, kayitlar), "rejim": _rejim_btc(motor), "drift_uyari": drift,
         "limitler": {"gunluk_kayip_yuzde": round((yaml_kayip if yaml_kayip is not None else sert.GUNLUK_KAYIP_UST_ORAN) * 100, 2), "kaldirac_tavan": sert.KALDIRAC_UST, "durdu_mu": durdu,
                      "kaldirac_ayar": _say(motor.rules.get("canli_marj_kaldirac"))},
         "saglik": {"son_nabiz": _iso(simdi), "hata_sayisi_gun": sum(1 for k in kayitlar if k.get("olay") == "adim_hata"), **_kaynak_saglik(motor)},
