@@ -5,7 +5,7 @@ Son güncelleme: 2026-11-19, lider Claude. Son karar: kullanıcı.
 ## Hedef (K-66, kullanıcı kararı 14.11)
 Kullanıcının asıl modeli: **Form Radarı** (`docs/RADAR_V1.md`, v1.1 kuralları K-53). Her gün son 7 günün formuna göre kadro:
 **İlk 11 sahada, 19 yedek** (toplam 30). Form düşen çıkar, yükselen girer. "Geçmiş değil, şimdi + gelecek."
-- Şu an yalnız **sanal** (GitHub Actions vardiyası). Gerçek para yok; geçiş yalnız kullanıcı kararıyla.
+- Şu an yalnız **sanal** (DigitalOcean sunucusunda 7/24; 19.11'den beri). Gerçek para yok; geçiş yalnız kullanıcı kararıyla.
 - **Süre ve karar noktası yok (K-71, kullanıcı kararı 19.11):** sanal dönemin bitiş tarihi yok, canlı tarihi yok; kullanıcı bildirene kadar sanal sürer. Otomatik "dur/devam" noktaları (K-46 02–03.12, 31.12 değerlendirmesi), tarih ve işlem sayısı şartları kalktı; proje zarar etse de devam eder, kullanıcı geliştirir. Gerçek paraya geçişin zamanı ve şekli yalnız kullanıcının kararı. 28 günlük strateji kilidi de kalktı: ayarlar kullanıcı kararıyla istendiği zaman değişebilir (yeni sürüm olarak).
 - Ölçüm ve raporlama sürer (bilgi amaçlı): ayda %4 ve BTC al-tut karşılaştırması, isabet ölçümü. Kayıp tahammülü: kasa zirveden %20 (kilit sistemde).
 - Kapanan yollar (kodları repodan silindi): D+ (sabit kadro), K-65 seçim vetoları, elle çıkarma listesi, walk-forward seçim doğrulaması, Revizyon 1. Sebep: geçmiş performansa göre seçim rastgeleden iyi çıkmadı (K-65 sonu); kullanıcı özgün Form Radarı'na döndü.
@@ -13,7 +13,13 @@ Kullanıcının asıl modeli: **Form Radarı** (`docs/RADAR_V1.md`, v1.1 kuralla
 ## Şu an
 - Form Radarı yürürlükte (kadro `radar_surum` v4): radar iş akışı tarama → kadro → isabet; saha 11 kişi (sanal kasa 10.000 $ → slot ≈ 909 $, `canli_sanal_kasa_ust_usd`; gerçek para sınırı 1.500 $ (K-72, kodda sert; günlük kayıp ≤ %5, kaldıraç ≤ 5x, CT 3x)); kadro haftalık (pazardan pazara; hafta içi yalnız güvenlik çıkışları; pazar yedeğe inenin pozisyonları trader'a bırakılır, en çok 72 sa); toplu emir bandı; yeni sanal dönem 16.11 11:30Z (14:30 TSİ). Ayrıntı K-66.
 - **Ana dal koruması** (`main-koruma`): PR zorunlu, `test` + `canli_sdk` yeşil olmadan birleşmez.
-- Telegram açık; dış nabız alarmı `sg-nabiz` (`docs/NABIZ_ALARMI.md`).
+- **Sunucu (19.11 tam geçiş, 15:44Z):** DigitalOcean Amsterdam droplet; motor `sg-sanal` (sürekli), yayım `sg-sanal-yayim.timer` (15 dk → `canli-durum`), pano `sg-sanal-pano.timer` (60 sn → `sg-pano`), açılış kontrolü `sg-sanal-kontrol`. Yalnız `uretim` modu (eski deneme modu, dalı ve panosu kaldırıldı, #664). Actions vardiyası kapalı (repo değişkeni `SUNUCU_AKTIF=evet`). Kurulum: `deploy/kurulum_sanal.md`.
+- **Oto-güncelleme (#659):** `sg-sanal-guncelle.timer` saatlik; yalnız CI'ı yeşil main commit'lerini fast-forward alır, açılış kontrolü geçmezse geri alır, Telegram'a bildirir. PR'lar **merge** ile birleştirilir (squash değil). Elle geri alma: `deploy/sanal_geri_al.sh`. Main'e giren değişiklik ≤1 saatte sunucuda.
+- Telegram açık (standart #653: `[CT] INFO/WARN/CRIT`, iki adımlı komut kodu, günlük 21:00 + haftalık pazar 21:10 TSİ); dış nabız alarmı `sg-nabiz` (`docs/NABIZ_ALARMI.md`).
+- **Paylaşım dosyaları** (`durum/paylasim/`, orkestratör okur): `kadro_yon_v1.json` (#648), `gunluk_ozet_v1.json` (#656, 21:00 TSİ + saatlik).
+- **Öğrenme (#654, #658, #663):** ortak öğrenme paketi `copytrade/ortak_ogrenme/` (kaynak ML f6221cb, SURUM 1.2.1) sanalda açık; dersler ve ML filtresi yalnız riski azaltır (atla/çarpan 0,5–1,0), sert sınırları aşamaz. Ayrıntı `docs/ORTAK_OGRENME_CT.md`.
+- **Yalnız kayıt (işleme etkisi yok):** rejim beslemesi (`rejim.py`, #652/#660; `rejim_anlik`), haber/duygu (`haber.py`, #657; Fear & Greed + RSS; `haber_anlik`), alınmayan sinyal karşı-olgusu (#649), PBO/holdout mührü ve sürüm karşılaştırma (#655).
+- **Kopya sapması (#649, #661, #662):** ideal kopya yalnız kopyalayabileceğimiz pozisyonları sayar (HIP-3, eski pozisyon ve K-41 ters yön hariç). Ayrı Telegram uyarısı yok; saatlik özette tek satır (coin başına en çok 6 saatte bir).
 - Repo adı `sselimgenc-oss/CT-Proje`.
 
 ## Oturum kuralı: Orkestratör (kullanıcı kararı 18.11)
