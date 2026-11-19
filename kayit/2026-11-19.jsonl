@@ -278,3 +278,6 @@
 {"zaman_ms":1795063593058,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"HYPE","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795063592677,"gorme_ms":1795063593057,"yas_ms":381}
 {"zaman_ms":1795063593528,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"HYPE","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795063593155,"gorme_ms":1795063593528,"yas_ms":373}
 {"zaman_ms":1795063594014,"olay":"emir_yok","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"HYPE","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795063593577,"gorme_ms":1795063594014,"yas_ms":437}
+{"zaman_ms":1795063641409,"olay":"telegram","metin":"🧾 Son 1 saat (06:46–07:47 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 8 (≈4 ayrı işlem)\n   • kural gereği 8: 4 slot tavanı · 4 ters netleşme (K‑41)\n   • kaçırılan 0 (geç görülen / veri yok)\n💰 Kasa: 10.003,67 $ · bugün 🔴 −18,82 $ (−%0,2) · başlangıçtan 🟢 +3,67 $ (%0,0)","acik":true}
+{"zaman_ms":1795064218150,"olay":"tur","ozsermaye_usd":10004.0617}
+{"zaman_ms":1795064408769,"olay":"funding","saat":498629,"saat_adet":1,"funding_usd":-0.014054539847463361,"toplam_funding_usd":0.3005861223379665}
