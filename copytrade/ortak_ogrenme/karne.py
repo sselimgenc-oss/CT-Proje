@@ -1,4 +1,4 @@
-# Kaynak: sselimgenc-oss/SG-Github-AB-proje trader/paket/ortak_ogrenme/karne.py @ 84f6cad (kopya; değiştirme, güncelleme kaynaktan)
+# Kaynak: sselimgenc-oss/SG-Github-AB-proje trader/paket/ortak_ogrenme/karne.py @ f6221cb (kopya; değiştirme, güncelleme kaynaktan)
 """Kurulum karnesi ve sanal kasa (spec parca 2 bolum 1). Yalniz standart kutuphane.
 
 ML karsiligi: trader_core/counterfactual.py -> arm_scorecard, arm_virtual_bankroll, _arm_block, _mean_or_none.

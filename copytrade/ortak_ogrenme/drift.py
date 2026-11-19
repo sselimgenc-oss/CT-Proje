@@ -1,4 +1,4 @@
-# Kaynak: sselimgenc-oss/SG-Github-AB-proje trader/paket/ortak_ogrenme/drift.py @ 84f6cad (kopya; değiştirme, güncelleme kaynaktan)
+# Kaynak: sselimgenc-oss/SG-Github-AB-proje trader/paket/ortak_ogrenme/drift.py @ f6221cb (kopya; değiştirme, güncelleme kaynaktan)
 """Drift izleme: CUSUM (spec parca 2 bolum 3). Yalniz standart kutuphane.
 
 ML karsiligi: trader_core/drift_monitor.py -> cusum_replay ve sabitler (ayni degerler).
