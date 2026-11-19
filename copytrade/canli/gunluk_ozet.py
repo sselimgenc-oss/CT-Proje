@@ -86,6 +86,53 @@ def ogrenme_etki(kayitlar: list[dict]) -> dict:
     return {"filtre_atlanan": filtre, "filtre_karsi_olgu_pnl": round(sum(kapali), 2) if kapali else None, "ders_kucultulen": sum(1 for c in carpanli if c < 1.0) if carpanli else None, "ders_engellenen": engel}
 
 
+def _medyan(v: list[float]) -> float | None:
+    if not v:
+        return None
+    s = sorted(v)
+    n = len(s)
+    return s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2
+
+
+def _p90(v: list[float]) -> float | None:
+    """En yakın sıra yöntemi: ceil(0,9 × n)-inci küçük değer (tam sayı aritmetiği)."""
+    if not v:
+        return None
+    s = sorted(v)
+    return s[max(0, (9 * len(s) + 9) // 10 - 1)]
+
+
+def _kalite_grup(satirlar: list[dict]) -> dict:
+    """Dolan (`usd_dolan` > 0) `emir` satırları için gecikme/görme/kayma özeti. Eksik zaman/kayma olan satır o metrikte atlanır. Veri yoksa null."""
+    dolu = [k for k in satirlar if k.get("olay") == "emir" and (_say(k.get("usd_dolan")) or 0.0) > 0]
+    gecikme, gorme, kayma = [], [], []
+    for k in dolu:
+        tdm = _say(k.get("trader_dolum_ms"))
+        dm = _say(k.get("dolum_ms"))
+        gm = _say(k.get("gorme_ms"))
+        kt = _say(k.get("kayma_trader"))
+        if tdm is not None and dm is not None:
+            gecikme.append(dm - tdm)
+        if tdm is not None and gm is not None:
+            gorme.append(gm - tdm)
+        if kt is not None:
+            kayma.append(kt * 10000)
+    r1 = lambda v: None if v is None else round(v, 1)                    # noqa: E731
+    return {"n": len(dolu), "gecikme_ms_medyan": r1(_medyan(gecikme)), "gecikme_ms_p90": r1(_p90(gecikme)),
+            "gorme_ms_medyan": r1(_medyan(gorme)), "kayma_bps_medyan": r1(_medyan(kayma)), "kayma_bps_p90": r1(_p90(kayma))}
+
+
+def kopya_kalite(kayitlar: list[dict]) -> dict:
+    """Kopya gecikme ve kayma özeti (YALNIZ BİLGİ; karar/eşik değiştirmez). Girdi: çağıranın seçtiği kayıt satırları (günlük ya da 24 sa).
+    - `gecikme_ms` = dolum_ms − trader_dolum_ms (bizim dolumumuz, trader dolumundan kaç ms sonra).
+    - `gorme_ms` = gorme_ms − trader_dolum_ms (trader dolumunu bizim kaç ms sonra gördüğümüz).
+    - `kayma_bps` = kayma_trader × 10000; + = trader fiyatından aleyhe (motor tanımı: alımda (dolum−trader)/trader, satımda ters işaret).
+    - `ac_artir` / `azalt_kapat`: aynı metrikler, eylem gruplarına göre.
+    Yalnız dolan emirler (usd_dolan > 0). p90: en yakın sıra. Veri yoksa ilgili alanlar null."""
+    return {**_kalite_grup(kayitlar), "ac_artir": _kalite_grup([k for k in kayitlar if k.get("eylem") in ("ac", "artir")]),
+            "azalt_kapat": _kalite_grup([k for k in kayitlar if k.get("eylem") in ("azalt", "kapat")])}
+
+
 def gunluk_etki(motor: Any) -> dict:
     """Bugünün (UTC gün) öğrenme etkisi: Telegram günlük raporu için. Hata yutulur; hata olursa tüm alanlar null/0."""
     try:
@@ -179,6 +226,7 @@ def olustur(motor: Any, ortam: dict | None = None) -> dict:
                      "kaldirac_ayar": _say(motor.rules.get("canli_marj_kaldirac"))},
         "saglik": {"son_nabiz": _iso(simdi), "hata_sayisi_gun": sum(1 for k in kayitlar if k.get("olay") == "adim_hata"), **_kaynak_saglik(motor)},
         "notlar": notlar[:5],
+        "kopya_kalite": kopya_kalite(kayitlar),
     }
     return json.loads(_ADRES.sub("[gizli]", json.dumps(veri, ensure_ascii=False)))
 
