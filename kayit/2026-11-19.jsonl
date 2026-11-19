@@ -322,3 +322,7 @@
 {"zaman_ms":1795068575056,"olay":"tur","ozsermaye_usd":10005.355}
 {"zaman_ms":1795069434890,"olay":"tur","ozsermaye_usd":10000.9783}
 {"zaman_ms":1795070299822,"olay":"tur","ozsermaye_usd":9993.9236}
+{"zaman_ms":1795070878769,"olay":"telegram","metin":"🧾 Son 1 saat (08:47–09:47 TSİ): 1 emir · sanal\n➕ açılış 0 · ⬆️ artırma 0 · ⬇️ azaltma 0 · ✖️ kapanış 1\n🏆 En büyük: 151 $ (SOL, AL) · 0xdebd49…\n⏭️ Kopyalanmayan trader dolumu: 2 (≈2 ayrı işlem)\n   • kural gereği 2: 2 slot tavanı\n   • kaçırılan 0 (geç görülen / veri yok)\n💵 Tutar toplamı: 151 $ · kayma","acik":true}
+{"zaman_ms":1795071144784,"olay":"tur","ozsermaye_usd":9995.375}
+{"zaman_ms":1795071632081,"olay":"funding","saat":498631,"saat_adet":1,"funding_usd":-0.016135531944167107,"toplam_funding_usd":0.2802682632959967}
+{"zaman_ms":1795071732295,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","hesap_usd":1015988.785556,"anlik_kaldirac":5.040587876220931,"esik":5.0,"durum":"basladi"}
