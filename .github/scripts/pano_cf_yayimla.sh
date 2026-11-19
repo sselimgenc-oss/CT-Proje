@@ -31,6 +31,7 @@ yayimla() {
   ozet="$(sha256sum "$cf_dizin/yeni.html" | cut -d' ' -f1)"
   if [ "$ozet" = "$son" ]; then return 0; fi
   cp "$cf_dizin/yeni.html" "$cf_dizin/site/index.html"
+  printf '/*\n  Content-Security-Policy: frame-ancestors '"'"'self'"'"' https://orkestra-kapi.sselimgenc-c18.workers.dev\n' > "$cf_dizin/site/_headers"   # tek pano kapısı (orkestratör, 19.11): yalnız kendi alanı + kapı iframe'de açabilir
   if ( cd "$cf_dizin" && WRANGLER_SEND_METRICS=false timeout -k 10 120 "$wrangler" deploy --assets=site --name sg-pano --compatibility-date=2026-11-01 >/dev/null ); then
     son="$ozet"
     echo "pano yayımlandı ($(date -u +%FT%TZ), ${ozet:0:12})"
