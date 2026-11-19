@@ -148,3 +148,12 @@ def test_saatlik_ozette_tek_drift_satiri_ve_6_saat_siniri(tmp_path):
 def test_drift_satiri_bicimi():
     assert tg.drift_satiri({}) == ""
     assert tg.drift_satiri({"ETH": 4.11, "BTC": 1.2, "BNB": 1.0, "ZEC": 1.0}).startswith("📐 Kopya sapması: 4 coin, en büyük ETH %411")
+
+
+def test_drift_telegram_uretimde_kapali_olay_surer(tmp_path):
+    m, saat, tgp, a = hazir(tmp_path)
+    assert m.rules.get("kopya_drift_telegram") is False
+    t = saat()
+    m.kopya_drift_adimi(t)
+    m.kopya_drift_adimi(t + 31 * DK)
+    assert kayitlar(tmp_path, "kopya_drift") and not any("Kopya sapması" in x for x in m.tg.gonderilen)
