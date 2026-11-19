@@ -2,13 +2,13 @@
  "bas_ms": 1794828600000,
  "btc_donem_fiyat": 64642.0,
  "doluluk": {
-  "brut_ms": 970143572903.9263,
-  "kapasite_ms": 2372143510.0,
-  "nakit_ms": 118666884.5083734,
-  "net_ms": 176124339501.07858,
-  "slot_ms": 2372143510.0,
-  "son_ms": 1795051792160,
-  "sure_ms": 215649410
+  "brut_ms": 975993983542.1045,
+  "kapasite_ms": 2382252510.0,
+  "nakit_ms": 119003354.57879315,
+  "net_ms": 177284125198.47272,
+  "slot_ms": 2382252510.0,
+  "son_ms": 1795052711160,
+  "sure_ms": 216568410
  },
  "donem": "2026-11-16T11:30:00Z",
  "emir_sayac": {
@@ -16,13 +16,13 @@
    "bant_ici": 6800,
    "gec_acilis": 8,
    "hip3_atlandi": 2912,
-   "min_emir_atlandi": 2012,
+   "min_emir_atlandi": 2013,
    "slot_tavani": 4723,
    "spot_atlandi": 14,
    "ters_netlesme": 880,
    "trader_hesap_yok": 3
   },
-  "atlanan": 17352,
+  "atlanan": 17353,
   "emir": 153,
   "yuvarlanan": 15
  },
@@ -43,9 +43,9 @@
    "ozsermaye_usd": 10022.4878
   },
   {
-   "btc": 62637.5,
+   "btc": 62746.5,
    "gun": "2026-11-19",
-   "ozsermaye_usd": 10039.838
+   "ozsermaye_usd": 10037.0522
   }
  ],
  "kasa_usd": 10000.0,
@@ -87,7 +87,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": -78.0395,
+   "net_usd": -79.6868,
    "sonuc": null
   },
   {
@@ -107,7 +107,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": -5.1346,
+   "net_usd": -3.4974,
    "sonuc": null
   },
   {
@@ -117,7 +117,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": 17.8413,
+   "net_usd": 17.0693,
    "sonuc": null
   },
   {
@@ -147,7 +147,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "kor_gevsetildi",
    "katman": "yedek",
-   "net_usd": 13.0046,
+   "net_usd": 12.4202,
    "sonuc": null
   },
   {
@@ -157,7 +157,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "kor_gevsetildi",
    "katman": "yedek",
-   "net_usd": 26.4471,
+   "net_usd": 25.0278,
    "sonuc": null
   }
  ]
