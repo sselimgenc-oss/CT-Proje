@@ -1372,6 +1372,7 @@ def test_emir_kaydinda_boyut_girdileri_elle_denetim(tmp_path):
     e1, e2 = kayitlar(tmp_path, "emir")[:2]
     assert (e1["trader_poz_once"], e1["trader_poz_sonra"], e1["trader_hesap_usd"]) == (0.0, 300.0, 100000.0)
     assert e1["slot_usd"] == pytest.approx(1000 / 11) and e1["biz_poz_usd"] == 0.0 and e1["biz_slot_toplam_usd"] == 0.0 and e1["hedef_usd"] == pytest.approx(27.2727, abs=1e-4)
+    assert e1["ders_carpan"] == 1.0                                                                  # açılışta ders çarpanı kayda yazılır (ders yok → 1,0)
     assert (e2["trader_poz_once"], e2["trader_poz_sonra"]) == (300.0, 150.0) and e2["biz_poz_usd"] == pytest.approx(27.2727, abs=1e-3) and e2["hedef_usd"] == pytest.approx(13.6364, abs=1e-4)
     assert e2["biz_slot_toplam_usd"] == pytest.approx(27.2727, abs=1e-3)
 

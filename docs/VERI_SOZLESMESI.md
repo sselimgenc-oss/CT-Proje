@@ -508,6 +508,7 @@ Adresler trader'ların halka açık adresleridir; API anahtarı, hesap adresimiz
 - `biz_poz_usd`: bizim o coindeki kopya nosyoneli, **$ (kopya ölçeği)**, emir anı mark'ı ile.
 - `biz_slot_toplam_usd`: bizim o trader slotundaki TÜM coinlerin toplam nosyoneli, **$ (kopya ölçeği)** (K‑35 tavanı için).
 - `hedef_usd`: hedef nosyonel = `min(slot_usd × |trader_poz_sonra| × trader_px / trader_hesap_usd, radar_slot_tavan_carpan × slot_usd)`, **$ (kopya ölçeği)**; hesap bilinmiyorsa `null`.
+- `ders_carpan`: açılış/artırmada ortak öğrenme ders çarpanı (0,5–1,0; ders yoksa 1,0; `slot_usd` bu çarpanla küçültülmüş hâlidir), azaltma/kapanışta `null` (19.11). Günlük özet `ogrenme.ders_kucultulen` bundan sayılır.
 Oranlar yoktur; hepsi mutlak sayıdır (adet ya da $). Zaman: UTC ms alanları değişmedi.
 - `kor_kirpildi` kaydı (K‑44 ile) yalnız durum DEĞİŞİNCE yazılır: imza = (aday, kadro `kosu_ms`, karar anındaki TAM saha) (B11; değiştirmede üye başına değişen `uyeler`/kalan imzaya girmez); aynı durumun 5 dk'lık tekrarı yazılmaz. `uyeler` alanı: kontrol edilen küme (değiştirmede çıkacak üye hariç).
 
