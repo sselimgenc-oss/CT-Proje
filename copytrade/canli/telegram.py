@@ -599,11 +599,14 @@ def msg_kapandi(adres: str, coin: str, pnl_usd: float, pnl_oran: float | None, n
             f"{tr_isaretli(pnl_usd)} ${oran} · Neden: {kapanis_nedeni_tr(neden)}")
 
 
+BOT_NEDEN_TR = {"komut": "sen /hepsini_kapat ile durdurdun", "zirve_dusus": "özsermaye zirveden çok düştü (zirve düşüş freni)"}
+
+
 def msg_bot_durdu(neden: str, acik_poz: int, stop_durumu: str, ek: str = "", senden: str = "Yeniden başlatmak için bana haber ver.", son: str | None = None) -> str:
     """Ayrı 🔴 'Bot durdu' mesajı (kritik, sesli; 6 saat tekrar sınırına TAKILMAZ; en çok 5 satır + `[CT]`): neden, açık pozisyon sayısı ve stop durumu.
     `ek`: pozisyonlar tam kapanmadıysa ayrıntı (ör. borsada kalan)."""
     son = son or (f"Pozisyonlar DÜZLEŞMEDİ{ek}; yeni işlem açılmıyor, kapanış yeniden deneniyor." if (ek or acik_poz > 0) else "Tüm pozisyonlar kapandı; yeni işlem açılmıyor.")
-    return f"🔴 Bot durdu\nNeden: {sade_ad(neden)}\nAçık pozisyon: {acik_poz} · Stop: {stop_durumu}\n{son}\n{senden}"
+    return f"🔴 Bot durdu\nNeden: {BOT_NEDEN_TR.get(neden, sade_ad(neden))}\nAçık pozisyon: {acik_poz} · Stop: {stop_durumu}\n{son}\n{senden}"
 
 
 def msg_limit_yaklasti(kayip_oran: float, sinir_oran: float, oz: float) -> str:

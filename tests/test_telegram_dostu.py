@@ -174,7 +174,7 @@ def test_motor_bot_durdu_mesaji_ve_yeniden_calisinca_tek_duzeldi(tmp_path):
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     m.dur_tetikle("komut")
     durdu = [x for x in tgp.gonderilen if x.startswith("🔴 Bot durdu")]
-    assert durdu and "Açık pozisyon: 0 · Stop: gerekmiyor" in durdu[0] and "Neden: komut" in durdu[0] and not KOD_ADI.search(durdu[0])
+    assert durdu and "Açık pozisyon: 0 · Stop: gerekmiyor" in durdu[0] and "Neden: sen /hepsini_kapat ile durdurdun" in durdu[0] and not KOD_ADI.search(durdu[0])
     assert (tmp_path / "durum" / "tg_bot_durdu").exists()
     (tmp_path / "durum" / "DUR").unlink()                                # sorun giderildi, bot yeniden başlıyor
     m2, hl2, saat2, tgp2 = kur(tmp_path, saat=saat)
