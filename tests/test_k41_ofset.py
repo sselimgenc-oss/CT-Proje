@@ -103,7 +103,7 @@ def test_hip3_dex_coin_dizgesi_ayri_coin(tmp_path):
 def test_pano_atlanan_sinyaller_ters_netlesme_nedenini_gosterir():
     from copytrade.canli import pano
     html = pano._atlanan_html([{"olay": "emir_yok", "neden": "ters_netlesme"}] * 2 + [{"olay": "emir_yok", "neden": "marj_yok"}])
-    assert "K‑41" in html and "<b>2</b>" in html
+    assert "ters netleşme" in html and "K‑41" not in html and "<b>2</b>" in html      # Fable 19.11: panoda kod eki yok
 
 
 # ---------------------------------------------------------------------------------------------------------------- ledger sayfalama
