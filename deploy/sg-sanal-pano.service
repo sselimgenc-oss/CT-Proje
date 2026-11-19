@@ -1,0 +1,21 @@
+# Cloudflare Workers pano yayını (deneme: sg-pano-sunucu; uretim: sg-pano). Cloudflare anahtarı YALNIZ bu birimde (/etc/sg-sanal-pano.env). Zamanlayıcı: sg-sanal-pano.timer (60 sn; içerik değişmediyse yayımlamaz).
+[Unit]
+Description=sg-arge sanal pano yayimi (Cloudflare)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=sgsanal
+Group=sgsanal
+WorkingDirectory=/var/lib/sg-sanal/depo
+EnvironmentFile=/etc/sg-sanal-mod.env
+EnvironmentFile=-/etc/sg-sanal-pano.env
+Environment=HOME=/var/lib/sg-sanal
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/bin/bash /var/lib/sg-sanal/depo/deploy/sanal_pano_cf.sh
+TimeoutStartSec=5min
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sg-sanal

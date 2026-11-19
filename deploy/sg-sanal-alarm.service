@@ -1,0 +1,14 @@
+# sg-sanal düşünce (OnFailure) bir kez çalışır: Telegram'a kısa alarm. Token/chat YALNIZ /etc/sg-sanal-telegram.env içinden; dosya/değer yoksa "atlandı" yazıp 0 ile biter (kullanıcı kararı 08.11: Telegram varsayılan kapalı).
+[Unit]
+Description=sg-arge sanal motor alarmi (OnFailure)
+
+[Service]
+Type=oneshot
+User=sgsanal
+Group=sgsanal
+EnvironmentFile=-/etc/sg-sanal-telegram.env
+ExecStart=/bin/bash /var/lib/sg-sanal/depo/deploy/alarm.sh sg-sanal
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true

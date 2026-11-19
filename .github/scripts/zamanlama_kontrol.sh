@@ -10,6 +10,16 @@ veri_dali="${VERI_DALI:?}"
 atla=false
 devral=""   # kilit sahibi koşu DOĞRULANMIŞ biçimde bitmişse onun kimliği: motor bu kilidi devralır (aksi halde motor kendi taze-nabız kontrolüyle başlamaz → zincir kopar)
 neden="yedek cron değil: normal çalışır"
+# SUNUCU GEÇİŞİ (docs/SUNUCU_SANAL_GECIS.md): sanal motor DigitalOcean sunucusuna taşındıysa Actions vardiyası HİÇ başlamaz (cron, dispatch, push; zincir de kopar = bitti).
+# Anahtar (biri yeter): repo değişkeni `SUNUCU_AKTIF=evet` (GitHub → Settings → Variables; geri alma: değeri `hayir` yap = tek tık) YA DA main'de `copytrade/canli/SUNUCU_AKTIF` dosyası.
+# Yalnız canli modu. Çalışan bir vardiya kesilmez; kendi süresi bitince zincir bir sonrakini başlatmaz (kontrol atla=true).
+if [ "$mod" = canli ] && { [ "${SUNUCU_AKTIF:-}" = evet ] || [ -f copytrade/canli/SUNUCU_AKTIF ]; }; then
+  neden="sunucu aktif (SUNUCU_AKTIF): sanal motor sunucuda çalışıyor, Actions vardiyası başlamaz"
+  echo "atla=true" >> "${GITHUB_OUTPUT:-/dev/null}"
+  echo "zamanlama kontrolü [$mod]: $neden"
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then echo "- zamanlama kontrolü [$mod]: $neden (atla=true)" >> "$GITHUB_STEP_SUMMARY"; fi
+  exit 0
+fi
 # radar: HER schedule koşusu (birincil de) bugün yapılmışsa atlar — geç gelen birincil koşu kadroyu gün içinde ikinci kez yazmasın (Opus denetimi, 05.11). canli: yalnız yedek cron.
 olay="${GITHUB_EVENT_NAME:-}"
 # G3: canli için workflow_dispatch de aynı "taze kilit varsa atla" mantığına girer (vardiya zinciri bir sonrakini dispatch ile tetikler; çift vardiya olmasın).

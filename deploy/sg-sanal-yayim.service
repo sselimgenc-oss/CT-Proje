@@ -1,0 +1,25 @@
+# Sanal motor durumunu (durum/*.json, kayit/, pano/) veri dalına yayımlar (deneme: canli-durum-sunucu; uretim: canli-durum). Zamanlayıcı: sg-sanal-yayim.timer (15 dk; Actions'taki 15 dk'lık döngünün karşılığı).
+# Git kimliği: yalnız sunucudaki SSH deploy anahtarı (/var/lib/sg-sanal/.ssh/id_ed25519; repoda ve ortam dosyalarında sır YOK). Telegram/Cloudflare anahtarı bu birime YÜKLENMEZ.
+[Unit]
+Description=sg-arge sanal durum yayimi (veri dali)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=sgsanal
+Group=sgsanal
+WorkingDirectory=/var/lib/sg-sanal/depo
+EnvironmentFile=/etc/sg-sanal-mod.env
+Environment=HOME=/var/lib/sg-sanal
+Environment=PATH=/var/lib/sg-sanal/venv/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHON=/var/lib/sg-sanal/venv/bin/python
+Environment=VARDIYA_ID=sunucu
+Environment="GIT_SSH_COMMAND=ssh -i /var/lib/sg-sanal/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/var/lib/sg-sanal/.ssh/known_hosts"
+Environment=YAYIM_KILIT=/var/lib/sg-sanal/yayim.lock
+ExecStart=/bin/bash /var/lib/sg-sanal/depo/deploy/sanal_yayimla.sh
+TimeoutStartSec=20min
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sg-sanal
