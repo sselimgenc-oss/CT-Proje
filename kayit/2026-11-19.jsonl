@@ -459,3 +459,5 @@
 {"zaman_ms":1795080024942,"olay":"saha_giris","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","neden":"kor_gevsetildi","yerine":null,"slot_usd":909.0909090909091}
 {"zaman_ms":1795080024943,"olay":"telegram","metin":"➕ Yeni trader takibe alındı: 0xf83e8b…\n↳ Neden: boş yer açıldı (benzerlik kuralı gevşetildi; saha hep dolu)","acik":true}
 {"zaman_ms":1795080376556,"olay":"tur","ozsermaye_usd":9989.5905}
+{"zaman_ms":1795081213516,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795081213241,"gorme_ms":1795081213516,"yas_ms":275}
+{"zaman_ms":1795081243922,"olay":"tur","ozsermaye_usd":9988.6016}
