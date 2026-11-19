@@ -210,3 +210,177 @@ def test_pano_cf_mod_pano_adi_ciftini_zorlar_ve_secretsiz_yayimlamaz(tmp_path):
         assert r.returncode == 0, r.stderr
     cagrilar = (tmp_path / "cagrilar.txt").read_text().splitlines()
     assert len(cagrilar) == 1 and "--name sg-pano-sunucu" in cagrilar[0] and "CLOUDFLARE" not in cagrilar[0]
+
+
+# ------------------------------------------------------------------------------------------------ otomatik güncelleme (sanal_guncelle.sh / sanal_geri_al.sh)
+GUNCELLE = DEPLOY / "sanal_guncelle.sh"
+GERI_AL = DEPLOY / "sanal_geri_al.sh"
+BETIK_G = GUNCELLE.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("betik", ["sanal_guncelle.sh", "sanal_geri_al.sh"])
+def test_guncelle_betikleri_bash_sozdizimi(betik):
+    assert subprocess.run(["bash", "-n", str(DEPLOY / betik)], capture_output=True, text=True).returncode == 0
+
+
+def test_guncelle_birimleri_alanlar_ve_sir_yok():
+    s = (DEPLOY / "sg-sanal-guncelle.service").read_text(encoding="utf-8")
+    t = (DEPLOY / "sg-sanal-guncelle.timer").read_text(encoding="utf-8")
+    assert re.search(r"^Type=oneshot$", s, re.M) and "ExecStart=/bin/bash /var/lib/sg-sanal/depo/deploy/sanal_guncelle.sh" in s
+    assert re.search(r"^OnCalendar=hourly$", t, re.M) and re.search(r"^RandomizedDelaySec=5min$", t, re.M) and re.search(r"^Persistent=true$", t, re.M) and "WantedBy=timers.target" in t
+    for ad in ("sg-sanal-guncelle.service", "sg-sanal-guncelle.timer"):
+        assert not re.search(r"TELEGRAM_BOT_TOKEN=\S|BEGIN [A-Z ]*PRIVATE KEY|0x[0-9a-fA-F]{40}", (DEPLOY / ad).read_text(encoding="utf-8")), ad
+
+
+@pytest.mark.skipif(shutil.which("systemd-analyze") is None, reason="systemd-analyze yok")
+def test_guncelle_birimleri_systemd_analyze_verify():
+    r = subprocess.run(["systemd-analyze", "verify", str(DEPLOY / "sg-sanal-guncelle.service"), str(DEPLOY / "sg-sanal-guncelle.timer")], capture_output=True, text=True)
+    assert not re.search(r"Unknown key|Unknown section|Invalid|Failed to parse", r.stdout + r.stderr), r.stdout + r.stderr
+
+
+def test_guncelle_statik_guvenceler():
+    kod = re.sub(r"(?m)^\s*#.*$", "", BETIK_G)
+    assert "--ff-only" in kod and "merge-base --is-ancestor" in kod                                  # yalnız fast-forward
+    assert "check-runs" in kod and 'ZORUNLU_CI="test canli_sdk"' in kod and "completed" in kod and "success" in kod   # CI kapısı
+    assert "reset -q --hard" in kod and "geri_al" in kod and "birimleri_geri" in kod and "pip_kur" in kod      # geri alma yolu
+    assert "--require-hashes -r" in kod and "requirements-canli.lock" in kod
+    assert '"tamam": true' in kod and "sg-sanal-kontrol" in kod and "flock" in kod
+    assert "durum kayit pano" in kod                                                                  # yerel durum koruması
+    assert "[CT] $1" in kod and "Sunucu güncellendi:" in kod and "CRIT" in kod and "INFO" in kod
+    # token: yalnız stdin'den curl --config'e; echo/log yok, set -x yok
+    assert "--config -" in kod and not re.search(r"set -[a-z]*x", kod)
+    assert not re.search(r"(echo|log)\b[^\n]*\$\{?tok\b", kod)
+    assert "git push" not in kod and "git pull" not in kod
+    g = GERI_AL.read_text(encoding="utf-8")
+    assert "evet" in g and "SANAL_HEDEF_SHA" in g and "dondur" in g
+
+
+class _Sunucu:
+    pass
+
+
+@pytest.fixture
+def sunucu(tmp_path):
+    """Sahte sunucu: bare origin + depo klonu (deploy/ birimi + kilit dosyası), sahte systemctl/journalctl/curl, sırsız ortam."""
+    bare, tohum, depo = tmp_path / "origin.git", tmp_path / "tohum", tmp_path / "depo"
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(bare)], check=True)
+    tohum.mkdir()
+    git(tohum, "init", "-q", "-b", "main")
+    (tohum / "deploy").mkdir()
+    (tohum / "deploy/sg-sanal.service").write_text("[Service]\n# v1\n")
+    (tohum / "requirements-canli.lock").write_text("a==1\n")
+    git(tohum, "add", "-A")
+    git(tohum, "commit", "-q", "-m", "v1")
+    git(tohum, "remote", "add", "origin", str(bare))
+    git(tohum, "push", "-q", "origin", "main")
+    subprocess.run(["git", "clone", "-q", str(bare), str(depo)], check=True)
+    v1 = subprocess.run(["git", "rev-parse", "HEAD"], cwd=depo, capture_output=True, text=True).stdout.strip()
+    bin_, birim, durum, log = tmp_path / "bin", tmp_path / "birim", tmp_path / "durum", tmp_path / "cagri.log"
+    for d in (bin_, birim):
+        d.mkdir()
+    (birim / "sg-sanal.service").write_text("[Service]\n# v1\n")
+    (bin_ / "systemctl").write_text(
+        '#!/usr/bin/env bash\necho "systemctl $*" >> "$CAGRI_LOG"\n'
+        'case "$1" in is-active) exit 0;; show) echo 0; exit 0;; esac\n'
+        'if [ "$1" = start ] && [ "$2" = sg-sanal-kontrol ]; then exit "${KONTROL_RC:-0}"; fi\nexit 0\n')
+    (bin_ / "journalctl").write_text('#!/usr/bin/env bash\nif [ "${KONTROL_TAMAM:-1}" = 1 ]; then echo \'  "tamam": true,\'; else echo \'  "tamam": false,\'; fi\n')
+    (bin_ / "curl").write_text(
+        '#!/usr/bin/env bash\necho "curl $*" >> "$CAGRI_LOG"\n'
+        'if [ "$1" != "-sSL" ]; then cat >/dev/null; for a in "$@"; do case "$a" in text=*) echo "TG:$a" >> "$CAGRI_LOG";; esac; done; exit 0; fi\n'
+        'cat "$CI_JSON"\n')
+    for f in bin_.iterdir():
+        f.chmod(0o755)
+    tg = tmp_path / "tg.env"
+    tg.write_text("TELEGRAM_BOT_TOKEN=SIRTOKEN123\nTELEGRAM_CHAT_ID=42\n")
+    ci_json = tmp_path / "ci.json"
+    ortak = _env(PATH=f"{bin_}:{os.environ['PATH']}", SANAL_DEPO=str(depo), SANAL_SERIT=str(tmp_path / "serit"), SANAL_DURUM_DIZIN=str(durum), SANAL_BIRIM_DIZIN=str(birim),
+                 SANAL_KULLANICI="", SANAL_TG_ENV=str(tg), SANAL_GUNCELLE_KILIT=str(tmp_path / "k.lock"), GUNCELLE_REPO="o/r", GUNCELLE_BEKLE_SN="0", CI_JSON=str(ci_json), CAGRI_LOG=str(log))
+    s = _Sunucu()
+
+    def ci(*runlar):
+        ci_json.write_text(json.dumps({"check_runs": [{"name": a, "status": st, "conclusion": c} for a, st, c in runlar]}))
+
+    def yeni_commit(icerik="v2", lock=None):
+        git(tohum, "pull", "-q", "origin", "main")
+        (tohum / "deploy/sg-sanal.service").write_text(f"[Service]\n# {icerik}\n")
+        if lock:
+            (tohum / "requirements-canli.lock").write_text(lock)
+        git(tohum, "add", "-A")
+        git(tohum, "commit", "-q", "-m", f"degisiklik {icerik}")
+        git(tohum, "push", "-q", "origin", "main")
+        return subprocess.run(["git", "rev-parse", "HEAD"], cwd=tohum, capture_output=True, text=True).stdout.strip()
+
+    s.depo, s.birim, s.durum, s.log, s.v1, s.ci, s.yeni_commit, s.ortak = depo, birim, durum, log, v1, ci, yeni_commit, ortak
+    s.calistir = lambda **ek: subprocess.run(["bash", str(GUNCELLE)], env={**ortak, **ek}, capture_output=True, text=True)
+    s.head = lambda: subprocess.run(["git", "rev-parse", "HEAD"], cwd=depo, capture_output=True, text=True).stdout.strip()
+    log.write_text("")
+    (depo / "durum").mkdir()
+    (depo / "durum/motor.json").write_text("{}")                                                      # yerel durum (izlenmez)
+    return s
+
+
+YESIL = (("test", "completed", "success"), ("canli_sdk", "completed", "success"))
+
+
+def test_guncelle_ayni_sha_ve_kirmizi_ci_hicbir_sey_yapmaz(sunucu):
+    r = sunucu.calistir()
+    assert r.returncode == 0 and sunucu.head() == sunucu.v1 and "systemctl stop" not in sunucu.log.read_text()
+    sunucu.yeni_commit()
+    for runlar in ((("test", "completed", "success"),), (*YESIL, ("x", "in_progress", None)), (("test", "completed", "success"), ("canli_sdk", "completed", "failure")), ()):
+        sunucu.ci(*runlar)
+        r = sunucu.calistir()
+        assert r.returncode == 0 and sunucu.head() == sunucu.v1 and "systemctl stop" not in sunucu.log.read_text(), r.stdout
+    assert "CI yeşil değil" in r.stdout
+
+
+def test_guncelle_basari_yolu_ff_birim_telegram_ve_yerel_durum_korunur(sunucu):
+    yeni = sunucu.yeni_commit("v2")
+    sunucu.ci(*YESIL)
+    r = sunucu.calistir()
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert sunucu.head() == yeni and "# v2" in (sunucu.birim / "sg-sanal.service").read_text()      # birim değişti -> kopyalandı
+    log = sunucu.log.read_text()
+    assert "daemon-reload" in log and log.index("stop sg-sanal") < log.index("start sg-sanal-kontrol") < log.rindex("start sg-sanal")
+    assert f"Sunucu güncellendi: {sunucu.v1[:7]}→{yeni[:7]} (degisiklik v2)" in log and "[CT] INFO" in log
+    assert "SIRTOKEN123" not in r.stdout + r.stderr + log                                             # token argv'ye/günlüğe girmez
+    assert (sunucu.depo / "durum/motor.json").exists()                                                # yerel durum dokunulmadı
+    assert sunucu.calistir().returncode == 0 and (sunucu.durum / "uygulanan_sha").read_text().strip() == yeni
+
+
+def test_guncelle_duman_testi_basarisizsa_geri_alir_ve_crit_bildirir(sunucu):
+    sunucu.yeni_commit("v2")
+    sunucu.ci(*YESIL)
+    r = sunucu.calistir(KONTROL_TAMAM="0")
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert sunucu.head() == sunucu.v1 and "# v1" in (sunucu.birim / "sg-sanal.service").read_text()   # git + birim geri
+    log = sunucu.log.read_text()
+    assert "[CT] CRIT" in log and "BAŞARISIZ" in log and (sunucu.depo / "durum/motor.json").exists()
+    assert "start sg-sanal\n" in log                                                                  # servisler yeniden başlatıldı
+    assert "SIRTOKEN123" not in r.stdout + r.stderr + log
+    r2 = sunucu.calistir()                                                                           # aynı bozuk commit saatlik döngüde tekrar denenmez
+    assert r2.returncode == 0 and "daha önce başarısız" in r2.stdout and sunucu.head() == sunucu.v1
+
+
+def test_guncelle_ff_olmayan_ve_dondurulmus_reddedilir(sunucu):
+    sunucu.yeni_commit("v2")
+    sunucu.ci(*YESIL)
+    sunucu.durum.mkdir(exist_ok=True)
+    (sunucu.durum / "dondur").write_text("abc\n")
+    r = sunucu.calistir()
+    assert r.returncode == 0 and "DONDURULMUŞ" in r.stdout and sunucu.head() == sunucu.v1
+    (sunucu.durum / "dondur").unlink()
+    git(sunucu.depo, "commit", "-q", "--allow-empty", "-m", "yerel sapma")                           # HEAD origin'den ayrıldı
+    r = sunucu.calistir()
+    assert r.returncode == 0 and "fast-forward" in r.stdout and "systemctl stop" not in sunucu.log.read_text()
+
+
+def test_geri_al_onay_ister_ve_onayla_dondurur(sunucu):
+    yeni = sunucu.yeni_commit("v2")
+    git(sunucu.depo, "pull", "-q", "--ff-only")
+    r = subprocess.run(["bash", str(GERI_AL), sunucu.v1[:7]], env=sunucu.ortak, input="hayir\n", capture_output=True, text=True)
+    assert r.returncode == 1 and "İptal" in r.stdout and sunucu.head() == yeni
+    r = subprocess.run(["bash", str(GERI_AL), "zzz"], env=sunucu.ortak, input="evet\n", capture_output=True, text=True)
+    assert r.returncode == 2
+    r = subprocess.run(["bash", str(GERI_AL), sunucu.v1[:7]], env=sunucu.ortak, input="evet\n", capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert sunucu.head() == sunucu.v1 and (sunucu.durum / "dondur").exists() and "elle geri alındı" in sunucu.log.read_text()

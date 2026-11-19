@@ -1,0 +1,15 @@
+# Otomatik güncelleme (root; saatlik, sg-sanal-guncelle.timer): CI'ı yeşil olan origin/main'i fast-forward ile alır, duman testi yapar, hata olursa geri alır ve Telegram'a [CT] CRIT yollar. Ayrıntı: deploy/sanal_guncelle.sh, deploy/kurulum_sanal.md §6b.
+# Telegram anahtarı betik içinde /etc/sg-sanal-telegram.env'den okunur (yoksa bildirim atlanır). Durum dizini /var/lib/sg-sanal-guncelle (root'a ait).
+[Unit]
+Description=sg-arge sanal sunucu otomatik guncelleme
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /var/lib/sg-sanal/depo/deploy/sanal_guncelle.sh
+StateDirectory=sg-sanal-guncelle
+StateDirectoryMode=0700
+TimeoutStartSec=20min
+Nice=10
+PrivateTmp=true

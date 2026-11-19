@@ -1,0 +1,10 @@
+[Unit]
+Description=sg-arge sanal sunucu otomatik guncelleme (saatlik)
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
