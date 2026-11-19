@@ -21,7 +21,7 @@ from html import escape as esc
 from pathlib import Path
 
 from copytrade import surum_karsilastirma
-from copytrade.canli.gunluk_ozet import kopya_kalite
+from copytrade.canli.gunluk_ozet import alinmayan_neden, kopya_kalite
 from copytrade.canli.telegram import ATLA_TR, KACIRILAN_NEDENLER, kip_adi, tr_isaretli, tr_sayi, tr_yuzde
 from copytrade.saglik import durum as saglik_durum, kontrol as saglik_kontrol, ozet_metin as saglik_metin
 
@@ -624,6 +624,17 @@ def _maruziyet_html(acik: list[dict], kasa: float, oz: float, kaldirac: float, c
             f'<div class="pi"><div class="ha">Coin başına doluluk (tavan: kasanın %{tr_sayi(tavan / kasa * 100 if kasa > 0 else coin_tavan_oran * 100, 0)}\'u)</div>{cubuk}</div>')
 
 
+def _alinmayan_neden_html(satirlar: list[dict]) -> str:
+    """Pano kartı "Alınmayan sinyaller (24 sa)" (yalnız bilgi): neden | adet | karşı-olgu PnL $ (hayali). Satır yoksa "veri yok"."""
+    if not satirlar:
+        return '<div class="bos">veri yok</div>'
+    govde = "".join(f'<tr><td>{esc(ATLA_TR.get(r["neden"], r["neden"]))}</td><td class="sg">{r["adet"]}</td>'
+                    f'<td class="sg {"art" if (r["karsi_olgu_pnl"] or 0) >= 0 else "eks"}">{esc(tl2(r["karsi_olgu_pnl"], True))}</td></tr>'
+                    for r in satirlar)
+    return (f'<div class="tw"><table><tr><th>NEDEN</th><th class="sg">ADET</th><th class="sg">KARŞI-OLGU PnL $</th></tr>{govde}</table></div>'
+            '<div class="ha" style="padding:6px 11px">Karşı-olgu PnL: atlanan sinyalin hayali K/Z\'si (ücret ve kayma yok). Kapanmayan karşı-olgu sayılmaz.</div>')
+
+
 def _kopya_kalite_html(satirlar: list[dict]) -> str:
     """Pano kartı "Kopya kalitesi" (yalnız bilgi): gecikme/görme/kayma özeti; girdi 24 sa kayıtları. Dolan emir yoksa açıklama."""
     q = kopya_kalite(satirlar)
@@ -839,6 +850,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     mut = (f'<div class="mt">Kartların toplamı <b class="{renk(toplam_net)}">{esc(tl(toplam_net, True))}</b> + kapanmış slotlar <b>{esc(tl(float(hesap.get("kapanmis_net") or 0.0), True))}</b> = '
            f'<b>{esc(tl(toplam_net + float(hesap.get("kapanmis_net") or 0.0), True))}</b> (başlangıçtan beri özsermaye farkı {esc(tl(oz - kasa, True))}){" · bazı K/Z bilinmiyor, toplam eksik" if net_eksik else ""}</div>') if slot_bas else ""
     kopya_html = _kopya_kalite_html(k24)
+    alinmayan_html = _alinmayan_neden_html(alinmayan_neden(k24))
     kaynak_html = _kaynak_html(kaynak)
     atlanan_html, kapanan_html, maliyet_html = _atlanan_html(k24), _kapanan_html(kayitlar), _maliyet_html(kayitlar, oz, kasa, gecmis, kip)
     from copytrade.canli.risk import coin_tavan_usd
@@ -954,6 +966,7 @@ input[name=t]{{position:absolute;opacity:0;pointer-events:none}}.sekmeler sectio
 <div class="p g2"><div class="pb">Kapanan işlemler <span>{esc(donem_etiketi(donem))} (UTC)</span></div>{kapanan_html}</div>
 <div class="p g3"><div class="pb">Maliyet dökümü <span>ücret · kayma · funding</span></div>{maliyet_html}</div>
 <div class="p"><div class="pb">Kopya kalitesi <span>24 sa · dolan emir · trader dolumuna göre</span></div><div class="pi">{kopya_html}</div></div>
+<div class="p"><div class="pb">Alınmayan sinyaller (24 sa) <span>neden · karşı-olgu PnL (hayali)</span></div><div class="pi">{alinmayan_html}</div></div>
 <div class="p"><div class="pb">Sunucu kaynakları <span>motor ölçümü · yalnız bilgi</span></div><div class="pi">{kaynak_html}</div></div>
 </section>
 <section class="n5 izgara">
