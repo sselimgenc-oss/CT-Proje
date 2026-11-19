@@ -8,8 +8,8 @@
 |---|---|---|
 | Motor | `canli_vardiya.yml` 4 sa 15 dk vardiya zinciri | `sg-sanal.service` sürekli (`--kip sanal --sanal-kasa-usd 10000`) |
 | Durum yayımı | `canli_yayimla.sh` (15 dk, `GITHUB_TOKEN`) | `sg-sanal-yayim.timer` → `deploy/sanal_yayimla.sh` (15 dk + servis durunca; SSH deploy anahtarı) |
-| Veri dalı | `canli-durum` | deneme: `canli-durum-sunucu`; üretim: `canli-durum` |
-| Pano | `pano` işi → `sg-pano` | `sg-sanal-pano.timer` → `deploy/sanal_pano_cf.sh`; deneme: `sg-pano-sunucu`, üretim: `sg-pano` |
+| Veri dalı | `canli-durum` | `canli-durum` |
+| Pano | `pano` işi → `sg-pano` | `sg-sanal-pano.timer` → `deploy/sanal_pano_cf.sh` → `sg-pano` |
 | Kadro | motor `radar` dalından raw.githubusercontent.com | aynı (motor kodu; git gerekmez) |
 | Dış nabız (`sg-nabiz`) | `canli-durum` kilit/özet | DEĞİŞMEZ: üretimde sunucu aynı dosyaları aynı dala yazar |
 | Geri yükleme | `donem_geri.sh` | `deploy/sanal_baslat.sh` (yalnız İLK açılışta; sonra yerel durum asıl kaynaktır) |
@@ -17,7 +17,7 @@
 **Çift motor güvencesi (3 katman):**
 1. Anahtar: repo değişkeni `SUNUCU_AKTIF=evet` (ya da main'de `copytrade/canli/SUNUCU_AKTIF` dosyası) → `zamanlama_kontrol.sh` her olayda (cron, dispatch, push) `atla=true`; `vardiya`, `pano` ve `zincir` işleri koşmaz, zincir kopar.
 2. Sunucu geçiş kapısı: üretim modunda ilk açılışta `canli-durum:durum/kilit.json` taze ve bırakılmamışsa (Actions vardiyası canlı) sunucu 75 ile bekler/başlamaz.
-3. Motorun kendi kilidi (`durum/kilit.json`, `canli_kilit_dk`=20): iki motor AYNI veri dalına yazıyorsa karşılıklı engeller. UYARI: kilit yalnız veri dalı üzerinden görülür (15 dk yayım gecikmeli); deneme modunda sunucu ayrı dala yazdığı için kilit bu iki motoru birbirinden ayıramaz — deneme güvenliği "ayrı dal + ayrı pano adı + Telegram komutu kapalı" ile sağlanır.
+3. Motorun kendi kilidi (`durum/kilit.json`, `canli_kilit_dk`=20): iki motor AYNI veri dalına yazıyorsa karşılıklı engeller. Kilit yalnız veri dalı üzerinden görülür (15 dk yayım gecikmeli). (Eski "deneme" modu — ayrı dal/pano — 19.11 tam geçişle kaldırıldı.)
 
 ## 1. Paketler
 ```bash
@@ -51,7 +51,7 @@ sudo cp /var/lib/sg-sanal/depo/deploy/sg-sanal*.service /var/lib/sg-sanal/depo/d
 
 ## 4. Mod ve ortam dosyaları
 ```bash
-sudo bash /var/lib/sg-sanal/depo/deploy/sanal_mod.sh deneme          # /etc/sg-sanal-mod.env yazar (sırsız); servisi başlatmaz
+sudo bash /var/lib/sg-sanal/depo/deploy/sanal_mod.sh uretim          # /etc/sg-sanal-mod.env yazar (sırsız); servisi başlatmaz
 sudo install -m 600 -o sgsanal -g sgsanal /dev/null /etc/sg-sanal-pano.env
 sudo -e /etc/sg-sanal-pano.env                                        # iki satır (aşağıda)
 ```
@@ -60,7 +60,7 @@ sudo -e /etc/sg-sanal-pano.env                                        # iki sat�
 CLOUDFLARE_API_TOKEN=<Workers düzenleme izinli API token>
 CLOUDFLARE_ACCOUNT_ID=<hesap kimliği>
 ```
-Telegram: şu an Actions'ta açık; sunucu üretim moduna geçince açık olmalı (deneme modunda kapalı, çift mesaj olmasın; dosya yoksa tüm kanallar sessiz). Açılacaksa `/etc/sg-sanal-telegram.env` (izin 600, sahibi `sgsanal`): `TELEGRAM_BOT_TOKEN=…`, `TELEGRAM_CHAT_ID=…`, ve DENEME modunda ayrıca `TELEGRAM_KOMUT=kapali` (Actions motoru aynı botun komutlarını okuyor olabilir; tek tüketici kuralı). Üretimde Actions kapalı olduğundan `TELEGRAM_KOMUT` satırı silinir ve servis yeniden başlatılır.
+Telegram: sunucuda açık (dosya yoksa tüm kanallar sessiz). `/etc/sg-sanal-telegram.env` (izin 600, sahibi `sgsanal`): `TELEGRAM_BOT_TOKEN=…`, `TELEGRAM_CHAT_ID=…`. Actions kapalı olduğundan komutları tek tüketici olarak sunucu okur.
 
 ## 5. Açılış kontrolü ve başlatma
 ```bash
@@ -68,7 +68,7 @@ sudo systemctl start sg-sanal-kontrol; journalctl -u sg-sanal-kontrol -n 60 -o c
 sudo systemctl enable --now sg-sanal sg-sanal-yayim.timer sg-sanal-pano.timer
 journalctl -u sg-sanal -f                                                               # canlı günlük
 ```
-İlk açılışta `sanal_baslat.sh` durumu `canli-durum` dalından (dönem aynıysa) kopyalar, deneme modunda `kilit.json`'u siler. 15 dk sonra deneme dalı `canli-durum-sunucu` GitHub'da görünür.
+İlk açılışta `sanal_baslat.sh` durumu `canli-durum` dalından (dönem aynıysa) kopyalar. 15 dk sonra ilk sunucu yayımı `canli-durum` dalında görünür.
 
 ## 6. Güncelleme
 ```bash

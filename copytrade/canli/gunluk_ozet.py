@@ -4,7 +4,7 @@ Yazım: motorun `durum_yaz()` çağrısındaki tek satırlık kanca `yaz_gerekir
 (b) en geç her saatte bir (`SAATLIK_MS`). Hata dışarı çıkmaz. Bilinmeyen alan `null` (alan atlanmaz). Adres/anahtar/e-posta YOK: hesaplar `ogrenme_adaptor.takma_ad` (T_xxxxxx) ile adlanır;
 çıktıda `0x...` kalıntısı maskelenir.
 
-`mod`: gerçek kip → "canli"; sunucu (`SUNUCU_MOD=deneme` ya da `VERI_DALI` canli-durum-sunucu / canli-durum-deneme) → "deneme"; diğer sanal (Actions `canli-durum`, sunucu `uretim`) → "sanal".
+`mod`: gerçek kip → "canli"; sunucu (`SUNUCU_MOD=deneme` ya da `VERI_DALI` canli-durum-deneme) → "deneme"; diğer sanal (Actions `canli-durum`, sunucu `uretim`) → "sanal".
 (Ortam değişkenleri `/etc/sg-sanal-mod.env`'den sunucu servisine, Actions'ta iş akışından gelir; belirsizse "sanal".)
 
 Sayım kaynağı: bugünün (UTC) `kayit/<tarih>.jsonl` dosyası (`emir`, `emir_yok`, `adim_hata` olayları); durum: motorun belleği. Birimler: para USD (kasa ölçeğinde), yüzdeler yüzde (2,1 = %2,1), zaman ISO UTC.
@@ -36,11 +36,11 @@ def _iso(ms: int) -> str:
 
 
 def mod_belirle(kip: str, ortam: dict | None = None) -> str:
-    """kip "gercek" → "canli"; sunucu deneme (SUNUCU_MOD=deneme ya da VERI_DALI canli-durum-sunucu / canli-durum-deneme) → "deneme"; aksi "sanal"."""
+    """kip "gercek" → "canli"; sunucu deneme (SUNUCU_MOD=deneme ya da VERI_DALI canli-durum-deneme) → "deneme"; aksi "sanal"."""
     if kip == "gercek":
         return "canli"
     e = os.environ if ortam is None else ortam
-    if str(e.get("SUNUCU_MOD", "")).strip() == "deneme" or str(e.get("VERI_DALI", "")).strip() in ("canli-durum-sunucu", "canli-durum-deneme"):
+    if str(e.get("SUNUCU_MOD", "")).strip() == "deneme" or str(e.get("VERI_DALI", "")).strip() == "canli-durum-deneme":
         return "deneme"
     return "sanal"
 

@@ -44,24 +44,12 @@ Kısaca: şimdi sanal (kâğıt üstü) işlem motoru GitHub'ın bedava makinele
 Her adımın çıktısını size gösteririm; beklenen sonucu görmezsem durup size söylerim.
 1. Sunucuda `deploy/kurulum_sanal.md` adımları: paketler, `sgsanal` kullanıcısı, SSH anahtarı (özel kısım sunucudan çıkmaz), depo, paketler (imzalı/kilitli sürümler), Cloudflare aracı, servis dosyaları, güvenlik duvarı (yalnız SSH).
 2. Ortak anahtarı size veririm (A-5); siz GitHub'a ekledikten sonra yazma denemesi yaparım.
-3. **Deneme modu**: `sanal_mod.sh deneme` → sunucu motoru **`canli-durum-sunucu`** adlı AYRI dala yazar, pano **`sg-pano-sunucu`** adresinde (canlı `sg-pano` değişmez), Telegram komutları kapalı. Actions motoru aynen sürer; birbirlerinin dosyasına dokunmaz. Sunucu, başlangıçta Actions'ın o anki durumunun kopyasıyla açılır (aynı dönem, aynı pozisyonlar), sonra ikisi kendi yolunda ilerler.
+3. **Deneme modu**: İPTAL (19.11; bkz. C).
 4. Açılış kontrolü (`sg-sanal-kontrol`): kip sanal, kadro okunuyor, hata yok.
 
-## C. 2–3 günlük yan yana doğrulama (deneme modu)
+## C. Yan yana doğrulama (deneme modu) — İPTAL
 
-Her gün bir kez (ilk gün 3 kez) iki dalı karşılaştırırım: `canli-durum` (Actions) ve `canli-durum-sunucu` (sunucu).
-
-| Kontrol | Geçme ölçütü (öneri; sizinle teyit edilir) |
-|---|---|
-| Sunucu hiç durmadan çalıştı mı (nabız `durum/kilit.json`) | her an < 20 dk eski; kesinti ve yeniden başlatma sayısı günlükte açıklanmış |
-| Açık pozisyonların coin/yön listesi | aynı trader sinyallerine aynı pozisyonlar; fark varsa tek tek nedeni açıklanmış (giriş anı fiyatı farkı normal) |
-| Özsermaye ve getiri (`durum/ozet.json`) | fark küçük ve açıklanabilir (başlangıçta öneri: 0,5 puan altı); sürekli büyüyen fark = DURUR, araştırılır |
-| İşlem sayısı (`kayit/<tarih>.jsonl`) | yakın; sunucuda kaçırılan işlem yok |
-| Hata/alarm günlüğü (`journalctl -u sg-sanal`) | açıklanamayan hata yok |
-| Pano (`sg-pano-sunucu`) ve veri tazeliği | 15 dk içinde güncel; Actions panosuyla uyumlu |
-| Yeniden başlatma testi | sunucuyu bir kez yeniden başlatırım (reboot): motor kendi kalktı, kaldığı yerden devam etti |
-
-Sonuç: size kısa bir tablo + "geçelim / bekleyelim" önerisi.
+19.11 kullanıcı kararı ("temkin adımı yok"): yan yana deneme yapılmadı, doğrudan tam geçiş yapıldı. Deneme modu koddan kaldırıldı; ayrı deneme dalı ve panosu silindi.
 
 ## D. Geçiş (üretim) ve geri alma
 
@@ -69,7 +57,7 @@ Sonuç: size kısa bir tablo + "geçelim / bekleyelim" önerisi.
 1. Siz `SUNUCU_AKTIF=evet` yaptınız. Etkisi: yeni Actions vardiyası **hiç başlamaz** (cron, elle çalıştırma, zincir hepsi). Çalışmakta olan vardiya kesilmez, süresi (en çok 4 sa 15 dk) bitince zincir sönmüş olur. Hızlandırmak için o koşuyu Actions'tan "Cancel" edebiliriz; ben `canli-durum` kilidinin "bırakıldı" olduğunu doğrularım.
 2. Ben sunucuda `sudo bash deploy/sanal_mod.sh uretim` (onay sorusuna `evet`) → servisleri başlatırım. **Sunucu, Actions vardiyası gerçekten bitmeden başlamaz** (kilit kapısı: en çok 30 dk bekler, sonra bekleyerek yeniden dener). Durum `canli-durum` dalından devralınır (dönem kuralı aynı).
 3. İlk 1 saat izlerim: `canli-durum` dalına sunucu işleniyor mu, canlı pano (`sg-pano`) güncel mi, dış nabız (sg-nabiz) ve sağlık kontrolü sessiz mi. Telegram'ı açacaksanız bu aşamada (komutlar için `TELEGRAM_KOMUT=kapali` satırı kaldırılır).
-4. Eski deneme dalı (`canli-durum-sunucu`) ve `sg-pano-sunucu` istenirse silinir.
+4. Eski deneme dalı ve panosu: silindi (19.11).
 
 **Geri alma (Actions'a dönüş) — 3 adım, veri kaybı yok:**
 1. Sunucuda `sudo systemctl stop sg-sanal` (ben yaparım/siz yapıştırırsınız): motor temiz kapanır, son durum `canli-durum`'a yazılır, kilit "bırakıldı".

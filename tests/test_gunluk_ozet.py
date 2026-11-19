@@ -88,7 +88,7 @@ def test_rejim_drift_ogrenme(tmp_path):
 
 
 @pytest.mark.parametrize("kip,ortam,beklenen", [
-    ("gercek", {"SUNUCU_MOD": "deneme"}, "canli"), ("sanal", {}, "sanal"), ("sanal", {"SUNUCU_MOD": "deneme", "VERI_DALI": "canli-durum-sunucu"}, "deneme"),
+    ("gercek", {"SUNUCU_MOD": "deneme"}, "canli"), ("sanal", {}, "sanal"), ("sanal", {"SUNUCU_MOD": "deneme"}, "deneme"),
     ("sanal", {"SUNUCU_MOD": "uretim", "VERI_DALI": "canli-durum"}, "sanal"), ("sanal", {"VERI_DALI": "canli-durum"}, "sanal"), ("sanal", {"VERI_DALI": "canli-durum-deneme"}, "deneme"),
 ])
 def test_mod(kip, ortam, beklenen):

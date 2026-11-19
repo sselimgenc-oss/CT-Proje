@@ -1,4 +1,4 @@
-# Sanal motor durumunu (durum/*.json, kayit/, pano/) veri dalına yayımlar (deneme: canli-durum-sunucu; uretim: canli-durum). Zamanlayıcı: sg-sanal-yayim.timer (15 dk; Actions'taki 15 dk'lık döngünün karşılığı).
+# Sanal motor durumunu (durum/*.json, kayit/, pano/) veri dalına yayımlar (canli-durum). Zamanlayıcı: sg-sanal-yayim.timer (15 dk; Actions'taki 15 dk'lık döngünün karşılığı).
 # Git kimliği: yalnız sunucudaki SSH deploy anahtarı (/var/lib/sg-sanal/.ssh/id_ed25519; repoda ve ortam dosyalarında sır YOK). Telegram/Cloudflare anahtarı bu birime YÜKLENMEZ.
 [Unit]
 Description=sg-arge sanal durum yayimi (veri dali)

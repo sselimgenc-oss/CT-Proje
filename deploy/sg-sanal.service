@@ -1,6 +1,6 @@
 # SANAL motor, sürekli (DigitalOcean sunucusu; GitHub Actions 4 saatlik vardiya zincirinin yerine). Ubuntu 24.04. Kurulum: deploy/kurulum_sanal.md, kullanıcı adımları: docs/SUNUCU_SANAL_GECIS.md.
 # Cüzdan/anahtar YOK: sanal kip HL'ye yalnız okuma yapar (allMids, kadro, funding). `--kip sanal --sanal-kasa-usd 10000` (K-66); gerçek kip bu birimde açılamaz (CANLI_KIP/HL_* yüklenmez).
-# Mod (/etc/sg-sanal-mod.env, sırsız): SUNUCU_MOD=deneme|uretim, VERI_DALI, PANO_ISIM, KADRO_DALI. Telegram isteğe bağlı: /etc/sg-sanal-telegram.env (kullanıcı kararı 08.11: varsayılan kapalı; dosya yoksa kanal sessiz).
+# Mod (/etc/sg-sanal-mod.env, sırsız): SUNUCU_MOD=uretim, VERI_DALI, PANO_ISIM, KADRO_DALI. Telegram isteğe bağlı: /etc/sg-sanal-telegram.env (kullanıcı kararı 08.11: varsayılan kapalı; dosya yoksa kanal sessiz).
 # Çalışma dizini = depo klonu: motor durum/ kayit/ dizinlerini orada (Actions düzeniyle aynı) tutar; sanal_yayimla.sh aynı dizinden veri dalına yayımlar. Kadro: motor radar dalından raw.githubusercontent.com ile okur (git gerekmez).
 # Çıkış kodları (G-15): 3 = kalıcı neden → yeniden BAŞLATILMAZ + OnFailure alarmı; 75 / 1 = geçici/beklenmedik → artan beklemeyle (30 sn → 10 dk) yeniden başlatılır.
 [Unit]
