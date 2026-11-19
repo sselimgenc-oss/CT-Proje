@@ -1,29 +1,29 @@
 {
  "sema": "ortak.gunluk_ozet.v1",
  "proje": "CT",
- "uretim": "2026-11-19T22:02:31Z",
+ "uretim": "2026-11-19T23:02:44Z",
  "gun": "2026-11-19",
  "mod": "sanal",
  "kasa": {
   "baslangic": 10000.0,
-  "simdi": 10005.87,
-  "gun_pnl": -16.61,
-  "toplam_pnl": 5.87,
-  "zirveden_dusus_yuzde": 0.43
+  "simdi": 9985.86,
+  "gun_pnl": -36.63,
+  "toplam_pnl": -14.14,
+  "zirveden_dusus_yuzde": 0.63
  },
  "islem": {
-  "gun_acilan": 10,
-  "gun_kapanan": 4,
+  "gun_acilan": 11,
+  "gun_kapanan": 5,
   "kazanan": 1,
-  "kaybeden": 3,
+  "kaybeden": 4,
   "acik_pozisyon": 32,
-  "alinmayan_sinyal": 4634
+  "alinmayan_sinyal": 4892
  },
  "hesaplar": [
   {
    "ad": "T_0c2447",
    "gun_pnl": 9.28,
-   "toplam_pnl": -33.18,
+   "toplam_pnl": -22.52,
    "islem": 8
   },
   {
@@ -41,13 +41,13 @@
   {
    "ad": "T_99f0d4",
    "gun_pnl": -0.3,
-   "toplam_pnl": 90.31,
+   "toplam_pnl": 80.9,
    "islem": 5
   },
   {
    "ad": "T_2e4035",
    "gun_pnl": 0.32,
-   "toplam_pnl": 13.2,
+   "toplam_pnl": 15.87,
    "islem": 8
   },
   {
@@ -58,21 +58,21 @@
   },
   {
    "ad": "T_b4c6ee",
-   "gun_pnl": -0.01,
-   "toplam_pnl": 20.98,
-   "islem": 1
+   "gun_pnl": -0.02,
+   "toplam_pnl": 10.85,
+   "islem": 2
   },
   {
    "ad": "T_e7ae5a",
    "gun_pnl": -2.73,
-   "toplam_pnl": 42.8,
+   "toplam_pnl": 29.55,
    "islem": 4
   },
   {
    "ad": "T_7bb402",
-   "gun_pnl": -38.33,
-   "toplam_pnl": -128.15,
-   "islem": 24
+   "gun_pnl": -52.71,
+   "toplam_pnl": -128.63,
+   "islem": 27
   },
   {
    "ad": "T_664206",
@@ -83,7 +83,7 @@
   {
    "ad": "T_574595",
    "gun_pnl": -0.0,
-   "toplam_pnl": 0.32,
+   "toplam_pnl": 0.24,
    "islem": 1
   }
  ],
@@ -106,12 +106,12 @@
   "kaldirac_ayar": 3.0
  },
  "saglik": {
-  "son_nabiz": "2026-11-19T22:02:31Z",
+  "son_nabiz": "2026-11-19T23:02:44Z",
   "hata_sayisi_gun": 0,
-  "ram_mb": 77.1,
-  "ram_tepe_mb": 81.7,
-  "disk_bos_gb": 63.7,
-  "yuk_1dk": 0.01,
+  "ram_mb": 86.5,
+  "ram_tepe_mb": 96.6,
+  "disk_bos_gb": 63.69,
+  "yuk_1dk": 0.0,
   "yeniden_baslama_1s": 0,
   "oom_son": false
  },
@@ -122,21 +122,21 @@
  "alinmayan_neden": [
   {
    "neden": "slot_tavani",
-   "adet": 1697,
+   "adet": 1702,
    "karsi_olgu_kapanan": 0,
    "karsi_olgu_pnl": null
+  },
+  {
+   "neden": "hip3_atlandi",
+   "adet": 1255,
+   "karsi_olgu_kapanan": 3,
+   "karsi_olgu_pnl": -7.87
   },
   {
    "neden": "bant_ici",
    "adet": 1148,
    "karsi_olgu_kapanan": 0,
    "karsi_olgu_pnl": null
-  },
-  {
-   "neden": "hip3_atlandi",
-   "adet": 1073,
-   "karsi_olgu_kapanan": 3,
-   "karsi_olgu_pnl": -7.87
   },
   {
    "neden": "min_emir_atlandi",
@@ -146,33 +146,33 @@
   },
   {
    "neden": "ters_netlesme",
-   "adet": 171,
+   "adet": 242,
    "karsi_olgu_kapanan": 0,
    "karsi_olgu_pnl": null
   }
  ],
  "kopya_kalite": {
-  "n": 51,
-  "gecikme_ms_medyan": 556.0,
+  "n": 55,
+  "gecikme_ms_medyan": 574.0,
   "gecikme_ms_p90": 968.0,
-  "gorme_ms_medyan": 305.0,
+  "gorme_ms_medyan": 313.0,
   "kayma_bps_medyan": -0.0,
-  "kayma_bps_p90": 1.6,
+  "kayma_bps_p90": 2.1,
   "ac_artir": {
-   "n": 30,
-   "gecikme_ms_medyan": 537.5,
+   "n": 33,
+   "gecikme_ms_medyan": 556.0,
    "gecikme_ms_p90": 893.0,
    "gorme_ms_medyan": 305.0,
    "kayma_bps_medyan": -0.0,
    "kayma_bps_p90": 0.6
   },
   "azalt_kapat": {
-   "n": 21,
-   "gecikme_ms_medyan": 595.0,
+   "n": 22,
+   "gecikme_ms_medyan": 584.5,
    "gecikme_ms_p90": 1094.0,
-   "gorme_ms_medyan": 363.0,
-   "kayma_bps_medyan": 0.0,
-   "kayma_bps_p90": 4.5
+   "gorme_ms_medyan": 339.0,
+   "kayma_bps_medyan": 0.1,
+   "kayma_bps_p90": 6.2
   }
  }
 }

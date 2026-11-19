@@ -1,44 +1,44 @@
 {
  "sema": "ct.rejim_sonuc.v1",
  "proje": "CT",
- "uretim": "2026-11-19T22:02:31Z",
+ "uretim": "2026-11-19T23:02:44Z",
  "pencere_gun": 7,
  "tablolar": {
   "rejim_1d": [
    {
     "etiket": "bilinmiyor",
-    "n": 15,
+    "n": 16,
     "kazanan": 5,
-    "isabet_yuzde": 33.3,
-    "toplam_pnl": 14.54,
-    "ortalama_pnl": 0.97
+    "isabet_yuzde": 31.2,
+    "toplam_pnl": 0.62,
+    "ortalama_pnl": 0.04
    }
   ],
   "rejim_4h": [
    {
     "etiket": "bilinmiyor",
-    "n": 15,
+    "n": 16,
     "kazanan": 5,
-    "isabet_yuzde": 33.3,
-    "toplam_pnl": 14.54,
-    "ortalama_pnl": 0.97
+    "isabet_yuzde": 31.2,
+    "toplam_pnl": 0.62,
+    "ortalama_pnl": 0.04
    }
   ],
   "duygu": [
    {
     "etiket": "bilinmiyor",
-    "n": 15,
+    "n": 16,
     "kazanan": 5,
-    "isabet_yuzde": 33.3,
-    "toplam_pnl": 14.54,
-    "ortalama_pnl": 0.97
+    "isabet_yuzde": 31.2,
+    "toplam_pnl": 0.62,
+    "ortalama_pnl": 0.04
    }
   ]
  },
  "notlar": [
   "Yalnız bilgi: karar/limit/eşik değiştirmez.",
   "Giriş damgası bu sürümden sonra açılan pozisyonlarda var; eski işlemler 'bilinmiyor' (beklenen).",
-  "Pencere son 7 gün kapanan işlemler: 15; rejimi bilinmeyen (1g): 15.",
+  "Pencere son 7 gün kapanan işlemler: 16; rejimi bilinmeyen (1g): 16.",
   "PnL gerçekleşen K/Z (ücret hariç); duygu = Fear&Greed sınıfı (giriş anı)."
  ]
 }
