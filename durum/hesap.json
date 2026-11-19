@@ -377,12 +377,14 @@
    "ETH": {
     "acilis_ms": 1794932420935,
     "giris": 1784.9129512314632,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": 0.6646160383401449
    },
    "PAXG": {
     "acilis_ms": 1795106461389,
     "giris": 3680.6,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": 0.002988643156007173
    }
@@ -393,6 +395,7 @@
    "HYPE": {
     "acilis_ms": 1795094118636,
     "giris": 68.71880301910895,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -9.7783728036559
    }
@@ -401,102 +404,119 @@
    "ADA": {
     "acilis_ms": 1794835413386,
     "giris": 0.15063,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": 208.15132425816202
    },
    "AERO": {
     "acilis_ms": 1795011021520,
     "giris": 0.43223164625129695,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": 249.40748084370745
    },
    "ALGO": {
     "acilis_ms": 1794828734462,
     "giris": 0.079057,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": 314.3607835766907
    },
    "AVAX": {
     "acilis_ms": 1794828927618,
     "giris": 7.1329,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": 1.5421497567609246
    },
    "BCH": {
     "acilis_ms": 1794835439940,
     "giris": 204.37,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": 0.3990550945478614
    },
    "BTC": {
     "acilis_ms": 1794835480523,
     "giris": 64104.0,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": 0.00020149716296805645
    },
    "DOGE": {
     "acilis_ms": 1794835523306,
     "giris": 0.059094261287677516,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": 760.7861354048476
    },
    "DOT": {
     "acilis_ms": 1795012552563,
     "giris": 0.72254,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -16.018776363587666
    },
    "ETC": {
     "acilis_ms": 1795011950483,
     "giris": 5.9977,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -1.8340363806125681
    },
    "FIL": {
     "acilis_ms": 1794828746575,
     "giris": 0.59887,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -18.367926261125117
    },
    "HBAR": {
     "acilis_ms": 1794947824328,
     "giris": 0.056943,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -256.6183526425221
    },
    "INJ": {
     "acilis_ms": 1794828746460,
     "giris": 6.7140952336595445,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": 16.28099128571226
    },
    "NEAR": {
     "acilis_ms": 1795011936458,
     "giris": 3.3326,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -3.3007261597551465
    },
    "TRX": {
     "acilis_ms": 1794835626512,
     "giris": 0.30380888150941415,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": 1595.5499955337878
    },
    "WLD": {
     "acilis_ms": 1794835637337,
     "giris": 0.26011,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -187.14118463207762
    },
    "WLFI": {
     "acilis_ms": 1794828744461,
     "giris": 0.045739940013568466,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -4684.990583045316
    },
    "kSHIB": {
     "acilis_ms": 1794829121462,
     "giris": 0.003876312129177016,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": 17088.96439159479
    }
@@ -507,12 +527,14 @@
    "XRP": {
     "acilis_ms": 1794968276975,
     "giris": 0.9709281069805941,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -1391.3934872759005
    },
    "ZEC": {
     "acilis_ms": 1795111709977,
     "giris": 912.84,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -0.019321117482625
    }
@@ -521,36 +543,42 @@
    "AAVE": {
     "acilis_ms": 1794980177125,
     "giris": 111.81999999999998,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -1.5426735222499144
    },
    "HYPE": {
     "acilis_ms": 1794980152307,
     "giris": 68.95500000000001,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -3.8726255564790764
    },
    "LINK": {
     "acilis_ms": 1794980261657,
     "giris": 9.253880195791584,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -14.547372186221153
    },
    "SOL": {
     "acilis_ms": 1795059969886,
     "giris": 73.91899999999998,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -4.531506253408303
    },
    "VVV": {
     "acilis_ms": 1794980015954,
     "giris": 21.254000000000005,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -2.573760317131464
    },
    "XRP": {
     "acilis_ms": 1794980079736,
     "giris": 0.987541428844537,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -426.0281391242794
    }
@@ -559,6 +587,7 @@
    "ETH": {
     "acilis_ms": 1794958511618,
     "giris": 1797.8162576392604,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": 0.5938906198921612
    }
@@ -568,6 +597,7 @@
    "XRP": {
     "acilis_ms": 1795082962254,
     "giris": 0.9847099999999999,
+    "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -11.170801555788
    }

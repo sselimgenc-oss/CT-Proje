@@ -1,14 +1,14 @@
 {
  "sema": "ortak.gunluk_ozet.v1",
  "proje": "CT",
- "uretim": "2026-11-19T19:04:40Z",
+ "uretim": "2026-11-19T19:04:56Z",
  "gun": "2026-11-19",
  "mod": "sanal",
  "kasa": {
   "baslangic": 10000.0,
-  "simdi": 9980.62,
-  "gun_pnl": -41.87,
-  "toplam_pnl": -19.38,
+  "simdi": 9980.84,
+  "gun_pnl": -41.65,
+  "toplam_pnl": -19.16,
   "zirveden_dusus_yuzde": 0.68
  },
  "islem": {
@@ -23,7 +23,7 @@
   {
    "ad": "T_0c2447",
    "gun_pnl": 9.28,
-   "toplam_pnl": -13.53,
+   "toplam_pnl": -14.0,
    "islem": 8
   },
   {
@@ -41,13 +41,13 @@
   {
    "ad": "T_99f0d4",
    "gun_pnl": -0.3,
-   "toplam_pnl": 71.32,
+   "toplam_pnl": 71.55,
    "islem": 5
   },
   {
    "ad": "T_2e4035",
    "gun_pnl": 0.35,
-   "toplam_pnl": 16.33,
+   "toplam_pnl": 16.2,
    "islem": 6
   },
   {
@@ -59,19 +59,19 @@
   {
    "ad": "T_b4c6ee",
    "gun_pnl": -0.01,
-   "toplam_pnl": -0.82,
+   "toplam_pnl": -0.51,
    "islem": 1
   },
   {
    "ad": "T_e7ae5a",
    "gun_pnl": -2.73,
-   "toplam_pnl": 17.47,
+   "toplam_pnl": 18.18,
    "islem": 4
   },
   {
    "ad": "T_7bb402",
    "gun_pnl": -26.07,
-   "toplam_pnl": -109.9,
+   "toplam_pnl": -110.32,
    "islem": 19
   },
   {
@@ -91,7 +91,11 @@
   "aktif_ders": 0,
   "yeni_ders": 0,
   "emekli_ders": 0,
-  "filtre_aktif": true
+  "filtre_aktif": true,
+  "filtre_atlanan": 0,
+  "filtre_karsi_olgu_pnl": null,
+  "ders_kucultulen": null,
+  "ders_engellenen": 0
  },
  "rejim": "trend_down",
  "drift_uyari": true,
@@ -102,11 +106,39 @@
   "kaldirac_ayar": 3.0
  },
  "saglik": {
-  "son_nabiz": "2026-11-19T19:04:40Z",
-  "hata_sayisi_gun": 0
+  "son_nabiz": "2026-11-19T19:04:56Z",
+  "hata_sayisi_gun": 0,
+  "ram_mb": 44.1,
+  "ram_tepe_mb": 44.8,
+  "disk_bos_gb": 63.71,
+  "yuk_1dk": 0.08
  },
  "notlar": [
   "drift uyarısı aktif",
   "hesaplar.gun_pnl = bugün gerçekleşen K/Z - ücret (açık pozisyon değişimi yok)"
- ]
+ ],
+ "kopya_kalite": {
+  "n": 44,
+  "gecikme_ms_medyan": 522.0,
+  "gecikme_ms_p90": 912.0,
+  "gorme_ms_medyan": 305.0,
+  "kayma_bps_medyan": 0.0,
+  "kayma_bps_p90": 1.6,
+  "ac_artir": {
+   "n": 25,
+   "gecikme_ms_medyan": 513.0,
+   "gecikme_ms_p90": 761.0,
+   "gorme_ms_medyan": 302.0,
+   "kayma_bps_medyan": 0.0,
+   "kayma_bps_p90": 0.4
+  },
+  "azalt_kapat": {
+   "n": 19,
+   "gecikme_ms_medyan": 574.0,
+   "gecikme_ms_p90": 2276.0,
+   "gorme_ms_medyan": 315.0,
+   "kayma_bps_medyan": 0.2,
+   "kayma_bps_p90": 6.2
+  }
+ }
 }
