@@ -10,7 +10,7 @@ Bu repo bir copy trade projesidir (Hyperliquid). Strateji: **Form Radarı v1** (
 ## Değişmez kurallar
 - **Repo herkese açık:** API anahtarı, şifre, token, kişisel veri asla commit edilmez. Anahtarlar yalnız GitHub
   Secrets'ta; para çekme yetkisi kapalı.
-- **Gerçek para yalnız K‑22/K‑26 sınırında:** tek Hyperliquid hesabı, kasa ≤ 1.000 $ (artırım yalnız kullanıcı kararıyla), yalnız para çekme yetkisiz
+- **Gerçek para yalnız K‑22/K‑26 sınırında:** tek Hyperliquid hesabı, kasa ≤ 1.500 $ (kullanıcı kararı 19.11, K-72; kodda sert sabit `copytrade/canli/sert_sinirlar.py`: günlük kayıp ≤ %5, kaldıraç ≤ 5x; artırım yalnız kullanıcı kararıyla), yalnız para çekme yetkisiz
   API cüzdanı, anahtar yalnız sunucuda / GitHub Secrets'ta. Emir kodu yalnız `RADAR_V1.md` §5b–§6 kurallarıyla ve testlerle gelir.
 - **Yöntem, eşik, ağırlık ve karar kodu değişmez** (`docs/RADAR_V1.md`, `copytrade/kurallar.yaml` `radar_*`) — görev belgesi
   açıkça istemedikçe. Yeni ölçümler bilgi amaçlıdır.
