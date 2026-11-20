@@ -38,6 +38,7 @@ from copytrade.canli.ogrenme_adaptor import Ogrenme
 from copytrade.canli import borsa_stop, izleme
 from copytrade.canli import haber, rejim, rejim_sonuc, secim_gercek
 from copytrade.canli import gunluk_ozet, hafta_paketi, kaynak
+from copytrade import koruyucu
 from copytrade.canli import sert_sinirlar as sert
 from copytrade.canli.borsa_stop import BorsaStop
 from copytrade.canli.risk import Risk, coin_tavan_usd, gun
@@ -2802,7 +2803,7 @@ class Motor:
                 ("ucret_duzelt", lambda: self.ucret_uygula(ucretler, simdi)),      # Denetim-6 (O9): tahmini ücret → HL fee (okuma kilit dışında yapıldı)
                 ("tasfiye", lambda: self._tasfiye(simdi)), ("funding", lambda: self.funding_uygula(oranlar, simdi)), ("funding_gercek", lambda: self.funding_gercek_uygula(fgercek, simdi)),
                 ("hl_ozsermaye", lambda: self.hl_uygula(hl[1], simdi, self._hl_okuma_ms(hl, simdi)) if hl else None), ("ofset", lambda: self._ofset_adimi(ledger, denendi, simdi)),
-                ("hl_sicrama", lambda: self._hl_sicrama_denetle(simdi) if hl else None), ("risk", lambda: self._risk(simdi)), ("felaket_stop", lambda: self._felaket_stop(simdi)), ("iz_suren", lambda: self._iz_suren_koruma(simdi)),
+                ("hl_sicrama", lambda: self._hl_sicrama_denetle(simdi) if hl else None), ("risk", lambda: self._risk(simdi)), ("koruyucu", lambda: koruyucu.motor_kancasi(self, simdi)), ("felaket_stop", lambda: self._felaket_stop(simdi)), ("iz_suren", lambda: self._iz_suren_koruma(simdi)),
                 ("borsa_stop", lambda: self.borsa_stop_esitle(stop_acik, simdi) if stop_acik is not False else None), ("anlik_saha", lambda: self._anlik(simdi)),
                 ("inen", lambda: self.karar_uygula(self.saha.inenleri_kapat(simdi), simdi)), ("sahipsiz", lambda: self._sahipsiz_tara(simdi)),
                 ("hl_izle", lambda: self._hl_izle(hl_zamani, hl, simdi)), ("mutabakat", lambda: self._mutabakat(simdi, hl)), ("kapanis_kuyrugu", lambda: self._kuyruk_isle(simdi)),

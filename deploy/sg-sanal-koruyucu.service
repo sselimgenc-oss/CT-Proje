@@ -1,0 +1,28 @@
+# CT yerel koruyucu (K-82): motordan BAĞIMSIZ ikinci hat, ayrı süreç. Günlük kayıp %5 -> yeni açılış dur, zirveden düşüş %20 -> hepsini kapat + dur, motor nabzı bayatsa alarm + açılış dur. Bayrağı motor her dakika okur (durum/ortak/dur.json).
+# Sır YOK: yalnız durum dosyalarını okur; Telegram anahtarı isteğe bağlı (/etc/sg-sanal-telegram.env). Type=simple, düşük bellek; Restart=always (motor düşse de koruyucu yaşar). Kurulum/yeniden başlatma: sanal_guncelle.sh.
+[Unit]
+Description=sg-arge sanal koruyucu (CT yerel ikinci hat)
+After=network-online.target
+
+[Service]
+Type=simple
+User=sgsanal
+Group=sgsanal
+WorkingDirectory=/var/lib/sg-sanal/depo
+EnvironmentFile=-/etc/sg-sanal-telegram.env
+Environment=HOME=/var/lib/sg-sanal
+Environment=PATH=/var/lib/sg-sanal/venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/var/lib/sg-sanal/venv/bin/python -u -m copytrade.koruyucu --durum-dizin durum --kayit-dizin kayit
+Restart=always
+RestartSec=10
+MemoryHigh=60M
+MemoryMax=100M
+Nice=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sg-sanal
+
+[Install]
+WantedBy=multi-user.target
