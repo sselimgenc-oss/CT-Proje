@@ -191,6 +191,34 @@ def test_yayimla_uretim_canli_durum_dalina_yazar_deneme_reddedilir(tmp_path):
         assert r.returncode == 1 and "Geçersiz mod/dal" in r.stderr
 
 
+
+def test_yayimla_kadro_dalini_her_yayimda_tazeler(tmp_path):
+    """20.11: pano radarı `origin/radar`dan okuyor, yayım betiği o dalı çekmiyordu -> pano/sağlık 'radar gelmedi' (kadro bayat) gösterdi; motor HTTP ile tazeydi."""
+    bare, calisma, baska = tmp_path / "origin.git", tmp_path / "calisma", tmp_path / "radar_yazar"
+    subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
+    calisma.mkdir()
+    git(calisma, "init", "-q", "-b", "main")
+    git(calisma, "remote", "add", "origin", str(bare))
+    (calisma / "OKU.md").write_text("x")
+    git(calisma, "add", "OKU.md")
+    git(calisma, "commit", "-q", "-m", "x")
+    git(calisma, "push", "-q", "origin", "main:radar")
+    git(calisma, "fetch", "-q", "origin", "radar")                                     # yerel origin/radar = eski uç
+    eski = subprocess.run(["git", "rev-parse", "origin/radar"], cwd=calisma, capture_output=True, text=True).stdout.strip()
+    subprocess.run(["git", "clone", "-q", "-b", "radar", str(bare), str(baska)], check=True)
+    (baska / "radar/son").mkdir(parents=True)
+    (baska / "radar/son/kadro.json").write_text(json.dumps({"kosu_ms": 2, "satirlar": []}))
+    for a in (["add", "-A"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "yeni kadro"], ["push", "-q", "origin", "radar"]):
+        subprocess.run(["git", *a], cwd=baska, check=True)
+    yeni = subprocess.run(["git", "rev-parse", "radar"], cwd=bare, capture_output=True, text=True).stdout.strip()
+    os.symlink(ROOT / "copytrade", calisma / "copytrade")
+    (calisma / "durum").mkdir()
+    (calisma / "durum/kilit.json").write_text(json.dumps({"vardiya": "sunucu", "nabiz_ms": 1, "birakildi": False}))
+    r = subprocess.run(["bash", str(DEPLOY / "sanal_yayimla.sh")], cwd=calisma, env=_env(SUNUCU_MOD="uretim", VERI_DALI="canli-durum", KADRO_DALI="radar", YAYIM_KILIT=str(tmp_path / "yayim.lock"), VARDIYA_ID="sunucu", PYTHON="python"), capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    simdi = subprocess.run(["git", "rev-parse", "origin/radar"], cwd=calisma, capture_output=True, text=True).stdout.strip()
+    assert simdi == yeni and simdi != eski
+
 def test_pano_cf_mod_pano_adi_ciftini_zorlar_ve_secretsiz_yayimlamaz(tmp_path):
     (tmp_path / "pano").mkdir()
     (tmp_path / "pano/index.html").write_text("<html></html>")
