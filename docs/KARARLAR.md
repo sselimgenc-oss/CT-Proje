@@ -447,3 +447,8 @@ Dayanak: `docs/binance-plan.md` §2-4/§7, `docs/binance-arastirma.md` §1b, Fab
 - Geçiş kuralı (plan §5 "koruyucu yoksa açma"): `durum/ortak/koruyucu.json` hiç görülmediyse yalnız uyarı (ilk kurulumda koruyucu henüz yokken motor kilitlenmesin); bir kez görülünce (`durum/koruyucu_gorulen` kalıcı işareti) nabzı `koruyucu_nabiz_bayat_sn` (180) yoksa motor yeni açılış yapmaz (`koruyucu_nabiz`), kapanış serbest. Gerekçe: koruyucu sonradan düşerse güvencesiz açılış olmaz; hiç kurulmamışsa sanal sistem durmaz.
 - Alarm: tek ⚠️/❌ satır, K-80 çift doğrulama (`dogrula`), güncelleme penceresinde ertelenir, 6 saatte bir (`Telegram.uyar`). Kayıt: `kayit/koruyucu/<gün>.jsonl` olay `koruyucu`.
 - Doğrulanmadı (Binance, A1): ana hesap API'sinin alt hesabı okuyabilmesi, ana hesabın alt hesap adına emir verememesi; bu iş gerçek para/anahtar/ağ içermez. Test: `tests/test_k82_koruyucu.py`.
+
+## K-84 CT ↔ ML etkileşimi yok (kullanıcı kararı 20.11)
+- ML, CT'den veri okumaz; konsensüs, ortak ders deposu ve ortak koruyucunun ML bağlantısı İPTAL. `docs/ortak-koruyucu-arayuz.md` İPTAL (arşiv).
+- CT yerel koruyucusu (K-82) aynen sürer (yalnız CT'yi korur).
+- CT'de yalnız ML için yazılmış çıktı/kodun silinmesi kullanıcı onayına bağlı (liste orkestratöre iletildi).
