@@ -26,11 +26,71 @@ Eşleme: coin adı + `USDT`; HIP-3 öneki (`xyz:`, `io:`) atılır (ör. `xyz:NV
 | Binance'te **yok** | 6 (%2,0) | 355 (%1,1) | +10,80 | 3 |
 | Toplam | 302 | 31.719 | -21,08 | 50 |
 
-- Yok: `PURR` (3 emir, K/Z +10,76 $), `xyz:ANT` (2 emir, +0,04), `xyz:XYZ100` (1 emir, 0). Bu üçü dökümde hiç geçmiyor.
-- HIP-3 (hisse vb.): 18 coin, 74 emir, 5.718 $ hacim, K/Z +5,17 $. Bunların 15'i Binance'te **"TradFi perp"** olarak var (NVDA, SNDK, GOOGL, META, MSFT, AMZN, AMD, INTC, MU, PLTR, BE, DRAM, SOXL, SPCX; `io:NVDA`/`io:SNDK` aynı hisseye eşleşir). Dökümde 179 hisse + 8 emtia TradFi perp'i var.
+- Yok: `PURR` (3 emir, K/Z +10,76 $), `xyz:ANT` (2 emir, +0,04), `xyz:XYZ100` (1 emir, 0). Bu üçü adla aranınca dökümde geçmiyor; ama `xyz:ANT` Anthropic pre-IPO ve Binance'te ANTHROPICUSDT olarak listelenmiş görünüyor (bölüm 1b); eşleşirse 48/50 coin. Ayrıntı ve düzeltilmiş kapsama 1b'de.
+- HIP-3 (hisse vb.): 18 coin, 74 emir, 5.718 $ hacim, K/Z +5,17 $. Bunların 16'sı (14 farklı sembol) Binance'te **"TradFi perp"** olarak var (NVDA, SNDK, GOOGL, META, MSFT, AMZN, AMD, INTC, MU, PLTR, BE, DRAM, SOXL, SPCX; `io:NVDA`/`io:SNDK` aynı hisseye eşleşir). Dökümde 179 hisse + 8 emtia TradFi perp'i var.
 - **Emin değilim:** `xyz:SPCX`, `xyz:DRAM`, `xyz:BE`, `xyz:SOXL` aynı sembol adıyla var ama aynı dayanak varlık mı, doğrulanmadı. `io:` markalı kontratların dayanağı da HL'de aynı hisse fiyatını mı izliyor, Binance'inkiyle bire bir mi, kontrol gerekir.
 - Binance TradFi perp açmak için kullanıcının ayrıca "TradFi-Perps sözleşmesi" imzalaması gerekiyor olabilir (Aralık 2025'te API'ye bu uç noktanın eklendiği haberi; şartları bulamadım).
 - K/Z payı: toplam K/Z negatif (-21 $), yani "yok" grubu kâr tarafında. Ama 6 emir/3 coin = küçük örnek; sonuç çıkarılamaz.
+
+## 1b. HIP-3 <-> Binance TradFi eşlemesi
+
+Kayıt: 16-20.11 dosyaları (`origin/canli-durum`). HIP-3 dolu emirlerin **tamamı 20.11'de** (01:12-14:58 UTC, bir Cuma) çıkmış: 16-19.11'de HIP-3 emri yok. Yani örnek tek gün, hafta sonu hiç yok. HL sütunları HL API'den (`metaAndAssetCtxs`, dex `xyz`/`io`, 20.11) ölçüldü. Binance sütunu: sembol varlığı bölüm 1'deki 11.10.2026 exchangeInfo dökümünden (40 günlük, üçüncü taraf); dayanak ve ek bilgiler WebSearch özetlerinden. Binance'in kendi sayfaları okunamadı.
+
+| HL sembolü | Dayanak varlık | Binance sembolü | HL azami kaldıraç | Emir | Hacim ($) |
+|---|---|---|---|---|---|
+| xyz:NVDA | Nvidia | NVDAUSDT (haberde de var) | 10x | 4 | 1.907 |
+| xyz:SNDK | SanDisk | SNDKUSDT (dökümde; bir haber "SANDUSDT" diyor, emin değil) | 10x | 11 | 705 |
+| xyz:SPCX | SpaceX pre-IPO (Binance'te öyle; HL tarafı bire bir mi doğrulanmadı) | SPCXUSDT (Binance pre-IPO, 21.05.2026) | 20x | 14 | 698 |
+| io:NVDA | Nvidia (io = Entropy) | NVDAUSDT (xyz:NVDA ile aynı sembol) | 25x | 7 | 376 |
+| xyz:GOOGL | Alphabet | GOOGLUSDT (dökümde) | 20x | 4 | 373 |
+| xyz:META | Meta | METAUSDT (dökümde) | 20x | 4 | 285 |
+| xyz:MSFT | Microsoft | MSFTUSDT (dökümde) | 20x | 5 | 257 |
+| xyz:AMZN | Amazon | AMZNUSDT (dökümde) | 20x | 7 | 253 |
+| xyz:XYZ100 | Nasdaq-100 tipi endeks (xyz'nin kendi endeksi; doğrulanmadı) | **yok / emin değil** (Binance'te QQQ ETF perp'i var; XYZ100 ile aynı değil, doğrulanmadı) | 30x | 1 | 205 |
+| xyz:BE | Bloom Energy (ticker'dan; doğrulanmadı) | BEUSDT (dökümde; dayanak eşleşmesi emin değil) | 10x (yalnız izole) | 3 | 163 |
+| io:SNDK | SanDisk | SNDKUSDT (xyz:SNDK ile aynı) | 15x | 3 | 138 |
+| xyz:MU | Micron | MUUSDT (dökümde) | 10x | 2 | 118 |
+| xyz:DRAM | emin değil (bellek temalı ürün; doğrulanmadı) | DRAMUSDT (dökümde; haberde yok, aynı dayanak mı emin değil) | 20x | 2 | 86 |
+| xyz:INTC | Intel | INTCUSDT (dökümde) | 10x | 2 | 72 |
+| xyz:ANT | Anthropic pre-IPO (trade.xyz; 26.10.2026) | **ANTHROPICUSDT olabilir** (Binance pre-IPO, 02.06.2026, haber; döküm taramam `ANTUSDT` aradığı için kaçırmış olabilir; doğrulanmadı) | 10x (yalnız izole) | 2 | 28 |
+| xyz:PLTR | Palantir | PLTRUSDT (dökümde) | 10x (yalnız izole) | 1 | 24 |
+| xyz:AMD | AMD | AMDUSDT (dökümde) | 10x (yalnız izole) | 1 | 18 |
+| xyz:SOXL | Direxion 3x yarı iletken ETF (ticker'dan; doğrulanmadı) | SOXLUSDT (dökümde) | 10x (yalnız izole) | 1 | 12 |
+| **Toplam** | 18 HL coin | | | 74 | 5.718 |
+
+Sayım: 16 HL coini dökümde sembolle bulunuyor (14 farklı Binance sembolü; `io:` ikisi `xyz:` ile aynı sembole gider): 71 emir, 5.485 $. Eşleşmeyen 2 HL coini: `xyz:XYZ100` (1 emir, 205 $) ve `xyz:ANT` (2 emir, 28 $; Binance'te Anthropic pre-IPO olduğu için büyük olasılıkla eşleşir). Not: bölüm 1'deki ilk sürümde `xyz:ANT` ismen "yok" sayılmıştı; HL tarafında ANT'nin Anthropic olduğu artık görüldü, bu yüzden düzeltildi.
+
+**Binance tarafında tüm TradFi perp'ler için ortak bilgi (kaynak: haber/Binance Square özetleri, Binance sayfası okunamadı; sembol bazlı doğrulanmadı):**
+- Min emir: 5 USDT notional, tick 0,01, min miktar 0,01 birim; bizim en küçük HIP-3 emrimiz 11 $ (sorun yok). (Binance Square açıklama yazısı; TSLA ön izlemesi, Ocak 2026.)
+- Azami kaldıraç: kaynaklar tutarsız: bir Binance Square rehberi "hisse perp'leri 10x", çoğu haber yeni listelerde 20x, bir haber Temmuz 2026 grubunda 25x. Sembol başına değişir; HL'deki 10-25x ile aynı mertebede, bizim ihtiyacımız (1-3x) için fark etmez.
+- Pre-IPO (SPCX, Anthropic): Binance'te 20x'e kadar; halka arz olup fiyat endeksi oluşunca standart TradFi perp'e dönüşür, arz olmazsa "IPO Failure Notice" ile kaldırılır (Binance duyuru özeti, 02.06.2026).
+- TradFi perp'ler için ayrı sözleşme imzası gerekebilir (bölüm 1).
+
+**İşlem saatleri / seans:**
+
+| | HL (xyz:/io:) | Binance TradFi |
+|---|---|---|
+| Hisse/ETF perp | 7/24 işlem; hisse piyasası kapalıyken fiyat (oracle) dahili fiyat fonksiyonuyla belirlenir (trade.xyz spesifikasyonu, arama özeti; sayfayı okuyamadım). Hafta sonu işlem var (Messari hafta sonu raporu). Bazı builder piyasaları gece/hafta sonu kapanabilir (Defiant): bizim 18 coin için tek tek doğrulanmadı. | Haberlerde "7/24" (hisse/ETF listelemeleri, Ağustos-Ekim 2026). Kapalı piyasada endeks Binance'in kendi defter fiyatından EWMA ile türetilir; mark fiyatı endeksten en fazla %5 (iş günü) / %3 (hafta sonu-tatil) sapabilir (tek kaynak). Bir kaynak "kontrat dayanağın seansını izler, kapanınca sessizleşir" diyor: **kaynaklar çelişiyor, doğrulanmadı.** |
+| Emtia perp | (bizim emrimiz yok) | 15.09.2026 21:00 UTC'den itibaren **24/5** (hafta sonu kapalı) (CryptoBriefing). |
+| FX perp | (bizim emrimiz yok) | Hafta içi normal fiyat, hafta sonu EWMA kipi. |
+
+Bizim 18 coinin hiçbiri emtia/FX değil; hepsi hisse/ETF/endeks/pre-IPO. Yani emtia 24/5 kuralı bu kopya için geçerli değil.
+
+**Seans farkının kopya için anlamı:**
+1. Haberler doğruysa (Binance hisse perp'i 7/24): HL'de trader seans dışında işlem yapsa bile Binance'te emir açılabilir; **seans nedeniyle kaçan sinyal ~%0** olur. Kalan risk fiyat: seans dışında iki borsanın fiyatı farklı mantıkla üretiliyor (HL oracle fonksiyonu / Binance defter EWMA'sı); trader'ın HL fiyatı ile bizim Binance fiyatımız arasında normalden büyük fark çıkabilir. Ölçülmedi.
+2. Binance hisse perp'i dayanağın seansını izliyorsa (çelişen kaynak doğruysa): 20.11 örneğinde 71 eşleşen emrin **40'ı (%56; 4.035 $ = %74 hacim)** ABD düzenli seansı (14:30-21:00 UTC, kış saati, Pzt-Cum) dışında geldi (gece, açılış öncesi). Tüm 302 emre oranla %13,2 emir, %12,7 hacim. Bu durumda kaçan sinyal bu mertebede olurdu. **Tek gün, bir Cuma, hafta sonu örneği yok:** hafta sonu payı bilinmiyor; HL'de 7/24 işlem yapan trader'lar için gerçek kayıp bundan büyük olabilir.
+3. Tahminim (ölçüm değil): haberler çoğunlukla 7/24 diyor, o yüzden esas senaryo 1; ama seans-izleme ihtimali kapanmadı. Kesinleştirmek için Binance'te erişilebilir bir ortamdan bir hafta sonu `exchangeInfo` `status` ve gece emir testi yapmak gerek.
+4. Pre-IPO ve endeks: SPCX/ANT seanssız çalışır (halka arz öncesi sürekli fiyat); XYZ100 zaten Binance'te yok / emin değil.
+
+**Kapsama özeti (bölüm 1 ile tutarlı):**
+
+| | Emir | Hacim ($) | Coin |
+|---|---|---|---|
+| Sembolü dökümde bulunan (alt sınır, bölüm 1 tablosu) | 296 (%98,0) | 31.364 (%98,9) | 47/50 |
+| + `xyz:ANT` -> ANTHROPICUSDT eşleşirse (doğrulanmadı) | 298 (%98,7) | 31.392 (%99,0) | 48/50 |
+| Hâlâ yok / emin değil | 4 (PURR 3, XYZ100 1) | 327 (%1,0) | 2/50 |
+
+HIP-3 içinde: 16/18 coin (71/74 emir, 5.485/5.718 $ = %95,9 hacim) eşleşir; ANT dahil 17/18 (%96,4 hacim). Toplam hacmin %17,3'ü (5.485 $) HIP-3. **Dayanak eşleşmesi emin olmayan:** SPCX, DRAM, BE, SOXL ve `io:` kontratları (6 HL coini, 30 emir, 1.473 $): sembol adı aynı ama aynı dayanak mı kanıtlanmadı. Bunlar düşülürse güvenli kapsama 266 emir (%88,1), 29.891 $ (%94,2 hacim), 41 coin olur. Gerçek kapsama bu güvenli taban ile yukarıdaki üst sınır (48/50 coin, %99,0 hacim) arasındadır.
 
 ## 2. Gecikme
 
