@@ -998,3 +998,13 @@
 {"zaman_ms":1795150066324,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"BNB","neden":"pozisyon_eski"}
 {"zaman_ms":1795150114593,"olay":"kopya_drift_bitti","coin":"xyz:ANT","biz_usd":14.32,"ideal_usd":21.58,"drift":0.145,"sure_dk":283}
 {"zaman_ms":1795150147697,"olay":"tur","ozsermaye_usd":9999.0023}
+{"zaman_ms":1795150672882,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"kPEPE","neden":"pozisyon_eski"}
+{"zaman_ms":1795150673878,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"AAVE","neden":"pozisyon_eski"}
+{"zaman_ms":1795150674867,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"UNI","neden":"pozisyon_eski"}
+{"zaman_ms":1795150803657,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"HYPE","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795150803181,"gorme_ms":1795150803656,"yas_ms":476}
+{"zaman_ms":1795150826989,"olay":"funding","saat":498653,"saat_adet":1,"funding_usd":-0.0002674641573524295,"toplam_funding_usd":-0.21617868405084828}
+{"zaman_ms":1795150992472,"olay":"tur","ozsermaye_usd":9994.2076}
+{"zaman_ms":1795151158996,"olay":"tg_bastirildi","tur":"kopya_sapmasi","metin":"📐 Kopya sapması: 4 coin, en büyük WLFI %157 (yalnız bilgi)"}
+{"zaman_ms":1795151158996,"olay":"tg_bastirildi","tur":"saatlik_bos","metin":"🧾 Son 1 saat (07:05–08:05 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 9 (≈5 ayrı işlem)\n   • kural gereği 9: 5 toplu emir bekliyor (fark küçük) · 4 ters netleşme (K‑41)\n   • kaçı"}
+{"zaman_ms":1795151158996,"olay":"tg_mesaj","tur":"saatlik_bos","anahtar":null,"seviye":"INFO","sessiz":false,"metin":"🧾 Son 1 saat (07:05–08:05 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 9 (≈5 ayrı işlem)\n   • kural gereği 9: 5 toplu emir bekliyor (fark küçük) · 4 ters netleşme (K‑41)\n   • kaçırılan 0 (geç görülen / veri yok)\n💰 Kasa: 9.986,01 $ · bugün 🔻 −9,70 $ (−%0,1) · başlangıçtan 🔻 −13,99 $ (−%0,1)","gonderildi":false,"bastirildi":true}
+{"zaman_ms":1795151291384,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"JUP","neden":"pozisyon_eski"}
