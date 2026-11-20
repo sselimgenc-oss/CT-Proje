@@ -15,6 +15,7 @@ import secrets
 import threading
 import time
 from datetime import timedelta
+from pathlib import Path
 from typing import Any, Callable
 
 from copytrade.canli.takma_ad import takma_ad
@@ -36,6 +37,10 @@ BASTIRILAN_TURLER = frozenset({"saha_giris", "saha_cikis", "saha_uyari", "saatli
 MESAJ_AZAMI = 3500                        # standart: mesaj başına en çok karakter
 KACIRILAN_PENCERE_S = 15 * 60          # G-16: bundan eski (ya da motor başlamadan önce gelmiş) komut YÜRÜTÜLMEZ; "işlenmedi, yeniden gönder" yanıtı alır
 YENIDEN_BEKLEME_S = (2.0, 5.0, 15.0)   # G-18: önemli mesaj (ONEMLI_ONEKLER) gönderilemezse bu beklemelerle 3 kez daha denenir
+GUNCELLEME_SESSIZ_S = 15 * 60.0       # K-80: güncellemeden sonraki bu sürede (işaret dosyası `guncelleme_zamani`) yalnız ÖLÜMCÜL uyarılar gider; diğer WARN/CRIT sürenin sonunda, hâlâ geçerliyse gönderilir
+DOGRULAMA_SN = 45.0                    # K-80: durum alarmları (bot durdu/veri eski/kapanış eksik/HL okunamıyor...) göndermeden önce bu kadar sonra koşul İKİNCİ kez sınanır (motor kurar; Telegram() varsayılanı 0 = kapalı)
+OLUMCUL_ISARETLER = ("bot durdu", "bot hâlâ kapalı", "tasfiye", "kayıp sınırı", "sert fren", "kapanış eksik", "kapanmadı", "kapanış bugün", "felaket stopu", "stopsuz pozisyon", "durdurma", "vardiya başlamadı", "yalnız kapanış")
+OLUMCUL_ONEKLER = ("🔴", "🛑", "💥")
 RETRY_AFTER_TAVAN_S = 60.0             # G-18: 429 `retry_after` en çok bu kadar beklenir (gönderim iş parçacığı kilitlenmesin)
 
 
@@ -176,6 +181,10 @@ class Telegram:
         self._tampon_bicim: Callable[[list[dict]], str] | None = None
         self._tampon_zaman: Any = None
         self._tampon_kilit = threading.Lock()
+        self.guncelleme_isareti: Path | None = None   # K-80: sunucu güncelleme betiğinin yazdığı işaret (ilk satır epoch sn); yoksa/None: pencere yok. Motor kurar
+        self.cift_dogrulama_sn = 0.0                  # K-80: >0 ise `dogrula=` verilen durum alarmları bu kadar sonra yeniden sınanır (motor DOGRULAMA_SN kurar)
+        self._ertelenen: dict[str, dict] = {}         # K-80: ikinci doğrulama / güncelleme penceresi bekleyen alarmlar (anahtar -> kayıt)
+        self._ertele_kilit = threading.Lock()
         if arka_plan:                                  # motor: gönderim emir hattını (25 sn'ye varan HTTP zaman aşımı) bekletmesin
             from concurrent.futures import ThreadPoolExecutor
             self._havuz = ThreadPoolExecutor(max_workers=1, thread_name_prefix="telegram")
@@ -215,8 +224,9 @@ class Telegram:
         if liste and bicim is not None:
             self.gonder(bicim(liste))
 
-    def uyar(self, anahtar: str, metin: str, onem: str | None = None) -> bool:
-        """Ortak uyarı yardımcısı: aynı `anahtar` en çok `UYARI_ARA_S` (6 saat) bir kez gider; sürerken tekrarlar kayda `telegram_tekrar_atlandi` yazar. Gönderilen uyarı `duzeldi` ile kapatılır."""
+    def uyar(self, anahtar: str, metin: str, onem: str | None = None, dogrula: Callable[[], bool] | None = None) -> bool:
+        """Ortak uyarı yardımcısı: aynı `anahtar` en çok `UYARI_ARA_S` (6 saat) bir kez gider; sürerken tekrarlar kayda `telegram_tekrar_atlandi` yazar. Gönderilen uyarı `duzeldi` ile kapatılır.
+        `dogrula` (K-80): durum alarmı için koşulu yeniden sınayan çağrı; verilirse ve `cift_dogrulama_sn` > 0 ise gönderim ertelenir, koşul hâlâ geçerliyse gider."""
         simdi = float(self.saat_s())
         son = self._uyari_son.get(anahtar)
         if son is not None and simdi - son < UYARI_ARA_S:
@@ -224,25 +234,114 @@ class Telegram:
                 self.kayit({"olay": "telegram_tekrar_atlandi", "onem": onem or "WARN", "anahtar": anahtar, "pencere_sn": UYARI_ARA_S})
             return False
         self._uyari_son[anahtar] = simdi
-        ok = self.gonder(metin, onem, anahtar=anahtar)
+        ok = self.gonder(metin, onem, anahtar=anahtar, dogrula=dogrula, _iptal=lambda: self._uyari_son.pop(anahtar, None))
         if not ok:
             self._uyari_son.pop(anahtar, None)                     # gitmedi: 6 saatlik kilit kurulmaz, sonraki çağrıda yeniden denenir
         return ok
 
     def duzeldi(self, anahtar: str, metin: str) -> bool:
-        """`uyar(anahtar)` ile uyarılmış bir sorun düzelince TEK "Düzeldi" mesajı (INFO, sessiz); uyarı hiç verilmediyse ya da zaten kapatıldıysa hiçbir şey gitmez."""
+        """`uyar(anahtar)` ile uyarılmış bir sorun düzelince TEK "Düzeldi" mesajı (INFO, sessiz); uyarı hiç verilmediyse ya da zaten kapatıldıysa hiçbir şey gitmez.
+        K-80: uyarı henüz GİTMEMİŞ (ikinci doğrulama / güncelleme penceresi bekliyor) ise iptal edilir; "düzeldi" de gitmez."""
+        with self._ertele_kilit:
+            bekleyen = self._ertelenen.pop(anahtar, None)
+        if bekleyen is not None:
+            if self.kayit:
+                self.kayit({"olay": "tg_ertelenen_iptal", "anahtar": anahtar, "neden": "duzeldi"})
+            if bekleyen.get("iptal"):
+                bekleyen["iptal"]()
+            return False
         if self._uyari_son.pop(anahtar, None) is None:
             return False
         self._son_gonderim.pop(anahtar, None)                      # düzelmiş sorun yeniden olursa 5 dk tekrar penceresi uyarıyı yutmasın
         return self.gonder(metin, "INFO")
 
-    def gonder(self, metin: str, onem: str | None = None, anahtar: str | None = None, tur: str | None = None, alan: dict | None = None) -> bool:
+    # ------------------------------------------------------------------------------------------ K-80: ikinci doğrulama + güncelleme penceresi
+    def guncelleme_kalan_s(self) -> float:
+        """Güncelleme işaretinden sonraki `GUNCELLEME_SESSIZ_S` penceresinde kalan saniye (pencere yoksa 0). İşaret yok/okunamıyor/bozuk/gelecekte: 0 (alarm susturulmaz)."""
+        if self.guncelleme_isareti is None:
+            return 0.0
+        try:
+            ts = float(Path(self.guncelleme_isareti).read_text(encoding="utf-8").split()[0])
+        except (OSError, ValueError, IndexError):
+            return 0.0
+        gecen = float(self.saat_s()) - ts
+        return GUNCELLEME_SESSIZ_S - gecen if 0 <= gecen < GUNCELLEME_SESSIZ_S else 0.0
+
+    def son_guncelleme_metni(self) -> str | None:
+        """Bağlam satırı için: 'son güncelleme N dk/sa önce' (işaret yoksa None)."""
+        if self.guncelleme_isareti is None:
+            return None
+        try:
+            ts = float(Path(self.guncelleme_isareti).read_text(encoding="utf-8").split()[0])
+        except (OSError, ValueError, IndexError):
+            return None
+        return f"son güncelleme {sure_metni(float(self.saat_s()) - ts)} önce"
+
+    def _ertele(self, anahtar: str, sn: float, kayit: dict) -> bool:
+        """Alarmı `sn` sonraya erteler (aynı anahtar bekliyorsa yenisi eklenmez). Zamanlayıcı yoksa False (çağıran kendi yoluna devam eder / düşürür)."""
+        if self._zamanlayici_fn is None:
+            return False
+        with self._ertele_kilit:
+            if anahtar in self._ertelenen:
+                return True
+            kayit.setdefault("ilk_s", float(self.saat_s()))
+            self._ertelenen[anahtar] = kayit
+        self._zamanlayici_fn(max(sn, 0.0) + 0.5, lambda: self._ertele_bitti(anahtar))
+        return True
+
+    def _ertele_bitti(self, anahtar: str) -> None:
+        with self._ertele_kilit:
+            e = self._ertelenen.pop(anahtar, None)
+        if e is None:                                              # düzeldi ile iptal edildi
+            return
+        try:
+            gecerli = True if e.get("dogrula") is None else bool(e["dogrula"]())
+        except Exception:                                          # noqa: BLE001 - sınama çökerse alarm kaybolmasın
+            gecerli = True
+        if not gecerli:
+            if self.kayit:
+                self.kayit({"olay": "tg_dogrulama_dustu", "anahtar": anahtar, "metin": str(e["metin"])[:120]})
+            if e.get("iptal"):
+                e["iptal"]()
+            return
+        metin = e["metin"]
+        if not e.get("baglamli"):
+            satir = self._baglam_satiri(e["ilk_s"])
+            metin = f"{metin}\n{satir}"
+            e["baglamli"] = True
+        self.gonder(metin, e["onem"], anahtar=e["anahtar"], tur=e.get("tur"), alan=e.get("alan"), dogrula=None, _ic=True, _iptal=e.get("iptal"), _baglamli=True)
+
+    def _baglam_satiri(self, ilk_s: float) -> str:
+        """Alarm metnine tek satır bağlam: ne zamandır sürüyor + son güncelleme ne zaman."""
+        parca = [f"⏱ başladı: {sure_metni(float(self.saat_s()) - ilk_s)} önce" if float(self.saat_s()) - ilk_s >= 60 else "⏱ yeni başladı"]
+        gun = self.son_guncelleme_metni()
+        parca.append(gun if gun else "son güncelleme: kayıt yok")
+        return " · ".join(parca)
+
+    def gonder(self, metin: str, onem: str | None = None, anahtar: str | None = None, tur: str | None = None, alan: dict | None = None, dogrula: Callable[[], bool] | None = None,
+               _ic: bool = False, _iptal: Callable[[], Any] | None = None, _baglamli: bool = False) -> bool:
         """Mesaj gönderir; hata motoru DURDURMAZ (sayılır). Token günlüğe/hata metnine ASLA yazılmaz. `onem`: INFO/WARN/CRIT (yoksa metinden çıkarılır); `anahtar`: tekrar önleme
-        anahtarı (yoksa WARN/CRIT için metnin kendisi). Giden mesajın ilk satırı `[CT] <ÖNEM>` olur (kayda/`gonderilen`e düz metin yazılır)."""
+        anahtarı (yoksa WARN/CRIT için metnin kendisi). Giden mesajın ilk satırı `[CT] <ÖNEM>` olur (kayda/`gonderilen`e düz metin yazılır).
+        K-80: (1) `dogrula` verilmiş durum alarmı `cift_dogrulama_sn` sonra koşul yeniden sınanarak gider (+1 bağlam satırı); (2) güncelleme penceresinde (işaret < 15 dk) ÖLÜMCÜL olmayan WARN/CRIT
+        pencere sonuna ertelenir (o zaman `dogrula` hâlâ geçerliyse gider; olay türü alarmlar `dogrula`sız gecikmeli gider, kaybolmaz). Gerçekleşmiş olay alarmları (tasfiye vb.) `dogrula` vermez: çift doğrulamaya girmez."""
         if tur is not None and tur in self.bastirilan:             # bastırılan tür: gönderilmez, kayda yazılır (tespit silinmedi)
             if self.kayit:
                 self.kayit({"olay": "tg_bastirildi", "tur": tur, "metin": metin[:200]})
                 self.kayit({"olay": "tg_mesaj", "tur": tur, "anahtar": anahtar, "seviye": onem or onem_duzeyi(metin), "sessiz": False, "metin": metin, "gonderildi": False, "bastirildi": True, **(alan or {})})
+            return False
+        seviye = onem or onem_duzeyi(metin)
+        k = anahtar if anahtar is not None else metin
+        if dogrula is not None and not _ic and self.cift_dogrulama_sn > 0 and seviye != "INFO":
+            if self._ertele(k, self.cift_dogrulama_sn, {"metin": metin, "onem": onem, "anahtar": anahtar, "tur": tur, "alan": alan, "dogrula": dogrula, "iptal": _iptal}):
+                if self.kayit:
+                    self.kayit({"olay": "tg_dogrulama_bekliyor", "anahtar": k, "sn": self.cift_dogrulama_sn})
+                return True
+        kalan = self.guncelleme_kalan_s() if seviye != "INFO" else 0.0
+        if kalan > 0 and not olumcul_mu(metin):
+            if self.kayit:
+                self.kayit({"olay": "tg_guncelleme_bekletildi", "anahtar": k, "kalan_sn": round(kalan), "metin": metin[:120]})
+            if self._ertele(k, kalan, {"metin": metin, "onem": onem, "anahtar": anahtar, "tur": tur, "alan": alan, "dogrula": dogrula, "iptal": _iptal, "baglamli": _baglamli}):
+                return True
             return False
         metin = kip_etiketle(metin, self.kip)
         for m in self.maske:
@@ -440,6 +539,25 @@ def _varsayilan_zamanlayici(sn: float, f: Callable[[], None]) -> Any:
     t.daemon = True
     t.start()
     return t
+
+
+def sure_metni(sn: float) -> str:
+    """Bağlam satırı için süre: '45 sn' / '12 dk' / '3 sa 10 dk'."""
+    sn = max(float(sn), 0.0)
+    if sn < 90:
+        return f"{sn:.0f} sn"
+    dk = sn / 60
+    if dk < 120:
+        return f"{dk:.0f} dk"
+    return f"{int(dk // 60)} sa {int(dk % 60)} dk"
+
+
+def olumcul_mu(metin: str) -> bool:
+    """K-80: güncelleme sonrası 15 dk içinde de HEMEN gidecek ölümcül mesaj mı (bot durdu, tasfiye, kayıp sınırı, kapanış eksik, DUR...). 🔴/🛑/💥 başlıklar her zaman."""
+    if metin.startswith(OLUMCUL_ONEKLER):
+        return True
+    norm = metin.replace("İ", "i").replace("I", "ı").lower()
+    return any(i in norm for i in OLUMCUL_ISARETLER)
 
 
 ALARM_BASLIKLARI = ("🔴", "🚨", "🛑", "💥", "⏸️", "▶️", "✅", "ℹ️", "⚠️", "ALARM", "UYARI", "BİLGİ", "TASFİYE", "DUR")

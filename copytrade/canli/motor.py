@@ -1950,7 +1950,8 @@ class Motor:
         eksik = [k for k, v in self.kapanis_kuyrugu.items() if v.get("eksik")]
         self.risk.bayrak("kapanis_eksik", bool(eksik))
         if eksik and self._aralik_mi("kapanis_alarm", simdi, 60):
-            self.tg.gonder(tg.alarm("ALARM: pozisyonlar hâlâ kapanmadı", f"kapanış eksik: {len(eksik)} pozisyon ({', '.join(k.split('|')[1] + ' ' + tg.kisa(k.split('|')[0]) for k in eksik[:5])}).\nYeniden deneniyor."))
+            self.tg.gonder(tg.alarm("ALARM: pozisyonlar hâlâ kapanmadı", f"kapanış eksik: {len(eksik)} pozisyon ({', '.join(k.split('|')[1] + ' ' + tg.kisa(k.split('|')[0]) for k in eksik[:5])}).\nYeniden deneniyor."),
+                         dogrula=lambda: any(v.get("eksik") for v in self.kapanis_kuyrugu.values()))
         self._dur_bitir_mi()
 
     def _borsa_fazla(self, simdi: int) -> dict[str, float] | None:
@@ -2520,7 +2521,7 @@ class Motor:
             if not self.risk.acilis_durdu.get("hl_deger"):
                 self.risk.bayrak("hl_deger", True)
                 self.kayit({"olay": "hl_deger_gecersiz", "deger": str(deger)[:24]})
-                self.tg.uyar("hl_deger", tg.alarm("ALARM: HL hesap değeri geçersiz", "HL'den gelen hesap değeri sayı değil / negatif. Yeni pozisyon açılmıyor; değer düzelince kalkar."))
+                self.tg.uyar("hl_deger", tg.alarm("ALARM: HL hesap değeri geçersiz", "HL'den gelen hesap değeri sayı değil / negatif. Yeni pozisyon açılmıyor; değer düzelince kalkar."), dogrula=lambda: bool(self.risk.acilis_durdu.get("hl_deger")))
             return False
         if self.risk.acilis_durdu.get("hl_deger"):
             self.risk.bayrak("hl_deger", False)
@@ -2643,7 +2644,7 @@ class Motor:
         self._ofset_bayrak(True)
         if self._ledger_hata_say >= 3:
             self.tg.uyar("ofset", tg.alarm("ALARM: yatırma/çekme kaydı okunamıyor", f"Hesap hareketi okuması {self._ledger_hata_say} kez üst üste başarısız; yatırma/çekme doğrulanamıyor.\n"
-                                           "Yeni pozisyon açılmıyor; risk yerel defterle sürüyor. Okuma düzelince kendiliğinden kalkar."))
+                                           "Yeni pozisyon açılmıyor; risk yerel defterle sürüyor. Okuma düzelince kendiliğinden kalkar."), dogrula=lambda: self._ledger_hata_say >= 3)
 
     def funding_bekliyor(self, simdi: int) -> bool:
         return self.kip == "sanal" and self.son_funding_saat is not None and simdi // 3_600_000 > self.son_funding_saat and any(self.hesap.poz.values())
@@ -3116,7 +3117,8 @@ class Motor:
                 eski = self.risk.zirve_yenile(oz)
                 self.kayit({"olay": "zirve_yenilendi", "eski_zirve": eski, "yeni_zirve": oz, "gerekce": "dur_sonrasi_ilk_risk"})
         if self.risk.kasa_siniri_asildi(self.kasa, kasa_ust(self.rules, self.kip)):
-            self.tg.uyar("kasa_siniri", tg.alarm("ALARM: kasa sınırı aşıldı", f"Başlangıç sermayesi (kasa) {tg.tr_sayi(self.kasa, 0)} $ > izin verilen üst sınır {tg.tr_sayi(kasa_ust(self.rules, self.kip), 0)} $.\nYeni pozisyon açılmıyor."))
+            self.tg.uyar("kasa_siniri", tg.alarm("ALARM: kasa sınırı aşıldı", f"Başlangıç sermayesi (kasa) {tg.tr_sayi(self.kasa, 0)} $ > izin verilen üst sınır {tg.tr_sayi(kasa_ust(self.rules, self.kip), 0)} $.\nYeni pozisyon açılmıyor."),
+                         dogrula=lambda: self.risk.kasa_siniri_asildi(self.kasa, kasa_ust(self.rules, self.kip)))
         else:
             self.tg.duzeldi("kasa_siniri", tg.duzeldi_metni("kasa sınırı", "Kasa sınırın altına indi; yeni pozisyonlar serbest."))
         if self._hl_sicrama and simdi - self._hl_sicrama_ms <= 3 * float(self.rules["canli_mutabakat_sn"]) * 1000:      # S-6: açıklanmayan sıçrama → bu okumada DUR yok (bayrak + alarm verildi)
@@ -3167,7 +3169,7 @@ class Motor:
                 if not self.risk.acilis_durdu.get("hl_okunamiyor"):
                     self.kayit({"olay": "hl_okunamiyor", "ardisik": self._hl_ardisik})
                 self.risk.bayrak("hl_okunamiyor", True)
-                self.tg.uyar("hl_okunamiyor", tg.alarm("ALARM: HL okunamıyor", f"{self._hl_ardisik} ardışık HL okuması başarısız. Risk yerel defterle sürüyor; yeni pozisyon açılmıyor (okuma düzelince kalkar)."))
+                self.tg.uyar("hl_okunamiyor", tg.alarm("ALARM: HL okunamıyor", f"{self._hl_ardisik} ardışık HL okuması başarısız. Risk yerel defterle sürüyor; yeni pozisyon açılmıyor (okuma düzelince kalkar)."), dogrula=lambda: bool(self.risk.acilis_durdu.get("hl_okunamiyor")))
             return
         self._hl_ardisik = 0
         if self.risk.acilis_durdu.get("hl_okunamiyor"):
@@ -3589,7 +3591,7 @@ class Motor:
         self.risk.bayrak("mutabakat", bool(sorunlar))
         if sorunlar and not onceki:
             self.kayit({"olay": "mutabakat_alarm", "sorunlar": sorunlar[:10]})
-            self.tg.gonder(tg.alarm("ALARM: kayıtlar uyuşmuyor (mutabakat)", f"{len(sorunlar)} sorun bulundu ({tg.sade_ad(sorunlar[0].get('neden'))}).\nYeni pozisyon açılmıyor."))
+            self.tg.gonder(tg.alarm("ALARM: kayıtlar uyuşmuyor (mutabakat)", f"{len(sorunlar)} sorun bulundu ({tg.sade_ad(sorunlar[0].get('neden'))}).\nYeni pozisyon açılmıyor."), dogrula=lambda: bool(self.risk.acilis_durdu.get("mutabakat")))
         elif not sorunlar and onceki:
             self.kayit({"olay": "mutabakat_duzeldi"})
             self.tg.gonder(tg.duzeldi_metni("kayıtlar uyuşuyor (mutabakat)", "Yeni pozisyonlar yeniden serbest."), "INFO")
@@ -5022,6 +5024,8 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     rules = load_rules()
     tgram = tg.Telegram(arka_plan=not args.kontrol, sessiz_utc=(int(rules["canli_telegram_sessiz_bas_utc"]), int(rules["canli_telegram_sessiz_bit_utc"])))
+    tgram.cift_dogrulama_sn = tg.DOGRULAMA_SN                                         # K-80: durum alarmları göndermeden önce koşul ikinci kez sınanır (+bağlam satırı)
+    tgram.guncelleme_isareti = Path(args.durum_dizin) / "guncelleme_zamani"            # K-80: güncelleme betiği yazar; sonraki 15 dk yalnız ölümcül uyarılar gider
     try:
         kip = kip_belirle(rules, args.kip)
         tgram.kip = kip                                    # S-22: açılış alarmlarında da kip etiketi

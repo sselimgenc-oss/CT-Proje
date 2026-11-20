@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 DAKIKA = 60_000
@@ -327,6 +328,17 @@ def vardiya_kosulari_oku(url: str = "", timeout: int = 20) -> list[dict[str, Any
         return None
 
 
+def guncelleme_penceresinde_mi(yol: str, simdi_ms: int, pencere_ms: int = 15 * DAKIKA) -> bool:
+    """K-80: işaret dosyasındaki epoch sn'den bu yana `pencere_ms` geçmediyse True (dosya yok/bozuk: False)."""
+    if not yol:
+        return False
+    try:
+        ts = float(open(yol, encoding="utf-8").read().split()[0]) * 1000
+    except (OSError, ValueError, IndexError):
+        return False
+    return 0 <= simdi_ms - ts < pencere_ms
+
+
 def main(argv: list[str] | None = None) -> int:
     import argparse
     import json
@@ -338,36 +350,60 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--kadro-dali", default="radar")
     ap.add_argument("--gercek-dali", "--veri-dali-gercek", dest="gercek_dali", default="", help="gerçek kip nabız dalı (ör. canli-gercek); verilirse ikinci kontrol yapılır (yayım hedefi kullanıcı kararı; boşsa atlanır)")
     ap.add_argument("--canli-url", default="", help="Cloudflare pano adresi (boşsa canlı sayfa kontrol edilmez)")
+    ap.add_argument("--guncelleme-isareti", default="", help="K-80: sunucu güncelleme işareti dosyası (ilk satır epoch sn); verilir ve < 15 dk ise yalnız KRİTİK alarm gider, bağlam satırına 'son güncelleme' eklenir")
+    ap.add_argument("--dogrula-sn", type=float, default=0.0, help="K-80: >0 ise alarmdan önce bu kadar bekleyip kontrolü yeniden yapar; yalnız iki okumada da görülen bulgular alarma girer (iş akışı: 45)")
     ap.add_argument("--telegram", action="store_true", help="bulgu varsa Telegram alarmı gönder (KRITIK her koşuda, UYARI 3 saatte bir: saat %% 3 == 0 ve dakika < 15)")
     args = ap.parse_args(argv)
+    def hesapla() -> tuple[list[Bulgu], str]:
+        simdi = int(time.time() * 1000)
+        if not _git_fetch([args.veri_dali, args.kadro_dali] + ([args.gercek_dali] if args.gercek_dali else [])):
+            print("BILGI: git fetch başarısız; yerel ref'ler bayat olabilir (bu yüzden bulgu üretilmedi).")
+        ozet_ham, kadro_ham = _git_oku(args.veri_dali, "durum/ozet.json"), _git_oku(args.kadro_dali, "radar/son/kadro.json")
+        ozet, kadro = (json.loads(ozet_ham) if ozet_ham else None), (json.loads(kadro_ham) if kadro_ham else None)
+        canli_ms, ulasildi = None, None
+        if args.canli_url:
+            try:
+                with urllib.request.urlopen(urllib.request.Request(args.canli_url, headers={"User-Agent": "sg-saglik/1"}), timeout=30) as r:
+                    canli_ms, ulasildi = canli_sayfa_ms(r.read().decode("utf-8", "replace")), True
+            except Exception:                                                                    # noqa: BLE001 - ağ hatası: bulgu olarak raporlanır, kontrol çökmez
+                ulasildi = False
+        motor_ham, risk_ham = _git_oku(args.veri_dali, "durum/motor.json"), _git_oku(args.veri_dali, "durum/risk.json")
+        bulgular = kontrol(simdi, ozet, kadro, pano_ms=_git_zaman_ms(args.veri_dali, "pano/index.html"), canli_pano_ms=canli_ms, canli_pano_ulasildi=ulasildi,
+                           motor=json.loads(motor_ham) if motor_ham else None, risk=json.loads(risk_ham) if risk_ham else None, dur_dosyasi=_git_var(args.veri_dali, "durum/DUR"),
+                           olaylar=kayit_olaylari(args.veri_dali, simdi), vardiya_kosulari=vardiya_kosulari_oku(), veri_dali_commit_ms=_git_son_commit_ms(args.veri_dali))
+        if args.gercek_dali:
+            g = lambda yol: (lambda h: json.loads(h) if h else None)(_git_oku(args.gercek_dali, yol))          # noqa: E731
+            bulgular += gercek_kontrol(simdi, g("durum/ozet.json"), g("nabiz.json"), g("durum/kilit.json"))
+        return bulgular, durum(bulgular)
+
     simdi = int(time.time() * 1000)
-    if not _git_fetch([args.veri_dali, args.kadro_dali] + ([args.gercek_dali] if args.gercek_dali else [])):
-        print("BILGI: git fetch başarısız; yerel ref'ler bayat olabilir (bu yüzden bulgu üretilmedi).")
-    ozet_ham, kadro_ham = _git_oku(args.veri_dali, "durum/ozet.json"), _git_oku(args.kadro_dali, "radar/son/kadro.json")
-    ozet, kadro = (json.loads(ozet_ham) if ozet_ham else None), (json.loads(kadro_ham) if kadro_ham else None)
-    canli_ms, ulasildi = None, None
-    if args.canli_url:
-        try:
-            with urllib.request.urlopen(urllib.request.Request(args.canli_url, headers={"User-Agent": "sg-saglik/1"}), timeout=30) as r:
-                canli_ms, ulasildi = canli_sayfa_ms(r.read().decode("utf-8", "replace")), True
-        except Exception:                                                                    # noqa: BLE001 - ağ hatası: bulgu olarak raporlanır, kontrol çökmez
-            ulasildi = False
-    motor_ham, risk_ham = _git_oku(args.veri_dali, "durum/motor.json"), _git_oku(args.veri_dali, "durum/risk.json")
-    bulgular = kontrol(simdi, ozet, kadro, pano_ms=_git_zaman_ms(args.veri_dali, "pano/index.html"), canli_pano_ms=canli_ms, canli_pano_ulasildi=ulasildi,
-                       motor=json.loads(motor_ham) if motor_ham else None, risk=json.loads(risk_ham) if risk_ham else None, dur_dosyasi=_git_var(args.veri_dali, "durum/DUR"),
-                       olaylar=kayit_olaylari(args.veri_dali, simdi), vardiya_kosulari=vardiya_kosulari_oku(), veri_dali_commit_ms=_git_son_commit_ms(args.veri_dali))
-    if args.gercek_dali:
-        g = lambda yol: (lambda h: json.loads(h) if h else None)(_git_oku(args.gercek_dali, yol))          # noqa: E731
-        bulgular += gercek_kontrol(simdi, g("durum/ozet.json"), g("nabiz.json"), g("durum/kilit.json"))
-    metin, st = ozet_metin(bulgular), durum(bulgular)
+    bulgular, st = hesapla()
+    if args.telegram and st != "SAGLIKLI" and args.dogrula_sn > 0:                           # K-80: durum alarmı göndermeden önce koşul ikinci kez sınanır; yalnız İKİ okumada da görülen kodlar gider
+        time.sleep(args.dogrula_sn)
+        bulgular2, _ = hesapla()
+        kodlar2 = {x.kod for x in bulgular2}
+        dusen = [x.kod for x in bulgular if x.kod not in kodlar2]
+        bulgular = [x for x in bulgular if x.kod in kodlar2]
+        if dusen:
+            print(f"BILGI: ikinci doğrulamada düzelen bulgular alarma girmedi: {', '.join(dusen)}")
+        st = durum(bulgular)
+    metin = ozet_metin(bulgular)
     print(f"DURUM: {st}\n{metin}")
     if args.telegram and st != "SAGLIKLI":
         saat_utc, dakika = int(time.strftime("%H", time.gmtime(simdi / 1000))), int(time.strftime("%M", time.gmtime(simdi / 1000)))
-        if st == "KRITIK" or (saat_utc % 3 == 0 and dakika < 15):                          # UYARI 3 saatte BİR kez (vardiya döngüsü 15 dk'da bir koşar: yalnız saatin ilk 15 dk'sı)
+        pencere = guncelleme_penceresinde_mi(args.guncelleme_isareti, simdi)
+        if pencere and st != "KRITIK":                                                       # K-80: güncellemeden sonraki 15 dk yalnız KRİTİK; UYARI sonraki koşuda hâlâ geçerliyse gider
+            print("BILGI: güncelleme sonrası 15 dk penceresi: UYARI bekletildi (yalnız KRİTİK gider).")
+        elif st == "KRITIK" or (saat_utc % 3 == 0 and dakika < 15):                          # UYARI 3 saatte BİR kez (vardiya döngüsü 15 dk'da bir koşar: yalnız saatin ilk 15 dk'sı)
             from copytrade.canli import telegram as tg
             t = tg.Telegram()
             if t.acik:
-                if not t.gonder(tg.alarm("ALARM: sistem sağlık kontrolü" if st == "KRITIK" else "Sağlık uyarısı", metin)):
+                gonder_metin = metin
+                if args.guncelleme_isareti:                                                  # K-80: 1 satır bağlam (bulgu metinleri yaşı zaten söyler; burada son güncelleme)
+                    t.guncelleme_isareti = Path(args.guncelleme_isareti)
+                    satir = t.son_guncelleme_metni()
+                    gonder_metin += f"\n⏱ {satir}" if satir else ""
+                if not t.gonder(tg.alarm("ALARM: sistem sağlık kontrolü" if st == "KRITIK" else "Sağlık uyarısı", gonder_metin)):
                     print("HATA: Telegram alarmı gönderilemedi", file=sys.stderr)                 # sessiz yutulmaz: iş kırmızı biter
                     return 2
             else:
