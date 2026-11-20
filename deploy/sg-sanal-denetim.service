@@ -1,0 +1,15 @@
+# Saatlik sunucu dayanıklılık alarmı (K-80): güncelleme günde 2 pencereye alındığından alarm_kontrol (yeniden başlama / OOM / günlük özet JSON'u) ayrı saatlik zamanlayıcıdan koşar. Güncelleme YAPMAZ (SANAL_YALNIZ_ALARM=1).
+[Unit]
+Description=sg-arge sanal sunucu saatlik denetim (yalniz alarm, guncelleme yok)
+After=network-online.target
+
+[Service]
+Type=oneshot
+Environment=SANAL_YALNIZ_ALARM=1
+ExecStart=/bin/bash /var/lib/sg-sanal/depo/deploy/sanal_guncelle.sh
+StateDirectory=sg-sanal-guncelle
+StateDirectoryMode=0700
+TimeoutStartSec=10min
+Nice=10
+MemoryMax=400M
+PrivateTmp=true

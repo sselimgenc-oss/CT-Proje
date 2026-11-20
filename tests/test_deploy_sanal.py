@@ -257,7 +257,7 @@ def test_guncelle_birimleri_alanlar_ve_sir_yok():
     s = (DEPLOY / "sg-sanal-guncelle.service").read_text(encoding="utf-8")
     t = (DEPLOY / "sg-sanal-guncelle.timer").read_text(encoding="utf-8")
     assert re.search(r"^Type=oneshot$", s, re.M) and "ExecStart=/bin/bash /var/lib/sg-sanal/depo/deploy/sanal_guncelle.sh" in s
-    assert re.search(r"^OnCalendar=hourly$", t, re.M) and re.search(r"^RandomizedDelaySec=5min$", t, re.M) and re.search(r"^Persistent=true$", t, re.M) and "WantedBy=timers.target" in t
+    assert re.findall(r"^OnCalendar=(.*)$", t, re.M) == ["*-*-* 07:30:00 UTC", "*-*-* 19:30:00 UTC"] and re.search(r"^RandomizedDelaySec=3min$", t, re.M)   # K-80: 10:30 ve 22:30 TSİ and re.search(r"^Persistent=true$", t, re.M) and "WantedBy=timers.target" in t
     for ad in ("sg-sanal-guncelle.service", "sg-sanal-guncelle.timer"):
         assert not re.search(r"TELEGRAM_BOT_TOKEN=\S|BEGIN [A-Z ]*PRIVATE KEY|0x[0-9a-fA-F]{40}", (DEPLOY / ad).read_text(encoding="utf-8")), ad
 
@@ -312,7 +312,9 @@ def sunucu(tmp_path):
     (bin_ / "systemctl").write_text(
         '#!/usr/bin/env bash\necho "systemctl $*" >> "$CAGRI_LOG"\n'
         'case "$1" in is-active) exit 0;; show) case "$*" in *Result*) echo "${SHOW_RESULT:-success}";; *) echo 0;; esac; exit 0;; esac\n'
-        'if [ "$1" = start ] && [ "$2" = sg-sanal-kontrol ]; then exit "${KONTROL_RC:-0}"; fi\nexit 0\n')
+        'if [ "$1" = start ] && [ "$2" = sg-sanal-kontrol ]; then exit "${KONTROL_RC:-0}"; fi\n'
+        'if [ "$1" = start ] && [ "$2" = sg-sanal ] && [ -z "${MOTOR_YAZMAZ:-}" ]; then printf \'{"yazildi_ms": %s}\' "$(( $(date +%s) * 1000 ))" > "$SANAL_DEPO/durum/ozet.json"; fi\n'
+        'case "$1:$2" in is-enabled:*) [ -n "${ETKIN_DEGIL:-}" ] && case "$*" in *"$ETKIN_DEGIL"*) exit 1;; esac;; esac\nexit 0\n')
     (bin_ / "journalctl").write_text('#!/usr/bin/env bash\ncase " $* " in *" -u sg-sanal "*) [ -n "${JOURNAL_SANAL:-}" ] && printf "%b" "$JOURNAL_SANAL"; exit 0;; esac\nif [ "${KONTROL_TAMAM:-1}" = 1 ]; then echo \'  "tamam": true,\'; else echo \'  "tamam": false,\'; fi\n')
     (bin_ / "curl").write_text(
         '#!/usr/bin/env bash\necho "curl $*" >> "$CAGRI_LOG"\n'
@@ -324,7 +326,7 @@ def sunucu(tmp_path):
     tg.write_text("TELEGRAM_BOT_TOKEN=SIRTOKEN123\nTELEGRAM_CHAT_ID=42\n")
     ci_json = tmp_path / "ci.json"
     ortak = _env(PATH=f"{bin_}:{os.environ['PATH']}", SANAL_DEPO=str(depo), SANAL_SERIT=str(tmp_path / "serit"), SANAL_DURUM_DIZIN=str(durum), SANAL_BIRIM_DIZIN=str(birim),
-                 SANAL_KULLANICI="", SANAL_TG_ENV=str(tg), SANAL_GUNCELLE_KILIT=str(tmp_path / "k.lock"), GUNCELLE_REPO="o/r", GUNCELLE_BEKLE_SN="0", CI_JSON=str(ci_json), CAGRI_LOG=str(log), SANAL_SAGLIK_JSON=str(tmp_path / "saglik.json"))
+                 SANAL_KULLANICI="", SANAL_TG_ENV=str(tg), SANAL_GUNCELLE_KILIT=str(tmp_path / "k.lock"), GUNCELLE_REPO="o/r", GUNCELLE_BEKLE_SN="0", CI_JSON=str(ci_json), CAGRI_LOG=str(log), SANAL_SAGLIK_JSON=str(tmp_path / "saglik.json"), SANAL_DOGRULA_SN="0", SANAL_OZ_DENETIM_SN="0", ALARM_DOGRULA_SN="0")
     s = _Sunucu()
 
     def ci(*runlar):
@@ -729,3 +731,176 @@ def test_guncelle_olcum_servisini_yalniz_bir_kez_baslatir(sunucu):
     assert r.returncode == 0, r.stdout + r.stderr
     assert sunucu.log.read_text().count("start --no-block sg-sanal-olcum.service") == 1
     assert "enable" not in "".join(l for l in sunucu.log.read_text().splitlines() if "olcum" in l)   # enable edilmez: yeniden açılışta kendiliğinden başlamaz
+
+
+# ------------------------------------------------------------------------------------------------ K-80 kararlılık paketi (pencere, işaret, öz-denetim, 60 dk bekçi, çift doğrulama)
+BEKCI = DEPLOY / "sanal_bekci.sh"
+
+
+def test_k80_birimleri_zamanlayici_desenleri_ve_betik_sozdizimi():
+    for ad in ("sanal_bekci.sh",):
+        assert subprocess.run(["bash", "-n", str(DEPLOY / ad)], capture_output=True, text=True).returncode == 0
+    t = (DEPLOY / "sg-sanal-bekci.timer").read_text(encoding="utf-8")
+    assert "OnBootSec=5min" in t and "OnUnitActiveSec=5min" in t and "WantedBy=timers.target" in t     # ikinci-alarm deseni
+    s = (DEPLOY / "sg-sanal-bekci.service").read_text(encoding="utf-8")
+    assert "Type=oneshot" in s and "sanal_bekci.sh" in s and "StateDirectory=sg-sanal-guncelle" in s
+    d = (DEPLOY / "sg-sanal-denetim.service").read_text(encoding="utf-8")
+    assert "SANAL_YALNIZ_ALARM=1" in d and "sanal_guncelle.sh" in d and "OnCalendar=hourly" in (DEPLOY / "sg-sanal-denetim.timer").read_text(encoding="utf-8")
+    for ad in ("sg-sanal-bekci.service", "sg-sanal-bekci.timer", "sg-sanal-denetim.service", "sg-sanal-denetim.timer"):
+        assert not re.search(r"TELEGRAM_BOT_TOKEN=\S|BEGIN [A-Z ]*PRIVATE KEY", (DEPLOY / ad).read_text(encoding="utf-8")), ad
+
+
+@pytest.mark.skipif(shutil.which("systemd-analyze") is None, reason="systemd-analyze yok")
+def test_k80_pencere_takvimi_ve_birimler_systemd_analyze():
+    r = subprocess.run(["systemd-analyze", "calendar", "*-*-* 07:30:00 UTC", "*-*-* 19:30:00 UTC"], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    r = subprocess.run(["systemd-analyze", "verify", *(str(DEPLOY / a) for a in ("sg-sanal-bekci.service", "sg-sanal-bekci.timer", "sg-sanal-denetim.service", "sg-sanal-denetim.timer"))], capture_output=True, text=True)
+    assert not re.search(r"Unknown key|Unknown section|Invalid|Failed to parse", r.stdout + r.stderr), r.stdout + r.stderr
+
+
+def _k80_birimler_ekle(sunucu):
+    tohum = sunucu.depo.parent / "tohum"
+    git(tohum, "pull", "-q", "origin", "main")
+    for ad in ("sg-sanal-bekci.service", "sg-sanal-bekci.timer", "sg-sanal-denetim.service", "sg-sanal-denetim.timer"):
+        (tohum / "deploy" / ad).write_text("[Unit]\n# k80\n")
+    git(tohum, "add", "-A")
+    git(tohum, "commit", "-q", "-m", "k80 birimleri")
+    git(tohum, "push", "-q", "origin", "main")
+
+
+def test_k80_guncelle_isaret_bekci_ve_yeni_zamanlayicilari_kurar(sunucu):
+    _k80_birimler_ekle(sunucu)
+    sunucu.ci(*YESIL)
+    r = sunucu.calistir()
+    assert r.returncode == 0, r.stdout + r.stderr
+    log = sunucu.log.read_text()
+    assert "enable --now sg-sanal-bekci.timer" in log and "enable --now sg-sanal-denetim.timer" in log and "öz-denetim tamam" in r.stdout
+    isaret = (sunucu.depo / "durum/guncelleme_zamani").read_text().split()                          # motor/Telegram bunu okur: epoch + sha
+    assert abs(int(isaret[0]) - time.time()) < 60 and isaret[1] == sunucu.head()
+    b = (sunucu.durum / "bekci").read_text().split()                                                  # 60 dk bekçi işareti: epoch / yeni / önceki / motor aktifti
+    assert b[1] == sunucu.head() and b[2] == sunucu.v1 and b[3] == "1" and "TG:" not in log           # sessiz kurulum
+
+
+def test_k80_oz_denetim_basarisizsa_geri_alir_ve_tek_uyari(sunucu):
+    sunucu.yeni_commit("v2")
+    sunucu.ci(*YESIL)
+    r = sunucu.calistir(MOTOR_YAZMAZ="1")                                                            # servis başladı ama durum dosyaları yazılmıyor
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert sunucu.head() == sunucu.v1 and "öz-denetim başarısız: durum-dosyalari-yazilmiyor" in r.stdout
+    assert (sunucu.durum / "kotu_sha").exists() and not (sunucu.durum / "bekci").exists()
+    log = sunucu.log.read_text()
+    assert log.count("TG:") == 1 and "Bot güncellemesi başarısız" in log
+
+
+def test_k80_oz_denetim_zamanlayici_etkin_degilse_geri_alir(sunucu):
+    tohum = sunucu.depo.parent / "tohum"
+    git(tohum, "pull", "-q", "origin", "main")
+    (tohum / "deploy/sg-sanal-radar.timer").write_text("[Timer]\n")
+    git(tohum, "add", "-A")
+    git(tohum, "commit", "-q", "-m", "radar")
+    git(tohum, "push", "-q", "origin", "main")
+    sunucu.ci(*YESIL)
+    r = sunucu.calistir(ETKIN_DEGIL="sg-sanal-radar.timer")
+    assert r.returncode == 1 and "sg-sanal-radar.timer-etkin-degil" in r.stdout and sunucu.head() == sunucu.v1
+
+
+def _bekci_hazirla(sunucu):
+    sunucu.yeni_commit("v2")
+    sunucu.ci(*YESIL)
+    assert sunucu.calistir().returncode == 0
+    yeni = sunucu.head()
+    (sunucu.depo / "kayit").mkdir(exist_ok=True)
+    sunucu.log.write_text("")
+    return yeni
+
+
+def _kayit_yaz(sunucu, olaylar):
+    yol = sunucu.depo / "kayit" / f"{time.strftime('%Y-%m-%d', time.gmtime())}.jsonl"
+    ms = int(time.time() * 1000)
+    with yol.open("a", encoding="utf-8") as f:
+        for o in olaylar:
+            f.write(json.dumps({"zaman_ms": ms, **o}) + "\n")
+
+
+def _bekci(sunucu, **ek):
+    return subprocess.run(["bash", str(BEKCI)], env={**sunucu.ortak, **ek}, capture_output=True, text=True)
+
+
+def test_k80_bekci_sorunsuzsa_izler_60_dk_sonra_biter(sunucu):
+    yeni = _bekci_hazirla(sunucu)
+    r = _bekci(sunucu)
+    assert r.returncode == 0 and "izleniyor" in r.stdout and sunucu.head() == yeni and (sunucu.durum / "bekci").exists()
+    _kayit_yaz(sunucu, [{"olay": "adim_hata"}] * 7 + [{"olay": "telegram_hata"}] * 4 + [{"olay": "kacan_telafi_hata"}] * 2)   # eşiklerin HEPSİ altında
+    assert _bekci(sunucu).returncode == 0 and sunucu.head() == yeni
+    b = (sunucu.durum / "bekci").read_text().split("\n")
+    (sunucu.durum / "bekci").write_text("\n".join([str(int(time.time()) - 3700)] + b[1:]))
+    r = _bekci(sunucu)
+    assert "bekçi bitti" in r.stdout and not (sunucu.durum / "bekci").exists() and sunucu.head() == yeni and "TG:" not in sunucu.log.read_text()
+
+
+@pytest.mark.parametrize("olaylar,neden", [
+    ([{"olay": "bekci_tetik"}], "bekçi motoru 1 kez"),
+    ([{"olay": "telegram_hata"}] * 3 + [{"olay": "telegram_yeniden", "tur": "CokIstek"}] * 2, "Telegram hata/429 5"),
+    ([{"olay": "kacan_telafi_hata"}] * 3, "kaçan işlem telafisi 3"),
+    ([{"olay": "adim_hata"}] * 4 + [{"olay": "olay_hata"}] * 2 + [{"olay": "defter_hata"}] * 2, "hata olayı 8"),
+])
+def test_k80_bekci_esik_asilirsa_onceki_surume_doner_kotu_sha_ve_tek_uyari(sunucu, olaylar, neden):
+    yeni = _bekci_hazirla(sunucu)
+    _kayit_yaz(sunucu, olaylar)
+    r = _bekci(sunucu)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert neden in r.stdout and sunucu.head() == sunucu.v1                                          # önceki sürüme dönüldü
+    assert (sunucu.durum / "kotu_sha").read_text().strip() == yeni and not (sunucu.durum / "bekci").exists()
+    log = sunucu.log.read_text()
+    assert log.count("TG:") == 1 and "[CT] ⚠️ Yeni sürüm sorun çıkardı, önceki sürüme dönüldü (" in log and neden.split(" ")[0] in log
+    assert not (sunucu.durum / "dondur").exists()                                                    # otomatik dönüş güncellemeyi dondurmaz (yeni commit gelince devam)
+    r2 = sunucu.calistir()                                                                           # sonraki pencerede aynı bozuk sürüm yeniden kurulmaz
+    assert "daha önce başarısız" in r2.stdout and sunucu.head() == sunucu.v1
+
+
+def test_k80_bekci_yeniden_baslama_esigi(sunucu):
+    yeni = _bekci_hazirla(sunucu)
+    r = _bekci(sunucu, JOURNAL_SANAL=_yeniden(3))
+    assert "motor 3 kez yeniden başladı" in r.stdout and sunucu.head() == sunucu.v1 and (sunucu.durum / "kotu_sha").read_text().strip() == yeni
+
+
+def test_k80_bekci_bayat_isaret_dokunmaz(sunucu):
+    yeni = _bekci_hazirla(sunucu)
+    sunucu.durum.joinpath("bekci").write_text(f"{int(time.time())}\n{sunucu.v1}\n{sunucu.v1}\n1\n")  # HEAD işaretteki sürüm değil
+    r = _bekci(sunucu, JOURNAL_SANAL=_yeniden(9))
+    assert "bayat" in r.stdout and not (sunucu.durum / "bekci").exists() and sunucu.head() == yeni
+    assert _bekci(sunucu).returncode == 0                                                           # işaret yok: hemen çıkar
+
+
+def test_k80_bekci_motor_pasif_ust_uste_iki_turda(sunucu, tmp_path):
+    yeni = _bekci_hazirla(sunucu)
+    pasif = tmp_path / "pasifbin"
+    pasif.mkdir()
+    (pasif / "systemctl").write_text('#!/usr/bin/env bash\necho "systemctl $*" >> "$CAGRI_LOG"\ncase "$1" in is-active) exit 3;; esac\nif [ "$1" = start ] && [ "$2" = sg-sanal ]; then printf \'{"yazildi_ms": %s}\' "$(( $(date +%s) * 1000 ))" > "$SANAL_DEPO/durum/ozet.json"; fi\nexit 0\n')
+    (pasif / "systemctl").chmod(0o755)
+    ek = {"PATH": f"{pasif}:{sunucu.ortak['PATH']}"}
+    r = _bekci(sunucu, **ek)
+    assert "ilk tur" in r.stdout and sunucu.head() == yeni                                           # tek tur: yanlış alarm yok
+    r = _bekci(sunucu, **ek)
+    assert "motor aktif değil" in r.stdout and sunucu.head() == sunucu.v1
+
+
+def test_k80_alarm_ikinci_dogrulamada_duzelen_alarm_gonderilmez(sunucu, tmp_path):
+    """Çift doğrulama: ilk okumada >2 yeniden başlama, 1 sn sonraki ikinci okumada sayaç düşmüşse alarm GİTMEZ."""
+    sayac = tmp_path / "sayac"
+    sayac.write_text("0")
+    (tmp_path / "bin/journalctl").write_text(
+        '#!/usr/bin/env bash\ncase " $* " in *" -u sg-sanal "*) n=$(cat "$SAYAC"); echo $((n+1)) > "$SAYAC"; if [ "$n" = 0 ]; then printf "Scheduled restart job, restart counter is at 1.\\n%.0s" 1 2 3 4; fi; exit 0;; esac\nexit 0\n')
+    r = sunucu.calistir(SAYAC=str(sayac), SANAL_DOGRULA_SN="1")
+    assert r.returncode == 0 and "ikinci doğrulamada düzeldi" in r.stdout and _tg(sunucu) == []
+    (tmp_path / "bin/journalctl").write_text('#!/usr/bin/env bash\ncase " $* " in *" -u sg-sanal "*) printf "Scheduled restart job, restart counter is at 1.\\n%.0s" 1 2 3 4; exit 0;; esac\nexit 0\n')
+    r = sunucu.calistir(SANAL_DOGRULA_SN="1")                                                        # iki okumada da var: gider + bağlam satırı
+    tg = _tg(sunucu)
+    assert len(tg) == 1 and "Bot durdu" in tg[0] and "⏱ Son 1 saatte 4 yeniden başlama · son güncelleme: kayıt yok" in tg[0]
+
+
+def test_k80_yalniz_alarm_kipi_guncelleme_yapmaz(sunucu):
+    sunucu.yeni_commit("v2")
+    sunucu.ci(*YESIL)
+    r = sunucu.calistir(SANAL_YALNIZ_ALARM="1", JOURNAL_SANAL=_yeniden(4))
+    assert r.returncode == 0 and sunucu.head() == sunucu.v1 and "systemctl stop" not in sunucu.log.read_text() and len(_tg(sunucu)) == 1

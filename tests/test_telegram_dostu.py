@@ -470,7 +470,7 @@ def _ikinci(tmp_path, yas_sn, aktif=False, **ek):
     (bin_ / "systemctl").write_text(f'#!/bin/sh\nexit {0 if aktif else 3}\n')
     for f in bin_.iterdir():
         f.chmod(0o755)
-    env = {"PATH": f"{bin_}:{_os.environ['PATH']}", "ALARM_DURUM_DIZIN": str(durum), "TELEGRAM_BOT_TOKEN": "TOK123", "TELEGRAM_CHAT_ID": "42", **ek}
+    env = {"PATH": f"{bin_}:{_os.environ['PATH']}", "ALARM_DURUM_DIZIN": str(durum), "TELEGRAM_BOT_TOKEN": "TOK123", "TELEGRAM_CHAT_ID": "42", "ALARM_DOGRULA_SN": "0", **ek}
     r = _sp.run(["bash", str(kok / "deploy" / "alarm_ikinci.sh")], env=env, capture_output=True, text=True)
     return r, kayit, durum
 

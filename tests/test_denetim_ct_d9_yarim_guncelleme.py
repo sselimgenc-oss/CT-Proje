@@ -14,7 +14,7 @@ def test_oldurulen_guncelleme_sonrasi_motor_yeniden_baslar(sunucu, tmp_path):  #
         'case "$1" in\n'
         ' is-active) [ ! -f "$STATE/$3.durdu" ] && [ ! -f "$STATE/$2.durdu" ]; exit $?;;\n'
         ' stop) for u in "${@:2}"; do touch "$STATE/$u.durdu"; done; exit 0;;\n'
-        ' start) for u in "${@:2}"; do rm -f "$STATE/$u.durdu"; done; exit 0;;\n'
+        ' start) for u in "${@:2}"; do rm -f "$STATE/$u.durdu"; [ "$u" = sg-sanal ] && printf \'{"yazildi_ms": %s}\' "$(( $(date +%s) * 1000 ))" > "$SANAL_DEPO/durum/ozet.json"; done; exit 0;;\n'
         ' show) case "$*" in *Result*) echo success;; *) echo 0;; esac; exit 0;;\n'
         'esac\nexit 0\n')
     (bin_ / "systemctl").chmod(0o755)
@@ -44,7 +44,7 @@ def _kurulum(sunucu, tmp_path):  # noqa: F811
         'case "$1" in\n'
         ' is-active) [ ! -f "$STATE/$3.durdu" ] && [ ! -f "$STATE/$2.durdu" ]; exit $?;;\n'
         ' stop) for u in "${@:2}"; do touch "$STATE/$u.durdu"; done; exit 0;;\n'
-        ' start) for u in "${@:2}"; do rm -f "$STATE/$u.durdu"; done; exit 0;;\n'
+        ' start) for u in "${@:2}"; do rm -f "$STATE/$u.durdu"; [ "$u" = sg-sanal ] && printf \'{"yazildi_ms": %s}\' "$(( $(date +%s) * 1000 ))" > "$SANAL_DEPO/durum/ozet.json"; done; exit 0;;\n'
         ' show) case "$*" in *Result*) echo success;; *) echo 0;; esac; exit 0;;\n'
         'esac\nexit 0\n')
     venv = tmp_path / "serit/venv/bin"
