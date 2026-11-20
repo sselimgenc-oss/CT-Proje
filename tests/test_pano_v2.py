@@ -40,7 +40,7 @@ def gorunur(h: str) -> str:
 def test_alti_sekme_sirasi():
     h = sayfa()
     etiketler = re.findall(r'<label for="t\d">([^<]+)</label>', h)
-    assert etiketler == ["ÖZET", "AÇIK", "KAPANAN", "K/Z", "ÖĞRENME", "TEKNİK"]
+    assert etiketler == ["ÖZET", "AÇIK (2)", "KAPANAN (bugün 3)", "K/Z", "ÖĞRENME", "TEKNİK"]
     assert len(re.findall(r'<section class="n\d">', h)) == 6
 
 
@@ -130,7 +130,32 @@ def test_koyu_tema_degiskenleri_kendine_baglanmaz():
     assert not re.search(r"--([\w-]+):var\(--\1\)", css)                                    # eski hata: --c2:var(--c2) değeri geçersiz kılıyordu
     for ad in ("c2", "c3", "bg", "k", "cz"):
         assert len(re.findall(rf"--{ad}:#[0-9a-fA-F]{{6}}", css)) >= 3                      # koyu + açık + sistem açık: sabit renk
-    assert ":root[data-theme=light]" in css and ":root[data-theme=dark]" in css and "data-theme=acik" not in css
+    assert ':root[data-theme="dark"]' in css and "data-theme=acik" not in css
+
+
+def test_tema_cihazi_izler_varsayilan_data_theme_yok():
+    h = sayfa()
+    css = h[h.index("<style>"):h.index("</style>")]
+    assert "<html lang=\"tr\"" in h and not re.search(r"<html[^>]*data-theme", h)
+    assert "@media(prefers-color-scheme:dark){:root:not([data-theme=\"light\"])" in css
+    assert re.search(r"^:root\{--bg:#f4f4f6", css, re.M) is None and ":root{--bg:#f4f4f6" in css       # açık değerler :root'ta, koyu yalnız medya/dark bloğunda
+    js = h[h.index("<script>"):]
+    assert re.search(r"try\{[^}]*localStorage\.getItem", js) and re.search(r"try\{localStorage\.setItem", js)
+
+
+def test_sekme_rozetleri_yalniz_acik_ve_kapanan():
+    h = sayfa()
+    etiketler = re.findall(r'<label for="t\d">([^<]+)</label>', h)
+    assert [("(" in e) for e in etiketler] == [False, True, True, False, False, False]
+    assert etiketler[1] == "AÇIK (2)" and etiketler[2] == "KAPANAN (bugün 3)"
+
+
+def test_kart_yaricapi_12px_ve_sistem_yazi_tipi():
+    h = sayfa()
+    css = h[h.index("<style>"):h.index("</style>")]
+    assert ".p{background:var(--k);border:1px solid var(--cz);min-width:0;border-radius:12px}" in css
+    assert 'system-ui,-apple-system,"Segoe UI",Roboto,sans-serif' in css
+    assert "--kar:" in css and "--zar:" in css and "--nt:" in css
 
 
 def test_iframe_icinde_baslik_gizlenir_ve_yenileme_metni():
