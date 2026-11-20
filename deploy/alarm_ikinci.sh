@@ -14,6 +14,13 @@ simdi="$(date +%s)"
 gecen=$((simdi - bas))
 [ "$gecen" -ge "$BEKLE" ] || exit 0
 if "${SYSTEMCTL:-systemctl}" is-active --quiet "$BIRIM" 2>/dev/null; then exit 0; fi       # bot çalışıyor: (motor işareti yakında siler) mesaj yok
+# K-80 çift doğrulama: durum alarmı göndermeden önce ALARM_DOGRULA_SN (30) sonra koşul yeniden sınanır (bot bu arada döndüyse / işaret silindiyse mesaj yok)
+DOGRULA="${ALARM_DOGRULA_SN:-30}"
+if [[ "$DOGRULA" =~ ^[0-9]+$ ]] && [ "$DOGRULA" -gt 0 ]; then
+  sleep "$DOGRULA"
+  [ -f "$DURUM/tg_bot_durdu" ] || exit 0
+  if "${SYSTEMCTL:-systemctl}" is-active --quiet "$BIRIM" 2>/dev/null; then exit 0; fi
+fi
 TOK="${TELEGRAM_BOT_TOKEN:-}"; CHAT="${TELEGRAM_CHAT_ID:-}"
 if { [ -z "$TOK" ] || [ -z "$CHAT" ]; } && [ -r "$TG_ENV" ]; then
   TOK="$(sed -n 's/^TELEGRAM_BOT_TOKEN=//p' "$TG_ENV" | tail -n1 | tr -d "\"'\r")"
@@ -29,9 +36,16 @@ d=json.load(open(sys.argv[1]))
 print(sum(len(c) for c in (d.get("poz") or {}).values()))' "$DURUM/hesap.json" 2>/dev/null || echo bilinmiyor)"
 fi
 case "$POZ" in 0) STOP="gerekmiyor (pozisyon yok)";; bilinmiyor) STOP="bilinmiyor";; *) STOP="bot kapalıyken yazılım stopu çalışmıyor";; esac
+GUNC="son güncelleme: kayıt yok"       # K-80 bağlam satırı: ne zamandır kapalı + son güncelleme (sanal_guncelle.sh işareti; aynı durum dizini)
+GTS="$(head -n1 "$DURUM/guncelleme_zamani" 2>/dev/null | tr -dc '0-9')"
+if [[ "$GTS" =~ ^[0-9]{9,}$ ]]; then
+  GG=$((simdi - GTS))
+  if [ "$GG" -lt 7200 ]; then GUNC="son güncelleme $((GG / 60)) dk önce"; else GUNC="son güncelleme $((GG / 3600)) sa $(((GG % 3600) / 60)) dk önce"; fi
+fi
 METIN="[CT] 🔴 Bot hâlâ kapalı ($((gecen / 60)) dk)
 Neden: ${NEDEN}
 Açık pozisyon: ${POZ} · Stop: ${STOP}
+⏱ $((gecen / 60)) dk önce durdu · ${GUNC}
 Senden: orkestratöre 'CT botu durdu' yaz."
 if printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "$TOK" | curl -sS -f --max-time 20 --config - \
      --data-urlencode "chat_id=$CHAT" --data-urlencode "text=${METIN}" -o /dev/null 2>/dev/null; then

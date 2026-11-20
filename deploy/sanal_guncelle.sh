@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sunucu SANAL motoru: otomatik güncelleme (root; sg-sanal-guncelle.service/.timer, saatlik). Elle geri alma: deploy/sanal_geri_al.sh <sha> (bu betiği SANAL_HEDEF_SHA ile çağırır).
+# Sunucu SANAL motoru: otomatik güncelleme (root; sg-sanal-guncelle.service/.timer: günde 2 SABİT pencere 10:30 ve 22:30 TSİ = 07:30/19:30 UTC, K-80; pencere dışında CI-yeşil yeni commit beklemede kalır). ACİL elle güncelleme: `sudo systemctl start --no-block sg-sanal-guncelle` (betik pencereye bakmaz; aynı kapılar). Elle geri alma: deploy/sanal_geri_al.sh <sha> (bu betiği SANAL_HEDEF_SHA ile çağırır).
 # Akış: git fetch (sgsanal) -> origin/main == HEAD ise çık -> origin/main commit'inin CI'ı YEŞİL mi (GitHub genel API, kimliksiz; `test` ve `canli_sdk` var + hepsi completed/success)? değilse çık (günlüğe neden)
 #   -> yalnız fast-forward -> servisleri durdur (durdururken son durum yayımlanır) -> git merge --ff-only -> pip (yalnız kilit dosyası değiştiyse; --require-hashes) -> birim dosyaları (yalnız değiştiyse) + daemon-reload
 #   -> duman testi: sg-sanal-kontrol "tamam": true -> servisleri başlat, ~60 sn sonra sg-sanal aktif mi. Haftada bir (bakim): git gc --auto + worktree prune.
@@ -7,6 +7,9 @@
 # HERHANGİ bir hata: git reset --hard <önceki sha>, kilit/birimler geri, servisler yeniden başlar, Telegram [CT] CRIT. Başarıda [CT] INFO.
 # Yarım kalan güncelleme (D9): servisler durdurulmadan ÖNCE $DURUM/yarim yazılır (önceki/yeni sha, motor/zamanlayıcı durumu); başarı ya da geri alma sonunda silinir. Betik arada öldürülürse (SIGKILL/OOM/zaman aşımı) sonraki çalışma
 #   bu işareti görür: birleştirme olduysa uygulama yolunu (pip/birim/duman/başlat) TAMAMLAR, olmadıysa eski sürümü başlatır; tek ⚠️ satır. Kasıtlı duruş (durum/DUR, $DURUM/dondur) ezilmez: motor başlatılmaz.
+# K-80 kararlılık: (a) her başarılı/geri alınan kurulumdan önce $DEPO/durum/guncelleme_zamani (epoch sn) yazılır: motor/Telegram sonraki 15 dk yalnız ölümcül uyarı yollar; (b) kurulum sonrası ÖZ-DENETİM (servisler, zamanlayıcılar, ozet.json yazılıyor mu, son yayım yeni mi) başarısızsa geri alma;
+#   (c) başarılı normal kurulum $DURUM/bekci yazar: 60 dk boyunca deploy/sanal_bekci.sh (5 dk'lık zamanlayıcı) sayaçları izler, eşik aşılırsa BU betiği SANAL_HEDEF_SHA + SANAL_GERI_NEDEN + SANAL_KOTU_SHA ile çağırıp önceki sürüme döner ve sha'yı kotu_sha yapar;
+#   (d) saatlik dayanıklılık alarmı ayrı zamanlayıcıdan (sg-sanal-denetim.timer; SANAL_YALNIZ_ALARM=1: yalnız alarm_kontrol, güncelleme yok). Durum alarmları ("Bot durdu") göndermeden önce SANAL_DOGRULA_SN (45) sonra yeniden sınanır.
 # Yerel durum (durum/ kayit/ pano/ depoda İZLENMEZ) git tarafından silinmez; yine de gelen commit bu yolları izlemeye başlarsa güncelleme REDDEDİLİR.
 # Sır: yalnız /etc/sg-sanal-telegram.env'den (token curl'e stdin ile verilir; argv/günlüğe girmez). Betik kendini geçici kopyadan çalıştırır (git merge çalışan dosyayı değiştirmesin).
 set -uo pipefail
@@ -35,7 +38,13 @@ KILIT="${SANAL_GUNCELLE_KILIT:-/run/sg-sanal-guncelle.lock}"
 BEKLE="${GUNCELLE_BEKLE_SN:-60}"
 YARIM="$DURUM/yarim"                                                 # güncelleme sürerken var (D9)
 YEDEK="$DURUM/yedek_birimler"                                        # birim yedeği kalıcı dizinde (yarım kalırsa geri alma yedeği yaşasın)
+BEKCI="$DURUM/bekci"                                                 # 60 dk bekçi işareti (K-80): epoch / yeni sha / önceki sha / motor önceden aktif mi
+ISARET="$DEPO/durum/guncelleme_zamani"                               # K-80: motor/Telegram okur (sgsanal okuyabilsin: 644)
+DOGRULA_SN="${SANAL_DOGRULA_SN:-45}"                                 # K-80: durum alarmı göndermeden önce koşulu bu kadar sonra yeniden sına
+OZ_SN="${SANAL_OZ_DENETIM_SN:-180}"                                  # K-80: öz-denetimde ozet.json'un yazılmasını en çok bu kadar bekle
 devam=0
+GERI_NEDEN="${SANAL_GERI_NEDEN:-}"                                   # K-80: bekçi geri dönüşü (neden metni) + bozuk sha
+KOTU_SHA="${SANAL_KOTU_SHA:-}"
 HEDEF="${SANAL_HEDEF_SHA:-}"                                       # elle geri alma kipi (sanal_geri_al.sh)
 GIT_SSH="ssh -i $SERIT/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$SERIT/.ssh/known_hosts -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=3"
 ZORUNLU_CI="test canli_sdk"
@@ -95,6 +104,44 @@ print("kirmizi:" + ", ".join(kotu) if kotu else "yesil")
 
 aktif() { "$SYSTEMCTL" is-active --quiet "$1"; }
 
+isaret_yaz() {   # K-80: güncelleme zamanı (epoch sn); servisler başlamadan ÖNCE yazılır → motor ilk dakikadan itibaren 15 dk penceresini bilir. Hata kurulumu bozmaz.
+  local gecici="$ISARET.tmp"
+  [ -d "$DEPO/durum" ] || return 0
+  { date +%s; printf '%s\n' "${yeni:-}"; } > "$gecici" 2>/dev/null && chmod 644 "$gecici" && { [ -z "$KULLANICI" ] || chown "$KULLANICI" "$gecici" 2>/dev/null || true; } && mv -f -- "$gecici" "$ISARET" || { rm -f -- "$gecici"; log "UYARI: güncelleme işareti yazılamadı"; }
+  return 0
+}
+
+yayim_taze() {   # veri dalındaki (origin/canli-durum) son yayım <= 50 dk mı: 0 taze, 1 eski, 2 bilinmiyor (dal yok)
+  local t
+  t="$(g log -1 --format=%ct refs/remotes/origin/canli-durum 2>/dev/null)" || return 2
+  [[ "$t" =~ ^[0-9]+$ ]] || return 2
+  [ $(( $(date +%s) - t )) -le 3000 ]
+}
+
+oz_denetim() {   # K-80: kurulum sonrası öz-denetim; sorun varsa nedeni yazar (stdout) ve 1 döner
+  local ad bas sn=0 taze=0 sorun=""
+  for ad in sg-sanal-radar.timer sg-sanal-ikinci-alarm.timer sg-sanal-denetim.timer sg-sanal-bekci.timer; do
+    [ -f "$BIRIM_DIZIN/$ad" ] || continue
+    "$SYSTEMCTL" is-enabled --quiet "$ad" || sorun="$sorun $ad-etkin-degil"
+  done
+  for ad in $aktif_zaman; do aktif "$ad" || sorun="$sorun $ad-aktif-degil"; done
+  if [ "$aktif_motor" = 1 ]; then
+    aktif sg-sanal || sorun="$sorun sg-sanal-aktif-degil"
+    bas="${baslat_ms:-0}"
+    while :; do   # durum dosyaları yazılıyor mu: ozet.json yazildi_ms, servis başlangıcından sonra
+      python3 -c 'import json,sys
+d=json.load(open(sys.argv[1]))
+sys.exit(0 if float(d.get("yazildi_ms") or 0) >= float(sys.argv[2]) else 1)' "$DEPO/durum/ozet.json" "$bas" 2>/dev/null && { taze=1; break; }
+      [ "$sn" -ge "$OZ_SN" ] && break
+      sleep 5; sn=$((sn + 5))
+    done
+    [ "$taze" = 1 ] || sorun="$sorun durum-dosyalari-yazilmiyor"
+    if [ "${yayim_once:-2}" = 0 ]; then yayim_taze; [ "$?" != 1 ] || sorun="$sorun son-yayim-eski"; fi
+  fi
+  [ -z "$sorun" ] || { echo "${sorun# }"; return 1; }
+  return 0
+}
+
 baslat_hepsi() {
   if [ "$aktif_motor" = 1 ]; then "$SYSTEMCTL" start sg-sanal || return 1; fi
   for t in $aktif_zaman; do "$SYSTEMCTL" start "$t" || return 1; done
@@ -144,15 +191,23 @@ geri_al() {   # $1 = neden
   g reset -q --hard "$onceki" || log "UYARI: git reset başarısız"
   if [ "$lock_degisti" = 1 ]; then pip_kur || log "UYARI: eski kilit paketleri kurulamadı"; fi
   birimleri_geri || log "UYARI: birimler geri yüklenemedi"
+  isaret_yaz
   baslat_hepsi || log "UYARI: servisler başlatılamadı"
   sleep "$BEKLE"
   motor_saglam || motor_durum="DEĞİL (elle bakın: journalctl -u sg-sanal)"
   printf '%s\n' "$yeni" > "$DURUM/kotu_sha"
-  rm -f -- "$YARIM"; rm -rf -- "$YEDEK"
+  rm -f -- "$YARIM" "$BEKCI"; rm -rf -- "$YEDEK"
   bildir WARN "⚠️ Bot güncellemesi başarısız, eski sürümle devam ediyor"
   exit 1
 }
 
+son_guncelleme_metni() {   # K-80: bağlam satırı için "son güncelleme N dk/sa önce" (işaret yoksa "kayıt yok")
+  local ts gecen
+  ts="$(head -n1 "$ISARET" 2>/dev/null | tr -dc '0-9')"
+  [[ "$ts" =~ ^[0-9]{9,}$ ]] || { echo "son güncelleme: kayıt yok"; return 0; }
+  gecen=$(( $(date +%s) - ts ))
+  if [ "$gecen" -lt 7200 ]; then echo "son güncelleme $((gecen / 60)) dk önce"; else echo "son güncelleme $((gecen / 3600)) sa $(((gecen % 3600) / 60)) dk önce"; fi
+}
 acik_poz() {   # sanal motorun defterindeki açık pozisyon sayısı (okunamazsa "bilinmiyor")
   python3 -c 'import json,sys
 d=json.load(open(sys.argv[1]))
@@ -187,15 +242,25 @@ alarm_kontrol() {   # sg-sanal son 1 saatte >ALARM_SINIR kez yeniden başladı m
       var=1
       son="$(cat "$DURUM/alarm_$t" 2>/dev/null || echo 0)"; [[ "$son" =~ ^[0-9]+$ ]] || son=0
       if [ ! -f "$DURUM/alarm_$t" ] || [ $((simdi - son)) -ge "$ALARM_ARA_SN" ]; then
+        if [ "$DOGRULA_SN" -gt 0 ] 2>/dev/null; then   # K-80: çift doğrulama; koşul DOGRULA_SN sonra hâlâ geçerli mi (günlük + OOM yeniden okunur)
+          sleep "$DOGRULA_SN"
+          j="$("$JOURNALCTL" -u sg-sanal --since=-1h -o cat --no-pager 2>/dev/null)" || j=""
+          sayi="$(printf '%s\n' "$j" | grep -c 'Scheduled restart job' || true)"; [[ "$sayi" =~ ^[0-9]+$ ]] || sayi=0
+          oom=0; if printf '%s\n' "$j" | grep -Eiq "Failed with result 'oom-kill'|killed by the OOM killer" || [ "$("$SYSTEMCTL" show -p Result --value sg-sanal 2>/dev/null || true)" = "oom-kill" ]; then oom=1; fi
+          if [ "$t" = yeniden ]; then [ "$sayi" -gt "$ALARM_SINIR" ] || { log "alarm ($t) ikinci doğrulamada düzeldi; gönderilmedi"; continue; }; else [ "$oom" = 1 ] || { log "alarm ($t) ikinci doğrulamada düzeldi; gönderilmedi"; continue; }; fi
+        fi
         poz="$(acik_poz)"
+        baglam="⏱ Son 1 saatte ${sayi} yeniden başlama · $(son_guncelleme_metni)"
         if [ "$t" = yeniden ]; then mesaj="🔴 Bot durdu
 Neden: son 1 saatte ${sayi} kez yeniden başladı (sınır ${ALARM_SINIR}); bellek taşması $([ "$oom" = 1 ] && echo oldu || echo olmadı).
 Açık pozisyon: ${poz} · Stop: $(stop_metni "$poz")
+${baglam}
 Sistem motoru kendiliğinden yeniden başlatıyor.
 Sorun sürerse bana haber ver."
         else mesaj="🔴 Bot durdu
 Neden: bellek tavanı aşıldı, motor öldürüldü (son 1 saatte ${sayi} yeniden başlama).
 Açık pozisyon: ${poz} · Stop: $(stop_metni "$poz")
+${baglam}
 Sistem motoru kendiliğinden yeniden başlatıyor.
 Sorun sürerse bana haber ver."; fi
         printf '%s\n' "$simdi" > "$DURUM/alarm_$t"
@@ -221,6 +286,7 @@ else
 fi
 
 alarm_kontrol || log "UYARI: alarm kontrolü başarısız (güncelleme etkilenmez)"
+if [ "${SANAL_YALNIZ_ALARM:-0}" = 1 ]; then exit 0; fi   # K-80: saatlik denetim zamanlayıcısı (sg-sanal-denetim): yalnız dayanıklılık alarmı, güncelleme yok
 if [ -z "$HEDEF" ] && [ -s "$DURUM/dondur" ]; then log "otomatik güncelleme DONDURULMUŞ ($(head -c 12 "$DURUM/dondur")); kaldırmak için: rm $DURUM/dondur"; exit 0; fi
 [ -d "$DEPO/.git" ] || { log "depo yok: $DEPO"; exit 1; }
 
@@ -303,6 +369,7 @@ konu="$(g log -1 --format=%s "$yeni" | tr -d '\000-\037' | cut -c1-120)"
 log "güncelleme: ${onceki:0:7} -> ${yeni:0:7} (${konu}); kilit değişti=$lock_degisti"
 
 aktif_motor=0; aktif_zaman=""
+yayim_taze; yayim_once=$?                                   # K-80: öz-denetim yalnız güncelleme ÖNCESİ taze olan yayımı sınar (önceden bozuk yayım güncellemeyi geri aldırmasın)
 aktif sg-sanal && aktif_motor=1
 for t in $ZAMANLAYICILAR; do if aktif "$t"; then aktif_zaman="$aktif_zaman $t"; fi; done
 rm -rf -- "$YEDEK"; mkdir -p "$YEDEK" || exit 1
@@ -316,22 +383,37 @@ fi
 if [ "$lock_degisti" = 1 ]; then pip_kur || geri_al "pip install başarısız"; fi
 birimleri_kur || geri_al "birim dosyaları kurulamadı"
 duman_testi || geri_al "duman testi (sg-sanal-kontrol) başarısız"
+isaret_yaz                                                                                       # K-80: servisler başlamadan ÖNCE (ilk dakikadan 15 dk yalnız ölümcül uyarı)
+baslat_ms=$(( $(date +%s) * 1000 - 2000 ))
 baslat_hepsi || geri_al "servisler başlatılamadı"
 sleep "$BEKLE"
 motor_saglam || geri_al "sg-sanal ${BEKLE} sn sonra aktif değil"
 
 [ -f "$BIRIM_DIZIN/sg-sanal-ikinci-alarm.timer" ] && { "$SYSTEMCTL" enable --now sg-sanal-ikinci-alarm.timer >/dev/null 2>&1 || log "ikinci alarm zamanlayıcısı açılamadı"; }   # bot durdu 20 dk ikinci mesaj (elle kurulum gerekmesin)
+[ -f "$BIRIM_DIZIN/sg-sanal-denetim.timer" ] && { "$SYSTEMCTL" enable --now sg-sanal-denetim.timer >/dev/null 2>&1 || log "saatlik denetim zamanlayıcısı açılamadı"; }   # K-80: saatlik dayanıklılık alarmı (güncelleme günde 2 pencere)
+[ -f "$BIRIM_DIZIN/sg-sanal-bekci.timer" ] && { "$SYSTEMCTL" enable --now sg-sanal-bekci.timer >/dev/null 2>&1 || log "60 dk bekçi zamanlayıcısı açılamadı"; }   # K-80: yeni sürümden sonra 60 dk sağlık sayaçları; eşik aşılırsa otomatik geri dönüş
 [ -f "$BIRIM_DIZIN/sg-sanal-radar.timer" ] && { "$SYSTEMCTL" enable --now sg-sanal-radar.timer >/dev/null 2>&1 || log "radar zamanlayıcısı açılamadı"; }   # günlük radar sunucuda (K-78; 00:37 UTC; elle kurulum gerekmesin; --now: Persistent kaçan koşuyu yakalar)
 if [ -f "$BIRIM_DIZIN/sg-sanal-olcum.service" ] && [ ! -e "$DURUM/olcum_basladi" ]; then   # 5a fiyat farkı ölçümü: BİR KEZ başlatılır (96 sa sonra kendi biter; işaret varken yeniden başlatılmaz)
   if "$SYSTEMCTL" start --no-block sg-sanal-olcum.service >/dev/null 2>&1; then date -u +%FT%TZ > "$DURUM/olcum_basladi"; log "fiyat farkı ölçümü başlatıldı"; else log "fiyat farkı ölçümü başlatılamadı"; fi
+fi
+if [ -z "$HEDEF" ]; then   # K-80: kurulum sonrası öz-denetim; başarısızsa geri alma (geri_al)
+  if oz_neden="$(oz_denetim)"; then log "öz-denetim tamam"; else geri_al "öz-denetim başarısız: $oz_neden"; fi
 fi
 printf '%s\n' "$yeni" > "$DURUM/uygulanan_sha"
 rm -f "$DURUM/kotu_sha" "$DURUM/reddedilen" "$YARIM"; rm -rf "$YEDEK"
 if [ "$devam" = 1 ]; then bildir WARN "⚠️ Yarım kalan güncelleme tamamlandı, bot yeniden başlatıldı"; fi
 if [ -n "$HEDEF" ]; then
-  bildir WARN "⚠️ Bot önceki sürüme döndürüldü"                                # tek satır; sürüm numaraları günlükte
-  log "elle geri alındı: ${onceki:0:7}→${yeni:0:7} (${konu})"
+  rm -f -- "$BEKCI"                                                              # geri dönüş bitti: 60 dk bekçi işareti kalkar
+  if [ -n "$GERI_NEDEN" ]; then   # K-80: bekçi/otomatik geri dönüş: bozuk sha işaretlenir (sonraki pencerede aynı sürüm tekrar kurulmaz) + tek ⚠️ satır
+    [[ "$KOTU_SHA" =~ ^[0-9a-f]{40}$ ]] && printf '%s\n' "$KOTU_SHA" > "$DURUM/kotu_sha"
+    bildir WARN "⚠️ Yeni sürüm sorun çıkardı, önceki sürüme dönüldü (${GERI_NEDEN})"
+    log "bekçi geri dönüşü: ${onceki:0:7}→${yeni:0:7}; neden: ${GERI_NEDEN}; kötü sha: ${KOTU_SHA:0:7}"
+  else
+    bildir WARN "⚠️ Bot önceki sürüme döndürüldü"                                # tek satır; sürüm numaraları günlükte
+    log "elle geri alındı: ${onceki:0:7}→${yeni:0:7} (${konu})"
+  fi
 else
+  { printf '%s\n%s\n%s\n%s\n' "$(date +%s)" "$yeni" "$onceki" "$aktif_motor" > "$BEKCI.tmp" && mv -f -- "$BEKCI.tmp" "$BEKCI"; } || log "UYARI: 60 dk bekçi işareti yazılamadı"   # K-80: 60 dk bekçi başlar
   date -u +%F >> "$DURUM/guncelleme_gunlugu"; tail -n 200 "$DURUM/guncelleme_gunlugu" > "$DURUM/guncelleme_gunlugu.tmp" && mv -f "$DURUM/guncelleme_gunlugu.tmp" "$DURUM/guncelleme_gunlugu"      # günlük rapor: "Bot bugün N kez güncellendi"
   log "güncellendi: ${onceki:0:7}→${yeni:0:7} (${konu})"                        # Telegram'a mesaj YOK (yalnız günlük)
 fi

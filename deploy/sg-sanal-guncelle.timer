@@ -1,9 +1,11 @@
 [Unit]
-Description=sg-arge sanal sunucu otomatik guncelleme (saatlik)
+Description=sg-arge sanal sunucu otomatik guncelleme (gunde 2 sabit pencere: 10:30 ve 22:30 TSI)
 
 [Timer]
-OnCalendar=hourly
-RandomizedDelaySec=5min
+# K-80: 10:30 ve 22:30 TSİ (= 07:30 ve 19:30 UTC). Pencere dışında CI-yeşil yeni commit beklemede kalır. Acil: sudo systemctl start --no-block sg-sanal-guncelle
+OnCalendar=*-*-* 07:30:00 UTC
+OnCalendar=*-*-* 19:30:00 UTC
+RandomizedDelaySec=3min
 Persistent=true
 
 [Install]

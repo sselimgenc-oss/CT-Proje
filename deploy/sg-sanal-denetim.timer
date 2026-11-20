@@ -1,0 +1,9 @@
+[Unit]
+Description=sg-arge sanal sunucu saatlik denetim (alarm)
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
