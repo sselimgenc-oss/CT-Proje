@@ -119,7 +119,9 @@ Radar (tarama + kadro + isabet + PBO + rastgele + holdout mührü + `radar` dal�
 - Çıkış 3 = kalıcı (ör. mod/dal uyuşmazlığı); servis yeniden başlamaz: nedeni günlükten okuyun, düzeltip `sudo systemctl reset-failed sg-sanal && sudo systemctl start sg-sanal`.
 - Motoru elle (birim dışında) ÇALIŞTIRMAYIN.
 
-## 8. Fiyat farkı ölçümü (HL ↔ Binance, 96 saat; elle kurulum)
+## 8. Fiyat farkı ölçümü (HL ↔ Binance, 96 saat)
+
+Oto-güncelleme birimi kurar ve ölçümü BİR KEZ başlatır (`/var/lib/sg-sanal-guncelle/olcum_basladi` işareti; 96 sa sonra kendi biter, yeniden başlatılmaz). Yeniden ölçmek için işareti silin. Aşağıdaki elle adımlar yalnız gerekirse:
 Salt-okur, bağımsız servis (`deploy/sg-sanal-olcum.service`); motora dokunmaz. Oto-kuruluma (sanal_guncelle) henüz bağlı DEĞİL; `sg-sanal*.service` kopyalama adımı birimi `/etc/systemd/system`'e koyabilir ama başlatmaz/etkinleştirmez.
 ```bash
 sudo cp /var/lib/sg-sanal/depo/deploy/sg-sanal-olcum.service /etc/systemd/system/ && sudo systemctl daemon-reload
