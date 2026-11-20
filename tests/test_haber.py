@@ -137,3 +137,21 @@ def test_pano_md_ve_html_duygu_satiri():
     md, _ = pano.pano_olustur(ozet, {}, {}, [], [], [], SIMDI)
     assert "Piyasa duygusu (Fear & Greed 0-100; sanalda ≥75 yeni long, ≤25 yeni short atlatır; gerçekte yalnız kayıt): 25 · Extreme Fear" in md
     assert "Piyasa duygusu: <b>25</b> (aşırı korku)" in pano.html_olustur(ozet, {}, {}, [], [], SIMDI, None, None)
+
+
+def test_rss_milyar_kahkaha_ve_utf16_reddedilir_normal_rss_ayristirilir():
+    """bandit B314: DTD/ENTITY içeren (billion laughs) ve UTF-16 ile gizlenmiş belgeler güvenle [] döner; 2 MB üstü reddedilir; normal RSS çalışır."""
+    ent = "".join(f'<!ENTITY l{i} "&l{i-1};&l{i-1};&l{i-1};&l{i-1};&l{i-1};&l{i-1};&l{i-1};&l{i-1};&l{i-1};&l{i-1};">' for i in range(1, 9))
+    bomba = f'<?xml version="1.0"?><!DOCTYPE lolz [<!ENTITY l0 "lol">{ent}]><rss><channel><item><title>&l8;</title><pubDate>Fri, 20 Nov 2026 10:00:00 GMT</pubDate></item></channel></rss>'
+    import time as _t
+    t0 = _t.monotonic()
+    assert haber.rss_coz(bomba.encode(), SIMDI) == []
+    assert haber.rss_coz(bomba.encode("utf-16"), SIMDI) == []
+    assert _t.monotonic() - t0 < 2
+    assert haber.rss_coz(b"<rss>" + b" " * (haber.RSS_EN_FAZLA_BAYT + 1), SIMDI) == []
+    assert haber.rss_coz(RSS, SIMDI) != []
+
+
+def test_rss_defusedxml_yoksa_kapali_guvenli(monkeypatch):
+    monkeypatch.setattr(haber, "_GUVENLI_ET", None)
+    assert haber.rss_coz(RSS, SIMDI) == []

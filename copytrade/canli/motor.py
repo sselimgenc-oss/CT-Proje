@@ -37,7 +37,7 @@ from copytrade.canli.niyet import Niyet, cloid_uret
 from copytrade.canli.ogrenme_adaptor import Ogrenme
 from copytrade.canli import borsa_stop, izleme
 from copytrade.canli import haber, rejim, rejim_sonuc, secim_gercek
-from copytrade.canli import gunluk_ozet, kaynak
+from copytrade.canli import gunluk_ozet, hafta_paketi, kaynak
 from copytrade.canli import sert_sinirlar as sert
 from copytrade.canli.borsa_stop import BorsaStop
 from copytrade.canli.risk import Risk, coin_tavan_usd, gun
@@ -976,13 +976,18 @@ class Motor:
         for adres in [a for a in self.kaldirac_tr if a not in adresler]:
             del self.kaldirac_tr[adres]
 
-    def rejim_adimi(self, simdi: int) -> None:
-        """ML rejim etiketi (kayıt; sanalda K-73 `sanal_rejim_filtre` açılış filtresi için okunur): `rejim_okuma_dk` dakikada bir okunur; adres boşsa hiç ağ çağrısı yok.
-        4h rejimi değiştiğinde coin başına `rejim_degisti` olayı (son kaydedilenle karşılaştırılır). Okuma hatası/bayat veri → önbellek boş (etiket None)."""
+    def rejim_oku(self, simdi: int) -> dict | None:
+        """rejim_adimi'nin AĞ yarısı (kilit DIŞINDA çağrılır; denetim D2). Zamanı gelmediyse/adres yoksa None."""
         url = str(self.rules.get("rejim_kaynak_url") or "").strip()
         if not url or not self._aralik_mi("rejim", simdi, float(self.rules.get("rejim_okuma_dk", 30)) * 60):
+            return None
+        return rejim.oku_tam(url, simdi_ms=simdi)
+
+    def rejim_uygula(self, anlik: dict | None) -> None:
+        """rejim_adimi'nin durum yarısı (kilit altında; ağ yok)."""
+        if anlik is None:
             return
-        self.rejim_anlik = rejim.oku_tam(url, simdi_ms=simdi)
+        self.rejim_anlik = anlik
         for coin, z in (self.rejim_anlik.get("rejimler") or {}).items():
             r4 = z.get("4h")
             if r4 is None or self.rejim_4h_son.get(coin) == r4:
@@ -990,13 +995,30 @@ class Motor:
             self.kayit({"olay": "rejim_degisti", "coin": coin, "onceki": self.rejim_4h_son.get(coin), "yeni": r4, "1d": z.get("1d")})
             self.rejim_4h_son[coin] = r4
 
-    def haber_adimi(self, simdi: int) -> None:
-        """Haber/duygu etiketi (kayıt; sanalda `_sanal_acilis_filtresi` haber/duygu ile açılışı atlatır, gerçek kipte yalnız kayıt): `haber_okuma_dk` dakikada bir; sınıf değişince `duygu_degisti`. Mantık haber.py'de."""
+    def rejim_adimi(self, simdi: int) -> None:
+        """ML rejim etiketi (kayıt; sanalda K-73 `sanal_rejim_filtre` açılış filtresi için okunur): `rejim_okuma_dk` dakikada bir okunur; adres boşsa hiç ağ çağrısı yok.
+        4h rejimi değiştiğinde coin başına `rejim_degisti` olayı (son kaydedilenle karşılaştırılır). Okuma hatası/bayat veri → önbellek boş (etiket None).
+        `dakika()` okuma (rejim_oku, kilitsiz) ve uygulamayı (rejim_uygula, kilit altında) ayırır; bu bileşik yol doğrudan çağrı içindir."""
+        self.rejim_uygula(self.rejim_oku(simdi))
+
+    def haber_oku(self, simdi: int) -> tuple[dict, list[dict]] | None:
+        """haber_adimi'nin AĞ yarısı (kilit DIŞINDA; denetim D2). Zamanı gelmediyse None."""
         if not self.rules.get("haber_aktif") or not self._aralik_mi("haber", simdi, float(self.rules.get("haber_okuma_dk", 60)) * 60):
+            return None
+        return haber.guncelle(self.rules, self.haber_anlik, simdi)
+
+    def haber_uygula(self, sonuc: tuple[dict, list[dict]] | None) -> None:
+        """haber_adimi'nin durum yarısı (kilit altında; ağ yok)."""
+        if sonuc is None:
             return
-        self.haber_anlik, olaylar = haber.guncelle(self.rules, self.haber_anlik, simdi)
+        self.haber_anlik, olaylar = sonuc
         for o in olaylar:
             self.kayit(o)
+
+    def haber_adimi(self, simdi: int) -> None:
+        """Haber/duygu etiketi (kayıt; sanalda `_sanal_acilis_filtresi` haber/duygu ile açılışı atlatır, gerçek kipte yalnız kayıt): `haber_okuma_dk` dakikada bir; sınıf değişince `duygu_degisti`. Mantık haber.py'de.
+        `dakika()` okuma (haber_oku, kilitsiz) ve uygulamayı (haber_uygula, kilit altında) ayırır; bu bileşik yol doğrudan çağrı içindir."""
+        self.haber_uygula(self.haber_oku(simdi))
 
     def trader_pozlari_oku(self, adres: str, dexler: list[str] | None = None) -> bool:
         try:
@@ -2680,6 +2702,9 @@ class Motor:
         ledger = self.ledger_oku(simdi) if denendi else None      # gerçek kip: yatırma/çekme kaydı (#5); ofset doğrulanmadıysa HL koşulundan bağımsız HER dakika denenir (K-1)
         ajan = self.ajan_suresi_oku(simdi)                                       # G-19: gerçek kip, günde bir: API cüzdanı `validUntil`
         btc = self.btc_donem_oku(simdi)                                          # BTC al-tut kıyası: dönem başı BTC fiyatı (yalnız eksikse; salt okur info)
+        haber_sonuc = self._kilitsiz_oku("haber", self.haber_oku, simdi)         # denetim D2: haber/rejim/radar ağ okumaları kilit DIŞINDA (kopya olayı ağı beklemesin)
+        rejim_sonuc = self._kilitsiz_oku("rejim", self.rejim_oku, simdi)
+        self._kilitsiz_oku("radar", lambda _s: hafta_paketi.onyukle(self), simdi)    # denetim D1: haftalık paketin radar okuması (yalnız yazım penceresinde)
         with self._lock:
             self.mids_uygula(mids, simdi)
             if hacimler:
@@ -2701,7 +2726,7 @@ class Motor:
                 ("telegram", lambda: self._komutlar(komutlar)), ("ajan_suresi", lambda: self.ajan_suresi_uygula(ajan, simdi)), ("ozet", lambda: self._gunluk_ozet(simdi)), ("haftalik", lambda: self._haftalik_ozet(simdi)),
                 ("emir_ozeti", lambda: self.emir_ozeti(simdi)), ("btc_donem", lambda: self.btc_donem_uygula(btc)), ("donem_seri", lambda: self.donem_seri_guncelle(simdi)),
                 ("ogrenme", lambda: self.ogrenme.adim(simdi)), ("tur_kaydi", lambda: self._tur_kaydi(simdi)), ("golge_kural", lambda: self.golge_kural_adimi(simdi)), ("karsi_olgu", lambda: self.karsi_olgu_adimi(simdi)), ("kopya_drift", lambda: self.kopya_drift_adimi(simdi)),          # yalnız kayıt + pano verisi; karar yolunda değil
-                ("haber", lambda: self.haber_adimi(simdi)), ("rejim", lambda: self.rejim_adimi(simdi)),                        # ML rejim etiketi: sanalda açılış filtresi (sanal_rejim_filtre), gerçek kipte yalnız kayıt
+                ("haber", lambda: self.haber_uygula(haber_sonuc)), ("rejim", lambda: self.rejim_uygula(rejim_sonuc)),                        # ML rejim etiketi: sanalda açılış filtresi (sanal_rejim_filtre), gerçek kipte yalnız kayıt
                 ("durum_yaz", self.durum_yaz),                                     # G-12b: disk dolu / salt okunur → dakikalık görev ölmez; kayıt + alarm
             ]
             for ad, f in adimlar:
@@ -2716,6 +2741,14 @@ class Motor:
                     elif ad != "durum_yaz" and (n == ADIM_ALARM_ARDISIK or (n > ADIM_ALARM_ARDISIK and n % 60 == 0)):      # M-2: aynı adım üst üste 3 kez → alarm (sonra saatte bir)
                         self.tg.gonder(tg.alarm(f"ALARM: '{tg.sade_ad(ad)}' adımı hata veriyor", f"Dakikalık '{tg.sade_ad(ad)}' adımı üst üste {n} kez başarısız ({type(hata).__name__}).\n"
                                                 "Bu adımın koruması çalışmıyor olabilir; bekçi gerekirse motoru yeniden başlatır."))
+
+    def _kilitsiz_oku(self, ad: str, f: Callable[[int], Any], simdi: int) -> Any:
+        """Kilit dışı ağ okuması: hata dakikayı bozmaz (kayıt `<ad>_okuma_hata`), sonuç None."""
+        try:
+            return f(simdi)
+        except Exception as hata:                          # noqa: BLE001
+            self.kayit({"olay": f"{ad}_okuma_hata", "tur": type(hata).__name__})
+            return None
 
     def _btc_donem_gecerli(self) -> dict | None:
         b = self.btc_donem
