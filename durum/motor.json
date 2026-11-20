@@ -27,14 +27,24 @@
  "haber_anlik": {
   "duygu": {
    "deger": 12,
-   "ms": 1795161926038,
+   "ms": 1795165549857,
    "sinif": "Extreme Fear"
   },
-  "haber_ms": 1795161926038,
+  "haber_ms": 1795165549857,
   "haberler": [
+   {
+    "b": "BlackRock’s IBIT loses record $541M amid Anthropic market debut",
+    "t": 1795162722000,
+    "ton": "pozitif"
+   },
    {
     "b": "Wrapped Monero token plunges 99% as issuer-linked wallet sells $13.5 million",
     "t": 1795161880000,
+    "ton": "negatif"
+   },
+   {
+    "b": "SEC charges eight firms over fake crypto platforms tied to $37M fraud",
+    "t": 1795161814000,
     "ton": "negatif"
    },
    {
@@ -251,16 +261,6 @@
     "b": "Bitcoin ETF assets fall to three-month low as 2026 net outflows top $2.5B",
     "t": 1795076779000,
     "ton": "negatif"
-   },
-   {
-    "b": "BTCPay Server issues emergency update for 5 security flaws",
-    "t": 1795075477000,
-    "ton": "negatif"
-   },
-   {
-    "b": "Bitcoin retests $62K as Nasdaq futures rise ahead of Anthropic debut",
-    "t": 1795074956000,
-    "ton": "pozitif"
    }
   ]
  },
@@ -268,52 +268,52 @@
  "hafta_taban": null,
  "hesap_tr": {
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": {
-   "deger": 158390.496097,
-   "ms": 1795164505163
+   "deger": 157395.693887,
+   "ms": 1795165720491
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": {
-   "deger": 55156.419573,
-   "ms": 1795164505163
+   "deger": 55674.595197,
+   "ms": 1795165720491
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": {
-   "deger": 119295.546164,
-   "ms": 1795164505163
+   "deger": 117569.362686,
+   "ms": 1795165720491
   },
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": {
-   "deger": 18620.09604132,
-   "ms": 1795164505163
+   "deger": 18632.49003832,
+   "ms": 1795165720491
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": {
-   "deger": 1160333.04110079,
-   "ms": 1795164505163
+   "deger": 1154052.42778879,
+   "ms": 1795165720491
   },
   "0x9eb42f017e793512e4734f8785de605c4cb3a24e": {
-   "deger": 374664.12467054,
-   "ms": 1795164505163
+   "deger": 373301.73013554,
+   "ms": 1795165720491
   },
   "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": {
    "deger": 13484.41227715,
-   "ms": 1795164505163
+   "ms": 1795165720491
   },
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": {
-   "deger": 1151820.348585,
-   "ms": 1795164505163
+   "deger": 1163003.245185,
+   "ms": 1795165720491
   },
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": {
-   "deger": 389493.094203,
-   "ms": 1795164505163
+   "deger": 394670.850167,
+   "ms": 1795165720491
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": {
-   "deger": 4258.7770119,
-   "ms": 1795164505163
+   "deger": 4266.4657049,
+   "ms": 1795165720491
   },
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": {
-   "deger": 172428.779684,
-   "ms": 1795164505163
+   "deger": 172709.807875,
+   "ms": 1795165720491
   },
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": {
-   "deger": 57874.313508,
-   "ms": 1795164505163
+   "deger": 58096.163625,
+   "ms": 1795165720491
   }
  },
  "hl_ofset": null,
@@ -5732,24 +5732,8 @@
   "0x9cf687eaca65e5da625d3fde534a73513b0a959f:834090779906314",
   "0x9cf687eaca65e5da625d3fde534a73513b0a959f:886086535402657",
   "0x9cf687eaca65e5da625d3fde534a73513b0a959f:571282515262794",
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:767780203862177",
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:503102040684586",
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:911471098296330",
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:696903413134064",
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:404218588861325",
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:331839663997116",
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:62397694092979",
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:1064344417457368",
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:1021902673124592",
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a:728610734270053",
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a:291106180875711",
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:590005795519035",
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:60796861682320",
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:572441802731821",
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:1670008429503",
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:496295921969726",
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:940240470641005",
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:855511308149960",
   "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:29796826600316",
   "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:71351137342589",
   "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:71120503882506",
@@ -15731,68 +15715,88 @@
   "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:1059446414757303",
   "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:663502579735212",
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a:374548552509294",
-  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a:722320243561691"
+  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a:722320243561691",
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:963320623280267",
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:651320760890467",
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:195593466967553",
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:653838248287760",
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:610310893655825",
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:339718018791116",
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:52206923024062",
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:491924442416776",
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:189667357093286",
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:10853033727149",
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:1019894968884743",
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:880714712661301",
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:10424684966014",
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:46259712757",
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:1077764801118848",
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3:1034980705082739",
+  "0x7a6937ff3655cda000778c0f0e9cf7c2c60e0934:341979194739087",
+  "0x7a6937ff3655cda000778c0f0e9cf7c2c60e0934:787256874119451",
+  "0x7a6937ff3655cda000778c0f0e9cf7c2c60e0934:267536890266236",
+  "0x7a6937ff3655cda000778c0f0e9cf7c2c60e0934:335173224473167"
  ],
  "kaldirac_tr": {
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": {
-   "anlik_kaldirac": 2.4379930268260206,
-   "hesap_usd": 158390.496097,
-   "ms": 1795164975866
+   "anlik_kaldirac": 2.451590577039736,
+   "hesap_usd": 157395.693887,
+   "ms": 1795165855984
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": {
-   "anlik_kaldirac": 6.573314498961413,
-   "hesap_usd": 55156.419573,
-   "ms": 1795164975866
+   "anlik_kaldirac": 6.509117271759298,
+   "hesap_usd": 55674.595197,
+   "ms": 1795165855984
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": {
-   "anlik_kaldirac": 1.2231172469708869,
-   "hesap_usd": 119295.546164,
-   "ms": 1795164975866
+   "anlik_kaldirac": 1.23653302764149,
+   "hesap_usd": 117569.362686,
+   "ms": 1795165855984
   },
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": {
-   "anlik_kaldirac": 0.36677560866736836,
-   "hesap_usd": 18620.09604132,
-   "ms": 1795164975866
+   "anlik_kaldirac": 0.3686216080016369,
+   "hesap_usd": 18632.49003832,
+   "ms": 1795165855984
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": {
-   "anlik_kaldirac": 5.8421632304066815,
-   "hesap_usd": 1160333.04110079,
-   "ms": 1795164975866
+   "anlik_kaldirac": 5.867852081894626,
+   "hesap_usd": 1154052.42778879,
+   "ms": 1795165855984
   },
   "0x9eb42f017e793512e4734f8785de605c4cb3a24e": {
-   "anlik_kaldirac": 2.1636609318355204,
-   "hesap_usd": 374664.12467054,
-   "ms": 1795164975866
+   "anlik_kaldirac": 2.164102493341452,
+   "hesap_usd": 373301.73013554,
+   "ms": 1795165855984
   },
   "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": {
    "anlik_kaldirac": 0.0,
    "hesap_usd": 13484.41227715,
-   "ms": 1795164975866
+   "ms": 1795165855984
   },
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": {
-   "anlik_kaldirac": 4.1843255346120785,
-   "hesap_usd": 1151820.348585,
-   "ms": 1795164975866
+   "anlik_kaldirac": 4.142993732561379,
+   "hesap_usd": 1163003.245185,
+   "ms": 1795165855984
   },
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": {
-   "anlik_kaldirac": 5.124945812157676,
-   "hesap_usd": 389493.094203,
-   "ms": 1795164975866
+   "anlik_kaldirac": 5.056469846089645,
+   "hesap_usd": 394670.850167,
+   "ms": 1795165855984
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": {
-   "anlik_kaldirac": 2.3062250436113287,
-   "hesap_usd": 4258.7770119,
-   "ms": 1795164975866
+   "anlik_kaldirac": 2.3010417120486624,
+   "hesap_usd": 4266.4657049,
+   "ms": 1795165855984
   },
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": {
-   "anlik_kaldirac": 1.8808371632296217,
-   "hesap_usd": 172428.779684,
-   "ms": 1795164975866
+   "anlik_kaldirac": 1.8811869231835887,
+   "hesap_usd": 172709.807875,
+   "ms": 1795165855984
   },
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": {
-   "anlik_kaldirac": 2.3252497364033182,
-   "hesap_usd": 57874.313508,
-   "ms": 1795164975866
+   "anlik_kaldirac": 2.315942967154916,
+   "hesap_usd": 58096.163625,
+   "ms": 1795165855984
   }
  },
  "kapanis_kuyrugu": {},
@@ -15802,7 +15806,7 @@
    "hayali_usd": 105.73054170820069,
    "ms": 1795151757823,
    "neden": "haber_ters",
-   "son_pnl": 1.5814986671719888,
+   "son_pnl": 1.5692389875814963,
    "yon": "B"
   },
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|PAXG": {
@@ -15810,7 +15814,7 @@
    "hayali_usd": 0.9333746910534656,
    "ms": 1795106461130,
    "neden": "min_emir_atlandi",
-   "son_pnl": -0.025876688498010007,
+   "son_pnl": -0.025699103380866815,
    "yon": "B"
   },
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|io:SNDK|slot_tavani|498650": {
@@ -15818,7 +15822,7 @@
    "hayali_usd": 67.25205488414464,
    "ms": 1795141123860,
    "neden": "slot_tavani",
-   "son_pnl": -2.305451219721177,
+   "son_pnl": -1.6999054879589721,
    "yon": "B"
   },
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|xyz:SOXL": {
@@ -15826,7 +15830,7 @@
    "hayali_usd": 1.5080229626010357,
    "ms": 1795152870006,
    "neden": "min_emir_atlandi",
-   "son_pnl": 0.01075829495896719,
+   "son_pnl": -0.018294471627394997,
    "yon": "B"
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33|BTC": {
@@ -15834,7 +15838,7 @@
    "hayali_usd": 1363.6363636363637,
    "ms": 1795157063508,
    "neden": "ters_netlesme",
-   "son_pnl": -1.126597946646319,
+   "son_pnl": -0.9056963884804512,
    "yon": "A"
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33|NEAR": {
@@ -15842,7 +15846,7 @@
    "hayali_usd": 72.24380527813175,
    "ms": 1795157297250,
    "neden": "duygu_ters",
-   "son_pnl": 0.6252404951922166,
+   "son_pnl": 0.6204858146204099,
    "yon": "A"
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33|xyz:GOOGL": {
@@ -15850,7 +15854,7 @@
    "hayali_usd": 10.83985364275222,
    "ms": 1795108144785,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.3887577960556886,
+   "son_pnl": -0.3958400404939267,
    "yon": "B"
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33|xyz:NVDA": {
@@ -15858,7 +15862,7 @@
    "hayali_usd": 17.158908445669386,
    "ms": 1795115525718,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.4867857449883296,
+   "son_pnl": -0.54402064849646,
    "yon": "B"
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33|xyz:SP500": {
@@ -15866,7 +15870,7 @@
    "hayali_usd": 432.0862977335162,
    "ms": 1795110638912,
    "neden": "hip3_atlandi",
-   "son_pnl": -5.713291641466225,
+   "son_pnl": -6.1124475747073905,
    "yon": "B"
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33|xyz:SP500|slot_tavani|498650": {
@@ -15874,7 +15878,7 @@
    "hayali_usd": 581.7507121148816,
    "ms": 1795141004896,
    "neden": "slot_tavani",
-   "son_pnl": -1.1438770373269338,
+   "son_pnl": -1.6874214451348482,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:AMD": {
@@ -15882,7 +15886,7 @@
    "hayali_usd": 3.488274445775162,
    "ms": 1795125973338,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.07142817200900581,
+   "son_pnl": -0.08526579966679494,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:AMZN": {
@@ -15890,7 +15894,7 @@
    "hayali_usd": 9.589106214548085,
    "ms": 1795125136314,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.03550275109638208,
+   "son_pnl": -0.06764208366784319,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:ANT": {
@@ -15898,7 +15902,7 @@
    "hayali_usd": 1.8596481862505783,
    "ms": 1795125939998,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.0697162003699736,
+   "son_pnl": -0.07554945737588444,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:BE": {
@@ -15906,7 +15910,7 @@
    "hayali_usd": 6.202143759953235,
    "ms": 1795125149563,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.13827387269117322,
+   "son_pnl": -0.20759766562147652,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:DRAM": {
@@ -15914,7 +15918,7 @@
    "hayali_usd": 2.5923062428658836,
    "ms": 1795125665459,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.03300700386520152,
+   "son_pnl": -0.046012850038424424,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:GOOGL": {
@@ -15922,7 +15926,7 @@
    "hayali_usd": 1.422692850311887,
    "ms": 1795125114696,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.0025230123494936396,
+   "son_pnl": -0.0034853985034243124,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:INTC": {
@@ -15930,7 +15934,7 @@
    "hayali_usd": 2.7433595950637177,
    "ms": 1795125371566,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.053134962306891825,
+   "son_pnl": -0.07450823994203051,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:META": {
@@ -15938,7 +15942,7 @@
    "hayali_usd": 7.410116756431858,
    "ms": 1795125126966,
    "neden": "hip3_atlandi",
-   "son_pnl": 0.01136162777718014,
+   "son_pnl": -0.008899941758792234,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:MSFT": {
@@ -15946,7 +15950,7 @@
    "hayali_usd": 18.651276860191974,
    "ms": 1795125158373,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.22366733190720464,
+   "son_pnl": -0.27860316781423894,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:MU": {
@@ -15954,7 +15958,7 @@
    "hayali_usd": 5.122262185552122,
    "ms": 1795125201007,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.06954802083196561,
+   "son_pnl": -0.11390777404397102,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:NVDA": {
@@ -15962,7 +15966,7 @@
    "hayali_usd": 10.895610035456087,
    "ms": 1795125388364,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.13433864007001198,
+   "son_pnl": -0.17128176608926507,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:PLTR": {
@@ -15970,7 +15974,7 @@
    "hayali_usd": 1.0733254419956648,
    "ms": 1795125956587,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.014307724842533525,
+   "son_pnl": -0.016803667014081137,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:SNDK": {
@@ -15978,7 +15982,7 @@
    "hayali_usd": 1.0521649380497893,
    "ms": 1795137128050,
    "neden": "min_emir_atlandi",
-   "son_pnl": -0.051742498876951606,
+   "son_pnl": -0.04455791461307233,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:XYZ100": {
@@ -15986,7 +15990,7 @@
    "hayali_usd": 20.813374854155487,
    "ms": 1795126548300,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.13912526102024378,
+   "son_pnl": -0.19532557832502934,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|AERO": {
@@ -15994,7 +15998,7 @@
    "hayali_usd": 8.278864680141467,
    "ms": 1795102626445,
    "neden": "slot_tavani",
-   "son_pnl": -0.19286824777722836,
+   "son_pnl": -0.11886743971768678,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|AERO|slot_tavani|498644": {
@@ -16002,7 +16006,7 @@
    "hayali_usd": 16.31401756283637,
    "ms": 1795119004127,
    "neden": "slot_tavani",
-   "son_pnl": -0.14698537604221723,
+   "son_pnl": 0.0009708413212866369,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|ETC|slot_tavani|498644": {
@@ -16010,7 +16014,7 @@
    "hayali_usd": 33.60884198762696,
    "ms": 1795119011610,
    "neden": "slot_tavani",
-   "son_pnl": 0.4131188366685737,
+   "son_pnl": 0.4502531141219228,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|ETC|slot_tavani|498645": {
@@ -16018,7 +16022,7 @@
    "hayali_usd": 53.67440418653558,
    "ms": 1795122012122,
    "neden": "slot_tavani",
-   "son_pnl": 0.4114907317870172,
+   "son_pnl": 0.4710731001905604,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|HYPE": {
@@ -16026,7 +16030,7 @@
    "hayali_usd": 61.03848087808651,
    "ms": 1795141868813,
    "neden": "ters_netlesme",
-   "son_pnl": -0.11976126541322261,
+   "son_pnl": 0.07391515599722502,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|JUP|slot_tavani|498644": {
@@ -16034,7 +16038,7 @@
    "hayali_usd": 136.13764095155776,
    "ms": 1795119029860,
    "neden": "slot_tavani",
-   "son_pnl": -13.353975928458565,
+   "son_pnl": -11.887604051986772,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|LINK": {
@@ -16042,7 +16046,7 @@
    "hayali_usd": 63.30917426095572,
    "ms": 1795102629574,
    "neden": "slot_tavani",
-   "son_pnl": 1.0937806499710399,
+   "son_pnl": 1.1695282038003905,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|TAO|slot_tavani|498644": {
@@ -16050,7 +16054,7 @@
    "hayali_usd": 35.150496012942035,
    "ms": 1795119004125,
    "neden": "slot_tavani",
-   "son_pnl": 1.3273575837124265,
+   "son_pnl": 1.3318909087934134,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|TAO|slot_tavani|498645": {
@@ -16058,7 +16062,7 @@
    "hayali_usd": 42.46664034898394,
    "ms": 1795122003671,
    "neden": "slot_tavani",
-   "son_pnl": 1.3693585647449158,
+   "son_pnl": 1.3748668453754307,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|XRP|slot_tavani|498644": {
@@ -16066,7 +16070,7 @@
    "hayali_usd": 54.083010754381526,
    "ms": 1795119038610,
    "neden": "slot_tavani",
-   "son_pnl": 0.14158812258893205,
+   "son_pnl": 0.1635005701324579,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|kPEPE|slot_tavani|498644": {
@@ -16074,7 +16078,7 @@
    "hayali_usd": 105.95103828458983,
    "ms": 1795119006603,
    "neden": "slot_tavani",
-   "son_pnl": -4.320498096359866,
+   "son_pnl": -4.574645043204584,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|xyz:GME": {
@@ -16082,7 +16086,7 @@
    "hayali_usd": 0.07334567345641733,
    "ms": 1795116752457,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.0004493562656894663,
+   "son_pnl": -0.0006411710298494417,
    "yon": "B"
   },
   "0x9eb42f017e793512e4734f8785de605c4cb3a24e|xyz:NVDA": {
@@ -16090,7 +16094,7 @@
    "hayali_usd": 12.67929202179325,
    "ms": 1795118504287,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.22161005782358095,
+   "son_pnl": -0.26437691108778133,
    "yon": "B"
   },
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9|ZEC": {
@@ -16098,7 +16102,7 @@
    "hayali_usd": 1.4334450841180881,
    "ms": 1795136443760,
    "neden": "duygu_ters",
-   "son_pnl": 0.067176386965606,
+   "son_pnl": 0.06616209999644287,
    "yon": "A"
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|ADA": {
@@ -16106,7 +16110,7 @@
    "hayali_usd": 49.111416824459006,
    "ms": 1795136111009,
    "neden": "ters_netlesme",
-   "son_pnl": 0.8320127965646608,
+   "son_pnl": 0.9404658264670614,
    "yon": "A"
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|BNB": {
@@ -16114,7 +16118,7 @@
    "hayali_usd": 13.715484006047394,
    "ms": 1795140013471,
    "neden": "duygu_ters",
-   "son_pnl": 0.02349116418945971,
+   "son_pnl": 0.023611017067977406,
    "yon": "A"
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|BTC": {
@@ -16122,7 +16126,7 @@
    "hayali_usd": 175.1161008282047,
    "ms": 1795108217090,
    "neden": "ters_netlesme",
-   "son_pnl": 1.8037734035921167,
+   "son_pnl": 1.8318258671005458,
    "yon": "A"
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|ETH": {
@@ -16130,7 +16134,7 @@
    "hayali_usd": 204.2402563718957,
    "ms": 1795156212371,
    "neden": "haber_ters",
-   "son_pnl": 1.1143683401964355,
+   "son_pnl": 1.0909079540870172,
    "yon": "B"
   },
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea|SOL": {
@@ -16138,7 +16142,7 @@
    "hayali_usd": 43.712923559604,
    "ms": 1795141893114,
    "neden": "ters_netlesme",
-   "son_pnl": 0.4413755730053003,
+   "son_pnl": 0.3683203057492502,
    "yon": "B"
   }
  },
@@ -16159,14 +16163,14 @@
  "kasa_ayar_usd": 10000.0,
  "kasa_usd": 10000.0,
  "kaynak": {
-  "cgroup_mb": 66.1,
-  "cgroup_tepe_mb": 81.9,
+  "cgroup_mb": 74.1,
+  "cgroup_tepe_mb": 84.8,
   "disk_bos_gb": 63.66,
   "disk_toplam_gb": 66.76,
-  "olc_ms": 1795164984072,
-  "ram_mb": 84.4,
-  "ram_tepe_mb": 100.2,
-  "yuk_1dk": 0.01
+  "olc_ms": 1795165859463,
+  "ram_mb": 92.4,
+  "ram_tepe_mb": 103.1,
+  "yuk_1dk": 0.0
  },
  "kip": "sanal",
  "kopya_drift": {
@@ -16178,7 +16182,7 @@
   "AERO": {
    "aktif": true,
    "bas_ms": 1795111473526,
-   "drift": 1.025
+   "drift": 1.026
   },
   "BNB": {
    "aktif": true,
@@ -16188,7 +16192,7 @@
   "ETH": {
    "aktif": true,
    "bas_ms": 1795159529006,
-   "drift": 0.278
+   "drift": 0.277
   },
   "JUP": {
    "aktif": true,
@@ -16203,12 +16207,12 @@
   "PAXG": {
    "aktif": true,
    "bas_ms": 1795107210751,
-   "drift": 0.908
+   "drift": 0.909
   },
   "TRX": {
    "aktif": true,
    "bas_ms": 1795111473526,
-   "drift": 0.298
+   "drift": 0.296
   },
   "UNI": {
    "aktif": true,
@@ -16218,12 +16222,12 @@
   "VVV": {
    "aktif": true,
    "bas_ms": 1795111473526,
-   "drift": 0.598
+   "drift": 0.599
   },
   "WLFI": {
    "aktif": true,
    "bas_ms": 1795102601627,
-   "drift": 1.607
+   "drift": 1.608
   },
   "ZEC": {
    "aktif": true,
@@ -16233,7 +16237,7 @@
   "io:SNDK": {
    "aktif": true,
    "bas_ms": 1795142055310,
-   "drift": 0.422
+   "drift": 0.415
   },
   "xyz:BRENTOIL": {
    "aktif": true,
@@ -16248,7 +16252,7 @@
   "xyz:GOOGL": {
    "aktif": true,
    "bas_ms": 1795133124749,
-   "drift": 0.289
+   "drift": 0.292
   },
   "xyz:SNXX": {
    "aktif": true,
@@ -16499,7 +16503,7 @@
    "io:ANTH": 9.016,
    "xyz:AMD": 0.713000000000001,
    "xyz:AMZN": 37.711999999999996,
-   "xyz:ANT": 163.86,
+   "xyz:ANT": 249.54,
    "xyz:CL": 209.404,
    "xyz:COPPER": -1408.05,
    "xyz:GME": 235.23,
@@ -16608,7 +16612,7 @@
   },
   "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3": {
    "BTC": -4.961330000000003,
-   "ETH": -49.723699999997955,
+   "ETH": -99.72369999999796,
    "HYPE": 7.439999999997513,
    "SOL": -496.68999999999886,
    "xyz:NVDA": 34.71099999999861,
@@ -16811,7 +16815,7 @@
   "0x7a6937ff3655cda000778c0f0e9cf7c2c60e0934|xyz:AAPL": 1795128519808,
   "0x7a6937ff3655cda000778c0f0e9cf7c2c60e0934|xyz:AMD": 1795128551675,
   "0x7a6937ff3655cda000778c0f0e9cf7c2c60e0934|xyz:AMZN": 1795128505172,
-  "0x7a6937ff3655cda000778c0f0e9cf7c2c60e0934|xyz:ANT": 1795131890496,
+  "0x7a6937ff3655cda000778c0f0e9cf7c2c60e0934|xyz:ANT": 1795165780947,
   "0x7a6937ff3655cda000778c0f0e9cf7c2c60e0934|xyz:CL": 1795127010911,
   "0x7a6937ff3655cda000778c0f0e9cf7c2c60e0934|xyz:COPPER": 1795108165406,
   "0x7a6937ff3655cda000778c0f0e9cf7c2c60e0934|xyz:GME": 1795148135385,
@@ -16901,7 +16905,7 @@
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a|xyz:SNXX": 1795097405708,
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a|xyz:UNITREE": 1795057721313,
   "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3|BTC": 1795163743797,
-  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3|ETH": 1795137474617,
+  "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3|ETH": 1795165060442,
   "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3|HYPE": 1795137474617,
   "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3|SOL": 1795137474617,
   "0xf1881ebf291d32f6663c8ee44bfac2249b8135d3|xyz:BABA": 1794896350673,
@@ -16921,18 +16925,18 @@
   "0xfb02009ab9221ec89dbac80d4f84bafd3cc20acc|xyz:SNDK": 1795122178402
  },
  "poz_tr_senk_ms": {
-  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 1795164508338,
-  "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 1795164508338,
-  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 1795164508338,
-  "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 1795164508338,
-  "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": 1795164508338,
-  "0x9eb42f017e793512e4734f8785de605c4cb3a24e": 1795164508338,
-  "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": 1795164508338,
-  "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": 1795164508338,
-  "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": 1795164508338,
-  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 1795164508338,
-  "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 1795164508338,
-  "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 1795164508338
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 1795165723279,
+  "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 1795165723279,
+  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 1795165723279,
+  "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 1795165723279,
+  "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": 1795165723279,
+  "0x9eb42f017e793512e4734f8785de605c4cb3a24e": 1795165723279,
+  "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": 1795165723279,
+  "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": 1795165723279,
+  "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": 1795165723279,
+  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 1795165723279,
+  "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 1795165723279,
+  "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 1795165723279
  },
  "rejim_4h_son": {
   "1000SHIB": "trend_down",
@@ -16981,7 +16985,7 @@
   "XRP": "trend_down"
  },
  "rejim_anlik": {
-  "gecerli_son_ms": 1795169048000,
+  "gecerli_son_ms": 1795170681000,
   "rejimler": {
    "1000SHIB": {
     "1d": "trend_down",
@@ -17209,13 +17213,13 @@
   ]
  },
  "son_funding_ms": null,
- "son_funding_saat": 498656,
- "son_olay_ms": 1795164312149,
+ "son_funding_saat": 498657,
+ "son_olay_ms": 1795165780947,
  "tg_offset": 260770054,
  "ucret_bekleyen": [],
  "ucret_gercek_usd": 0.0,
  "ucret_tahmin_say": 0,
  "vardiya": "sunucu",
- "yazildi_ms": 1795164984073,
+ "yazildi_ms": 1795165859464,
  "yetim_ilk": {}
 }
