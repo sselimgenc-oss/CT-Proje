@@ -538,9 +538,9 @@ def test_yeniden_baslatma_cift_emir_yok_durum_kaldigi_yerden(tmp_path):
     assert m2.sayac["emir"] == 0 and len(kayitlar(tmp_path, "emir")) == 1
 
 
-def test_kacan_dolum_rest_ile_tamamlanir_gec_acilis_emir_uretmez(tmp_path):
-    """K‑37 §5: AÇILIŞ olay yaşı > 120 sn ise emir YOK (`gec_acilis`): 30 sn eski BTC açılışı işlenir (REST kaynaklı → `gec_goruldu`); 5 dk eski SOL ve 90 dk eski ETH açılışı emir ÜRETMEZ
-    (yalnız trader pozisyon izleyicisi güncellenir)."""
+def test_kacan_dolum_rest_ile_tamamlanir_acilis_alinmaz_emir_uretmez(tmp_path):
+    """K-83 (K-37 §5'in yerine): REST ile tamamlanan (açılışta/kopmada kaçan) AÇILIŞ yaşına bakılmadan ALINMAZ (`gec_goruldu_alinmaz`): 30 sn, 5 dk ve 90 dk eski açılışların üçü de emir ÜRETMEZ
+    (yalnız trader pozisyon izleyicisi güncellenir). Kapanış/azaltma ayrı testte (test_k83_telafi_yok) uygulanır."""
     saat = Saat()
     taze = {"tid": 11, "time": saat() - 30_000, "coin": "BTC", "px": "100", "sz": "300", "side": "B", "startPosition": "0"}
     bes_dk = {"tid": 12, "time": saat() - 5 * 60_000, "coin": "SOL", "px": "100", "sz": "300", "side": "B", "startPosition": "0"}
@@ -548,11 +548,10 @@ def test_kacan_dolum_rest_ile_tamamlanir_gec_acilis_emir_uretmez(tmp_path):
     hl = SahteHL(rest_dolumlar={adr(1): [eski, bes_dk, taze]})
     m, _, _, _ = kur(tmp_path, hl=hl, saat=saat)
     m.baslat()
-    assert m.kacanlari_tamamla(saat() - 3 * SAAT) == 3                                         # üçü de bir Sonuç döner: 1 emir + 2 atlandı
-    e = kayitlar(tmp_path, "emir")
-    assert len(e) == 1 and e[0]["coin"] == "BTC" and e[0]["gec_goruldu"] is True and e[0]["kaynak"] == "rest" and m.sayac["gec_goruldu"] == 3
-    assert m.sayac["gec_acilis"] == 2 and m.neden_say["gec_acilis"] == 2 and m.hesap.sz(adr(1), "SOL") == 0.0 and m.hesap.sz(adr(1), "ETH") == 0.0
-    assert m.poz_tr[adr(1)]["ETH"] == 10 and m.poz_tr[adr(1)]["SOL"] == 300                    # izleyici güncel
+    assert m.kacanlari_tamamla(saat() - 3 * SAAT) == 3                                         # üçü de bir Sonuç döner (hepsi atlandı)
+    assert kayitlar(tmp_path, "emir") == [] and m.sayac["gec_goruldu"] == 3 and m.sayac["emir"] == 0
+    assert m.neden_say["gec_goruldu_alinmaz"] == 3 and all(m.hesap.sz(adr(1), c) == 0.0 for c in ("BTC", "SOL", "ETH"))
+    assert m.poz_tr[adr(1)]["ETH"] == 10 and m.poz_tr[adr(1)]["SOL"] == 300 and m.poz_tr[adr(1)]["BTC"] == 300      # izleyici güncel
 
 
 def test_gec_gelen_kapanis_yasa_bakmadan_islenir_ve_kuyruk_beklemesi_yasa_dahil(tmp_path):

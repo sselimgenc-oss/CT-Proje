@@ -830,7 +830,7 @@ def test_k80_bekci_sorunsuzsa_izler_60_dk_sonra_biter(sunucu):
     yeni = _bekci_hazirla(sunucu)
     r = _bekci(sunucu)
     assert r.returncode == 0 and "izleniyor" in r.stdout and sunucu.head() == yeni and (sunucu.durum / "bekci").exists()
-    _kayit_yaz(sunucu, [{"olay": "adim_hata"}] * 7 + [{"olay": "telegram_hata"}] * 4 + [{"olay": "kacan_telafi_hata"}] * 2)   # eşiklerin HEPSİ altında
+    _kayit_yaz(sunucu, [{"olay": "adim_hata"}] * 7 + [{"olay": "telegram_hata"}] * 4)   # eşiklerin HEPSİ altında
     assert _bekci(sunucu).returncode == 0 and sunucu.head() == yeni
     b = (sunucu.durum / "bekci").read_text().split("\n")
     (sunucu.durum / "bekci").write_text("\n".join([str(int(time.time()) - 3700)] + b[1:]))
@@ -841,7 +841,6 @@ def test_k80_bekci_sorunsuzsa_izler_60_dk_sonra_biter(sunucu):
 @pytest.mark.parametrize("olaylar,neden", [
     ([{"olay": "bekci_tetik"}], "bekçi motoru 1 kez"),
     ([{"olay": "telegram_hata"}] * 3 + [{"olay": "telegram_yeniden", "tur": "CokIstek"}] * 2, "Telegram hata/429 5"),
-    ([{"olay": "kacan_telafi_hata"}] * 3, "kaçan işlem telafisi 3"),
     ([{"olay": "adim_hata"}] * 4 + [{"olay": "olay_hata"}] * 2 + [{"olay": "defter_hata"}] * 2, "hata olayı 8"),
 ])
 def test_k80_bekci_esik_asilirsa_onceki_surume_doner_kotu_sha_ve_tek_uyari(sunucu, olaylar, neden):

@@ -33,17 +33,6 @@ def test_d5_trader_esigi_tek_sabit_toz_kalinti_kapat_sayilir():
     assert mt.eylem_belirle(1.0, 1e-8, 1.0) == ["azalt"]
 
 
-def test_d6_telafi_yas_onbellegi_24_saat_siniri_yeniden_denetlenir(tmp_path):
-    from tests.test_canli_motor import SAAT, kayitlar
-    from tests.test_k75_kacan_telafi import _hazir
-    m, hl, saat = _hazir(tmp_path)
-    m.poz_tr[adr(1)]["BTC"] = 300.0
-    m._telafi_yas[f"{adr(1)}|BTC"] = (1, saat() - 25 * SAAT, True)           # önbellekteki açılış 25 sa önce (limit 24)
-    m.kacan_telafi(saat())
-    assert m.hesap.sz(adr(1), "BTC") == 0.0 and not [e for e in kayitlar(tmp_path, "emir")]
-    assert any(a["neden"] == "pozisyon_eski" for a in kayitlar(tmp_path, "kacan_telafi_atlandi"))
-
-
 def test_d7_yetim_borsa_stopu_dinamik_orani_kullanir_birim():
     from copytrade.canli import borsa_stop as bs
     sabit = bs.yetim_hedefler({"ETH": {"sz": 0.5, "mark": 2000.0}}, {}, 0.22, 10.0)

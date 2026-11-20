@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """K-80 60 dk bekçi sayacı (yalnız standart kütüphane; sanal_bekci.sh çağırır): kayit/<UTC gün>.jsonl içinde `epoch` sn'den beri sağlık olaylarını sayar, tek satır JSON yazar.
 
-Sayılanlar: bekci_tetik (motor bekçisi süreci öldürdü), telegram_hata + 429 yeniden denemeleri (telegram_yeniden, tur CokIstek), kacan_telafi_hata, hata (adim_hata + olay_hata + defter_hata).
+Sayılanlar: bekci_tetik (motor bekçisi süreci öldürdü), telegram_hata + 429 yeniden denemeleri (telegram_yeniden, tur CokIstek), hata (adim_hata + olay_hata + defter_hata).
 Kullanım: python3 sanal_bekci_say.py <kayit_dizin> <epoch_sn>"""
 import json
 import sys
@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 def say(kayit_dizin: Path, epoch_sn: float) -> dict[str, int]:
-    out = {"bekci_tetik": 0, "telegram": 0, "kacan_telafi_hata": 0, "hata": 0}
+    out = {"bekci_tetik": 0, "telegram": 0, "hata": 0}
     ms0 = epoch_sn * 1000
     gunler = {time.strftime("%Y-%m-%d", time.gmtime(t)) for t in (epoch_sn, time.time())}
     for gun in sorted(gunler):
@@ -31,8 +31,6 @@ def say(kayit_dizin: Path, epoch_sn: float) -> dict[str, int]:
                 out["bekci_tetik"] += 1
             elif ad == "telegram_hata" or (ad == "telegram_yeniden" and o.get("tur") == "CokIstek"):
                 out["telegram"] += 1
-            elif ad == "kacan_telafi_hata":
-                out["kacan_telafi_hata"] += 1
             elif ad in ("adim_hata", "olay_hata", "defter_hata"):
                 out["hata"] += 1
     return out
