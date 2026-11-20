@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-20 04:37 UTC
+# Canlı rapor — 2026-11-20 04:52 UTC
 
 **Kip** sanal · vardiya `sunucu` · saha 11/11 (inen 1)
 
@@ -8,11 +8,11 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 10.000,00 $ | 10.005,66 $ | +%0,10 | — (geçmiş < 7 gün) | +%0,06 | −%0,44 |
+| 10.000,00 $ | 10.002,74 $ | +%0,07 | — (geçmiş < 7 gün) | +%0,03 | −%0,47 |
 
-Başarı kıyası (aynı dönemde): toplam +%0,06 · BTC al-tut: −%5,0 · fark: +%5,0 · aylık eşdeğer: +%0,5 · hedef %4/ay: geçmiyor
+Başarı kıyası (aynı dönemde): toplam +%0,03 · BTC al-tut: −%4,9 · fark: +%5,0 · aylık eşdeğer: +%0,2 · hedef %4/ay: geçmiyor
 
-Komisyon (dönem): ödenen ücret: 12,57 $ · brüt kârın %69'i _(ücret işlem hacmine bağlıdır, emir sayısına değil)_
+Komisyon (dönem): ödenen ücret: 12,57 $ · brüt kârın %82'i _(ücret işlem hacmine bağlıdır, emir sayısına değil)_
 
 Piyasa duygusu (Fear & Greed 0-100; sanalda ≥75 yeni long, ≤25 yeni short atlatır; gerçekte yalnız kayıt): 12 · Extreme Fear
 
@@ -20,53 +20,53 @@ Piyasa duygusu (Fear & Greed 0-100; sanalda ≥75 yeni long, ≤25 yeni short at
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| 0x9eb42f… | xyz:NVDA | L | 1.361,60 $ | −2,04 $ |
-| 0xc30c7e… | XRP | S | 1.330,02 $ | +20,92 $ |
-| 0x2d29c0… | ETH | L | 1.143,17 $ | −43,11 $ |
-| 0xdebd49… | SOL | S | 710,94 $ | +6,71 $ |
-| 0x76c2cd… | TRX | L | 492,83 $ | +8,09 $ |
-| 0x3d380a… | xyz:NVDA | L | 437,36 $ | −0,44 $ |
-| 0xc3602c… | XRP | S | 407,24 $ | +13,48 $ |
-| 0xc3602c… | SOL | S | 326,03 $ | +8,94 $ |
-| 0xc3602c… | HYPE | S | 251,71 $ | +15,33 $ |
-| 0x3d380a… | xyz:GOOGL | L | 242,53 $ | −0,71 $ |
-| 0x76c2cd… | WLFI | S | 214,69 $ | −0,40 $ |
-| 0x6a8686… | xyz:XYZ100 | L | 204,77 $ | −0,50 $ |
-| 0xc3602c… | AAVE | S | 157,05 $ | +15,45 $ |
-| 0x2d29c0… | io:SNDK | L | 134,99 $ | −3,39 $ |
-| 0xc3602c… | LINK | S | 127,45 $ | +7,17 $ |
-| 0x76c2cd… | INJ | L | 107,33 $ | −1,98 $ |
-| 0x76c2cd… | AERO | L | 101,50 $ | −6,30 $ |
-| 0x6a8686… | xyz:META | L | 91,32 $ | −0,43 $ |
-| 0x76c2cd… | BCH | L | 81,06 $ | −0,50 $ |
+| 0x9eb42f… | xyz:NVDA | L | 1.363,02 $ | −0,62 $ |
+| 0xc30c7e… | XRP | S | 1.333,24 $ | +17,70 $ |
+| 0x2d29c0… | ETH | L | 1.144,97 $ | −41,31 $ |
+| 0xdebd49… | SOL | S | 711,62 $ | +6,04 $ |
+| 0x76c2cd… | TRX | L | 493,40 $ | +8,66 $ |
+| 0x3d380a… | xyz:NVDA | L | 437,82 $ | +0,02 $ |
+| 0xc3602c… | XRP | S | 408,22 $ | +12,50 $ |
+| 0xc3602c… | SOL | S | 326,34 $ | +8,63 $ |
+| 0xc3602c… | HYPE | S | 250,89 $ | +16,15 $ |
+| 0x3d380a… | xyz:GOOGL | L | 242,67 $ | −0,57 $ |
+| 0x76c2cd… | WLFI | S | 214,81 $ | −0,52 $ |
+| 0x6a8686… | xyz:XYZ100 | L | 204,69 $ | −0,58 $ |
+| 0xc3602c… | AAVE | S | 157,60 $ | +14,90 $ |
+| 0x2d29c0… | io:SNDK | L | 134,60 $ | −3,78 $ |
+| 0xc3602c… | LINK | S | 127,55 $ | +7,07 $ |
+| 0x76c2cd… | INJ | L | 106,70 $ | −2,61 $ |
+| 0x76c2cd… | AERO | L | 101,80 $ | −6,00 $ |
+| 0x6a8686… | xyz:META | L | 91,33 $ | −0,43 $ |
+| 0x76c2cd… | BCH | L | 81,01 $ | −0,54 $ |
 | 0x6a8686… | xyz:MSFT | L | 76,87 $ | −0,37 $ |
-| 0x6a8686… | xyz:AMZN | L | 69,58 $ | −0,28 $ |
-| 0x6a8686… | xyz:GOOGL | L | 63,54 $ | −0,19 $ |
-| 0x76c2cd… | kSHIB | L | 63,35 $ | −2,89 $ |
-| 0x76c2cd… | TAO | S | 62,43 $ | +2,96 $ |
-| 0x6a8686… | xyz:BE | L | 61,63 $ | −0,69 $ |
-| 0x6a8686… | xyz:MU | L | 56,80 $ | −0,15 $ |
-| 0x6a8686… | xyz:NVDA | L | 55,70 $ | −0,08 $ |
-| 0xc3602c… | VVV | S | 52,28 $ | +2,42 $ |
-| 0x76c2cd… | WLD | S | 45,62 $ | +3,06 $ |
-| 0x76c2cd… | DOGE | L | 43,15 $ | −1,81 $ |
-| 0x6a8686… | xyz:INTC | L | 35,84 $ | +0,25 $ |
-| 0x76c2cd… | ADA | L | 30,72 $ | −0,64 $ |
-| 0x6a8686… | xyz:DRAM | L | 29,51 $ | −0,17 $ |
-| 0x76c2cd… | ALGO | L | 23,69 $ | −1,16 $ |
-| 0x6a8686… | xyz:PLTR | L | 23,43 $ | −0,16 $ |
-| 0xdebd49… | BNB | S | 18,38 $ | +0,36 $ |
+| 0x6a8686… | xyz:AMZN | L | 69,57 $ | −0,28 $ |
+| 0x6a8686… | xyz:GOOGL | L | 63,58 $ | −0,16 $ |
+| 0x76c2cd… | kSHIB | L | 63,45 $ | −2,79 $ |
+| 0x76c2cd… | TAO | S | 62,50 $ | +2,89 $ |
+| 0x6a8686… | xyz:BE | L | 61,53 $ | −0,80 $ |
+| 0x6a8686… | xyz:MU | L | 56,72 $ | −0,23 $ |
+| 0x6a8686… | xyz:NVDA | L | 55,76 $ | −0,02 $ |
+| 0xc3602c… | VVV | S | 53,17 $ | +1,53 $ |
+| 0x76c2cd… | WLD | S | 45,71 $ | +2,96 $ |
+| 0x76c2cd… | DOGE | L | 43,20 $ | −1,75 $ |
+| 0x6a8686… | xyz:INTC | L | 35,69 $ | +0,10 $ |
+| 0x76c2cd… | ADA | L | 30,67 $ | −0,69 $ |
+| 0x6a8686… | xyz:DRAM | L | 29,47 $ | −0,21 $ |
+| 0x76c2cd… | ALGO | L | 23,70 $ | −1,15 $ |
+| 0x6a8686… | xyz:PLTR | L | 23,42 $ | −0,17 $ |
 | 0x6a8686… | xyz:AMD | L | 18,37 $ | +0,12 $ |
-| 0x6a8686… | xyz:ANT | L | 14,25 $ | +0,02 $ |
-| 0x76c2cd… | HBAR | S | 13,53 $ | +1,08 $ |
+| 0xdebd49… | BNB | S | 18,37 $ | +0,37 $ |
+| 0x6a8686… | xyz:ANT | L | 14,31 $ | +0,08 $ |
+| 0x76c2cd… | HBAR | S | 13,59 $ | +1,03 $ |
 | 0x76c2cd… | BTC | L | 12,38 $ | −0,54 $ |
-| 0x76c2cd… | DOT | S | 11,12 $ | +0,45 $ |
-| 0xf83e8b… | XRP | S | 10,68 $ | +0,32 $ |
-| 0x6a8686… | xyz:SNDK | L | 10,55 $ | −0,45 $ |
-| 0x2d29c0… | PAXG | L | 10,53 $ | −0,47 $ |
-| 0x76c2cd… | AVAX | L | 10,51 $ | −0,49 $ |
-| 0x76c2cd… | ETC | S | 10,39 $ | +0,61 $ |
-| 0x76c2cd… | FIL | S | 10,10 $ | +0,90 $ |
+| 0x76c2cd… | DOT | S | 11,15 $ | +0,42 $ |
+| 0xf83e8b… | XRP | S | 10,70 $ | +0,30 $ |
+| 0x2d29c0… | PAXG | L | 10,54 $ | −0,46 $ |
+| 0x76c2cd… | AVAX | L | 10,52 $ | −0,48 $ |
+| 0x6a8686… | xyz:SNDK | L | 10,51 $ | −0,49 $ |
+| 0x76c2cd… | ETC | S | 10,37 $ | +0,63 $ |
+| 0x76c2cd… | FIL | S | 10,15 $ | +0,85 $ |
 | 0x76c2cd… | NEAR | S | 9,96 $ | +1,04 $ |
 
 ## Son 24 saat
@@ -100,7 +100,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 32 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
+- süre 47 dk · WS kopma 0 / yeniden bağlanma 0 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
@@ -136,24 +136,24 @@ _Taban = fiili + ML/ders yüzünden atlanan sinyallerin hayali K/Z'si (ücret/ka
 
 ## Dönem (kalıcı seri)
 
-- motor 10.005,66 $ · BTC al-tut 9.504,73 $ · %4/ay hedef çizgisi 10.059,28 $
-- katkı: İlk 11 7 slot −27,12 $ · Yedek 5 slot +32,78 $
-- saha doluluğu %100,00 · nakitte kalan %47,07 (3,6 gün ölçüldü)
-- kullanılan sermaye getirisi +%0,11 · ort. brüt maruziyet 5.293,59 $ · ort. net 828,12 $ · risk kilidi olayı 0 (gölge eğri yok)
+- motor 10.002,74 $ · BTC al-tut 9.505,97 $ · %4/ay hedef çizgisi 10.059,28 $
+- katkı: İlk 11 7 slot −26,12 $ · Yedek 5 slot +28,86 $
+- saha doluluğu %100,00 · nakitte kalan %46,96 (3,6 gün ölçüldü)
+- kullanılan sermaye getirisi +%0,05 · ort. brüt maruziyet 5.304,46 $ · ort. net 829,65 $ · risk kilidi olayı 0 (gölge eğri yok)
 - atlanan sinyal %98,99 · yuvarlanan emir %8,19 (emir 232, atlanan 22688)
 - radar hunisi: evren 2575 → aday 904 → ≥10 işlem 144 → geçen 17
 
 | trader | katman | giriş | çıkış | net $ |
 |---|---|---|---|---|
 | 0x6d2667… | ilk11 | 16.11 14:30 | sahada | +96,25 $ |
-| 0xc3602c… | yedek | 16.11 14:30 | sahada | +59,54 $ |
-| 0xc30c7e… | yedek | 16.11 14:30 | sahada | +20,38 $ |
-| 0x76c2cd… | yedek | 16.11 14:30 | sahada | +6,06 $ |
-| 0xf83e8b… | yedek | 19.11 12:20 | sahada | +0,32 $ |
+| 0xc3602c… | yedek | 16.11 14:30 | sahada | +57,52 $ |
+| 0xc30c7e… | yedek | 16.11 14:30 | sahada | +17,16 $ |
+| 0x76c2cd… | yedek | 16.11 14:30 | sahada | +5,99 $ |
+| 0xf83e8b… | yedek | 19.11 12:20 | sahada | +0,29 $ |
 | 0xc2dd65… | ilk11 | 16.11 14:30 | 19.11 12:20 islem_yok | +0,00 $ |
 | 0xe69acc… | ilk11 | 16.11 14:30 | sahada | +0,00 $ |
-| 0x3d380a… | ilk11 | 16.11 14:30 | sahada | −1,48 $ |
-| 0x9eb42f… | ilk11 | 16.11 14:30 | sahada | −2,70 $ |
-| 0x6a8686… | ilk11 | 16.11 14:30 | sahada | −3,86 $ |
-| 0x2d29c0… | yedek | 16.11 14:30 | sahada | −53,53 $ |
-| 0xdebd49… | ilk11 | 16.11 14:30 | sahada | −115,32 $ |
+| 0x3d380a… | ilk11 | 16.11 14:30 | sahada | −0,88 $ |
+| 0x9eb42f… | ilk11 | 16.11 14:30 | sahada | −1,28 $ |
+| 0x6a8686… | ilk11 | 16.11 14:30 | sahada | −4,21 $ |
+| 0x2d29c0… | yedek | 16.11 14:30 | sahada | −52,11 $ |
+| 0xdebd49… | ilk11 | 16.11 14:30 | sahada | −115,99 $ |

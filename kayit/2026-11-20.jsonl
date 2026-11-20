@@ -993,3 +993,8 @@
 {"zaman_ms":1795149455038,"olay":"kacan_telafi_atlandi","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","coin":"ATOM","neden":"pozisyon_eski"}
 {"zaman_ms":1795149455310,"olay":"kacan_telafi_atlandi","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","coin":"MON","neden":"pozisyon_eski"}
 {"zaman_ms":1795149467989,"olay":"kacan_telafi_atlandi","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"BTC","neden":"kayma_fazla","kayma":0.010153,"trader_giris":62070.7,"mark":61440.5}
+{"zaman_ms":1795150064356,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"ETH","neden":"pozisyon_eski"}
+{"zaman_ms":1795150065336,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"SOL","neden":"pozisyon_eski"}
+{"zaman_ms":1795150066324,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"BNB","neden":"pozisyon_eski"}
+{"zaman_ms":1795150114593,"olay":"kopya_drift_bitti","coin":"xyz:ANT","biz_usd":14.32,"ideal_usd":21.58,"drift":0.145,"sure_dk":283}
+{"zaman_ms":1795150147697,"olay":"tur","ozsermaye_usd":9999.0023}
