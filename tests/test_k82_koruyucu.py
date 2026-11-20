@@ -202,3 +202,18 @@ def test_guncelle_koruyucu_servisini_kurar_etkinlestirir_ve_yeniden_baslatir(sun
     log = sunucu.log.read_text()
     assert log.index("daemon-reload") < log.index("enable sg-sanal-koruyucu.service") < log.index("restart sg-sanal-koruyucu.service")
     assert "TG:" not in log
+
+
+def test_yeni_donemde_eski_zirve_tasinmaz_yanlis_kapat_yok(tmp_path):
+    k, saat, tgp = _kur(tmp_path)
+    d = tmp_path / "durum"
+    (d).mkdir(parents=True, exist_ok=True)
+    (d / "donem.txt").write_text("2026-11-16T11:30:00Z\n")
+    _motor_dosyalari(d, 13000.0, saat(), kasa=10000.0, risk_ek={"zirve": 13000.0})
+    k.adim()
+    (d / "donem.txt").write_text("2026-11-23T11:30:00Z\n")          # yeni dönem: kasa 10.000'e sıfırlandı
+    _motor_dosyalari(d, 10000.0, saat(), kasa=10000.0)
+    k.adim()
+    b = _bayrak(tmp_path)
+    assert not b["kapat_dur"] and not b["yeni_acilis_dur"]          # eski zirve (13.000) taşınsaydı %23 düşüş -> yanlış kapat
+    assert json.loads((d / "ortak/koruyucu.json").read_text())["zirve"] == 10000.0

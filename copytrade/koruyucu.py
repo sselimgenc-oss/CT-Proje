@@ -129,6 +129,13 @@ class Koruyucu:
             self._mandal_kaldir("bayrak dosyası silindi", oz)
         # --- özsermaye denetimi
         gunluk = dusus = None
+        donem = (self.durum / "donem.txt").read_text(encoding="utf-8").strip() if (self.durum / "donem.txt").exists() else None
+        if donem and d.get("donem") not in (None, donem):                                          # yeni dönem (kasa sıfırlandı): eski dönemin gün başı/zirve/mandalı taşınmaz, yeniden tohumlanır
+            self.kayit({"olay": "koruyucu", "tur": "donem_degisti", "eski": d.get("donem"), "yeni": donem})
+            for k in ("gun", "gun_basi", "zirve", "son_oz", "kapat", "kapat_ms", "kapat_neden", "dur_goruldu"):
+                d.pop(k, None)
+        if donem:
+            d["donem"] = donem
         if oz is not None:
             if "gun" not in d:
                 self._tohumla(oz, kasa, simdi)
