@@ -149,6 +149,14 @@ def test_filtre_atlamisti_saygi(tmp_path):
     assert m3.hesap.sz(adr(1), "BTC") > 0
 
 
+def test_hip3_eski_atlamasi_yeniden_denenir(tmp_path):
+    """K-73 öncesi `hip3_atlandi` atlaması telafiye engel değildir (açılış yine güncel kurallardan geçer)."""
+    m, _, saat = _hazir(tmp_path)
+    m.son_atla[f"{adr(1)}|BTC"] = ["hip3_atlandi", saat() - 2 * SAAT]
+    m.dakika()
+    assert m.hesap.sz(adr(1), "BTC") > 0
+
+
 def test_k73_filtreleri_telafide_de_gecerli(tmp_path):
     """Filtre kaydı olmasa bile açılış yolundaki K-73 filtreleri telafide aynen çalışır (aynı `_emir_isle`): rejim ters → emir yok; nedeni `son_atla`ya yazılır, sonraki senkron tekrar denemez."""
     m, _, saat = _hazir(tmp_path)

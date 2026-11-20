@@ -52,7 +52,7 @@ from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter, Ra
 EPS = 1e-12
 DAKIKA = 60_000
 SON_ATLA_MAX = 3000          # adet (K-75: "adres|coin" başına son açılış atlama nedeni; aşılırsa en eskiler düşer)
-TELAFI_YENIDEN_DENE = ("gec_acilis", "trader_hesap_yok", "hesap_yok")      # K-75: bu nedenlerle atlanan açılış "kaçmış" sayılır (kural/filtre değil, veri/zaman) → telafi edilebilir; diğer atlama nedenlerine saygı gösterilir
+TELAFI_YENIDEN_DENE = ("gec_acilis", "trader_hesap_yok", "hesap_yok", "hip3_atlandi")      # K-75 (hip3_atlandi: K-73 öncesi kalan atlama; açılış yine güncel HIP-3 kuralından geçer): bu nedenlerle atlanan açılış "kaçmış" sayılır (kural/filtre değil, veri/zaman) → telafi edilebilir; diğer atlama nedenlerine saygı gösterilir
 SNAP_SAKLA = 50_000          # adet (yalnız snapshot görülen dolum kimlikleri, bellekte; HL userFills snapshot'ı adres başına ≤ 2000 dolum × 10 adres + trades snapshot'ları)
 
 
