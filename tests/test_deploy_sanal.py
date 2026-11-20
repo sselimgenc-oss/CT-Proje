@@ -248,7 +248,7 @@ def test_guncelle_statik_guvenceler():
     assert "--require-hashes -r" in kod and "requirements-canli.lock" in kod
     assert '"tamam": true' in kod and "sg-sanal-kontrol" in kod and "flock" in kod
     assert "durum kayit pano" in kod                                                                  # yerel durum koruması
-    assert "[CT] $2" in kod and "Sunucu güncellendi:" in kod and "CRIT" in kod and "INFO" in kod and "[CT] $1" not in kod
+    assert "[CT] $2" in kod and "bildir_rutin" not in kod and "WARN" in kod and "[CT] $1" not in kod and "Sunucu güncellendi" not in kod
     # token: yalnız stdin'den curl --config'e; echo/log yok, set -x yok
     assert "--config -" in kod and not re.search(r"set -[a-z]*x", kod)
     assert not re.search(r"(echo|log)\b[^\n]*\$\{?tok\b", kod)
@@ -364,7 +364,7 @@ def test_guncelle_basari_yolu_ff_birim_telegram_ve_yerel_durum_korunur(sunucu):
     assert sunucu.head() == yeni and "# v2" in (sunucu.birim / "sg-sanal.service").read_text()      # birim değişti -> kopyalandı
     log = sunucu.log.read_text()
     assert "daemon-reload" in log and log.index("stop sg-sanal") < log.index("start sg-sanal-kontrol") < log.rindex("start sg-sanal")
-    assert f"tg_bastirildi: sunucu_guncellendi (Sunucu güncellendi: {sunucu.v1[:7]}→{yeni[:7]} (degisiklik v2))" in r.stdout        # rutin INFO Telegram'a GİTMEZ (pano/günlük)
+    assert f"güncellendi: {sunucu.v1[:7]}→{yeni[:7]} (degisiklik v2)" in r.stdout        # başarılı güncelleme Telegram'a HİÇ mesaj atmaz (yalnız günlük)
     assert "Sunucu güncellendi" not in log and "TG:" not in log
     assert "SIRTOKEN123" not in r.stdout + r.stderr + log                                             # token argv'ye/günlüğe girmez
     assert (sunucu.depo / "durum/motor.json").exists()                                                # yerel durum dokunulmadı
@@ -378,7 +378,7 @@ def test_guncelle_duman_testi_basarisizsa_geri_alir_ve_crit_bildirir(sunucu):
     assert r.returncode == 1, r.stdout + r.stderr
     assert sunucu.head() == sunucu.v1 and "# v1" in (sunucu.birim / "sg-sanal.service").read_text()   # git + birim geri
     log = sunucu.log.read_text()
-    assert "[CT] 🚨 Sunucu güncellemesi başarısız oldu" in log and "CRIT" not in log and "NS:disable_notification=false" in log and (sunucu.depo / "durum/motor.json").exists()
+    assert "[CT] ⚠️ Bot güncellemesi başarısız, eski sürümle devam ediyor" in log and log.count("TG:") == 1 and "CRIT" not in log and "NS:disable_notification=false" in log and (sunucu.depo / "durum/motor.json").exists()
     assert "start sg-sanal\n" in log                                                                  # servisler yeniden başlatıldı
     assert "SIRTOKEN123" not in r.stdout + r.stderr + log
     r2 = sunucu.calistir()                                                                           # aynı bozuk commit saatlik döngüde tekrar denenmez
@@ -407,7 +407,7 @@ def test_geri_al_onay_ister_ve_onayla_dondurur(sunucu):
     assert r.returncode == 2
     r = subprocess.run(["bash", str(GERI_AL), sunucu.v1[:7]], env=sunucu.ortak, input="evet\n", capture_output=True, text=True)
     assert r.returncode == 0, r.stdout + r.stderr
-    assert sunucu.head() == sunucu.v1 and (sunucu.durum / "dondur").exists() and "TG:text=[CT] Bot önceki sürüme döndürüldü" in sunucu.log.read_text() and "NS:disable_notification=true" in sunucu.log.read_text() and "Sunucu güncellendi" not in sunucu.log.read_text()
+    assert sunucu.head() == sunucu.v1 and (sunucu.durum / "dondur").exists() and "TG:text=[CT] ⚠️ Bot önceki sürüme döndürüldü" in sunucu.log.read_text() and sunucu.log.read_text().count("TG:") == 1 and "Sunucu güncellendi" not in sunucu.log.read_text()
 
 
 # ------------------------------------------------------------------------------------------------ kaynak sınırları ve haftalık bakım

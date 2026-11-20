@@ -30,7 +30,7 @@ def test_eski_surum_kadro_uygulanmaz_v2_uygulanir(tmp_path):
     assert m.saha.uyeler == {} and m._son_kadro is None
     bekle = kayitlar(tmp_path, "kadro_surum_bekleniyor")
     assert len(bekle) == 1 and bekle[0]["gerekli"] == "v2" and bekle[0]["gelen"] == "v1.1"          # günde bir kayıt
-    assert sum("yeni seçim yapısı bekleniyor" in x.lower() for x in tgp.gonderilen) == 1
+    assert sum("yeni seçim yapısı bekleniyor" in x.lower() for x in tgp.gonderilen) == 0          # Telegram sadeleştirme (20.11): rutin bilgi gitmez (kayıt var)
     yeni = {**eski, "radar_surum": "v2"}
     m._kadro_uygula((True, yeni), saat())
     assert len(m.saha.uyeler) == 5 and m._son_kadro is yeni
