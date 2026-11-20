@@ -276,6 +276,30 @@ def main(argv: list[str] | None = None) -> int:
     acik_satir = [s for s in satirlar if s["acik"]]
     pano_fark = [s for s in acik_satir if s["pano"] != "var, aynı"]
 
+    # A-5: pano KAPANAN satırları ↔ log azalt/kapat emirleri (satır bazında)
+    log_kap = [k for k in kayitlar if k.get("olay") == "emir" and k.get("reduce_only") and k.get("durum") in ("dolu", "kismi") and k.get("pnl_usd") is not None]
+    log_ix = {(k["adres"], k["coin"], int(k["zaman_ms"])): k for k in log_kap}
+    pano_ix = {(r["adres"], r["coin"], r["ms"]): r for r in kapanan_pano}
+    ortak = sorted(set(log_ix) & set(pano_ix))
+    pano_fazla = [pano_ix[k] for k in sorted(set(pano_ix) - set(log_ix))]
+    log_eksik = [log_ix[k] for k in sorted(set(log_ix) - set(pano_ix))]
+    kz_uyus = []
+    for kk in ortak:
+        r, k = pano_ix[kk], log_ix[kk]
+        log_net = round(float(k["pnl_usd"]) - float(k.get("ucret") or 0.0), 2)
+        log_yon = "uzun" if k.get("yon") == "A" else "kısa"
+        if round(r["net"], 2) != log_net or r["yon"] != log_yon or r["coin"] != k["coin"]:
+            kz_uyus.append((kk, round(r["net"], 2), log_net, r["yon"], log_yon))
+    tasf_log = [t for t in tasfiye]
+    for s_ in satirlar:                       # kapalı pozisyonlar: kapanış satırı panoda var mı (aynı trader, coin, kapanış anı)
+        if s_["acik"]:
+            continue
+        if s_["kapanis"] == "tasfiye":
+            s_["pano"] = "YOK (tasfiye, KAPANAN'da yok)"
+            continue
+        r = pano_ix.get((s_["adres"], s_["coin"], int(s_["kapanis_ms"])))
+        s_["pano"] = "YOK" if r is None else "var, aynı (satır K/Z A-5)"
+
     # ---------- Markdown ----------
     L: list[str] = []
     a = L.append
@@ -302,7 +326,7 @@ def main(argv: list[str] | None = None) -> int:
         if s["kapanis"] == "tasfiye":
             kapanis_txt += " (tasfiye)"
         a(f"| {i} | P{i:03d} | {ADRES_KISA(s['adres'])} | {s['coin']} | {s['yon']} | {tsi(s['acilis_ms'])} | {kapanis_txt} | {fiyat(s['giris'])} | {fiyat(s['cikis'])} | "
-          f"{tr_say(kz, 2, True)} | {'evet, maks ' + tr_say(s['maks_kaldirac'], 0) + 'x' if s['k67'] else '—'} | {s['pano'] if s['acik'] else '— (kapalı)'} | {s['tg']} |")
+          f"{tr_say(kz, 2, True)} | {'evet, maks ' + tr_say(s['maks_kaldirac'], 0) + 'x' if s['k67'] else '—'} | {s['pano']} | {s['tg']} |")
     a("")
     a("Açıklamalar: giriş/çıkış = dolum fiyatı (ağırlıklı ortalama, $/coin). Çıkış tasfiyelerde tasfiye fiyatıdır. \"panoda\" = pano açık pozisyon listesiyle (`ozet.acik`, pano HTML şeridi) aynı yön, miktar ve giriş fiyatı.")
     a("")
@@ -331,6 +355,18 @@ def main(argv: list[str] | None = None) -> int:
     for d in duz:
         a(f"- kapanis_duzeltme: {ADRES_KISA(d['adres'])}, {d['coin']}, sz {d.get('sz')}, neden {d.get('neden')}.")
     a("")
+    a("### A-5) Pano KAPANAN satırları ↔ log azalt/kapat emirleri (satır bazında)")
+    a("")
+    a(f"Eşleşme anahtarı: trader, coin, zaman (ms). Pano satırı: {len(kapanan_pano)}. Log kapanış dolumu (reduce-only, dolu/kısmi, pnl kayıtlı): {len(log_kap)}. Eşleşen: {len(ortak)}.")
+    a(f"- Panoda var, logda yok: **{len(pano_fazla)}**" + (" " + "; ".join(f"{ADRES_KISA(r['adres'])} {r['coin']} {tsi(r['ms'])}" for r in pano_fazla) if pano_fazla else ""))
+    a(f"- Logda var, panoda yok: **{len(log_eksik)}**")
+    for k in log_eksik:
+        a(f"  - {ADRES_KISA(k['adres'])} {k['coin']} {k.get('eylem')} {'uzun' if k.get('yon') == 'A' else 'kısa'} {tsi(int(k['zaman_ms']))} net {tr_say(float(k['pnl_usd']) - float(k.get('ucret') or 0), 2, True)} $ (neden: pano yalnız `reduce_only` ve pnl'li satırları alır; buradaki satır eksik)")
+    a(f"- Eşleşenlerde coin/yön/K/Z (2 ondalık) farkı: **{len(kz_uyus)}**" + ("" if not kz_uyus else ""))
+    for kk, pn, ln, py, ly in kz_uyus:
+        a(f"  - {ADRES_KISA(kk[0])} {kk[1]} {tsi(kk[2])}: pano {pn} / log {ln}, yön pano {py} / log {ly}")
+    a(f"- Tasfiye (log, pano KAPANAN listesinde yok): **{len(tasf_log)}** — VVV, −14,97 $.")
+    a("")
     a("### A-4) Açık pozisyon sayımı")
     a("")
     a(f"- Motor (`durum/hesap.json` poz): **{len(motor_poz)}**")
@@ -338,7 +374,7 @@ def main(argv: list[str] | None = None) -> int:
     a(f"- Pano HTML şeridi (\"Açık poz.\"): **{pano_strip if pano_strip is not None else '—'}**")
     a(f"- Pano OZET.md tablosu satırı: **{pano_md_say}**")
     sifir_say = sum(1 for s in satirlar if s["sifir"])
-    a(f"- Pano KAPANAN sekmesi (`copytrade.canli.pano.kapanan_islemler`): {kapanan_pano_ozet['poz']} tamamen kapanan pozisyon ({kapanan_pano_ozet['kapanis']} kapanış dolumu). Log: {sum(1 for s in satirlar if s['kapanis'] == 'kapat') - sifir_say} `kapat` emriyle, {sifir_say} azaltmayla sıfırlanarak kapanmış (pano bunları kapanan saymaz; motor poz sıfır, uyuşmazlık değil).")
+    a(f"- Pano KAPANAN sekmesi: {kapanan_pano_ozet['poz']} pozisyon ({kapanan_pano_ozet['kapanis']} satır). Log: {sum(1 for s in satirlar if s['kapanis'] == 'kapat') - sifir_say} `kapat` + {sifir_say} azaltmayla sıfırlanan + {sum(1 for s in satirlar if s['kapanis'] == 'tasfiye')} tasfiye = {sum(1 for s in satirlar if s['kapanis'] != 'açık')} kapanmış pozisyon. **UYUŞMAZLIK**: pano kapanış pozisyon sayısı log'dan {sum(1 for s in satirlar if s['kapanis'] != 'açık') - kapanan_pano_ozet['poz']} eksik (azaltmayla sıfırlananlar ve tasfiye pano pozisyon sayısında yok; pano düzeltmesi ayrı PR). Satır bazlı karşılaştırma: bölüm A-5.")
     a(f"- Pano açık satır karşılaştırması: aynı {len(acik_satir) - len(pano_fark)} / farklı {len(pano_fark)}")
     a("")
     a("## B) Toplamlar")
