@@ -1393,3 +1393,13 @@
 {"zaman_ms":1795155419169,"olay":"kacan_telafi_atlandi","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"HYPE","neden":"kayma_fazla","kayma":0.047847,"trader_giris":68.74,"mark":65.451}
 {"zaman_ms":1795155419170,"olay":"kacan_telafi_atlandi","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"ZEC","neden":"kayma_fazla","kayma":0.087771,"trader_giris":932.896,"mark":851.015}
 {"zaman_ms":1795155584864,"olay":"tur","ozsermaye_usd":9982.0255}
+{"zaman_ms":1795156000362,"olay":"kacan_telafi_atlandi","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"LIT","neden":"pozisyon_eski"}
+{"zaman_ms":1795156000362,"olay":"kacan_telafi_atlandi","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"xyz:SP500","neden":"filtre_atlamisti:slot_tavani"}
+{"zaman_ms":1795156003592,"olay":"kacan_telafi_atlandi","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","coin":"ATOM","neden":"pozisyon_eski"}
+{"zaman_ms":1795156003848,"olay":"kacan_telafi_atlandi","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","coin":"MON","neden":"pozisyon_eski"}
+{"zaman_ms":1795156022055,"olay":"karsi_olgu_kapandi","coin":"ETH","neden":"ters_netlesme","yon":"A","hayali_usd":419.7,"pnl_usd":4.2453,"sure_sa":7.93,"kapanis":"trader_kapadi"}
+{"zaman_ms":1795156212370,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"haber_ters","trader_dolum_ms":1795156211972,"gorme_ms":1795156212368,"yas_ms":398}
+{"zaman_ms":1795156453161,"olay":"tur","ozsermaye_usd":9988.41}
+{"zaman_ms":1795156608722,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"ETH","neden":"pozisyon_eski"}
+{"zaman_ms":1795156609651,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"SOL","neden":"pozisyon_eski"}
+{"zaman_ms":1795156610147,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"BNB","neden":"pozisyon_eski"}
