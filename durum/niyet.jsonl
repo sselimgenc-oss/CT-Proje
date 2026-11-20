@@ -482,3 +482,5 @@
 {"t":"sonuc","cloid":"0xf653909a23e911e04a5489d083321c70","durum":"dolu","ms":1795144023839,"sz":1.1371790659812078,"px":65.56,"ucret":0.03354905680457759}
 {"t":"niyet","kimlik":"kapat:0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda:HYPE:1795144023876:0:tam_kapanis","eylem":"kapat","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","coin":"HYPE","yon":"B","usd":74.545439,"reduce_only":true,"cloid":"0xb926f3641904b394160de791e52c0064","ms":1795144023876}
 {"t":"sonuc","cloid":"0xb926f3641904b394160de791e52c0064","durum":"dolu","ms":1795144024138,"sz":1.0815831073508897,"px":65.56,"ucret":0.031908864833065945}
+{"t":"niyet","kimlik":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:959446836199899","eylem":"ac","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"xyz:SOXL","yon":"B","usd":11.861352,"reduce_only":false,"cloid":"0x0d60e474c83c0a33c59ed93f606ace42","ms":1795152870008}
+{"t":"sonuc","cloid":"0x0d60e474c83c0a33c59ed93f606ace42","durum":"dolu","ms":1795152870243,"sz":0.28240642034769947,"px":42.001,"ucret":0.005337608427460676}
