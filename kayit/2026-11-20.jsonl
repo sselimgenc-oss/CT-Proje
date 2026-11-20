@@ -8270,3 +8270,6 @@
 {"zaman_ms":1795209124259,"olay":"tg_mesaj","tur":"islem_satiri","anahtar":null,"seviye":"INFO","sessiz":false,"metin":"🔻 xyz:SP500 kapandı · trader Antares-3D (sanal)\n−0,43 $ (−%0,03) · Neden: trader kapattı\nToplam tutar 1.363 $ (4 artırma)","gonderildi":false,"bastirildi":true,"adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"xyz:SP500","yon":"A","pnl":-0.432708,"neden":"tam_kapanis"}
 {"zaman_ms":1795209280642,"olay":"tur","ozsermaye_usd":9849.3237}
 {"zaman_ms":1795209555488,"olay":"emir_yok","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"BTC","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795209555165,"gorme_ms":1795209555487,"yas_ms":323}
+{"zaman_ms":1795209574086,"olay":"karsi_olgu_kapandi","coin":"BTC","neden":"rejim_ters","yon":"B","hayali_usd":635.58,"pnl_usd":1.0812,"sure_sa":2.1,"kapanis":"trader_kapadi"}
+{"zaman_ms":1795210013268,"olay":"kacan_telafi_atlandi","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"BTC","neden":"filtre_atlamisti:ters_netlesme"}
+{"zaman_ms":1795210130999,"olay":"tur","ozsermaye_usd":9832.1308}
