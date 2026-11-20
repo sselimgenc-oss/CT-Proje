@@ -44,6 +44,7 @@ class Dolum:
     durum: str = "dolmadi"        # dolu | kismi | dolmadi | red | belirsiz (G-1: emir gönderildi, yanıt alınamadı; sonucu `orderStatus(cloid)` belirler)
     neden: str = ""
     ham: dict = field(default_factory=dict)
+    ek: dict | None = None        # K-81: yürütücüye özgü ek kayıt alanları (Binance kâğıt: yurutucu, sembol, bid/ask, dolum fiyatı...); motor `emir` kaydına olduğu gibi ekler. HL yürütücüleri None bırakır
     defter: dict | None = None    # S-12: gerçek kipte emir anı l2Book (ilk 10 seviye, {"levels": [bids, asks]}); gerçek ↔ sanal raporu aynı defterle sanal modeli koşar
 
     @property

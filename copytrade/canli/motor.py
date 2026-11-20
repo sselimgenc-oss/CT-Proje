@@ -575,6 +575,10 @@ class Motor:
         if self.kip == "gercek" and m and h is None:
             raise DurumBozuk("motor.json var, hesap.json yok: defter kaybı; elle mutabakat gerekli (hesap.json.bak varsa kontrol edin); motor başlamadı")
         self.hesap = Hesap.from_json(h, float(rules["canli_marj_kaldirac"])) if h else Hesap(self.kasa, float(rules["canli_marj_kaldirac"]))
+        mmr_ayar = getattr(yurutucu, "mmr_ayari", None)                           # K-81: Binance kâğıt yürütücüsü K-74 tasfiye/stop hesabına Binance bakım marjı (varsayılan + kademe) verir; HL yürütücülerinde yok
+        if mmr_ayar is not None:
+            ma = mmr_ayar()
+            self.hesap.mmr_varsayilan, self.hesap.mmr_kademe = float(ma["varsayilan"]), {k: [list(r) for r in v] for k, v in (ma.get("kademe") or {}).items()}
         self._hesap_yok = h is None                                                # hesap.json hiç yok: niyet dosyasındaki eski dolumlar yeni deftere OYNATILMAZ (hayalet pozisyon)
         self._oynat_gecis = h is not None and "son_niyet_cloid" not in h          # eski biçim hesap.json: geçiş (işaretçi = niyet dosyasının sonu, geçmiş oynatılmaz)
         self._kayitli_kip = str(m.get("kip") or "sanal")                           # G5: motor.json yoksa/eski biçimse (kip alanı yok) sanal sayılır
@@ -1276,6 +1280,9 @@ class Motor:
             kn = self.kaldirac_yetersiz(o.coin)                     # Denetim-4a: gerçek kipte HL azami kaldıracı < `canli_min_azami_kaldirac` → açılış/artırma yok (kapanış serbest)
             if kn:
                 return self._atla(o, adres, eylem, "atlandi", kn)
+            kapi = getattr(self.yurutucu, "acilis_kapisi", None)    # K-81: Binance kâğıt: eşleme yok / doğrulanmadı / işlem yok → açılış atlanır (neden kayıtlı, karşı-olgu ölçülür); HL yürütücülerinde kanca yok
+            if kapi is not None and (kn := kapi(o.coin)):
+                return self._atla(o, adres, eylem, "atlandi", kn)
         inen = adres in self.saha.inen and adres not in self.saha.uyeler
         if acilis and inen:
             return self._atla(o, adres, eylem, "engel", "inen_trader")
@@ -1600,9 +1607,9 @@ class Motor:
         self.sayac["emir"] += 1
         if not belirsiz:
             self.sayac[d.durum if d.durum in self.sayac else "red"] += 1
-        if d.neden == "min_nosyonel":
+        if d.neden in ("min_nosyonel", "binance_min_nosyonel"):
             self.sayac["min_nosyonel"] += 1
-            self._say_neden("min_nosyonel")
+            self._say_neden(d.neden)
         kayma_trader = None
         if d.px and o.px:
             ham = (d.px - o.px) / o.px
@@ -1643,7 +1650,8 @@ class Motor:
                     "gec_goruldu": gec, "kaynak": o.kaynak, "bant": bant, "cloid": cloid, "giris_ctx": onceki_ctx, "rejim": rejim.coin_rejimi(self.rejim_anlik, o.coin, self.saat_ms()), **haber.emir_alanlari(self.haber_anlik, o.coin, self.saat_ms()), "funding_usd": round(self.hesap.funding.get(adres, 0.0), 6),
                     **({"defter": d.defter} if self.kip == "gercek" and getattr(d, "defter", None) else {}),       # S-12: emir anı defteri (yalnız gerçek kip; gercek_sanal_karsilastir)
                     **({"ham": maskele(json.dumps(d.ham, ensure_ascii=False, default=str))[:300]} if d.durum in ("red", "belirsiz") and d.ham else {}),       # G-19: red → HL ham yanıtı (300 karakter)
-                    **{k: (round(v, 8) if isinstance(v, float) else v) for k, v in (self._boyut_girdi or {}).items()}})
+                    **{k: (round(v, 8) if isinstance(v, float) else v) for k, v in (self._boyut_girdi or {}).items()},
+                    **(getattr(d, "ek", None) or {})})                  # K-81: yürütücü alanları (Binance kâğıt: yurutucu="binance_kagit", sembol, bid/ask, Binance dolum fiyatı); HL'de boş
         self._boyut_girdi = None
         self._ozet_emir += 1
         e = {"adres": adres, "coin": o.coin, "yon": yon, "usd": d.usd_dolan or usd, "px": d.px, "kayma": kayma_trader, "durum": d.durum, "eylem": eylem, "neden": d.neden}
@@ -2702,7 +2710,8 @@ class Motor:
                 toplam += f
         self.son_funding_saat = saat
         self._funding_bekleyen = []
-        self.kayit({"olay": "funding", "saat": saat, "saat_adet": n, "funding_usd": toplam, "toplam_funding_usd": self.hesap.funding_toplam()})
+        fk = getattr(getattr(self.post, "piyasa", None), "fonlama_kaynak", None)         # K-81: Binance kâğıt: oran kaynağı ("binance" | "hl_yedek" = Binance fonlaması okunamadı, HL oranı kullanıldı); HL sürecinde yok
+        self.kayit({"olay": "funding", "saat": saat, "saat_adet": n, "funding_usd": toplam, "toplam_funding_usd": self.hesap.funding_toplam(), **({"funding_kaynak": fk} if fk else {})})
         return toplam
 
     def funding_gercek_oku(self, simdi: int) -> list[dict] | None:
@@ -3034,10 +3043,23 @@ class Motor:
         kucult, self._kucult_tampon = self._kucult_tampon, []          # K-77: pencerede değişen trader küçültmeleri → özette TEK satır
         metin = tg.msg_sanal_saatlik(bas, simdi, round((simdi - bas) / DAKIKA) if zorla else dk, emirler, atlanan,
                                      (self.ozsermaye(), self.risk.gun_basi, self.kasa) if emirler else None, islem, adresler, "", tg.kucult_satiri(kucult), self.kip)
+        bk = self._binance_satiri(simdi)                                 # K-81: Binance kâğıt süreci kuruluysa saatlik özete TEK satır (ayrı mesaj yok); hata özeti engellemez
+        if metin and bk:
+            metin += "\n" + bk
         if metin:
             self.tg.gonder(metin, tur="islem_ozeti", alan={"emir": len(emirler), "kapanan": sum(1 for e in emirler if e.get("kapandi")), "net_kz": round(tg.net_kz(emirler), 6)})
         elif not zorla:                                                 # emirsiz "sistem çalışıyor" mesajı bastırılır; kayda `tg_bastirildi` yazılır
             self.tg.gonder(tg.msg_sanal_saatlik_bos(bas, simdi, dk, atlanan, (self.ozsermaye(), self.risk.gun_basi, self.kasa), islem, adresler, "", tg.kucult_satiri(kucult)), tur="saatlik_bos")
+
+    def _binance_satiri(self, simdi: int) -> str | None:
+        """K-81: HL sanal motorunun saatlik özetine eklenen "Binance kâğıt: ..." satırı (`durum/binance_kagit/ozet.json`). Binance sürecinin kendisinde / dosya yokken None."""
+        if self.kip != "sanal" or hasattr(self.yurutucu, "acilis_kapisi"):
+            return None
+        try:
+            from copytrade.canli import binance_kagit
+            return binance_kagit.ozet_satiri(self.durum_dizin, simdi)
+        except Exception:                                              # noqa: BLE001 - yalnız bilgi satırı
+            return None
 
     def _tasfiye(self, simdi: int) -> None:
         if self.kip != "sanal":
@@ -3272,7 +3294,8 @@ class Motor:
         if not self.rules.get("dinamik_stop") or giris <= 0:
             return ust
         azami = self.hesap.maks_kaldirac.get(coin) or self._hl_maks_kaldirac.get(coin)
-        return dinamik_stop_orani(uzun, giris, kaldirac or self.hesap.kaldirac, azami, ust, pay)
+        mmr, cum_oran = self.hesap.mmr_cum(coin, giris)          # K-81: Binance kâğıtta kademe/varsayılan bakım marjı (HL sürecinde (None, 0) → eski formül aynen)
+        return dinamik_stop_orani(uzun, giris, kaldirac or self.hesap.kaldirac, azami, ust, pay, mmr=mmr, cum_oran=cum_oran)
 
     def _felaket_stop(self, simdi: int) -> None:
         """K-62 felaket stopu: pozisyon ortalama girişten `canli_felaket_stop_oran` kadar aleyhe gittiyse (mark ile) o pozisyon kapanır. Trader sahada kalır (slot kuralı ayrıca işler).
@@ -3746,7 +3769,8 @@ class Motor:
                 mk = self.marks.get(coin) or p.giris
                 acik.append({"adres": adres, "coin": coin, "sz": p.sz, "giris": p.giris, "mark": mk, "usd": abs(p.sz) * mk, "kz_usd": p.sz * (mk - p.giris)})
         stats = getattr(self.post, "stats", None) or {}
-        return {"acik": acik, "rest_istek": stats.get("istek"), "rest_429": stats.get("429"), "ogrenme": self.ogrenme.pano(), "duygu": haber.duygu_ozet(self.haber_anlik, self.saat_ms())}
+        yo = getattr(self.yurutucu, "ozet", None)                      # K-81: yürütücü özeti (Binance kâğıt: dolum/kapanan/kayma/erişim); HL yürütücülerinde yok
+        return {"acik": acik, "rest_istek": stats.get("istek"), "rest_429": stats.get("429"), "ogrenme": self.ogrenme.pano(), "duygu": haber.duygu_ozet(self.haber_anlik, self.saat_ms()), **(yo() if yo is not None else {})}
 
     def _kucult_aktif_satir(self) -> str:
         """K-77: günlük rapora TEK satır: şu an küçültülmüş traderlar (yoksa '')."""
@@ -4956,7 +4980,7 @@ def acilis_hl_denetle(rules: dict, kip: str, post: Callable[[dict], Any], sk: di
 
 
 def _motor_calistir(args: argparse.Namespace, rules: dict, kip: str, post: Callable[[dict], Any], kadro_oku: Callable[[], dict | None], tgram: tg.Telegram, sk: dict,
-                    post_hizli: Callable[[dict], Any] | None = None) -> int:
+                    post_hizli: Callable[[dict], Any] | None = None, yur_fabrika: Callable[[], Yurutucu] | None = None) -> int:
     """Açılış + ana döngü. Çıkış kodları: 0 temiz; 1 beklenmedik (systemd yeniden başlatır); 3 kalıcı (yeniden başlatılmaz); 75 geçici HL/ağ (yeniden başlatılır) — G-15."""
     post_hizli = post_hizli or post
 
@@ -4981,7 +5005,8 @@ def _motor_calistir(args: argparse.Namespace, rules: dict, kip: str, post: Calla
     except ValueError as hata:                                          # D-9: HL ayrıştırma vb. beklenmeyen ValueError (geçici HL bozukluğu servisi kalıcı durdurmasın): geçici (75)
         return _baslamadi(tgram, HlOkunamadi(f"açılışta beklenmeyen ayrıştırma hatası ({type(hata).__name__})"), CIKIS_GECICI)
     try:
-        yur: Yurutucu = acilis_yeniden_dene(lambda: gercek_yurutucu_olustur(post_hizli, rules), bildir=bildir) if kip == "gercek" else SanalYurutucu(post_hizli, rules)
+        yur: Yurutucu = (yur_fabrika() if yur_fabrika is not None                # K-81: Binance kâğıt süreci (--borsa binance_kagit): BinanceKagitYurutucu
+                         else acilis_yeniden_dene(lambda: gercek_yurutucu_olustur(post_hizli, rules), bildir=bildir) if kip == "gercek" else SanalYurutucu(post_hizli, rules))
     except HlOkunamadi as hata:
         return _baslamadi(tgram, hata, CIKIS_GECICI)
     except AnahtarYok as hata:
@@ -5004,6 +5029,9 @@ def _motor_calistir(args: argparse.Namespace, rules: dict, kip: str, post: Calla
         return _baslamadi(tgram, hata, CIKIS_KALICI)
     except _GECICI_HATALAR as hata:                                 # açılış okumalarında ağ hatası: geçici (systemd yeniden başlatır)
         return _baslamadi(tgram, HlOkunamadi(f"açılışta HL okunamadı ({type(hata).__name__})"), CIKIS_GECICI)
+    if yur_fabrika is not None:                                         # K-81: çalışırken Binance erişimi kesilirse TEK ⚠️ + temiz durma (çıkış 4); HL motoru ayrı süreç, etkilenmez
+        from copytrade.canli import binance_kagit
+        binance_kagit.Bekci(post.piyasa, motor, binance_kagit.uyari_gonder, float(rules.get("binance_kagit_erisim_kesinti_sn", 180))).start()      # type: ignore[attr-defined]
     ozet = asyncio.run(calis(motor, args.sure_sn))
     print(json.dumps(ozet, ensure_ascii=False, indent=1, default=str))
     return int(getattr(motor, "cikis_kodu", 0))           # G-12b: görev beklenmedik bittiyse 1 (systemd yeniden başlatır)
@@ -5020,14 +5048,21 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--kadro-dali", default=None, help="kadro.json veri dalı (varsayılan canli_kadro_dali; dal doğrulamasında radar-deneme)")
     ap.add_argument("--vardiya", default="yerel")
     ap.add_argument("--devral-vardiya", default="", help="iş akışının BİTMİŞ doğruladığı önceki vardiya kimliği: kilit sahibi bu ise (bırakılmamış olsa da) kilit devralınır; boş = devralma yok")
+    ap.add_argument("--borsa", choices=["hl", "binance_kagit"], default="hl", help="K-81: fiyat/dolum kaynağı. hl (varsayılan, değişmedi) | binance_kagit (YALNIZ sanal kip: Binance public verisiyle ayrı kâğıt kasası; ayrı --durum-dizin ile)")
     ap.add_argument("--sanal-kasa-usd", type=float, default=None, help="yalnız sanal kip: kasa $ (0 < kasa <= canli_sanal_kasa_ust_usd; K-66); varsayılan kurallar.yaml canli_kasa_usd. Ayrı --durum-dizin ile (G5)")
     args = ap.parse_args(argv)
     rules = load_rules()
-    tgram = tg.Telegram(arka_plan=not args.kontrol, sessiz_utc=(int(rules["canli_telegram_sessiz_bas_utc"]), int(rules["canli_telegram_sessiz_bit_utc"])))
+    if args.borsa == "binance_kagit":                                                  # K-81: ayrı işlem mesajı YOK (kanal kapalı, komut yok); HL motorunun saatlik özeti tek satır ekler
+        from copytrade.canli import binance_kagit
+        tgram = binance_kagit.sessiz_telegram(rules, not args.kontrol)
+    else:
+        tgram = tg.Telegram(arka_plan=not args.kontrol, sessiz_utc=(int(rules["canli_telegram_sessiz_bas_utc"]), int(rules["canli_telegram_sessiz_bit_utc"])))
     tgram.cift_dogrulama_sn = tg.DOGRULAMA_SN                                         # K-80: durum alarmları göndermeden önce koşul ikinci kez sınanır (+bağlam satırı)
     tgram.guncelleme_isareti = Path(args.durum_dizin) / "guncelleme_zamani"            # K-80: güncelleme betiği yazar; sonraki 15 dk yalnız ölümcül uyarılar gider
     try:
         kip = kip_belirle(rules, args.kip)
+        if args.borsa != "hl" and kip != "sanal":
+            raise KipHatasi("--borsa binance_kagit yalnız sanal kipte çalışır (gerçek emir yok)")           # K-81
         tgram.kip = kip                                    # S-22: açılış alarmlarında da kip etiketi
         if args.sanal_kasa_usd is not None:
             sanal_kasa_dogrula(rules, kip, args.sanal_kasa_usd)          # gerçek kipte / sınır dışında erken ret (kontrol dahil)
@@ -5040,6 +5075,7 @@ def main(argv: list[str] | None = None) -> int:
         return CIKIS_KALICI
     sk = {} if args.sanal_kasa_usd is None else {"sanal_kasa": args.sanal_kasa_usd}      # bayrak yoksa çağrılar birebir eskisi (1.000 $ seri değişmez)
     post = rest_post_olustur(rules)
+    post_hizli, yur_fabrika = rest_post_hizli_olustur(post), None
     kadro_oku = lambda: http_kadro_oku(rules, args.kadro_dali)          # noqa: E731
     if args.kontrol:
         rapor = kontrol(rules, kip, post, kadro_oku, tgram, durum_dizin=args.durum_dizin, **sk)
@@ -5051,6 +5087,12 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"kontrol raporu dosyaya yazılamadı ({type(hata).__name__}); stdout'a yazılıyor", file=sys.stderr)
         print(json.dumps(rapor, ensure_ascii=False, indent=1))
         return 0 if rapor["tamam"] else 1
+    if args.borsa == "binance_kagit":                                                  # K-81: fiyat/fonlama Binance, trader/kadro HL; erişim yoksa TEK ⚠️ ve çıkış 4 (HL motoru ayrı süreç)
+        from copytrade.canli import binance_kagit
+        post, post_hizli, yur_fabrika, _bp, ilk_kod = binance_kagit.hazirla(rules, post, post_hizli)
+        if ilk_kod:
+            print("BAŞLAMADI: Binance erişimi yok (403/451); Binance kâğıt katmanı başlamadı", file=sys.stderr)
+            return ilk_kod
     kilit_fd: int | None = None
     hesap_fd: int | None = None
     try:
@@ -5064,7 +5106,7 @@ def main(argv: list[str] | None = None) -> int:
             except KipHatasi as hata:
                 return _baslamadi(tgram, hata, CIKIS_KALICI)
         try:
-            return _motor_calistir(args, rules, kip, post, kadro_oku, tgram, sk, rest_post_hizli_olustur(post))
+            return _motor_calistir(args, rules, kip, post, kadro_oku, tgram, sk, post_hizli, yur_fabrika)
         except Exception as hata:                                       # noqa: BLE001 - beklenmedik: iz günlüğe, kısa alarm (yalnız tür adı), 1 (systemd yeniden başlatır)
             import traceback
             traceback.print_exc()
