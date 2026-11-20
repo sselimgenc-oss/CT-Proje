@@ -1,0 +1,40 @@
+# HL coin -> Binance USDⓈ-M sembol eşlemesi (K-81, Aşama A Binance kâğıt). Okuyucu: copytrade/canli/binance_eslesme.py. Kaynak: docs/binance-arastirma.md §1/§1b, docs/binance-plan.md §3.
+# Alanlar: binance (sembol | null = Binance'te karşılık yok), carpan (HL fiyatı = Binance fiyatı × carpan; HL miktarı = Binance miktarı / carpan; kPEPE <-> 1000PEPE aynı birimdir: 1),
+#          dogrulandi (dayanak varlık + çarpan teyitli mi; false → AÇILIŞ atlanır: binance_eslesme_dogrulanmadi; kapanış/azaltma hep serbest), tur (kripto | tradfi | preipo).
+# Bu ortamdan Binance okunamadığı için "dogrulandi" yalnız arastirma §1/§1b ve copytrade/olcum/fiyat_farki.py HIP3_ESLEME ile tutarlıdır; sembolün BUGÜN TRADING olup olmadığı çalışma anında
+# exchangeInfo ile denetlenir (binance_islem_yok). Elle onaylı tablo: otomatik tahmin yalnız ana dex'te "COIN + USDT" (aşağıdaki ana_dex) ve yine exchangeInfo'da bulunması şartıyla.
+surum: 1
+guncelleme: "2026-11-20"
+ana_dex:
+  otomatik: true          # tabloda olmayan ana dex coini (örn. BTC) -> BTCUSDT (carpan 1, dogrulandi true, tur kripto). `kXXX`, `@N`, `A/B` ve `dex:COIN` bu kurala GİRMEZ
+  sonek: USDT
+satirlar:
+  # --- çarpanlı (HL 'k' = 1000'lik) ---
+  kPEPE:  {binance: 1000PEPEUSDT,  carpan: 1, dogrulandi: true,  tur: kripto}
+  kSHIB:  {binance: 1000SHIBUSDT,  carpan: 1, dogrulandi: true,  tur: kripto}
+  kBONK:  {binance: 1000BONKUSDT,  carpan: 1, dogrulandi: true,  tur: kripto}
+  kFLOKI: {binance: 1000FLOKIUSDT, carpan: 1, dogrulandi: true,  tur: kripto}
+  kLUNC:  {binance: 1000LUNCUSDT,  carpan: 1, dogrulandi: false, tur: kripto}     # çarpan her coinde aynı olmayabilir (plan §3): exchangeInfo ile teyit edilene dek atlanır
+  kDOGS:  {binance: DOGSUSDT,      carpan: 1000, dogrulandi: false, tur: kripto}  # HL k = 1000 DOGS, Binance DOGSUSDT birim fiyat olabilir: doğrulanmadı
+  kNEIRO: {binance: 1000NEIROCTOUSDT, carpan: 1, dogrulandi: false, tur: kripto}  # doğrulanmadı
+  # --- HIP-3 -> Binance TradFi perp (arastirma §1b); io: ve xyz: aynı sembole gider (tek net pozisyon: ters_netlesme mantığı HL tarafında zaten coin başına) ---
+  "xyz:NVDA":  {binance: NVDAUSDT,  carpan: 1, dogrulandi: true,  tur: tradfi}
+  "io:NVDA":   {binance: NVDAUSDT,  carpan: 1, dogrulandi: true,  tur: tradfi}
+  "xyz:GOOGL": {binance: GOOGLUSDT, carpan: 1, dogrulandi: true,  tur: tradfi}
+  "xyz:META":  {binance: METAUSDT,  carpan: 1, dogrulandi: true,  tur: tradfi}
+  "xyz:MSFT":  {binance: MSFTUSDT,  carpan: 1, dogrulandi: true,  tur: tradfi}
+  "xyz:AMZN":  {binance: AMZNUSDT,  carpan: 1, dogrulandi: true,  tur: tradfi}
+  "xyz:MU":    {binance: MUUSDT,    carpan: 1, dogrulandi: true,  tur: tradfi}
+  "xyz:INTC":  {binance: INTCUSDT,  carpan: 1, dogrulandi: true,  tur: tradfi}
+  "xyz:PLTR":  {binance: PLTRUSDT,  carpan: 1, dogrulandi: true,  tur: tradfi}
+  "xyz:AMD":   {binance: AMDUSDT,   carpan: 1, dogrulandi: true,  tur: tradfi}
+  "xyz:SNDK":  {binance: SNDKUSDT,  carpan: 1, dogrulandi: false, tur: tradfi}    # bir haber SANDUSDT diyor; döküm SNDKUSDT
+  "io:SNDK":   {binance: SNDKUSDT,  carpan: 1, dogrulandi: false, tur: tradfi}
+  "xyz:SPCX":  {binance: SPCXUSDT,  carpan: 1, dogrulandi: false, tur: preipo}    # SpaceX pre-IPO; HL tarafı bire bir mi doğrulanmadı
+  "xyz:BE":    {binance: BEUSDT,    carpan: 1, dogrulandi: false, tur: tradfi}    # dayanak (Bloom Energy) eşleşmesi emin değil
+  "xyz:DRAM":  {binance: DRAMUSDT,  carpan: 1, dogrulandi: false, tur: tradfi}    # dayanak emin değil
+  "xyz:SOXL":  {binance: SOXLUSDT,  carpan: 1, dogrulandi: false, tur: tradfi}    # 3x ETF; aynı ürün mü doğrulanmadı
+  "xyz:ANT":   {binance: ANTHROPICUSDT, carpan: 1, dogrulandi: false, tur: preipo}  # Anthropic pre-IPO; sembol doğrulanmadı
+  "xyz:XYZ100": {binance: null, carpan: 1, dogrulandi: false, tur: tradfi}        # Binance'te karşılık yok / emin değil
+  # --- Binance'te karşılığı olmayanlar ---
+  PURR:   {binance: null, carpan: 1, dogrulandi: false, tur: kripto}
