@@ -1,15 +1,15 @@
-# CT kural maliyeti (son 7 gün, 2026-11-20T01:03:37Z)
+# CT kural maliyeti (son 7 gün, 2026-11-20T02:03:45Z)
 
-**Slot tavanı:** 6425 olay, 5 trader; karşı-olgu toplam -2.19 $ (kapanan 0.68, açık -2.86; hayali nosyonel 651.27 $).
+**Slot tavanı:** 6425 olay, 5 trader; karşı-olgu toplam -8.34 $ (kapanan 0.68, açık -9.01; hayali nosyonel 651.27 $).
 
 | Neden | Olay | Trader | Karşı-olgu kapanan $ | Açık anlık $ | Toplam $ | Hayali nosyonel $ |
 |---|---:|---:|---:|---:|---:|---:|
-| bant_ici | 7947 | 8 | 0.00 (0) | 0.00 (0) | 0.00 | 0.00 |
-| slot_tavani | 6425 | 5 | 0.68 (2) | -2.86 (10) | -2.19 | 651.27 |
-| hip3_atlandi | 4130 | 6 | -7.87 (3) | -13.46 (19) | -21.33 | 1085.16 |
-| min_emir_atlandi | 2625 | 5 | 0.00 (0) | -0.02 (1) | -0.02 | 0.93 |
-| ters_netlesme | 1127 | 7 | 0.02 (1) | 0.19 (5) | 0.21 | 762.57 |
-| duygu_ters | 78 | 1 | 0.00 (0) | 0.00 (1) | 0.00 | 1.43 |
+| bant_ici | 7957 | 8 | 0.00 (0) | 0.00 (0) | 0.00 | 0.00 |
+| slot_tavani | 6425 | 5 | 0.68 (2) | -9.01 (10) | -8.34 | 651.27 |
+| hip3_atlandi | 4130 | 6 | -7.87 (3) | -14.71 (19) | -22.58 | 1085.16 |
+| min_emir_atlandi | 2627 | 5 | 0.00 (0) | -0.04 (2) | -0.04 | 1.99 |
+| ters_netlesme | 1155 | 7 | 0.02 (1) | 5.92 (5) | 5.94 | 762.57 |
+| duygu_ters | 80 | 2 | 0.00 (0) | 0.04 (2) | 0.04 | 15.15 |
 | spot_atlandi | 14 | 1 | 0.00 (0) | 0.00 (0) | 0.00 | 0.00 |
 | gec_acilis | 8 | 1 | 0.00 (0) | 0.00 (0) | 0.00 | 0.00 |
 | trader_hesap_yok | 3 | 1 | 0.00 (0) | 0.00 (0) | 0.00 | 0.00 |

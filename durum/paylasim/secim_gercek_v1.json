@@ -1,7 +1,7 @@
 {
  "sema": "ct.secim_gercek.v1",
  "proje": "CT",
- "uretim": "2026-11-20T01:03:36Z",
+ "uretim": "2026-11-20T02:03:45Z",
  "degisken": "form_sirasi_gercek_pnl_spearman",
  "pencere_gun": 14,
  "gunler": [
@@ -57,7 +57,7 @@
    "kadro_gunu": "2026-11-20",
    "ilk11_n": 11,
    "kadro_n": 17,
-   "kopyalanan_n": 1,
+   "kopyalanan_n": 2,
    "yedek_n": 6,
    "durum": "az_trader"
   }
