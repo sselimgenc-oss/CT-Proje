@@ -398,20 +398,6 @@
     "sz": 1.5028485232632365,
     "zirve_kar": 0.006372702902030528
    },
-   "xyz:SNDK": {
-    "acilis_ms": 1795177380094,
-    "boyut_carpan": 1.0,
-    "giris": 87.47038189286836,
-    "giris_ctx": {
-     "duygu": "Extreme Fear",
-     "duygu_deger": 12,
-     "r1d": null,
-     "r4h": null
-    },
-    "kaldirac": 3.0,
-    "sz": 7.2378816564236965,
-    "zirve_kar": 0.018836297172562914
-   },
    "xyz:SOXL": {
     "acilis_ms": 1795191453767,
     "boyut_carpan": 1.0,
@@ -429,7 +415,7 @@
    "xyz:SPCX": {
     "acilis_ms": 1795191608438,
     "boyut_carpan": 1.0,
-    "giris": 129.5349769657742,
+    "giris": 129.39060465729776,
     "giris_ctx": {
      "duygu": "Extreme Fear",
      "duygu_deger": 12,
@@ -437,8 +423,8 @@
      "r4h": null
     },
     "kaldirac": 3.0,
-    "sz": 2.6654682708417257,
-    "zirve_kar": 0.005597121728885249
+    "sz": 5.1877660909614915,
+    "zirve_kar": 0.0
    }
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": {},
@@ -729,7 +715,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -4684.990583045316,
-    "zirve_kar": 0.0325085693843799
+    "zirve_kar": 0.035438175325276454
    },
    "kSHIB": {
     "acilis_ms": 1794829121462,
@@ -777,7 +763,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -1.5426735222499144,
-    "zirve_kar": 0.14298873189053818
+    "zirve_kar": 0.14462081917367184
    },
    "HYPE": {
     "acilis_ms": 1794980152307,
@@ -813,7 +799,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -2.573760317131464,
-    "zirve_kar": 0.08087889338477483
+    "zirve_kar": 0.08701891408676041
    },
    "XRP": {
     "acilis_ms": 1794980079736,
@@ -838,7 +824,7 @@
     },
     "kaldirac": 3.0,
     "sz": -0.032420236345455676,
-    "zirve_kar": 0.06571616430771363
+    "zirve_kar": 0.06812990967920544
    },
    "SOL": {
     "acilis_ms": 1795124117792,
@@ -859,7 +845,7 @@
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": {}
  },
  "realize": {
-  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": -30.84080515639608,
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": -83.64993090155976,
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": -24.684685047367633,
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 7.457037859730447,
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 97.4120820862675,
@@ -886,7 +872,7 @@
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 909.0909090909091,
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 909.0909090909091
  },
- "son_niyet_cloid": "0x2af72dc05a28eb5dd3266f628de7816a",
+ "son_niyet_cloid": "0xc8ba6bccfe4b3efb35a22c687e2d6726",
  "tasfiyeler": [
   {
    "adres": "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89",
@@ -898,7 +884,7 @@
   }
  ],
  "ucret": {
-  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 2.1769829524935305,
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 2.584803537689094,
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 2.2001317291267153,
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 1.3959954502531862,
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 1.5963080030477517,
