@@ -22,7 +22,7 @@ from pathlib import Path
 
 from copytrade import surum_karsilastirma
 from copytrade.canli.gunluk_ozet import alinmayan_neden, kopya_kalite
-from copytrade.canli.telegram import ATLA_TR, KACIRILAN_NEDENLER, kip_adi, tr_isaretli, tr_sayi, tr_yuzde
+from copytrade.canli.telegram import ATLA_TR, KACIRILAN_NEDENLER, fiyat, kip_adi, tr_isaretli, tr_sayi, tr_yuzde
 from copytrade.saglik import durum as saglik_durum, kontrol as saglik_kontrol
 
 SAAT_MS = 3_600_000
@@ -791,14 +791,6 @@ def _tyuz(v: float | None) -> str:
 
 def _renk(v: float | None) -> str:
     return "yok" if v is None else ("art" if v >= 0 else "eks")
-
-
-def fiyat(v: float | None) -> str:
-    """Fiyat kademeli ondalık: ≥ 1 $ → 2, < 1 $ → 4, < 0,01 $ → 6 (küçük coinlerde "0,08" hiçbir şey söylemez). Dolar K/Z her zaman 2 ondalık."""
-    if v is None:
-        return "—"
-    a = abs(float(v))
-    return tr_sayi(float(v), 2 if a >= 1 or a == 0 else (4 if a >= 0.01 else 6))
 
 
 def sure_metni(ms: float | None) -> str:

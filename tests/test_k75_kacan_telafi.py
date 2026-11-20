@@ -220,3 +220,113 @@ def test_yeniden_baslatmada_trader_kapattiysa_ilk_dakikada_kapanir(tmp_path):
     assert kayitlar(tmp_path, "senkron_kapanis")
     k = [e for e in kayitlar(tmp_path, "emir") if e["eylem"] == "kapat"]
     assert k and k[-1]["reduce_only"] is True and k[-1]["boyut_neden"] != "kacan_telafi"
+
+
+# ---------------------------------------------------------------- 429 düzeltmesi: önbellek, bütçe, geri çekilme
+class HLSay(HLGiris):
+    """`userFillsByTime` çağrılarını sayar; `hata429` doluysa o okumalarda RateLimitError fırlatır."""
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.dolum_okuma = 0
+        self.hata429 = False
+
+    def __call__(self, y):
+        if y["type"] == "userFillsByTime":
+            self.dolum_okuma += 1
+            if self.hata429:
+                raise mt.RateLimitError("429")
+        return super().__call__(y)
+
+
+def _say_hazir(tmp_path, pozlar=None, **kurallar):
+    pozlar = pozlar or {"BTC": 300.0}
+    hl = HLSay(pozlar={adr(1): pozlar}, giris={"BTC": 100.0, "ETH": 2000.0, "SOL": 100.0})
+    m, hl, saat, _ = kur(tmp_path, hl=hl, kurallar=kurallar)
+    hl.rest = {adr(1): [_acilis_dolumu(saat, coin=c) for c in pozlar]}
+    m.baslat()
+    for c in pozlar:                                                   # filtre atlaması: yaş okunur ama pozisyon AÇILMAZ (sayımlar sonraki senkronlarda da geçerli kalsın)
+        m.son_atla[f"{adr(1)}|{c}"] = ["rejim_ters", saat() + 10**9]
+    hl.dolum_okuma = 0
+    return m, hl, saat
+
+
+def test_yaml_telafi_429_varsayilanlari():
+    r = load_rules()
+    assert r["kacan_telafi_okuma_max"] == 3 and r["kacan_telafi_geri_cekil_sn"] == 300 and r["kacan_telafi_dolum_ttl_dk"] == 30
+
+
+def test_yas_onbellek_ikinci_senkronda_okuma_yok(tmp_path):
+    """Pozisyon açık kaldıkça yaş önbellekten gelir: ikinci senkronda ek dolum okuması YOK."""
+    m, hl, saat = _say_hazir(tmp_path)
+    m.kacan_telafi(saat())
+    ilk = hl.dolum_okuma
+    assert ilk == 1
+    for ms in (600_000, 1_200_000):
+        m.kacan_telafi(saat() + ms)
+    assert hl.dolum_okuma == ilk
+
+
+def test_yas_onbellek_pozisyon_kapaninca_gecersiz(tmp_path):
+    """Trader pozisyonu 0'a inince (ya da yön değiştirince) önbellek silinir: yeniden açılınca taze okunur."""
+    m, hl, saat = _say_hazir(tmp_path, kacan_telafi_dolum_ttl_dk=0)
+    m.kacan_telafi(saat())
+    assert hl.dolum_okuma == 1 and f"{adr(1)}|BTC" in m._telafi_yas
+    m.poz_tr[adr(1)]["BTC"] = 0.0
+    m.kacan_telafi(saat() + 1000)
+    assert f"{adr(1)}|BTC" not in m._telafi_yas
+    m.poz_tr[adr(1)]["BTC"] = -300.0                                   # ters yön
+    m.kacan_telafi(saat() + 2000)
+    assert hl.dolum_okuma == 2 and m._telafi_yas[f"{adr(1)}|BTC"][0] == -1
+
+
+def test_dolum_ttl_onbellegi_ayni_adreste_ikinci_coin_icin_okumaz(tmp_path):
+    """Aynı adresin iki coini: dolum geçmişi tek okunur (TTL içinde)."""
+    m, hl, saat = _say_hazir(tmp_path, pozlar={"BTC": 300.0, "ETH": 5.0})
+    m.kacan_telafi(saat())
+    assert hl.dolum_okuma == 1
+
+
+def test_senkron_basina_butce_3(tmp_path):
+    """Dolum önbelleği kapalı (TTL 0), 4 aday coin → senkron başına en çok 3 okuma (varsayılan); kalan sonraki senkronda okunur."""
+    m, hl, saat = _say_hazir(tmp_path, pozlar={"BTC": 300.0, "ETH": 5.0, "SOL": 300.0, "DOGE": 1000.0}, kacan_telafi_dolum_ttl_dk=0)
+    m.marks["DOGE"] = 0.1
+    hl.giris["DOGE"] = 0.1
+    m.kacan_telafi(saat())
+    assert hl.dolum_okuma == 3 and len(m._telafi_yas) == 3
+    m.kacan_telafi(saat() + 600_000)
+    assert hl.dolum_okuma == 4 and len(m._telafi_yas) == 4            # ilk üçü önbellekten; yalnız kalan 1 okundu
+
+
+def test_429_geri_cekil_300_sonra_600_basari_sifirlar(tmp_path):
+    """429 → telafi 300 sn durur (tek olay, aday başına değil); süre dolunca yine 429 → 600 sn; başarı sayacı sıfırlar (sonraki 429 yine 300)."""
+    m, hl, saat = _say_hazir(tmp_path, pozlar={"BTC": 300.0, "ETH": 5.0, "SOL": 300.0}, kacan_telafi_dolum_ttl_dk=0)
+    t0 = saat()
+    hl.hata429 = True
+    m.kacan_telafi(t0)
+    gc = kayitlar(tmp_path, "kacan_telafi_geri_cekil")
+    assert len(gc) == 1 and gc[0]["sn"] == 300 and hl.dolum_okuma == 1                  # sıkı döngü yok: ilk 429'da durdu
+    m.kacan_telafi(t0 + 299_000)
+    assert hl.dolum_okuma == 1 and len(kayitlar(tmp_path, "kacan_telafi_geri_cekil")) == 1   # geri çekilme sürüyor: okuma yok
+    m.kacan_telafi(t0 + 301_000)
+    gc = kayitlar(tmp_path, "kacan_telafi_geri_cekil")
+    assert len(gc) == 2 and gc[1]["sn"] == 600 and hl.dolum_okuma == 2
+    hl.hata429 = False
+    m.kacan_telafi(t0 + 301_000 + 599_000)
+    assert hl.dolum_okuma == 2                                                          # 600 sn dolmadı
+    m.kacan_telafi(t0 + 301_000 + 601_000)
+    assert hl.dolum_okuma > 2 and m._telafi_ardisik_429 == 0                            # başarı: sıfırlandı
+    hl.hata429 = True
+    m._telafi_yas.clear()
+    t1 = t0 + 2_000_000
+    m.kacan_telafi(t1)
+    assert kayitlar(tmp_path, "kacan_telafi_geri_cekil")[-1]["sn"] == 300
+
+
+def test_geri_cekil_tavan_1_saat(tmp_path):
+    m, hl, saat = _say_hazir(tmp_path, kacan_telafi_dolum_ttl_dk=0)
+    hl.hata429 = True
+    t = saat()
+    for _ in range(8):
+        t = max(t, m._telafi_geri_bit_ms) + 1
+        m.kacan_telafi(t)
+    assert [e["sn"] for e in kayitlar(tmp_path, "kacan_telafi_geri_cekil")][-1] == 3600
