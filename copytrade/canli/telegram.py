@@ -590,7 +590,7 @@ def msg_acildi(adres: str, coin: str, yon: str, giris: float, usd: float, stop: 
     stop_s = fiyat_tr(stop) if stop else "yok"
     kopya = f" (trader {fiyat_tr(trader_px)} · fark %{tr_sayi(abs(giris / trader_px - 1) * 100, 2)})" if trader_px else ""
     gec = f" · {gecikme_sn:.0f} sn geç" if gecikme_sn else ""
-    return (f"🟢 {coin} {'AL' if yon == 'B' else 'SAT'} açıldı · trader {kisa(adres)}{_kip_eki(kip)}\n"
+    return (f"{'🟢' if yon == 'B' else '🟠'} {coin} {'LONG' if yon == 'B' else 'SHORT'} açıldı · trader {kisa(adres)}{_kip_eki(kip)}\n"
             f"Giriş {fiyat_tr(giris)}{kopya} · Tutar {tr_sayi(usd, 0 if usd >= 100 else 1)} $ · Stop {stop_s}{gec}")
 
 

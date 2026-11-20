@@ -63,7 +63,7 @@ def test_kayma_icinde_acilir_boyut_normal_yolla_ve_kayit(tmp_path):
     assert e[0]["telafi_trader_giris"] == 100.0 and e[0]["telafi_kayma"] == 0.0 and e[0]["telafi_yas_sa"] == pytest.approx(3.0)
     assert m.hesap.sz(adr(1), "BTC") == pytest.approx(0.272727, abs=1e-5)
     assert any(x["karar"] == "emir" for x in kayitlar(tmp_path, "kacan_telafi"))
-    assert any(x.startswith("🟢 BTC AL açıldı") for x in m._tgp.gonderilen)
+    assert any(x.startswith("🟢 BTC LONG açıldı") for x in m._tgp.gonderilen)
 
 
 def test_sinirda_acar_yuzde_1_aleyhte(tmp_path):

@@ -186,7 +186,7 @@ def test_g18_gercek_kip_emir_mesajlari_tamponda_birlesir(tmp_path):
     once = len(tgp.gonderilen)
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     m.olay_isle(olay("a:2", adr(2), "ETH", "B", 300, 2000.0, 0.0, saat))
-    assert len(tgp.gonderilen) == once + 2 and tgp.gonderilen[once].startswith("🟢 BTC AL açıldı · trader ") and "Giriş 100,00 (trader 100,00 · fark %0,00) · Tutar 27,3 $ · Stop 80,00" in tgp.gonderilen[once]
+    assert len(tgp.gonderilen) == once + 2 and tgp.gonderilen[once].startswith("🟢 BTC LONG açıldı · trader ") and "Giriş 100,00 (trader 100,00 · fark %0,00) · Tutar 27,3 $ · Stop 80,00" in tgp.gonderilen[once]
     assert tgp.gonderilen[once + 1].startswith("ℹ️ Trader açtı, biz açamadık: emir reddedildi")                 # sessiz bilgi: gerçek hata/eksik kopya     # açıldı: anında, ayrı, 2 satır
     assert len(zamanlar) == 1 and zamanlar[0][0] == t.tampon_sn                                            # sorunlu (dolmayan) emir: tek zamanlayıcı, henüz mesaj yok
     zamanlar[0][1]()                                                                                       # 2,5 sn doldu

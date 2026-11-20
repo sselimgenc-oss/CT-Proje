@@ -220,7 +220,7 @@ def test_kapanan_satir_trader_adi_ve_fiyat_farki_ayrintisi():
     assert s["tr_giris"] == 100.0 and s["giris"] == 100.1 and abs(s["giris_fark"] - 0.001) < 1e-9 and abs(s["cikis_fark"] - 0.001) < 1e-9       # her ikisi bizim aleyhe %0,10
     assert s["ayrinti"] == "Zarar stopu (%20)" and s["neden"] == "Stop"
     h = sayfa(kayit=k)
-    assert "uzun · 0xa1a1a1…" in h and "Giriş (trader → biz)" in h and "%0,10 aleyhe" in h and "Zarar stopu (%20)" in h
+    assert "long · 0xa1a1a1…" in h and "Giriş (trader → biz)" in h and "%0,10 aleyhe" in h and "Zarar stopu (%20)" in h
     assert pano.kapanan_islemler([emir(SIMDI, neden="borsa_stop")])[0]["ayrinti"] == "Borsa stopu"
     assert pano.kapanan_islemler([emir(SIMDI, neden="trader_ters_senkron")])[0]["neden"] == "Trader yön değiştirdi"
     assert pano.kapanan_islemler([emir(SIMDI, neden="inen_ters")])[0]["neden"] == "Konsensüs döndü"

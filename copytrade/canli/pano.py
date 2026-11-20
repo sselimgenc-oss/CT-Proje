@@ -627,7 +627,7 @@ def _maruziyet_html(acik: list[dict], kasa: float, oz: float, kaldirac: float, c
         coin[q["coin"]] = coin.get(q["coin"], 0.0) + (q.get("usd") or 0)
     tavan = coin_tavan_oran * kasa if tavan_usd is None else float(tavan_usd)
     cubuk = "".join(f'<div class="s"><span>{esc(c)} · {esc(tl2(u))} / {esc(tl2(tavan))}</span><div class="ol"><i style="width:{min(u / tavan * 100, 100):.0f}%;background:{"#ff5d5d" if u > tavan else "var(--tu)"}"></i></div></div>' for c, u in sorted(coin.items(), key=lambda x: -x[1]) if tavan > 0)
-    return (f'<div class="iz2"><div class="h"><div class="hb">Net uzun / kısa</div><div class="hd">{esc(tl2(uzun - kisa_, True))}</div><div class="ha">uzun {esc(tl2(uzun))} · kısa {esc(tl2(kisa_))}</div></div>'
+    return (f'<div class="iz2"><div class="h"><div class="hb">Net long / short</div><div class="hd">{esc(tl2(uzun - kisa_, True))}</div><div class="ha">long {esc(tl2(uzun))} · short {esc(tl2(kisa_))}</div></div>'
             f'<div class="h"><div class="hb">Brüt / kasa</div><div class="hd">%{tr_sayi(brut / kasa * 100, 0) if kasa > 0 else "—"}</div><div class="ha">brüt {esc(tl2(brut))}</div></div>'
             f'<div class="h"><div class="hb">Teminat / özsermaye</div><div class="hd">%{tr_sayi(teminat / oz * 100, 0) if oz > 0 else "—"}</div><div class="ha">teminat ~{esc(tl2(teminat))} ({tr_sayi(kaldirac, 0)}x)</div></div></div>'
             f'<div class="pi"><div class="ha">Coin başına doluluk (tavan: kasanın %{tr_sayi(tavan / kasa * 100 if kasa > 0 else coin_tavan_oran * 100, 0)}\'u)</div>{cubuk}</div>')
@@ -904,7 +904,7 @@ def kapanan_islemler(kayitlar: list[dict], felaket_oran: float = 0.0) -> list[di
         if kod == "felaket_stop" and felaket_oran > 0:
             ayr += f" (%{tr_sayi(felaket_oran * 100, 0)})"
         tr_cikis = k.get("trader_px")
-        cikti.append({"ms": ms, "adres": str(k.get("adres") or ""), "coin": str(k.get("coin") or ""), "yon": "uzun" if uzun else "kısa", "net": net, "poz": poz, "kapat": tam,
+        cikti.append({"ms": ms, "adres": str(k.get("adres") or ""), "coin": str(k.get("coin") or ""), "yon": "long" if uzun else "short", "net": net, "poz": poz, "kapat": tam,
                       "oran": (net / (sz * giris)) if giris and sz else None, "neden": NEDEN_KAPANIS.get(kod, "diğer"), "ayrinti": ayr,
                       "giris": giris, "tr_giris": tr_giris, "cikis": None if cikis is None else float(cikis), "tr_cikis": None if tr_cikis is None else float(tr_cikis),
                       "giris_fark": None if not giris or not tr_giris else ((giris - tr_giris) if uzun else (tr_giris - giris)) / tr_giris,                    # + = bizim aleyhe
@@ -948,7 +948,7 @@ def acik_satirlari(acik: list[dict], hesap: dict, kurallar: dict, simdi_ms: int,
         else:
             iz = f"henüz devrede değil (en yüksek kâr %{tr_sayi(zk * 100, 1)}; %{tr_sayi(bb * 100, 0)}'te başlar)"
         stop = "—" if not giris or fel <= 0 else f"{fiyat(float(giris) * (1 - fel if sz > 0 else 1 + fel))} (girişten %{tr_sayi(fel * 100, 0)} aleyhe)"
-        cikti.append({"adres": q["adres"], "coin": q["coin"], "yon": "uzun" if sz > 0 else "kısa", "giris": giris, "mark": q.get("mark"), "kz": kz,
+        cikti.append({"adres": q["adres"], "coin": q["coin"], "yon": "long" if sz > 0 else "short", "giris": giris, "mark": q.get("mark"), "kz": kz,
                       "oran": None if kz is None or not taban else float(kz) / taban, "acilis_ms": p.get("acilis_ms"), "sure_ms": (simdi_ms - int(p["acilis_ms"])) if p.get("acilis_ms") else None,
                       "usd": q.get("usd"), "kaldirac": p.get("kaldirac"), "iz": iz, "stop": stop})
     return sorted(cikti, key=lambda r: -(int(r["acilis_ms"]) if r["acilis_ms"] else 0))
@@ -1284,7 +1284,7 @@ body{margin:0;background:var(--bg);color:var(--y);font:14px/1.45 system-ui,-appl
 .sirit{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--cz);border:1px solid var(--cz);margin-bottom:6px;border-radius:12px;overflow:hidden}
 .h{background:var(--k);padding:7px 8px;min-width:0}.hb{font-size:10px;letter-spacing:.04em;color:var(--so);text-transform:uppercase}.hd{font-size:15px;font-weight:700;margin:2px 0}.h .ha{font-size:10.5px;line-height:1.3}
 .art{color:var(--kar)}.eks{color:var(--zar)}.bk{color:var(--bk)}.yok{color:var(--nt)}
-.gn{text-align:right;font-size:11px;color:var(--so);margin:0 0 6px}
+.gn{text-align:left;font-size:11px;color:var(--so);margin:0 0 6px}
 .tabs{display:flex;justify-content:space-between;margin:0 0 8px;border-bottom:1px solid var(--cz)}.tabs label{flex:0 1 auto;padding:9px 5px;font-size:11px;letter-spacing:.02em;color:var(--so);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;font-weight:600}
 input[type=radio]{position:absolute;opacity:0;pointer-events:none}
 .sekmeler>section{display:none}
