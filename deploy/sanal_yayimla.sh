@@ -48,7 +48,7 @@ mkdir -p "$work/durum" "$work/kayit"
 for f in hesap.json saha.json risk.json motor.json kilit.json ozet.json niyet.jsonl DUR donem.txt donem_seri.json; do
   if [ -f "$kaynak/durum/$f" ]; then cp "$kaynak/durum/$f" "$work/durum/$f"; fi
 done
-# K-81: Binance kâğıt süreci (sg-binance-kagit) durumu: ayrı alt dizin (HL dosyalarıyla karışmaz); pano karşılaştırma kartı ve orkestratör okur. Yoksa atlanır.
+# K-81: Binance kâğıt süreci (sg-sanal-binance-kagit) durumu: ayrı alt dizin (HL dosyalarıyla karışmaz); pano karşılaştırma kartı ve orkestratör okur. Yoksa atlanır.
 for f in hesap.json saha.json risk.json motor.json kilit.json ozet.json donem_seri.json; do
   if [ -f "$kaynak/durum/binance_kagit/$f" ]; then mkdir -p "$work/durum/binance_kagit"; cp "$kaynak/durum/binance_kagit/$f" "$work/durum/binance_kagit/$f"; fi
 done

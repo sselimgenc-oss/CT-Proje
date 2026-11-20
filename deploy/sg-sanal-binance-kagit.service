@@ -1,6 +1,6 @@
 # Binance KÂĞIT motoru (K-81, Aşama A; docs/binance-plan.md §7). HL sanal motoruyla (sg-sanal) AYNI sinyalleri Binance public fiyatlarıyla AYRI sanal kasada (10.000 $) yürütür: gerçek emir YOK, Binance anahtarı YOK (yalnız public uçlar).
 # Ayrı süreç + ayrı durum/kayıt dizini (durum/binance_kagit, kayit/binance_kagit): Binance erişimi (451) ya da bu sürecin çökmesi HL sanal motorunu ETKİLEMEZ. Pano ve saatlik Telegram özeti bu dizinleri okur (ayrı işlem mesajı YOK).
-# Erişim yoksa (açılışta HTTP 403/451 ya da çalışırken 180 sn kesintisiz hata): TEK ⚠️ Telegram + temiz durma + çıkış kodu 4. `SuccessExitStatus=4`: başarılı sayılır → yeniden başlatma / OnFailure alarm döngüsü YOK; sunucu konumu çözülünce elle: `systemctl restart sg-binance-kagit`.
+# Erişim yoksa (açılışta HTTP 403/451 ya da çalışırken 180 sn kesintisiz hata): TEK ⚠️ Telegram + temiz durma + çıkış kodu 4. `SuccessExitStatus=4`: başarılı sayılır → yeniden başlatma / OnFailure alarm döngüsü YOK; sunucu konumu çözülünce elle: `systemctl restart sg-sanal-binance-kagit`.
 # Telegram: yalnız o TEK ⚠️ için (token/chat /etc/sg-sanal-telegram.env); komut okuma kapalı (TELEGRAM_KOMUT=kapali; getUpdates tüketicisi yalnız sg-sanal). Kurulum: deploy/kurulum_sanal.md §9 (otomatik ETKİNLEŞTİRİLMEZ; kullanıcı kararı).
 # Çıkış kodları: 3 = kalıcı (yeniden başlatılmaz), 4 = Binance erişimi yok (yeniden başlatılmaz), 75 / 1 = geçici/beklenmedik (artan beklemeyle yeniden başlatılır).
 [Unit]
