@@ -178,9 +178,9 @@ def test_dal_sil_yalniz_listelenen_arsiv_dallari_elle_main():
 
 
 # ---------------------------------------------------------------------------------------------------- radar (T3)
-def test_radar_yml_gunluk_00_37_utc_kadro_ve_yayim_sirasi():
+def test_radar_yml_elle_yedek_kadro_ve_yayim_sirasi():
     wf = yukle("radar.yml")
-    assert wf["on"]["schedule"] == [{"cron": "37 0 * * *"}, {"cron": "17 2 * * *"}] and "workflow_dispatch" in wf["on"] and wf["on"]["push"] == {"branches": ["main"], "paths": ["copytrade/radar/CALISTIR"]}
+    assert "schedule" not in wf["on"] and "workflow_dispatch" in wf["on"] and wf["on"]["push"] == {"branches": ["main"], "paths": ["copytrade/radar/CALISTIR"]}
     assert adim(wf, "radar", "Veri dalına yaz")["env"]["VERI_DALI"] == "${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}"        # dal koşusu gerçek radar dalına yazmaz
     assert "inputs" not in (wf["on"]["workflow_dispatch"] or {})                              # donmuş kurallar: aday sayısı / kural_ust girdisi YOK
     assert wf["permissions"] == {"contents": "read"} and wf["jobs"]["radar"]["permissions"] == {"contents": "write"} and wf["concurrency"]["cancel-in-progress"] is False   # G-23: yazma yalnız radar işinde

@@ -1,0 +1,35 @@
+# Günlük Form Radarı (tarama + kadro + isabet + yayım; K-78): Actions yerine sunucuda. Betik: deploy/sanal_radar.sh (ayrı worktree, flock, zaman aşımı; başarısızlıkta tek ⚠️ Telegram, başarıda mesaj yok). Zamanlayıcı: sg-sanal-radar.timer.
+# Sır YOK: tarama halka açık Hyperliquid verisi. Git kimliği = sunucudaki SSH deploy anahtarı (repoda sır yok). Telegram anahtarı isteğe bağlı (/etc/sg-sanal-telegram.env; yoksa alarm atlanır).
+# Kaynak: motor (300M) ve pano/yayım ile çakışmasın diye düşük öncelik + bellek tavanı. OOMPolicy=continue: bellek tavanı aşılırsa betik ölmez, adım başarısız görünür ve ⚠️ alarmı gider.
+[Unit]
+Description=sg-arge sanal radar (gunluk tarama + kadro, veri dali radar)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=sgsanal
+Group=sgsanal
+WorkingDirectory=/var/lib/sg-sanal/depo
+EnvironmentFile=-/etc/sg-sanal-telegram.env
+Environment=HOME=/var/lib/sg-sanal
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=SANAL_DEPO=/var/lib/sg-sanal/depo
+Environment=RADAR_VERI_DALI=radar
+Environment=RADAR_KILIT=/var/lib/sg-sanal/radar.lock
+Environment=RADAR_VENV=/var/lib/sg-sanal/venv-radar
+Environment="GIT_SSH_COMMAND=ssh -i /var/lib/sg-sanal/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/var/lib/sg-sanal/.ssh/known_hosts"
+ExecStart=/bin/bash /var/lib/sg-sanal/depo/deploy/sanal_radar.sh
+TimeoutStartSec=4h
+OOMPolicy=continue
+# Kaynak sınırı (2 GB sunucu; motor 300M, pano 400M, yayım 300M): düşük öncelik
+MemoryHigh=550M
+MemoryMax=700M
+CPUQuota=60%
+Nice=15
+IOSchedulingClass=idle
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sg-sanal

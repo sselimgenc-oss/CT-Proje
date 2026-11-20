@@ -1,0 +1,5 @@
+# Sunucu radar işi (deploy/sanal_radar.sh) için bağımlılıklar: tarama/kadro/isabet/PBO (pandas + numpy). Canlı motorun venv'inde (requirements-canli.lock) pandas YOK; radar ayrı venv'de koşar.
+pandas==2.3.3
+numpy==2.5.4
+requests==2.34.2
+PyYAML==6.0.3

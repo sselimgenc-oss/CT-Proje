@@ -17,7 +17,7 @@ SAAT = 60 * DAKIKA
 # Eşikler (ms / sayı)
 VARDIYA_YAZMA_UYARI = 30 * DAKIKA          # motor özeti 15 dk'da bir yazılır; 30 dk üstü: vardiya durmuş/yayım kopmuş olabilir
 VARDIYA_YAZMA_KRITIK = 60 * DAKIKA
-RADAR_UYARI = 30 * SAAT                    # günlük radar (00:37Z + yedek 02:17Z); 30 sa üstü: bugünkü radar gelmedi
+RADAR_UYARI = 30 * SAAT                    # günlük radar (K-78: sunucu zamanlayıcısı 00:37Z, tarama ~2-3 sa sürer; Actions yalnız elle yedek); 30 sa üstü: bugünkü radar gelmedi (yeni saatle de doğru: normal yaş ≤ ~27 sa)
 RADAR_KRITIK = 54 * SAAT
 PANO_UYARI = 45 * DAKIKA                   # veri dalındaki pano 15 dk'da bir; canlı Cloudflare sayfası en az bir yayın geride olabilir
 GECTI_ALT = 8                              # RADAR_V1 günlük beklenti 8–20 (devir kontrol listesi)

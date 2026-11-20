@@ -1,0 +1,12 @@
+# Günlük radar: 00:37 UTC = 03:37 TSİ (eski Actions cron'u ile aynı saat; Actions ~7 sa geç tetikliyordu). Persistent: sunucu o saatte kapalıysa açılınca bir kez koşar (bugünün radarı varsa betik iş yapmaz).
+[Unit]
+Description=sg-arge sanal radar (gunluk 00:37 UTC)
+
+[Timer]
+OnCalendar=*-*-* 00:37:00 UTC
+Persistent=true
+RandomizedDelaySec=120
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target
