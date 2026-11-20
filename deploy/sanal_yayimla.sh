@@ -27,6 +27,11 @@ else
   git -C "$work" checkout --orphan "$veri_dali"
   git -C "$work" rm -rfq --ignore-unmatch .
 fi
+# Pano radar kadrosunu / isabeti / havuzu `git show origin/$KADRO_DALI:...` ile okur; motor kadroyu HTTP ile taze alır. Bu dal burada çekilmezse
+# pano ve sağlık satırı eski kadroyu gösterir ("Bugünkü radar henüz gelmedi", 20.11). Her yayımda tazele; ağ hatası yayımı durdurmaz.
+if [ -n "${KADRO_DALI:-}" ]; then
+  git fetch -q origin "+refs/heads/$KADRO_DALI:refs/remotes/origin/$KADRO_DALI" || echo "UYARI: $KADRO_DALI dalı çekilemedi (pano eski radar kadrosunu gösterebilir)" >&2
+fi
 # Pano (B7): her yayımda (15 dk) güncel `pano/OZET.md` + `pano/index.html`. `--vardiya`: ozet.json başka vardiyadansa (bayat) pano YAZILMAZ. Hata yayımı durdurmaz ama GÖRÜNÜR (stderr uyarısı; sessizce yutulmaz).
 if [ -s "$kaynak/durum/ozet.json" ]; then
   if ! "${PYTHON:-python}" -u -m copytrade.canli.pano --durum durum --kayit kayit --gecmis pano/gecmis.json --cikti pano/OZET.md --html pano/index.html --vardiya "${VARDIYA_ID:-}" ${KADRO_DALI:+--isabet-dali "$KADRO_DALI"} >/dev/null; then
