@@ -332,10 +332,20 @@ def test_trader_acti_biz_acamadik_sessiz_6_saat_ve_kural_gereji_atlananlar_gonde
     m, saat, tgp = _kur10k(tmp_path)
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat, yas_ms=130_000))        # geç görülen açılış = kaçırılan
     m.olay_isle(olay("a:2", adr(1), "BTC", "B", 300, 100.0, 0.0, saat, yas_ms=131_000))
-    k = [x for x in tgp.gonderilen if x.startswith("ℹ️ Trader açtı, biz açamadık")]
-    assert len(k) == 1 and "geç görülen açılış" in k[0] and "BTC · trader" in k[0]            # 6 saat kuralı: ikinci mesaj yok
+    # Telegram sadeleştirme (20.11): geç görülen açılış RUTİN → Telegram'a gitmez (tür kopya_kacan, kayda tg_bastirildi); gerçek hata (emir reddedildi) aşağıdaki testte gider
+    assert not [x for x in tgp.gonderilen if "biz açamadık" in x]
     m.olay_isle(olay("a:3", adr(1), "@142", "B", 300, 100.0, 0.0, saat))                       # spot = kural gereği atlanır
-    assert len([x for x in tgp.gonderilen if "biz açamadık" in x]) == 1
+    assert not [x for x in tgp.gonderilen if "biz açamadık" in x]
+    assert "kopya_kacan" in tg.BASTIRILAN_TURLER
+
+
+def test_trader_acti_biz_acamadik_gercek_hata_gonderilir_6_saatte_bir(tmp_path):
+    from tests.test_canli_motor import adr
+    m, saat, tgp = _kur10k(tmp_path)
+    m._kopya_hata("ac", adr(1), "BTC", "emir reddedildi")
+    m._kopya_hata("ac", adr(1), "BTC", "emir reddedildi")
+    k = [x for x in tgp.gonderilen if x.startswith("ℹ️ Trader açtı, biz açamadık")]
+    assert len(k) == 1 and "emir reddedildi" in k[0] and "BTC · trader" in k[0]                # 6 saat kuralı: ikinci mesaj yok
     assert tg.onem_duzeyi(k[0]) == "INFO"
 
 

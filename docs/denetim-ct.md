@@ -53,6 +53,7 @@ Kırmızı testler ve ham raporlar oturum çalışma alanında (R1–R5, CURUTME
 
 ## Karar gereken (kullanıcı / Fable)
 - **Günlük %5 kayıp sınırı yalnız YENİ açılışı durduruyor**; açık pozisyonlar `canli_gunluk_kapat_oran` (%10) eşiğine kadar kapanmıyor. Bilinçli mi?
+  - **Bilinçli tasarım, kullanıcı onayladı (20.11, karar A): %5'te yalnız yeni açılış durur, açık pozisyonlar trader'ı izlemeye devam eder, %10'da hepsi kapanır.**
 
 ## Güven sınaması
 Yerel, hiç push edilmeyen dalda para yoluna 5 ince hata eklendi (tam suite 1850 yeşil kaldı). Habersiz inceleyici **2/5** yakaladı: kuyruk azaltmasında reduce_only düşmesi (motor.py), coin tavanında `>=`→`>` (risk.py). Kaçanlar: sanal tasfiyede long `<=`→`<` (hesap.py), stop yeniden kurma eşiği `>`→`>=` (borsa_stop.py), sert sınır günlük kayıp toleransı 1e-12→5e-5 (sert_sinirlar.py). Üçü de eşitlik/tolerans sınırı ve mevcut testlerin hiçbiri bu sınırları sınamıyor.

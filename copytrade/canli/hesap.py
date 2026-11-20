@@ -203,8 +203,9 @@ class Hesap:
                 "belirsiz": self.belirsiz}
 
     @classmethod
-    def from_json(cls, d: dict[str, Any]) -> "Hesap":
-        h = cls(d["kasa_usd"], d.get("kaldirac", 3.0), d.get("maks_kaldirac"))
+    def from_json(cls, d: dict[str, Any], kaldirac: float | None = None) -> "Hesap":
+        """`kaldirac` (güncel kural `canli_marj_kaldirac`) verilirse defterin YENİ pozisyon kaldıracı odur; açık pozisyonlar kendi `Poz.kaldirac` değerini korur."""
+        h = cls(d["kasa_usd"], d.get("kaldirac", 3.0) if kaldirac is None else kaldirac, d.get("maks_kaldirac"))
         h.realize, h.ucret, h.slot_bas = dict(d.get("realize", {})), dict(d.get("ucret", {})), dict(d.get("slot_bas", {}))
         h.poz = {a: {c: Poz(**p) for c, p in coinler.items()} for a, coinler in d.get("poz", {}).items()}
         h.tasfiyeler = list(d.get("tasfiyeler", []))
