@@ -709,3 +709,23 @@ def test_guncelle_radar_zamanlayicisini_kurar_ve_etkinlestirir(sunucu):
     log = sunucu.log.read_text()
     assert "systemctl enable --now sg-sanal-radar.timer" in log and log.index("daemon-reload") < log.index("enable --now sg-sanal-radar.timer")
     assert "TG:" not in log                                                                           # kurulum mesaj atmaz
+
+
+def test_guncelle_olcum_servisini_yalniz_bir_kez_baslatir(sunucu):
+    tohum = sunucu.depo.parent / "tohum"
+    git(tohum, "pull", "-q", "origin", "main")
+    (tohum / "deploy/sg-sanal-olcum.service").write_text("[Service]\n# o1\n")
+    git(tohum, "add", "-A")
+    git(tohum, "commit", "-q", "-m", "olcum birimi")
+    git(tohum, "push", "-q", "origin", "main")
+    sunucu.ci(*YESIL)
+    r = sunucu.calistir()
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert (sunucu.birim / "sg-sanal-olcum.service").exists() and (sunucu.durum / "olcum_basladi").exists()
+    assert sunucu.log.read_text().count("start --no-block sg-sanal-olcum.service") == 1
+    sunucu.yeni_commit("v3")                                                       # sonraki güncelleme: işaret var -> yeniden başlatılmaz (96 sa bitince tekrar koşmasın)
+    sunucu.ci(*YESIL)
+    r = sunucu.calistir()
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert sunucu.log.read_text().count("start --no-block sg-sanal-olcum.service") == 1
+    assert "enable" not in "".join(l for l in sunucu.log.read_text().splitlines() if "olcum" in l)   # enable edilmez: yeniden açılışta kendiliğinden başlamaz

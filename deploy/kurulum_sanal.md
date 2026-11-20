@@ -118,3 +118,15 @@ Radar (tarama + kadro + isabet + PBO + rastgele + holdout mührü + `radar` dal�
 - Pano: `sudo systemctl start sg-sanal-pano; journalctl -u sg-sanal-pano -n 20 -o cat`.
 - Çıkış 3 = kalıcı (ör. mod/dal uyuşmazlığı); servis yeniden başlamaz: nedeni günlükten okuyun, düzeltip `sudo systemctl reset-failed sg-sanal && sudo systemctl start sg-sanal`.
 - Motoru elle (birim dışında) ÇALIŞTIRMAYIN.
+
+## 8. Fiyat farkı ölçümü (HL ↔ Binance, 96 saat)
+
+Oto-güncelleme birimi kurar ve ölçümü BİR KEZ başlatır (`/var/lib/sg-sanal-guncelle/olcum_basladi` işareti; 96 sa sonra kendi biter, yeniden başlatılmaz). Yeniden ölçmek için işareti silin. Aşağıdaki elle adımlar yalnız gerekirse:
+Salt-okur, bağımsız servis (`deploy/sg-sanal-olcum.service`); motora dokunmaz. Enable edilmez (yeniden açılışta kendiliğinden başlamaz).
+```bash
+sudo cp /var/lib/sg-sanal/depo/deploy/sg-sanal-olcum.service /etc/systemd/system/ && sudo systemctl daemon-reload
+sudo systemctl start sg-sanal-olcum            # 96 saat koşar, kendiliğinden biter (enable ETMEYİN)
+journalctl -u sg-sanal-olcum -n 30 -o cat      # çıkış 3 = Binance erişimi yok (451/403): tek ⚠️ Telegram + durum/olcum/fiyat_farki/<gün>.jsonl'de "erisim" kaydı
+sudo -u sgsanal bash -c 'cd /var/lib/sg-sanal/depo && /var/lib/sg-sanal/venv/bin/python -m copytrade.olcum.fiyat_farki --ozet'    # özet markdown → stdout + durum/olcum/fiyat_farki/OZET.md
+```
+Çıktı yeri: `/var/lib/sg-sanal/depo/durum/olcum/fiyat_farki/` (`<gün>.jsonl`: `erisim`, `fark`, `mid`, `bitis` olayları). Veri dalına yayımlanmaz (yayım betiği yalnız bilinen dosyaları kopyalar); özeti elle alın.
