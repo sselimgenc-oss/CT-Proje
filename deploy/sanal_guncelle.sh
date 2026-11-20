@@ -260,7 +260,7 @@ Bana haber ver, ben bakarım."; fi
     exit 0
   fi
   ci="$(ci_durum "$yeni")"
-  if [ "$ci" = yok ]; then   # PR birleştirme commit'inde kontrol yoksa (CI pull_request'te koşar) 2. ebeveyn = PR ucu
+  if [ "$ci" = yok ] || [[ "$ci" == kirmizi:eksik\ kontrol* ]]; then   # PR birleştirme commit'inde zorunlu kontrol yoksa (CI pull_request'te koşar; zamanlanmış iş akışları main ucuna başka kontroller ekleyebilir) 2. ebeveyn = PR ucu
     ebeveynler="$(g rev-list --parents -n1 "$yeni")"
     pr_ucu="$(echo "$ebeveynler" | awk 'NF==3 {print $3}')"
     if [ -n "$pr_ucu" ]; then ci="$(ci_durum "$pr_ucu")"; log "kontrol ${yeni:0:7} üzerinde yok; PR ucu ${pr_ucu:0:7} değerlendirildi"; fi
