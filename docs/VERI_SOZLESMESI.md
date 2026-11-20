@@ -582,3 +582,9 @@ JSON üst düzey: `n_istenen` (adet), `kasa_usd` ($; `--kasa-usd`, yoksa `canli_
 ## 20.11 K-76: ara dolum sınırı (kullanıcı kararı)
 - `kurallar.yaml`: `kopya_ara_dolum_max` (adet, 2), `kopya_ara_dolum_kume_ms` (ms, 1000). `kayit`: `emir_yok` (ve `senkron_azalt`) yeni neden `ara_dolum_siniri` (3. ve sonraki ara dolum; `karar` atlandi; karşı-olgu kaydı YOK); `neden_say`/`ozet.json` aynı anahtar; pano/Telegram etiketi "ara dolum sınırı (ilk 2 sonrası)". `motor.json` yeni `ara_dolum`: `adres|coin` -> {`n` (sayılan ara dolum kümesi), `isaret` (1 | -1), `yon` (B | A, son küme), `ms` (son dolum), `izin` (bool)}. Kalıcıdır; tam kapanış / yön dönüşü / senkronda kapanış görülünce silinir. Ayrıntı: `docs/KARARLAR.md` K-76.
 
+
+## 20.11 K-77: zarar ettiren trader küçültme (kullanıcı kararı)
+- `kurallar.yaml`: `trader_zarar_kucult_n1` (adet, 5), `trader_zarar_kucult_carpan1` (çarpan, 0,5), `trader_zarar_kucult_n2` (adet, 10). Pencere `radar_pencere_saat`. Ayrıntı: `docs/KARARLAR.md` K-77.
+- `kayit` yeni olay `trader_kucult`: `adres`, `eski`, `yeni` (seviye: 0 = ×1, 1 = ×0,5, 2 = en küçük), `n` (penceredeki kapanmış pozisyon), `net` ($, pozisyon bazında net toplamı).
+- `kayit` `emir` (açılış/artırma): küçültme varsa ek alanlar `kucult_seviye` (1 | 2), `kucult_carpan`; `boyut_neden` = `trader_en_kucuk` (en küçük boyutta açılış); `emir_yok` yeni neden `trader_en_kucuk` (en küçük boyutta artırma).
+- `hesap.json` yeni: `poz_net` (`"adres|coin"` → açık pozisyonun net'i), `kapanan` (adres → [[kapanış_ms, net], …], en çok 200), `kucult` (adres → seviye; yalnız >0). Pano rozeti `kucult`ten okur.
