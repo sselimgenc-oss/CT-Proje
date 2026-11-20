@@ -883,6 +883,7 @@ def kapanan_islemler(kayitlar: list[dict], felaket_oran: float = 0.0) -> list[di
         if not k.get("reduce_only"):
             o = acik.setdefault(anahtar, {"ms": ms, "ders": k.get("ders_carpan"), "sz": 0.0, "tr": 0.0, "biz": 0.0, "n": 0, "kalan": 0.0})
             s_ = abs(float(k.get("sz") or 0.0))
+            o["tepe"] = o.get("tepe", 0.0) + s_                                                            # toplam açılan büyüklük (toz toleransı tabanı)
             o["kalan"] = o.get("kalan", 0.0) + s_                                                          # açık büyüklük (kapanış tespiti: sıfıra inince pozisyon bitmiştir)
             if k.get("trader_px") is not None and k.get("dolum_px") is not None and s_ > 0:
                 o["sz"] += s_
@@ -894,7 +895,7 @@ def kapanan_islemler(kayitlar: list[dict], felaket_oran: float = 0.0) -> list[di
         o = acik.get(anahtar) or {}
         sz_k = abs(float(k.get("sz") or 0.0))
         kalan = o["kalan"] - sz_k if "kalan" in o else None
-        tam = k.get("eylem") == "kapat" or (kalan is not None and kalan <= 1e-9 * max(1.0, o["kalan"]))      # kapat / azaltmalarla sıfıra iniş / tasfiye: hepsi pozisyon sonu
+        tam = k.get("eylem") == "kapat" or (kalan is not None and kalan <= 1e-4 * o.get("tepe", o["kalan"]))      # toz: açılan büyüklüğün %0,01'i altı kalıntı = sıfır      # kapat / azaltmalarla sıfıra iniş / tasfiye: hepsi pozisyon sonu
         if "kalan" in o:
             o["kalan"] = max(kalan, 0.0)
         poz = (anahtar[0], anahtar[1], seq.get(anahtar, 0))
