@@ -1,15 +1,15 @@
 {
  "sema": "ortak.gunluk_ozet.v1",
  "proje": "CT",
- "uretim": "2026-11-20T03:19:03Z",
+ "uretim": "2026-11-20T04:05:50Z",
  "gun": "2026-11-20",
  "mod": "sanal",
  "kasa": {
   "baslangic": 10000.0,
-  "simdi": 10011.69,
-  "gun_pnl": 15.98,
-  "toplam_pnl": 11.69,
-  "zirveden_dusus_yuzde": 0.38
+  "simdi": 10013.62,
+  "gun_pnl": 17.9,
+  "toplam_pnl": 13.62,
+  "zirveden_dusus_yuzde": 0.36
  },
  "islem": {
   "gun_acilan": 19,
@@ -17,25 +17,25 @@
   "kazanan": 1,
   "kaybeden": 1,
   "acik_pozisyon": 48,
-  "alinmayan_sinyal": 489
+  "alinmayan_sinyal": 490
  },
  "hesaplar": [
   {
    "ad": "T_0c2447",
    "gun_pnl": -0.47,
-   "toplam_pnl": -32.75,
+   "toplam_pnl": -40.57,
    "islem": 10
   },
   {
    "ad": "T_c2c3cf",
    "gun_pnl": -0.31,
-   "toplam_pnl": 0.75,
+   "toplam_pnl": 2.31,
    "islem": 2
   },
   {
    "ad": "T_f6b664",
    "gun_pnl": -0.37,
-   "toplam_pnl": -1.87,
+   "toplam_pnl": -0.13,
    "islem": 14
   },
   {
@@ -47,31 +47,31 @@
   {
    "ad": "T_2e4035",
    "gun_pnl": 0,
-   "toplam_pnl": 12.04,
+   "toplam_pnl": 9.64,
    "islem": 0
   },
   {
    "ad": "T_9934d6",
    "gun_pnl": -0.61,
-   "toplam_pnl": 2.72,
+   "toplam_pnl": 5.64,
    "islem": 1
   },
   {
    "ad": "T_b4c6ee",
    "gun_pnl": 0.23,
-   "toplam_pnl": 16.56,
+   "toplam_pnl": 14.59,
    "islem": 1
   },
   {
    "ad": "T_e7ae5a",
    "gun_pnl": 0,
-   "toplam_pnl": 42.8,
+   "toplam_pnl": 48.07,
    "islem": 0
   },
   {
    "ad": "T_7bb402",
    "gun_pnl": 0,
-   "toplam_pnl": -125.08,
+   "toplam_pnl": -122.46,
    "islem": 0
   },
   {
@@ -83,7 +83,7 @@
   {
    "ad": "T_574595",
    "gun_pnl": 0,
-   "toplam_pnl": 0.29,
+   "toplam_pnl": 0.27,
    "islem": 0
   }
  ],
@@ -106,13 +106,13 @@
   "kaldirac_ayar": 3.0
  },
  "saglik": {
-  "son_nabiz": "2026-11-20T03:19:03Z",
+  "son_nabiz": "2026-11-20T04:05:50Z",
   "hata_sayisi_gun": 0,
-  "ram_mb": 76.9,
-  "ram_tepe_mb": 81.9,
-  "disk_bos_gb": 63.68,
-  "yuk_1dk": 0.0,
-  "yeniden_baslama_1s": 1,
+  "ram_mb": 42.0,
+  "ram_tepe_mb": 46.8,
+  "disk_bos_gb": 63.67,
+  "yuk_1dk": 0.28,
+  "yeniden_baslama_1s": 0,
   "oom_son": false
  },
  "notlar": [
@@ -134,9 +134,9 @@
   },
   {
    "neden": "ters_netlesme",
-   "adet": 110,
-   "karsi_olgu_kapanan": 1,
-   "karsi_olgu_pnl": 0.02
+   "adet": 111,
+   "karsi_olgu_kapanan": 2,
+   "karsi_olgu_pnl": -0.12
   },
   {
    "neden": "duygu_ters",
