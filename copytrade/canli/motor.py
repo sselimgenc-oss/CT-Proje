@@ -1534,7 +1534,7 @@ class Motor:
                 self._kopya_fark.append(abs(kayma_trader))
             if gecikme_sn is not None and gecikme_sn >= 0:
                 self._gecikme.append(gecikme_sn)
-            kz_dolum = float(pnl or 0.0)
+            kz_dolum = float(pnl or 0.0) - (float(d.ucret or 0.0) if not acildi and eylem != "artir" else 0.0)   # pano ile aynı: kapanış/azaltma dolumunun neti (gerçekleşen − o dolumun ücreti)
             anahtar_poz = f"{adres}|{o.coin}"
             if acildi:
                 ozet = self._poz_ozet[anahtar_poz] = {"tutar": float(d.usd_dolan or usd), "artir": 0, "azalt": 0, "pnl": 0.0}

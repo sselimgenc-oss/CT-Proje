@@ -313,6 +313,20 @@ def test_kapandi_toplam_tutar_artirma_ve_yuzde_toplam_tutara_gore(tmp_path):
     assert m._say_gun["artir"] == 1 and m._say_gun["ac"] == 1
 
 
+def test_kapandi_kz_pano_ile_ayni_net_kapanis_ucreti_dusulur(tmp_path):
+    """Kapandı mesajındaki $ = pozisyonun kapanış dolumlarının (gerçekleşen − o dolumun ücreti) toplamı; pano KAPANAN neti ile aynı."""
+    from tests.test_canli_motor import olay, adr
+    m, saat, tgp = _kur10k(tmp_path)
+    m.olay_isle(olay("b:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
+    m.olay_isle(olay("b:2", adr(1), "BTC", "A", 150, 110.0, 300.0, saat))          # azaltma
+    m.olay_isle(olay("b:3", adr(1), "BTC", "A", 150, 120.0, 150.0, saat))          # tam kapanış
+    from tests.test_canli_motor import kayitlar
+    kap = [e for e in kayitlar(tmp_path, "emir") if e.get("reduce_only") and e.get("durum") in ("dolu", "kismi")]
+    beklenen = sum(float(e["pnl_usd"]) - float(e.get("ucret") or 0) for e in kap)
+    tg_k = [x for x in kayitlar(tmp_path, "tg_mesaj") if x.get("neden") not in (None, "ac") and x.get("coin") == "BTC"]
+    assert len(kap) == 2 and tg_k and abs(tg_k[-1]["pnl"] - beklenen) < 1e-6 and any(float(e.get("ucret") or 0) > 0 for e in kap)
+
+
 def test_trader_acti_biz_acamadik_sessiz_6_saat_ve_kural_gereji_atlananlar_gonderilmez(tmp_path):
     from tests.test_canli_motor import olay, adr
     m, saat, tgp = _kur10k(tmp_path)
