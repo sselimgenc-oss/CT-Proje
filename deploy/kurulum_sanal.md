@@ -122,7 +122,7 @@ Radar (tarama + kadro + isabet + PBO + rastgele + holdout mührü + `radar` dal�
 ## 8. Fiyat farkı ölçümü (HL ↔ Binance, 96 saat)
 
 Oto-güncelleme birimi kurar ve ölçümü BİR KEZ başlatır (`/var/lib/sg-sanal-guncelle/olcum_basladi` işareti; 96 sa sonra kendi biter, yeniden başlatılmaz). Yeniden ölçmek için işareti silin. Aşağıdaki elle adımlar yalnız gerekirse:
-Salt-okur, bağımsız servis (`deploy/sg-sanal-olcum.service`); motora dokunmaz. Oto-kuruluma (sanal_guncelle) henüz bağlı DEĞİL; `sg-sanal*.service` kopyalama adımı birimi `/etc/systemd/system`'e koyabilir ama başlatmaz/etkinleştirmez.
+Salt-okur, bağımsız servis (`deploy/sg-sanal-olcum.service`); motora dokunmaz. Enable edilmez (yeniden açılışta kendiliğinden başlamaz).
 ```bash
 sudo cp /var/lib/sg-sanal/depo/deploy/sg-sanal-olcum.service /etc/systemd/system/ && sudo systemctl daemon-reload
 sudo systemctl start sg-sanal-olcum            # 96 saat koşar, kendiliğinden biter (enable ETMEYİN)
