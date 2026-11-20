@@ -411,6 +411,34 @@
     "kaldirac": 3.0,
     "sz": 7.2378816564236965,
     "zirve_kar": 0.018836297172562914
+   },
+   "xyz:SOXL": {
+    "acilis_ms": 1795191453767,
+    "boyut_carpan": 1.0,
+    "giris": 36.21,
+    "giris_ctx": {
+     "duygu": "Extreme Fear",
+     "duygu_deger": 12,
+     "r1d": null,
+     "r4h": null
+    },
+    "kaldirac": 3.0,
+    "sz": 0.42441884226696125,
+    "zirve_kar": 0.002526926263463031
+   },
+   "xyz:SPCX": {
+    "acilis_ms": 1795191608438,
+    "boyut_carpan": 1.0,
+    "giris": 129.5349769657742,
+    "giris_ctx": {
+     "duygu": "Extreme Fear",
+     "duygu_deger": 12,
+     "r1d": null,
+     "r4h": null
+    },
+    "kaldirac": 3.0,
+    "sz": 2.6654682708417257,
+    "zirve_kar": 0.0006949708591030212
    }
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": {
@@ -858,7 +886,7 @@
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 909.0909090909091,
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 909.0909090909091
  },
- "son_niyet_cloid": "0x07ffdb4b65023458744a663069fcddba",
+ "son_niyet_cloid": "0xe27188b54781ff2dc6d1c5521fe78abd",
  "tasfiyeler": [
   {
    "adres": "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89",
@@ -870,7 +898,7 @@
   }
  ],
  "ucret": {
-  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 2.0146951426882933,
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 2.1769829524935305,
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 1.6043346878076914,
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 1.3959954502531862,
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 1.4851345470278854,
