@@ -406,6 +406,32 @@
     "sz": 0.38114928085476824,
     "zirve_kar": 0.0
    },
+   "xyz:DRAM": {
+    "acilis_ms": 1795139156755,
+    "giris": 37.781,
+    "giris_ctx": {
+     "duygu": "Extreme Fear",
+     "duygu_deger": 12,
+     "r1d": null,
+     "r4h": null
+    },
+    "kaldirac": 3.0,
+    "sz": 0.7855581163223301,
+    "zirve_kar": 0.0035467563060797846
+   },
+   "xyz:MU": {
+    "acilis_ms": 1795139132181,
+    "giris": 672.64,
+    "giris_ctx": {
+     "duygu": "Extreme Fear",
+     "duygu_deger": 12,
+     "r1d": null,
+     "r4h": null
+    },
+    "kaldirac": 3.0,
+    "sz": 0.08466611936776196,
+    "zirve_kar": 0.0026388558515698995
+   },
    "xyz:SNDK": {
     "acilis_ms": 1795137128357,
     "giris": 93.92,
@@ -427,7 +453,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -9.7783728036559,
-    "zirve_kar": 0.039556902909863745
+    "zirve_kar": 0.04344230236779304
    }
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": {
@@ -493,7 +519,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -16.018776363587666,
-    "zirve_kar": 0.016912558474271335
+    "zirve_kar": 0.020248013950784623
    },
    "ETC": {
     "acilis_ms": 1795011950483,
@@ -501,7 +527,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -1.8340363806125681,
-    "zirve_kar": 0.03761441886056322
+    "zirve_kar": 0.038431398702836114
    },
    "FIL": {
     "acilis_ms": 1794828746575,
@@ -509,7 +535,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -18.367926261125117,
-    "zirve_kar": 0.0534339673050913
+    "zirve_kar": 0.059461986741696914
    },
    "HBAR": {
     "acilis_ms": 1794947824328,
@@ -533,7 +559,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -3.3007261597551465,
-    "zirve_kar": 0.04739542699393855
+    "zirve_kar": 0.0582878233211306
    },
    "TAO": {
     "acilis_ms": 1795119004082,
@@ -562,7 +588,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -187.14118463207762,
-    "zirve_kar": 0.04332782284418132
+    "zirve_kar": 0.05632232517012032
    },
    "WLFI": {
     "acilis_ms": 1794828744461,
@@ -570,7 +596,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -4684.990583045316,
-    "zirve_kar": 0.0
+    "zirve_kar": 0.000873197768878141
    },
    "kSHIB": {
     "acilis_ms": 1794829121462,
@@ -608,7 +634,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -3.8726255564790764,
-    "zirve_kar": 0.042846784134580665
+    "zirve_kar": 0.04671887462838091
    },
    "LINK": {
     "acilis_ms": 1794980261657,
@@ -616,7 +642,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -14.547372186221153,
-    "zirve_kar": 0.02980157403777523
+    "zirve_kar": 0.0331947452627798
    },
    "SOL": {
     "acilis_ms": 1795059969886,
@@ -624,7 +650,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -4.531506253408303,
-    "zirve_kar": 0.016051353508569937
+    "zirve_kar": 0.017025392659532516
    },
    "VVV": {
     "acilis_ms": 1794980015954,
@@ -632,7 +658,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -2.573760317131464,
-    "zirve_kar": 0.0
+    "zirve_kar": 0.007104545026818637
    },
    "XRP": {
     "acilis_ms": 1794980079736,
@@ -655,7 +681,7 @@
     },
     "kaldirac": 3.0,
     "sz": -0.032420236345455676,
-    "zirve_kar": 0.0017389348375265756
+    "zirve_kar": 0.0022580198636537765
    },
    "SOL": {
     "acilis_ms": 1795124117792,
@@ -711,7 +737,7 @@
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 909.0909090909091,
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 909.0909090909091
  },
- "son_niyet_cloid": "0x6d7eff1808363069d7e0779da5e00ced",
+ "son_niyet_cloid": "0x6ba29026285a2361268f42c06ecf1448",
  "tasfiyeler": [
   {
    "adres": "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89",
@@ -725,7 +751,7 @@
  "ucret": {
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 0.7456652404174823,
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 0.0,
-  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 0.35907554400111147,
+  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 0.39805858937704885,
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 1.1966286638722594,
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": 0.850485455662888,
   "0x9eb42f017e793512e4734f8785de605c4cb3a24e": 0.0,
