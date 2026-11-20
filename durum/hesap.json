@@ -379,7 +379,7 @@
     "giris": 1784.9129512314632,
     "giris_ctx": null,
     "kaldirac": 3.0,
-    "sz": 0.49774806819446127,
+    "sz": 0.3616425307426855,
     "zirve_kar": 0.0
    },
    "io:SNDK": {
@@ -394,6 +394,19 @@
     "kaldirac": 3.0,
     "sz": 1.5028485232632365,
     "zirve_kar": 0.006372702902030528
+   },
+   "xyz:SNDK": {
+    "acilis_ms": 1795177380094,
+    "giris": 88.07909965674024,
+    "giris_ctx": {
+     "duygu": "Extreme Fear",
+     "duygu_deger": 12,
+     "r1d": null,
+     "r4h": null
+    },
+    "kaldirac": 3.0,
+    "sz": 2.782700562727145,
+    "zirve_kar": 0.007424012572881973
    },
    "xyz:SOXL": {
     "acilis_ms": 1795152870243,
@@ -843,7 +856,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -4.531506253408303,
-    "zirve_kar": 0.04114638996739655
+    "zirve_kar": 0.041701051150583514
    },
    "VVV": {
     "acilis_ms": 1794980015954,
@@ -887,14 +900,14 @@
     },
     "kaldirac": 3.0,
     "sz": -4.495657448093417,
-    "zirve_kar": 0.02408028492206218
+    "zirve_kar": 0.024644818212855343
    }
   },
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": {},
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": {}
  },
  "realize": {
-  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": -11.784473421865389,
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": -18.50984970630208,
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 0.0,
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": -0.08645851069459667,
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 97.4120820862675,
@@ -921,7 +934,7 @@
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 909.0909090909091,
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 909.0909090909091
  },
- "son_niyet_cloid": "0xb01ed0560c9b433121e3b2a33bd42938",
+ "son_niyet_cloid": "0x24aa5e5d8e343cf823889ffcd637030e",
  "tasfiyeler": [
   {
    "adres": "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89",
@@ -933,7 +946,7 @@
   }
  ],
  "ucret": {
-  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 1.2761787365112294,
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 1.4927677507033201,
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 0.3064685778617234,
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 0.7655434306488058,
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 1.4851345470278854,
