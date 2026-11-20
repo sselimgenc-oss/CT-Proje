@@ -3,7 +3,7 @@
 Yalnız GERÇEK kipte geçerlidir; sanal kip (kendi `canli_sanal_kasa_ust_usd` sınırı) etkilenmez.
 - Kasa üst sınırı 1.500 $ (etkin sınır = min(yaml `canli_kasa_ust_usd`, bu sabit)).
 - Günlük kayıp oranı ≤ 0,05: yaml'daki `canli_gunluk_kayip_oran` bunu aşarsa gerçek kip BAŞLAMAZ (açık hata).
-- Marj kaldıracı `canli_marj_kaldirac` ∈ [1, 5]: dışındaysa gerçek kip BAŞLAMAZ. (K-67 `canli_min_azami_kaldirac` ayrı şeydir: coin filtresi.)
+- Marj kaldıracı `canli_marj_kaldirac` ∈ [1, 5], TAM SAYI: dışındaysa gerçek kip BAŞLAMAZ. (K-67 `canli_min_azami_kaldirac` ayrı şeydir: coin filtresi.)
 - `canli_hl_deger_ust_usd` (HL hesap değeri açılış tavanı) kasa sınırı DEĞİLDİR: kârlı günden sonra yeniden başlatma takılmasın diye
   kasa sınırından büyük olabilir; etkin kasa yine min(CANLI_KASA_USD, HL) ≤ kasa sınırı. Ayrı sert sınır konmadı.
 """
@@ -33,3 +33,5 @@ def gercek_kip_dogrula(rules: dict) -> None:
     k = rules.get("canli_marj_kaldirac")
     if k is not None and (not math.isfinite(float(k)) or not KALDIRAC_ALT <= float(k) <= KALDIRAC_UST):
         raise ValueError(f"canli_marj_kaldirac {k} x, [{KALDIRAC_ALT}, {KALDIRAC_UST}] x dışında (K-72)")
+    if k is not None and float(k) != int(float(k)):                        # D8: borsa `int()` ile keser (4,5x → 4x) ama defter 4,5x sayar: kesirli kaldıraç reddedilir
+        raise ValueError(f"canli_marj_kaldirac {k} x tam sayı olmalı (borsa kesirli kaldıraç almaz; D8)")

@@ -177,11 +177,6 @@ class AnahtarYok(RuntimeError):
     """Gerçek kip için ortam değişkenleri eksik: motor BAŞLAMAZ."""
 
 
-def tick_yuvarla(px: float, sz_decimals: int) -> float:
-    """HL perp fiyat kuralı: en çok 5 anlamlı basamak ve en çok (6 − szDecimals) ondalık."""
-    return round(float(f"{px:.5g}"), max(0, 6 - int(sz_decimals)))
-
-
 def _izgara(px: float, sz_decimals: int, yukari: bool) -> float:
     """HL perp fiyat ızgarasına yuvarlama (`yukari`: tavana, değilse tabana). Adım = max(5 anlamlı basamak adımı, 10^−(6 − szDecimals)); tam sayı fiyat her zaman geçerli
     olduğundan 5 anlamlı basamak adımı en çok 1'dir (Y-7: 123.456 gibi ≥ 100.000 fiyatta adım 10 değil 1)."""

@@ -208,7 +208,7 @@ def test_kapanan_pozisyon_bazinda_kazanma_ve_kismi_kapanis_tek_sonuc():
     s = pano.kapanan_islemler(k)
     assert len(s) == 3
     o = pano.kapanan_ozeti(s)
-    assert o["kapanis"] == 3 and o["poz"] == 2 and o["kazanma"] == 0.5 and o["ort_kazanc"] == pytest.approx(1.9) and o["ort_kayip"] == pytest.approx(-4.05)      # komisyon 0,05 dolum başına
+    assert o["kapanis"] == 3 and o["poz"] == 2 and o["kazanma"] == 0.5 and o["ort_kazanc"] == pytest.approx(1.85) and o["ort_kayip"] == pytest.approx(-4.1)      # komisyon 0,05 dolum başına; giriş ücreti de düşer (D3)
     h = sayfa(kayit=k)
     assert "2 pozisyon" in h and "pozisyon bazında" in h
 
@@ -262,3 +262,14 @@ def test_bayat_veri_tek_sayi_risk_bilinmiyor_ve_gorev():
 def test_koyu_temada_uyari_seridi_koyu_kirmizi():
     css = sayfa()[sayfa().index("<style>"):sayfa().index("</style>")]
     assert "--uyb:#7f1d1d" in css and "--uyy:#ffe4e4" in css and ".uy{background:var(--uyb);color:var(--uyy)" in css
+
+
+def test_d3_kapanan_net_giris_ucretini_de_dusar_tek_yardimci():
+    from copytrade.canli import hesap
+    k = [emir(SIMDI - 9 * 3_600_000, eylem="ac", pnl=0.0, neden="tamam", sz=0.10, ucret=0.30),
+         emir(SIMDI - 8 * 3_600_000, eylem="azalt", pnl=5.0, neden="tamam", sz=0.04, ucret=0.10),
+         emir(SIMDI - 7 * 3_600_000, pnl=-1.0, sz=0.06, ucret=0.10)]
+    s = pano.kapanan_islemler(k)
+    toplam = sum(r["net"] for r in s)
+    assert toplam == pytest.approx(5.0 - 1.0 - 0.10 - 0.10 - 0.30)                 # giriş ücreti 0,30 pozisyon boyunca paylaşılır
+    assert hesap.dolum_net(5.0, 0.1, 0.12) == pytest.approx(4.78)

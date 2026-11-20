@@ -177,17 +177,12 @@ class Ogrenme:
         try:
             if not self.aktif:
                 return 1.0
-            alias = takma_ad(adres)
-            c = self.uyg["carpan"].get(alias)
-            w = 1.0 if c is None else float(c["deger"])
-            d = self.uyg["drift_carpan"].get(alias)                   # K-73: drift eylemi çarpanı (ders çarpanıyla min alınır)
-            if d is not None:
-                w = min(w, float(d["deger"]))
-            return max(AGIRLIK_ALT, min(AGIRLIK_UST, w))
+            return self.agirlik_alias(takma_ad(adres))
         except Exception:                                         # noqa: BLE001
             return 1.0
 
     def agirlik_alias(self, alias: str) -> float:
+        """Takma ada göre çarpan: ders çarpanı ile K-73 drift çarpanının min'i, [AGIRLIK_ALT, AGIRLIK_UST] içinde (`agirlik` buna dayanır)."""
         c = self.uyg["carpan"].get(alias)
         d = self.uyg["drift_carpan"].get(alias)
         w = min(1.0 if c is None else float(c["deger"]), 1.0 if d is None else float(d["deger"]))

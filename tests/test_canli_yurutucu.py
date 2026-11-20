@@ -178,10 +178,6 @@ def test_g12a_exchange_zaman_asimi_kurallardan_sdk_kurucusuna_gecer(monkeypatch)
     assert kurulan["timeout"] == 3.0
 
 
-def test_tick_yuvarlama_5_anlamli_basamak():
-    assert yu.tick_yuvarla(100.50001, 5) == 100.5 and yu.tick_yuvarla(1234.5678, 5) == 1234.6 and yu.tick_yuvarla(0.123456789, 0) == 0.12346
-
-
 def test_anahtar_yoksa_gercek_yurutucu_kurulamaz():
     with pytest.raises(yu.AnahtarYok):
         yu.gercek_yurutucu_olustur(meta_post, RULES, ortam={})

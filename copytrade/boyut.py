@@ -63,6 +63,16 @@ def sig_coin_kirp(rules: dict, emir_usd: float, mevcut_usd: float, hacim_usd: fl
     return (kirpilan, "sig_coin_kirpildi") if kirpilan >= float(rules["radar_min_emir_usd"]) else (0.0, "sig_coin_tavani")
 
 
+def hedef_ham(slot: float, trader_poz: float, fiyat: float, trader_hesap_usd: float) -> float:
+    """Kopya hedef nosyoneli ($, tavansız) = slot × trader nosyonel / trader hesap. TEK YER: `hedef_emir` (ac/artir/azalt), motor `hedef_usd` kaydı ve `_hedef_usd` buna dayanır (işlem sırası korunur)."""
+    return float(slot) * abs(float(trader_poz)) * float(fiyat) / float(trader_hesap_usd)
+
+
+def hedef_usd(slot: float, trader_poz: float, fiyat: float, trader_hesap_usd: float, rules: dict) -> float:
+    """`hedef_ham` + coin tavanı (`radar_slot_tavan_carpan` × slot)."""
+    return min(hedef_ham(slot, trader_poz, fiyat, trader_hesap_usd), float(rules["radar_slot_tavan_carpan"]) * float(slot))
+
+
 def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trader_hesap_usd: float, biz_poz_usd: float, slot: float, fiyat: float,
                rules: dict | None = None, biz_slot_toplam_usd: float | None = None, bant: bool = False) -> tuple[float, str]:
     """§5b: tek bir trader dolumunun bizdeki emir BÜYÜKLÜĞÜ ($, işaretsiz; yönü çağıran bilir) ve nedeni.
@@ -91,7 +101,7 @@ def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trad
     if eylem == "ac":
         if trader_hesap_usd <= 0 or fiyat <= 0:
             return 0.0, "hesap_yok"
-        hedef = float(slot) * sonra * float(fiyat) / float(trader_hesap_usd)
+        hedef = hedef_ham(slot, sonra, fiyat, trader_hesap_usd)
         neden = "tamam"
         if hedef > tavan + EPS:
             hedef, neden = tavan, "tavan_kirpildi"
@@ -107,7 +117,7 @@ def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trad
         # K‑36: hedef tabanlı. hedef = slot × trader nosyonel(sonra) / trader hesap; coin tavanı; emir = max(0, hedef − mevcut); sonra K‑35 toplam tavanı.
         if trader_hesap_usd <= 0 or fiyat <= 0:
             return 0.0, "hesap_yok"
-        hedef = float(slot) * sonra * float(fiyat) / float(trader_hesap_usd)
+        hedef = hedef_ham(slot, sonra, fiyat, trader_hesap_usd)
         if hedef > tavan + EPS:
             hedef = tavan
         emir, neden = max(0.0, hedef - biz), "tamam"
@@ -128,7 +138,7 @@ def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trad
             if emir >= minimum - EPS:
                 return emir, "azalt_oransal_yedek"                       # lider onayı (05.11): yedek yol SAYILIR (neden_say / kayıt `boyut_neden`)
             return (biz, "azalt_oransal_yedek") if biz - emir < minimum - EPS else (0.0, "min_emir_atlandi")
-        hedef = min(float(slot) * sonra * float(fiyat) / float(trader_hesap_usd), tavan)
+        hedef = min(hedef_ham(slot, sonra, fiyat, trader_hesap_usd), tavan)
         if hedef < minimum - EPS and biz >= minimum - EPS:
             return biz, "kucuk_kalan_kapat"
         fark = biz - hedef

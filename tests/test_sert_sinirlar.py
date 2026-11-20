@@ -57,3 +57,13 @@ def test_sanal_kip_etkilenmez():
     assert mt.kasa_belirle(r, "sanal", {}) == (float(r["canli_kasa_usd"]), "yaml")
     assert mt.kasa_ust(RULES, "sanal") == 10000.0
     assert mt.sanal_kasa_dogrula(RULES, "sanal", 10000) == 10000.0
+
+
+@pytest.mark.parametrize("k", [4.5, 1.5, 2.0001])
+def test_d8_kesirli_kaldirac_gercekte_reddedilir(k):
+    with pytest.raises(mt.KipHatasi, match="canli_marj_kaldirac"):
+        mt.kasa_belirle({**RULES, "canli_marj_kaldirac": k}, "gercek", ORTAM)
+
+
+def test_d8_tam_sayi_gibi_float_kabul():
+    assert mt.kasa_belirle({**RULES, "canli_marj_kaldirac": 4.0}, "gercek", ORTAM)[0] == 1000.0

@@ -59,10 +59,11 @@ def yetim_mi(anahtar: str) -> bool:
     return anahtar.endswith(YETIM_SONEK)
 
 
-def yetim_hedefler(yetim: dict[str, dict], marks: dict[str, float], oran: float, min_usd: float) -> dict[str, dict]:
+def yetim_hedefler(yetim: dict[str, dict], marks: dict[str, float], oran: float, min_usd: float, oran_fn: Any = None) -> dict[str, dict]:
     """Denetim-5 (K-68): defter dışı borsa fazlası için ek stop. `yetim`: coin → {sz (işaretli fazla), mark (yetimin İLK görüldüğü andaki mark; kalıcı)}.
     Tetik referansı SABİT ilk mark'tır (her dakika güncellenmez: stop fiyatı kovalamaz), `oran` kadar aleyhe. Referans mark yoksa stop yok (uydurma fiyat yok).
-    Defter temelli `hedefler` DEĞİŞMEZ; bu yalnız fazla miktarı korur (anahtar: coin + YETIM_SONEK)."""
+    Defter temelli `hedefler` DEĞİŞMEZ; bu yalnız fazla miktarı korur (anahtar: coin + YETIM_SONEK).
+    `oran_fn(coin, long, ref_mark) -> oran` (K-74 `dinamik_stop`, D7; None = sabit `oran`)."""
     sonuc: dict[str, dict] = {}
     for c, y in yetim.items():
         sz, ref = float(y.get("sz") or 0.0), float(y.get("mark") or 0.0)
@@ -72,7 +73,8 @@ def yetim_hedefler(yetim: dict[str, dict], marks: dict[str, float], oran: float,
         if abs(sz) * mk < float(min_usd):
             continue
         long = sz > 0
-        sonuc[c + YETIM_SONEK] = {"long": long, "sz": abs(sz), "tetik": ref * (1 - oran) if long else ref * (1 + oran)}
+        o = oran if oran_fn is None else float(oran_fn(c, long, ref))
+        sonuc[c + YETIM_SONEK] = {"long": long, "sz": abs(sz), "tetik": ref * (1 - o) if long else ref * (1 + o)}
     return sonuc
 
 

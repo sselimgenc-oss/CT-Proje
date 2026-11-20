@@ -7,13 +7,12 @@ Trader adresi çıkmaz; yalnız adet.
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from copytrade.canli.rejim_sonuc import kayitlari_oku
+from copytrade.canli.hafta_paketi import _yaz_atomik
 
 SEMA = "ct.kural_maliyet.v1"
 DOSYA_JSON = "kural_maliyet_v1.json"
@@ -114,21 +113,6 @@ def markdown(veri: dict) -> str:
     out += [_satir_md(r) for r in veri["satirlar"]] or ["| - | 0 | 0 | 0.00 | 0.00 | 0.00 | 0.00 |"]
     out += ["", "Notlar:", ""] + [f"- {n}" for n in veri["notlar"]]
     return "\n".join(out) + "\n"
-
-
-def _yaz_atomik(yol: Path, metin: str) -> None:
-    yol.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=str(yol.parent), prefix=".km-", suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(metin)
-        os.replace(tmp, yol)
-    except BaseException:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
 
 
 def yaz(motor: Any) -> None:

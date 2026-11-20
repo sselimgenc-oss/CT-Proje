@@ -191,13 +191,14 @@ def _dogrula(**kw):
 
 
 @pytest.mark.parametrize("anahtar,deger", [("canli_kasa_ust_usd", 1500.0), ("canli_kasa_ust_usd", 1.0), ("canli_gunluk_kayip_oran", 0.05), ("canli_gunluk_kayip_oran", 0.0),
-                                           ("canli_marj_kaldirac", 1), ("canli_marj_kaldirac", 5), ("canli_marj_kaldirac", 3), ("canli_marj_kaldirac", 1.0000001), ("canli_marj_kaldirac", 4.9999999)])
+                                           ("canli_marj_kaldirac", 1), ("canli_marj_kaldirac", 5), ("canli_marj_kaldirac", 3)])
 def test_sert_sinirda_ve_icinde_kabul(anahtar, deger):
     _dogrula(**{anahtar: deger})
 
 
 @pytest.mark.parametrize("anahtar,deger", [("canli_kasa_ust_usd", 1500.000001), ("canli_kasa_ust_usd", 1501), ("canli_gunluk_kayip_oran", 0.05 + 1e-9),
-                                           ("canli_marj_kaldirac", 5.0000001), ("canli_marj_kaldirac", 0.9999999), ("canli_marj_kaldirac", 0), ("canli_marj_kaldirac", 6)])
+                                           ("canli_marj_kaldirac", 5.0000001), ("canli_marj_kaldirac", 0.9999999), ("canli_marj_kaldirac", 0), ("canli_marj_kaldirac", 6),
+                                           ("canli_marj_kaldirac", 1.0000001), ("canli_marj_kaldirac", 4.9999999)])                 # D8: kesirli kaldıraç (aralık içinde bile) reddedilir
 def test_sert_siniri_hemen_asan_reddedilir(anahtar, deger):
     with pytest.raises(ValueError, match=anahtar):
         _dogrula(**{anahtar: deger})
