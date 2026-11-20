@@ -410,7 +410,7 @@
    },
    "xyz:SPCX": {
     "acilis_ms": 1795174842871,
-    "giris": 132.31430440786653,
+    "giris": 132.30360492655677,
     "giris_ctx": {
      "duygu": "Extreme Fear",
      "duygu_deger": 12,
@@ -418,8 +418,8 @@
      "r4h": null
     },
     "kaldirac": 3.0,
-    "sz": 2.0327725386268947,
-    "zirve_kar": 0.0
+    "sz": 2.6444936571566764,
+    "zirve_kar": 1.0544485496133058e-05
    }
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": {
@@ -698,7 +698,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -16.018776363587666,
-    "zirve_kar": 0.040136186231904
+    "zirve_kar": 0.0403437871951726
    },
    "ETC": {
     "acilis_ms": 1795011950483,
@@ -738,7 +738,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -3.3007261597551465,
-    "zirve_kar": 0.10431794994898873
+    "zirve_kar": 0.10995919102202484
    },
    "TAO": {
     "acilis_ms": 1795119004082,
@@ -775,7 +775,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -4684.990583045316,
-    "zirve_kar": 0.013990836310205701
+    "zirve_kar": 0.014799757353587623
    },
    "kSHIB": {
     "acilis_ms": 1794829121462,
@@ -827,7 +827,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -3.8726255564790764,
-    "zirve_kar": 0.06996591980277012
+    "zirve_kar": 0.07515771155101168
    },
    "LINK": {
     "acilis_ms": 1794980261657,
@@ -921,7 +921,7 @@
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 909.0909090909091,
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 909.0909090909091
  },
- "son_niyet_cloid": "0xd592c55162d2c1604ccbc134ce70e78e",
+ "son_niyet_cloid": "0xb01ed0560c9b433121e3b2a33bd42938",
  "tasfiyeler": [
   {
    "adres": "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89",
@@ -933,7 +933,7 @@
   }
  ],
  "ucret": {
-  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 1.239768714700494,
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 1.2761787365112294,
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 0.3064685778617234,
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 0.7655434306488058,
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 1.4851345470278854,
