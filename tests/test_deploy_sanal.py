@@ -397,7 +397,7 @@ def _ayar(birim: str) -> dict:
 
 
 @pytest.mark.parametrize("birim,beklenen", [
-    ("sg-sanal.service", {"MemoryHigh": "700M", "MemoryMax": "1000M"}),
+    ("sg-sanal.service", {"MemoryHigh": "225M", "MemoryMax": "300M"}),
     ("sg-sanal-pano.service", {"MemoryMax": "400M", "Nice": "10", "CPUQuota": "50%"}),
     ("sg-sanal-yayim.service", {"MemoryMax": "300M", "Nice": "5"}),
     ("sg-sanal-kontrol.service", {"MemoryMax": "400M"}),
