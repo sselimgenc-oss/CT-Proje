@@ -904,3 +904,25 @@ def test_k80_yalniz_alarm_kipi_guncelleme_yapmaz(sunucu):
     sunucu.ci(*YESIL)
     r = sunucu.calistir(SANAL_YALNIZ_ALARM="1", JOURNAL_SANAL=_yeniden(4))
     assert r.returncode == 0 and sunucu.head() == sunucu.v1 and "systemctl stop" not in sunucu.log.read_text() and len(_tg(sunucu)) == 1
+
+
+def test_guncelle_binance_kagit_motorunu_kurar_ve_baslatir_erisim_yoksa_tekrarlamaz(sunucu):
+    tohum = sunucu.depo.parent / "tohum"
+    git(tohum, "pull", "-q", "origin", "main")
+    (tohum / "deploy/sg-sanal-binance-kagit.service").write_text("[Service]\n# b1\n")
+    git(tohum, "add", "-A")
+    git(tohum, "commit", "-q", "-m", "binance kagit birimi")
+    git(tohum, "push", "-q", "origin", "main")
+    sunucu.ci(*YESIL)
+    r = sunucu.calistir()
+    assert r.returncode == 0, r.stdout + r.stderr
+    log = sunucu.log.read_text()
+    assert (sunucu.birim / "sg-sanal-binance-kagit.service").exists()
+    assert "enable sg-sanal-binance-kagit.service" in log and "restart --no-block sg-sanal-binance-kagit.service" in log
+    (sunucu.durum / "binance_kagit_kapali").write_text("")                      # kalıcı kapatma işareti: yeniden açılmaz
+    sunucu.yeni_commit("v3")
+    sunucu.ci(*YESIL)
+    sunucu.log.write_text("")
+    r = sunucu.calistir()
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "sg-sanal-binance-kagit" not in sunucu.log.read_text()

@@ -700,6 +700,38 @@ def _ogrenme_html(og: dict | None) -> str:
                  "Öğrenme katmanı bugün kaç sinyali atladı ya da emri küçülttü; hayali K/Z, atlananlar alınsaydı ne olurdu.")
 
 
+def binance_kiyas(hl_ozet: dict, hl_kayit: list[dict], bk: dict | None) -> dict | None:
+    """K-81 Aşama A kıyası (HL sanal ↔ Binance kâğıt, AYNI sinyaller, ayrı kasalar). `bk` = {ozet, kayit} (Binance kâğıt sürecinin `durum/binance_kagit/ozet.json` + `kayit/binance_kagit/*.jsonl`); yoksa None.
+    Saf: yeni risk/K-Z hesabı yok; açık = açık pozisyon sayısı, kapanan = TAM kapanan pozisyon (`kapanan_ozeti`), net K/Z = özsermaye − kasa, kayma = trader fiyatına göre ortalama (`ozet.ortalama_kayma_trader`)."""
+    if not isinstance(bk, dict) or not bk.get("ozet"):
+        return None
+
+    def taraf(ozet: dict, kayit: list[dict]) -> dict:
+        ko = kapanan_ozeti(kapanan_islemler(kayit)) if kayit else {"poz": 0, "net": 0.0}
+        return {"acik": int(ozet.get("acik_pozisyon") or 0), "kapanan": int(ko.get("poz") or 0), "net": float(ozet.get("ozsermaye_usd") or 0.0) - float(ozet.get("kasa_usd") or 0.0),
+                "kayma": ozet.get("ortalama_kayma_trader"), "emir": int((ozet.get("emir") or {}).get("emir") or 0), "atlanan": int((ozet.get("emir") or {}).get("atlandi") or 0)}
+    b = (bk["ozet"].get("binance") or {})
+    return {"hl": taraf(hl_ozet, hl_kayit), "binance": taraf(bk["ozet"], bk.get("kayit") or []), "neden_say": dict(b.get("neden_say") or {}), "kayma_bp_medyan": b.get("kayma_bp_medyan"), "kayma_bp_p90": b.get("kayma_bp_p90"),
+            "fark_bp": b.get("fark_bp"), "erisim": (b.get("piyasa") or {}), "yazildi_ms": bk["ozet"].get("yazildi_ms"), "mmr_dogrulandi": bool(b.get("mmr_dogrulandi"))}
+
+
+def _binance_kiyas_html(k: dict | None, simdi_ms: int) -> str:
+    """Pano kartı "Binance kâğıt kıyası" (TEKNİK; yalnız bilgi): HL sanal ↔ Binance kâğıt yan yana. Veri yoksa kart "kurulu değil" yazar. Mevcut `.s` / `.ha` stilleri (karanlık/aydınlık tema, 12px köşe sayfa genelinde)."""
+    if not k:
+        return '<div class="bos">Binance kâğıt süreci kurulu değil / henüz veri yok</div>'
+    h, b = k["hl"], k["binance"]
+    kayma = lambda x: "—" if x is None else tr_yuzde(float(x))                                                            # noqa: E731
+    yas = None if not k.get("yazildi_ms") else simdi_ms - int(k["yazildi_ms"])
+    uyari = '<div class="uy">Binance kâğıt durdu ya da veri bayat (HL sanal etkilenmedi)</div>' if yas is None or yas > 1_800_000 else ""
+    atl = ", ".join(f"{_neden_tr(n)} {c}" for n, c in sorted(k["neden_say"].items(), key=lambda x: -x[1])[:4]) or "yok"
+    ek = (f'medyan {tr_sayi(float(k["kayma_bp_medyan"]), 1)} bp · p90 {tr_sayi(float(k["kayma_bp_p90"]), 1)} bp' if k.get("kayma_bp_medyan") is not None else "kayma verisi birikiyor")
+    return (uyari + _kart([("Açık pozisyon", f'HL {h["acik"]} · Binance {b["acik"]}'), ("Kapanan pozisyon", f'HL {h["kapanan"]} · Binance {b["kapanan"]}'),
+                           ("Net K/Z", f'HL {tl2(h["net"], True)} · Binance {tl2(b["net"], True)}'), ("Kayma (trader fiyatına göre)", f'HL {kayma(h["kayma"])} · Binance {kayma(b["kayma"])}'),
+                           ("Emir / atlanan", f'HL {h["emir"]}/{h["atlanan"]} · Binance {b["emir"]}/{b["atlanan"]}'), ("Binance'e özgü atlama", atl)],
+                          f"Aynı sinyaller, ayrı 10.000 $ kasalar. Binance fiyat kayması: {ek}. Düzeltme (fark bp): {'yok' if k.get('fark_bp') is None else tr_sayi(float(k['fark_bp']), 1) + ' bp'}; "
+                          f"bakım marjı oranı {'doğrulandı' if k.get('mmr_dogrulandi') else 'DOĞRULANMADI (varsayılan)'}; fonlama kaynağı {str((k.get('erisim') or {}).get('fonlama_kaynak') or '—')}."))
+
+
 def _kural_maliyet_html(km: dict | None) -> str:
     """Pano kartı "Kural maliyeti" (yalnız bilgi): `durum/paylasim/kural_maliyet_v1.json`. Slot tavanı satırı ilk; ardından en büyük 3 neden. Veri yoksa "veri birikiyor"."""
     satirlar = km.get("satirlar") if isinstance(km, dict) else None
@@ -1369,7 +1401,7 @@ def _risk_olay_tr(olay: str) -> str:
 def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecmis: list[dict], simdi_ms: int, kadro: dict | None = None, saha_durum: dict | None = None, hesap_tr: dict | None = None, havuz: dict | None = None, kurallar: dict | None = None,
                  donem_seri: dict | None = None, isabetler: list[dict] | None = None, kaldirac_tr: dict | None = None, surum_gun: dict[str, str] | None = None,
                  rejim_sonuc: dict | None = None, kaynak: dict | None = None, gunluk_ozet: dict | None = None, kural_maliyet: dict | None = None, secim_gercek: dict | None = None,
-                 rejim_anlik: dict | None = None, haber_anlik: dict | None = None) -> str:
+                 rejim_anlik: dict | None = None, haber_anlik: dict | None = None, binance_kagit: dict | None = None) -> str:
     """Telefonda/bilgisayarda açılan tek dosyalık panel (`pano/index.html`; kullanıcının Cloudflare statik sayfası `canli-durum` dalının `pano/` klasörünü gösterir, salt okunur; kapı sayfasında iframe içinde de açılır).
     6 sekme: ÖZET · AÇIK · KAPANAN · K/Z · ÖĞRENME · TEKNİK; üstte her sekmede sabit 6 kutulu şerit. Saf fonksiyon; yeni risk hesabı yok (özet + kayıtlardan yalnız toplama/dizme). Dış kaynak yok; tüm metin HTML kaçışlı."""
     from copytrade.kurallar import load_rules
@@ -1560,7 +1592,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
               f'<div class="grp">Risk limitleri</div>{cu("Günlük ve zirve limiti", limit_html)}{cu("Zirveden düşüş eğrisi", _cizgi(dd, "#ff6b6b", taban=0.0, x_etiket=x_et, birim="%"))}{cu("Maruziyet", maruziyet_html)}{cu("Risk olayları (24 sa)", risk_html)}'
               f'<div class="grp">Kalite kapıları</div>{cu("Başarı ölçütü", _karar_kutusu_html(ozet))}{cu("Seçim isabeti", _isabet_ozet_html(isabetler or [], ozet) + _isabet_html(isabetler or [], ozet))}{cu("Radar süzgeci", _huni_html(kadro))}'
               f'<div class="grp">Ölçümler</div>{cu("Kural maliyeti", _kural_maliyet_html(kural_maliyet))}{cu("Alınmayan sinyaller", _atlanan_html(k24) + _alinmayan_neden_html(alinmayan_neden(k24)))}{cu("Rejim × duygu", duygu_satiri + _rejim_sonuc_html(rejim_sonuc))}'
-              f'{cu("Kopya kalitesi", _kopya_kalite_html(k24))}{cu("Seçim × rastgele", _secim_rastgele_html(isabetler, secim_gercek))}{cu("Saha doluluğu", doluluk_html + emir_html + _maruziyet_ozet_html(mo))}{cu("Öğrenme etkisi (bugün)", _ogrenme_html((gunluk_ozet or {}).get("ogrenme")))}'
+              f'{cu("Kopya kalitesi", _kopya_kalite_html(k24))}{cu("Binance kâğıt kıyası", _binance_kiyas_html(binance_kiyas(ozet, kayitlar, binance_kagit), simdi_ms))}{cu("Seçim × rastgele", _secim_rastgele_html(isabetler, secim_gercek))}{cu("Saha doluluğu", doluluk_html + emir_html + _maruziyet_ozet_html(mo))}{cu("Öğrenme etkisi (bugün)", _ogrenme_html((gunluk_ozet or {}).get("ogrenme")))}'
               f'<div class="grp">Kayıtlar</div>{cu("Dönem eğrisi", _donem_egri_html(egri_noktalari(ds, float(kurallar.get("basari_aylik_hedef", 0.04)), simdi_ms), ds.get("kilitler")))}{cu("Trader katkısı", _katki_html(so))}{cu("İlk 11 ↔ Yedek", _ilk_yedek_html(so))}'
               f'{cu("Giriş / çıkış geçmişi", _gecmis_html(ds))}{cu("Maliyet dökümü", _maliyet_html(kayitlar, oz, kasa, gecmis, kip))}{cu("Trader bazında kapanışlar", _kapanan_html(kayitlar))}{cu("Emirler (24 sa)", emir_ozet + emir_son)}'
               f'{cu("Trader değişiklikleri (24 sa)", saha_html)}{cu("Sürüm karşılaştırma", surum_karsilastirma.html_tablo(surum_karsilastirma.karsilastir(kayitlar, surum_gun)))}'
@@ -1658,6 +1690,15 @@ def havuz_oku(dal: str | None, kadro: dict | None) -> dict[str, dict]:
     return {r["adres"]: {k: r.get(k) for k in ("yatirma_payi", "kopya_koruma")} for r in json.loads(s.stdout).get("satirlar", []) if r.get("adres")}
 
 
+def binance_kagit_oku(durum: Path, kayit: Path) -> dict | None:
+    """K-81: Binance kâğıt sürecinin çıktıları (`durum/binance_kagit/ozet.json`, `kayit/binance_kagit/*.jsonl`); süreç kurulu değilse None. Okuma hatası panoyu düşürmez."""
+    try:
+        o = _json(durum / "binance_kagit" / "ozet.json")
+        return {"ozet": o, "kayit": kayitlari_oku(kayit / "binance_kagit")} if o else None
+    except (OSError, ValueError):
+        return None
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--durum", type=Path, default=Path("durum"))
@@ -1689,7 +1730,8 @@ def main(argv: list[str] | None = None) -> int:
                                                rejim_sonuc=_json(args.durum / "paylasim" / "rejim_sonuc_v1.json"), kaynak=_json(args.durum / "motor.json").get("kaynak"),
                                                gunluk_ozet=_json(args.durum / "paylasim" / "gunluk_ozet_v1.json"), kural_maliyet=_json(args.durum / "paylasim" / "kural_maliyet_v1.json"),
                                                secim_gercek=_json(args.durum / "paylasim" / "secim_gercek_v1.json"),
-                                               rejim_anlik=_json(args.durum / "motor.json").get("rejim_anlik"), haber_anlik=_json(args.durum / "motor.json").get("haber_anlik")), encoding="utf-8")
+                                               rejim_anlik=_json(args.durum / "motor.json").get("rejim_anlik"), haber_anlik=_json(args.durum / "motor.json").get("haber_anlik"),
+                                               binance_kagit=binance_kagit_oku(args.durum, args.kayit)), encoding="utf-8")
     print(md)
     return 0
 

@@ -144,3 +144,16 @@ journalctl -u sg-sanal-olcum -n 30 -o cat      # çıkış 3 = Binance erişimi 
 sudo -u sgsanal bash -c 'cd /var/lib/sg-sanal/depo && /var/lib/sg-sanal/venv/bin/python -m copytrade.olcum.fiyat_farki --ozet'    # özet markdown → stdout + durum/olcum/fiyat_farki/OZET.md
 ```
 Çıktı yeri: `/var/lib/sg-sanal/depo/durum/olcum/fiyat_farki/` (`<gün>.jsonl`: `erisim`, `fark`, `mid`, `bitis` olayları). Veri dalına yayımlanmaz (yayım betiği yalnız bilinen dosyaları kopyalar); özeti elle alın.
+
+## 9. Binance KÂĞIT motoru (K-81, Aşama A; HL sanal ile paralel kıyas)
+
+HL sanal motoruyla AYNI sinyalleri Binance public fiyatlarıyla ayrı bir sanal kasada (10.000 $) yürüten ikinci süreç (`deploy/sg-sanal-binance-kagit.service`). Gerçek emir YOK, Binance anahtarı YOK. HL motoru (`sg-sanal`) ayrı süreç olarak aynen sürer: Binance erişimi (451) ya da bu sürecin çökmesi onu etkilemez. Oto-güncelleme birimi kurar, etkinleştirir ve her güncellemede yeniden başlatır (K-73: kâğıtta açık). Son çıkış 4 (Binance erişimi yok) ise yeniden başlatmaz; kalıcı kapatma için `/var/lib/sg-sanal-guncelle/binance_kagit_kapali` dosyası. Elle (gerekirse):
+```bash
+sudo cp /var/lib/sg-sanal/depo/deploy/sg-sanal-binance-kagit.service /etc/systemd/system/ && sudo systemctl daemon-reload
+sudo systemctl enable --now sg-sanal-binance-kagit
+journalctl -u sg-sanal-binance-kagit -n 30 -o cat    # çıkış 4 = Binance erişimi yok (403/451): TEK ⚠️ Telegram, süreç durur (yeniden başlatma döngüsü yok)
+```
+- Durum/kayıt: `durum/binance_kagit/`, `kayit/binance_kagit/` (depo içinde; `sanal_yayimla.sh` veri dalına `durum/binance_kagit/` ve `kayit/binance_kagit/` olarak yayımlar). Pano TEKNİK sekmesinde "Binance kâğıt kıyası" kartı; HL saatlik Telegram özetinde tek satır.
+- Erişim testi (kurulumdan önce): `curl -s -o /dev/null -w '%{http_code}\n' https://fapi.binance.com/fapi/v1/ping` → 200 beklenir; 451/403 = sunucu konumu kısıtlı (karar kullanıcıda, plan §8 K1).
+- Dönem sıfırlama gerekirse yalnız `durum/binance_kagit` ve `kayit/binance_kagit` silinir (HL durumuna DOKUNMAYIN); `binance_kagit_fark_bp` 96 saatlik ölçüm bitince `copytrade/kurallar.yaml`da doldurulur (null = düzeltme yok).
+- Durdurma: `sudo touch /var/lib/sg-sanal-guncelle/binance_kagit_kapali && sudo systemctl disable --now sg-sanal-binance-kagit` (HL sanal etkilenmez; işaret olmadan güncelleme yeniden açar).

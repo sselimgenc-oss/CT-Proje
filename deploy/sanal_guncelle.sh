@@ -394,6 +394,14 @@ motor_saglam || geri_al "sg-sanal ${BEKLE} sn sonra aktif değil"
 [ -f "$BIRIM_DIZIN/sg-sanal-bekci.timer" ] && { "$SYSTEMCTL" enable --now sg-sanal-bekci.timer >/dev/null 2>&1 || log "60 dk bekçi zamanlayıcısı açılamadı"; }   # K-80: yeni sürümden sonra 60 dk sağlık sayaçları; eşik aşılırsa otomatik geri dönüş
 [ -f "$BIRIM_DIZIN/sg-sanal-koruyucu.service" ] && { { "$SYSTEMCTL" enable sg-sanal-koruyucu.service >/dev/null 2>&1 && "$SYSTEMCTL" restart sg-sanal-koruyucu.service >/dev/null 2>&1; } || log "koruyucu servisi açılamadı"; }   # K-82: CT yerel koruyucu (ayrı süreç; restart = yeni kod yüklenir; durumu dosyada, güvenli)
 [ -f "$BIRIM_DIZIN/sg-sanal-radar.timer" ] && { "$SYSTEMCTL" enable --now sg-sanal-radar.timer >/dev/null 2>&1 || log "radar zamanlayıcısı açılamadı"; }   # günlük radar sunucuda (K-78; 00:37 UTC; elle kurulum gerekmesin; --now: Persistent kaçan koşuyu yakalar)
+if [ -f "$BIRIM_DIZIN/sg-sanal-binance-kagit.service" ] && [ ! -e "$DURUM/binance_kagit_kapali" ]; then   # K-81: Binance kâğıt motoru (HL sanal ile paralel kıyas) oto-kurulur, yeni kod için yeniden başlatılır. Kalıcı kapatma: $DURUM/binance_kagit_kapali
+  if [ "$("$SYSTEMCTL" show -p ExecMainStatus --value sg-sanal-binance-kagit.service 2>/dev/null)" = 4 ]; then
+    log "binance kâğıt: son çıkış 4 (Binance erişimi yok); yeniden başlatılmadı (her pencerede aynı ⚠️ tekrarlanmasın)"
+  else
+    "$SYSTEMCTL" enable sg-sanal-binance-kagit.service >/dev/null 2>&1 || log "binance kâğıt birimi etkinleştirilemedi"
+    "$SYSTEMCTL" restart --no-block sg-sanal-binance-kagit.service >/dev/null 2>&1 || log "binance kâğıt başlatılamadı"
+  fi
+fi
 if [ -f "$BIRIM_DIZIN/sg-sanal-olcum.service" ] && [ ! -e "$DURUM/olcum_basladi" ]; then   # 5a fiyat farkı ölçümü: BİR KEZ başlatılır (96 sa sonra kendi biter; işaret varken yeniden başlatılmaz)
   if "$SYSTEMCTL" start --no-block sg-sanal-olcum.service >/dev/null 2>&1; then date -u +%FT%TZ > "$DURUM/olcum_basladi"; log "fiyat farkı ölçümü başlatıldı"; else log "fiyat farkı ölçümü başlatılamadı"; fi
 fi

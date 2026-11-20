@@ -24,20 +24,37 @@ class Poz:
     zirve_kar: float = 0.0          # K-73 iz süren koruma (yalnız sanal): girişe göre en yüksek kâr oranı (artırmada ortalama giriş değişince sıfırlanır); hesap.json ile kalıcı
 
 
-def tasfiye_fiyati(yon_long: bool, giris: float, kaldirac: float, azami_kaldirac: float | None) -> float:
-    mmr = 1.0 / (2.0 * (azami_kaldirac or 20.0))
-    return giris * (1 - 1 / kaldirac) / (1 - mmr) if yon_long else giris * (1 + 1 / kaldirac) / (1 + mmr)
+def tasfiye_fiyati(yon_long: bool, giris: float, kaldirac: float, azami_kaldirac: float | None, mmr: float | None = None, cum_oran: float = 0.0) -> float:
+    """İzole tek pozisyon tasfiye fiyatı (ücret hariç). HL: `mmr` verilmezse 1/(2 × azami kaldıraç). K-81 Binance uyarlaması: `mmr` = kademenin bakım marjı oranı, `cum_oran` = kademe bakım tutarı (cum) / nosyonel;
+    long: giris × (1 − 1/k − cum_oran) / (1 − mmr), short: giris × (1 + 1/k + cum_oran) / (1 + mmr) (Binance: MM = nosyonel × MMR − cum; formül DOĞRULANMADI, resmi SSS'den teyit edilecek). cum_oran = 0 → HL ile aynı."""
+    if mmr is None:
+        mmr = 1.0 / (2.0 * (azami_kaldirac or 20.0))
+    return giris * (1 - 1 / kaldirac - cum_oran) / (1 - mmr) if yon_long else giris * (1 + 1 / kaldirac + cum_oran) / (1 + mmr)
 
 
-def tasfiye_mesafe(yon_long: bool, giris: float, kaldirac: float, azami_kaldirac: float | None) -> float:
+def tasfiye_mesafe(yon_long: bool, giris: float, kaldirac: float, azami_kaldirac: float | None, mmr: float | None = None, cum_oran: float = 0.0) -> float:
     """K-74 (taslak): girişten tasfiye fiyatına ALEYHE oran (0,1429 = %14,29). Formül `tasfiye_fiyati` ile aynı."""
-    liq = tasfiye_fiyati(yon_long, giris, kaldirac, azami_kaldirac)
+    liq = tasfiye_fiyati(yon_long, giris, kaldirac, azami_kaldirac, mmr, cum_oran)
     return (giris - liq) / giris if yon_long else (liq - giris) / giris
 
 
-def dinamik_stop_orani(yon_long: bool, giris: float, kaldirac: float, azami_kaldirac: float | None, ust: float, pay: float, taban: float = 0.005) -> float:
+def dinamik_stop_orani(yon_long: bool, giris: float, kaldirac: float, azami_kaldirac: float | None, ust: float, pay: float, taban: float = 0.005, mmr: float | None = None, cum_oran: float = 0.0) -> float:
     """K-74 (taslak, `dinamik_stop` bayrağı): pozisyon başına stop oranı = min(`ust`, tasfiye mesafesi − `pay`); en az `taban` (0 ya da eksi oran 'stop kapalı' demek olmasın)."""
-    return max(taban, min(float(ust), tasfiye_mesafe(yon_long, giris, kaldirac, azami_kaldirac) - float(pay)))
+    return max(taban, min(float(ust), tasfiye_mesafe(yon_long, giris, kaldirac, azami_kaldirac, mmr, cum_oran) - float(pay)))
+
+
+def mmr_kademe_bul(nosyonel: float | None, kademeler: list | None, varsayilan: float | None) -> tuple[float | None, float]:
+    """K-81: Binance kademe tablosundan (satır: [alt, ust, mmr, cum]; alt ≤ nosyonel < ust, son kademe üstü açık) (mmr, cum $) seçer. Tablo yoksa (varsayilan, 0). `nosyonel` None → ilk kademe."""
+    if not kademeler:
+        return varsayilan, 0.0
+    ilk = kademeler[0]
+    if nosyonel is None:
+        return float(ilk[2]), float(ilk[3])
+    secim = ilk
+    for k in kademeler:
+        if float(nosyonel) >= float(k[0]):
+            secim = k
+    return float(secim[2]), float(secim[3])
 
 
 KAPANAN_AZAMI = 200                                  # K-77: trader başına saklanan en çok kapanmış pozisyon kaydı
@@ -52,6 +69,8 @@ class Hesap:
     def __init__(self, kasa_usd: float, kaldirac: float = 3.0, maks_kaldirac: dict[str, float] | None = None) -> None:
         self.kasa_usd, self.kaldirac = float(kasa_usd), float(kaldirac)
         self.maks_kaldirac = dict(maks_kaldirac or {})
+        self.mmr_varsayilan: float | None = None      # K-81 (Binance kâğıt): bakım marjı oranı (None = HL formülü 1/(2×azami kaldıraç)); yalnız Binance sürecinde kurulur, hesap.json'a yalnız doluysa yazılır
+        self.mmr_kademe: dict[str, list] = {}         # K-81: coin -> [[alt, ust, mmr, cum], ...] (isteğe bağlı; yoksa mmr_varsayilan)
         self.poz: dict[str, dict[str, Poz]] = {}
         self.realize: dict[str, float] = {}          # adres -> girişten beri gerçekleşen K/Z (ücret HARİÇ)
         self.ucret: dict[str, float] = {}            # adres -> girişten beri ücret
@@ -199,6 +218,14 @@ class Hesap:
         return sum(abs(p.sz) * p.giris / p.kaldirac for c in self.poz.values() for p in c.values())
 
     # ------------------------------------------------------------------ tasfiye
+    def mmr_cum(self, coin: str, giris: float, sz: float | None = None) -> tuple[float | None, float]:
+        """K-81: coin için (mmr | None, cum_oran). HL sürecinde (mmr_varsayilan None, kademe yok) → (None, 0.0) = eski formül. `sz` None → ilk kademe (stop hesabı)."""
+        if self.mmr_varsayilan is None and not self.mmr_kademe.get(coin):
+            return None, 0.0
+        nos = None if sz is None else abs(float(sz)) * float(giris)
+        mmr, cum = mmr_kademe_bul(nos, self.mmr_kademe.get(coin), self.mmr_varsayilan)
+        return mmr, (cum / nos if nos else 0.0)
+
     def tasfiye_kontrol(self, marks: dict[str, float], zaman_ms: int) -> list[dict]:
         """Mark fiyatı tasfiye fiyatını geçen izole pozisyonları tasfiye fiyatında kapatır (kayıp ≈ marjın bakım marjı dışındaki kısmı). Döner: tasfiye olayları."""
         olaylar = []
@@ -208,7 +235,8 @@ class Hesap:
                 if not mark:
                     continue
                 uzun = p.sz > 0
-                liq = tasfiye_fiyati(uzun, p.giris, p.kaldirac, self.maks_kaldirac.get(coin))
+                mmr, cum_oran = self.mmr_cum(coin, p.giris, p.sz)
+                liq = tasfiye_fiyati(uzun, p.giris, p.kaldirac, self.maks_kaldirac.get(coin), mmr, cum_oran)
                 if (uzun and mark <= liq) or (not uzun and mark >= liq):
                     sz0, giris0 = abs(p.sz), p.giris                      # uygula() aynı nesneyi sıfırlar: önce yakala
                     pnl = self.uygula(adres, coin, "A" if uzun else "B", sz0, liq, 0.0, zaman_ms)
@@ -234,7 +262,8 @@ class Hesap:
     def to_json(self) -> dict[str, Any]:
         return {"kasa_usd": self.kasa_usd, "kaldirac": self.kaldirac, "maks_kaldirac": self.maks_kaldirac, "realize": self.realize, "ucret": self.ucret, "slot_bas": self.slot_bas,
                 "poz": {a: {c: asdict(p) for c, p in coinler.items()} for a, coinler in self.poz.items()}, "tasfiyeler": self.tasfiyeler[-200:], "kapanmis_net": self.kapanmis_net, "funding": self.funding, "son_niyet_cloid": self.son_niyet_cloid,
-                "belirsiz": self.belirsiz, "poz_net": self.poz_net, "kapanan": self.kapanan, "kucult": self.kucult}
+                "belirsiz": self.belirsiz, "poz_net": self.poz_net, "kapanan": self.kapanan, "kucult": self.kucult,
+                **({"mmr_varsayilan": self.mmr_varsayilan} if self.mmr_varsayilan is not None else {}), **({"mmr_kademe": self.mmr_kademe} if self.mmr_kademe else {})}
 
     @classmethod
     def from_json(cls, d: dict[str, Any], kaldirac: float | None = None) -> "Hesap":
@@ -250,4 +279,6 @@ class Hesap:
         h.kucult = {a: int(v) for a, v in (d.get("kucult") or {}).items()}
         h.son_niyet_cloid = d.get("son_niyet_cloid")
         h.belirsiz = {k: dict(v) for k, v in (d.get("belirsiz") or {}).items()}
+        h.mmr_varsayilan = None if d.get("mmr_varsayilan") is None else float(d["mmr_varsayilan"])
+        h.mmr_kademe = {k: [list(r) for r in v] for k, v in (d.get("mmr_kademe") or {}).items()}
         return h

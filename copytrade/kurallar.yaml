@@ -309,3 +309,21 @@ fiyat_farki_grup_min_dolum: 30
 trader_zarar_kucult_n1: 5               # adet (ilk küçültme için en az kapanmış pozisyon)
 trader_zarar_kucult_carpan1: 0.5        # çarpan (n1'de yeni açılış/artırma boyutu)
 trader_zarar_kucult_n2: 10              # adet (en küçük boyut için en az kapanmış pozisyon)
+
+# K-81 (kullanıcı onayı 20.11, Aşama A): CT sinyallerini Binance USDⓈ-M fiyatlarıyla KÂĞITTA yürüten AYRI süreç (`motor --borsa binance_kagit`, ayrı durum/binance_kagit dizini ve 10.000 $ sanal kasa; HL sanal motoru aynen sürer).
+# Kâğıtta her özellik açık ve işleme etkili (K-73). "DOĞRULANMADI": Binance dokümanı bu ortamdan okunamadı (docs/binance-plan.md okuma notu); resmi sayfadan teyit edilene dek VARSAYIMDIR.
+binance_taker: 0.0005                    # oran (Binance VIP0 taker %0,05; BNB indirimiyle %0,045; DOĞRULANMADI: tarife değişir; kâğıtta BNB indirimi yok sayılır)
+binance_kagit_kasa_usd: 10000            # $ (Binance kâğıt sanal kasası; HL sanal ile aynı, kıyas için)
+binance_kagit_gecikme_ms: 250            # ms (emir yolu: defter "sinyal + gecikme" anında okunur; arastirma tahmini ~230–280 ms, ÖLÇÜLMEDİ, 5a ölçümüyle güncellenecek)
+binance_kagit_ioc_bant_major: 0.0010     # oran (Fable F3 önerisi: majör 10 bp; 5a p95 ile kesinleşir; çağıran bant verirse o geçerli)
+binance_kagit_ioc_bant_alt: 0.0025       # oran (Fable F3 önerisi: altcoin / TradFi 25 bp)
+binance_kagit_fark_bp: null              # bp (HL<->Binance fark/kayma düzeltmesi; + = bizim aleyhimize, dolum fiyatına alışta +, satışta − uygulanır). null = düzeltme YOK (doğrudan Binance fiyatı). 96 saatlik ölçüm (copytrade/olcum/fiyat_farki.py, durum/olcum) bitince doldurulur
+binance_mmr_varsayilan: 0.005            # oran (K-74 Binance uyarlaması: ilk kademe bakım marjı oranı; DOĞRULANMADI. leverageBracket imzalı uçtur: anahtarsız okunamaz; elle tablo için binance_mmr_kademe)
+binance_mmr_kademe: {}                   # coin -> [[alt_nosyonel, ust_nosyonel, mmr, cum_usd], ...] (isteğe bağlı; boş = yalnız varsayılan). Örnek: {BTC: [[0, 50000, 0.004, 0], [50000, 250000, 0.005, 50]]}
+binance_mmr_dogrulandi: false            # bool (mmr tablosu resmi kaynaktan teyitli mi; ozet/pano "doğrulanmadı" etiketi)
+binance_reduce_min_nosyonel_muaf: true   # bool (reduceOnly kapanış/azaltma minNotional'dan muaf; DOĞRULANMADI)
+binance_fonlama_varsayilan_saat: 8       # saat (fundingInfo'da olmayan sembol: 8 saatlik aralık; DOĞRULANMADI)
+binance_kagit_derinlik_limit: 20         # adet (depth seviyesi: 5/10/20/50/100; boyutumuz için 20 yeter)
+binance_kagit_mark_ttl_sn: 10            # sn (premiumIndex önbelleği; tüm semboller tek istek)
+binance_kagit_bilgi_ttl_sn: 3600         # sn (exchangeInfo önbelleği: durum/tick/adım/minNotional)
+binance_kagit_erisim_kesinti_sn: 180     # sn (Binance verisi bu kadar kesintisiz okunamazsa TEK ⚠️ ile Binance kâğıt süreci durur; HL motoru etkilenmez)
