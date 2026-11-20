@@ -28,6 +28,17 @@ def tasfiye_fiyati(yon_long: bool, giris: float, kaldirac: float, azami_kaldirac
     return giris * (1 - 1 / kaldirac) / (1 - mmr) if yon_long else giris * (1 + 1 / kaldirac) / (1 + mmr)
 
 
+def tasfiye_mesafe(yon_long: bool, giris: float, kaldirac: float, azami_kaldirac: float | None) -> float:
+    """K-74 (taslak): girişten tasfiye fiyatına ALEYHE oran (0,1429 = %14,29). Formül `tasfiye_fiyati` ile aynı."""
+    liq = tasfiye_fiyati(yon_long, giris, kaldirac, azami_kaldirac)
+    return (giris - liq) / giris if yon_long else (liq - giris) / giris
+
+
+def dinamik_stop_orani(yon_long: bool, giris: float, kaldirac: float, azami_kaldirac: float | None, ust: float, pay: float, taban: float = 0.005) -> float:
+    """K-74 (taslak, `dinamik_stop` bayrağı): pozisyon başına stop oranı = min(`ust`, tasfiye mesafesi − `pay`); en az `taban` (0 ya da eksi oran 'stop kapalı' demek olmasın)."""
+    return max(taban, min(float(ust), tasfiye_mesafe(yon_long, giris, kaldirac, azami_kaldirac) - float(pay)))
+
+
 class Hesap:
     def __init__(self, kasa_usd: float, kaldirac: float = 3.0, maks_kaldirac: dict[str, float] | None = None) -> None:
         self.kasa_usd, self.kaldirac = float(kasa_usd), float(kaldirac)
@@ -177,8 +188,9 @@ class Hesap:
                 uzun = p.sz > 0
                 liq = tasfiye_fiyati(uzun, p.giris, p.kaldirac, self.maks_kaldirac.get(coin))
                 if (uzun and mark <= liq) or (not uzun and mark >= liq):
-                    pnl = self.uygula(adres, coin, "A" if uzun else "B", abs(p.sz), liq, 0.0, zaman_ms)
-                    ev = {"adres": adres, "coin": coin, "tasfiye_px": liq, "mark": mark, "pnl": pnl, "zaman_ms": zaman_ms}
+                    sz0, giris0 = abs(p.sz), p.giris                      # uygula() aynı nesneyi sıfırlar: önce yakala
+                    pnl = self.uygula(adres, coin, "A" if uzun else "B", sz0, liq, 0.0, zaman_ms)
+                    ev = {"adres": adres, "coin": coin, "tasfiye_px": liq, "mark": mark, "pnl": pnl, "zaman_ms": zaman_ms, "sz": sz0, "giris": giris0, "yon": "uzun" if uzun else "kısa"}
                     olaylar.append(ev)
                     self.tasfiyeler.append(ev)
         return olaylar

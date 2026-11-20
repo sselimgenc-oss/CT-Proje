@@ -761,14 +761,14 @@ def _kaynak_html(kaynak: dict | None, saglik: dict | None = None) -> str:
 # ------------------------------------------------------------------------------------------------------------------------------ pano v2 (6 sekme): saf yardımcılar
 SEKMELER = ("ÖZET", "AÇIK", "KAPANAN", "K/Z", "ÖĞRENME", "TEKNİK")
 UCRET_YOK = "Henüz ölçülemedi"
-NEDEN_KAPANIS = {"felaket_stop": "Stop", "borsa_stop": "Stop", "borsa_stop_korumasiz": "Stop", "iz_suren_koruma": "İz süren",
+NEDEN_KAPANIS = {"tasfiye": "Tasfiye", "felaket_stop": "Stop", "borsa_stop": "Stop", "borsa_stop_korumasiz": "Stop", "iz_suren_koruma": "İz süren",
                  "tam_kapanis": "Trader kapattı", "kucuk_kalan_kapat": "Trader kapattı", "trader_kapali_senkron": "Trader kapattı",
                  "trader_ters_senkron": "Trader yön değiştirdi", "inen_ters": "Konsensüs döndü",
                  "tamam": "Trader azalttı", "min_emir_yuvarlandi": "Trader azalttı", "slot_tavani": "Trader azalttı"}
 RISK_TR = {"risk": "risk freni", "dur": "motor durduruldu", "dur_tamam": "motor durdu", "mutabakat_alarm": "hesap uyuşmazlığı", "mutabakat_duzeldi": "hesap uyuşmazlığı giderildi",
            "kapanis_eksik": "kapanış eksik kaldı", "tasfiye": "zorla kapanma", "kuyruk_tasti": "olay kuyruğu taştı", "vardiya_boslugu": "çalışma kesintisi",
            "vardiya_baslamadi": "çalışma başlamadı", "telegram_yetkisiz": "yetkisiz Telegram denemesi"}
-NEDEN_AYRINTI = {"felaket_stop": "Zarar stopu", "borsa_stop": "Borsa stopu", "borsa_stop_korumasiz": "Borsa stopu (koruma kurulamadı)", "iz_suren_koruma": "İz süren koruma",
+NEDEN_AYRINTI = {"tasfiye": "Sanal tasfiye (zorla kapanma)", "felaket_stop": "Zarar stopu", "borsa_stop": "Borsa stopu", "borsa_stop_korumasiz": "Borsa stopu (koruma kurulamadı)", "iz_suren_koruma": "İz süren koruma",
                  "tam_kapanis": "Trader pozisyonu kapattı", "kucuk_kalan_kapat": "Trader pozisyonu kapattı (küçük kalan)", "trader_kapali_senkron": "Trader pozisyonu kapattı",
                  "trader_ters_senkron": "Trader ters yöne geçti", "inen_ters": "Takipten ayrılan trader'ın pozisyonu, başka bir trader ters yönde açınca kapandı",
                  "tamam": "Trader pozisyonunu küçülttü", "min_emir_yuvarlandi": "Trader pozisyonunu küçülttü", "slot_tavani": "Trader pozisyonunu küçülttü"}
@@ -881,8 +881,9 @@ def kapanan_islemler(kayitlar: list[dict], felaket_oran: float = 0.0) -> list[di
         anahtar = (k.get("adres"), k.get("coin"))
         ms = int(k.get("zaman_ms") or 0)
         if not k.get("reduce_only"):
-            o = acik.setdefault(anahtar, {"ms": ms, "ders": k.get("ders_carpan"), "sz": 0.0, "tr": 0.0, "biz": 0.0, "n": 0})
+            o = acik.setdefault(anahtar, {"ms": ms, "ders": k.get("ders_carpan"), "sz": 0.0, "tr": 0.0, "biz": 0.0, "n": 0, "kalan": 0.0})
             s_ = abs(float(k.get("sz") or 0.0))
+            o["kalan"] = o.get("kalan", 0.0) + s_                                                          # açık büyüklük (kapanış tespiti: sıfıra inince pozisyon bitmiştir)
             if k.get("trader_px") is not None and k.get("dolum_px") is not None and s_ > 0:
                 o["sz"] += s_
                 o["tr"] += s_ * float(k["trader_px"])
@@ -891,7 +892,11 @@ def kapanan_islemler(kayitlar: list[dict], felaket_oran: float = 0.0) -> list[di
         if k.get("pnl_usd") is None:
             continue
         o = acik.get(anahtar) or {}
-        tam = k.get("eylem") == "kapat"
+        sz_k = abs(float(k.get("sz") or 0.0))
+        kalan = o["kalan"] - sz_k if "kalan" in o else None
+        tam = k.get("eylem") == "kapat" or (kalan is not None and kalan <= 1e-9 * max(1.0, o["kalan"]))      # kapat / azaltmalarla sıfıra iniş / tasfiye: hepsi pozisyon sonu
+        if "kalan" in o:
+            o["kalan"] = max(kalan, 0.0)
         poz = (anahtar[0], anahtar[1], seq.get(anahtar, 0))
         if tam:
             acik.pop(anahtar, None)

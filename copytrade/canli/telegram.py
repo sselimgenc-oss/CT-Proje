@@ -229,12 +229,13 @@ class Telegram:
         self._son_gonderim.pop(anahtar, None)                      # düzelmiş sorun yeniden olursa 5 dk tekrar penceresi uyarıyı yutmasın
         return self.gonder(metin, "INFO")
 
-    def gonder(self, metin: str, onem: str | None = None, anahtar: str | None = None, tur: str | None = None) -> bool:
+    def gonder(self, metin: str, onem: str | None = None, anahtar: str | None = None, tur: str | None = None, alan: dict | None = None) -> bool:
         """Mesaj gönderir; hata motoru DURDURMAZ (sayılır). Token günlüğe/hata metnine ASLA yazılmaz. `onem`: INFO/WARN/CRIT (yoksa metinden çıkarılır); `anahtar`: tekrar önleme
         anahtarı (yoksa WARN/CRIT için metnin kendisi). Giden mesajın ilk satırı `[CT] <ÖNEM>` olur (kayda/`gonderilen`e düz metin yazılır)."""
         if tur is not None and tur in self.bastirilan:             # bastırılan tür: gönderilmez, kayda yazılır (tespit silinmedi)
             if self.kayit:
                 self.kayit({"olay": "tg_bastirildi", "tur": tur, "metin": metin[:200]})
+                self.kayit({"olay": "tg_mesaj", "tur": tur, "anahtar": anahtar, "seviye": onem or onem_duzeyi(metin), "sessiz": False, "metin": metin, "gonderildi": False, "bastirildi": True, **(alan or {})})
             return False
         metin = kip_etiketle(metin, self.kip)
         for m in self.maske:
@@ -242,6 +243,8 @@ class Telegram:
         self.gonderilen.append(metin)
         if self.kayit:
             self.kayit({"olay": "telegram", "metin": metin[:300], "acik": self.acik})
+            self.kayit({"olay": "tg_mesaj", "tur": tur, "anahtar": anahtar, "seviye": onem or onem_duzeyi(metin), "sessiz": self.sessiz_mi(metin), "metin": metin, "gonderildi": bool(self.acik),
+                        "bastirildi": False, **(alan or {})})      # mutabakat: TAM metin + yapısal alanlar (adres/coin/yon/pnl/neden); token/chat id yazılmaz (metinde yok, `maskele` kayıtta ayrıca süzer)
         if not self.acik:
             return False
         oge = (metin, onem or onem_duzeyi(metin), anahtar, float(self.saat_s()))
@@ -588,7 +591,7 @@ def msg_acildi(adres: str, coin: str, yon: str, giris: float, usd: float, stop: 
             f"Giriş {fiyat_tr(giris)}{kopya} · Tutar {tr_sayi(usd, 0 if usd >= 100 else 1)} $ · Stop {stop_s}{gec}")
 
 
-KAPANIS_NEDEN_TR = {"felaket_stop": "stop", "borsa_stop": "stop", "borsa_stop_korumasiz": "stopsuz kaldığı için kapatıldı", "tam_kapanis": "trader kapattı",
+KAPANIS_NEDEN_TR = {"tasfiye": "tasfiye", "felaket_stop": "stop", "borsa_stop": "stop", "borsa_stop_korumasiz": "stopsuz kaldığı için kapatıldı", "tam_kapanis": "trader kapattı",
                     "trader_kapali_senkron": "trader kapattı", "trader_ters_senkron": "trader yön değiştirdi", "gunluk_kapat": "günlük kayıp freni",
                     "sahipsiz_pozisyon": "sahipsiz pozisyon kuralı", "iz_suren_koruma": "iz süren koruma", "dur": "bot durduruldu", "komut": "sen kapattın (/hepsini_kapat)", "inen_24sa": "trader takipten çıktı", "inen_ters": "trader takipten çıktı"}
 

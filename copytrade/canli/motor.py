@@ -30,7 +30,7 @@ from typing import Any, Callable
 
 from copytrade import boyut
 from copytrade.canli import telegram as tg
-from copytrade.canli.hesap import Hesap
+from copytrade.canli.hesap import Hesap, dinamik_stop_orani
 from copytrade.canli.kadro import Karar, Saha, kadro_taze_mi
 from copytrade.canli.mutabakat import poz_farki, sanal_tutarlilik
 from copytrade.canli.niyet import Niyet, cloid_uret
@@ -1556,17 +1556,20 @@ class Motor:
                 p = self.hesap.poz.get(adres, {}).get(coin)
                 giris = float(d.px or 0.0) or float(p.giris if p is not None else 0.0)
                 oran = float(self.rules.get("canli_felaket_stop_oran", 0) or 0)
+                oran = self._stop_orani(coin, yon == "B", giris, oran, 0.03) if oran > 0 else oran
                 stop = (giris * (1 - oran) if yon == "B" else giris * (1 + oran)) if oran > 0 and giris > 0 else None
                 gec_ek = gecikme_sn if (gecikme_sn is not None and gecikme_sn > float(self.rules.get("canli_olay_stale_sn", 120))) else None
-                self._islem_mesaji(tg.msg_acildi(adres, coin, yon, giris, float(d.usd_dolan), stop, self.kip, float(o.px) if o is not None and o.px else None, gec_ek), True, 0.0)
+                self._islem_mesaji(tg.msg_acildi(adres, coin, yon, giris, float(d.usd_dolan), stop, self.kip, float(o.px) if o is not None and o.px else None, gec_ek), True, 0.0,
+                                   {"adres": adres, "coin": coin, "yon": yon, "pnl": 0.0, "neden": "ac"})
             else:
                 toplam = float(ozet["tutar"]) if ozet else (abs(float(d.sz)) * onceki_giris if d.sz else 0.0)
                 kz = float(ozet["pnl"]) if ozet else float(pnl or 0.0)
-                self._islem_mesaji(tg.msg_kapandi(adres, coin, kz, (kz / toplam) if toplam > 0 else None, neden, self.kip, toplam, int(ozet["artir"]) if ozet else 0, int(ozet["azalt"]) if ozet else 0), False, kz)
+                self._islem_mesaji(tg.msg_kapandi(adres, coin, kz, (kz / toplam) if toplam > 0 else None, neden, self.kip, toplam, int(ozet["artir"]) if ozet else 0, int(ozet["azalt"]) if ozet else 0), False, kz,
+                                   {"adres": adres, "coin": coin, "yon": yon, "pnl": round(kz, 6), "neden": neden})
         except Exception as hata:                           # noqa: BLE001 - mesaj hatası emri/defteri etkilemez
             self.kayit({"olay": "tg_mesaj_hata", "tur": type(hata).__name__})
 
-    def _islem_mesaji(self, metin: str, acildi: bool, kz: float) -> None:
+    def _islem_mesaji(self, metin: str, acildi: bool, kz: float, alan: dict | None = None) -> None:
         simdi = self.saat_ms()
         p = self._islem_pen
         if p["bas"] is None or simdi - int(p["bas"]) >= 3_600_000:
@@ -1574,10 +1577,11 @@ class Motor:
             p = self._islem_pen = {"bas": simdi, "n": 0, "ac": 0, "kapat": 0, "net": 0.0}
         if p["n"] < int(self.rules.get("canli_telegram_islem_saat_max", 10)):
             p["n"] += 1
-            self.tg.gonder(metin)
+            self.tg.gonder(metin, alan=alan)
         else:
             p["ac" if acildi else "kapat"] += 1
             p["net"] += kz
+            self.kayit({"olay": "tg_mesaj", "tur": "islem_saat_siniri", "anahtar": None, "seviye": "INFO", "sessiz": False, "metin": metin, "gonderildi": False, "bastirildi": True, **(alan or {})})
             self.kayit({"olay": "tg_bastirildi", "tur": "islem_saat_siniri", "metin": metin[:120]})
 
     def _islem_toplu(self, simdi: int, zorla: bool = False) -> None:
@@ -2715,7 +2719,30 @@ class Motor:
             return                                         # gerçek kipte tasfiyeyi HL yapar; mutabakat farkı yakalar
         for e in self.hesap.tasfiye_kontrol(self.marks, simdi):
             self.kayit({"olay": "tasfiye", **e})
-            self.tg.gonder(tg.alarm("TASFİYE (sanal)", f"{e['coin']} pozisyonu (trader {tg.kisa(e['adres'])}) {e['tasfiye_px']:.6g} fiyatında tasfiye oldu (piyasa {e['mark']:.6g}).", "💥"))
+            self._tasfiye_emri(e, simdi)
+            self.tg.gonder(tg.alarm("Tasfiye (sanal)", f"{e['coin']} pozisyonu (trader {tg.kisa(e['adres'])}) {e['tasfiye_px']:.6g} fiyatında tasfiye oldu (piyasa {e['mark']:.6g}). Pozisyon kapandı, kayıt yazıldı.", "💥"))
+
+    def _tasfiye_emri(self, e: dict, simdi: int) -> None:
+        """Sanal tasfiye = normal kapanış gibi görünür: `emir` kaydı (kapanış, neden tasfiye; pano/mutabakat görür) + standart 'kapandı' Telegram mesajı. Defter `tasfiye_kontrol`de zaten düşülmüştür.
+        Hata motoru durdurmaz."""
+        try:
+            adres, coin, sz, px, pnl = e["adres"], e["coin"], float(e.get("sz") or 0.0), float(e["tasfiye_px"]), float(e["pnl"])
+            uzun = e.get("yon") == "uzun"
+            yon = "A" if uzun else "B"
+            self._dolum_yaz()
+            self.kayit({"olay": "emir", "kip": self.kip, "adres": adres, "coin": coin, "eylem": "kapat", "yon": yon, "usd_istenen": sz * px, "usd_dolan": sz * px, "sz": sz, "reduce_only": True,
+                        "pnl_usd": round(pnl, 6), "durum": "dolu", "red_neden": None, "boyut_neden": "tasfiye", "emir_ms": simdi, "dolum_ms": simdi, "referans_px": e.get("mark"), "dolum_px": px,
+                        "ucret": 0.0, "kaynak": "tasfiye"})
+            self._ozet_emir += 1
+            self._say_gun["kapat"] = self._say_gun.get("kapat", 0) + 1
+            ozet = self._poz_ozet.pop(f"{adres}|{coin}", None)
+            giris = float(e.get("giris") or 0.0)
+            toplam = float(ozet["tutar"]) if ozet else sz * giris
+            kz = (float(ozet["pnl"]) if ozet else 0.0) + pnl
+            self._islem_mesaji(tg.msg_kapandi(adres, coin, kz, (kz / toplam) if toplam > 0 else None, "tasfiye", self.kip, toplam, int(ozet["artir"]) if ozet else 0, int(ozet["azalt"]) if ozet else 0), False, kz,
+                               {"adres": adres, "coin": coin, "yon": yon, "pnl": round(kz, 6), "neden": "tasfiye"})
+        except Exception as hata:                           # noqa: BLE001
+            self.kayit({"olay": "tasfiye_emir_hata", "tur": type(hata).__name__})
 
     _zirve_yenile = False
     bekci_nabiz: Callable[[], None] | None = None          # `calis` bekçinin `nabiz`ını bağlar (kapanış döngüsü her denemede besler)
@@ -2910,6 +2937,13 @@ class Motor:
         if degisti:
             self._hesap_yaz()                                    # zirve yeniden başlatmada kaybolmasın
 
+    def _stop_orani(self, coin: str, uzun: bool, giris: float, ust: float, pay: float, kaldirac: float | None = None) -> float:
+        """K-74 (taslak): `dinamik_stop` açıksa min(`ust`, tasfiye mesafesi − `pay`); kapalıysa (varsayılan) `ust` aynen. Azami kaldıraç: sanal defter tablosu, yoksa gerçek kip HL tablosu, yoksa 20 (formül yedeği)."""
+        if not self.rules.get("dinamik_stop") or giris <= 0:
+            return ust
+        azami = self.hesap.maks_kaldirac.get(coin) or self._hl_maks_kaldirac.get(coin)
+        return dinamik_stop_orani(uzun, giris, kaldirac or self.hesap.kaldirac, azami, ust, pay)
+
     def _felaket_stop(self, simdi: int) -> None:
         """K-62 felaket stopu: pozisyon ortalama girişten `canli_felaket_stop_oran` kadar aleyhe gittiyse (mark ile) o pozisyon kapanır. Trader sahada kalır (slot kuralı ayrıca işler).
         Gerçek kipte borsada duran tetik emri ayrıca gerekir (bot çökmesine karşı); bu, motor ayaktayken çalışan yazılım katmanıdır."""
@@ -2922,7 +2956,8 @@ class Motor:
                 if not mk or not p.giris or not p.sz:
                     continue
                 aleyhe = (p.giris - mk) / p.giris if p.sz > 0 else (mk - p.giris) / p.giris
-                if aleyhe >= oran - 1e-12:
+                oran_p = self._stop_orani(coin, p.sz > 0, p.giris, oran, 0.03, p.kaldirac)         # K-74: bayrak kapalıyken `oran` aynen
+                if aleyhe >= oran_p - 1e-12:
                     ok, _ = self._kapat_coin(adres, coin, "felaket_stop", simdi)
                     self.kayit({"olay": "felaket_stop", "adres": adres, "coin": coin, "giris": p.giris, "mark": mk, "aleyhe": aleyhe, "kapandi": bool(ok)})
                     self._kozmetik("donem_kilit", self.donem_kilit, "felaket_stop", simdi)          # D-5: kozmetik; istisnası aynı dakikadaki diğer stop ihlallerini ertelemez
@@ -2962,7 +2997,9 @@ class Motor:
         kapanış yoluyla temizlenir (`_kapat_coin` → borsa 0 ise G-13 harici kapanış + defter düzeltmesi). Hata → kayıt + saatte bir alarm; motor durmaz."""
         if self.kip != "gercek" or not hasattr(self.yurutucu, "stop_koy"):
             return
-        hedef = borsa_stop.hedefler(self.hesap.poz, self.marks, float(self.rules["canli_borsa_stop_oran"]), float(self.rules.get("canli_min_nosyonel_usd", 10)))     # defter temelli (K-64; değişmedi)
+        bs_oran = float(self.rules["canli_borsa_stop_oran"])
+        oran_fn = (lambda c, uzun, giris: self._stop_orani(c, uzun, giris, bs_oran, 0.01)) if self.rules.get("dinamik_stop") else None     # K-74 (taslak): coin başına min(%22, tasfiye mesafesi − %1); bayrak kapalı → None (eski)
+        hedef = borsa_stop.hedefler(self.hesap.poz, self.marks, bs_oran, float(self.rules.get("canli_min_nosyonel_usd", 10)), oran_fn)     # defter temelli (K-64)
         hedef.update(borsa_stop.yetim_hedefler(self.yetim_ilk, self.marks, float(self.rules["canli_borsa_stop_oran"]), float(self.rules.get("canli_min_nosyonel_usd", 10))))      # Denetim-5 (K-68): defter dışı fazla için SABİT (ilk görülen mark) referanslı ek stop
         olay = self.borsa_stop.esitle(hedef, acik, self.yurutucu)
         yeniden = False

@@ -25,8 +25,9 @@ def bizim_mi(cloid: Any) -> bool:
     return str(cloid or "").lower().startswith(ONEK)
 
 
-def hedefler(poz: dict[str, dict[str, Any]], marks: dict[str, float], oran: float, min_usd: float) -> dict[str, dict]:
-    """Coin → {long, sz, tetik} (tetik: ham fiyat, yuvarlanmamış). `poz`: adres → coin → Poz(sz işaretli, giris)."""
+def hedefler(poz: dict[str, dict[str, Any]], marks: dict[str, float], oran: float, min_usd: float, oran_fn: Any = None) -> dict[str, dict]:
+    """Coin → {long, sz, tetik} (tetik: ham fiyat, yuvarlanmamış). `poz`: adres → coin → Poz(sz işaretli, giris).
+    `oran_fn(coin, long, giris) -> oran` (K-74 `dinamik_stop`; None = hep sabit `oran`, eski davranış)."""
     net: dict[str, float] = {}
     for coinler in poz.values():
         for c, p in coinler.items():
@@ -44,7 +45,8 @@ def hedefler(poz: dict[str, dict[str, Any]], marks: dict[str, float], oran: floa
         mk = float(marks.get(c) or giris)
         if abs(n) * mk < float(min_usd):
             continue
-        sonuc[c] = {"long": long, "sz": abs(n), "tetik": giris * (1 - oran) if long else giris * (1 + oran)}
+        o = oran if oran_fn is None else float(oran_fn(c, long, giris))
+        sonuc[c] = {"long": long, "sz": abs(n), "tetik": giris * (1 - o) if long else giris * (1 + o)}
     return sonuc
 
 
