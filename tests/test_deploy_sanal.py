@@ -248,7 +248,7 @@ def test_guncelle_statik_guvenceler():
     assert "--require-hashes -r" in kod and "requirements-canli.lock" in kod
     assert '"tamam": true' in kod and "sg-sanal-kontrol" in kod and "flock" in kod
     assert "durum kayit pano" in kod                                                                  # yerel durum koruması
-    assert "[CT] $1" in kod and "Sunucu güncellendi:" in kod and "CRIT" in kod and "INFO" in kod
+    assert "[CT] $2" in kod and "Sunucu güncellendi:" in kod and "CRIT" in kod and "INFO" in kod and "[CT] $1" not in kod
     # token: yalnız stdin'den curl --config'e; echo/log yok, set -x yok
     assert "--config -" in kod and not re.search(r"set -[a-z]*x", kod)
     assert not re.search(r"(echo|log)\b[^\n]*\$\{?tok\b", kod)
@@ -288,7 +288,7 @@ def sunucu(tmp_path):
     (bin_ / "journalctl").write_text('#!/usr/bin/env bash\ncase " $* " in *" -u sg-sanal "*) [ -n "${JOURNAL_SANAL:-}" ] && printf "%b" "$JOURNAL_SANAL"; exit 0;; esac\nif [ "${KONTROL_TAMAM:-1}" = 1 ]; then echo \'  "tamam": true,\'; else echo \'  "tamam": false,\'; fi\n')
     (bin_ / "curl").write_text(
         '#!/usr/bin/env bash\necho "curl $*" >> "$CAGRI_LOG"\n'
-        'if [ "$1" != "-sSL" ]; then cat >/dev/null; for a in "$@"; do case "$a" in text=*) echo "TG:$a" >> "$CAGRI_LOG";; esac; done; exit 0; fi\n'
+        'if [ "$1" != "-sSL" ]; then cat >/dev/null; for a in "$@"; do case "$a" in text=*) echo "TG:$a" >> "$CAGRI_LOG";; disable_notification=*) echo "NS:$a" >> "$CAGRI_LOG";; esac; done; exit 0; fi\n'
         'cat "$CI_JSON"\n')
     for f in bin_.iterdir():
         f.chmod(0o755)
@@ -343,7 +343,8 @@ def test_guncelle_basari_yolu_ff_birim_telegram_ve_yerel_durum_korunur(sunucu):
     assert sunucu.head() == yeni and "# v2" in (sunucu.birim / "sg-sanal.service").read_text()      # birim değişti -> kopyalandı
     log = sunucu.log.read_text()
     assert "daemon-reload" in log and log.index("stop sg-sanal") < log.index("start sg-sanal-kontrol") < log.rindex("start sg-sanal")
-    assert f"Sunucu güncellendi: {sunucu.v1[:7]}→{yeni[:7]} (degisiklik v2)" in log and "[CT] INFO" in log
+    assert f"tg_bastirildi: sunucu_guncellendi (Sunucu güncellendi: {sunucu.v1[:7]}→{yeni[:7]} (degisiklik v2))" in r.stdout        # rutin INFO Telegram'a GİTMEZ (pano/günlük)
+    assert "Sunucu güncellendi" not in log and "TG:" not in log
     assert "SIRTOKEN123" not in r.stdout + r.stderr + log                                             # token argv'ye/günlüğe girmez
     assert (sunucu.depo / "durum/motor.json").exists()                                                # yerel durum dokunulmadı
     assert sunucu.calistir().returncode == 0 and (sunucu.durum / "uygulanan_sha").read_text().strip() == yeni
@@ -356,7 +357,7 @@ def test_guncelle_duman_testi_basarisizsa_geri_alir_ve_crit_bildirir(sunucu):
     assert r.returncode == 1, r.stdout + r.stderr
     assert sunucu.head() == sunucu.v1 and "# v1" in (sunucu.birim / "sg-sanal.service").read_text()   # git + birim geri
     log = sunucu.log.read_text()
-    assert "[CT] CRIT" in log and "BAŞARISIZ" in log and (sunucu.depo / "durum/motor.json").exists()
+    assert "[CT] 🚨 Sunucu güncellemesi başarısız oldu" in log and "CRIT" not in log and "NS:disable_notification=false" in log and (sunucu.depo / "durum/motor.json").exists()
     assert "start sg-sanal\n" in log                                                                  # servisler yeniden başlatıldı
     assert "SIRTOKEN123" not in r.stdout + r.stderr + log
     r2 = sunucu.calistir()                                                                           # aynı bozuk commit saatlik döngüde tekrar denenmez
@@ -385,7 +386,7 @@ def test_geri_al_onay_ister_ve_onayla_dondurur(sunucu):
     assert r.returncode == 2
     r = subprocess.run(["bash", str(GERI_AL), sunucu.v1[:7]], env=sunucu.ortak, input="evet\n", capture_output=True, text=True)
     assert r.returncode == 0, r.stdout + r.stderr
-    assert sunucu.head() == sunucu.v1 and (sunucu.durum / "dondur").exists() and "elle geri alındı" in sunucu.log.read_text()
+    assert sunucu.head() == sunucu.v1 and (sunucu.durum / "dondur").exists() and "TG:text=[CT] Bot önceki sürüme döndürüldü" in sunucu.log.read_text() and "NS:disable_notification=true" in sunucu.log.read_text() and "Sunucu güncellendi" not in sunucu.log.read_text()
 
 
 # ------------------------------------------------------------------------------------------------ kaynak sınırları ve haftalık bakım
@@ -425,9 +426,13 @@ def _yeniden(n):
 
 def _tg(sunucu):
     satirlar, cikti = sunucu.log.read_text().splitlines(), []
-    for i, s in enumerate(satirlar):                                                                  # sahte curl mesajı ilk satıra keser: sonraki satır metindir
+    for i, s in enumerate(satirlar):                                                                  # sahte curl mesajı ilk satıra keser: sonraki satırlar (başka çağrı başlayana dek) metindir
         if s.startswith("TG:"):
-            cikti.append(s + " " + (satirlar[i + 1] if i + 1 < len(satirlar) else ""))
+            j = i + 1
+            while j < len(satirlar) and not satirlar[j].startswith(("curl ", "systemctl ", "journalctl ", "NS:", "TG:", "git ")):
+                s += " " + satirlar[j]
+                j += 1
+            cikti.append(s)
     return cikti
 
 
@@ -437,7 +442,8 @@ def test_alarm_yeniden_baslama_siniri_tek_crit_ve_6_saat_siniri(sunucu):
     r = sunucu.calistir(JOURNAL_SANAL=_yeniden(4))
     assert r.returncode == 0, r.stdout
     tg = _tg(sunucu)
-    assert len(tg) == 1 and "[CT] CRIT" in tg[0] and "4 kez yeniden başladı (sınır 2)" in tg[0] and "OOM hayır" in tg[0]
+    assert len(tg) == 1 and "[CT] 🔴 Bot durdu" in tg[0] and "CRIT" not in tg[0] and "Açık pozisyon: " in tg[0] and "Stop: " in tg[0] and "4 kez yeniden başladı (sınır 2)" in tg[0] and "bellek taşması olmadı" in tg[0] and "Senden" not in tg[0].split("\n")[0] and "Sorun sürerse bana haber ver" in tg[0] and "journalctl" not in tg[0]
+    assert "NS:disable_notification=false" in sunucu.log.read_text()                                  # CRIT sesli
     assert "SIRTOKEN123" not in sunucu.log.read_text()
     sunucu.calistir(JOURNAL_SANAL=_yeniden(5))                                                      # 6 saat dolmadan tekrar YOK
     assert len(_tg(sunucu)) == 1
@@ -453,7 +459,7 @@ def test_alarm_duzeldi_tek_info_ve_durum_temizlenir(sunucu):
     assert len(_tg(sunucu)) == 1 and (sunucu.durum / "alarm_yeniden").exists()
     sunucu.calistir(JOURNAL_SANAL=_yeniden(1))
     tg = _tg(sunucu)
-    assert len(tg) == 2 and "[CT] INFO" in tg[1] and "düzeldi" in tg[1] and not (sunucu.durum / "alarm_yeniden").exists()
+    assert len(tg) == 2 and "[CT] ✅ Düzeldi" in tg[1] and "INFO" not in tg[1] and "NS:disable_notification=true" in sunucu.log.read_text() and not (sunucu.durum / "alarm_yeniden").exists()
     sunucu.calistir()                                                                               # tekrar düzeldi mesajı YOK
     assert len(_tg(sunucu)) == 2
 
@@ -461,11 +467,11 @@ def test_alarm_duzeldi_tek_info_ve_durum_temizlenir(sunucu):
 def test_alarm_oom_crit_gunlukten_ve_systemctl_sonucundan(sunucu):
     sunucu.calistir(JOURNAL_SANAL="sg-sanal.service: Failed with result 'oom-kill'.\n")
     tg = _tg(sunucu)
-    assert len(tg) == 1 and "[CT] CRIT" in tg[0] and "OOM" in tg[0]
+    assert len(tg) == 1 and "[CT] 🔴 Bot durdu" in tg[0] and "bellek tavanı" in tg[0]
     sunucu.calistir(JOURNAL_SANAL="x\n")                                                           # düzeldi
     assert len(_tg(sunucu)) == 2
     sunucu.calistir(SHOW_RESULT="oom-kill")                                                         # systemctl Result=oom-kill
-    assert len(_tg(sunucu)) == 3 and "OOM" in _tg(sunucu)[2]
+    assert len(_tg(sunucu)) == 3 and "bellek tavanı" in _tg(sunucu)[2]
 
 
 def test_alarm_commit_olmasa_da_calisir_donmusken_de_ve_guncellemeyi_bozmaz(sunucu):
@@ -483,3 +489,20 @@ def test_alarm_commit_olmasa_da_calisir_donmusken_de_ve_guncellemeyi_bozmaz(sunu
 def test_alarm_betik_statik():
     s = GUNCELLE.read_text(encoding="utf-8")
     assert s.index("\nalarm_kontrol ||") < s.index('-s "$DURUM/dondur"') and "21600" in s and "oom-kill" in s
+
+
+def test_alarm_bot_durdu_acik_pozisyon_sayisi_defterden(sunucu):
+    (sunucu.depo / "durum").mkdir(exist_ok=True)
+    (sunucu.depo / "durum" / "hesap.json").write_text(json.dumps({"poz": {"0xa": {"BTC": {}, "ETH": {}}}}))
+    sunucu.calistir(JOURNAL_SANAL=_yeniden(4))
+    tg = _tg(sunucu)
+    assert len(tg) == 1 and "Açık pozisyon: 2 · Stop: bot kapalıyken yazılım stopu çalışmıyor" in tg[0]
+
+
+def test_guncelleme_sayaci_saglik_jsona_yazilir_gunluk_rapor_icin(sunucu):
+    sunucu.yeni_commit("v2")
+    sunucu.ci(*YESIL)
+    assert sunucu.calistir().returncode == 0
+    assert (sunucu.durum / "guncelleme_gunlugu").read_text().split() == [time.strftime("%Y-%m-%d", time.gmtime())]
+    sunucu.calistir()                                                                               # sonraki çalışma sağlık JSON'unu yazar
+    assert json.loads(Path(sunucu.ortak["SANAL_SAGLIK_JSON"]).read_text())["guncelleme_bugun"] == 1

@@ -62,7 +62,7 @@ def test_g1_asili_emir_zaman_asimi_belirsiz_orderstatus_filled_deftere_tek_kez(t
     assert s[0].karar == "belirsiz" and s[0].neden == "sdk_hatasi: ReadTimeout"
     assert sim.poz["BTC"] == pytest.approx(SZ) and m.hesap.sz(adr(1), "BTC") == 0.0                        # borsada açık, defterde henüz yok
     assert len(m.hesap.belirsiz) == 1 and len(m.niyet.sonucsuz()) == 1 and m.risk.acilis_durdu["belirsiz"] is True
-    assert m.sayac["red"] == 0 and m.sayac["belirsiz"] == 1 and any("emir sonucu belirsiz" in x for x in tgp.gonderilen)
+    assert m.sayac["red"] == 0 and m.sayac["belirsiz"] == 1 and any("emir sonucu belirsiz" in x.lower() for x in tgp.gonderilen)
     m.dakika()                                                                                              # aynı an: zaman aşımı (10 sn) dolmadı → sorgu yok
     assert sim.orderstatus_say() == 0 and m.hesap.sz(adr(1), "BTC") == 0.0
     saat.ms += 60_000
@@ -196,7 +196,7 @@ def test_g12b_dakika_durum_yaz_hatasi_adim_korumasinda_alarm(tmp_path):
     m.dakika()
     m.dakika()
     h = [x for x in kayitlar(tmp_path, "adim_hata") if x["adim"] == "durum_yaz"]
-    assert len(h) == 2 and h[0]["tur"] == "OSError" and sum("durum diske yazılamıyor" in x for x in tgp.gonderilen) == 1
+    assert len(h) == 2 and h[0]["tur"] == "OSError" and sum("durum diske yazılamıyor" in x.lower() for x in tgp.gonderilen) == 1
 
 
 class StubMotor:
@@ -272,7 +272,7 @@ def test_g12b_gorev_beklenmedik_biterse_motor_durur_cikis_kodu_1():
         return t
     t = asyncio.run(kos())
     assert isinstance(t.exception(), RuntimeError) and m.cikis_kodu == 1 and durdurulan == [1]
-    assert [x for x in m.kayitlar if x.get("olay") == "gorev_bitti"][0]["tur"] == "RuntimeError" and any("motor görevi durdu" in x for x in m.tg.gonderilen)
+    assert [x for x in m.kayitlar if x.get("olay") == "gorev_bitti"][0]["tur"] == "RuntimeError" and any(x.startswith("🔴 Bot durdu") and "görevi beklenmedik biçimde bitti" in x for x in m.tg.gonderilen)
     m2 = StubMotor(Path(tempfile.mkdtemp()), hata_sira=())
     m2.dur_istendi = True
     din2 = types.SimpleNamespace(izle_ekle=lambda a: None, durdur=lambda: None, ozet=lambda: {"genel": {}})
@@ -330,7 +330,7 @@ def test_bekci_180_sn_ilerleme_yoksa_alarm_ve_cikis_1_nabiz_sifirlar():
     assert b.kontrol() is False
     saat.t += 0.1
     assert b.kontrol() is True and cikis == [1]
-    assert m.kayitlar == [{"olay": "bekci_tetik", "gecen_sn": 180.0, "sinir_sn": 180.0}] and "motor dondu" in m.tg.gonderilen[0]
+    assert m.kayitlar == [{"olay": "bekci_tetik", "gecen_sn": 180.0, "sinir_sn": 180.0}] and m.tg.gonderilen[0].startswith("🔴 Bot durdu") and "motor dondu" in m.tg.gonderilen[0]
     saat.t += 500
     assert b.kontrol() is False and cikis == [1]                               # tek sefer
 

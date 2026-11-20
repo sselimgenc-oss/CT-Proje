@@ -1,0 +1,16 @@
+# Bot 20 dk içinde dönmediyse İKİNCİ sesli "Bot durdu" mesajı (deploy/alarm_ikinci.sh). Token/chat yalnız /etc/sg-sanal-telegram.env; yoksa "atlandı".
+[Unit]
+Description=sg-arge sanal bot ikinci alarm (20 dk dönmediyse)
+
+[Service]
+Type=oneshot
+User=sgsanal
+Group=sgsanal
+EnvironmentFile=-/etc/sg-sanal-telegram.env
+Environment=ALARM_DURUM_DIZIN=/var/lib/sg-sanal/depo/durum
+ExecStart=/bin/bash /var/lib/sg-sanal/depo/deploy/alarm_ikinci.sh
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sg-sanal/depo/durum

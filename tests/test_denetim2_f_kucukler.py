@@ -185,7 +185,7 @@ def test_d11_kapanis_modunda_yeni_acilis_yok_kapanis_calisir(tmp_path, monkeypat
     m2, *_ = kur_gercek(tmp_path, monkeypatch, sim, saat=saat, tgp=tgp)
     m2.kapanis_modu = True
     m2.baslat()
-    assert m2.risk.acilis_durdu["kapanis_modu"] is True and kayitlar(tmp_path, "kapanis_modu") and any("yalnız kapanış modu" in x for x in tgp.gonderilen)
+    assert m2.risk.acilis_durdu["kapanis_modu"] is True and kayitlar(tmp_path, "kapanis_modu") and any("yalnız kapanış modu" in x.lower() for x in tgp.gonderilen)
     s = m2.olay_isle(olay("a:2", adr(1), "ETH", "B", 15, 2000.0, 0.0, saat))                       # yeni açılış
     assert s[0].karar == "engel" and s[0].neden == "kapanis_modu"
     s2 = m2.olay_isle(olay("a:3", adr(1), "BTC", "A", 300, 100.0, 300.0, saat))                     # trader kapatır → bizim kapanış

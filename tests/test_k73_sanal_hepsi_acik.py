@@ -325,7 +325,7 @@ def test_filtre_hata_uyarisi_3_hatada_ve_6_saatte_bir(tmp_path, monkeypatch):
     assert not _uyarilar(m)
     _hata_yap(m, saat, monkeypatch)
     u = _uyarilar(m)
-    assert len(u) == 1 and u[0].startswith("⚠️") and len(u[0].splitlines()) <= 5 and "Senden: bir şey gerekmiyor" in u[0]
+    assert len(u) == 1 and u[0].startswith("⚠️") and len(u[0].splitlines()) <= 5 and "Senden bir şey gerekmiyor" in u[0]
     saat.ms += 60_000
     _hata_yap(m, saat, monkeypatch)
     assert len(_uyarilar(m)) == 1                                  # 6 saat içinde tekrar yok

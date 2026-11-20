@@ -65,7 +65,7 @@ Telegram: sunucuda açık (dosya yoksa tüm kanallar sessiz). `/etc/sg-sanal-tel
 ## 5. Açılış kontrolü ve başlatma
 ```bash
 sudo systemctl start sg-sanal-kontrol; journalctl -u sg-sanal-kontrol -n 60 -o cat     # "tamam": true, kip sanal, kadro var
-sudo systemctl enable --now sg-sanal sg-sanal-yayim.timer sg-sanal-pano.timer
+sudo systemctl enable --now sg-sanal sg-sanal-yayim.timer sg-sanal-pano.timer sg-sanal-ikinci-alarm.timer     # ikinci: bot 20 dk dönmezse ikinci sesli mesaj
 journalctl -u sg-sanal -f                                                               # canlı günlük
 ```
 İlk açılışta `sanal_baslat.sh` durumu `canli-durum` dalından (dönem aynıysa) kopyalar. 15 dk sonra ilk sunucu yayımı `canli-durum` dalında görünür.

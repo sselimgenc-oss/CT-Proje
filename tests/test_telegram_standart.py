@@ -28,18 +28,18 @@ def test_ilk_satir_proje_etiketi_ve_onem():
     t.gonder("🧾 normal bilgi")
     t.gonder(tg.alarm("UYARI: kadro kasası farklı", "x", "⚠️"))
     t.gonder(tg.alarm("ALARM: API cüzdanı", "y"))
-    assert [x.splitlines()[0] for x in t.post.ham] == ["[CT] INFO", "[CT] WARN", "[CT] CRIT"]
-    assert t.post.ham[0] == "[CT] INFO\n🧾 normal bilgi"
+    assert [x.splitlines()[0] for x in t.post.ham] == ["[CT] 🧾 normal bilgi", "[CT] ⚠️ Kadro kasası farklı", "[CT] 🚨 API cüzdanı"]       # seviye kelimesi yok; ALARM:/UYARI: kod sözcüğü atılır
+    assert t.post.ham[0] == "[CT] 🧾 normal bilgi"
     assert tg.onem_duzeyi("🛑 DUR: x") == "CRIT" and tg.onem_duzeyi("📭 x") == "WARN" and tg.onem_duzeyi("📊 x") == "INFO"
     t.gonder("açık", onem="WARN")
-    assert t.post.ham[-1].startswith("[CT] WARN\n")
+    assert t.post.ham[-1] == "[CT] açık" and "WARN" not in t.post.ham[-1]
 
 
 def test_mesaj_3500_karakteri_asmaz_baslik_sabit_kalir():
     t = yeni()
     t.gonder("🚨 ALARM: başlık\n" + "x" * 6000)
     gidecek = t.post.ham[-1]
-    assert len(gidecek) <= 3500 and gidecek.startswith("[CT] CRIT\n🚨 ALARM: başlık\n") and gidecek.endswith("(kısaltıldı)")
+    assert len(gidecek) <= 3500 and gidecek.startswith("[CT] 🚨 Başlık\n") and gidecek.endswith("(kısaltıldı)")
     assert tg.mesaj_kirp("kısa") == "kısa"
 
 
@@ -190,7 +190,7 @@ def test_gunluk_rapor_21_tsi_haftalik_pazar_18_10_utc(tmp_path):
 
 def test_haftalik_metin_altin_ornek():
     metin = tg.msg_haftalik("sanal", 1000.0, 1030.0, 1000.0, 105.0, 100.0, 42, [("0xaaaaaaaaaaaa", 20.0), ("0xbbbbbbbbbbbb", -5.5), ("0xcccccccccccc", 3.0)])
-    assert metin.splitlines() == ["🗓️ Haftalık özet (sanal · deneme parası)", tg.AYRAC, "📈 Hafta: +30,00 $ (+%3,00)", "₿ BTC al-tut: +%5,00 · fark −%2,00",
+    assert metin.splitlines() == ["🗓️ Haftalık özet (sanal · deneme parası)", tg.AYRAC, "💰 Özsermaye: 1.030,00 $", "📈 Hafta: +30,00 $ (+%3,00)", "📌 Açık pozisyon: —", "₿ BTC al-tut: +%5,00 · fark −%2,00",
                                   "🧾 Hafta içi 42 emir", "🏆 En iyi trader: 0xaaaaaa… · +20,00 $ (slot K/Z)", "🔻 En kötü trader: 0xbbbbbb… · −5,50 $ (slot K/Z)"]
     ilk = tg.msg_haftalik("sanal", 1000.0, 990.0, None, None, None, 3, [])
     assert "Başlangıçtan beri: −10,00 $" in ilk and "BTC kıyası: bu hafta için veri yok" in ilk and "Sahada trader yok" in ilk

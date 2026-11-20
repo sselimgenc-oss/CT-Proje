@@ -602,4 +602,4 @@ def test_telegram_gece_sessiz_alarm_her_zaman_sesli():
     t_gunduz = tg.Telegram(TOKEN, CHAT, sahte, sessiz_utc=(21, 5), saat_s=lambda: gece)
     t_gece = tg.Telegram(TOKEN, CHAT, sahte, sessiz_utc=(21, 5), saat_s=lambda: gece + 9 * 3600)                 # 22:46 UTC = 01:46 TSİ
     t_gunduz.gonder("🧾 emir özeti"), t_gece.gonder("🧾 emir özeti"), t_gece.gonder("ALARM: kapanış EKSİK"), t_gece.gonder("DUR: komut")
-    assert [y["disable_notification"] for y in yuklenen] == [False, True, False, False]
+    assert [y["disable_notification"] for y in yuklenen] == [True, True, False, False]          # INFO her zaman sessiz (kullanıcı standardı); WARN/CRIT sesli

@@ -141,3 +141,20 @@ def test_uretim_sanal_kontrol_degismedi():
     ozet = {"kip": "gercek", "yazildi_ms": SIMDI - 5 * 60_000}
     kadro = {"kosu_ms": SIMDI - 60_000, "gecti_sayisi": 12, "saha_n": 11, "satirlar": [{"katman": "ilk11"}] * 11}
     assert "gercek_nabiz_eski" not in _kodlar(saglik.kontrol(SIMDI, ozet, kadro))
+
+
+def test_alarm_servis_dustu_mesaji_bot_durdu_acik_pozisyon_ve_duzeldi_isareti(tmp_path):
+    """🔴 Bot durdu biçimi: '[CT] 🔴 ...' (INFO/WARN/CRIT kelimesi yok), açık pozisyon sayısı + stop durumu; durum dizini verilirse `tg_bot_durdu` işareti yazılır (motor yeniden çalışınca tek Düzeldi)."""
+    durum = tmp_path / "durum"
+    durum.mkdir()
+    (durum / "hesap.json").write_text(json.dumps({"poz": {"0xa": {"BTC": {}, "ETH": {}}, "0xb": {"SOL": {}}}}))
+    kayit = tmp_path / "kayit.txt"
+    sahte = tmp_path / "curl"
+    sahte.write_text(f'#!/bin/sh\ncat >/dev/null\nfor a in "$@"; do case "$a" in text=*) printf "%s" "$a" > {kayit};; esac; done\nexit 0\n')
+    sahte.chmod(0o755)
+    r = subprocess.run(["bash", str(DEPLOY / "alarm.sh"), "sg-sanal"], capture_output=True, text=True,
+                       env=_env(PATH=f"{tmp_path}:{os.environ['PATH']}", TELEGRAM_BOT_TOKEN=TOKEN, TELEGRAM_CHAT_ID="42", ALARM_DURUM_DIZIN=str(durum)))
+    assert r.returncode == 0, r.stderr
+    m = kayit.read_text()
+    assert m.startswith("text=[CT] 🔴 Bot durdu\n") and "Açık pozisyon: 3 · Stop: bot kapalıyken yazılım stopu çalışmıyor" in m and "journalctl" not in m
+    assert not re.search(r"\b(INFO|WARN|CRIT)\b", m) and (durum / "tg_bot_durdu").exists()

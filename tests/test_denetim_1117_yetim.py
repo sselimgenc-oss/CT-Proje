@@ -49,7 +49,7 @@ def test_yetim_tespit_alarm_kalici_durum_ve_sabit_referansli_stop(tmp_path, monk
     t0 = saat()
     _dk(m, saat)                                                          # tespit (+ aynı dakikada borsa stopu eşitlemesi mutabakattan ÖNCE: ikinci dakikada stop)
     assert m.yetim_ilk["ETH"]["mark"] == 2000.0 and m.yetim_ilk["ETH"]["sz"] == pytest.approx(0.5) and m.yetim_ilk["ETH"]["ms"] == t0 + 60_000
-    assert kayitlar(tmp_path, "yetim_tespit") and any("defter dışı borsa pozisyonu" in x for x in tgp.gonderilen)
+    assert kayitlar(tmp_path, "yetim_tespit") and any("defter dışı borsa pozisyonu" in x.lower() for x in tgp.gonderilen)
     _dk(m, saat)
     st = [e for e in sim.acik if e["coin"] == "ETH"]
     assert len(st) == 1 and st[0]["side"] == "A" and st[0]["reduceOnly"] is True and st[0]["sz"] == pytest.approx(0.5) and float(st[0]["triggerPx"]) == pytest.approx(1560.0)
