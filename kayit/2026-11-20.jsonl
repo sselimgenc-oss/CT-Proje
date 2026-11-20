@@ -8302,3 +8302,5 @@
 {"zaman_ms":1795213129459,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"xyz:NATGAS","neden":"pozisyon_eski"}
 {"zaman_ms":1795213535193,"olay":"tur","ozsermaye_usd":9805.0435}
 {"zaman_ms":1795213751372,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"xyz:NATGAS","neden":"kayma_lehte_fazla","kayma":-0.010164,"trader_giris":3.74642,"mark":3.7845}
+{"zaman_ms":1795214374398,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"xyz:NATGAS","neden":"pozisyon_eski"}
+{"zaman_ms":1795214417781,"olay":"tur","ozsermaye_usd":9827.7933}
