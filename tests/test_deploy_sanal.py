@@ -289,7 +289,7 @@ def sunucu(tmp_path):
     (bin_ / "curl").write_text(
         '#!/usr/bin/env bash\necho "curl $*" >> "$CAGRI_LOG"\n'
         'if [ "$1" != "-sSL" ]; then cat >/dev/null; for a in "$@"; do case "$a" in text=*) echo "TG:$a" >> "$CAGRI_LOG";; disable_notification=*) echo "NS:$a" >> "$CAGRI_LOG";; esac; done; exit 0; fi\n'
-        'cat "$CI_JSON"\n')
+        'sha="$(printf "%s" "$*" | sed -nE "s#.*/commits/([0-9a-f]+)/check-runs.*#\\1#p")"; if [ -n "$sha" ] && [ -f "$CI_JSON.$sha" ]; then cat "$CI_JSON.$sha"; else cat "$CI_JSON"; fi\n')
     for f in bin_.iterdir():
         f.chmod(0o755)
     tg = tmp_path / "tg.env"
@@ -333,6 +333,27 @@ def test_guncelle_ayni_sha_ve_kirmizi_ci_hicbir_sey_yapmaz(sunucu):
         r = sunucu.calistir()
         assert r.returncode == 0 and sunucu.head() == sunucu.v1 and "systemctl stop" not in sunucu.log.read_text(), r.stdout
     assert "CI yeşil değil" in r.stdout
+
+
+def test_guncelle_birlestirme_commitinde_zamanli_kontrol_varsa_pr_ucu_degerlendirilir(sunucu, tmp_path):
+    """20.11 olayı: zamanlanmış iş akışları main ucuna (birleştirme commit'i) 'radar'/'kontrol' ekleyince zorunlu test/canli_sdk eksik görünüyordu → güncelleme hiç uygulanmadı. Artık 2. ebeveyn (PR ucu) değerlendirilir."""
+    tohum = sunucu.depo.parent / "tohum"
+    git(tohum, "pull", "-q", "origin", "main")
+    git(tohum, "checkout", "-q", "-b", "pr")
+    (tohum / "deploy/sg-sanal.service").write_text("[Service]\n# v3\n")
+    git(tohum, "commit", "-qam", "pr")
+    pr_ucu = subprocess.run(["git", "rev-parse", "HEAD"], cwd=tohum, capture_output=True, text=True).stdout.strip()
+    git(tohum, "checkout", "-q", "main")
+    git(tohum, "merge", "-q", "--no-ff", "-m", "Merge pr", "pr")
+    git(tohum, "push", "-q", "origin", "main")
+    birlesme = subprocess.run(["git", "rev-parse", "HEAD"], cwd=tohum, capture_output=True, text=True).stdout.strip()
+    ci = tmp_path / "ci.json"
+    Path(f"{ci}.{birlesme}").write_text(json.dumps({"check_runs": [{"name": "radar", "status": "completed", "conclusion": "skipped"}, {"name": "kontrol", "status": "completed", "conclusion": "success"}]}))
+    Path(f"{ci}.{pr_ucu}").write_text(json.dumps({"check_runs": [{"name": a, "status": st, "conclusion": c} for a, st, c in YESIL]}))
+    sunucu.ci()
+    r = sunucu.calistir()
+    assert r.returncode == 0 and sunucu.head() == birlesme, r.stdout + r.stderr
+    assert "PR ucu" in r.stdout
 
 
 def test_guncelle_basari_yolu_ff_birim_telegram_ve_yerel_durum_korunur(sunucu):
