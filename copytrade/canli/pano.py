@@ -1266,14 +1266,14 @@ def _kadro_bolumu(ozet: dict, hesap: dict, kayitlar: list[dict], acik: list[dict
 
 
 
-KOYU = "--bg:#0b0b0d;--k:#141417;--cz:#2b2b31;--y:#ececf1;--so:#b3b3bd;--tu:#f5a524;--art:#3ddc84;--eks:#ff6b6b;--bk:#f5d90a;--c2:#202026;--c3:#18181c;--uyb:#7f1d1d;--uyy:#ffe4e4"
-ACIK = "--bg:#f4f4f6;--k:#ffffff;--cz:#d6d6dd;--y:#16161a;--so:#5f5f69;--tu:#b36b00;--art:#15803d;--eks:#c81e1e;--bk:#8a5a00;--c2:#e6e6ec;--c3:#f0f0f3;--uyb:#c81e1e;--uyy:#ffffff"
-CSS = (":root{" + KOYU + ";color-scheme:dark}"
-       ":root[data-theme=light]{" + ACIK + ";color-scheme:light}"
-       ":root[data-theme=dark]{" + KOYU + ";color-scheme:dark}"
-       "@media(prefers-color-scheme:light){:root:not([data-theme=dark]):not([data-theme=light]){" + ACIK + ";color-scheme:light}}" + """
+KOYU = "--bg:#0b0b0d;--k:#141417;--cz:#2b2b31;--y:#ececf1;--so:#b3b3bd;--tu:#f5a524;--art:#3ddc84;--eks:#ff6b6b;--bk:#f5d90a;--c2:#202026;--c3:#18181c;--uyb:#7f1d1d;--uyy:#ffe4e4;--kar:#3ddc84;--zar:#ff6b6b;--nt:#b3b3bd"
+ACIK = "--bg:#f4f4f6;--k:#ffffff;--cz:#d6d6dd;--y:#16161a;--so:#5f5f69;--tu:#b36b00;--art:#15803d;--eks:#c81e1e;--bk:#8a5a00;--c2:#e6e6ec;--c3:#f0f0f3;--uyb:#c81e1e;--uyy:#ffffff;--kar:#15803d;--zar:#c81e1e;--nt:#5f5f69"
+CSS = (":root{" + ACIK + ";color-scheme:light dark}"
+       "@media(prefers-color-scheme:dark){:root:not([data-theme=\"light\"]){" + KOYU + ";color-scheme:dark}}"
+       ":root[data-theme=\"dark\"]{" + KOYU + ";color-scheme:dark}"
+       ":root[data-theme=\"light\"]{color-scheme:light}" + """
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--y);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;padding:12px;overflow-wrap:anywhere}
+body{margin:0;background:var(--bg);color:var(--y);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-variant-numeric:tabular-nums;padding:12px;overflow-wrap:anywhere}
 .ust{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}.ic .ust{display:none}
 .lg0{background:var(--tu);color:#000;font-weight:800;padding:2px 7px;border-radius:4px}.ust b{font-size:15px}
 .so,.ha{color:var(--so)}.ha{font-size:11px}.kc{font-size:11px}
@@ -1281,16 +1281,16 @@ body{margin:0;background:var(--bg);color:var(--y);font:14px/1.45 system-ui,-appl
 .dug{display:inline-flex;gap:4px}.dug button{background:var(--k);color:var(--y);border:1px solid var(--cz);border-radius:4px;padding:4px 9px;font:inherit;font-size:12px;cursor:pointer}
 .uy{background:var(--uyb);color:var(--uyy);font-weight:700;padding:6px 10px;margin-bottom:8px;border-radius:4px}
 .rk-b{display:none}.bayat .rk-n{display:none}.bayat .rk-b{display:block}
-.sirit{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--cz);border:1px solid var(--cz);margin-bottom:6px}
+.sirit{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--cz);border:1px solid var(--cz);margin-bottom:6px;border-radius:12px;overflow:hidden}
 .h{background:var(--k);padding:7px 8px;min-width:0}.hb{font-size:10px;letter-spacing:.04em;color:var(--so);text-transform:uppercase}.hd{font-size:15px;font-weight:700;margin:2px 0}.h .ha{font-size:10.5px;line-height:1.3}
-.art{color:var(--art)}.eks{color:var(--eks)}.bk{color:var(--bk)}.yok{color:var(--so)}
+.art{color:var(--kar)}.eks{color:var(--zar)}.bk{color:var(--bk)}.yok{color:var(--nt)}
 .gn{text-align:right;font-size:11px;color:var(--so);margin:0 0 6px}
 .tabs{display:flex;justify-content:space-between;margin:0 0 8px;border-bottom:1px solid var(--cz)}.tabs label{flex:0 1 auto;padding:9px 5px;font-size:11px;letter-spacing:.02em;color:var(--so);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;font-weight:600}
 input[type=radio]{position:absolute;opacity:0;pointer-events:none}
 .sekmeler>section{display:none}
 #t1:checked~.tabs label[for=t1],#t2:checked~.tabs label[for=t2],#t3:checked~.tabs label[for=t3],#t4:checked~.tabs label[for=t4],#t5:checked~.tabs label[for=t5],#t6:checked~.tabs label[for=t6]{color:var(--tu);border-bottom-color:var(--tu)}
 #t1:checked~.sekmeler .n1,#t2:checked~.sekmeler .n2,#t3:checked~.sekmeler .n3,#t4:checked~.sekmeler .n4,#t5:checked~.sekmeler .n5,#t6:checked~.sekmeler .n6{display:grid;gap:8px}
-.p{background:var(--k);border:1px solid var(--cz);min-width:0;border-radius:6px}
+.p{background:var(--k);border:1px solid var(--cz);min-width:0;border-radius:12px}
 .pb{font-size:11px;letter-spacing:.06em;color:var(--tu);text-transform:uppercase;padding:8px 11px;border-bottom:1px solid var(--cz);display:flex;justify-content:space-between;gap:8px;font-weight:600}.pb span{color:var(--so);text-transform:none;letter-spacing:0;font-weight:400}
 .pi{padding:9px 11px}.p.kirmizi{border-color:var(--eks)}.p.sari{border-color:var(--bk)}
 .kv{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid var(--c2);font-size:13px}.kv:last-child{border:0}.kv span{color:var(--so);flex:0 0 auto}.kv b{font-weight:600;text-align:right}
@@ -1304,7 +1304,7 @@ input[type=radio]{position:absolute;opacity:0;pointer-events:none}
 .pil{display:flex;gap:6px;margin:0 0 8px}.pil label{flex:1;text-align:center;padding:7px 4px;border:1px solid var(--cz);border-radius:6px;font-size:12px;cursor:pointer;color:var(--so);background:var(--k)}
 .per{display:none}#p1:checked~.per1,#p2:checked~.per2,#p3:checked~.per3,#p4:checked~.per4{display:block}
 #p1:checked~.pil label[for=p1],#p2:checked~.pil label[for=p2],#p3:checked~.pil label[for=p3],#p4:checked~.pil label[for=p4]{color:var(--tu);border-color:var(--tu);font-weight:700}
-.ozs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--cz);border:1px solid var(--cz);margin-bottom:8px;border-radius:6px;overflow:hidden}
+.ozs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--cz);border:1px solid var(--cz);margin-bottom:8px;border-radius:12px;overflow:hidden}
 table.tb{width:100%;border-collapse:collapse;font-size:13px}.tb td,.tb th{padding:6px 6px;border-bottom:1px solid var(--c2);text-align:left}.tb th{font-size:10px;color:var(--so);letter-spacing:.05em;text-transform:uppercase;font-weight:600}.tb .sg{text-align:right}.tb tr:last-child td{border:0}.tb tr.alt td{font-size:11px;color:var(--so);padding:0 6px 5px}
 .gr{width:100%;height:110px;display:block}.ek{display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--so);margin-top:4px}.ek2{justify-content:center;text-align:center;flex-wrap:wrap}
 .lg{display:inline-block;margin:6px 12px 0 0;font-size:11px;color:var(--so)}.lg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}
@@ -1324,7 +1324,7 @@ table.tb{width:100%;border-collapse:collapse;font-size:13px}.tb td,.tb th{paddin
 
 JS = """(function(){var d=document,r=d.documentElement;try{if(window.self!==window.top)r.classList.add("ic")}catch(e){r.classList.add("ic")}
 try{var t=localStorage.getItem("ct_tema");if(t==="light"||t==="dark")r.setAttribute("data-theme",t)}catch(e){}
-var b=d.getElementById("tema");if(b)b.onclick=function(){var c=r.getAttribute("data-theme")||(window.matchMedia&&matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"),n=c==="light"?"dark":"light";r.setAttribute("data-theme",n);try{localStorage.setItem("ct_tema",n)}catch(e){}};
+var b=d.getElementById("tema");if(b)b.onclick=function(){var c=r.getAttribute("data-theme")||(window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"),n=c==="light"?"dark":"light";r.setAttribute("data-theme",n);try{localStorage.setItem("ct_tema",n)}catch(e){}};
 var y=d.getElementById("yenile");if(y)y.onclick=function(){location.reload()};
 var e=d.getElementById("bayat");
 function k(){if(!e)return;var ms=Number(e.dataset.ms);if(!ms)return;var dk=Math.max(0,Math.round((Date.now()-ms)/60000)),eski=Date.now()-Number(e.dataset.ms)>3600*1000,s=dk<1?"az önce":(dk<120?dk+" dk önce":Math.round(dk/60)+" sa önce");e.className=eski?"uy":"gn";e.textContent=eski?"Veri bayat: son güncelleme "+s+" — sistem durmuş olabilir":"son güncelleme "+s;r.classList.toggle("bayat",eski)}
@@ -1560,6 +1560,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
               f'{cu("Giriş / çıkış geçmişi", _gecmis_html(ds))}{cu("Maliyet dökümü", _maliyet_html(kayitlar, oz, kasa, gecmis, kip))}{cu("Trader bazında kapanışlar", _kapanan_html(kayitlar))}{cu("Emirler (24 sa)", emir_ozet + emir_son)}'
               f'{cu("Trader değişiklikleri (24 sa)", saha_html)}{cu("Sürüm karşılaştırma", surum_karsilastirma.html_tablo(surum_karsilastirma.karsilastir(kayitlar, surum_gun)))}'
               f'{cu(f"Takip edilen traderlar ({sahada_n}/{saha_n})", (f"<div class=mt>{motor_satiri}</div>" if motor_satiri else "") + f"<div class=so style=padding:4px>radar {esc(kadro_tarih)} TSİ · dokun → bize ne verdi</div>" + kadro_html + mut)}</div>')
+    rozet_t = {1: f" ({len(acik)})", 2: f" (bugün {len(donemler[0][2])})"}
     uyari = '<div class="uy">GERÇEK PARA</div>' if kip == "gercek" else ""
     bayat_s = simdi_ms - veri_ms > 3600 * 1000
     bayat_txt = ("Veri bayat: son güncelleme " + sure_metni(simdi_ms - veri_ms) + " önce — sistem durmuş olabilir") if bayat_s else ("son güncelleme " + (sure_metni(simdi_ms - veri_ms) + " önce" if simdi_ms - veri_ms >= 60_000 else "az önce"))
@@ -1571,7 +1572,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
 <div id="bayat" data-ms="{veri_ms}" class="{"uy" if bayat_s else "gn"}">{esc(bayat_txt)}</div>{uyari}
 {serit_html}
 <input type="radio" name="t" id="t1" checked><input type="radio" name="t" id="t2"><input type="radio" name="t" id="t3"><input type="radio" name="t" id="t4"><input type="radio" name="t" id="t5"><input type="radio" name="t" id="t6">
-<div class="tabs">{"".join(f'<label for="t{i + 1}">{ad}</label>' for i, ad in enumerate(SEKMELER))}</div>
+<div class="tabs">{"".join(f'<label for="t{i + 1}">{ad}{rozet_t.get(i, "")}</label>' for i, ad in enumerate(SEKMELER))}</div>
 <div class="sekmeler">
 <section class="n1">{"".join(ozet_kartlari)}</section>
 <section class="n2"><div class="p"><div class="pb">Açık işlemler <span>{len(acik_s)} adet</span></div>{acik_liste_html(acik_s)}</div></section>
