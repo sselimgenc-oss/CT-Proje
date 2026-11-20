@@ -228,3 +228,144 @@ Dönemde 11 başlangıç üyesinin 7'si "ilk gün", 4'ü "kor gevşetildi" neden
 - HL sorgusu: `userFillsByTime` (sayfa sınırı 2.000 dolumdur; en çok 1.176 dolum, sayfalama gerekmedi) ve `clearinghouseState` (anlık).
 - Radar isabet verisi yalnız 05–09 Kasım'da var; sanal dönemi kapsamaz.
 - O1/O3 yeniden koşusu gerektiren sayılar yukarıda etiketli.
+## CT 22a: Açılış sonrası artırma/azaltma kopyalaması kazandırıyor mu?
+
+Veri anı: 20.11 15:44 TSİ (son kayıt). Dönem: 16.11 14:30 TSİ → 20.11 15:44 TSİ. Düzeltme durumu: düzeltme öncesi (O1 azaltma çarpanı düzeltmesi 20.11 16:04 TSİ canlıda). **Bu soru O1'den etkilenir — düzeltme sonrası yeniden koşulacak.**
+
+Tanımlar: pozisyon = (trader, coin) için boyut sıfıra inene kadar olan dolumlar (tasfiye dahil). Kapalı = 24 tam kapanış + 1 tasfiye (VVV) + 1 sıfırlanmış kalıntı (ZEC) = 26; açık = `durum/ozet.json` açık listesi = 49. Karşı-olgu: ilk açılış dolumu (aynı boyut), ara artırma/azaltmalar (kopyalanan sayı kadar, sırayla), son kapanış fiyatıyla tam kapanış; açıksa `ozet.json` mark. Ücret oranı = toplam ücret / toplam nosyonel = %0,045, her kopya dolumuna uygulanır. Tam kopya (aynı yöntem) = tüm dolumlar; gerçek = kayıttaki net K/Z.
+
+### 1) Pozisyon başına dolum sayısı
+
+| Dolum sayısı | Kapalı (n) | Açık (n) |
+|---|---:|---:|
+| 1 | 0 | 29 |
+| 2–4 | 12 | 17 |
+| 5–10 | 9 | 2 |
+| >10 | 5 | 1 |
+| Toplam | 26 | 49 |
+
+Veri anı: 20.11 15:44 TSİ. Etiket: düzeltme öncesi; O1'den etkilenir.
+
+### 2) Karşı-olgu: ilk açılış + tam kapanış vs tam kopya ($, komisyon dahil)
+
+| Kalem | Kapalı (n=26) | Açık (n=49, mark) | Toplam (n=75) |
+|---|---:|---:|---:|
+| Tam kopya (aynı yöntem) | -30,05 | +16,76 | -13,28 |
+| İlk açılış + tam kapanış | -66,61 | +38,21 | -28,40 |
+| Gerçek kayıt (tam kopya, ücret dahil) | -29,99 | +20,63 | -9,36 |
+
+Pozisyon başına (kapalı, n=26):
+
+| Trader | Coin | Dolum | Tam kopya $ | İlk+son $ |
+|---|---|---:|---:|---:|
+| 0x2d29c0… | BTC | 4 | -1,39 | -0,20 |
+| 0x2d29c0… | MEGA | 2 | -0,05 | -0,05 |
+| 0x2d29c0… | PAXG | 2 | -0,31 | -0,31 |
+| 0x2d29c0… | PURR | 3 | +10,70 | +1,79 |
+| 0x2d29c0… | VVV | 2 | -15,07 | -5,73 |
+| 0x2d29c0… | io:NVDA | 7 | -0,41 | -0,39 |
+| 0x6a8686… | HYPE | 2 | +0,15 | +0,15 |
+| 0x6a8686… | HYPE | 11 | -0,56 | +0,02 |
+| 0x6d2667… | HYPE | 9 | +65,68 | +0,94 |
+| 0x6d2667… | HYPE | 14 | +30,24 | +0,69 |
+| 0x76c2cd… | CAKE | 10 | +2,81 | +0,60 |
+| 0x76c2cd… | LIT | 2 | -0,66 | -0,66 |
+| 0xc30c7e… | ETH | 4 | +0,97 | +0,15 |
+| 0xc30c7e… | ETH | 2 | -0,01 | -0,01 |
+| 0xc30c7e… | ZEC | 6 | -0,65 | -0,74 |
+| 0xc30c7e… | ZEC | 9 | -0,07 | +0,36 |
+| 0xdebd49… | BTC | 14 | -12,65 | -13,93 |
+| 0xdebd49… | BTC | 8 | -15,62 | -2,54 |
+| 0xdebd49… | BTC | 6 | -9,10 | -3,13 |
+| 0xdebd49… | BTC | 2 | -2,72 | -2,72 |
+| 0xdebd49… | ETH | 14 | -50,72 | -31,20 |
+| 0xdebd49… | SOL | 5 | -12,93 | -13,27 |
+| 0xdebd49… | SOL | 5 | +3,54 | +9,34 |
+| 0xdebd49… | SOL | 2 | -1,41 | -1,41 |
+| 0xdebd49… | SOL | 13 | -20,07 | -4,61 |
+| 0xf83e8b… | XRP | 2 | +0,26 | +0,26 |
+
+Trader başına (tüm pozisyonlar):
+
+| Trader | Pozisyon (n) | Tam kopya $ | İlk+son $ | Fark $ |
+|---|---:|---:|---:|---:|
+| 0x2d29c0… | 11 | -50,54 | -6,75 | +43,79 |
+| 0x3d380a… | 2 | -8,36 | -8,36 | +0,00 |
+| 0x6a8686… | 16 | -20,07 | -18,24 | +1,83 |
+| 0x6d2667… | 2 | +95,93 | +1,63 | -94,30 |
+| 0x76c2cd… | 20 | -0,53 | -2,77 | -2,24 |
+| 0x9eb42f… | 1 | -20,43 | -20,43 | +0,00 |
+| 0xc30c7e… | 5 | +33,32 | +32,84 | -0,48 |
+| 0xc3602c… | 6 | +72,59 | +55,88 | -16,71 |
+| 0xdebd49… | 11 | -115,46 | -62,47 | +52,99 |
+| 0xf83e8b… | 1 | +0,26 | +0,26 | +0,00 |
+
+Etiket: düzeltme öncesi; O1'den etkilenir.
+
+### 3) İlk dolum boyutu / en büyük boyut oranı ile sonuç
+
+Oran = ilk dolum boyutu / pozisyonun ulaştığı en büyük açık boyut.
+
+| Oran kovası | n | Ort. net K/Z $ | Toplam $ | Kapalı n | Kapalı kazanma |
+|---|---:|---:|---:|---:|---:|
+| <0,25 | 17 | +1,92 | +32,71 | 10 | 50% |
+| 0,25–0,5 | 4 | -5,16 | -20,66 | 4 | 25% |
+| 0,5–0,75 | 9 | -2,81 | -25,25 | 1 | 0% |
+| >=0,75 | 45 | +0,09 | +3,84 | 11 | 18% |
+
+Trader başına ortalama oran (artan sıra; oran < 0,25 = 'deneme ile açan'):
+
+| Trader | Pozisyon (n) | Ort. oran | Toplam net $ | İşaret |
+|---|---:|---:|---:|---|
+| 0x6d2667… | 2 | 0,019 | +95,93 | deneme ile açan (oran<0,25) |
+| 0x2d29c0… | 11 | 0,447 | -49,87 |  |
+| 0xc30c7e… | 5 | 0,529 | +33,91 |  |
+| 0xdebd49… | 11 | 0,614 | -115,31 |  |
+| 0xc3602c… | 6 | 0,695 | +73,18 |  |
+| 0x6a8686… | 16 | 0,834 | -19,64 |  |
+| 0x76c2cd… | 20 | 0,865 | +0,05 |  |
+| 0x3d380a… | 2 | 1,0 | -8,06 |  |
+| 0x9eb42f… | 1 | 1,0 | -19,82 |  |
+| 0xf83e8b… | 1 | 1,0 | +0,26 |  |
+
+Etiket: düzeltme öncesi; O1'den etkilenir.
+
+### 4) Yalnız ilk 1 ve ilk 2 ara dolum kopyalansa
+
+İlk açılış her zaman kopyalanır; ara dolumların ilk K tanesi sırayla alınır, sonrakiler yok sayılır; son kapanış tam kopyalanır.
+
+| Senaryo | Kapalı $ | Açık $ (mark) | Toplam $ | n |
+|---|---:|---:|---:|---:|
+| Tam kopya | -30,05 | +16,76 | -13,28 | 75 |
+| İlk 1 ara dolum | -16,85 | +45,83 | +28,98 | 75 |
+| İlk 2 ara dolum | -6,88 | +44,70 | +37,82 | 75 |
+| Hiç ara dolum (ilk+son) | -66,61 | +38,21 | -28,40 | 75 |
+
+Açık pozisyonlar mark'a bağlıdır (gerçekleşmemiş); kapalı sütun gerçekleşmiştir. Etiket: düzeltme öncesi; O1'den etkilenir.
+
+### 5) Çok dolumlu pozisyonlar
+
+| Grup | n | Kapalı n | Net K/Z $ (gerçek) | Kapalı kazanma |
+|---|---:|---:|---:|---:|
+| >5 dolum | 13 | 12 | -40,65 | 25% |
+| >10 dolum | 6 | 5 | -83,29 | 20% |
+
+Etiket: düzeltme öncesi; O1'den etkilenir.
+
+### Komisyon payı (toplam 13,35 $)
+
+| Dolum türü | Komisyon $ | Pay |
+|---|---:|---:|
+| Pozisyonun ilk açılış dolumu (75) | 4,61 | %34,5 |
+| Ara artırma/azaltma dolumları (161) | 7,28 | %54,5 |
+| Son kapanış dolumu (kapalı, 25) | 1,46 | %10,9 |
+
+Etiket: düzeltme öncesi; O1'den etkilenir (ara dolumların sayısı ve boyutu azaltma çarpanına bağlı).
+
+### Sınırlar
+
+- Açık pozisyon sonuçları mark'a bağlıdır; kapalı sonuçlar gerçekleşmiştir.
+- Karşı-olgu fiyatları kayıttaki dolum fiyatlarıdır; kayma, gecikme ve kısmi dolum modellenmedi.
+- VVV tasfiyesi `tasfiye_px` ve `tasfiye` pnl'i ile; ZEC son dolumla tam kapanış sayıldı (kapanis_duzeltme kaydıyla).
+- Örneklem küçük (kapalı 26); yalnız bilgi.
+
