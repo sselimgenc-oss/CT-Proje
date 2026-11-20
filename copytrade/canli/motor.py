@@ -601,6 +601,7 @@ class Motor:
             self._islenen_ekle(str(k))
         self._snap: dict[str, tuple[float, float]] = {}        # G-14/G-17b: yalnız snapshot (canlı değil) görülen kimlik -> (önce, sonra); aynı dolum sonra dolgu/rest ile gelirse poz_tr ikinci kez değişmez, emir bu değerlerle
         self.poz_tr: dict[str, dict[str, float]] = {a: dict(c) for a, c in (m.get("poz_tr") or {}).items()}       # trader işaretli pozisyonları (coin birimi)
+        self.ara_dolum: dict[str, dict] = {k: dict(v) for k, v in (m.get("ara_dolum") or {}).items() if isinstance(v, dict)}      # K-76: "adres|coin" -> trader pozisyonunun ara dolum sayacı {n, isaret, yon, ms, izin}; kalıcı (yeniden başlatmada kaybolmaz)
         self.hesap_tr: dict[str, dict] = dict(m.get("hesap_tr") or {})                                              # adres -> {deger, ms}
         self.kaldirac_tr: dict[str, dict] = dict(m.get("kaldirac_tr") or {})                                          # adres -> {anlik_kaldirac, hesap_usd, ms}: yalnız pano/bilgi (işlem etkisi yok)
         self._golge_acik: dict[str, list[str]] = {a: list(k) for a, k in (m.get("golge_acik") or {}).items()}          # adres -> şu an doğru olan gölge kuralları (yalnız durum değişiminde kayıt)
@@ -815,7 +816,7 @@ class Motor:
                 "notlar": "Trader pozisyonlarının toplamı (kopya kadrosu). Bizim hesabımızın pozisyonu DEĞİL. Yatırım tavsiyesi değil."}
 
     def _motor_json(self) -> dict:
-        return {"islenen": self.islenen, "poz_tr": self.poz_tr, "poz_tr_ms": {f"{a}|{c}": ms for (a, c), ms in self._poz_tr_ms.items()}, "poz_tr_senk_ms": self._poz_tr_senk_ms, "hesap_tr": self.hesap_tr, "kaldirac_tr": self.kaldirac_tr, "golge_acik": self._golge_acik, "son_olay_ms": self.son_olay_ms,
+        return {"islenen": self.islenen, "poz_tr": self.poz_tr, "ara_dolum": self.ara_dolum, "poz_tr_ms": {f"{a}|{c}": ms for (a, c), ms in self._poz_tr_ms.items()}, "poz_tr_senk_ms": self._poz_tr_senk_ms, "hesap_tr": self.hesap_tr, "kaldirac_tr": self.kaldirac_tr, "golge_acik": self._golge_acik, "son_olay_ms": self.son_olay_ms,
                 "ozet_gunu": self._ozet_gunu, "ozet_oz": self._ozet_oz, "ozet_emir": self._ozet_emir, "hafta_gunu": self._hafta_gunu, "hafta_taban": self._hafta_taban, "kip": self.kip, "kasa_usd": self.kasa, "kasa_ayar_usd": self.kasa_ayar, "vardiya": self.vardiya_id, "yazildi_ms": self.saat_ms(),
                 "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "hl_onceki": list(self._hl_onceki) if self._hl_onceki else None, "hl_sicrama": self._hl_sicrama, "hl_sicrama_ms": self._hl_sicrama_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.kalici_offset,
                 "son_funding_ms": self.son_funding_ms, "funding_kimlik": self.funding_kimlik[-500:], "funding_gercek_usd": self.funding_gercek_usd, "ucret_gercek_usd": self.ucret_gercek_usd, "ucret_tahmin_say": self.ucret_tahmin_say,
@@ -1025,6 +1026,7 @@ class Motor:
         try:
             okuma_ms = self.saat_ms()
             self.poz_tr[adres] = clearinghouse_pozisyonlari(self.post_hizli, adres, dexler if dexler is not None else self._dexler())
+            self._ara_dolum_buda(adres)
             self._poz_tr_senk_isaretle(adres, okuma_ms)
             return True
         except Exception as hata:                          # noqa: BLE001
@@ -1104,6 +1106,45 @@ class Motor:
         self._poz_tr_ms[(o.adres, o.coin)] = max(self._poz_tr_ms.get((o.adres, o.coin), 0), o.zaman_ms)
         return once, sonra
 
+    def _ara_dolum_say(self, o: Olay, once: float, sonra: float) -> tuple[bool, bool]:
+        """K-76 (kullanıcı kararı 20.11): trader pozisyonunun ARA DOLUM sayacı (pozisyon başına `adres|coin`). Kopyalanan = ilk açılış + ilk `kopya_ara_dolum_max` (2) ara dolum + tam kapanış.
+        Tanım: ara dolum = açılıştan sonra, tam kapanıştan önce aynı pozisyonda aynı yönde artır YA DA azalt. Parçalı dolum: dolumlar `tid` ile tekilleşir, `oid` Olay'a taşınmaz; bu yüzden AYNI YÖN +
+        önceki dolumdan en çok `kopya_ara_dolum_kume_ms` (1000 ms) sonrası = aynı emrin parçası = AYNI ara dolum (kümenin kararı parçalara aynen uygulanır). Açılış emrinin sonraki parçaları da
+        açılış kümesindedir (ara dolum DEĞİL). Tam kapanış (sonra≈0) sayacı siler; yön dönüşü (kapanış + yeni açılış) yeni pozisyondur: sayaç sıfırdan. Döner (ara_dolum_mu, izin_var_mı)."""
+        anahtar = f"{o.adres}|{o.coin}"
+        yon = "B" if o.yon == "B" else "A"
+        if abs(sonra) < TR_EPS:
+            self.ara_dolum.pop(anahtar, None)
+            return False, True
+        isaret = 1 if sonra > 0 else -1
+        if abs(once) < TR_EPS or once * sonra < 0:
+            self.ara_dolum[anahtar] = {"n": 0, "isaret": isaret, "yon": yon, "ms": int(o.zaman_ms), "izin": True}
+            return False, True
+        c = self.ara_dolum.get(anahtar)
+        if c is not None and int(c.get("isaret", 0)) != isaret:
+            c = None
+        kume = float(self.rules.get("kopya_ara_dolum_kume_ms", 1000))
+        if c is not None and c.get("yon") == yon and abs(int(o.zaman_ms) - int(c.get("ms", 0))) <= kume:
+            c["ms"] = max(int(c.get("ms", 0)), int(o.zaman_ms))
+            return int(c["n"]) > 0, bool(c.get("izin", True))
+        n = (int(c["n"]) if c is not None else 0) + 1
+        izin = n <= int(self.rules.get("kopya_ara_dolum_max", 2))
+        self.ara_dolum[anahtar] = {"n": n, "isaret": isaret, "yon": yon, "ms": int(o.zaman_ms), "izin": izin}
+        return True, izin
+
+    def _ara_dolum_asildi(self, adres: str, coin: str) -> bool:
+        """K-76: bu pozisyonda sınır aşıldı (alınmayan ara dolum var)? Telafi yeniden açmasın, drift alarmı yalan söylemesin diye."""
+        c = self.ara_dolum.get(f"{adres}|{coin}")
+        return c is not None and int(c.get("n", 0)) > int(self.rules.get("kopya_ara_dolum_max", 2))
+
+    def _ara_dolum_buda(self, adres: str) -> None:
+        """K-76: REST okuması trader pozisyonunu değiştirdi: kapanan ya da yön değiştiren pozisyonun sayacı silinir (kaçan kapanış / dönüş)."""
+        gercek = self.poz_tr.get(adres, {})
+        for anahtar in [k for k in self.ara_dolum if k.partition("|")[0] == adres]:
+            v = gercek.get(anahtar.partition("|")[2], 0.0)
+            if abs(v) < TR_EPS or (v > 0) != (int(self.ara_dolum[anahtar].get("isaret", 1)) > 0):
+                del self.ara_dolum[anahtar]
+
     def dusen_isle(self, o: Olay) -> None:
         """Kuyruk taşınca düşen olay (t4b #6): emir üretilmez ama trader pozisyon tablosu güncellenir (600 sn senkronu beklenmez). Daha yeni bir dolum zaten işlendiyse atlanır."""
         with self._lock:
@@ -1113,7 +1154,8 @@ class Motor:
                 return
             if o.kimlik in self._snap or self._gorulduysa_isaretle(o.kimlik):        # aynı ms'deki FARKLI dolum uygulanır; aynı kimlik (işlenmiş / snapshot'ta uygulanmış / düşmüş) ikinci kez sayılmaz
                 return
-            self._poz_tr_isle(o)
+            once, sonra = self._poz_tr_isle(o)
+            self._ara_dolum_say(o, once, sonra)                                          # K-76: düşen olay da trader'ın dolumudur (emir yok, sayaç ilerler)
             self.kayit({"olay": "dusen_olay_poz_tr", "adres": o.adres, "coin": o.coin, "yon": o.yon, "sz": o.sz})
 
     def _olay_isle(self, o: Olay, canli: bool = True) -> list[Sonuc]:
@@ -1152,7 +1194,12 @@ class Motor:
         if gec:
             self.sayac["gec_goruldu"] += 1
         biz_sz = self.hesap.sz(adres, o.coin)
+        ara_dolum, ara_izin = self._ara_dolum_say(o, once, sonra)
         for eylem in eylem_belirle(once, sonra, biz_sz):
+            if ara_dolum and not ara_izin and eylem in ("ac", "artir", "azalt"):       # K-76: 3. ve sonraki ara dolum: emir yok (kapanış / yön dönüşü kapat parçası her zaman alınır)
+                sonuclar.append(self._atla(o, adres, eylem, "atlandi", "ara_dolum_siniri"))
+                _yaz(self.durum_dizin / "motor.json", self._motor_json())              # sayaç + işlenen kimlik kalıcı (emir yolu yazmıyor)
+                continue
             s = self._emir_isle(o, adres, eylem, once, sonra, biz_sz, simdi, gec)
             sonuclar.append(s)
             biz_sz = self.hesap.sz(adres, o.coin)
@@ -1381,6 +1428,8 @@ class Motor:
                 h = self._hedef_usd(adres, coin, mk) if mk else None
                 if not h:
                     continue
+                if self._ara_dolum_asildi(adres, coin):
+                    continue                                          # K-76: 3.+ ara dolum kasıtlı alınmaz: ideal (trader'ın güncel boyutu) bizim kuralımız değil, drift alarmı yok
                 tutulu = abs(self.hesap.sz(adres, coin)) > EPS
                 if not tutulu and ((sinif := coin_sinifi(coin)) == "spot" or (sinif == "hip3" and not hip3_acik)):
                     continue                                          # kural gereği açılmaz (K-42): ideal değil
@@ -1477,7 +1526,7 @@ class Motor:
                     "yas_ms": self.saat_ms() - o.zaman_ms})
         if eylem == "ac" and neden in tg.KACIRILAN_NEDENLER:          # kaçırılan (geç görülen / veri yok) = eksik kopya → sessiz bilgi; kural gereği atlananlar gönderilmez
             self.tg.gonder(tg.msg_kopya_hata("ac", o.coin, adres, tg.atla_etiket(neden)), "INFO", tur="kopya_kacan")      # rutin (geç görülen/veri yok): Telegram'a gitmez; gerçek hata (emir reddedildi/kapanış doldurulamadı) `_kopya_hata` ile gider
-        if eylem in ("ac", "artir") and neden != "bant_ici":
+        if eylem in ("ac", "artir") and neden not in ("bant_ici", "ara_dolum_siniri"):      # K-76: ara dolum sınırı için karşı-olgu ÖLÇÜLMEZ (kullanıcı kararı 20.11)
             try:
                 self._karsi_olgu_ac(o, adres, neden)
             except Exception as hata:                      # noqa: BLE001
@@ -2208,6 +2257,7 @@ class Motor:
                 self.kayit({"olay": "poz_senkron", "adres": adres, "fark": {c: list(v) for c, v in list(fark.items())[:10]}})
                 duzeltilen += 1
             self.poz_tr[adres] = dict(gercek)
+            self._ara_dolum_buda(adres)
             self._poz_tr_senk_isaretle(adres, self._senkron_okuma_ms)          # G-14: okumadan eski snapshot dolumu bu değeri artık ezemez
             for coin in list(self.hesap.poz.get(adres, {})):
                 if coin in yeni_olay or coin in spot:
@@ -2312,6 +2362,9 @@ class Motor:
             for coin, poz in list(self.poz_tr.get(adres, {}).items()):
                 if abs(poz) < EPS or abs(self.hesap.sz(adres, coin)) > EPS or coin_sinifi(coin) == "spot":
                     continue
+                if self._ara_dolum_asildi(adres, coin):                                              # K-76: hedef tabanlı telafi atlanan ara dolumları geri getirirdi
+                    self._telafi_log_yaz(adres, coin, "ara_dolum_siniri")
+                    continue
                 if simdi - self._son_olay_coin.get((adres, coin), -10**15) <= taze:                  # taze dolum: normal yol (zaten karar verdi / verecek)
                     continue
                 mk = self.marks.get(coin)
@@ -2395,6 +2448,12 @@ class Motor:
             return
         sahte = Olay(f"senkron:{adres}:{coin}:{simdi}", adres[:12], adres, simdi, simdi, "senkron", False, "", coin, mk, abs(izlenen - gercek), "A" if izlenen > 0 else "B", izlenen)
         biz_sz = self.hesap.sz(adres, coin)
+        _, izin = self._ara_dolum_say(sahte, izlenen, gercek)                  # K-76: kaçan azaltma da bir ara dolumdur: sınır aşıldıysa senkron atlananı geri getirmez
+        if not izin:
+            self.kayit({"olay": "senkron_azalt", "adres": adres, "coin": coin, "trader_once": izlenen, "trader_sonra": gercek, "karar": "atlandi", "neden": "ara_dolum_siniri"})
+            self.sayac["atlandi"] += 1
+            self._say_neden("ara_dolum_siniri")
+            return
         s = self._emir_isle(sahte, adres, "azalt", izlenen, gercek, biz_sz, simdi, True)
         self.kayit({"olay": "senkron_azalt", "adres": adres, "coin": coin, "trader_once": izlenen, "trader_sonra": gercek, "karar": s.karar, "neden": s.neden})
 
