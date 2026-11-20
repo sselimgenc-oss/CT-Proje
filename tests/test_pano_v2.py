@@ -178,7 +178,7 @@ def test_ml_aldi_kararlari_kayittan_ve_isabet():
 
 
 def test_kapanan_pozisyon_bazinda_kazanma_ve_kismi_kapanis_tek_sonuc():
-    k = [emir(SIMDI - 9 * 3_600_000, eylem="ac", pnl=0.0, neden="tamam"), emir(SIMDI - 8 * 3_600_000, eylem="azalt", pnl=5.0, neden="tamam"), emir(SIMDI - 7 * 3_600_000, pnl=-3.0),   # poz 1: +5 −3 → +2 (kazandı)
+    k = [emir(SIMDI - 9 * 3_600_000, eylem="ac", pnl=0.0, neden="tamam", sz=0.15), emir(SIMDI - 8 * 3_600_000, eylem="azalt", pnl=5.0, neden="tamam"), emir(SIMDI - 7 * 3_600_000, pnl=-3.0, sz=0.10),   # poz 1: +5 −3 → +2 (kazandı)
          emir(SIMDI - 6 * 3_600_000, eylem="ac", pnl=0.0, neden="tamam"), emir(SIMDI - 5 * 3_600_000, pnl=-4.0)]                                                                        # poz 2: −4 (kaybetti)
     s = pano.kapanan_islemler(k)
     assert len(s) == 3

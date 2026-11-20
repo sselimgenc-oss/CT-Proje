@@ -151,6 +151,7 @@ canli_gunluk_kayip_oran: 0.05           # oran (gün başı özsermayeden kayıp
 canli_gunluk_kapat_oran: 0.10            # oran (K-62 günlük sert fren: gün başı özsermayeden kayıp >= bu: TÜM pozisyonlar kapanır, o gün açılış yok, motor ertesi gün sürer; DUR değil)
 canli_felaket_stop_oran: 0.20            # oran (K-62 felaket stopu: pozisyon ortalama girişten bu kadar aleyhe giderse o pozisyon kapanır; normalde slot kuralı daha önce keser)
 canli_borsa_stop_oran: 0.22             # oran (K-64 borsada duran felaket stopu; yazılım stopundan (%20) biraz uzak: motor ayaktayken önce yazılım keser, borsa stopu çökmeye karşı yedek)
+dinamik_stop: false                      # K-74 (TASLAK, kullanıcı onayı bekliyor): true → pozisyon başına stop = min(canli_felaket_stop_oran, tasfiye mesafesi − %3); gerçekte borsa stopu = min(canli_borsa_stop_oran, tasfiye mesafesi − %1). Tasfiye mesafesi: ortalama giriş + kaldıraç + coin azami kaldıracı (azami 3 olan coinde %20 stop tasfiyeden sonra kalır). false → bugünkü davranış aynen
 canli_borsa_stop_sn: 60                 # sn (gerçek kip: açık emir okuma + stop eşitleme aralığı)
 canli_borsa_stop_korumasiz_sn: 1800       # sn (K-65, K-69: 7200 → 1800 (kullanıcı kararı 17.11); stop beklenen coin bu kadar borsada stopsuz kalırsa pozisyon otomatik kapatılır; gerçek kip)
 canli_borsa_stop_ceza_sn: 21600          # sn (K-65: zorunlu kapatmadan sonra bu süre yeni açılış/artırma yok; kapanış serbest)
