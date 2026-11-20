@@ -3129,7 +3129,8 @@ class Motor:
                 aleyhe = (p.giris - mk) / p.giris if p.sz > 0 else (mk - p.giris) / p.giris
                 oran_p = self._stop_orani(coin, p.sz > 0, p.giris, oran, 0.03, p.kaldirac)         # K-74: bayrak kapalıyken `oran` aynen
                 if aleyhe >= oran_p - 1e-12:
-                    ok, _ = self._kapat_coin(adres, coin, "felaket_stop", simdi)
+                    neden_k = "tasfiye_koruma_stop" if oran_p < oran - 1e-9 else "felaket_stop"        # K-74: tasfiyeye göre daraltılmış stop ayrı neden (Telegram/pano'da açık)
+                    ok, _ = self._kapat_coin(adres, coin, neden_k, simdi)
                     self.kayit({"olay": "felaket_stop", "adres": adres, "coin": coin, "giris": p.giris, "mark": mk, "aleyhe": aleyhe, "kapandi": bool(ok)})
                     self._kozmetik("donem_kilit", self.donem_kilit, "felaket_stop", simdi)          # D-5: kozmetik; istisnası aynı dakikadaki diğer stop ihlallerini ertelemez
                     self.tg.gonder(tg.alarm("ALARM: felaket stopu", f"{tg.kisa(adres)} {coin} pozisyonu girişten %{aleyhe * 100:.0f} aleyhe gitti, "

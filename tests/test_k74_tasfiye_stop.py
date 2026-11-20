@@ -45,6 +45,15 @@ def test_dinamik_stop_acik_azami3_short_yuzde_11_3te_kapanir(tmp_path):
     m.dakika()
     assert m.hesap.sz(adr(1), "SOL") == 0.0
     assert any(x["olay"] == "felaket_stop" for x in kayitlar(tmp_path))
+    em = [x for x in kayitlar(tmp_path, "emir") if x.get("reduce_only")]
+    assert em and em[-1]["boyut_neden"] == "tasfiye_koruma_stop"                 # daraltılmış stop ayrı neden
+    assert any("Neden: tasfiye koruması stopu" in x for x in tgp.gonderilen)
+
+
+def test_yaml_dinamik_stop_kullanici_onayiyla_acik():
+    import yaml
+    from pathlib import Path
+    assert yaml.safe_load(Path("copytrade/kurallar.yaml").read_text(encoding="utf-8"))["dinamik_stop"] is True
 
 
 def test_dinamik_stop_kapali_ayni_pozisyon_yuzde_11_3te_kapanmaz(tmp_path):
