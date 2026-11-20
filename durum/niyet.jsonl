@@ -522,3 +522,5 @@
 {"t":"sonuc","cloid":"0xca8959c3051d7093e4355df9ec911c50","durum":"dolu","ms":1795177380841,"sz":0.7501757028780935,"px":88.088,"ucret":0.029736664791806474}
 {"t":"niyet","kimlik":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:635130610829624","eylem":"artir","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"xyz:SNDK","yon":"B","usd":114.800214,"reduce_only":false,"cloid":"0x24aa5e5d8e343cf823889ffcd637030e","ms":1795177421933}
 {"t":"sonuc","cloid":"0x24aa5e5d8e343cf823889ffcd637030e","durum":"dolu","ms":1795177422158,"sz":1.3035257998605296,"px":88.069,"ucret":0.05166009615056265}
+{"t":"niyet","kimlik":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e:72926041770010","eylem":"azalt","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"TRX","yon":"A","usd":25.050669,"reduce_only":true,"cloid":"0xb912194638973f74c501bc9c031cf36c","ms":1795178541591}
+{"t":"sonuc","cloid":"0xb912194638973f74c501bc9c031cf36c","durum":"dolu","ms":1795178541816,"sz":81.92918973920102,"px":0.30576,"ucret":0.011272801074596146}
