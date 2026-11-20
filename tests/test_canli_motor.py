@@ -365,7 +365,7 @@ def test_uctan_uca_altin_ornek_acilis_azaltma_kapanis(tmp_path):
     assert not any("Son " in x and "emir (" in x for x in tgp.gonderilen)                                         # emirler ayrı ayrı gitmez; biriktirilir
     m.emir_ozeti(saat(), zorla=True)
     assert not any("Son 15 dakikada" in x for x in tgp.gonderilen) and any(k["tur"] == "emir_ozeti" for k in kayitlar(tmp_path, "tg_bastirildi"))          # özet bastırılan tür
-    assert any(x.startswith("🟢 BTC AL açıldı · trader ") and "Giriş 100 (trader 100 · fark %0,00) · Tutar 27,3 $ · Stop 80" in x for x in tgp.gonderilen)              # açıldı: 2 satır
+    assert any(x.startswith("🟢 BTC AL açıldı · trader ") and "Giriş 100,00 (trader 100,00 · fark %0,00) · Tutar 27,3 $ · Stop 80,00" in x for x in tgp.gonderilen)              # açıldı: 2 satır
     assert any(x.startswith("✅ BTC kapandı · trader ") or x.startswith("🔻 BTC kapandı · trader ") for x in tgp.gonderilen)
     assert not any("Yeni trader takibe alındı" in x for x in tgp.gonderilen)
 
@@ -1065,7 +1065,7 @@ def test_k36_motor_artirma_trader_hesap_degerini_kullanir_hesap_yok_degil(tmp_pa
 def test_telegram_mesajlari_sade_turkce_altin_ornek():
     a = "0x1234567890abcdef"
     assert tg.msg_emir(a, "ETH", "B", 11.0, 2000.0, 0.00012, "dolu", "sanal", "ac") == \
-        "🟢 ETH AL: 11,0 $ (sanal · deneme parası)\n↳ Trader 0x123456… pozisyon açtı, biz de kopyaladık\n↳ Fiyat 2000 · trader'a göre fark +1.2 bp"
+        "🟢 ETH AL: 11,0 $ (sanal · deneme parası)\n↳ Trader 0x123456… pozisyon açtı, biz de kopyaladık\n↳ Fiyat 2.000,00 · trader'a göre fark +1.2 bp"
     assert tg.msg_emir(a, "BTC", "A", 272.73, 100.0, None, "dolmadi", "sanal", "kapat").startswith("⚠️ BTC SAT: emir tam dolmadı (dolmadi)")
     assert tg.msg_saha("giriş", a, "bos_slot (yerine 0xabcdef12…)") == "➕ Yeni trader takibe alındı: 0x123456…\n↳ Neden: boş yer açıldı (yerine 0xabcdef12…)"
     assert tg.msg_saha("çıkış", a, "kadro_disi (sonuçla, 14 gün bekleme)").startswith("➖ Trader takipten çıktı: 0x123456…\n↳ Neden: günlük kadrodan düştü")

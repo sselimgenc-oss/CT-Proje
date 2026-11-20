@@ -140,6 +140,9 @@ sanal_hip3_kopya: true                  # bool, K-73: SANAL kipte HIP‑3 açıl
 sanal_kacan_acilis_telafi: true         # bool, K-75 (kullanıcı kararı 20.11): SANAL kipte kaçan açılış telafisi: her senkronda (ve başlatmada ilk dakikada) saha traderının açık pozisyonunu biz tutmuyorsak, filtre/kural atlaması yoksa ve fiyat/yaş koşulları uygunsa normal açılış yolundan açılır (emir boyut_neden "kacan_telafi"). Gerçek kip etkilenmez
 kacan_telafi_kayma: 0.01                # oran (K-75: güncel mark, trader giriş fiyatına göre bizim aleyhimize en çok bu kadar; lehimize sınırsız; 0,01 = %1)
 kacan_telafi_max_saat: 24               # saat (K-75: trader pozisyonunun yaşı bundan büyükse telafi yok; yaş dolumlardan bulunur, bilinmiyorsa serbest)
+kacan_telafi_okuma_max: 3               # adet (K-75 429 düzeltmesi: senkron başına en çok bu kadar yaş/dolum REST okuması; kalan adaylar sonraki senkrona kalır)
+kacan_telafi_geri_cekil_sn: 300         # sn (429 alınca yalnız telafi bu kadar durur; ardışık 429'da ikiye katlanır, tavan 3600; başarılı okumada sıfırlanır)
+kacan_telafi_dolum_ttl_dk: 30           # dk (trader dolum geçmişi önbelleği; pozisyon açılış anı pozisyon açıkken değişmez)
 canli_kadro_dali: radar                 # kadro.json'un okunduğu veri dalı (radar/son/kadro.json); dal doğrulamasında radar-deneme
 canli_kadro_aralik_sn: 300              # sn (kadro.json okuma sıklığı)
 canli_kadro_eski_saat: 36               # saat (kosu_ms bundan eskiyse kadro bayat: yeni giriş yok, düşme kuralları çalışır, alarm günde 1)

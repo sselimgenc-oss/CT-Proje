@@ -569,12 +569,15 @@ SONRAKI_ADIM = {"kapat": "Kapanış daha geniş bantla yeniden denenecek; olmazs
                 "ac": "Pozisyon açılmadı (yeniden denenmez).", "artir": "Artırma yapılmadı (yeniden denenmez)."}
 
 
-def fiyat_tr(px: float) -> str:
-    """Fiyat: anlamlı 6 hane, Türkçe ondalık: 150.25 → '150,25'."""
-    t = f"{px:.6g}"
-    if "e" not in t and "." in t and len(t.split(".")[1]) < 2:
-        t = f"{px:.2f}"                                                  # en az 2 ondalık (150,10)
-    return t.replace(".", ",")
+def fiyat(v: float | None) -> str:
+    """Fiyat kademeli ondalık (pano + Telegram ortak): ≥ 1 $ → 2, < 1 $ → 4, < 0,01 $ → 6 (küçük coinlerde "0,08" hiçbir şey söylemez); Türkçe virgül, binlik nokta. Dolar K/Z her zaman 2 ondalık."""
+    if v is None:
+        return "—"
+    a = abs(float(v))
+    return tr_sayi(float(v), 2 if a >= 1 or a == 0 else (4 if a >= 0.01 else 6))
+
+
+fiyat_tr = fiyat                                                       # eski ad (geriye uyum)
 
 
 def _kip_eki(kip: str) -> str:
@@ -676,7 +679,7 @@ def msg_emir(adres: str, coin: str, yon: str, usd: float, px: float | None, kaym
         return msg_emir_gercek_sorun(coin, eylem, usd, durum, neden) + f"\n↳ Trader {kisa(adres)} · {ne}"
     if durum != "dolu":
         return f"⚠️ {coin} {ne}: emir tam dolmadı ({durum}) · istenen {tr_sayi(usd, 0 if usd >= 100 else 1)} $ ({kip_adi(kip)}){nedeni}"
-    return ilk + nedeni + (f"\n↳ Fiyat {px:.6g}" if px else "") + (f" · trader'a göre fark {kayma * 1e4:+.1f} bp" if kayma is not None else "")
+    return ilk + nedeni + (f"\n↳ Fiyat {fiyat(px)}" if px else "") + (f" · trader'a göre fark {kayma * 1e4:+.1f} bp" if kayma is not None else "")
 
 
 def ogrenme_satiri(o: dict | None) -> str | None:

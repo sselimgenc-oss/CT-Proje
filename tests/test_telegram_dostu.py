@@ -5,7 +5,7 @@ import ast
 import re
 from pathlib import Path
 
-from copytrade.canli import telegram as tg
+from copytrade.canli import pano, telegram as tg
 
 KOD_ADI = re.compile(r"(?<![/\w])[a-z]+_[a-z_]+")             # snake_case kod adı ("/hepsini_kapat" gibi komutlar hariç)
 ADR = "0xf43a34aaaaaaaa"
@@ -292,7 +292,7 @@ def test_motor_acildi_gercek_trader_fiyati_ve_esik_alti_gecikmede_ek_yok(tmp_pat
     m, saat, tgp = _kur10k(tmp_path)
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat, yas_ms=100_000))        # 100 sn < canli_olay_stale_sn (120)
     a = [x for x in tgp.gonderilen if x.startswith("🟢 BTC AL açıldı")]
-    assert len(a) == 1 and "(trader 100 · fark %" in a[0] and "sn geç" not in a[0] and len(a[0].splitlines()) == 2
+    assert len(a) == 1 and "(trader 100,00 · fark %" in a[0] and "sn geç" not in a[0] and len(a[0].splitlines()) == 2
 
 
 def test_kapandi_toplam_tutar_artirma_ve_yuzde_toplam_tutara_gore(tmp_path):
@@ -451,3 +451,17 @@ def test_bot_durdu_ikinci_mesaj_20_dk_sonra_orkestratore_yaz(tmp_path):
 def test_bot_durdu_ikinci_mesaj_bot_calisiyorsa_yok(tmp_path):
     r, kayit, durum = _ikinci(tmp_path, 1300, aktif=True)
     assert not kayit.exists() and not (durum / "tg_bot_durdu_2").exists()
+
+
+def test_acildi_kademeli_fiyat_ondalik():
+    """Pano ile aynı kademeli ondalık: ≥1 $ → 2, <1 $ → 4, <0,01 $ → 6; Türkçe virgül + binlik nokta (Giriş, trader, Stop)."""
+    assert tg.fiyat(115) == "115,00" and tg.fiyat(115.008) == "115,01" and tg.fiyat(26388) == "26.388,00" and tg.fiyat(21110.4) == "21.110,40"
+    assert tg.fiyat(0.5) == "0,5000" and tg.fiyat(0.0123) == "0,0123" and tg.fiyat(0.00123456) == "0,001235"
+    assert pano.fiyat is tg.fiyat
+    m = tg.msg_acildi(ADR, "BTC", "B", 26388.0, 50.0, 21110.4, "sanal", trader_px=26388.0)
+    assert "Giriş 26.388,00 (trader 26.388,00 · fark %0,00)" in m and m.endswith("Stop 21.110,40")
+    m = tg.msg_acildi(ADR, "SOL", "B", 115.008, 50.0, 115.0, "sanal")
+    assert "Giriş 115,01 " in m and "Stop 115,00" in m
+    m = tg.msg_acildi(ADR, "DOGE", "A", 0.0834, 50.0, 0.0917, "sanal")
+    assert "Giriş 0,0834" in m and "Stop 0,0917" in m
+    assert "Fiyat 26.388,00" in tg.msg_emir(ADR, "BTC", "B", 50.0, 26388.0, None, "dolu", "sanal", "ac")
