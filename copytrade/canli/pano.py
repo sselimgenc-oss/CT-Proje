@@ -763,11 +763,16 @@ SEKMELER = ("ÖZET", "AÇIK", "KAPANAN", "K/Z", "ÖĞRENME", "TEKNİK")
 UCRET_YOK = "Henüz ölçülemedi"
 NEDEN_KAPANIS = {"felaket_stop": "Stop", "borsa_stop": "Stop", "borsa_stop_korumasiz": "Stop", "iz_suren_koruma": "İz süren",
                  "tam_kapanis": "Trader kapattı", "kucuk_kalan_kapat": "Trader kapattı", "trader_kapali_senkron": "Trader kapattı",
-                 "trader_ters_senkron": "Konsensüs döndü", "inen_ters": "Konsensüs döndü",
+                 "trader_ters_senkron": "Trader yön değiştirdi", "inen_ters": "Konsensüs döndü",
                  "tamam": "Trader azalttı", "min_emir_yuvarlandi": "Trader azalttı", "slot_tavani": "Trader azalttı"}
 RISK_TR = {"risk": "risk freni", "dur": "motor durduruldu", "dur_tamam": "motor durdu", "mutabakat_alarm": "hesap uyuşmazlığı", "mutabakat_duzeldi": "hesap uyuşmazlığı giderildi",
            "kapanis_eksik": "kapanış eksik kaldı", "tasfiye": "zorla kapanma", "kuyruk_tasti": "olay kuyruğu taştı", "vardiya_boslugu": "çalışma kesintisi",
            "vardiya_baslamadi": "çalışma başlamadı", "telegram_yetkisiz": "yetkisiz Telegram denemesi"}
+NEDEN_AYRINTI = {"felaket_stop": "Zarar stopu", "borsa_stop": "Borsa stopu", "borsa_stop_korumasiz": "Borsa stopu (koruma kurulamadı)", "iz_suren_koruma": "İz süren koruma",
+                 "tam_kapanis": "Trader pozisyonu kapattı", "kucuk_kalan_kapat": "Trader pozisyonu kapattı (küçük kalan)", "trader_kapali_senkron": "Trader pozisyonu kapattı",
+                 "trader_ters_senkron": "Trader ters yöne geçti", "inen_ters": "Takipten ayrılan trader'ın pozisyonu, başka bir trader ters yönde açınca kapandı",
+                 "tamam": "Trader pozisyonunu küçülttü", "min_emir_yuvarlandi": "Trader pozisyonunu küçülttü", "slot_tavani": "Trader pozisyonunu küçülttü"}
+YAS_KODLARI = ("vardiya_gecikti", "vardiya_durdu", "veri_dali_bayat", "veri_dali_durdu")                 # veri yaşı sayısı tek yerde (üstteki uyarı satırı); sağlık listesinde tekrar edilmez
 TSI_GUN_MS = 3 * SAAT_MS
 
 
@@ -789,8 +794,11 @@ def _renk(v: float | None) -> str:
 
 
 def fiyat(v: float | None) -> str:
-    """Fiyat: 2 ondalık; yalnız 1 $'ın altındaki coinlerde 4 (aksi hâlde '0,08' hiçbir şey söylemez)."""
-    return "—" if v is None else tr_sayi(float(v), 2 if abs(float(v)) >= 1 else 4)
+    """Fiyat kademeli ondalık: ≥ 1 $ → 2, < 1 $ → 4, < 0,01 $ → 6 (küçük coinlerde "0,08" hiçbir şey söylemez). Dolar K/Z her zaman 2 ondalık."""
+    if v is None:
+        return "—"
+    a = abs(float(v))
+    return tr_sayi(float(v), 2 if a >= 1 or a == 0 else (4 if a >= 0.01 else 6))
 
 
 def sure_metni(ms: float | None) -> str:
@@ -860,38 +868,63 @@ def donem_kz(seri: list[tuple[int, float]], oz: float, kasa: float, simdi_ms: in
             ("Toplam", oz - kasa, (oz - kasa) / kasa if kasa > 0 else None)]
 
 
-def kapanan_islemler(kayitlar: list[dict]) -> list[dict]:
+def kapanan_islemler(kayitlar: list[dict], felaket_oran: float = 0.0) -> list[dict]:
     """KAPANAN sekmesi: kapanış dolumları TEK TEK (toplu değil), yeniden eskiye. Satır = bir `reduce_only` dolum (tam kapanış ya da trader'ın azaltması); net = gerçekleşen K/Z − o dolumun ücreti.
-    Giriş fiyatı K/Z'den geri çıkarılır (çıkış fiyatı ∓ K/Z / miktar); süre = aynı (trader, coin) için ilk açılış dolumundan beri; neden = kapanış kodu (bilinmeyen → "diğer")."""
+    Pozisyon kimliği (`poz`): aynı (trader, coin) için tam kapanışa (`kapat`) kadar olan tüm azaltmalar + son kapanış tek pozisyondur (kazanma oranı pozisyon bazında sayılır).
+    Giriş fiyatı: açılış dolumlarının (trader fiyatı ↔ bizim dolum fiyatı) miktar ağırlıklı ortalaması; kayıtta açılış yoksa bizim giriş K/Z'den geri çıkarılır. Süre = ilk açılış dolumundan beri.
+    Neden = kapanış kodu (bilinmeyen → "diğer"); `ayrinti` = ayrıntı satırı (zarar stopu ↔ borsa stopu ayrı)."""
     acik: dict[tuple, dict] = {}
+    seq: dict[tuple, int] = {}
     cikti: list[dict] = []
     emirler = sorted((k for k in kayitlar if k.get("olay") == "emir" and k.get("durum") in ("dolu", "kismi")), key=lambda k: int(k.get("zaman_ms") or 0))
     for k in emirler:
         anahtar = (k.get("adres"), k.get("coin"))
         ms = int(k.get("zaman_ms") or 0)
         if not k.get("reduce_only"):
-            acik.setdefault(anahtar, {"ms": ms, "ders": k.get("ders_carpan")})
+            o = acik.setdefault(anahtar, {"ms": ms, "ders": k.get("ders_carpan"), "sz": 0.0, "tr": 0.0, "biz": 0.0, "n": 0})
+            s_ = abs(float(k.get("sz") or 0.0))
+            if k.get("trader_px") is not None and k.get("dolum_px") is not None and s_ > 0:
+                o["sz"] += s_
+                o["tr"] += s_ * float(k["trader_px"])
+                o["biz"] += s_ * float(k["dolum_px"])
             continue
         if k.get("pnl_usd") is None:
             continue
         o = acik.get(anahtar) or {}
-        if k.get("eylem") == "kapat":
+        tam = k.get("eylem") == "kapat"
+        poz = (anahtar[0], anahtar[1], seq.get(anahtar, 0))
+        if tam:
             acik.pop(anahtar, None)
+            seq[anahtar] = seq.get(anahtar, 0) + 1
         pnl, ucret, sz, cikis = float(k["pnl_usd"]), float(k.get("ucret") or 0.0), abs(float(k.get("sz") or 0.0)), k.get("dolum_px")
         uzun = k.get("yon") == "A"                                                                         # kapatan emir SAT ise pozisyon uzundu
-        giris = None if not sz or cikis is None else (float(cikis) - pnl / sz if uzun else float(cikis) + pnl / sz)
+        giris = o["biz"] / o["sz"] if o.get("sz") else (None if not sz or cikis is None else (float(cikis) - pnl / sz if uzun else float(cikis) + pnl / sz))
+        tr_giris = o["tr"] / o["sz"] if o.get("sz") else None
         net = pnl - ucret
-        cikti.append({"ms": ms, "adres": str(k.get("adres") or ""), "coin": str(k.get("coin") or ""), "yon": "uzun" if uzun else "kısa", "net": net,
-                      "oran": (net / (sz * giris)) if giris and sz else None, "neden": NEDEN_KAPANIS.get(str(k.get("boyut_neden") or ""), "diğer"),
-                      "giris": giris, "cikis": None if cikis is None else float(cikis), "sure_ms": (ms - o["ms"]) if o.get("ms") else None, "ucret": ucret, "ders": o.get("ders")})
+        kod = str(k.get("boyut_neden") or "")
+        ayr = NEDEN_AYRINTI.get(kod, "Bilinmeyen kapanış nedeni")
+        if kod == "felaket_stop" and felaket_oran > 0:
+            ayr += f" (%{tr_sayi(felaket_oran * 100, 0)})"
+        tr_cikis = k.get("trader_px")
+        cikti.append({"ms": ms, "adres": str(k.get("adres") or ""), "coin": str(k.get("coin") or ""), "yon": "uzun" if uzun else "kısa", "net": net, "poz": poz, "kapat": tam,
+                      "oran": (net / (sz * giris)) if giris and sz else None, "neden": NEDEN_KAPANIS.get(kod, "diğer"), "ayrinti": ayr,
+                      "giris": giris, "tr_giris": tr_giris, "cikis": None if cikis is None else float(cikis), "tr_cikis": None if tr_cikis is None else float(tr_cikis),
+                      "giris_fark": None if not giris or not tr_giris else ((giris - tr_giris) if uzun else (tr_giris - giris)) / tr_giris,                    # + = bizim aleyhe
+                      "cikis_fark": None if cikis is None or not tr_cikis else ((float(tr_cikis) - float(cikis)) if uzun else (float(cikis) - float(tr_cikis))) / float(tr_cikis),
+                      "sure_ms": (ms - o["ms"]) if o.get("ms") else None, "ucret": ucret, "ders": o.get("ders")})
     return sorted(cikti, key=lambda r: -r["ms"])
 
 
-def kapanan_ozeti(satirlar: list[dict]) -> tuple[int, float | None, float, float | None, float | None]:
-    """(adet, kazanma oranı, net K/Z, ort. kazanç, ort. kayıp) — kazanma = net > 0."""
-    net = [r["net"] for r in satirlar]
-    kaz, kay = [x for x in net if x > 0], [x for x in net if x < 0]
-    return len(net), (len(kaz) / len(net) if net else None), sum(net), (sum(kaz) / len(kaz) if kaz else None), (sum(kay) / len(kay) if kay else None)
+def kapanan_ozeti(satirlar: list[dict], tum: list[dict] | None = None) -> dict:
+    """Dönem özeti: `kapanis` (dolum adedi), `poz` (tamamen kapanan pozisyon sayısı; kısmi kapanışlar ayrı sayılmaz), `kazanma` (pozisyon bazında, sonuç = pozisyonun TÜM kapanışlarının net toplamı > 0),
+    `net` (dönemdeki tüm kapanış satırlarının net toplamı), `ort_kazanc` / `ort_kayip` (pozisyon başına). `tum`: pozisyonun dönem dışındaki kısmi kapanışlarını da toplamak için tüm satırlar."""
+    toplam: dict[tuple, float] = {}
+    for r in (tum if tum is not None else satirlar):
+        toplam[r["poz"]] = toplam.get(r["poz"], 0.0) + r["net"]
+    sonuc = [toplam[k] for k in {r["poz"] for r in satirlar if r["kapat"]}]
+    kaz, kay = [x for x in sonuc if x > 0], [x for x in sonuc if x < 0]
+    return {"kapanis": len(satirlar), "poz": len(sonuc), "kazanma": (len(kaz) / len(sonuc) if sonuc else None), "net": sum(r["net"] for r in satirlar),
+            "ort_kazanc": (sum(kaz) / len(kaz) if kaz else None), "ort_kayip": (sum(kay) / len(kay) if kay else None)}
 
 
 def acik_satirlari(acik: list[dict], hesap: dict, kurallar: dict, simdi_ms: int, kip: str) -> list[dict]:
@@ -948,7 +981,6 @@ def _alias_haritasi(adresler: set[str]) -> dict[str, str]:
 def ogrenme_ozeti(kayitlar: list[dict], ozet: dict, gunluk: dict | None, kurallar: dict, simdi_ms: int, adlar: dict[str, str]) -> dict:
     """ÖĞRENME sekmesi verisi (ders + makine öğrenmesi). Ölçülemeyen her şey None: panoda "Henüz ölçülemedi (n işlem, en az N gerek)"; uydurma sayı YOK.
     Ders katkısı = (ders yüzünden alınmayan işlemlerin hayali K/Z toplamı) × −1; ML katkısı = (ML'in almadığı işlemlerin hayali K/Z toplamı) × −1 (pozitif = ders/ML bize kazandırdı)."""
-    from copytrade.canli.ogrenme_adaptor import takma_ad
     og = [r for r in (ozet.get("ogrenme") or []) if isinstance(r, dict)]
     g_og = (gunluk or {}).get("ogrenme") or {}
     sanal = str(ozet.get("kip", "sanal")) == "sanal"
@@ -975,6 +1007,7 @@ def ogrenme_ozeti(kayitlar: list[dict], ozet: dict, gunluk: dict | None, kuralla
     guven = [f"{ad_(str(r.get('kurulum')))}: " + ("yeni alımlar durduruldu" if r.get("emekli") else f"alım boyutu %{tr_sayi(float(r['carpan']) * 100, 0)}'e düşürüldü") for r in og if r.get("emekli") or r.get("carpan")]
     ders_ko = [float(k.get("pnl_usd") or 0.0) for k in kayitlar if k.get("olay") == "karsi_olgu_kapandi" and k.get("neden") == "ders_emekli"]
     ders_min = 30
+    ders_var = aktif_ders > 0 or bool(dersler)
     gun_n = (kayit_donemi(kayitlar) or ("", "", 0))[2]
     # --- ML
     min_n = int(kurallar.get("ogrenme_filtre_min_n", 20))
@@ -982,22 +1015,35 @@ def ogrenme_ozeti(kayitlar: list[dict], ozet: dict, gunluk: dict | None, kuralla
     modelli = {str(r["kurulum"]) for r in og if r.get("filtre")}
     ret = [k for k in kayitlar if k.get("olay") == "ml_filtre_atla"]
     ret7 = [k for k in ret if int(k.get("zaman_ms") or 0) >= gun7]
-    onay7 = sum(1 for k in emir7 if takma_ad(str(k.get("adres"))) in modelli)
     ml_ko = sorted((k for k in kayitlar if k.get("olay") == "karsi_olgu_kapandi" and k.get("neden") == "ml_filtre_atla"), key=lambda k: int(k.get("zaman_ms") or 0))
-    son20 = ml_ko[-20:]
+    adaylar = sorted((k for k in kayitlar if k.get("olay") == "ogrenme_aday" and k.get("net_usd") is not None), key=lambda k: int(k.get("zaman_ms") or 0))
     egitim = [k for k in kayitlar if k.get("olay") == "ml_filtre_egitildi"]
-    kullanilan: set[int] = set()
-    kararlar = []
-    for k in sorted(ret, key=lambda k: -int(k.get("zaman_ms") or 0))[:5]:
+    al = [k for k in kayitlar if k.get("olay") == "ml_filtre_al"]
+    al7 = [k for k in al if int(k.get("zaman_ms") or 0) >= gun7]
+    kullanilan_ko: set[int] = set()
+    kullanilan_ad: set[int] = set()
+    kararlar_hepsi = []                                                                                                # (ms, coin, karar, sonuç $ | None, doğru mu | None)
+    for k in sorted([*ret, *al], key=lambda k: int(k.get("zaman_ms") or 0)):
         ms = int(k.get("zaman_ms") or 0)
-        sonuc = next(((i, c) for i, c in enumerate(ml_ko) if i not in kullanilan and c.get("coin") == k.get("coin") and int(c.get("zaman_ms") or 0) >= ms), None)
-        if sonuc:
-            kullanilan.add(sonuc[0])
-        kararlar.append((ms, str(k.get("coin") or "?"), "almadı", None if sonuc is None else float(sonuc[1].get("pnl_usd") or 0.0)))
+        if k.get("olay") == "ml_filtre_atla":                                                                           # ret: karşı-olgu K/Z < 0 ise ret doğruydu
+            s_ = next(((i_, c) for i_, c in enumerate(ml_ko) if i_ not in kullanilan_ko and c.get("coin") == k.get("coin") and int(c.get("zaman_ms") or 0) >= ms), None)
+            if s_:
+                kullanilan_ko.add(s_[0])
+            pnl = None if s_ is None else float(s_[1].get("pnl_usd") or 0.0)
+            kararlar_hepsi.append((ms, str(k.get("coin") or "?"), "almadı", pnl, None if pnl is None else pnl < 0))
+        else:                                                                                                          # onay: aynı (kurulum, coin) için sonraki kapanan işlem net K/Z > 0 ise onay doğruydu
+            s_ = next(((i_, c) for i_, c in enumerate(adaylar) if i_ not in kullanilan_ad and c.get("kurulum") == k.get("kurulum") and c.get("coin") == k.get("coin") and int(c.get("zaman_ms") or 0) >= ms), None)
+            if s_:
+                kullanilan_ad.add(s_[0])
+            net = None if s_ is None else float(s_[1]["net_usd"])
+            kararlar_hepsi.append((ms, str(k.get("coin") or "?"), "aldı", net, None if net is None else net > 0))
+    kararlar_hepsi.sort(key=lambda x: -x[0])
+    sonuclu = [x for x in kararlar_hepsi if x[4] is not None][:20]
+    kararlar = [x[:4] for x in kararlar_hepsi[:5]]
     return {"var": var, "ders_acik": ders_kural and var, "ders_kural": ders_kural, "kucuk": kucuk, "engel": engel, "aktif_ders": aktif_ders, "dersler": dersler, "guven": guven,
             "ders_katki": (-sum(ders_ko) if len(ders_ko) >= ders_min else None), "ders_n": len(ders_ko), "ders_min": ders_min, "gun_n": gun_n,
-            "ml_kural": ml_kural, "model": bool(modelli), "islem": islem, "min_n": min_n, "ret7": len(ret7), "onay7": onay7, "kucult7": 0,
-            "isabet": (sum(1 for k in son20 if float(k.get("pnl_usd") or 0.0) < 0), len(son20)) if modelli and len(son20) >= 10 else None, "isabet_n": len(son20),
+            "ml_kural": ml_kural, "model": bool(modelli), "islem": islem, "min_n": min_n, "ret7": len(ret7), "onay7": len(al7),
+            "isabet": (sum(1 for x in sonuclu if x[4]), len(sonuclu)) if modelli and len(sonuclu) >= 10 else None, "isabet_n": len(sonuclu), "ders_var": ders_var,
             "ml_katki": (-sum(float(k.get("pnl_usd") or 0.0) for k in ml_ko) if modelli and len(ml_ko) >= min_n else None), "ml_ko_n": len(ml_ko),
             "egitim": (int(egitim[-1].get("zaman_ms") or 0), egitim[-1].get("n_egitim")) if egitim else None, "kararlar": kararlar}
 
@@ -1015,22 +1061,24 @@ def _rozet(sinif: str, metin: str) -> str:
 
 
 def _olculemedi(n: int, en_az: int) -> str:
-    return f'<span class="so">{UCRET_YOK} ({n} işlem, en az {en_az} gerek)</span>'
+    return f'<span class="so">Veri birikiyor: {n}/{en_az} işlem</span>'
 
 
 def ders_karti(d: dict, tam: bool) -> str:
-    """Ders kartı. Durum: "Açık, işlemleri etkiliyor" / "Kapalı"; açık ama işlemi etkilemiyorsa KIRMIZI. `tam` = ÖĞRENME sekmesi (ÖZET'te kısa)."""
+    """Ders kartı. Ders yokken SARI "Açık, henüz ders çıkmadı"; ders çıktıysa ve işlemleri etkiliyorsa yeşil; ders çıktığı hâlde son 7 günde hiçbir işleme uygulanmadıysa KIRMIZI. `tam` = ÖĞRENME sekmesi; ÖZET'te tek satır."""
     if not d["var"] and d["ders_kural"]:
         durum = _rozet("yok", "veri birikiyor")
     elif not d["ders_acik"]:
         durum = _rozet("yok", "Kapalı")
-    elif d["kucuk"] + d["engel"] > 0 or d["aktif_ders"] > 0:
+    elif not d["ders_var"]:
+        durum = _rozet("bk", "Açık, henüz ders çıkmadı")
+    elif d["kucuk"] + d["engel"] > 0:
         durum = _rozet("art", "Açık, işlemleri etkiliyor")
     else:
-        durum = _rozet("eks", "Açık ama işlemleri etkilemiyor")
-    son = f'{_tsi(d["dersler"][0][0], "%d.%m")} · {esc(d["dersler"][0][1])}' if d["dersler"] else '<span class="so">henüz ders çıkmadı</span>'
+        durum = _rozet("eks", "Açık ama işlemlere uygulanmıyor")
     if not tam:
-        return _kv([("Durum", durum), ("Son öğrendiği", son)])
+        return f'<div class="s">{durum}' + (f' <span class="so">son: {_tsi(d["dersler"][0][0], "%d.%m")}</span>' if d["dersler"] else "") + "</div>"
+    son = f'{_tsi(d["dersler"][0][0], "%d.%m")} · {esc(d["dersler"][0][1])}' if d["dersler"] else '<span class="so">henüz ders çıkmadı</span>'
     katki = (f'<span class="{_renk(d["ders_katki"])}">{esc(_tl(d["ders_katki"], True))}</span>' if d["ders_katki"] is not None else _olculemedi(d["ders_n"], d["ders_min"]))
     return (_kv([("Durum", durum), ("Son öğrendiği", son),
                  ("Son 7 günde değişen işlem", f'{d["kucuk"] + d["engel"]} ({d["kucuk"]} küçüldü · {d["engel"]} engellendi)'),
@@ -1039,7 +1087,7 @@ def ders_karti(d: dict, tam: bool) -> str:
 
 
 def ml_karti(d: dict, tam: bool) -> str:
-    """Makine öğrenmesi kartı. Model henüz eğitilmediyse her ölçüm "Henüz ölçülemedi (X işlem, en az N gerek)"."""
+    """Makine öğrenmesi kartı. Model henüz eğitilmediyse tek satır "Veri birikiyor: X/N işlem" (uydurma sayı yok). ÖZET'te (`tam` = False) tek satır."""
     if not d["var"] and d["ml_kural"]:
         durum = _rozet("yok", "veri birikiyor")
     elif not d["ml_kural"]:
@@ -1050,11 +1098,11 @@ def ml_karti(d: dict, tam: bool) -> str:
         durum = _rozet("bk", "Açık, henüz eğitilmedi")
     if not d["model"]:
         yok = _olculemedi(d["islem"], d["min_n"])
-        return _kv([("Durum", durum), ("İsabet", yok), ("Son 7 gün", yok)] + ([("Katkı", yok), ("Son eğitim", '<span class="so">henüz eğitilmedi</span>')] if tam else []))
-    isabet = f'son {d["isabet"][1]} tahminin {d["isabet"][0]}\'{_EK3.get(d["isabet"][0], "i")} tuttu' if d["isabet"] else _olculemedi(d["isabet_n"], 10)
-    ozet_satir = f'{d["onay7"]} onay · {d["ret7"]} ret · {d["kucult7"]} küçültme'
+        return f'<div class="s">{durum} {yok}</div>' if not tam else _kv([("Durum", durum), ("Ölçüm", yok), ("Son eğitim", '<span class="so">henüz eğitilmedi</span>')])
+    isabet = f'son {d["isabet"][1]} kararın {d["isabet"][0]}\'{_EK3.get(d["isabet"][0], "i")} tuttu' if d["isabet"] else f'<span class="so">Veri birikiyor: {d["isabet_n"]}/10 karar</span>'
+    ozet_satir = f'{d["onay7"]} işlem onaylandı · ML\'in atlattığı işlem: {d["ret7"]}'
     if not tam:
-        return _kv([("Durum", durum), ("İsabet", isabet), ("Son 7 gün", ozet_satir)])
+        return f'<div class="s">{durum}</div>' + _kv([("İsabet", isabet), ("Son 7 gün", ozet_satir)])
     fark = (f'<span class="{_renk(d["ml_katki"])}">{esc(_tl(d["ml_katki"], True))}</span>' if d["ml_katki"] is not None else _olculemedi(d["ml_ko_n"], d["min_n"]))
     egit = "henüz kayıtta yok" if d["egitim"] is None else f'{_tsi(d["egitim"][0], "%d.%m.%Y")} · {"—" if d["egitim"][1] is None else d["egitim"][1]} örnek'
     return _kv([("Durum", durum), ("İsabet", isabet), ("Son 7 gün", ozet_satir), ("Katkı (ML'li − ML'siz K/Z)", fark), ("Son eğitim", esc(egit))])
@@ -1095,15 +1143,22 @@ def acik_liste_html(satirlar: list[dict]) -> str:
     return _liste_baslik(["Coin", "Giriş → şimdi", "K/Z", "Süre"], "ga") + _daha_fazla(govde)
 
 
+def _fark_metni(a: float | None) -> str:
+    """Bizim fiyat − trader fiyatı farkı (% ve yön): + = bizim aleyhe."""
+    return "—" if a is None else (f"%{tr_sayi(a * 100, 2)} aleyhe" if a >= 0 else f"%{tr_sayi(abs(a) * 100, 2)} lehe")
+
+
 def kapanan_liste_html(satirlar: list[dict]) -> str:
     if not satirlar:
         return '<div class="bos">Bu dönemde kapanan işlem yok</div>'
     govde = []
     for r in satirlar:
         ders = "uygulanmadı" if r["ders"] is None or float(r["ders"]) >= 1.0 else f'alım boyutu %{tr_sayi(float(r["ders"]) * 100, 0)}\'e düşürülmüştü'
-        ay = _kv([("Trader", esc(kisa(r["adres"]))), ("Giriş → çıkış", f'{fiyat(r["giris"])} → {fiyat(r["cikis"])}'), ("Süre", esc(sure_metni(r["sure_ms"]))),
-                  ("Komisyon", esc(_tl(r["ucret"]))), ("Ders", esc(ders))])
-        govde.append(_liste_satir([f'<b>{esc(r["coin"])}</b><br><span class="so">{r["yon"]}</span>', esc(_tsi(r["ms"])), kz_html(r["net"], r["oran"]), esc(r["neden"])], ay, "gk"))
+        ay = _kv([("Trader", esc(kisa(r["adres"]))), ("Neden", esc(r["ayrinti"])),
+                  ("Giriş (trader → biz)", f'{fiyat(r["tr_giris"])} → {fiyat(r["giris"])} · {_fark_metni(r["giris_fark"])}'),
+                  ("Çıkış (trader → biz)", f'{fiyat(r["tr_cikis"])} → {fiyat(r["cikis"])} · {_fark_metni(r["cikis_fark"])}'),
+                  ("Süre", esc(sure_metni(r["sure_ms"]))), ("Komisyon", esc(_tl(r["ucret"]))), ("Ders", esc(ders))])
+        govde.append(_liste_satir([f'<b>{esc(r["coin"])}</b><br><span class="so kc">{r["yon"]} · {esc(kisa(r["adres"]))}</span>', esc(_tsi(r["ms"])), kz_html(r["net"], r["oran"]), esc(r["neden"])], ay, "gk"))
     return _liste_baslik(["Coin", "Kapanış (TSİ)", "K/Z", "Neden"], "gk") + _daha_fazla(govde)
 
 
@@ -1213,8 +1268,8 @@ def _kadro_bolumu(ozet: dict, hesap: dict, kayitlar: list[dict], acik: list[dict
 
 
 
-KOYU = "--bg:#0b0b0d;--k:#141417;--cz:#2b2b31;--y:#ececf1;--so:#9a9aa5;--tu:#f5a524;--art:#3ddc84;--eks:#ff6b6b;--bk:#f5d90a;--c2:#202026;--c3:#18181c"
-ACIK = "--bg:#f4f4f6;--k:#ffffff;--cz:#d6d6dd;--y:#16161a;--so:#5f5f69;--tu:#b36b00;--art:#15803d;--eks:#c81e1e;--bk:#8a5a00;--c2:#e6e6ec;--c3:#f0f0f3"
+KOYU = "--bg:#0b0b0d;--k:#141417;--cz:#2b2b31;--y:#ececf1;--so:#b3b3bd;--tu:#f5a524;--art:#3ddc84;--eks:#ff6b6b;--bk:#f5d90a;--c2:#202026;--c3:#18181c;--uyb:#7f1d1d;--uyy:#ffe4e4"
+ACIK = "--bg:#f4f4f6;--k:#ffffff;--cz:#d6d6dd;--y:#16161a;--so:#5f5f69;--tu:#b36b00;--art:#15803d;--eks:#c81e1e;--bk:#8a5a00;--c2:#e6e6ec;--c3:#f0f0f3;--uyb:#c81e1e;--uyy:#ffffff"
 CSS = (":root{" + KOYU + ";color-scheme:dark}"
        ":root[data-theme=light]{" + ACIK + ";color-scheme:light}"
        ":root[data-theme=dark]{" + KOYU + ";color-scheme:dark}"
@@ -1226,7 +1281,8 @@ body{margin:0;background:var(--bg);color:var(--y);font:14px/1.45 system-ui,-appl
 .so,.ha{color:var(--so)}.ha{font-size:11px}.kc{font-size:11px}
 .rozet{border:1px solid var(--cz);border-radius:4px;padding:1px 8px;color:var(--tu);font-size:11px;margin-right:6px}
 .dug{display:inline-flex;gap:4px}.dug button{background:var(--k);color:var(--y);border:1px solid var(--cz);border-radius:4px;padding:4px 9px;font:inherit;font-size:12px;cursor:pointer}
-.uy{background:var(--eks);color:#fff;font-weight:700;padding:6px 10px;margin-bottom:8px;border-radius:4px}
+.uy{background:var(--uyb);color:var(--uyy);font-weight:700;padding:6px 10px;margin-bottom:8px;border-radius:4px}
+.rk-b{display:none}.bayat .rk-n{display:none}.bayat .rk-b{display:block}
 .sirit{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--cz);border:1px solid var(--cz);margin-bottom:6px}
 .h{background:var(--k);padding:7px 8px;min-width:0}.hb{font-size:10px;letter-spacing:.04em;color:var(--so);text-transform:uppercase}.hd{font-size:15px;font-weight:700;margin:2px 0}.h .ha{font-size:10.5px;line-height:1.3}
 .art{color:var(--art)}.eks{color:var(--eks)}.bk{color:var(--bk)}.yok{color:var(--so)}
@@ -1272,8 +1328,8 @@ JS = """(function(){var d=document,r=d.documentElement;try{if(window.self!==wind
 try{var t=localStorage.getItem("ct_tema");if(t==="light"||t==="dark")r.setAttribute("data-theme",t)}catch(e){}
 var b=d.getElementById("tema");if(b)b.onclick=function(){var c=r.getAttribute("data-theme")||(window.matchMedia&&matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"),n=c==="light"?"dark":"light";r.setAttribute("data-theme",n);try{localStorage.setItem("ct_tema",n)}catch(e){}};
 var y=d.getElementById("yenile");if(y)y.onclick=function(){location.reload()};
-var e=d.getElementById("bayat"),g=d.getElementById("gun");
-function k(){var ms=e?Number(e.dataset.ms):0;if(e)e.style.display=Date.now()-Number(e.dataset.ms)>3600*1000?"block":"none";if(g&&ms){var m=Math.max(0,Math.round((Date.now()-ms)/60000));g.textContent="son güncelleme "+(m<1?"az önce":m+" dk önce")}}
+var e=d.getElementById("bayat");
+function k(){if(!e)return;var ms=Number(e.dataset.ms);if(!ms)return;var dk=Math.max(0,Math.round((Date.now()-ms)/60000)),eski=Date.now()-Number(e.dataset.ms)>3600*1000,s=dk<1?"az önce":(dk<120?dk+" dk önce":Math.round(dk/60)+" sa önce");e.className=eski?"uy":"gn";e.textContent=eski?"Veri bayat: son güncelleme "+s+" — sistem durmuş olabilir":"son güncelleme "+s;r.classList.toggle("bayat",eski)}
 k();setInterval(k,60000);document.addEventListener("visibilitychange",function(){if(!document.hidden)k()});
 try{["t","p"].forEach(function(a){var s=sessionStorage.getItem("ct_"+a);if(s){var x=d.getElementById(s);if(x)x.checked=true}d.querySelectorAll("input[name="+a+"]").forEach(function(i){i.addEventListener("change",function(){try{sessionStorage.setItem("ct_"+a,i.id)}catch(z){}})})});
 var yy=sessionStorage.getItem("ct_y");if(yy)window.scrollTo(0,Number(yy));setTimeout(function(){try{sessionStorage.setItem("ct_y",String(window.scrollY))}catch(z){}location.reload()},180000)}catch(e2){setTimeout(function(){location.reload()},180000)}
@@ -1290,7 +1346,7 @@ def _sayfa_kart(baslik: str, govde: str, sinif: str = "", sag: str = "") -> str:
 
 
 def _bugun_satiri(r: dict) -> str:
-    return (f'<div class="s"><b>{esc(r["coin"])}</b> {r["yon"]} · {esc(_tsi(r["ms"]))} · <b class="{_renk(r["net"])}">{esc(_tl(r["net"], True))}</b> · {esc(r["neden"])}</div>')
+    return (f'<div class="s"><b>{esc(r["coin"])}</b> {r["yon"]} <span class="so">{esc(kisa(r["adres"]))}</span> · {esc(_tsi(r["ms"]))} · <b class="{_renk(r["net"])}">{esc(_tl(r["net"], True))}</b> · {esc(r["neden"])}</div>')
 
 
 SAHA_NEDEN_TR = {"ilk_gun": "ilk kadro", "bos_slot": "boş yer açıldı", "kor_gevsetildi": "boş yer açıldı", "kadro_disi": "günlük kadrodan düştü", "r1_elendi": "radar elemesinden düştü",
@@ -1352,9 +1408,10 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     serit_html = serit([hucre("Kasa", _tl(oz), "", f"başl. {_tl(kasa)}"), hucre("Bugün K/Z", _tl(kz_donem[0][1], True), _renk(kz_donem[0][1]), _tyuz(kz_donem[0][2])),
                         hucre("Toplam K/Z", _tl(oz - kasa, True), _renk(oz - kasa), _tyuz(toplam_oran)), hucre("Açık poz.", str(len(acik)), "", f"brüt {_tl(sum(q.get('usd') or 0 for q in acik))}"),
                         hucre("Zirveden düşüş", _tl(-(float(zirve) - oz), True) if zirve else "—", _renk(-dusus if dusus is not None else None), _tyuz(-dusus if dusus is not None else None)),
-                        hucre("Risk durumu", r_metin, r_sinif, r_alt)], "s6")
+                        f'<div class="h"><div class="hb">Risk durumu</div><div class="rk-n"><div class="hd {r_sinif}">{esc(r_metin)}</div><div class="ha">{esc(r_alt)}</div></div>'
+                        '<div class="rk-b"><div class="hd yok">Bilinmiyor</div><div class="ha">veri güncel değil</div></div></div>'], "s6")
     # ---- veri hazırlığı
-    kap = kapanan_islemler(kayitlar)
+    kap = kapanan_islemler(kayitlar, float(kurallar.get("canli_felaket_stop_oran", 0) or 0))
     acik_s = acik_satirlari(acik, hesap, kurallar, simdi_ms, kip)
     uyeler, inenler = ((saha_durum or {}).get("uyeler") or {}), ((saha_durum or {}).get("inen") or {})
     adresler = {*uyeler, *inenler, *(hesap.get("slot_bas") or {}), *(q["adres"] for q in acik), *(str(k["adres"]) for k in emirler if k.get("adres"))}
@@ -1362,15 +1419,13 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     rejim_eski = bool(rejim_anlik) and rejim_anlik.get("gecerli_son_ms") is not None and simdi_ms > int(rejim_anlik["gecerli_son_ms"])
     haber_eski = bool(haber_anlik) and bool(haber_anlik.get("duygu")) and haber_mod.duygu_ozet(haber_anlik, simdi_ms) is None
     sorunlar = [b for b in sg if b.seviye in ("KRITIK", "UYARI")]
-    mesaj = lambda b: re.sub(r"\s*\([^)]*\.(?:json|jsonl|yml|py|sh)[^)]*\)", "", b.mesaj)                         # noqa: E731  dosya adı görünmesin
+    mesaj = lambda b: "Veri güncel değil (süre üstteki satırda)" if b.kod in YAS_KODLARI else re.sub(r"\s*\([^)]*\.(?:json|jsonl|yml|py|sh)[^)]*\)", "", b.mesaj)      # noqa: E731  dosya adı ve veri yaşı sayısı tekrar edilmez
 
     # ---- ÖZET
     if durdu or r_sinif == "eks":
         gorev = "Risk freni devrede, yeni işlem açılmıyor; nedeni için TEKNİK sekmesine bakın."
     elif sg_durum == "KRITIK":
         gorev = "Sistemde acil bir sorun var; TEKNİK sekmesindeki sağlık bölümüne bakın."
-    elif simdi_ms - veri_ms > 3600 * 1000:
-        gorev = "Veri 1 saatten eski; sunucunun çalıştığını kontrol edin."
     else:
         gorev = "Bir şey yapmanız gerekmiyor."
     kzler = [q for q in acik_s if q["kz"] is not None]
@@ -1384,13 +1439,13 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
         k_acik = '<div class="bos">Açık işlem yok</div>'
     k_son = ("".join(_bugun_satiri(r) for r in kap[:3]) + '<label for="t3" class="ln">tümü →</label>') if kap else '<div class="bos">veri birikiyor: henüz kapanan işlem yok</div>'
     if sorunlar:
-        isik = ("eks", "Teknik sorun: " + mesaj(sorunlar[0]) + (f" (+{len(sorunlar) - 1} sorun daha)" if len(sorunlar) > 1 else "") + " — ayrıntı TEKNİK sekmesinde")
+        isik = ("eks", "Teknik sorun var — ayrıntı TEKNİK sekmesinde")
     elif rejim_eski or haber_eski:
         isik = ("bk", " · ".join([*(["Rejim verisi güncel değil"] if rejim_eski else []), *(["Haber verisi güncel değil"] if haber_eski else [])]))
     else:
         isik = ("art", "Her şey yolunda")
     k_isik = _sayfa_kart("Durum ışığı", f'<div class="gorev {isik[0]}" style="font-size:14px">{esc(isik[1])}</div>', {"eks": "kirmizi", "bk": "sari"}.get(isik[0], ""))
-    ozet_kartlari = [_sayfa_kart("Ne yapmalıyım?", f'<div class="gorev">{esc(gorev)}</div>'), _sayfa_kart("Açık işlemler", k_acik), _sayfa_kart("Son kapanan işlemler", k_son),
+    ozet_kartlari = [_sayfa_kart("Ne yapmalıyım?", f'<div class="gorev rk-n">{esc(gorev)}</div><div class="gorev rk-b eks">Veri 1 saattir gelmiyor: orkestratöre \'CT panosu güncellenmiyor\' yaz.</div>'), _sayfa_kart("Açık işlemler", k_acik), _sayfa_kart("Son kapanan işlemler", k_son),
                      _sayfa_kart("Ders öğrenmesi", ders_karti(og, False)), _sayfa_kart("Makine öğrenmesi", ml_karti(og, False))]
     ozet_kartlari = [k_isik, *ozet_kartlari] if isik[0] == "eks" else [*ozet_kartlari, k_isik]
     # ---- KAPANAN
@@ -1400,9 +1455,10 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     kap_html = "".join(f'<input type="radio" name="p" id="{i}"{" checked" if i == "p2" else ""}>' for i, _, _ in donemler)
     kap_html += '<div class="pil">' + "".join(f'<label for="{i}">{esc(ad)}</label>' for i, ad, _ in donemler) + "</div>"
     for i, _, satirlar in donemler:
-        n, oran, net, _, _ = kapanan_ozeti(satirlar)
-        kap_html += (f'<div class="per per{i[1]}"><div class="ozs">{hucre("Adet", str(n))}{hucre("Kazanma", "—" if oran is None else "%" + tr_sayi(oran * 100, 0))}{hucre("Net K/Z", _tl(net, True) if n else "—", _renk(net) if n else "")}</div>'
-                     f'{kapanan_liste_html(satirlar)}</div>')
+        oz_p = kapanan_ozeti(satirlar, kap)
+        kap_html += (f'<div class="per per{i[1]}"><div class="ozs">{hucre("Kapanış", str(oz_p["kapanis"]), "", f"{oz_p['poz']} pozisyon")}{hucre("Kazanma", "—" if oz_p["kazanma"] is None else "%" + tr_sayi(oz_p["kazanma"] * 100, 0), "", "pozisyon bazında")}'
+                     f'{hucre("Net K/Z", _tl(oz_p["net"], True) if oz_p["kapanis"] else "—", _renk(oz_p["net"]) if oz_p["kapanis"] else "")}</div>'
+                     f'<div class="ha" style="padding:0 6px 6px">Net = kapanış K/Z − kapanış komisyonu. Açılış komisyonu ve zorla kapanmalar K/Z sekmesindeki dökümde.</div>{kapanan_liste_html(satirlar)}</div>')
     # ---- K/Z
     nokta = [v for t, v in seri if t >= simdi_ms - 30 * GUN_MS]
     if len(nokta) > 300:
@@ -1410,7 +1466,7 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
         nokta = nokta[::adim] + [nokta[-1]]
     ilk_ms = next((t for t, _ in seri if t >= simdi_ms - 30 * GUN_MS), simdi_ms)
     egri30 = _cizgi(nokta, "#f5a524", baz=kasa if kasa > 0 else None, x_etiket=(_tsi(ilk_ms, "%d.%m"), _tsi(simdi_ms, "%d.%m")))
-    n_k, oran_k, net_k, ort_k, ort_z = kapanan_ozeti(kap)
+    oz_k = kapanan_ozeti(kap)
     donem_satir = "".join(f'<tr><td>{esc(ad)}</td><td class="sg {_renk(v)}">{esc(_tl(v, True))}</td><td class="sg {_renk(o)}">{esc(_tyuz(o))}</td></tr>' for ad, v, o in kz_donem)
     bas_ms_ = int(ds.get("bas_ms") or 0)
     ucret_d, brut_d, oran_d = komisyon_ozeti(kayitlar, ozet, ds)
@@ -1420,9 +1476,30 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     kapanmis = float(hesap.get("kapanmis_net") or 0.0)
     bt, fk = ozet.get("btc_al_tut_getiri"), ozet.get("btc_fark")
     btc_satir = ("BTC al-tut " + _tyuz(None if bt is None else float(bt)) + " · biz " + _tyuz(ozet.get("getiri")) + " · fark " + _tyuz(None if fk is None else float(fk))) if bt is not None else "BTC al-tut kıyası: veri birikiyor"
-    kz_html_ = (_sayfa_kart("Özsermaye (son 30 gün)", egri30, "tam") + _sayfa_kart("Getiri", f'<table class="tb"><tr><th>Dönem</th><th class="sg">K/Z</th><th class="sg">Oran</th></tr>{donem_satir}</table><div class="ha" style="padding-top:6px">{esc(btc_satir)}</div>')
-                + _sayfa_kart("Kazanma", (_kv([("Kazanma oranı", "—" if oran_k is None else "%" + tr_sayi(oran_k * 100, 0)), ("Ortalama kazanç", f'<span class="art">{esc(_tl(ort_k))}</span>'), ("Ortalama kayıp", f'<span class="eks">{esc(_tl(ort_z))}</span>'),
-                                                      ("Kapanan işlem", f'{n_k} (son {(donem or ("", "", 0))[2]} gün)')]) if n_k else '<div class="bos">veri birikiyor: henüz kapanan işlem yok</div>'))
+    gerc_t = sum(float(v) for v in (hesap.get("realize") or {}).values())
+    tasfiye_t = sum(float(x.get("pnl") or 0.0) for x in (hesap.get("tasfiyeler") or []))
+    ucret_t, fon_t = sum(float(v) for v in (hesap.get("ucret") or {}).values()), sum(float(v) for v in (hesap.get("funding") or {}).values())
+    acik_t = sum(float(q["kz_usd"]) for q in acik if q.get("kz_usd") is not None)
+    fark_t = (oz - kasa) - (gerc_t + acik_t - ucret_t + fon_t + kapanmis)
+    ks = lambda v: f'<span class="{_renk(v)}">{esc(_tl(v, True))}</span>'                                           # noqa: E731
+    toplam_kart = ""
+    if hesap.get("realize") or hesap.get("ucret"):
+        toplam_kart = _sayfa_kart("Toplam nasıl oluşuyor", _kv([("Kapanışlar (gerçekleşen)", ks(gerc_t - tasfiye_t)), *([("Zorla kapanma", ks(tasfiye_t))] if abs(tasfiye_t) > 0.005 else []),
+                                                              ("Açık pozisyonlar", ks(acik_t)), ("Komisyon (açılış + kapanış)", ks(-ucret_t)), ("Fonlama ücreti", ks(fon_t)),
+                                                              *([("Takipten ayrılan traderlar", ks(kapanmis))] if abs(kapanmis) > 0.005 else []), ("Toplam K/Z", f"<b>{ks(oz - kasa)}</b>"),
+                                                              *([("Açıklanamayan fark", ks(fark_t))] if abs(fark_t) > 0.05 else [])])
+                                  + '<div class="ha" style="padding-top:6px">Toplam = kapanışlar + zorla kapanma + açık − komisyon ± fonlama ücreti (motorun kayıtlı toplamları).</div>')
+    bg = kz_donem[0]
+    bugun_kart = ""
+    if bg[1] is not None:
+        bugun_kap = sum(r["net"] for r in kap if r["ms"] >= bugun0)
+        limit_gun = (oz - float(gun_basi)) if gun_basi else None
+        bugun_kart = _sayfa_kart("Bugün", _kv([("Bugün K/Z (gece yarısından, TSİ)", ks(bg[1])), ("Bugün kapanışlar (net)", ks(bugun_kap)), ("Açık pozisyon değişimi ve masraf", ks(bg[1] - bugun_kap)),
+                                                *([("Limit gününde K/Z (03:00 TSİ'den)", ks(limit_gun))] if limit_gun is not None else []), ("Risk durumu", f'<span class="{r_sinif}">{esc(r_metin)}</span> · {esc(r_alt)}')])
+                                 + '<div class="ha" style="padding-top:6px">Günlük limit motorun gün başından (03:00 TSİ) sayılır; "Bugün" gece yarısından. Bu yüzden iki K/Z farklı olabilir.</div>')
+    kz_html_ = (_sayfa_kart("Özsermaye (son 30 gün)", egri30, "tam") + toplam_kart + bugun_kart + _sayfa_kart("Getiri", f'<table class="tb"><tr><th>Dönem</th><th class="sg">K/Z</th><th class="sg">Oran</th></tr>{donem_satir}</table><div class="ha" style="padding-top:6px">{esc(btc_satir)}</div>')
+                + _sayfa_kart("Kazanma", (_kv([("Kazanma oranı (pozisyon bazında)", "—" if oz_k["kazanma"] is None else "%" + tr_sayi(oz_k["kazanma"] * 100, 0)), ("Ortalama kazanç", f'<span class="art">{esc(_tl(oz_k["ort_kazanc"]))}</span>'), ("Ortalama kayıp", f'<span class="eks">{esc(_tl(oz_k["ort_kayip"]))}</span>'),
+                                                      ("Kapanan", f'{oz_k["kapanis"]} kapanış · {oz_k["poz"]} pozisyon (son {(donem or ("", "", 0))[2]} gün)')]) if oz_k["kapanis"] else '<div class="bos">veri birikiyor: henüz kapanan işlem yok</div>'))
                 + _sayfa_kart("Kaynak başına K/Z", (f'<table class="tb"><tr><th>Trader</th><th class="sg">K/Z</th><th class="sg">İşlem</th><th class="sg">Durum</th></tr>{kaynak_satir}</table>'
                                                     + (f'<div class="ha" style="padding-top:6px">Takipten ayrılan traderlar: {esc(_tl(kapanmis, True))}</div>' if kapanmis else "") if kaynaklar else '<div class="bos">veri birikiyor</div>'), "tam")
                 + _sayfa_kart("Maliyetler", _kv([("Komisyon", f"{esc(_tl(ucret_d))}" + (f' <span class="so">(brüt K/Z\'nin %{tr_sayi(oran_d * 100, 0)}\'i)</span>' if oran_d is not None else "")), ("Fonlama ücreti", f'<span class="{_renk(fonlama_d)}">{esc(_tl(fonlama_d, True))}</span>')])))
@@ -1430,7 +1507,10 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
     son_dersler = "".join(f'<div class="s"><span class="so">{_tsi(ms, "%d.%m")}</span> {esc(m)}</div>' for ms, m in og["dersler"]) or '<div class="bos">veri birikiyor: henüz ders çıkmadı</div>'
     ml_kararlar = ""
     for ms, coin, karar, pnl in og["kararlar"]:
-        sonuc = "sürüyor" if pnl is None else (f'alsaydık {_tl(pnl, True)} · doğru karar' if pnl < 0 else f'alsaydık {_tl(pnl, True)} · yanlış karar')
+        if karar == "aldı":
+            sonuc = "sürüyor" if pnl is None else f'sonuç {_tl(pnl, True)} · ' + ("doğru karar" if pnl > 0 else "yanlış karar")
+        else:
+            sonuc = "sürüyor" if pnl is None else (f'alsaydık {_tl(pnl, True)} · doğru karar' if pnl < 0 else f'alsaydık {_tl(pnl, True)} · yanlış karar')
         ml_kararlar += f'<div class="s"><span class="so">{_tsi(ms, "%d.%m %H:%M")}</span> <b>{esc(coin)}</b> · {karar} · <span class="so">{esc(sonuc)}</span></div>'
     ml_kararlar = ml_kararlar or ('<div class="bos">veri birikiyor: model eğitilince kararlar burada görünür</div>' if not og["model"] else '<div class="bos">veri birikiyor: henüz karar yok</div>')
     ogrenme_html = (_sayfa_kart("Ders öğrenmesi", ders_karti(og, True), "tam") + _sayfa_kart("Son 5 ders", son_dersler) + _sayfa_kart("Makine öğrenmesi", ml_karti(og, True), "tam") + _sayfa_kart("Makine öğrenmesinin son 5 kararı", ml_kararlar))
@@ -1483,15 +1563,15 @@ def html_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], gecm
               f'{cu("Trader değişiklikleri (24 sa)", saha_html)}{cu("Sürüm karşılaştırma", surum_karsilastirma.html_tablo(surum_karsilastirma.karsilastir(kayitlar, surum_gun)))}'
               f'{cu(f"Takip edilen traderlar ({sahada_n}/{saha_n})", (f"<div class=mt>{motor_satiri}</div>" if motor_satiri else "") + f"<div class=so style=padding:4px>radar {esc(kadro_tarih)} TSİ · dokun → bize ne verdi</div>" + kadro_html + mut)}</div>')
     uyari = '<div class="uy">GERÇEK PARA</div>' if kip == "gercek" else ""
-    gun_txt = f"veri {_tsi(veri_ms, '%d.%m.%Y %H:%M')} TSİ"
+    bayat_s = simdi_ms - veri_ms > 3600 * 1000
+    bayat_txt = ("Veri bayat: son güncelleme " + sure_metni(simdi_ms - veri_ms) + " önce — sistem durmuş olabilir") if bayat_s else ("son güncelleme " + (sure_metni(simdi_ms - veri_ms) + " önce" if simdi_ms - veri_ms >= 60_000 else "az önce"))
     return f"""<!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><meta name="color-scheme" content="dark light">
-<title>Copy Trade Panosu</title>
+<html lang="tr"{' class="bayat"' if bayat_s else ""}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><meta name="color-scheme" content="dark light">
+<title>Kopya İşlem Panosu</title>
 <style>{CSS}</style></head><body>
-<div class="ust"><div><span class="lg0">CT</span> <b>Copy Trade Panosu</b></div><div><span class="rozet">{esc(kip_adi(kip))}</span><span class="dug"><button type="button" id="yenile">Yenile</button><button type="button" id="tema">Tema</button></span></div></div>
-<div id="bayat" data-ms="{veri_ms}" class="uy" style="display:none">Veri bayat: son güncelleme 1 saatten eski, sistem durmuş olabilir</div>{uyari}
+<div class="ust"><div><span class="lg0">CT</span> <b>Kopya İşlem Panosu</b></div><div><span class="rozet">{esc(kip_adi(kip))}</span><span class="dug"><button type="button" id="yenile">Yenile</button><button type="button" id="tema">Tema</button></span></div></div>
+<div id="bayat" data-ms="{veri_ms}" class="{"uy" if bayat_s else "gn"}">{esc(bayat_txt)}</div>{uyari}
 {serit_html}
-<div class="gn"><span id="gun">{esc(gun_txt)}</span></div>
 <input type="radio" name="t" id="t1" checked><input type="radio" name="t" id="t2"><input type="radio" name="t" id="t3"><input type="radio" name="t" id="t4"><input type="radio" name="t" id="t5"><input type="radio" name="t" id="t6">
 <div class="tabs">{"".join(f'<label for="t{i + 1}">{ad}</label>' for i, ad in enumerate(SEKMELER))}</div>
 <div class="sekmeler">

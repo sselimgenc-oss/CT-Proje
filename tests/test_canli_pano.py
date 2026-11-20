@@ -352,7 +352,7 @@ def test_s14_md_gun_payda_gun_basi():
 def test_s15_bayat_uyarisi_periyodik_ve_gorunurlukte_yeniden_denetlenir():
     h = pano.html_olustur({"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "yazildi_ms": SIMDI_D}, {}, {}, [], [], SIMDI_D)
     js = h[h.index("<script>"):h.index("</script>")]
-    assert "setInterval(k,60000)" in js and 'addEventListener("visibilitychange"' in js and "3600*1000" in js and '"block":"none"' in js
+    assert "setInterval(k,60000)" in js and 'addEventListener("visibilitychange"' in js and "3600*1000" in js and 'classList.toggle("bayat"' in js
     from copytrade.saglik import canli_sayfa_ms
     assert canli_sayfa_ms(h) == SIMDI_D                                                     # sağlık kontrolünün okuduğu öznitelik değişmedi
 
