@@ -22,6 +22,7 @@ from pathlib import Path
 
 from copytrade import surum_karsilastirma
 from copytrade.canli.gunluk_ozet import alinmayan_neden, kopya_kalite
+from copytrade.canli.hesap import dinamik_stop_orani
 from copytrade.canli.telegram import ATLA_TR, KACIRILAN_NEDENLER, fiyat, kip_adi, tr_isaretli, tr_sayi, tr_yuzde
 from copytrade.saglik import durum as saglik_durum, kontrol as saglik_kontrol
 
@@ -947,7 +948,11 @@ def acik_satirlari(acik: list[dict], hesap: dict, kurallar: dict, simdi_ms: int,
             iz = "başa baş: kâr girişe inerse kapanır"
         else:
             iz = f"henüz devrede değil (en yüksek kâr %{tr_sayi(zk * 100, 1)}; %{tr_sayi(bb * 100, 0)}'te başlar)"
-        stop = "—" if not giris or fel <= 0 else f"{fiyat(float(giris) * (1 - fel if sz > 0 else 1 + fel))} (girişten %{tr_sayi(fel * 100, 0)} aleyhe)"
+        oran_s = fel
+        if giris and fel > 0 and kurallar.get("dinamik_stop"):       # K-74: motorun kullandığı aynı formül (azami kaldıraç yoksa 20x yedeği)
+            kal = float(p.get("kaldirac") or hesap.get("kaldirac") or 3.0)
+            oran_s = dinamik_stop_orani(sz > 0, float(giris), kal, (hesap.get("maks_kaldirac") or {}).get(q["coin"]), fel, 0.03)
+        stop = "—" if not giris or fel <= 0 else f"{fiyat(float(giris) * (1 - oran_s if sz > 0 else 1 + oran_s))} (girişten %{tr_sayi(oran_s * 100, 1 if oran_s != fel else 0)} aleyhe)"
         cikti.append({"adres": q["adres"], "coin": q["coin"], "yon": "long" if sz > 0 else "short", "giris": giris, "mark": q.get("mark"), "kz": kz,
                       "oran": None if kz is None or not taban else float(kz) / taban, "acilis_ms": p.get("acilis_ms"), "sure_ms": (simdi_ms - int(p["acilis_ms"])) if p.get("acilis_ms") else None,
                       "usd": q.get("usd"), "kaldirac": p.get("kaldirac"), "iz": iz, "stop": stop})

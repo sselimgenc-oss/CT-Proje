@@ -573,7 +573,7 @@ class Motor:
         h = oku("hesap.json")
         if self.kip == "gercek" and m and h is None:
             raise DurumBozuk("motor.json var, hesap.json yok: defter kaybı; elle mutabakat gerekli (hesap.json.bak varsa kontrol edin); motor başlamadı")
-        self.hesap = Hesap.from_json(h) if h else Hesap(self.kasa, float(rules["canli_marj_kaldirac"]))
+        self.hesap = Hesap.from_json(h, float(rules["canli_marj_kaldirac"])) if h else Hesap(self.kasa, float(rules["canli_marj_kaldirac"]))
         self._hesap_yok = h is None                                                # hesap.json hiç yok: niyet dosyasındaki eski dolumlar yeni deftere OYNATILMAZ (hayalet pozisyon)
         self._oynat_gecis = h is not None and "son_niyet_cloid" not in h          # eski biçim hesap.json: geçiş (işaretçi = niyet dosyasının sonu, geçmiş oynatılmaz)
         self._kayitli_kip = str(m.get("kip") or "sanal")                           # G5: motor.json yoksa/eski biçimse (kip alanı yok) sanal sayılır
@@ -661,7 +661,7 @@ class Motor:
         self.atlanan_trader: dict[str, dict[str, int]] = {"spot_atlandi": {}, "hip3_atlandi": {}}      # K‑42 bilgi: neden -> {adres: adet}
         self.neden_say: dict[str, int] = {}          # boyut / risk nedenleri sayacı (slot_tavani, marj_yok, coin_tavani …)
         self.niyet = Niyet(durum_dizin / "niyet.jsonl")
-        self.ogrenme = Ogrenme(rules, durum_dizin / "ogrenme", self.kip, self.saat_ms, self.kayit, self.tg.gonder)      # ortak öğrenme (docs/ORTAK_OGRENME_CT.md): yalnız sanal kip; dersler yalnız riski azaltır
+        self.ogrenme = Ogrenme(rules, durum_dizin / "ogrenme", self.kip, self.saat_ms, self.kayit, lambda m: self.tg.gonder(m, tur="ogrenme_ders"))      # ortak öğrenme (docs/ORTAK_OGRENME_CT.md): yalnız sanal kip; dersler yalnız riski azaltır
         if self.ogrenme.aktif:
             self.hesap.dinleyici = self.ogrenme.dolum
         if self._oynat_gecis:
@@ -1229,6 +1229,10 @@ class Motor:
             slot = slot * ders_carpan                              # ortak öğrenme: [0.5, 1.0] çarpan, yalnız açılış/artırma boyutu
         if golge_carpan is not None and golge_carpan != 1.0:
             slot = slot * golge_carpan                             # K-73 B5: trader kaldıracı > golge_kaldirac_uyari → yeni açılış/artırma boyutu x0.5 (yalnız sanal)
+        efektif_carpan = (ders_carpan if ders_carpan is not None else 1.0) * (golge_carpan if golge_carpan is not None else 1.0)
+        if eylem == "azalt":                                       # K-73 ek (O1): azaltma, açılışı küçülten AYNI çarpanla hedeflenir (Poz.boyut_carpan; yoksa 1.0)
+            bp = self.hesap.poz.get(adres, {}).get(o.coin)
+            slot = slot * (float(bp.boyut_carpan) if bp is not None else 1.0)
         mk = self.mark(o.coin, o.px)
         biz_usd = abs(biz_sz) * (mk or o.px)
         hesap_usd = self.trader_hesap_usd(adres, simdi, taze_sart=eylem in ("ac", "artir")) if eylem in ("ac", "artir", "azalt") else 0.0
@@ -1271,6 +1275,10 @@ class Motor:
             sonuc = self._kapat_coin(adres, o.coin, neden, simdi, o)
             return sonuc[1] or Sonuc(adres, o.coin, eylem, "atlandi", "kapanis_yok")
         s = self._yurut(o, adres, eylem, yon, emir_usd, not acilis, abs(biz_sz) if not acilis else None, neden, gec, simdi)
+        if acilis and s.karar == "emir":                           # K-73 ek (O1): uygulanan çarpanı pozisyona yaz (azaltma kullanır; hesap.json ile kalıcı)
+            yp = self.hesap.poz.get(adres, {}).get(o.coin)
+            if yp is not None:
+                yp.boyut_carpan = efektif_carpan
         if yeni_coin and s.karar == "emir":                        # O1: patlama freni yalnız GERÇEKTEN açılan farklı coinleri sayar (emir sonrası)
             self.risk.yeni_coin_kaydet(adres, o.coin, simdi)
         if eylem == "azalt":                                       # kısmi dolum kalırsa bir sonraki dakikada yeniden dene
@@ -1445,7 +1453,7 @@ class Motor:
         self.kayit({"olay": "emir_yok", "adres": adres, "coin": o.coin, "eylem": eylem, "karar": karar, "neden": neden, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
                     "yas_ms": self.saat_ms() - o.zaman_ms})
         if eylem == "ac" and neden in tg.KACIRILAN_NEDENLER:          # kaçırılan (geç görülen / veri yok) = eksik kopya → sessiz bilgi; kural gereği atlananlar gönderilmez
-            self._kopya_hata("ac", adres, o.coin, tg.atla_etiket(neden))
+            self.tg.gonder(tg.msg_kopya_hata("ac", o.coin, adres, tg.atla_etiket(neden)), "INFO", tur="kopya_kacan")      # rutin (geç görülen/veri yok): Telegram'a gitmez; gerçek hata (emir reddedildi/kapanış doldurulamadı) `_kopya_hata` ile gider
         if eylem in ("ac", "artir") and neden != "bant_ici":
             try:
                 self._karsi_olgu_ac(o, adres, neden)
@@ -1948,7 +1956,7 @@ class Motor:
             elif k.tur == "hafta_degisimi":
                 self.ogrenme.hafta_degisti()                                     # ortak öğrenme: "emekli" kayıtları haftalık kadro değişiminde biter
                 self.kayit({"olay": "hafta_degisimi", "hafta": k.neden, "saha": list(self.saha.uyeler), "inen": list(self.saha.inen)})
-                self.tg.gonder(f"🔄 Haftalık kadro değişti\nSahada {len(self.saha.uyeler)} trader var" + (f"; {len(self.saha.inen)} trader yedeğe indi, pozisyonları kapanana kadar izleniyor." if self.saha.inen else ".") + f"\n{tg.SENDEN_YOK}")
+                self.tg.gonder(f"🔄 Haftalık kadro değişti\nSahada {len(self.saha.uyeler)} trader var" + (f"; {len(self.saha.inen)} trader yedeğe indi, pozisyonları kapanana kadar izleniyor." if self.saha.inen else ".") + f"\n{tg.SENDEN_YOK}", tur="haftalik_kadro")      # rutin: Telegram'a gitmez (tg.BASTIRILAN_TURLER)
             elif k.tur == "giris_atlandi":
                 imza = (self.saha.son_kosu_ms, tuple(sorted(k.saha if k.saha is not None else (k.kor_kirpildi or []))))
                 if self._kor_imza.get(k.adres) != imza:                          # B11: imza = (kadro koşusu, adayın karşılaştığı TAM saha); değiştirmede üye başına değişen `kalan` imzaya girmez → aynı durum bir kez yazılır
@@ -3485,7 +3493,7 @@ class Motor:
             if self.saha.alarm_gunu != gun(simdi):
                 self.saha.alarm_gunu = gun(simdi)
                 self.kayit({"olay": "kadro_surum_bekleniyor", "gerekli": str(gerekli), "gelen": kadro.get("radar_surum")})
-                self.tg.gonder(tg.alarm("BİLGİ: yeni seçim yapısı bekleniyor", f"Gelen kadro sürümü {kadro.get('radar_surum') or 'yok'}, gereken {gerekli}. Trader alınmıyor; kasa nakitte.", "ℹ️"))
+                self.tg.gonder(tg.alarm("BİLGİ: yeni seçim yapısı bekleniyor", f"Gelen kadro sürümü {kadro.get('radar_surum') or 'yok'}, gereken {gerekli}. Trader alınmıyor; kasa nakitte.", "ℹ️"), tur="kadro_surum_bekleniyor")
             kadro = None
             if self._son_kadro is not None and str(self._son_kadro.get("radar_surum")) != str(gerekli):
                 self._son_kadro = None

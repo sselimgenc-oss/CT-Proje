@@ -58,10 +58,24 @@ def duygu_coz(veri: Any) -> dict | None:
         return None
 
 
+KOK_ONEKLER = ("approv", "liquidat")                  # bu kökler kelime sonuna kadar uzar (approve/approved/approval, liquidation/liquidated); diğerleri TAM kelime (+ çekim ekleri)
+EK_KELIMELER = ("banned", "banning", "suing", "rising", "risen", "fell", "dropped", "dropping")     # çift ünsüz/düzensiz çekimler
+
+
+def _kelime_deseni(kelimeler: tuple[str, ...]) -> re.Pattern:
+    """Anahtar kelimeler KELİME SINIRINDA (Unicode-güvenli `(?<!\\w)` ... `(?!\\w)`, büyük/küçük harf duyarsız): 'bank' 'ban'ı, 'issue' 'sue'yu, 'against' 'gain'i ETKİLEMEZ.
+    Çekim: s/es/ed/d/ing eki serbest ('bans', 'surged'); `KOK_ONEKLER` kelime sonuna kadar uzar. Çok kelimeli/tireli ifadeler ('sell-off') aynen çalışır."""
+    parcalar = [re.escape(k) + (r"\w*" if k in KOK_ONEKLER else r"(?:s|es|ed|d|ing)?") for k in kelimeler]
+    return re.compile(r"(?<!\w)(?:" + "|".join(parcalar) + r")(?!\w)", re.IGNORECASE)
+
+
+_POZ_RE = _kelime_deseni(POZITIF + tuple(k for k in EK_KELIMELER if k in ("rising", "risen")))
+_NEG_RE = _kelime_deseni(NEGATIF + tuple(k for k in EK_KELIMELER if k not in ("rising", "risen")))
+
+
 def ton(baslik: str) -> str:
-    """KABA ton: pozitif/negatif anahtar kelime sayısı farkının işareti (eşitse 'notr')."""
-    b = baslik.lower()
-    skor = sum(1 for k in POZITIF if k in b) - sum(1 for k in NEGATIF if k in b)
+    """KABA ton: pozitif/negatif anahtar kelime sayısı farkının işareti (eşitse 'notr'). Eşleşme kelime BAŞI sınırında (alt-dize değil)."""
+    skor = len({m.group(0).lower() for m in _POZ_RE.finditer(baslik)}) - len({m.group(0).lower() for m in _NEG_RE.finditer(baslik)})
     return "pozitif" if skor > 0 else "negatif" if skor < 0 else "notr"
 
 

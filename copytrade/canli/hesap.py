@@ -20,6 +20,7 @@ class Poz:
     acilis_ms: int
     kaldirac: float = 3.0
     giris_ctx: dict | None = None   # açılış anı rejim/duygu damgası (yalnız bilgi; rejim_sonuc raporu)
+    boyut_carpan: float = 1.0       # K-73 ek (O1): açılış/artırmada slotu küçülten çarpan (ders × gölge B5); AZALTMA aynı çarpanla hedeflenir; hesap.json ile kalıcı
     zirve_kar: float = 0.0          # K-73 iz süren koruma (yalnız sanal): girişe göre en yüksek kâr oranı (artırmada ortalama giriş değişince sıfırlanır); hesap.json ile kalıcı
 
 
@@ -202,8 +203,9 @@ class Hesap:
                 "belirsiz": self.belirsiz}
 
     @classmethod
-    def from_json(cls, d: dict[str, Any]) -> "Hesap":
-        h = cls(d["kasa_usd"], d.get("kaldirac", 3.0), d.get("maks_kaldirac"))
+    def from_json(cls, d: dict[str, Any], kaldirac: float | None = None) -> "Hesap":
+        """`kaldirac` (güncel kural `canli_marj_kaldirac`) verilirse defterin YENİ pozisyon kaldıracı odur; açık pozisyonlar kendi `Poz.kaldirac` değerini korur."""
+        h = cls(d["kasa_usd"], d.get("kaldirac", 3.0) if kaldirac is None else kaldirac, d.get("maks_kaldirac"))
         h.realize, h.ucret, h.slot_bas = dict(d.get("realize", {})), dict(d.get("ucret", {})), dict(d.get("slot_bas", {}))
         h.poz = {a: {c: Poz(**p) for c, p in coinler.items()} for a, coinler in d.get("poz", {}).items()}
         h.tasfiyeler = list(d.get("tasfiyeler", []))

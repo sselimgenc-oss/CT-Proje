@@ -29,7 +29,8 @@ HIZ_LIMITI_DK = 15                        # standart: dakikada en çok 15 mesaj 
 INFO_OMUR_S = 24 * 3600.0                 # standart: 24 saatten eski INFO mesajı atılır
 TEKRAR_PENCERE_S = 300.0                  # standart: aynı uyarı (WARN/CRIT, aynı metin / anahtar) bu sürede bir kez
 UYARI_ARA_S = 6 * 3600.0                  # kullanıcı standardı: aynı uyarı en çok 6 saatte bir (`Telegram.uyar`); düzelince TEK "Düzeldi" (`Telegram.duzeldi`)
-BASTIRILAN_TURLER = frozenset({"saha_giris", "saha_cikis", "saha_uyari", "saatlik_bos", "emir_ozeti", "emir_artir_azalt"})      # KOD ANAHTARI: bu türler Telegram'a GİTMEZ; kayda `tg_bastirildi` (tür ile) yazılır, tespit/kayıt/pano sürer. Geri açmak için `Telegram.bastirilan` kümesinden çıkarın
+BASTIRILAN_TURLER = frozenset({"saha_giris", "saha_cikis", "saha_uyari", "saatlik_bos", "emir_ozeti", "emir_artir_azalt",
+                           "haftalik_kadro", "kopya_kacan", "kadro_surum_bekleniyor", "ogrenme_ders"})      # KOD ANAHTARI: bu türler Telegram'a GİTMEZ; kayda `tg_bastirildi` (tür ile) yazılır, tespit/kayıt/pano sürer. Geri açmak için `Telegram.bastirilan` kümesinden çıkarın
 MESAJ_AZAMI = 3500                        # standart: mesaj başına en çok karakter
 KACIRILAN_PENCERE_S = 15 * 60          # G-16: bundan eski (ya da motor başlamadan önce gelmiş) komut YÜRÜTÜLMEZ; "işlenmedi, yeniden gönder" yanıtı alır
 YENIDEN_BEKLEME_S = (2.0, 5.0, 15.0)   # G-18: önemli mesaj (ONEMLI_ONEKLER) gönderilemezse bu beklemelerle 3 kez daha denenir
@@ -220,7 +221,10 @@ class Telegram:
                 self.kayit({"olay": "telegram_tekrar_atlandi", "onem": onem or "WARN", "anahtar": anahtar, "pencere_sn": UYARI_ARA_S})
             return False
         self._uyari_son[anahtar] = simdi
-        return self.gonder(metin, onem, anahtar=anahtar)
+        ok = self.gonder(metin, onem, anahtar=anahtar)
+        if not ok:
+            self._uyari_son.pop(anahtar, None)                     # gitmedi: 6 saatlik kilit kurulmaz, sonraki çağrıda yeniden denenir
+        return ok
 
     def duzeldi(self, anahtar: str, metin: str) -> bool:
         """`uyar(anahtar)` ile uyarılmış bir sorun düzelince TEK "Düzeldi" mesajı (INFO, sessiz); uyarı hiç verilmediyse ya da zaten kapatıldıysa hiçbir şey gitmez."""
