@@ -8273,3 +8273,9 @@
 {"zaman_ms":1795209574086,"olay":"karsi_olgu_kapandi","coin":"BTC","neden":"rejim_ters","yon":"B","hayali_usd":635.58,"pnl_usd":1.0812,"sure_sa":2.1,"kapanis":"trader_kapadi"}
 {"zaman_ms":1795210013268,"olay":"kacan_telafi_atlandi","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"BTC","neden":"filtre_atlamisti:ters_netlesme"}
 {"zaman_ms":1795210130999,"olay":"tur","ozsermaye_usd":9832.1308}
+{"zaman_ms":1795210634816,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"VVV","neden":"kayma_lehte_fazla","kayma":-0.013975,"trader_giris":19.9004,"mark":20.1785}
+{"zaman_ms":1795210642973,"olay":"kacan_telafi_atlandi","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","coin":"HYPE","neden":"filtre_atlamisti:ters_netlesme"}
+{"zaman_ms":1795210986384,"olay":"tur","ozsermaye_usd":9810.007}
+{"zaman_ms":1795211229554,"olay":"emir_yok","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"BTC","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795211229013,"gorme_ms":1795211229553,"yas_ms":541}
+{"zaman_ms":1795211230189,"olay":"emir_yok","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"BTC","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795211229831,"gorme_ms":1795211230188,"yas_ms":358}
+{"zaman_ms":1795211258548,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"SOL","neden":"filtre_atlamisti:duygu_ters"}
