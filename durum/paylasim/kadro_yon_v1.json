@@ -3,732 +3,672 @@
   {
    "coin": "BTC",
    "long_trader": 2,
-   "net_nominal_usd": -3127150.92,
+   "net_nominal_usd": -3143106.86,
    "net_yon": "short",
-   "nominal_long_usd": 177558.33,
-   "nominal_short_usd": 3304709.25,
-   "short_trader": 4,
-   "veri_yasi_sn": 109773.8
+   "nominal_long_usd": 178373.17,
+   "nominal_short_usd": 3321480.03,
+   "short_trader": 5,
+   "veri_yasi_sn": 110679.0
   },
   {
    "coin": "XRP",
    "long_trader": 1,
-   "net_nominal_usd": -2590814.35,
+   "net_nominal_usd": -2602785.81,
    "net_yon": "short",
-   "nominal_long_usd": 6302.33,
-   "nominal_short_usd": 2597116.68,
+   "nominal_long_usd": 6331.46,
+   "nominal_short_usd": 2609117.26,
    "short_trader": 4,
-   "veri_yasi_sn": 89305.9
+   "veri_yasi_sn": 90211.1
   },
   {
    "coin": "xyz:SKHX",
    "long_trader": 1,
-   "net_nominal_usd": 1605810.0,
+   "net_nominal_usd": 1642770.0,
    "net_yon": "long",
-   "nominal_long_usd": 1605810.0,
+   "nominal_long_usd": 1642770.0,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 513.2
+   "veri_yasi_sn": 205.8
   },
   {
    "coin": "xyz:SNDK",
    "long_trader": 3,
-   "net_nominal_usd": 901702.41,
+   "net_nominal_usd": 1007364.11,
    "net_yon": "long",
-   "nominal_long_usd": 901702.41,
+   "nominal_long_usd": 1007364.11,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 8467.6
+   "veri_yasi_sn": 953.8
   },
   {
    "coin": "xyz:NVDA",
    "long_trader": 3,
-   "net_nominal_usd": 877604.04,
+   "net_nominal_usd": 861606.34,
    "net_yon": "long",
-   "nominal_long_usd": 877604.04,
+   "nominal_long_usd": 861606.34,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 67348.1
+   "veri_yasi_sn": 68253.3
   },
   {
    "coin": "ETH",
    "long_trader": 2,
-   "net_nominal_usd": -560069.04,
+   "net_nominal_usd": -562879.48,
    "net_yon": "short",
-   "nominal_long_usd": 39269.44,
-   "nominal_short_usd": 599338.48,
+   "nominal_long_usd": 39466.49,
+   "nominal_short_usd": 602345.97,
    "short_trader": 3,
-   "veri_yasi_sn": 88415.6
+   "veri_yasi_sn": 89320.8
   },
   {
    "coin": "xyz:GME",
    "long_trader": 1,
-   "net_nominal_usd": 544210.0,
+   "net_nominal_usd": 541460.0,
    "net_yon": "long",
-   "nominal_long_usd": 544210.0,
+   "nominal_long_usd": 541460.0,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 56540.6
+   "veri_yasi_sn": 57445.8
   },
   {
    "coin": "TRX",
    "long_trader": 2,
-   "net_nominal_usd": 497614.89,
+   "net_nominal_usd": 493419.2,
    "net_yon": "long",
-   "nominal_long_usd": 497614.89,
+   "nominal_long_usd": 493419.2,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 15641.3
+   "veri_yasi_sn": 16546.5
   },
   {
    "coin": "xyz:NATGAS",
    "long_trader": 0,
-   "net_nominal_usd": -397875.5,
+   "net_nominal_usd": -401170.0,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 397875.5,
+   "nominal_short_usd": 401170.0,
    "short_trader": 1,
-   "veri_yasi_sn": 513.2
+   "veri_yasi_sn": 205.8
   },
   {
    "coin": "WLFI",
    "long_trader": 0,
-   "net_nominal_usd": -262629.89,
+   "net_nominal_usd": -262717.82,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 262629.89,
+   "nominal_short_usd": 262717.82,
    "short_trader": 1,
-   "veri_yasi_sn": 70957.5
+   "veri_yasi_sn": 71862.7
   },
   {
    "coin": "AERO",
    "long_trader": 1,
-   "net_nominal_usd": 189234.74,
+   "net_nominal_usd": 190965.81,
    "net_yon": "long",
-   "nominal_long_usd": 189234.74,
+   "nominal_long_usd": 190965.81,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 3490.6
+   "veri_yasi_sn": 4395.8
   },
   {
    "coin": "BCH",
    "long_trader": 1,
-   "net_nominal_usd": 178588.9,
+   "net_nominal_usd": 179567.47,
    "net_yon": "long",
-   "nominal_long_usd": 178588.9,
+   "nominal_long_usd": 179567.47,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 88282.5
+   "veri_yasi_sn": 89187.7
   },
   {
    "coin": "JUP",
    "long_trader": 1,
-   "net_nominal_usd": 175043.36,
+   "net_nominal_usd": 176061.25,
    "net_yon": "long",
-   "nominal_long_usd": 175043.36,
+   "nominal_long_usd": 176061.25,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 11686.6
+   "veri_yasi_sn": 12591.8
   },
   {
    "coin": "kSHIB",
    "long_trader": 1,
-   "net_nominal_usd": 171101.62,
+   "net_nominal_usd": 171895.05,
    "net_yon": "long",
-   "nominal_long_usd": 171101.62,
+   "nominal_long_usd": 171895.05,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 10443.6
+   "veri_yasi_sn": 11348.8
   },
   {
    "coin": "LINK",
    "long_trader": 0,
-   "net_nominal_usd": -169841.1,
+   "net_nominal_usd": -170728.55,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 169841.1,
+   "nominal_short_usd": 170728.55,
    "short_trader": 3,
-   "veri_yasi_sn": 205632.4
+   "veri_yasi_sn": 206537.6
   },
   {
    "coin": "SOL",
    "long_trader": 2,
-   "net_nominal_usd": -167089.93,
+   "net_nominal_usd": -167808.15,
    "net_yon": "short",
-   "nominal_long_usd": 27010.72,
-   "nominal_short_usd": 194100.65,
+   "nominal_long_usd": 27126.82,
+   "nominal_short_usd": 194934.97,
    "short_trader": 3,
-   "veri_yasi_sn": 84882.0
+   "veri_yasi_sn": 85787.2
   },
   {
    "coin": "kPEPE",
    "long_trader": 1,
-   "net_nominal_usd": 153130.44,
+   "net_nominal_usd": 154437.01,
    "net_yon": "long",
-   "nominal_long_usd": 153130.44,
+   "nominal_long_usd": 154437.01,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 66839.8
+   "veri_yasi_sn": 67745.0
   },
   {
    "coin": "DOGE",
    "long_trader": 1,
-   "net_nominal_usd": 138303.04,
+   "net_nominal_usd": 138862.49,
    "net_yon": "long",
-   "nominal_long_usd": 150730.65,
-   "nominal_short_usd": 12427.61,
+   "nominal_long_usd": 151340.38,
+   "nominal_short_usd": 12477.89,
    "short_trader": 1,
-   "veri_yasi_sn": 66498.6
+   "veri_yasi_sn": 67403.8
   },
   {
    "coin": "HYPE",
    "long_trader": 2,
-   "net_nominal_usd": -133497.94,
+   "net_nominal_usd": -129467.61,
    "net_yon": "short",
-   "nominal_long_usd": 136814.29,
-   "nominal_short_usd": 270312.23,
+   "nominal_long_usd": 143460.26,
+   "nominal_short_usd": 272927.87,
    "short_trader": 4,
-   "veri_yasi_sn": 122300.1
+   "veri_yasi_sn": 123205.2
   },
   {
    "coin": "TAO",
    "long_trader": 0,
-   "net_nominal_usd": -128306.38,
+   "net_nominal_usd": -129333.05,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 128306.38,
+   "nominal_short_usd": 129333.05,
    "short_trader": 1,
-   "veri_yasi_sn": 61490.6
+   "veri_yasi_sn": 62395.8
   },
   {
    "coin": "POL",
    "long_trader": 1,
-   "net_nominal_usd": 124127.1,
+   "net_nominal_usd": 124891.44,
    "net_yon": "long",
-   "nominal_long_usd": 124127.1,
+   "nominal_long_usd": 124891.44,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 12225.6
+   "veri_yasi_sn": 13130.8
   },
   {
    "coin": "ZEC",
    "long_trader": 0,
-   "net_nominal_usd": -116767.99,
+   "net_nominal_usd": -118500.3,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 116767.99,
+   "nominal_short_usd": 118500.3,
    "short_trader": 3,
-   "veri_yasi_sn": 88033.8
+   "veri_yasi_sn": 88939.0
   },
   {
    "coin": "UNI",
    "long_trader": 2,
-   "net_nominal_usd": 114011.23,
+   "net_nominal_usd": 114927.94,
    "net_yon": "long",
-   "nominal_long_usd": 114011.23,
+   "nominal_long_usd": 114927.94,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 179721.1
+   "veri_yasi_sn": 180626.2
   },
   {
    "coin": "HBAR",
    "long_trader": 0,
-   "net_nominal_usd": -110311.37,
+   "net_nominal_usd": -111031.33,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 110311.37,
+   "nominal_short_usd": 111031.33,
    "short_trader": 1,
-   "veri_yasi_sn": 6922.6
+   "veri_yasi_sn": 7827.8
   },
   {
    "coin": "INJ",
    "long_trader": 1,
-   "net_nominal_usd": 107447.06,
+   "net_nominal_usd": 108175.37,
    "net_yon": "long",
-   "nominal_long_usd": 133657.16,
-   "nominal_short_usd": 26210.1,
+   "nominal_long_usd": 134563.13,
+   "nominal_short_usd": 26387.76,
    "short_trader": 1,
-   "veri_yasi_sn": 177191.1
+   "veri_yasi_sn": 178096.2
   },
   {
    "coin": "ETC",
    "long_trader": 0,
-   "net_nominal_usd": -102264.75,
+   "net_nominal_usd": -102830.25,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 102264.75,
+   "nominal_short_usd": 102830.25,
    "short_trader": 1,
-   "veri_yasi_sn": 61572.6
+   "veri_yasi_sn": 62477.8
   },
   {
    "coin": "XLM",
    "long_trader": 0,
-   "net_nominal_usd": -101804.13,
+   "net_nominal_usd": -102223.59,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 101804.13,
+   "nominal_short_usd": 102223.59,
    "short_trader": 1,
-   "veri_yasi_sn": 11846.8
+   "veri_yasi_sn": 12751.9
   },
   {
    "coin": "WLD",
    "long_trader": 0,
-   "net_nominal_usd": -79340.58,
+   "net_nominal_usd": -80630.3,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 79340.58,
+   "nominal_short_usd": 80630.3,
    "short_trader": 1,
-   "veri_yasi_sn": 12057.8
+   "veri_yasi_sn": 12963.0
   },
   {
    "coin": "DOT",
    "long_trader": 0,
-   "net_nominal_usd": -79248.64,
+   "net_nominal_usd": -79825.43,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 79248.64,
+   "nominal_short_usd": 79825.43,
    "short_trader": 1,
-   "veri_yasi_sn": 12388.1
+   "veri_yasi_sn": 13293.3
   },
   {
    "coin": "FIL",
    "long_trader": 0,
-   "net_nominal_usd": -75316.93,
+   "net_nominal_usd": -75554.03,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 75316.93,
+   "nominal_short_usd": 75554.03,
    "short_trader": 1,
-   "veri_yasi_sn": 6981.6
+   "veri_yasi_sn": 7886.7
   },
   {
    "coin": "NEAR",
    "long_trader": 0,
-   "net_nominal_usd": -68004.14,
+   "net_nominal_usd": -68706.55,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 68004.14,
+   "nominal_short_usd": 68706.55,
    "short_trader": 2,
-   "veri_yasi_sn": 86352.6
+   "veri_yasi_sn": 87257.7
   },
   {
    "coin": "GRAM",
    "long_trader": 0,
-   "net_nominal_usd": -67640.15,
+   "net_nominal_usd": -67830.32,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 67640.15,
+   "nominal_short_usd": 67830.32,
    "short_trader": 1,
-   "veri_yasi_sn": 10567.6
+   "veri_yasi_sn": 11472.7
   },
   {
    "coin": "VVV",
    "long_trader": 0,
-   "net_nominal_usd": -65034.3,
+   "net_nominal_usd": -65683.54,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 65034.3,
+   "nominal_short_usd": 65683.54,
    "short_trader": 3,
-   "veri_yasi_sn": 334148.5
+   "veri_yasi_sn": 335053.7
   },
   {
    "coin": "xyz:GOOGL",
-   "long_trader": 2,
-   "net_nominal_usd": 49052.96,
+   "long_trader": 1,
+   "net_nominal_usd": 63794.15,
    "net_yon": "long",
-   "nominal_long_usd": 49052.96,
+   "nominal_long_usd": 63794.15,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 63927.7
-  },
-  {
-   "coin": "xyz:NBIS",
-   "long_trader": 0,
-   "net_nominal_usd": -44582.75,
-   "net_yon": "short",
-   "nominal_long_usd": 0.0,
-   "nominal_short_usd": 44582.75,
-   "short_trader": 1,
-   "veri_yasi_sn": 513.2
+   "veri_yasi_sn": 830.7
   },
   {
    "coin": "xyz:SNXX",
    "long_trader": 0,
-   "net_nominal_usd": -44184.53,
+   "net_nominal_usd": -46786.24,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 44184.53,
+   "nominal_short_usd": 46786.24,
    "short_trader": 1,
-   "veri_yasi_sn": 88487.9
+   "veri_yasi_sn": 89393.1
+  },
+  {
+   "coin": "xyz:NBIS",
+   "long_trader": 0,
+   "net_nominal_usd": -46746.25,
+   "net_yon": "short",
+   "nominal_long_usd": 0.0,
+   "nominal_short_usd": 46746.25,
+   "short_trader": 1,
+   "veri_yasi_sn": 205.8
   },
   {
    "coin": "ENA",
    "long_trader": 0,
-   "net_nominal_usd": -41281.61,
+   "net_nominal_usd": -41717.36,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 41281.61,
+   "nominal_short_usd": 41717.36,
    "short_trader": 1,
-   "veri_yasi_sn": 87659.6
+   "veri_yasi_sn": 88564.8
   },
   {
    "coin": "ALGO",
    "long_trader": 1,
-   "net_nominal_usd": 41059.99,
+   "net_nominal_usd": 41344.73,
    "net_yon": "long",
-   "nominal_long_usd": 41059.99,
+   "nominal_long_usd": 41344.73,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 12437.5
+   "veri_yasi_sn": 13342.7
   },
   {
    "coin": "ADA",
    "long_trader": 1,
-   "net_nominal_usd": 38293.68,
+   "net_nominal_usd": 38549.01,
    "net_yon": "short",
-   "nominal_long_usd": 44156.24,
-   "nominal_short_usd": 5862.55,
+   "nominal_long_usd": 44450.65,
+   "nominal_short_usd": 5901.64,
    "short_trader": 2,
-   "veri_yasi_sn": 16831.6
+   "veri_yasi_sn": 17736.7
   },
   {
    "coin": "xyz:SP500",
    "long_trader": 1,
-   "net_nominal_usd": 35727.0,
+   "net_nominal_usd": 35956.0,
    "net_yon": "long",
-   "nominal_long_usd": 35727.0,
+   "nominal_long_usd": 35956.0,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 64538.2
+   "veri_yasi_sn": 65443.4
   },
   {
    "coin": "ONDO",
    "long_trader": 0,
-   "net_nominal_usd": -34183.89,
+   "net_nominal_usd": -34476.71,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 34183.89,
+   "nominal_short_usd": 34476.71,
    "short_trader": 1,
-   "veri_yasi_sn": 66889.8
+   "veri_yasi_sn": 67795.0
   },
   {
    "coin": "ZRO",
    "long_trader": 0,
-   "net_nominal_usd": -34009.33,
+   "net_nominal_usd": -34132.52,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 34009.33,
+   "nominal_short_usd": 34132.52,
    "short_trader": 1,
-   "veri_yasi_sn": 6748.6
-  },
-  {
-   "coin": "LTC",
-   "long_trader": 0,
-   "net_nominal_usd": -32774.58,
-   "net_yon": "short",
-   "nominal_long_usd": 0.0,
-   "nominal_short_usd": 32774.58,
-   "short_trader": 1,
-   "veri_yasi_sn": 260585.0
+   "veri_yasi_sn": 7653.8
   },
   {
    "coin": "PUMP",
    "long_trader": 0,
-   "net_nominal_usd": -32650.41,
+   "net_nominal_usd": -33004.59,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 32650.41,
+   "nominal_short_usd": 33004.59,
    "short_trader": 1,
-   "veri_yasi_sn": 12243.8
+   "veri_yasi_sn": 13149.0
+  },
+  {
+   "coin": "LTC",
+   "long_trader": 0,
+   "net_nominal_usd": -32859.88,
+   "net_yon": "short",
+   "nominal_long_usd": 0.0,
+   "nominal_short_usd": 32859.88,
+   "short_trader": 1,
+   "veri_yasi_sn": 261490.1
   },
   {
    "coin": "AVAX",
    "long_trader": 1,
-   "net_nominal_usd": 28205.09,
+   "net_nominal_usd": 28221.31,
    "net_yon": "long",
-   "nominal_long_usd": 28205.09,
+   "nominal_long_usd": 28221.31,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 88016.5
+   "veri_yasi_sn": 88921.7
   },
   {
    "coin": "ARB",
    "long_trader": 0,
-   "net_nominal_usd": -27222.76,
+   "net_nominal_usd": -27342.96,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 27222.76,
+   "nominal_short_usd": 27342.96,
    "short_trader": 1,
-   "veri_yasi_sn": 12458.6
+   "veri_yasi_sn": 13363.8
   },
   {
    "coin": "xyz:XYZ100",
    "long_trader": 1,
-   "net_nominal_usd": 26117.5,
+   "net_nominal_usd": 26390.5,
    "net_yon": "long",
-   "nominal_long_usd": 26117.5,
+   "nominal_long_usd": 26390.5,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 59345.7
-  },
-  {
-   "coin": "xyz:SPCX",
-   "long_trader": 1,
-   "net_nominal_usd": 24731.77,
-   "net_yon": "long",
-   "nominal_long_usd": 24731.77,
-   "nominal_short_usd": 0.0,
-   "short_trader": 0,
-   "veri_yasi_sn": 1.4
+   "veri_yasi_sn": 60250.8
   },
   {
    "coin": "XMR",
    "long_trader": 1,
-   "net_nominal_usd": 23254.13,
+   "net_nominal_usd": 23304.35,
    "net_yon": "long",
-   "nominal_long_usd": 58532.41,
-   "nominal_short_usd": 35278.28,
+   "nominal_long_usd": 58658.81,
+   "nominal_short_usd": 35354.47,
    "short_trader": 1,
-   "veri_yasi_sn": 344316.9
+   "veri_yasi_sn": 345222.1
   },
   {
    "coin": "io:SNDK",
    "long_trader": 1,
-   "net_nominal_usd": 22458.8,
+   "net_nominal_usd": 23080.2,
    "net_yon": "long",
-   "nominal_long_usd": 22458.8,
+   "nominal_long_usd": 23080.2,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 43837.8
-  },
-  {
-   "coin": "xyz:MSFT",
-   "long_trader": 1,
-   "net_nominal_usd": 22331.25,
-   "net_yon": "long",
-   "nominal_long_usd": 22331.25,
-   "nominal_short_usd": 0.0,
-   "short_trader": 0,
-   "veri_yasi_sn": 6076.5
-  },
-  {
-   "coin": "ICP",
-   "long_trader": 0,
-   "net_nominal_usd": -22053.41,
-   "net_yon": "short",
-   "nominal_long_usd": 0.0,
-   "nominal_short_usd": 22053.41,
-   "short_trader": 1,
-   "veri_yasi_sn": 12299.8
+   "veri_yasi_sn": 44742.9
   },
   {
    "coin": "xyz:BE",
    "long_trader": 1,
-   "net_nominal_usd": 19394.79,
+   "net_nominal_usd": 22621.88,
    "net_yon": "long",
-   "nominal_long_usd": 19394.79,
+   "nominal_long_usd": 22621.88,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 16.6
+   "veri_yasi_sn": 21.7
   },
   {
-   "coin": "xyz:META",
-   "long_trader": 1,
-   "net_nominal_usd": 17477.1,
-   "net_yon": "long",
-   "nominal_long_usd": 17477.1,
-   "nominal_short_usd": 0.0,
-   "short_trader": 0,
-   "veri_yasi_sn": 668.2
-  },
-  {
-   "coin": "BNB",
-   "long_trader": 1,
-   "net_nominal_usd": 15939.66,
+   "coin": "ICP",
+   "long_trader": 0,
+   "net_nominal_usd": -22140.13,
    "net_yon": "short",
-   "nominal_long_usd": 27774.79,
-   "nominal_short_usd": 11835.13,
-   "short_trader": 2,
-   "veri_yasi_sn": 33279.8
-  },
-  {
-   "coin": "SUI",
-   "long_trader": 1,
-   "net_nominal_usd": 15298.38,
-   "net_yon": "long",
-   "nominal_long_usd": 15298.38,
-   "nominal_short_usd": 0.0,
-   "short_trader": 0,
-   "veri_yasi_sn": 12182.6
-  },
-  {
-   "coin": "xyz:AMZN",
-   "long_trader": 1,
-   "net_nominal_usd": 15260.1,
-   "net_yon": "long",
-   "nominal_long_usd": 15260.1,
-   "nominal_short_usd": 0.0,
-   "short_trader": 0,
-   "veri_yasi_sn": 6063.5
+   "nominal_long_usd": 0.0,
+   "nominal_short_usd": 22140.13,
+   "short_trader": 1,
+   "veri_yasi_sn": 13205.0
   },
   {
    "coin": "xyz:MU",
    "long_trader": 1,
-   "net_nominal_usd": 15195.95,
+   "net_nominal_usd": 17268.71,
    "net_yon": "long",
-   "nominal_long_usd": 15195.95,
+   "nominal_long_usd": 17268.71,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 14.6
+   "veri_yasi_sn": 19.8
+  },
+  {
+   "coin": "BNB",
+   "long_trader": 1,
+   "net_nominal_usd": 16001.66,
+   "net_yon": "short",
+   "nominal_long_usd": 27882.82,
+   "nominal_short_usd": 11881.16,
+   "short_trader": 2,
+   "veri_yasi_sn": 34185.0
+  },
+  {
+   "coin": "SUI",
+   "long_trader": 1,
+   "net_nominal_usd": 15391.32,
+   "net_yon": "long",
+   "nominal_long_usd": 15391.32,
+   "nominal_short_usd": 0.0,
+   "short_trader": 0,
+   "veri_yasi_sn": 13087.7
   },
   {
    "coin": "xyz:DRAM",
    "long_trader": 1,
-   "net_nominal_usd": 11828.12,
+   "net_nominal_usd": 12494.61,
    "net_yon": "long",
-   "nominal_long_usd": 11828.12,
+   "nominal_long_usd": 12494.61,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 22.6
-  },
-  {
-   "coin": "xyz:INTC",
-   "long_trader": 1,
-   "net_nominal_usd": 10839.3,
-   "net_yon": "long",
-   "nominal_long_usd": 10839.3,
-   "nominal_short_usd": 0.0,
-   "short_trader": 0,
-   "veri_yasi_sn": 17676.6
+   "veri_yasi_sn": 57.8
   },
   {
    "coin": "xyz:SOXL",
    "long_trader": 1,
-   "net_nominal_usd": 9869.38,
+   "net_nominal_usd": 10466.75,
    "net_yon": "long",
-   "nominal_long_usd": 9869.38,
+   "nominal_long_usd": 10466.75,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 33024.0
+   "veri_yasi_sn": 33929.2
   },
   {
    "coin": "LIT",
    "long_trader": 0,
-   "net_nominal_usd": -7601.55,
+   "net_nominal_usd": -7662.45,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 7601.55,
+   "nominal_short_usd": 7662.45,
    "short_trader": 1,
-   "veri_yasi_sn": 513.2
+   "veri_yasi_sn": 205.8
   },
   {
    "coin": "NEO",
    "long_trader": 0,
-   "net_nominal_usd": -5741.66,
+   "net_nominal_usd": -5774.22,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 5741.66,
+   "nominal_short_usd": 5774.22,
    "short_trader": 1,
-   "veri_yasi_sn": 513.2
-  },
-  {
-   "coin": "xyz:ANT",
-   "long_trader": 1,
-   "net_nominal_usd": 5336.52,
-   "net_yon": "long",
-   "nominal_long_usd": 5336.52,
-   "nominal_short_usd": 0.0,
-   "short_trader": 0,
-   "veri_yasi_sn": 3514.4
+   "veri_yasi_sn": 205.8
   },
   {
    "coin": "ASTER",
    "long_trader": 1,
-   "net_nominal_usd": -5001.58,
+   "net_nominal_usd": -5011.36,
    "net_yon": "short",
-   "nominal_long_usd": 50116.0,
-   "nominal_short_usd": 55117.58,
+   "nominal_long_usd": 50214.0,
+   "nominal_short_usd": 55225.36,
    "short_trader": 1,
-   "veri_yasi_sn": 10656.6
+   "veri_yasi_sn": 11561.7
   },
   {
    "coin": "MON",
    "long_trader": 1,
-   "net_nominal_usd": 3628.41,
+   "net_nominal_usd": 3696.05,
    "net_yon": "long",
-   "nominal_long_usd": 3628.41,
+   "nominal_long_usd": 3696.05,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 513.2
+   "veri_yasi_sn": 205.8
   },
   {
    "coin": "ATOM",
    "long_trader": 1,
-   "net_nominal_usd": 3355.15,
+   "net_nominal_usd": 3371.24,
    "net_yon": "long",
-   "nominal_long_usd": 3355.15,
+   "nominal_long_usd": 3371.24,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 513.2
+   "veri_yasi_sn": 205.8
   },
   {
    "coin": "FARTCOIN",
    "long_trader": 0,
-   "net_nominal_usd": -3092.36,
+   "net_nominal_usd": -3126.12,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 3092.36,
+   "nominal_short_usd": 3126.12,
    "short_trader": 1,
-   "veri_yasi_sn": 513.2
+   "veri_yasi_sn": 205.8
   },
   {
    "coin": "xyz:PLTR",
    "long_trader": 1,
-   "net_nominal_usd": 2958.8,
+   "net_nominal_usd": 3032.4,
    "net_yon": "long",
-   "nominal_long_usd": 2958.8,
+   "nominal_long_usd": 3032.4,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 59937.4
+   "veri_yasi_sn": 60842.6
   },
   {
    "coin": "xyz:AMD",
    "long_trader": 1,
-   "net_nominal_usd": 2313.12,
+   "net_nominal_usd": 2361.3,
    "net_yon": "long",
-   "nominal_long_usd": 2313.12,
+   "nominal_long_usd": 2361.3,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 59920.7
+   "veri_yasi_sn": 60825.8
   },
   {
    "coin": "AAVE",
    "long_trader": 1,
-   "net_nominal_usd": -1593.29,
+   "net_nominal_usd": -1602.13,
    "net_yon": "short",
-   "nominal_long_usd": 51277.9,
-   "nominal_short_usd": 52871.19,
+   "nominal_long_usd": 51562.48,
+   "nominal_short_usd": 53164.62,
    "short_trader": 1,
-   "veri_yasi_sn": 205693.1
+   "veri_yasi_sn": 206598.3
   },
   {
    "coin": "POPCAT",
    "long_trader": 0,
-   "net_nominal_usd": -1412.48,
+   "net_nominal_usd": -1420.36,
    "net_yon": "short",
    "nominal_long_usd": 0.0,
-   "nominal_short_usd": 1412.48,
+   "nominal_short_usd": 1420.36,
    "short_trader": 1,
-   "veri_yasi_sn": 513.2
+   "veri_yasi_sn": 205.8
   },
   {
    "coin": "XTEN",
    "long_trader": 1,
-   "net_nominal_usd": 25.01,
+   "net_nominal_usd": 25.02,
    "net_yon": "long",
-   "nominal_long_usd": 25.01,
+   "nominal_long_usd": 25.02,
    "nominal_short_usd": 0.0,
    "short_trader": 0,
-   "veri_yasi_sn": 175086.6
+   "veri_yasi_sn": 175991.8
   }
  ],
  "kadro_kosu_utc": "2026-11-20T07:42:18Z",
@@ -737,5 +677,5 @@
  "notlar": "Trader pozisyonlarının toplamı (kopya kadrosu). Bizim hesabımızın pozisyonu DEĞİL. Yatırım tavsiyesi değil.",
  "saha_trader_sayisi": 11,
  "sema": "ct.kadro_yon.v1",
- "uretildi_utc": "2026-11-20T14:44:53Z"
+ "uretildi_utc": "2026-11-20T14:59:58Z"
 }

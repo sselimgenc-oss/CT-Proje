@@ -400,7 +400,7 @@
    "xyz:SNDK": {
     "acilis_ms": 1795177380094,
     "boyut_carpan": 1.0,
-    "giris": 88.07909965674024,
+    "giris": 87.47038189286836,
     "giris_ctx": {
      "duygu": "Extreme Fear",
      "duygu_deger": 12,
@@ -408,8 +408,8 @@
      "r4h": null
     },
     "kaldirac": 3.0,
-    "sz": 2.782700562727145,
-    "zirve_kar": 0.02245595551008114
+    "sz": 7.2378816564236965,
+    "zirve_kar": 0.018836297172562914
    },
    "xyz:SOXL": {
     "acilis_ms": 1795152870243,
@@ -439,7 +439,7 @@
     },
     "kaldirac": 3.0,
     "sz": 0.8911723856940645,
-    "zirve_kar": 0.021891258151974877
+    "zirve_kar": 0.034201656041620794
    },
    "xyz:NVDA": {
     "acilis_ms": 1795140995402,
@@ -471,34 +471,6 @@
     "sz": 0.03887318101838341,
     "zirve_kar": 0.02238647013717302
    },
-   "xyz:AMZN": {
-    "acilis_ms": 1795141022127,
-    "boyut_carpan": 1.0,
-    "giris": 254.30379116825233,
-    "giris_ctx": {
-     "duygu": "Extreme Fear",
-     "duygu_deger": 12,
-     "r1d": null,
-     "r4h": null
-    },
-    "kaldirac": 3.0,
-    "sz": 0.4940945846683112,
-    "zirve_kar": 0.006493056293664175
-   },
-   "xyz:ANT": {
-    "acilis_ms": 1795141833183,
-    "boyut_carpan": 1.0,
-    "giris": 91.759,
-    "giris_ctx": {
-     "duygu": "Extreme Fear",
-     "duygu_deger": 12,
-     "r1d": null,
-     "r4h": null
-    },
-    "kaldirac": 3.0,
-    "sz": 0.15501596884114544,
-    "zirve_kar": 0.010740090890266915
-   },
    "xyz:BE": {
     "acilis_ms": 1795138486314,
     "boyut_carpan": 1.0,
@@ -511,7 +483,7 @@
     },
     "kaldirac": 3.0,
     "sz": 1.0257509353815566,
-    "zirve_kar": 0.0
+    "zirve_kar": 0.008805421769159175
    },
    "xyz:DRAM": {
     "acilis_ms": 1795139156755,
@@ -526,62 +498,6 @@
     "kaldirac": 3.0,
     "sz": 2.3207554811423803,
     "zirve_kar": 0.007596837236832016
-   },
-   "xyz:GOOGL": {
-    "acilis_ms": 1795141020592,
-    "boyut_carpan": 1.0,
-    "giris": 272.98,
-    "giris_ctx": {
-     "duygu": "Extreme Fear",
-     "duygu_deger": 12,
-     "r1d": null,
-     "r4h": null
-    },
-    "kaldirac": 3.0,
-    "sz": 0.2334780661303705,
-    "zirve_kar": 0.02174151952523995
-   },
-   "xyz:INTC": {
-    "acilis_ms": 1795139558829,
-    "boyut_carpan": 1.0,
-    "giris": 54.183,
-    "giris_ctx": {
-     "duygu": "Extreme Fear",
-     "duygu_deger": 12,
-     "r1d": null,
-     "r4h": null
-    },
-    "kaldirac": 3.0,
-    "sz": 0.6568181065794085,
-    "zirve_kar": 0.01407267962275996
-   },
-   "xyz:META": {
-    "acilis_ms": 1795141018443,
-    "boyut_carpan": 1.0,
-    "giris": 584.4159324636507,
-    "giris_ctx": {
-     "duygu": "Extreme Fear",
-     "duygu_deger": 12,
-     "r1d": null,
-     "r4h": null
-    },
-    "kaldirac": 3.0,
-    "sz": 0.2431946543698706,
-    "zirve_kar": 0.000332070919988737
-   },
-   "xyz:MSFT": {
-    "acilis_ms": 1795141019547,
-    "boyut_carpan": 1.0,
-    "giris": 494.9721834512778,
-    "giris_ctx": {
-     "duygu": "Extreme Fear",
-     "duygu_deger": 12,
-     "r1d": null,
-     "r4h": null
-    },
-    "kaldirac": 3.0,
-    "sz": 0.25729991931934715,
-    "zirve_kar": 0.003096773111641142
    },
    "xyz:MU": {
     "acilis_ms": 1795139132181,
@@ -744,7 +660,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -18.367926261125117,
-    "zirve_kar": 0.08369095129159927
+    "zirve_kar": 0.08826623474209765
    },
    "HBAR": {
     "acilis_ms": 1794947824328,
@@ -860,7 +776,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -1.5426735222499144,
-    "zirve_kar": 0.09823824002861731
+    "zirve_kar": 0.0995796816311928
    },
    "HYPE": {
     "acilis_ms": 1794980152307,
@@ -887,7 +803,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -4.531506253408303,
-    "zirve_kar": 0.04562426439751605
+    "zirve_kar": 0.046463020333067095
    },
    "VVV": {
     "acilis_ms": 1794980015954,
@@ -935,7 +851,7 @@
     },
     "kaldirac": 3.0,
     "sz": -4.495657448093417,
-    "zirve_kar": 0.02863785856236835
+    "zirve_kar": 0.02949154305088487
    }
   },
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": {},
@@ -944,7 +860,7 @@
  "realize": {
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": -28.95433026847345,
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 0.0,
-  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": -0.08645851069459667,
+  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 7.457037859730447,
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 97.4120820862675,
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": 5.978917861911193,
   "0x9eb42f017e793512e4734f8785de605c4cb3a24e": 0.0,
@@ -969,7 +885,7 @@
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 909.0909090909091,
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 909.0909090909091
  },
- "son_niyet_cloid": "0xf94ab6b52512a78eae7ae9752943fc21",
+ "son_niyet_cloid": "0xb76991abdb4fd3b19590788988c11e22",
  "tasfiyeler": [
   {
    "adres": "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89",
@@ -981,9 +897,9 @@
   }
  ],
  "ucret": {
-  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 1.8356053173788425,
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 2.010206447960398,
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 0.3064685778617234,
-  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 0.911337757945879,
+  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 1.14363859586482,
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 1.4851345470278854,
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": 0.8869822939847873,
   "0x9eb42f017e793512e4734f8785de605c4cb3a24e": 0.6136363636363636,
