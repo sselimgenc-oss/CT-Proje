@@ -423,3 +423,45 @@
 {"zaman_ms":1795141071493,"olay":"bekci_tetik","gecen_sn":182.4,"sinir_sn":180.0}
 {"zaman_ms":1795141071494,"olay":"telegram","metin":"🔴 Bot durdu (sanal · deneme parası)\nNeden: motor dondu (182 sn'dir bakım bitmedi)\nAçık pozisyon: 47 · Stop: bot kapalıyken yazılım stopu çalışmıyor\nYeni işlem açılmıyor; sistem motoru kendiliğinden yeniden başlatıyor.\nSenden bir şey gerekmiyor.","acik":true}
 {"zaman_ms":1795141071494,"olay":"tg_mesaj","tur":null,"anahtar":null,"seviye":"CRIT","sessiz":false,"metin":"🔴 Bot durdu (sanal · deneme parası)\nNeden: motor dondu (182 sn'dir bakım bitmedi)\nAçık pozisyon: 47 · Stop: bot kapalıyken yazılım stopu çalışmıyor\nYeni işlem açılmıyor; sistem motoru kendiliğinden yeniden başlatıyor.\nSenden bir şey gerekmiyor.","gonderildi":true,"bastirildi":false}
+{"zaman_ms":1795141123860,"olay":"emir_yok","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"io:SNDK","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795141119566,"gorme_ms":1795141123611,"yas_ms":4294}
+{"zaman_ms":1795141126632,"olay":"kacan_tamamlandi","adet":1,"bas_ms":1795140959017}
+{"zaman_ms":1795141126632,"olay":"telegram","metin":"✅ Düzeldi: bot yeniden çalışıyor (sanal · deneme parası)\n1 dk kapalı kaldı; bu sürede kaçan işlem yok.","acik":true}
+{"zaman_ms":1795141126632,"olay":"tg_mesaj","tur":null,"anahtar":null,"seviye":"INFO","sessiz":true,"metin":"✅ Düzeldi: bot yeniden çalışıyor (sanal · deneme parası)\n1 dk kapalı kaldı; bu sürede kaçan işlem yok.","gonderildi":true,"bastirildi":false}
+{"zaman_ms":1795141135436,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"HYPE","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795141135003,"gorme_ms":1795141135435,"yas_ms":433}
+{"zaman_ms":1795141139481,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:NVDA","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1795141139086,"gorme_ms":1795141139480,"yas_ms":395}
+{"zaman_ms":1795141165417,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"HYPE","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795141165057,"gorme_ms":1795141165417,"yas_ms":360}
+{"zaman_ms":1795141169418,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:NVDA","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1795141169052,"gorme_ms":1795141169417,"yas_ms":366}
+{"zaman_ms":1795141174647,"olay":"emir_yok","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"io:SNDK","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795141174254,"gorme_ms":1795141174646,"yas_ms":393}
+{"zaman_ms":1795141186121,"olay":"emir_yok","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"io:SNDK","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795141185785,"gorme_ms":1795141186120,"yas_ms":336}
+{"zaman_ms":1795141195449,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"HYPE","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795141195049,"gorme_ms":1795141195448,"yas_ms":400}
+{"zaman_ms":1795141198456,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:NVDA","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1795141198064,"gorme_ms":1795141198455,"yas_ms":392}
+{"zaman_ms":1795141216159,"olay":"kacan_telafi_hata","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"ARB","asama":"yas","tur":"RateLimitError"}
+{"zaman_ms":1795141216159,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"UNI","neden":"kayma_fazla","kayma":0.025773,"trader_giris":4.7279,"mark":4.84975}
+{"zaman_ms":1795141216159,"olay":"kacan_telafi_hata","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"HYPE","asama":"yas","tur":"RateLimitError"}
+{"zaman_ms":1795141216160,"olay":"kacan_telafi_hata","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"VVV","asama":"yas","tur":"RateLimitError"}
+{"zaman_ms":1795141216160,"olay":"kacan_telafi_hata","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"ASTER","asama":"yas","tur":"RateLimitError"}
+{"zaman_ms":1795141216160,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"ZEC","neden":"kayma_fazla","kayma":0.043677,"trader_giris":909.6974,"mark":869.965}
+{"zaman_ms":1795141216160,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"xyz:SPCX","neden":"kayma_fazla","kayma":0.051274,"trader_giris":143.7033,"mark":136.335}
+{"zaman_ms":1795141217670,"olay":"kacan_telafi_hata","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795141217671,"olay":"kacan_telafi_hata","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795141217671,"olay":"kacan_telafi_hata","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795141217671,"olay":"kacan_telafi_hata","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795141217671,"olay":"kacan_telafi_hata","adres":"0x9eb42f017e793512e4734f8785de605c4cb3a24e","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795141217671,"olay":"kacan_telafi_hata","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795141217672,"olay":"kacan_telafi_hata","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795141217672,"olay":"kacan_telafi_hata","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795141217672,"olay":"kacan_telafi_hata","adres":"0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795141217672,"olay":"kacan_telafi_hata","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795141217672,"olay":"tur","ozsermaye_usd":10027.5095}
+{"zaman_ms":1795141217673,"olay":"kopya_drift_bitti","coin":"xyz:AMZN","biz_usd":69.89,"ideal_usd":69.08,"drift":0.012,"sure_dk":133}
+{"zaman_ms":1795141217673,"olay":"kopya_drift_bitti","coin":"xyz:MSFT","biz_usd":77.21,"ideal_usd":76.33,"drift":0.012,"sure_dk":133}
+{"zaman_ms":1795141217674,"olay":"kopya_drift_bitti","coin":"xyz:META","biz_usd":91.73,"ideal_usd":90.65,"drift":0.012,"sure_dk":133}
+{"zaman_ms":1795141217674,"olay":"kopya_drift_bitti","coin":"io:NVDA","biz_usd":188.11,"ideal_usd":244.03,"drift":0.229,"sure_dk":133}
+{"zaman_ms":1795141217674,"olay":"kopya_drift_bitti","coin":"xyz:XYZ100","biz_usd":205.39,"ideal_usd":203.02,"drift":0.012,"sure_dk":133}
+{"zaman_ms":1795141218479,"olay":"emir_yok","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"io:SNDK","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795141216227,"gorme_ms":1795141216550,"yas_ms":2252}
+{"zaman_ms":1795141225519,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"HYPE","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795141225021,"gorme_ms":1795141225519,"yas_ms":498}
+{"zaman_ms":1795141228582,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:NVDA","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1795141228067,"gorme_ms":1795141228581,"yas_ms":515}
+{"zaman_ms":1795141246486,"olay":"emir_yok","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"io:SNDK","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795141246069,"gorme_ms":1795141246485,"yas_ms":417}
+{"zaman_ms":1795141255407,"olay":"emir_yok","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"io:SNDK","eylem":"artir","karar":"atlandi","neden":"slot_tavani","trader_dolum_ms":1795141255037,"gorme_ms":1795141255406,"yas_ms":370}
+{"zaman_ms":1795141255407,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"HYPE","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795141255037,"gorme_ms":1795141255406,"yas_ms":370}
+{"zaman_ms":1795141259441,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:NVDA","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1795141259036,"gorme_ms":1795141259441,"yas_ms":405}
