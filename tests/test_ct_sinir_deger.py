@@ -875,3 +875,32 @@ def test_to_json_from_json_gidis_donus_ve_varsayilanlar():
     bos = Hesap.from_json({"kasa_usd": 100.0})
     assert bos.kaldirac == 3.0 and bos.kapanmis_net == 0.0 and bos.belirsiz == {} and bos.son_niyet_cloid is None and bos.maks_kaldirac == {}
     assert Hesap.from_json({"kasa_usd": 100.0, "belirsiz": None}).belirsiz == {}
+
+
+def test_gunluk_kapat_tolerans_1e12():
+    a = _risk()
+    a.ozsermaye_isle(1000.0, T0)
+    assert "gunluk_kapat" in a.ozsermaye_isle(1000.0 * (1 - (0.1 - 0.5e-12)), T0 + 1)     # eşiğin 0,5e-12 altı: tolerans içinde → tetik
+    b = _risk()
+    b.ozsermaye_isle(1000.0, T0)
+    assert "gunluk_kapat" not in b.ozsermaye_isle(1000.0 * (1 - (0.1 - 1.5e-12)), T0 + 1)  # 1,5e-12 altı: tetik yok
+
+
+def test_stop_durum_bos_cloid_sorulmaz_her_zaman_oid_donen_yurutucu():
+    class Hep:
+        cagri = 0
+
+        def stop_durum(self, c):
+            Hep.cagri += 1
+            return 7
+    assert bs._stop_durum(Hep(), "") is None and bs._stop_durum(Hep(), None) is None and Hep.cagri == 0
+    assert bs._stop_durum(Hep(), "x") == 7 and Hep.cagri == 1
+
+
+def test_dinleyici_yeni_bayragi_tam_eps_pozisyonda_false():
+    h = _h()
+    olaylar = []
+    h.dinleyici = olaylar.append
+    h.poz = {"a": {"BTC": Poz(1e-12, 100.0, 5)}}
+    h.uygula("a", "BTC", "B", 1.0, 100.0, 0.0, 7)
+    assert olaylar[-1]["yeni"] is False
