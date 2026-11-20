@@ -2096,3 +2096,5 @@
 {"zaman_ms":1795170943945,"olay":"kopya_drift","coin":"HYPE","biz_usd":-252.33,"ideal_usd":-445.9,"drift":0.434,"sure_dk":30}
 {"zaman_ms":1795171108296,"olay":"tur","ozsermaye_usd":10004.5966}
 {"zaman_ms":1795171315872,"olay":"kacan_telafi_atlandi","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"NEAR","neden":"pozisyon_eski"}
+{"zaman_ms":1795171942730,"olay":"kacan_telafi_atlandi","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"NEAR","neden":"kayma_fazla","kayma":0.012863,"trader_giris":3.05444,"mark":3.01515}
+{"zaman_ms":1795171997703,"olay":"tur","ozsermaye_usd":10000.9739}
