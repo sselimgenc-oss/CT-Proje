@@ -651,3 +651,227 @@ def test_sdk_hatasi_orderstatus_ile_sorulur_diger_nedenlerde_sorulmaz():
     y4 = YurD()
     olay4 = bs.BorsaStop().esitle(h, None, y4)
     assert y4.sorgular == [] and len(olay4["konan"]) == 1                              # başarılı koyma: sorgu yok
+
+
+# ------------------------------------------------------------------ 7) hesap.py: defter aritmetiği ve sınırları (mutasyon sonrası)
+from copytrade.canli import hesap as hs  # noqa: E402
+
+
+def _h(**kw):
+    return Hesap(1000.0, 3.0, kw.get("maks"))
+
+
+def test_poz_ve_hesap_varsayilanlari():
+    p = Poz(1.0, 2.0, 3)
+    assert (p.kaldirac, p.giris_ctx, p.zirve_kar) == (3.0, None, 0.0) and isinstance(p.zirve_kar, float)
+    h = _h()
+    assert h.dinleyici is None and h.son_niyet_cloid is None and h.kapanmis_net == 0.0 and h.tasfiyeler == []
+    assert hs.EPS == 1e-12
+
+
+def test_slot_ac_eski_defteri_kapanmis_nete_tasir():
+    h = _h()
+    h.kapanmis_net = 10.0
+    h.realize["a"], h.ucret["a"], h.funding["a"] = 5.0, 2.0, 3.0
+    h.slot_ac("a", 300.0)
+    assert h.kapanmis_net == 10.0 + 5.0 - 2.0 + 3.0 and h.realize["a"] == h.ucret["a"] == h.funding["a"] == 0.0 and h.slot_bas["a"] == 300.0 and h.poz["a"] == {}
+    h.slot_ac("yeni", 100.0)                                                          # yeni üye: kayıt yok → net 0 (varsayılanlar 0)
+    assert h.kapanmis_net == 16.0
+
+
+def test_donem_yenile_neti_tasir_pozisyonluysa_reddeder():
+    h = _h()
+    h.slot_ac("a", 300.0)
+    h.kapanmis_net = 10.0
+    h.realize["a"], h.ucret["a"], h.funding["a"] = 5.0, 2.0, 3.0
+    h.slot_bas["eksik"] = 50.0                                                        # realize/ucret/funding kaydı yok → 0 sayılır
+    eski = h.donem_yenile(2000.0, 400.0)
+    assert h.kapanmis_net == 16.0 and h.kasa_usd == 2000.0 and h.slot_bas == {"a": 400.0, "eksik": 400.0}
+    assert h.realize["a"] == h.ucret["a"] == h.funding["a"] == 0.0 and eski["kasa_usd"] == 1000.0 and eski["kapanmis_net"] == 10.0
+    h.poz["a"]["BTC"] = Poz(1.0, 100.0, 0)
+    with pytest.raises(ValueError):
+        h.donem_yenile(1.0, 1.0)
+
+
+def test_slot_kapat_net_tasir_ve_siler_pozisyonluysa_dokunmaz():
+    h = _h()
+    h.slot_ac("a", 300.0)
+    h.kapanmis_net = 10.0
+    h.realize["a"], h.ucret["a"], h.funding["a"] = 5.0, 2.0, 3.0
+    h.slot_kapat("a")
+    assert h.kapanmis_net == 16.0 and "a" not in h.poz and "a" not in h.slot_bas and "a" not in h.realize and "a" not in h.ucret and "a" not in h.funding
+    h.slot_kapat("hic_yok")
+    assert h.kapanmis_net == 16.0                                                     # kayıtsız: net değişmez
+    h.slot_ac("b", 100.0)
+    h.poz["b"]["BTC"] = Poz(1.0, 100.0, 0)
+    h.realize["b"] = 9.0
+    h.slot_kapat("b")
+    assert h.kapanmis_net == 16.0 and h.realize["b"] == 9.0                           # açık pozisyon: silinmez
+
+
+def test_ters_yonlu_var_yon_esik_ve_toz():
+    h = _h()
+    h.poz = {"a": {"BTC": Poz(-1.0, 100.0, 0)}, "b": {"ETH": Poz(2.0, 10.0, 0)}}
+    assert h.ters_yonlu_var("x", "BTC", "B") is True and h.ters_yonlu_var("x", "BTC", "A") is False        # a short: alış ters
+    assert h.ters_yonlu_var("x", "ETH", "A") is True and h.ters_yonlu_var("x", "ETH", "B") is False        # b long: satış ters
+    assert h.ters_yonlu_var("a", "BTC", "B") is False                                  # kendi pozisyonu sayılmaz
+    assert h.ters_yonlu_var("x", "SOL", "B") is False
+    assert h.ters_yonlu_var("x", "BTC", "B", toz_usd=100.0) is False                   # nosyonel tam 100 = toz: sayılmaz
+    assert h.ters_yonlu_var("x", "BTC", "B", toz_usd=99.99) is True
+    assert h.ters_yonlu_var("x", "BTC", "B", {"BTC": 50.0}, toz_usd=60.0) is False     # mark ile nosyonel 50 (giriş 100 değil)
+    assert h.ters_yonlu_var("x", "BTC", "B", {"BTC": 200.0}, toz_usd=150.0) is True
+    kucuk = _h()
+    kucuk.poz = {"a": {"BTC": Poz(-0.5, 1.0, 0)}}
+    assert kucuk.ters_yonlu_var("x", "BTC", "B") is True                               # varsayılan toz 0: 0,5 $ sayılır
+
+
+def test_ters_yonlu_var_eps_siniri():
+    for sz, yon, beklenen in ((-1e-12, "B", False), (-1.5e-12, "B", True), (-6e-13, "B", False), (6e-13, "A", False), (1.5e-12, "A", True), (0.0, "B", False), (0.0, "A", False)):
+        h = _h()
+        h.poz = {"a": {"BTC": Poz(sz, 100.0, 0)}}
+        assert h.ters_yonlu_var("x", "BTC", yon) is beklenen, (sz, yon)
+
+
+def test_uygula_gecersiz_dolum():
+    h = _h()
+    for sz, px in ((0.0, 100.0), (-1.0, 100.0), (1.0, 0.0), (1.0, -1.0), (1.0, math.inf), (1.0, math.nan)):
+        with pytest.raises(ValueError):
+            h.uygula("a", "BTC", "B", sz, px, 0.0, 1)
+    h.uygula("a", "BTC", "B", 1.0, 1.0, 0.0, 1)                                       # px 1 ve altı geçerli (ucuz coin)
+    h.uygula("a", "SHIB", "B", 1.0, 0.5, 0.0, 1)
+    assert h.poz["a"]["BTC"].giris == 1.0 and h.poz["a"]["SHIB"].giris == 0.5
+
+
+def test_uygula_acilis_artirma_azaltma_kapanis_ve_dinleyici():
+    h = _h()
+    olaylar = []
+    h.dinleyici = olaylar.append
+    assert h.uygula("a", "BTC", "B", 1.0, 100.0, 0.5, 1000) == 0.0
+    p = h.poz["a"]["BTC"]
+    assert (p.sz, p.giris, p.acilis_ms, p.kaldirac, p.zirve_kar) == (1.0, 100.0, 1000, 3.0, 0.0)
+    assert olaylar[-1] == {"adres": "a", "coin": "BTC", "yon": "B", "sz": 1.0, "px": 100.0, "pnl": 0.0, "ucret": 0.5, "ms": 1000, "yeni": True, "kapandi": False, "poz_sz": 1.0, "acilis_ms": 1000, "kaldirac": 3.0}
+    p.zirve_kar = 0.3
+    p.kaldirac = 5.0
+    h.uygula("a", "BTC", "B", 1.0, 200.0, 0.0, 2000)                                  # artırma: ağırlıklı ortalama, zirve sıfırlanır
+    assert (p.sz, p.giris, p.zirve_kar, p.acilis_ms) == (2.0, 150.0, 0.0, 1000) and olaylar[-1]["yeni"] is False and olaylar[-1]["acilis_ms"] == 1000 and olaylar[-1]["kaldirac"] == 5.0
+    pnl = h.uygula("a", "BTC", "A", 0.5, 170.0, 0.1, 3000)                            # azaltma: long kâr
+    assert pnl == pytest.approx(0.5 * 20.0) and p.sz == 1.5 and olaylar[-1]["kapandi"] is False and olaylar[-1]["poz_sz"] == 1.5 and olaylar[-1]["pnl"] == pnl
+    pnl2 = h.uygula("a", "BTC", "A", 1.5, 140.0, 0.0, 4000)                           # kapanış: kayıp
+    assert pnl2 == pytest.approx(1.5 * -10.0) and "BTC" not in h.poz["a"]
+    assert olaylar[-1]["kapandi"] is True and olaylar[-1]["poz_sz"] == 0.0 and olaylar[-1]["acilis_ms"] == 1000 and olaylar[-1]["kaldirac"] == 5.0    # silinen pozisyondan
+    assert h.realize["a"] == pytest.approx(pnl + pnl2) and h.ucret["a"] == pytest.approx(0.6)
+
+
+def test_uygula_short_pnl_ve_kayitsiz_adres_varsayilanlari():
+    h = _h()
+    h.uygula("a", "BTC", "A", 2.0, 100.0, 0.25, 1)                                    # slot_ac yok: realize/ucret kaydı yok → 0'dan başlar
+    assert h.realize["a"] == 0.0 and h.ucret["a"] == 0.25
+    assert h.uygula("a", "BTC", "B", 2.0, 90.0, 0.0, 2) == pytest.approx(20.0)        # short kâr
+    h2 = _h()
+    h2.uygula("a", "BTC", "A", 1.0, 100.0, 0.0, 1)
+    assert h2.uygula("a", "BTC", "B", 1.0, 110.0, 0.0, 2) == pytest.approx(-10.0)     # short zarar
+
+
+def test_uygula_dinleyici_hatasi_hesabi_bozmaz_ve_cagrilir():
+    h = _h()
+    cagri = []
+
+    def patla(e):
+        cagri.append(e)
+        raise RuntimeError("x")
+    h.dinleyici = patla
+    h.uygula("a", "BTC", "B", 1.0, 100.0, 0.0, 1)
+    assert len(cagri) == 1 and h.poz["a"]["BTC"].sz == 1.0
+    _h().uygula("a", "BTC", "B", 1.0, 100.0, 0.0, 1)                                  # dinleyici yok: sorunsuz
+
+
+def test_uygula_eps_ve_tolerans_sinirlari():
+    h = _h()
+    h.poz = {"a": {"BTC": Poz(1e-12, 100.0, 5)}}                                      # tam EPS: boş pozisyon DEĞİL (artırma)
+    h.uygula("a", "BTC", "B", 1.0, 200.0, 0.0, 7)
+    assert h.poz["a"]["BTC"].sz != 1.0 and h.poz["a"]["BTC"].acilis_ms == 5
+    h2 = _h()
+    h2.poz = {"a": {"BTC": Poz(5e-13, 100.0, 5)}}                                     # EPS altı: boş sayılır, yeniden açılır
+    h2.uygula("a", "BTC", "B", 1.0, 200.0, 0.0, 7)
+    assert h2.poz["a"]["BTC"].sz == 1.0 and h2.poz["a"]["BTC"].acilis_ms == 7 and h2.poz["a"]["BTC"].giris == 200.0
+    t = _h()
+    t.poz = {"a": {"BTC": Poz(1.0, 100.0, 0)}}
+    t.uygula("a", "BTC", "A", 1.0 + 1e-9, 100.0, 0.0, 1)                              # tolerans tam sınırı: kabul
+    with pytest.raises(ValueError, match="ters dönüş"):
+        u = _h()
+        u.poz = {"a": {"BTC": Poz(1.0, 100.0, 0)}}
+        u.uygula("a", "BTC", "A", 1.0 + 1.5e-9, 100.0, 0.0, 1)
+    k = _h()
+    k.poz = {"a": {"BTC": Poz(2e-12, 100.0, 0)}}
+    k.uygula("a", "BTC", "A", 1e-12, 100.0, 0.0, 1)                                   # kalan tam 1e-12: silinmez
+    assert k.poz["a"]["BTC"].sz == pytest.approx(1e-12)
+    k2 = _h()
+    k2.poz = {"a": {"BTC": Poz(2.5e-12, 100.0, 0)}}
+    k2.uygula("a", "BTC", "A", 1e-12, 100.0, 0.0, 1)                                  # kalan 1,5e-12: silinmez
+    assert "BTC" in k2.poz["a"]
+    k3 = _h()
+    k3.poz = {"a": {"BTC": Poz(1.5e-12 + 5e-13, 100.0, 0)}}
+    k3.uygula("a", "BTC", "A", 1.5e-12, 100.0, 0.0, 1)                                # kalan 5e-13: silinir
+    assert "BTC" not in k3.poz["a"]
+
+
+def test_ucret_duzelt_slotlu_ve_kapanmis():
+    h = _h()
+    h.slot_ac("a", 100.0)
+    h.ucret_duzelt("a", 0.3)
+    assert h.ucret["a"] == pytest.approx(0.3) and h.kapanmis_net == 0.0
+    h.ucret_duzelt("a", -0.1)
+    assert h.ucret["a"] == pytest.approx(0.2)
+    h.kapanmis_net = 10.0
+    h.ucret_duzelt("silinmis", 0.25)
+    assert h.kapanmis_net == pytest.approx(9.75) and "silinmis" not in h.ucret
+
+
+def test_degerleme_poz_brut_marj_funding_ozsermaye():
+    h = _h()
+    h.slot_ac("a", 300.0)
+    h.slot_ac("b", 300.0)
+    h.poz["a"] = {"BTC": Poz(-2.0, 100.0, 0, 4.0), "ETH": Poz(1.0, 10.0, 0, 2.0)}
+    h.poz["b"] = {"BTC": Poz(1.0, 100.0, 0, 5.0)}
+    assert h.sz("a", "BTC") == -2.0 and h.sz("a", "SOL") == 0.0 and h.sz("zz", "BTC") == 0.0
+    assert h.poz_usd("a", "BTC", None) == 200.0 and h.poz_usd("a", "BTC", 150.0) == 300.0 and h.poz_usd("a", "SOL", 150.0) == 0.0 and h.poz_usd("zz", "BTC", 1.0) == 0.0
+    assert h.brut_coin("BTC", {}) == 300.0 and h.brut_coin("BTC", {"BTC": 150.0}) == 450.0 and h.brut_coin("SOL", {}) == 0.0
+    assert h.brut_toplam({}) == 310.0 and h.brut_toplam({"BTC": 150.0, "ETH": 20.0}) == 470.0
+    assert h.marj_toplam() == pytest.approx(200.0 / 4 + 10.0 / 2 + 100.0 / 5)
+    h.funding_isle("a", 1.5)
+    h.funding_isle("a", -0.5)
+    h.funding_isle("yeni", 2.0)
+    assert h.funding["a"] == 1.0 and h.funding["yeni"] == 2.0 and h.funding_toplam() == 3.0
+    h.realize["a"], h.ucret["a"] = 7.0, 2.0
+    marks = {"BTC": 90.0}
+    assert h.slot_ozsermaye("a", marks) == pytest.approx(300.0 + 7.0 - 2.0 + 1.0 + (-2.0 * -10.0))
+    assert h.slot_ozsermaye("yok", marks) is None
+    h.slot_bas["eksik"] = 50.0                                                        # realize/ucret/funding kaydı yok → 0
+    h.poz["eksik"] = {}
+    assert h.slot_ozsermaye("eksik", marks) == 50.0
+
+
+def test_tasfiye_mark_olmayan_coin_sonrakini_engellemez_ve_ucretsiz():
+    h = Hesap(1000.0, 3.0, {"BTC": 40.0})
+    h.slot_ac("a", 300.0)
+    h.poz["a"] = {"ETH": Poz(1.0, 100.0, 0, 3.0), "BTC": Poz(1.0, 100.0, 0, 3.0)}
+    ev = h.tasfiye_kontrol({"BTC": 1.0}, 9)                                           # ETH'nin marku yok (atlanır), BTC tasfiye
+    assert [e["coin"] for e in ev] == ["BTC"] and h.ucret["a"] == 0.0
+
+
+def test_to_json_from_json_gidis_donus_ve_varsayilanlar():
+    h = _h()
+    h.slot_ac("a", 300.0)
+    for i in range(201):
+        h.tasfiyeler.append({"i": i})
+    h.poz["a"]["BTC"] = Poz(1.0, 100.0, 5, 4.0)
+    h.son_niyet_cloid = "0xabc"
+    h.belirsiz = {"c1": {"ms": 1, "deneme": 2}}
+    h.kapanmis_net = 3.5
+    d = h.to_json()
+    assert len(d["tasfiyeler"]) == 200 and d["tasfiyeler"][0] == {"i": 1} and d["tasfiyeler"][-1] == {"i": 200}
+    r = Hesap.from_json(d)
+    assert r.son_niyet_cloid == "0xabc" and r.belirsiz == {"c1": {"ms": 1, "deneme": 2}} and r.kapanmis_net == 3.5 and r.poz["a"]["BTC"].kaldirac == 4.0 and r.kaldirac == 3.0
+    bos = Hesap.from_json({"kasa_usd": 100.0})
+    assert bos.kaldirac == 3.0 and bos.kapanmis_net == 0.0 and bos.belirsiz == {} and bos.son_niyet_cloid is None and bos.maks_kaldirac == {}
+    assert Hesap.from_json({"kasa_usd": 100.0, "belirsiz": None}).belirsiz == {}
