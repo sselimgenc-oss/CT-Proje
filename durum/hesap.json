@@ -392,7 +392,21 @@
    }
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": {},
-  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": {},
+  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": {
+   "xyz:SNDK": {
+    "acilis_ms": 1795137128357,
+    "giris": 93.92,
+    "giris_ctx": {
+     "duygu": "Extreme Fear",
+     "duygu_deger": 12,
+     "r1d": null,
+     "r4h": null
+    },
+    "kaldirac": 3.0,
+    "sz": 0.11712095400340715,
+    "zirve_kar": 0.0
+   }
+  },
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": {
    "HYPE": {
     "acilis_ms": 1795094118636,
@@ -410,7 +424,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": 208.15132425816202,
-    "zirve_kar": 0.012646883091017845
+    "zirve_kar": 0.014240191196972769
    },
    "AERO": {
     "acilis_ms": 1795011021520,
@@ -442,7 +456,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": 0.3990550945478614,
-    "zirve_kar": 0.013235797817683534
+    "zirve_kar": 0.016440769193130034
    },
    "BTC": {
     "acilis_ms": 1794835480523,
@@ -474,7 +488,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -1.8340363806125681,
-    "zirve_kar": 0.037497707454524215
+    "zirve_kar": 0.03761441886056322
    },
    "FIL": {
     "acilis_ms": 1794828746575,
@@ -506,7 +520,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -3.3007261597551465,
-    "zirve_kar": 0.044289743743623516
+    "zirve_kar": 0.04439476684870666
    },
    "TAO": {
     "acilis_ms": 1795119004082,
@@ -535,7 +549,7 @@
     "giris_ctx": null,
     "kaldirac": 3.0,
     "sz": -187.14118463207762,
-    "zirve_kar": 0.03979085771404405
+    "zirve_kar": 0.040790434816039396
    },
    "WLFI": {
     "acilis_ms": 1794828744461,
@@ -684,7 +698,7 @@
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 909.0909090909091,
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 909.0909090909091
  },
- "son_niyet_cloid": "0x2f30c0f7ef19b6cac6c2aa310646d267",
+ "son_niyet_cloid": "0xe91783cdaac260a535073ecb6f09b7ed",
  "tasfiyeler": [
   {
    "adres": "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89",
@@ -698,7 +712,7 @@
  "ucret": {
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 0.7456652404174823,
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 0.0,
-  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 0.326080770490458,
+  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 0.33103077049045804,
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 1.1966286638722594,
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": 0.850485455662888,
   "0x9eb42f017e793512e4734f8785de605c4cb3a24e": 0.0,
