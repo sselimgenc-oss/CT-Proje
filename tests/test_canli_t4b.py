@@ -592,7 +592,7 @@ def test_telegram_gercek_kipte_emir_aninda_gider_ozet_beklemez(tmp_path, monkeyp
     m, sim, saat, tgp = kur_gercek(tmp_path, monkeypatch, sim)
     m.baslat()
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
-    assert any("GERÇEK PARA" in x and "BTC AL" in x for x in tgp.gonderilen) and not m._emir_tampon
+    assert any("GERÇEK PARA" in x and "BTC LONG" in x for x in tgp.gonderilen) and not m._emir_tampon
 
 
 def test_telegram_gece_sessiz_alarm_her_zaman_sesli():

@@ -136,7 +136,7 @@ def test_acildi_mesaji_2_satir_trader_adi_panodaki_ile_ayni_ve_sade_coin():
     from copytrade.canli import pano
     m = tg.msg_acildi(ADR, "SOL", "B", 150.25, 27.3, 120.2, "sanal")
     satirlar = m.splitlines()
-    assert len(satirlar) == 2 and satirlar[0] == f"🟢 SOL AL açıldı · trader {pano.kisa(ADR)} (sanal)"             # trader adı = pano.kisa
+    assert len(satirlar) == 2 and satirlar[0] == f"🟢 SOL LONG açıldı · trader {pano.kisa(ADR)} (sanal)"             # trader adı = pano.kisa
     assert satirlar[1] == "Giriş 150,25 · Tutar 27,3 $ · Stop 120,20" and "_" not in m and tg.kisa(ADR) == pano.kisa(ADR)
     assert tg.onem_duzeyi(m) == "INFO"
 
@@ -247,7 +247,7 @@ def test_baslik_ilk_satir_ct_ve_baslik_seviye_kelimesi_yok():
     t.gonder(tg.alarm("ALARM: kasa sınırı aşıldı", "x"))
     t.gonder(tg.msg_acildi(ADR, "SOL", "B", 150.25, 27.3, 120.2, "sanal"))
     t.gonder(tg.msg_bot_durdu("komut", 1, "borsada duruyor"))
-    assert [y["text"].split("\n")[0] for y in post.yukler] == ["[CT] 🚨 Kasa sınırı aşıldı", f"[CT] 🟢 SOL AL açıldı · trader {tg.kisa(ADR)} (sanal)", "[CT] 🔴 Bot durdu"]
+    assert [y["text"].split("\n")[0] for y in post.yukler] == ["[CT] 🚨 Kasa sınırı aşıldı", f"[CT] 🟢 SOL LONG açıldı · trader {tg.kisa(ADR)} (sanal)", "[CT] 🔴 Bot durdu"]
     assert [y["disable_notification"] for y in post.yukler] == [False, True, False]            # seviye iç mantıkta: INFO sessiz, kritik sesli
 
 
@@ -291,7 +291,7 @@ def test_motor_acildi_gercek_trader_fiyati_ve_esik_alti_gecikmede_ek_yok(tmp_pat
     from tests.test_canli_motor import olay, adr
     m, saat, tgp = _kur10k(tmp_path)
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat, yas_ms=100_000))        # 100 sn < canli_olay_stale_sn (120)
-    a = [x for x in tgp.gonderilen if x.startswith("🟢 BTC AL açıldı")]
+    a = [x for x in tgp.gonderilen if x.startswith("🟢 BTC LONG açıldı")]
     assert len(a) == 1 and "(trader 100,00 · fark %" in a[0] and "sn geç" not in a[0] and len(a[0].splitlines()) == 2
 
 
