@@ -1532,3 +1532,5 @@
 {"zaman_ms":1795161933912,"olay":"rejim_degisti","coin":"WMT","onceki":"unclear","yeni":"trend_up","1d":"trend_up"}
 {"zaman_ms":1795162203143,"olay":"kopya_drift","coin":"BCH","biz_usd":81.28,"ideal_usd":55.89,"drift":0.454,"sure_dk":31}
 {"zaman_ms":1795162536379,"olay":"tur","ozsermaye_usd":10014.8251}
+{"zaman_ms":1795163360747,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"VVV","neden":"pozisyon_eski"}
+{"zaman_ms":1795163408916,"olay":"tur","ozsermaye_usd":10010.8897}
