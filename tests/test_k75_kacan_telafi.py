@@ -54,7 +54,7 @@ def test_yaml_varsayilanlari():
 
 
 def test_kayma_icinde_acilir_boyut_normal_yolla_ve_kayit(tmp_path):
-    """Trader girişi 100, mark 100 (kayma 0) → telafi: 27,27 $ (hedef tabanlı, normal açılışla aynı); emir `boyut_neden` kacan_telafi; `açıldı` Telegram mesajı."""
+    """Trader girişi 100, mark 100 (kayma 0) → telafi: 27,27 $ (hedef tabanlı, normal açılışla aynı); emir `boyut_neden` kacan_telafi; `açıldı` satırı (saatlik özet; tek tek metin `tg_mesaj` kaydında)."""
     m, hl, saat = _hazir(tmp_path)
     assert m.hesap.sz(adr(1), "BTC") == 0.0
     m.dakika()
@@ -63,7 +63,8 @@ def test_kayma_icinde_acilir_boyut_normal_yolla_ve_kayit(tmp_path):
     assert e[0]["telafi_trader_giris"] == 100.0 and e[0]["telafi_kayma"] == 0.0 and e[0]["telafi_yas_sa"] == pytest.approx(3.0)
     assert m.hesap.sz(adr(1), "BTC") == pytest.approx(0.272727, abs=1e-5)
     assert any(x["karar"] == "emir" for x in kayitlar(tmp_path, "kacan_telafi"))
-    assert any(x.startswith("🟢 BTC LONG açıldı") for x in m._tgp.gonderilen)
+    assert any(k.get("tur") == "islem_satiri" and k["metin"].startswith("🟢 BTC LONG açıldı") for k in kayitlar(tmp_path, "tg_mesaj"))       # K-79: ayrı mesaj değil, saatlik özet satırı (tek tek metin kayıtta)
+    assert not any(x.startswith("🟢 BTC LONG açıldı") for x in m._tgp.gonderilen)
 
 
 def test_sinirda_acar_yuzde_1_aleyhte(tmp_path):

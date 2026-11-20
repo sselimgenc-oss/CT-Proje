@@ -365,9 +365,12 @@ def test_uctan_uca_altin_ornek_acilis_azaltma_kapanis(tmp_path):
     assert m.sayac["emir"] == 3 and len(m.kayma_trader) == 3
     assert not any("Son " in x and "emir (" in x for x in tgp.gonderilen)                                         # emirler ayrı ayrı gitmez; biriktirilir
     m.emir_ozeti(saat(), zorla=True)
-    assert not any("Son 15 dakikada" in x for x in tgp.gonderilen) and any(k["tur"] == "emir_ozeti" for k in kayitlar(tmp_path, "tg_bastirildi"))          # özet bastırılan tür
-    assert any(x.startswith("🟢 BTC LONG açıldı · trader ") and "Giriş 100,00 (trader 100,00 · fark %0,00) · Tutar 27,3 $ · Stop 80,00" in x for x in tgp.gonderilen)              # açıldı: 2 satır
-    assert any(x.startswith("✅ BTC kapandı · trader ") or x.startswith("🔻 BTC kapandı · trader ") for x in tgp.gonderilen)
+    assert not any("Son 15 dakikada" in x for x in tgp.gonderilen)                                              # eski 15 dk'lık özet gitmez
+    assert not any("Son 15 dakikada" in x for x in tgp.gonderilen) and any(k["tur"] == "emir_ozeti" for k in kayitlar(tmp_path, "tg_bastirildi"))          # eski 15 dk'lık özet (dk=0) bastırılan tür; saatlik tek özet ayrı testlerde
+    satirlar = [k["metin"] for k in kayitlar(tmp_path, "tg_mesaj") if k.get("tur") == "islem_satiri"]            # tek tek metinler kayıtta; ayrı mesaj olarak GİTMEZ
+    assert any(x.startswith("🟢 BTC LONG açıldı · trader ") and "Giriş 100,00 (trader 100,00 · fark %0,00) · Tutar 27,3 $ · Stop 80,00" in x for x in satirlar)              # açıldı: 2 satır
+    assert any(x.startswith("✅ BTC kapandı · trader ") or x.startswith("🔻 BTC kapandı · trader ") for x in satirlar)
+    assert not any(" açıldı · trader " in x or " kapandı · trader " in x for x in tgp.gonderilen)
     assert not any("Yeni trader takibe alındı" in x for x in tgp.gonderilen)
 
 

@@ -4,15 +4,16 @@ from copytrade.canli.hesap import Hesap
 
 
 def test_rutin_turler_bastirilir_ve_gonderilmez():
-    for t in ("haftalik_kadro", "kopya_kacan", "kadro_surum_bekleniyor", "ogrenme_ders", "saha_giris", "emir_ozeti"):
+    for t in ("haftalik_kadro", "kopya_kacan", "kadro_surum_bekleniyor", "ogrenme_ders", "saha_giris", "emir_ozeti", "islem_satiri"):
         assert t in tg.BASTIRILAN_TURLER
+    assert "islem_ozeti" not in tg.BASTIRILAN_TURLER                                  # K-79: saatlik tek işlem özeti GİDER
     gid = []
     k = tg.Telegram("T", "1", lambda u, y: gid.append(y["text"]) or {"ok": True}, saat_s=lambda: 1000.0, uyku=lambda s: None)
     assert k.gonder("🔄 Haftalık kadro değişti", tur="haftalik_kadro") is False and not gid
 
 
-def test_islem_toplu_tek_satir_ve_tek_cikti():
-    assert tg.msg_islem_toplu(4, 3, -2.1).startswith("🧾 +7 işlem daha")
+def test_eski_islem_toplu_satiri_kalkti_ust_sinir_yok():
+    assert not hasattr(tg, "msg_islem_toplu")                                          # K-79: "+N işlem daha" satırı + saatlik üst sınır yerine tek saatlik özet
 
 
 def test_hesap_from_json_yeni_kaldirac_acik_pozisyon_kendi_kaldiracini_korur():

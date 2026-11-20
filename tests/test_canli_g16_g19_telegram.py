@@ -186,17 +186,22 @@ def test_g18_gercek_kip_emir_mesajlari_tamponda_birlesir(tmp_path):
     once = len(tgp.gonderilen)
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
     m.olay_isle(olay("a:2", adr(2), "ETH", "B", 300, 2000.0, 0.0, saat))
-    assert len(tgp.gonderilen) == once + 2 and tgp.gonderilen[once].startswith("🟢 BTC LONG açıldı · trader ") and "Giriş 100,00 (trader 100,00 · fark %0,00) · Tutar 27,3 $ · Stop 80,00" in tgp.gonderilen[once]
-    assert tgp.gonderilen[once + 1].startswith("ℹ️ Trader açtı, biz açamadık: emir reddedildi")                 # sessiz bilgi: gerçek hata/eksik kopya     # açıldı: anında, ayrı, 2 satır
+    # K-79: "açıldı" artık ayrı mesaj DEĞİL (saatlik özet satırı); tek tek metin + yapısal alanlar kayda (`tg_mesaj`, tür islem_satiri) yazılır. Anında giden yalnız hata/sorun mesajları.
+    assert len(tgp.gonderilen) == once + 1 and tgp.gonderilen[once].startswith("ℹ️ Trader açtı, biz açamadık: emir reddedildi")                 # sessiz bilgi: gerçek hata/eksik kopya
+    acildi = [x for x in kayitlar(tmp_path, "tg_mesaj") if x.get("tur") == "islem_satiri" and x["metin"].startswith("🟢 BTC LONG açıldı · trader ")]
+    assert len(acildi) == 1 and acildi[0]["gonderildi"] is False and acildi[0]["bastirildi"] is True and acildi[0]["coin"] == "BTC"
+    assert "Giriş 100,00 (trader 100,00 · fark %0,00) · Tutar 27,3 $ · Stop 80,00" in acildi[0]["metin"]
     assert len(zamanlar) == 1 and zamanlar[0][0] == t.tampon_sn                                            # sorunlu (dolmayan) emir: tek zamanlayıcı, henüz mesaj yok
     zamanlar[0][1]()                                                                                       # 2,5 sn doldu
-    yeni = tgp.gonderilen[once + 2:]
+    yeni = tgp.gonderilen[once + 1:]
     assert len(yeni) == 1
     satirlar = yeni[0].splitlines()
     assert satirlar[0].startswith("🚨 [GERÇEK] EMİR REDDEDİLDİ — ETH ac ") and "neden: hl err: Invalid nonce" in yeni[0] and not t.sessiz_mi(yeni[0])
-    m.olay_isle(olay("a:3", adr(1), "BTC", "B", 300, 100.0, 300.0, saat))                                   # dolu artırma: Telegram'a gitmez (kayda tg_bastirildi)
+    m.olay_isle(olay("a:3", adr(1), "BTC", "B", 300, 100.0, 300.0, saat))                                   # dolu artırma: ayrı mesaj yok (kayda tg_bastirildi), saatlik özet satırı olur
     m.emir_ozeti(m.saat_ms(), zorla=True)
-    assert len(tgp.gonderilen) == once + 3 and any(k["tur"] == "emir_artir_azalt" for k in kayitlar(tmp_path, "tg_bastirildi"))
+    ozet = tgp.gonderilen[once + 2:]
+    assert len(ozet) == 1 and ozet[0].startswith("🧾 Son ") and "GERÇEK PARA" in ozet[0] and "🟢 Açılan: BTC long 27,3 $" in ozet[0] and "↕️ BTC artırıldı" in ozet[0]
+    assert any(k["tur"] == "emir_artir_azalt" for k in kayitlar(tmp_path, "tg_bastirildi"))
 
 
 def test_m3_kapanis_pozisyonla_kirpilip_tamami_dolarsa_dolu_altin_ornek():
