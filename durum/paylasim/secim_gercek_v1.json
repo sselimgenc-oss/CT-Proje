@@ -1,7 +1,7 @@
 {
  "sema": "ct.secim_gercek.v1",
  "proje": "CT",
- "uretim": "2026-11-20T13:02:53Z",
+ "uretim": "2026-11-20T14:03:04Z",
  "degisken": "form_sirasi_gercek_pnl_spearman",
  "pencere_gun": 14,
  "gunler": [
@@ -63,15 +63,15 @@
    "rho": -0.5,
    "p": 0.8333,
    "yontem": "tam",
-   "toplam_net_pnl": 0.06,
+   "toplam_net_pnl": 0.01,
    "traderlar": [
     {
      "takma_ad": "T_f6b664",
      "form": 61.34,
-     "islem": 17,
+     "islem": 19,
      "pnl": 0.0,
-     "ucret": 0.44,
-     "net_pnl": -0.44
+     "ucret": 0.49,
+     "net_pnl": -0.49
     },
     {
      "takma_ad": "T_574595",
