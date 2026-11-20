@@ -1428,3 +1428,16 @@
 {"zaman_ms":1795157300935,"olay":"emir_yok","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"NEAR","eylem":"ac","karar":"atlandi","neden":"duygu_ters","trader_dolum_ms":1795157300520,"gorme_ms":1795157300931,"yas_ms":415}
 {"zaman_ms":1795157300936,"olay":"emir_yok","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"NEAR","eylem":"ac","karar":"atlandi","neden":"duygu_ters","trader_dolum_ms":1795157300520,"gorme_ms":1795157300931,"yas_ms":416}
 {"zaman_ms":1795157326001,"olay":"tur","ozsermaye_usd":9984.2831}
+{"zaman_ms":1795157804666,"olay":"kacan_telafi_atlandi","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"NEAR","neden":"pozisyon_eski"}
+{"zaman_ms":1795157811673,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"JUP","neden":"pozisyon_eski"}
+{"zaman_ms":1795157812695,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"POL","neden":"pozisyon_eski"}
+{"zaman_ms":1795158029561,"olay":"funding","saat":498655,"saat_adet":1,"funding_usd":-0.050400144528626636,"toplam_funding_usd":-0.3243958135199083}
+{"zaman_ms":1795158194903,"olay":"tur","ozsermaye_usd":9981.384}
+{"zaman_ms":1795158310204,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"haber_ters","trader_dolum_ms":1795158309899,"gorme_ms":1795158310203,"yas_ms":305}
+{"zaman_ms":1795158330661,"olay":"tg_bastirildi","tur":"kopya_sapmasi","metin":"📐 Kopya sapması: 6 coin, en büyük xyz:SP500 %100 (yalnız bilgi)"}
+{"zaman_ms":1795158330661,"olay":"tg_bastirildi","tur":"saatlik_bos","metin":"🧾 Son 1 saat (09:04–10:05 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 23 (≈6 ayrı işlem)\n   • kural gereği 23: 17 piyasa duygusu ters · 4 ters netleşme (K‑41) · 2 haber akışı ter"}
+{"zaman_ms":1795158330661,"olay":"tg_mesaj","tur":"saatlik_bos","anahtar":null,"seviye":"INFO","sessiz":false,"metin":"🧾 Son 1 saat (09:04–10:05 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 23 (≈6 ayrı işlem)\n   • kural gereği 23: 17 piyasa duygusu ters · 4 ters netleşme (K‑41) · 2 haber akışı ters\n   • kaçırılan 0 (geç görülen / veri yok)\n💰 Kasa: 9.985,70 $ · bugün 🔻 −10,02 $ (−%0,1) · başlangıçtan 🔻 −14,30 $ (−%0,1)","gonderildi":false,"bastirildi":true}
+{"zaman_ms":1795158420047,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"HYPE","neden":"filtre_atlamisti:ters_netlesme"}
+{"zaman_ms":1795158421033,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"XMR","neden":"pozisyon_eski"}
+{"zaman_ms":1795158421964,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"xyz:SKHX","neden":"pozisyon_eski"}
+{"zaman_ms":1795158422709,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"xyz:GME","neden":"pozisyon_eski"}

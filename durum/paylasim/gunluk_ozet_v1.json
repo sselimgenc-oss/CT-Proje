@@ -1,15 +1,15 @@
 {
  "sema": "ortak.gunluk_ozet.v1",
  "proje": "CT",
- "uretim": "2026-11-20T06:05:03Z",
+ "uretim": "2026-11-20T07:05:31Z",
  "gun": "2026-11-20",
  "mod": "sanal",
  "kasa": {
   "baslangic": 10000.0,
-  "simdi": 9971.81,
-  "gun_pnl": -23.91,
-  "toplam_pnl": -28.19,
-  "zirveden_dusus_yuzde": 0.78
+  "simdi": 9985.7,
+  "gun_pnl": -10.02,
+  "toplam_pnl": -14.3,
+  "zirveden_dusus_yuzde": 0.64
  },
  "islem": {
   "gun_acilan": 20,
@@ -17,25 +17,25 @@
   "kazanan": 1,
   "kaybeden": 1,
   "acik_pozisyon": 49,
-  "alinmayan_sinyal": 802
+  "alinmayan_sinyal": 825
  },
  "hesaplar": [
   {
    "ad": "T_0c2447",
    "gun_pnl": -0.48,
-   "toplam_pnl": -42.63,
+   "toplam_pnl": -37.41,
    "islem": 11
   },
   {
    "ad": "T_c2c3cf",
    "gun_pnl": -0.31,
-   "toplam_pnl": -3.0,
+   "toplam_pnl": -1.77,
    "islem": 2
   },
   {
    "ad": "T_f6b664",
    "gun_pnl": -0.39,
-   "toplam_pnl": -5.31,
+   "toplam_pnl": -5.0,
    "islem": 15
   },
   {
@@ -47,31 +47,31 @@
   {
    "ad": "T_2e4035",
    "gun_pnl": 0,
-   "toplam_pnl": 9.64,
+   "toplam_pnl": 10.23,
    "islem": 0
   },
   {
    "ad": "T_9934d6",
    "gun_pnl": -0.61,
-   "toplam_pnl": -5.66,
+   "toplam_pnl": -1.03,
    "islem": 1
   },
   {
    "ad": "T_b4c6ee",
    "gun_pnl": 0.23,
-   "toplam_pnl": 1.54,
+   "toplam_pnl": 3.81,
    "islem": 1
   },
   {
    "ad": "T_e7ae5a",
    "gun_pnl": 0,
-   "toplam_pnl": 42.8,
+   "toplam_pnl": 43.44,
    "islem": 0
   },
   {
    "ad": "T_7bb402",
    "gun_pnl": 0,
-   "toplam_pnl": -121.99,
+   "toplam_pnl": -122.99,
    "islem": 0
   },
   {
@@ -83,7 +83,7 @@
   {
    "ad": "T_574595",
    "gun_pnl": 0,
-   "toplam_pnl": 0.16,
+   "toplam_pnl": 0.18,
    "islem": 0
   }
  ],
@@ -106,12 +106,12 @@
   "kaldirac_ayar": 3.0
  },
  "saglik": {
-  "son_nabiz": "2026-11-20T06:05:03Z",
+  "son_nabiz": "2026-11-20T07:05:31Z",
   "hata_sayisi_gun": 0,
-  "ram_mb": 41.9,
-  "ram_tepe_mb": 45.9,
+  "ram_mb": 73.0,
+  "ram_tepe_mb": 78.1,
   "disk_bos_gb": 63.67,
-  "yuk_1dk": 0.07,
+  "yuk_1dk": 0.08,
   "yeniden_baslama_1s": 0,
   "oom_son": false
  },
@@ -128,9 +128,9 @@
   },
   {
    "neden": "ters_netlesme",
-   "adet": 193,
-   "karsi_olgu_kapanan": 4,
-   "karsi_olgu_pnl": -3.47
+   "adet": 197,
+   "karsi_olgu_kapanan": 5,
+   "karsi_olgu_pnl": 0.77
   },
   {
    "neden": "min_emir_atlandi",
@@ -140,7 +140,7 @@
   },
   {
    "neden": "duygu_ters",
-   "adet": 81,
+   "adet": 98,
    "karsi_olgu_kapanan": 0,
    "karsi_olgu_pnl": null
   },
@@ -152,7 +152,7 @@
   },
   {
    "neden": "haber_ters",
-   "adet": 5,
+   "adet": 7,
    "karsi_olgu_kapanan": 0,
    "karsi_olgu_pnl": null
   },
