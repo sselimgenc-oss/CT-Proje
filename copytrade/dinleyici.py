@@ -753,6 +753,21 @@ def clearinghouse_pozisyonlari(post: Callable[[dict], Any], adres: str, dex_adla
     return sonuc
 
 
+def clearinghouse_giris_pxleri(post: Callable[[dict], Any], adres: str, dex_adlari: list[str]) -> dict[str, float]:
+    """K-75: `clearinghouseState` → {coin: trader'ın ortalama giriş fiyatı (`entryPx`)}. Okuma `clearinghouse_pozisyonlari` ile aynı kurallarla (ana dex + HIP-3 dex'leri; bozuk çağrı/yanıt istisna).
+    `entryPx` yok / sayı değil ise o coin sözlükte yer almaz (çağıran 'bilinmiyor' sayar)."""
+    sonuc: dict[str, float] = {}
+    for dex in ["", *dex_adlari]:
+        yanit = post(clearinghouse_yuk(adres, dex))
+        clearinghouse_ayristir(yanit)                                       # bozuk yanıt → ValueError
+        for ap in yanit["assetPositions"]:
+            poz = ap["position"]
+            px = _sayi(poz.get("entryPx"))
+            if px is not None and px > 0:
+                sonuc[str(poz["coin"])] = px
+    return sonuc
+
+
 def coin_listesi(post: Callable[[dict], Any]) -> list[str]:
     """Abone olunacak coin evreni = izleme motorunun kopyaladığı evren (kural 7): ana perp dex + HER HIP-3 dex'in perp coin'leri (`dex:COIN`).
     Motor `perp_fills` ile yalnız SPOT'u dışarıda bırakır (`olcut.asset_class`); spot kopyalanmadığı için abone olunmaz, REST'te görülürse `kacan_sinif.spot` olarak yalnız sayılır."""
