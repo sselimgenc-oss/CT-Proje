@@ -1,15 +1,15 @@
 {
  "sema": "ortak.gunluk_ozet.v1",
  "proje": "CT",
- "uretim": "2026-11-20T12:01:41Z",
+ "uretim": "2026-11-20T12:03:59Z",
  "gun": "2026-11-20",
  "mod": "sanal",
  "kasa": {
   "baslangic": 10000.0,
-  "simdi": 10007.94,
-  "gun_pnl": 12.22,
-  "toplam_pnl": 7.94,
-  "zirveden_dusus_yuzde": 0.42
+  "simdi": 10006.24,
+  "gun_pnl": 10.53,
+  "toplam_pnl": 6.24,
+  "zirveden_dusus_yuzde": 0.44
  },
  "islem": {
   "gun_acilan": 21,
@@ -17,25 +17,25 @@
   "kazanan": 2,
   "kaybeden": 2,
   "acik_pozisyon": 48,
-  "alinmayan_sinyal": 2706
+  "alinmayan_sinyal": 2722
  },
  "hesaplar": [
   {
    "ad": "T_0c2447",
    "gun_pnl": -6.77,
-   "toplam_pnl": -39.1,
+   "toplam_pnl": -40.21,
    "islem": 20
   },
   {
    "ad": "T_c2c3cf",
    "gun_pnl": -0.31,
-   "toplam_pnl": -3.0,
+   "toplam_pnl": -3.32,
    "islem": 2
   },
   {
    "ad": "T_f6b664",
    "gun_pnl": -0.44,
-   "toplam_pnl": -14.25,
+   "toplam_pnl": -15.44,
    "islem": 17
   },
   {
@@ -47,31 +47,31 @@
   {
    "ad": "T_2e4035",
    "gun_pnl": 0,
-   "toplam_pnl": 2.85,
+   "toplam_pnl": 2.24,
    "islem": 0
   },
   {
    "ad": "T_9934d6",
    "gun_pnl": -0.61,
-   "toplam_pnl": -10.6,
+   "toplam_pnl": -10.65,
    "islem": 1
   },
   {
    "ad": "T_b4c6ee",
    "gun_pnl": 0.23,
-   "toplam_pnl": 27.48,
+   "toplam_pnl": 27.65,
    "islem": 1
   },
   {
    "ad": "T_e7ae5a",
    "gun_pnl": 0,
-   "toplam_pnl": 66.42,
+   "toplam_pnl": 67.36,
    "islem": 0
   },
   {
    "ad": "T_7bb402",
    "gun_pnl": -0.41,
-   "toplam_pnl": -118.36,
+   "toplam_pnl": -117.89,
    "islem": 1
   },
   {
@@ -106,12 +106,12 @@
   "kaldirac_ayar": 3.0
  },
  "saglik": {
-  "son_nabiz": "2026-11-20T12:01:41Z",
+  "son_nabiz": "2026-11-20T12:03:59Z",
   "hata_sayisi_gun": 0,
-  "ram_mb": 80.5,
-  "ram_tepe_mb": 85.6,
-  "disk_bos_gb": 63.66,
-  "yuk_1dk": 0.0,
+  "ram_mb": 44.9,
+  "ram_tepe_mb": 46.3,
+  "disk_bos_gb": 63.65,
+  "yuk_1dk": 0.09,
   "yeniden_baslama_1s": 0,
   "oom_son": false
  },
@@ -122,25 +122,25 @@
  "alinmayan_neden": [
   {
    "neden": "bant_ici",
-   "adet": 1035,
+   "adet": 1042,
    "karsi_olgu_kapanan": 0,
    "karsi_olgu_pnl": null
   },
   {
    "neden": "min_emir_atlandi",
-   "adet": 512,
+   "adet": 514,
    "karsi_olgu_kapanan": 1,
    "karsi_olgu_pnl": -0.02
   },
   {
    "neden": "duygu_ters",
-   "adet": 503,
+   "adet": 507,
    "karsi_olgu_kapanan": 0,
    "karsi_olgu_pnl": null
   },
   {
    "neden": "slot_tavani",
-   "adet": 337,
+   "adet": 340,
    "karsi_olgu_kapanan": 2,
    "karsi_olgu_pnl": 0.68
   },
