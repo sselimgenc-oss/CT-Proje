@@ -871,3 +871,10 @@
 {"zaman_ms":1795144894489,"olay":"kacan_telafi_hata","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","asama":"giris_px","tur":"RateLimitError"}
 {"zaman_ms":1795144894489,"olay":"kacan_telafi_hata","adres":"0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a","asama":"giris_px","tur":"RateLimitError"}
 {"zaman_ms":1795144894489,"olay":"kacan_telafi_hata","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795145422610,"olay":"tur","ozsermaye_usd":10018.0233}
+{"zaman_ms":1795145509347,"olay":"kacan_telafi_hata","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"HYPE","asama":"yas","tur":"RateLimitError"}
+{"zaman_ms":1795145509347,"olay":"kacan_telafi_hata","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"LIT","asama":"yas","tur":"RateLimitError"}
+{"zaman_ms":1795145509347,"olay":"kacan_telafi_hata","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"xyz:SP500","asama":"yas","tur":"RateLimitError"}
+{"zaman_ms":1795145519574,"olay":"kacan_telafi_atlandi","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"HYPE","neden":"filtre_atlamisti:ters_netlesme"}
+{"zaman_ms":1795145568988,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795145452706,"gorme_ms":1795145452706,"yas_ms":116282}
+{"zaman_ms":1795145568989,"olay":"kacan_telafi","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","yon":"A","trader_giris":1758.5,"mark":1743.95,"kayma":0.008274,"yas_sa":5.01,"karar":"atlandi","neden":"ters_netlesme"}
