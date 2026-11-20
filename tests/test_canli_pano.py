@@ -39,8 +39,8 @@ def test_pano_altin_ornek_sayilar():
     md, yeni = pano.pano_olustur(OZET, RISK, {}, kayitlar, [isabet], GECMIS, SIMDI)
     assert "| 1.000,00 $ | 1.012,50 $ | +%1,25 | " in md and "| +%1,25 | −%1,22 |" in md                    # gün +%1,25; toplam +%1,25; zirveden düşüş −%1,22
     assert "emir 3 · dolum 2 · kayma p50 +%0,30 / max +%0,30 (n=2)" in md and "funding −0,12 $ · ücret 0,03 $" in md
-    assert "| 0x111111… | BTC | L | 55,00 $ | +5,00 $ |" in md and "| 0x222222… | ETH | S | 2.010,00 $ | −10,00 $ |" in md
-    assert "giriş 0x111111… — ilk_gun" in md and "çıkış 0x222222… — islem_yok" in md and "`risk` gunluk_kayip" in md and "boşluk 45.0 dk" in md and "REST 429 0" in md
+    assert "| Vega-11 | BTC | L | 55,00 $ | +5,00 $ |" in md and "| Serçe-22 | ETH | S | 2.010,00 $ | −10,00 $ |" in md
+    assert "giriş Vega-11 — ilk_gun" in md and "çıkış Serçe-22 — islem_yok" in md and "`risk` gunluk_kayip" in md and "boşluk 45.0 dk" in md and "REST 429 0" in md
     assert "| 2026-11-05 | 7.0 gün | +0.31 | +%0,40 | +%2,00 | 11/3/30 |" in md
     assert yeni[-1] == {"gun": gunler(), "ozsermaye": 1012.5} and len(yeni) == 3
 
@@ -60,7 +60,7 @@ def test_isabet_yoksa_ilk_olcum_yazilir_acik_pozisyon_yoksa_ve_hesap_json_yedegi
     # ozet'te 'acik' yoksa hesap.json'dan (mark yok → K/Z —)
     ozet = {k: v for k, v in OZET.items() if k != "acik"}
     md2, _ = pano.pano_olustur(ozet, RISK, {"poz": {A1: {"BTC": {"sz": 0.5, "giris": 100.0}}}}, [], [], [], SIMDI)
-    assert "| 0x111111… | BTC | L | 50,00 $ | — |" in md2
+    assert "| Vega-11 | BTC | L | 50,00 $ | — |" in md2
 
 
 def test_gecmis_gunde_bir_nokta_ve_en_cok_15_gun():
@@ -98,7 +98,7 @@ def test_motor_pano_ek_acik_pozisyon_kz_ve_rest_sayaclari(tmp_path):
     assert acik["ETH"]["usd"] == pytest.approx(1990.0) and acik["ETH"]["kz_usd"] == pytest.approx(10.0) and acik["ETH"]["sz"] == -1.0
     assert ek["rest_istek"] == 120 and ek["rest_429"] == 2
     ozet_md, _ = pano.pano_olustur({**OZET, **ek}, RISK, {}, [], [], [], SIMDI)
-    assert "| 0x000000… | ETH | S | 1.990,00 $ | +10,00 $ |" in ozet_md and "REST 429 2" in ozet_md
+    assert "| Papağan-00 | ETH | S | 1.990,00 $ | +10,00 $ |" in ozet_md and "REST 429 2" in ozet_md
 
 
 def test_html_pano_turkce_biçim_ve_kacis(tmp_path):
@@ -200,6 +200,8 @@ def test_pano_c1_canli_kopya_korumasi_ve_c6_kadro_kartlari():
     assert "+%5,40" in h and "+%3,00" in h and ">1,80<" in h                      # C1: bizim getiri / trader getirisi / koruma oranı
     assert "+%30,00" in h and "0,75" in h                                       # C6: yatirma_payi 0,3 > 0,2 ⇒ kırmızı; radar koruma
     assert "Güven ayarlı getiri" in h and "Hype yakalama" not in h                # C6: form bileşenleri; 14.11: H (ağırlık 0) çubuğu gösterilmez
+    from copytrade.canli.takma_ad import kisa_adres, takma_ad
+    assert f'<b title="{kisa_adres(a1)}">{takma_ad(a1)}</b>' in h and a1 not in h.replace(f'explorer/address/{a1}', '')      # takma ad ana etiket; adres yalnız tooltip (kısa) + bağlantı href'inde
     assert f'href="https://app.hyperliquid.xyz/explorer/address/{a1}"' in h       # C6: trader sayfası bağlantısı (yalnız geçerli 42 karakterli adres)
     h2 = pano.html_olustur(ozet, {}, hesap, kayit, [], 1_793_900_000_000, kadro, {"uyeler": {a1: {"giris_ms": 1}}, "inen": {}}, None, None)
     assert "girişte kaydedilmemiş" in h2                                          # eski üyede giriş hesabı yok → "—"

@@ -153,7 +153,7 @@ def test_g18_gercek_kip_dolmayan_emir_sesli_altin_ornek():
     assert m == ("🚨 [GERÇEK] EMİR REDDEDİLDİ — BTC kapat 27,30 $\n"
                  "neden: hl err: User or API Wallet 0xabc does not exist.\n"
                  "Kapanış daha geniş bantla yeniden denenecek; olmazsa kuyruğa alınır ve dakikada bir denenir. Tekrarlarsa: /hepsini_kapat ya da HL web.\n"
-                 "↳ Trader 0x123456… · SAT")
+                 "↳ Trader Ördek-12 · SAT")
     gece = tg.Telegram(TOKEN, CHAT, SahteTG(), sessiz_utc=(21, 5), saat_s=lambda: 1_800_000_000 - 1_800_000_000 % 86400 + 2 * 3600)     # 02:00 UTC
     assert not gece.sessiz_mi(m) and gece.sessiz_mi("🟢 BTC AL: 27 $")                                     # 🚨 gece de sesli; dolu emir sessiz
     assert tg.msg_emir(a, "ETH", "B", 11.0, None, None, "kismi", "gercek", "ac").startswith("🚨 [GERÇEK] EMİR KISMEN DOLDU — ETH ac 11,00 $\nPozisyon açılmadı")
@@ -312,7 +312,7 @@ def test_s13_bolum5_ornekleri_birebir():
     a = "0x8730ab" + "0" * 34
     assert tg.atlanan_satirlari({"inen_trader": 86, "min_emir_atlandi": 21}, 86, {"inen_trader": {a: 86}, "min_emir_atlandi": {a: 21}}) == [
         "⏭️ Kopyalanmayan trader dolumu: 107 (≈86 ayrı işlem)",
-        "   • kural gereği 107: 86 ayrılan trader 0x8730ab… (yeni alım yok) · 21 çok küçük (< 11 $)",
+        "   • kural gereği 107: 86 ayrılan trader Orkinos-87 (yeni alım yok) · 21 çok küçük (< 11 $)",
         "   • kaçırılan 0 (geç görülen / veri yok)"]
     assert tg.atlanan_satirlari({"gec_acilis": 180, "slot_tavani": 100, "min_emir_atlandi": 61}, 32) == [
         "⚠️ Kopyalanmayan trader dolumu: 341 (≈32 ayrı işlem)",

@@ -17,6 +17,8 @@ import time
 from datetime import timedelta
 from typing import Any, Callable
 
+from copytrade.canli.takma_ad import takma_ad
+
 ONEMLI_ONEKLER = ("ALARM", "DUR", "TASFİYE", "🚨", "🛑", "💥", "🔴")          # her zaman sesli
 PROJE_ETIKETI = "[CT]"                    # her mesajın İLK satırı "[CT] <başlık>" (INFO/WARN/CRIT kullanıcıya GÖSTERİLMEZ; yalnız iç mantıkta sesli/sessiz için)
 KOMUTLAR = ("/durum", "/rapor", "/yardim", "/start", "/durdur", "/devam", "/hepsini_kapat")      # standart komut adları (motora iki adımlı onaydan sonra bu adlarla gider)
@@ -98,7 +100,8 @@ def mesaj_kirp(metin: str, azami: int = MESAJ_AZAMI) -> str:
 
 
 def kisa(adres: str) -> str:
-    return adres[:8] + "…" if len(adres) > 8 else adres
+    """Trader adresinin kullanıcıya gösterilen biçimi: sabit takma ad (örn. "Kartal-78"); geçersizse kısa adres."""
+    return takma_ad(adres)
 
 
 def _urllib_post(url: str, yuk: dict) -> dict:

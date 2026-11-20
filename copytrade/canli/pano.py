@@ -23,6 +23,7 @@ from pathlib import Path
 from copytrade import surum_karsilastirma
 from copytrade.canli.gunluk_ozet import alinmayan_neden, kopya_kalite
 from copytrade.canli.hesap import dinamik_stop_orani, dolum_net
+from copytrade.canli.takma_ad import kisa_adres
 from copytrade.canli.telegram import ATLA_TR, KACIRILAN_NEDENLER, REJIM_TR, TSI, kisa, fiyat, kip_adi, tr_isaretli, tr_sayi, tr_yuzde
 from copytrade.saglik import durum as saglik_durum, kontrol as saglik_kontrol
 
@@ -1235,11 +1236,12 @@ def _kadro_bolumu(ozet: dict, hesap: dict, kayitlar: list[dict], acik: list[dict
             ek += f'<div class="ms"><div><span class="so">Net para yatırma payı (7g)</span><br><b class="{"eks" if float(yp) > 0.2 else ""}">{esc(tyuz(float(yp)))}</b></div></div>'
         if r.get("bilesenler"):
             ek += '<div class="bil">' + "".join(f'<div class="bl"><span>{esc(ad_)}</span><div class="ol"><i style="width:{min(max(float(r["bilesenler"].get(k_) or 0), 0), 100):.0f}%"></i></div><span>{float(r["bilesenler"].get(k_) or 0):.0f}</span></div>' for k_, ad_ in BILESEN_AD if k_ != "H" or float(kurallar.get("radar_agirlik_h", 0) or 0) > 0) + '</div>'
+        ek += f'<div class="ms"><div><span class="so">Adres</span><br>{esc(kisa_adres(ad))}</div></div>'
         if ADRES_RE.fullmatch(ad):
             ek += f'<div class="ms"><div><a class="ln" href="https://app.hyperliquid.xyz/explorer/address/{ad}" target="_blank" rel="noopener noreferrer">Trader sayfasını aç (Hyperliquid) ↗</a></div></div>'
         ayrinti += ek
         rozet = {"SAHADA": "art", "İNİYOR": "eks", "BEKLİYOR": "bk", "YEDEK": "yok", "KADRO DIŞI": "yok"}[durum]
-        gruplar[durum].append(f'<details class="kd{" kb" if durum == "BEKLİYOR" else ""}"><summary><span class="sr">{int(r.get("sira", 0)) or "·"}</span><b>{esc(kisa(ad))}</b><span class="rz {rozet}">{durum}</span>'
+        gruplar[durum].append(f'<details class="kd{" kb" if durum == "BEKLİYOR" else ""}"><summary><span class="sr">{int(r.get("sira", 0)) or "·"}</span><b title="{esc(kisa_adres(ad))}">{esc(kisa(ad))}</b><span class="rz {rozet}">{durum}</span>'
                        f'<span class="fb"><i style="width:{min(max(float(r.get("form") or 0), 0), 100):.0f}%"></i></span><span class="fm">{f"{float(r['form']):.0f}" if r.get("form") is not None else ""}</span>'
                        f'<span class="nt {renk(net)}">{esc(tl(net, True)) if net is not None else ""}</span></summary>{ayrinti}</details>')
     mut = (f'<div class="mt">Kartların toplamı <b class="{renk(toplam_net)}">{esc(tl(toplam_net, True))}</b> + takipten ayrılan traderlar <b>{esc(tl(float(hesap.get("kapanmis_net") or 0.0), True))}</b> = '

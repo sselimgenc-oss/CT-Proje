@@ -13,6 +13,7 @@ from copytrade.canli import kadro as kd
 from copytrade.canli import motor as mt
 from copytrade.canli import telegram as tg
 from copytrade.canli import yurutucu as yu
+from copytrade.canli.takma_ad import takma_ad
 from copytrade.kurallar import load_rules
 
 RULES = load_rules()
@@ -599,7 +600,7 @@ def test_telegram_komutlari_yalniz_yapilandirilmis_sohbetten_ve_biçim():
     assert tg.msg_gunluk("sanal", 1000, 1012.5, 1000.0, 58, 9, 11, acik, -0.12) == (
         "📋 Günlük rapor (sanal · deneme parası)\n━━━━━━━━━━━━━━\n💰 Özsermaye: 1.012,50 $ (başlangıç 1.000 $) · başlangıçtan beri +%1,25\n📈 Günün K/Z (son 24 saat): +12,50 $ (+%1,25) · 💸 funding (sanal) −0,12 $\n"
         "📌 Açık pozisyon: 2 (K/Z: 🟩 BTC +12,34 $ · 🔻 ETH −1,50 $)\n🧾 Bugün 58 emir · 👥 takipte 9/11 trader\n🛡️ Risk: normal, motor çalışıyor\nAyrıntı: pano")                  # ilk 3 satır: özsermaye, günün K/Z'si, açık pozisyon
-    assert tg.kisa(adr(255)) == "0x000000…"
+    assert tg.kisa(adr(255)) == takma_ad(adr(255)) and tg.kisa(adr(255)) != adr(255)
 
 
 # ================================================================================================ kip güvencesi
@@ -1065,10 +1066,10 @@ def test_k36_motor_artirma_trader_hesap_degerini_kullanir_hesap_yok_degil(tmp_pa
 def test_telegram_mesajlari_sade_turkce_altin_ornek():
     a = "0x1234567890abcdef"
     assert tg.msg_emir(a, "ETH", "B", 11.0, 2000.0, 0.00012, "dolu", "sanal", "ac") == \
-        "🟢 ETH AL: 11,0 $ (sanal · deneme parası)\n↳ Trader 0x123456… pozisyon açtı, biz de kopyaladık\n↳ Fiyat 2.000,00 · trader'a göre fark +1.2 bp"
+        "🟢 ETH AL: 11,0 $ (sanal · deneme parası)\n↳ Trader Ördek-12 pozisyon açtı, biz de kopyaladık\n↳ Fiyat 2.000,00 · trader'a göre fark +1.2 bp"
     assert tg.msg_emir(a, "BTC", "A", 272.73, 100.0, None, "dolmadi", "sanal", "kapat").startswith("⚠️ BTC SAT: emir tam dolmadı (dolmadi)")
-    assert tg.msg_saha("giriş", a, "bos_slot (yerine 0xabcdef12…)") == "➕ Yeni trader takibe alındı: 0x123456…\n↳ Neden: boş yer açıldı (yerine 0xabcdef12…)"
-    assert tg.msg_saha("çıkış", a, "kadro_disi (sonuçla, 14 gün bekleme)").startswith("➖ Trader takipten çıktı: 0x123456…\n↳ Neden: günlük kadrodan düştü")
+    assert tg.msg_saha("giriş", a, "bos_slot (yerine 0xabcdef12…)") == "➕ Yeni trader takibe alındı: Ördek-12\n↳ Neden: boş yer açıldı (yerine 0xabcdef12…)"
+    assert tg.msg_saha("çıkış", a, "kadro_disi (sonuçla, 14 gün bekleme)").startswith("➖ Trader takipten çıktı: Ördek-12\n↳ Neden: günlük kadrodan düştü")
     assert tg.msg_durum("sanal", 1000.71, 1000.0, 9, 11, 3, 8, 0, False) == (
         "📊 Anlık durum (sanal · deneme parası)\n━━━━━━━━━━━━━━\n💰 Özsermaye 1.000,71 $ (kasaya göre +%0,07)\n👥 Takipte 9/11 trader · 3 tanesi ayrılıyor (pozisyonları kapanıyor)\n📌 Açık pozisyon: 8\n🧾 Bu turda emir: 0\n🛡️ Risk: normal, motor çalışıyor")
     assert tg.tr_sayi(1234567.891) == "1.234.567,89" and tg.tr_yuzde(-0.0125) == "−%1,25"
@@ -1083,9 +1084,9 @@ def test_telegram_emir_ozeti_toplar_tek_mesaj_ayni_satir_birlesir():
                {"adres": a, "coin": "NEAR", "yon": "B", "usd": 11.0, "px": 3.943, "kayma": 0.00015, "durum": "kismi", "eylem": "ac"}]
     assert tg.msg_emir_ozeti("sanal", emirler, 5) == (
         "🧾 Son 5 dakikada 4 emir (sanal · deneme parası)\n"
-        "🟢 AL BTC: 35 $ · 0xf43a34… pozisyon açtı\n"                                                              # büyükten küçüğe sıralı
-        "🟢 AL ETH: 25 $ (2 emir) · 0xf43a34… pozisyonunu artırdı\n"
-        "🟢 AL NEAR: 11 $ · 0xf43a34… pozisyon açtı · ⚠️ 1 tanesi tam dolmadı")
+        "🟢 AL BTC: 35 $ · Kanguru-F4 pozisyon açtı\n"                                                              # büyükten küçüğe sıralı
+        "🟢 AL ETH: 25 $ (2 emir) · Kanguru-F4 pozisyonunu artırdı\n"
+        "🟢 AL NEAR: 11 $ · Kanguru-F4 pozisyon açtı · ⚠️ 1 tanesi tam dolmadı")
     assert tg.msg_emir_ozeti("sanal", emirler[:1], 5).startswith("🟢 ETH AL: 12,0 $")                               # tek emir: ayrıntılı biçim
 
 
