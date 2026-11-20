@@ -67,16 +67,19 @@ def test_kayma_icinde_acilir_boyut_normal_yolla_ve_kayit(tmp_path):
 
 
 def test_sinirda_acar_yuzde_1_aleyhte(tmp_path):
-    """Long: trader girişi 99, mark 100 → kayma +%1,0101 (aleyhimize) → AÇILMAZ; giriş 99,01 → +%0,99 → açılır; lehimize (giriş 105 → −%4,8) açılır."""
+    """Long: trader girişi 99, mark 100 → kayma +%1,0101 (aleyhimize) → AÇILMAZ; giriş 99,01 → +%0,99 → açılır; lehimize en çok %1 (giriş 100,9 → −%0,9) açılır; lehimize %1'den fazla (giriş 105 → −%4,8) AÇILMAZ (iki yönlü sınır, K-75 ek)."""
     m, _, _ = _hazir(tmp_path / "a", giris=99.0)
     m.dakika()
     assert m.hesap.sz(adr(1), "BTC") == 0.0
     m2, _, _ = _hazir(tmp_path / "b", giris=99.01)
     m2.dakika()
     assert m2.hesap.sz(adr(1), "BTC") > 0
-    m3, _, _ = _hazir(tmp_path / "c", giris=105.0)
+    m3, _, _ = _hazir(tmp_path / "c", giris=100.9)
     m3.dakika()
     assert m3.hesap.sz(adr(1), "BTC") > 0
+    m4, _, _ = _hazir(tmp_path / "d", giris=105.0)
+    m4.dakika()
+    assert m4.hesap.sz(adr(1), "BTC") == 0.0
 
 
 def test_yuzde_1_5_aleyhte_acilmaz(tmp_path):
