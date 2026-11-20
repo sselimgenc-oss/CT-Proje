@@ -7753,3 +7753,17 @@
 {"zaman_ms":1795198548142,"olay":"kacan_telafi_atlandi","adres":"0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a","coin":"xyz:NBIS","neden":"kayma_fazla","kayma":0.43472,"trader_giris":148.0,"mark":83.6615}
 {"zaman_ms":1795198548142,"olay":"kacan_telafi_atlandi","adres":"0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a","coin":"xyz:SNXX","neden":"kayma_fazla","kayma":0.466875,"trader_giris":3.36375,"mark":1.7933}
 {"zaman_ms":1795198550242,"olay":"kacan_telafi_geri_cekil","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","asama":"giris_px","sn":300.0,"ardisik":1}
+{"zaman_ms":1795198682103,"olay":"tur","ozsermaye_usd":9912.0406}
+{"zaman_ms":1795199138095,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"VVV","neden":"pozisyon_eski"}
+{"zaman_ms":1795199150890,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"xyz:GME","neden":"pozisyon_eski"}
+{"zaman_ms":1795199165433,"olay":"kacan_telafi_atlandi","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"BTC","neden":"kayma_fazla","kayma":0.126329,"trader_giris":67703.4,"mark":59150.5}
+{"zaman_ms":1795199165433,"olay":"kacan_telafi_atlandi","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"ETH","neden":"kayma_fazla","kayma":0.114197,"trader_giris":1851.71,"mark":1640.25}
+{"zaman_ms":1795199165434,"olay":"kacan_telafi_atlandi","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"SOL","neden":"kayma_lehte_fazla","kayma":-0.047233,"trader_giris":72.9932,"mark":69.5455}
+{"zaman_ms":1795199165434,"olay":"kacan_telafi_atlandi","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"BNB","neden":"kayma_fazla","kayma":0.077724,"trader_giris":590.268,"mark":544.39}
+{"zaman_ms":1795199165434,"olay":"kacan_telafi_atlandi","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"DOGE","neden":"kayma_fazla","kayma":0.091443,"trader_giris":0.059906,"mark":0.054428}
+{"zaman_ms":1795199165434,"olay":"kacan_telafi_atlandi","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"XRP","neden":"kayma_lehte_fazla","kayma":-0.049463,"trader_giris":0.96021,"mark":0.912715}
+{"zaman_ms":1795199165434,"olay":"kacan_telafi_atlandi","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"TRX","neden":"kayma_lehte_fazla","kayma":-0.052448,"trader_giris":0.31841,"mark":0.30171}
+{"zaman_ms":1795199165434,"olay":"kacan_telafi_atlandi","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"ADA","neden":"kayma_fazla","kayma":0.070279,"trader_giris":0.152164,"mark":0.14147}
+{"zaman_ms":1795199165434,"olay":"kacan_telafi_atlandi","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"HYPE","neden":"kayma_fazla","kayma":0.066142,"trader_giris":65.8992,"mark":61.5405}
+{"zaman_ms":1795199165434,"olay":"kacan_telafi_atlandi","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"ZEC","neden":"kayma_fazla","kayma":0.146062,"trader_giris":909.4393,"mark":776.605}
+{"zaman_ms":1795199527819,"olay":"tur","ozsermaye_usd":9892.8063}
