@@ -285,3 +285,16 @@ iz_kilit_seviye: 0.15                   # oran (kilit stopunun kâr seviyesi)
 kopya_ara_dolum_max: 2                  # adet
 # Bir emrin parçalı dolumları (oid Olay'da yok): aynı yön + önceki dolumdan en çok bu kadar ms sonra = aynı ara dolum
 kopya_ara_dolum_kume_ms: 1000           # ms
+# Fiyat farkı ölçümü kabul ölçütü (copytrade/olcum/fiyat_farki.py; Binance hazırlığı 5a). KULLANICI ONAYI BEKLENİYOR: eşikler koordinatör önerisidir, onaylanana dek değiştirilebilir. Birim bp, yön düzeltilmiş (aleyhimize +).
+# GEÇ = medyan ≤ gec_medyan_bp VE p90 ≤ gec_p90_bp VE ortalama ≤ gec_ortalama_bp; DUR = medyan > dur_medyan_bp VEYA p90 > dur_p90_bp VEYA ortalama > dur_ortalama_bp; arası GRİ.
+# Yeterlilik: toplam eşleşmiş dolum, gün ve coin asgarisi altında "örnek yetersiz"; grup başına asgari dolumun altında "karar yok".
+fiyat_farki_gec_medyan_bp: 1.0
+fiyat_farki_gec_p90_bp: 10.0
+fiyat_farki_gec_ortalama_bp: 1.5
+fiyat_farki_dur_medyan_bp: 2.0
+fiyat_farki_dur_p90_bp: 15.0
+fiyat_farki_dur_ortalama_bp: 3.0
+fiyat_farki_min_dolum: 300
+fiyat_farki_min_gun: 3
+fiyat_farki_min_coin: 15
+fiyat_farki_grup_min_dolum: 30

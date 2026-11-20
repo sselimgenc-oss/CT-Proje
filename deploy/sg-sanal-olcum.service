@@ -1,0 +1,31 @@
+# HL ↔ Binance fiyat farkı ölçümü (Binance hazırlığı 5a): 96 saatlik, salt-okur, bağımsız süreç. Motora (sg-sanal) dokunmaz: kayit/ ve durum/ yalnız OKUNUR; çıktı durum/olcum/fiyat_farki/<gün>.jsonl.
+# Anahtar YOK (Binance genel uçları). Telegram yalnız erişim engelinde (403/451) tek ⚠️ mesaj için: /etc/sg-sanal-telegram.env (yoksa sessiz).
+# Süre: modül kendiliğinden 95,5 sa sonra temiz çıkar (--sure-saat 95.5, çıkış 0); RuntimeMaxSec=96h yalnız emniyet (systemd'nin süre aşımı "başarısız" sayılıp yeniden başlatmasın diye modül ondan ÖNCE biter).
+# Çıkış 3 = Binance erişimi yok (403/451): yeniden BAŞLATILMAZ (denemeler arasında döngü yok). Özet: python -m copytrade.olcum.fiyat_farki --ozet. Kurulum: deploy/kurulum_sanal.md §8.
+[Unit]
+Description=sg-arge HL-Binance fiyat farki olcumu (96 saat, salt-okur)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=600
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=sgsanal
+Group=sgsanal
+WorkingDirectory=/var/lib/sg-sanal/depo
+EnvironmentFile=-/etc/sg-sanal-telegram.env
+Environment=HOME=/var/lib/sg-sanal
+ExecStart=/var/lib/sg-sanal/venv/bin/python -u -m copytrade.olcum.fiyat_farki --durum-dizin durum --kayit-dizin kayit --cikti-dizin durum/olcum/fiyat_farki --sure-saat 95.5
+Restart=on-failure
+RestartSec=30
+RestartPreventExitStatus=3
+RuntimeMaxSec=96h
+# Kaynak sınırı (motorla aynı sunucu): tek süreç, sınırlı tampon
+MemoryMax=120M
+Nice=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sg-sanal
