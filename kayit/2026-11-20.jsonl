@@ -2092,3 +2092,7 @@
 {"zaman_ms":1795170170405,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:MSFT","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1795170170040,"gorme_ms":1795170170403,"yas_ms":365}
 {"zaman_ms":1795170251075,"olay":"tur","ozsermaye_usd":9996.5076}
 {"zaman_ms":1795170283653,"olay":"kopya_drift_bitti","coin":"TRX","biz_usd":490.58,"ideal_usd":644.84,"drift":0.239,"sure_dk":980}
+{"zaman_ms":1795170713685,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","hesap_usd":391883.980665,"anlik_kaldirac":5.0943505601128605,"esik":5.0,"durum":"basladi"}
+{"zaman_ms":1795170943945,"olay":"kopya_drift","coin":"HYPE","biz_usd":-252.33,"ideal_usd":-445.9,"drift":0.434,"sure_dk":30}
+{"zaman_ms":1795171108296,"olay":"tur","ozsermaye_usd":10004.5966}
+{"zaman_ms":1795171315872,"olay":"kacan_telafi_atlandi","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"NEAR","neden":"pozisyon_eski"}
