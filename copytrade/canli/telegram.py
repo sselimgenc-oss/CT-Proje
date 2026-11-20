@@ -720,7 +720,7 @@ def risk_satiri(dur: bool = False, bayraklar: list[str] | None = None) -> str:
 
 def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_sayisi: int, saha: int, n: int, acik: list[dict], funding_usd: float | None = None, karsi_olgu: dict[str, list[float]] | None = None, ogrenme: dict | None = None,
                dur: bool = False, bayraklar: list[str] | None = None, saglik: list[str] | None = None, kopya_fark: float | None = None, gecikme_sn: float | None = None,
-               artir: int = 0, azalt: int = 0, guncelleme: int | None = None) -> str:
+               artir: int = 0, azalt: int = 0, guncelleme: int | None = None, kucult_satir: str = "") -> str:
     """Günlük rapor (21:00 TSİ, ortak standart; en çok ~12 satır, ayrıntı pano). Sıra: kasa → son 24 saat → emirler/takip → açık pozisyon → risk → (varsa) alınmayan sinyal, öğrenme, sağlık → 'Ayrıntı: pano'.
     `onceki_oz`: önceki özetteki özsermaye (ilk özette kasa). `acik`: {coin, sz, usd, kz_usd}. `karsi_olgu`: alınmayan sinyal özeti. `ogrenme`: öğrenme etkisi (satır yalnız sayı > 0 ise).
     `dur`/`bayraklar`: risk durumu (`risk_satiri`). `saglik`: YALNIZ sorun varsa dolu liste (boşsa satır yok)."""
@@ -742,6 +742,8 @@ def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_s
     if guncelleme:
         satirlar.append(f"🔄 Bot bugün {guncelleme} kez güncellendi")
     satirlar.append(risk_satiri(dur, bayraklar))
+    if kucult_satir:
+        satirlar.append(kucult_satir)                                                                       # K-77: küçültülmüş traderlar (tek satır)
     if karsi_olgu:
         kn, kk = sum(int(v[0]) for v in karsi_olgu.values()), sum(v[1] for v in karsi_olgu.values())
         satirlar.append(f"🔍 Alınmayan sinyal (hayali, işlem yok): {kn} kapandı · {tr_isaretli(kk)} $ — " + " · ".join(f"{ATLA_TR.get(ad, ad).replace(' (K‑41)', '')} {int(v[0])}/{tr_isaretli(v[1])}" for ad, v in sorted(karsi_olgu.items(), key=lambda kv: -abs(kv[1][1]))[:3]))
@@ -856,8 +858,21 @@ def drift_satiri(drift: dict[str, float]) -> str:
     return f"📐 Kopya sapması: {len(drift)} coin, en büyük {coin} %{round(oran * 100)} (yalnız bilgi)"
 
 
+def kucult_satiri(olaylar: list[dict]) -> str:
+    """K-77: özet penceresinde boyutu küçülen/geri dönen traderlar için TEK satır (ayrı mesaj yok): '🔽 Zarar küçültme: Kartal-78 ½ (5 kapanış, −3,20 $) · Vaşak-12 geri ×1'. Olay yoksa ''.
+    Aynı trader birden çok kez değiştiyse son hâli. Seviye: 1 = ½, 2 = en küçük, 0 = geri ×1."""
+    son: dict[str, dict] = {}
+    for e in olaylar or []:
+        son[e["adres"]] = e
+    parca = []
+    for adres, e in son.items():
+        ad = {0: "geri ×1", 1: "½", 2: "en küçük"}.get(int(e["yeni"]), "?")
+        parca.append(f"{kisa(adres)} {ad}" + (f" ({e['n']} kapanış, {tr_isaretli(float(e['net']))} $)" if int(e["yeni"]) else ""))
+    return ("🔽 Zarar küçültme: " + " · ".join(parca[:3]) + (f" … +{len(parca) - 3}" if len(parca) > 3 else "")) if parca else ""
+
+
 def msg_sanal_saatlik(bas_ms: int, bit_ms: int, sure_dk: float, emirler: list[dict], atlanan: dict[str, int], kasa_bilgi: tuple[float, float, float] | None = None,
-                      atla_islem: int | None = None, atla_adres: dict[str, dict[str, int]] | None = None, drift_satir: str = "") -> str:
+                      atla_islem: int | None = None, atla_adres: dict[str, dict[str, int]] | None = None, drift_satir: str = "", kucult_satir: str = "") -> str:
     """SANAL kip emir partisi (tek mesaj, en çok 3 satır): kaç emir, ne tür (açılış/artırma/azaltma/kapanış), kasa özeti. Emir yoksa '' (mesaj gönderilmez).
     `atlanan`/`atla_islem`/`atla_adres`/`drift_satir` imzada kalır ama mesaja GİRMEZ (kopyalanmayan dolumlar ve kopya sapması yalnız kayıt/pano; kullanıcı standardı: tekrar eden bilgi mesajı yok)."""
     if not emirler:
@@ -874,17 +889,21 @@ def msg_sanal_saatlik(bas_ms: int, bit_ms: int, sure_dk: float, emirler: list[di
         oz, gun_basi, kasa = kasa_bilgi
         gun = oz - gun_basi
         satirlar.append(f"💰 Kasa: {tr_sayi(oz)} $ · bugün {'🟢' if gun >= 0 else '🔻'} {tr_isaretli(gun)} $ ({_yuzde1(gun / kasa)})")
+    if kucult_satir:
+        satirlar.append(kucult_satir)                      # K-77: tek satır (ayrı mesaj yok)
     return "\n".join(satirlar)
 
 
 def msg_sanal_saatlik_bos(bas_ms: int, bit_ms: int, sure_dk: float, atlanan: dict[str, int], kasa_bilgi: tuple[float, float, float] | None = None,
-                          atla_islem: int | None = None, atla_adres: dict[str, dict[str, int]] | None = None, drift_satir: str = "") -> str:
+                          atla_islem: int | None = None, atla_adres: dict[str, dict[str, int]] | None = None, drift_satir: str = "", kucult_satir: str = "") -> str:
     """SANAL kip: pencerede emir YOK ama sistem canlı (`canli_telegram_sanal_bos_mesaj`). Tek kısa satır grubu; emir sayısı 0."""
     sure = f"{int(sure_dk // 60)} saat" if sure_dk >= 60 and sure_dk % 60 == 0 else f"{sure_dk:.0f} dk"
     satirlar = [f"🧾 Son {sure} ({_tsi_saat(bas_ms)}–{_tsi_saat(bit_ms)} TSİ): emir yok · sistem çalışıyor"]
     satirlar += atlanan_satirlari(atlanan, atla_islem, atla_adres)
     if drift_satir:
         satirlar.append(drift_satir)
+    if kucult_satir:
+        satirlar.append(kucult_satir)
     if kasa_bilgi is not None and kasa_bilgi[2] > 0:
         oz, gun_basi, kasa = kasa_bilgi
         gun, top = oz - gun_basi, oz - kasa
