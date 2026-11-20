@@ -209,7 +209,7 @@ class Olcum:
                     pencere[ad].kacan_sinif[sinif] = pencere[ad].kacan_sinif.get(sinif, 0) + 1
                 if sinif == "gercek":
                     gercek += 1
-                if sinif in ("gercek", "kopma_araligi"):      # Denetim-8 (O11): kaçan perp dolum yalnız sayılmaz; dolgu yoluyla İŞLENİR (kapanış geç de olsa uygulanır; açılış `canli_olay_stale_sn` ile reddedilir)
+                if sinif in ("gercek", "kopma_araligi"):      # Denetim-8 (O11): kaçan perp dolum yalnız sayılmaz; dolgu yoluyla İŞLENİR (kapanış/azaltma geç de olsa uygulanır; açılış/artırma motorda `gec_goruldu_alinmaz` ile reddedilir, K-83)
                     self.dolgu_yeni.append((ad, f))
         for pencere in (self.toplam, self.saat):
             pencere[ad].kacan += gercek

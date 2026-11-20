@@ -23,7 +23,7 @@ Okuma notu: "(doğrulanmadı)" = Binance dokümanının kendisini bu ortamdan ok
             |
             v
  +-------------------------------+
- |  CT MOTOR (motor.py)          |  filtreler (K-73), K-76 ara dolum sayacı, K-75 telafi, K-77, slot/tavanlar
+ |  CT MOTOR (motor.py)          |  filtreler (K-73), K-76 ara dolum sayacı, K-83 (telafi YOK; kaçan açılış alınmaz), K-77, slot/tavanlar
  |  hesap.py (defter)            |  risk.py (günlük kayıp), borsa_stop.py (stop eşitleme), mutabakat
  +---------------+---------------+
                  |  Yurutucu arayüzü:  emir(...) / hazirla(...) / stop_koy / stop_durum / stop_iptal
@@ -156,7 +156,7 @@ Eşleme tablosu: `copytrade/canli/binance_eslesme.yaml` (öneri); her satır `hl
 
 ## 4. Kâğıt (sanal) Binance yürütme
 
-Kural K-73: kâğıtta hiçbir özellik kapalı/gölge/yalnız-kayıt kalmaz; Binance kâğıt kipi de TÜM mevcut sanal özellikleri (filtreler, K-74 dinamik stop, K-75 telafi, K-76, K-77, iz süren koruma, sanal tasfiye) açık çalıştırır. Kalite kapıları yalnız gerçek içindir.
+Kural K-73: kâğıtta hiçbir özellik kapalı/gölge/yalnız-kayıt kalmaz; Binance kâğıt kipi de TÜM mevcut sanal özellikleri (filtreler, K-74 dinamik stop, K-83 kaçan-işlem-telafisiz kural, K-76, K-77, iz süren koruma, sanal tasfiye) açık çalıştırır. Kalite kapıları yalnız gerçek içindir.
 
 ### 4.1 Dolum modeli
 

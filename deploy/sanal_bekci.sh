@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Sunucu SANAL motoru: 60 dk BEKÇİ + otomatik geri dönüş (K-80; root; sg-sanal-bekci.service/.timer, 5 dk'da bir).
 # Güncelleme betiği (sanal_guncelle.sh) başarılı NORMAL kurulumdan sonra $DURUM/bekci yazar (epoch / yeni sha / önceki sha / motor önceden aktif mi). Bu betik işaret varken her 5 dk'da sağlık sayaçlarına bakar:
-#   motor yeniden başlama (günlük 'Scheduled restart job'), bekci_tetik, Telegram hata/429, kacan_telafi_hata, hata olayları (adim/olay/defter) — hepsi KURULUMDAN BERİ sayılır — ve motor aktif değil (üst üste 2 tur).
+#   motor yeniden başlama (günlük 'Scheduled restart job'), bekci_tetik, Telegram hata/429, hata olayları (adim/olay/defter) — hepsi KURULUMDAN BERİ sayılır — ve motor aktif değil (üst üste 2 tur).
 # Eşik aşılırsa: SANAL_HEDEF_SHA=<önceki> SANAL_GERI_NEDEN=<neden> SANAL_KOTU_SHA=<yeni> ile sanal_guncelle.sh çağrılır (aynı geri alma yolu: durdur, reset, duman testi, başlat); tek ⚠️ "Yeni sürüm sorun çıkardı, önceki
 #   sürüme dönüldü (neden)" gider; bozuk sha kotu_sha olur (sonraki pencerede aynı sürüm tekrar kurulmaz). 60 dk sorunsuz geçerse işaret silinir. Eşikler ortamdan (varsayılanlar aşağıda; elle ayar: systemctl edit sg-sanal-bekci).
 # Güncelleme sürerken (kilit dolu) o tur atlanır. İşaretteki sha HEAD ile uyuşmuyorsa (araya elle geri alma/güncelleme girdi) işaret bayat sayılıp silinir. Telegram bildirimini sanal_guncelle.sh yapar; burada sır yok.
@@ -17,7 +17,6 @@ PENCERE_SN="${BEKCI_PENCERE_SN:-3600}"            # izleme süresi
 ESIK_YENIDEN="${BEKCI_ESIK_YENIDEN:-3}"           # kurulumdan beri motor yeniden başlama >= 3 (dayanıklılık alarmı da >2 der)
 ESIK_TETIK="${BEKCI_ESIK_TETIK:-1}"               # bekçi motoru öldürdü >= 1 (motor donmuş demektir)
 ESIK_TELEGRAM="${BEKCI_ESIK_TELEGRAM:-5}"         # telegram_hata + 429 >= 5 (saglik.py TELEGRAM_HATA_UYARI ile aynı)
-ESIK_TELAFI="${BEKCI_ESIK_TELAFI:-3}"             # kacan_telafi_hata >= 3
 ESIK_HATA="${BEKCI_ESIK_HATA:-8}"                 # adim_hata + olay_hata + defter_hata >= 8 (tek tek geçici HL hatalarına dayanıklı)
 SAYAC="$(dirname "$0")/sanal_bekci_say.py"
 log() { echo "bekci: $*"; }
@@ -40,10 +39,9 @@ sayac="$(python3 -I "$SAYAC" "$DEPO/kayit" "$b_epoch" 2>/dev/null || echo '{}')"
 sayi() { printf '%s' "$sayac" | python3 -c 'import json,sys
 try: print(int(json.load(sys.stdin).get(sys.argv[1], 0)))
 except Exception: print(0)' "$1"; }
-tetik="$(sayi bekci_tetik)"; tg="$(sayi telegram)"; telafi="$(sayi kacan_telafi_hata)"; hata="$(sayi hata)"
+tetik="$(sayi bekci_tetik)"; tg="$(sayi telegram)"; hata="$(sayi hata)"
 [ "$tetik" -ge "$ESIK_TETIK" ] && ekle "bekçi motoru ${tetik} kez yeniden başlattı"
 [ "$tg" -ge "$ESIK_TELEGRAM" ] && ekle "Telegram hata/429 ${tg}"
-[ "$telafi" -ge "$ESIK_TELAFI" ] && ekle "kaçan işlem telafisi ${telafi} kez hata verdi"
 [ "$hata" -ge "$ESIK_HATA" ] && ekle "hata olayı ${hata}"
 if [ "$b_motor" = 1 ] && [ ! -f "$DEPO/durum/DUR" ]; then   # motor aktif değil: üst üste 2 tur (systemd yeniden başlatma boşluğu tek turda yanlış alarm vermesin)
   if "$SYSTEMCTL" is-active --quiet sg-sanal; then rm -f -- "$DURUM/bekci_pasif"
@@ -58,6 +56,6 @@ if [ -n "$neden" ]; then
   rm -f -- "$BEKCI"
   exit 0
 fi
-if [ "$gecen" -ge "$PENCERE_SN" ]; then log "60 dk sorunsuz geçti (yeniden=${yeniden} tetik=${tetik} tg=${tg} telafi=${telafi} hata=${hata}); bekçi bitti"; rm -f -- "$BEKCI" "$DURUM/bekci_pasif"; exit 0; fi
-log "izleniyor: $((gecen / 60)) dk; yeniden=${yeniden} tetik=${tetik} tg=${tg} telafi=${telafi} hata=${hata}"
+if [ "$gecen" -ge "$PENCERE_SN" ]; then log "60 dk sorunsuz geçti (yeniden=${yeniden} tetik=${tetik} tg=${tg} hata=${hata}); bekçi bitti"; rm -f -- "$BEKCI" "$DURUM/bekci_pasif"; exit 0; fi
+log "izleniyor: $((gecen / 60)) dk; yeniden=${yeniden} tetik=${tetik} tg=${tg} hata=${hata}"
 exit 0
