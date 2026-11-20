@@ -19662,7 +19662,8 @@
   "0x69369ad76474577121293fcf015a4c90e49b9417:912058394831675",
   "0x69369ad76474577121293fcf015a4c90e49b9417:1022730292852875",
   "0x59629e23c52a0d7c092436870ef2db1dc382ddf8:1090161095605658",
-  "0x59629e23c52a0d7c092436870ef2db1dc382ddf8:85553236013947"
+  "0x59629e23c52a0d7c092436870ef2db1dc382ddf8:85553236013947",
+  "kapat:0xdebd491a259a242fc9bd8fd780a507e8e062b67a:BNB:1795202112620:0:tam_kapanis"
  ],
  "kaldirac_tr": {
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": {
@@ -20194,14 +20195,14 @@
  "kasa_ayar_usd": 10000.0,
  "kasa_usd": 10000.0,
  "kaynak": {
-  "cgroup_mb": 65.0,
-  "cgroup_tepe_mb": 72.0,
+  "cgroup_mb": 28.6,
+  "cgroup_tepe_mb": 28.6,
   "disk_bos_gb": 63.62,
   "disk_toplam_gb": 66.76,
-  "olc_ms": 1795204930779,
-  "ram_mb": 83.2,
-  "ram_tepe_mb": 88.8,
-  "yuk_1dk": 0.01
+  "olc_ms": 1795204976115,
+  "ram_mb": 41.8,
+  "ram_tepe_mb": 41.8,
+  "yuk_1dk": 0.15
  },
  "kip": "sanal",
  "kopya_drift": {
@@ -21597,6 +21598,6 @@
  "ucret_gercek_usd": 0.0,
  "ucret_tahmin_say": 0,
  "vardiya": "sunucu",
- "yazildi_ms": 1795204930780,
+ "yazildi_ms": 1795204976116,
  "yetim_ilk": {}
 }
