@@ -99,4 +99,4 @@ def test_sanal_bozuk_dosya_alarm_kayit_ile_baslar_kilitlenmez(tmp_path):
     m1, _, _, tgp = kur(tmp_path)
     assert m1.durum_bozuk == ["hesap.json"] and (tmp_path / "durum" / "hesap.json.bozuk").read_text(encoding="utf-8") == "{"
     m1.baslat()
-    assert kayitlar(tmp_path, "durum_bozuk")[-1]["dosyalar"] == ["hesap.json"] and any("durum dosyası bozuk" in x for x in tgp.gonderilen)
+    assert kayitlar(tmp_path, "durum_bozuk")[-1]["dosyalar"] == ["hesap.json"] and any("durum dosyası bozuk" in x.lower() for x in tgp.gonderilen)

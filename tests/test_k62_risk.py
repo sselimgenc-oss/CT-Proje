@@ -53,7 +53,7 @@ def test_motor_felaket_stopu_yuzde_20_aleyhe_pozisyonu_kapatir_trader_sahada_kal
     hl.kitaplar["SOL"] = {"levels": [[{"px": "79.9", "sz": "100000"}], [{"px": "80", "sz": "100000"}]]}
     m.dakika()
     assert m.hesap.sz(adr(1), "SOL") == 0.0 and adr(1) in m.saha.uyeler
-    assert any(x["olay"] == "felaket_stop" and x["coin"] == "SOL" and x["kapandi"] for x in kayitlar(tmp_path)) and any("felaket stopu" in x for x in tgp.gonderilen)
+    assert any(x["olay"] == "felaket_stop" and x["coin"] == "SOL" and x["kapandi"] for x in kayitlar(tmp_path)) and any("felaket stopu" in x.lower() for x in tgp.gonderilen)
 
 
 def test_risk_sig_coin_tavani_slotla_olceklenir_f01():

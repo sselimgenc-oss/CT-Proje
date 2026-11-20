@@ -220,6 +220,19 @@ SUNUCU_SAGLIK_YOL = "/var/lib/sg-sanal/saglik_sunucu.json"        # deploy/sanal
 SUNUCU_SAGLIK_ESKI_SN = 3 * 3600                                   # bundan eski ölçüm bayat sayılır (null)
 
 
+def guncelleme_bugun(ortam: dict | None = None) -> int | None:
+    """Sunucu sağlık dosyasındaki 'guncelleme_bugun' (deploy/sanal_guncelle.sh yazar: bugün (UTC) kaç güncelleme uygulandı). Dosya yok/bayat/bozuk/0 → None (günlük rapora satır girmez)."""
+    try:
+        yol = (ortam if ortam is not None else os.environ).get("SG_SAGLIK_SUNUCU") or SUNUCU_SAGLIK_YOL
+        d = json.loads(Path(yol).read_text(encoding="utf-8"))
+        if time.time() - float(d["zaman"]) > SUNUCU_SAGLIK_ESKI_SN:
+            return None
+        n = d.get("guncelleme_bugun")
+        return n if isinstance(n, int) and not isinstance(n, bool) and n > 0 else None
+    except Exception:                                              # noqa: BLE001
+        return None
+
+
 def _sunucu_saglik(ortam: dict | None = None) -> dict:
     """Sunucu dayanıklılık alanları (yeni, ek): yeniden_baslama_1s (son 1 saatte sg-sanal yeniden başlama), oom_son (son 1 saatte OOM-kill). Dosya yok/bayat/bozuk -> None. Hata yutulur."""
     bos = {"yeniden_baslama_1s": None, "oom_son": None}

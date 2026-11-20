@@ -122,6 +122,7 @@ def test_belirsiz_yonlu_tutulmayan_coin_izlenmez(tmp_path):
 
 def _ozetli(tmp_path):
     m, saat, tgp, a = hazir(tmp_path)
+    m.tg.bastirilan.discard("emir_ozeti")
     t = saat()
     m.kopya_drift_adimi(t)
     m.kopya_drift_adimi(t + 31 * DK)                                # BTC drift aktif
@@ -134,16 +135,17 @@ def test_saatlik_ozette_tek_drift_satiri_ve_6_saat_siniri(tmp_path):
     gonder = len(m.tg.gonderilen)
     m._saatlik_ozet(t + 32 * DK + 3_600_000, 60, True)
     yeni = m.tg.gonderilen[gonder:]
-    assert len(yeni) == 1 and yeni[0].count("Kopya sapması") == 1 and "1 coin, en büyük BTC %100" in yeni[0]
+    assert len(yeni) == 1 and "Kopya sapması" not in yeni[0]                       # kullanıcı standardı: sapma satırı mesajda yok (yalnız kayıt)
     assert tg.onem_duzeyi(yeni[0]) == "INFO"
+    assert [k["tur"] for k in kayitlar(tmp_path, "tg_bastirildi") if k["tur"] == "kopya_sapmasi"] == ["kopya_sapmasi"] and "1 coin, en büyük BTC %100" in [k for k in kayitlar(tmp_path, "tg_bastirildi") if k["tur"] == "kopya_sapmasi"][0]["metin"]
     m._emir_tampon = [{"adres": adr(1), "coin": "BTC", "yon": "B", "usd": 20.0, "durum": "dolu", "eylem": "ac", "kayma": 0.0}]
     gonder = len(m.tg.gonderilen)
     m._saatlik_ozet(t + 32 * DK + 2 * 3_600_000, 60, True)           # 6 saat dolmadı: satır yok
-    assert "Kopya sapması" not in "".join(m.tg.gonderilen[gonder:])
+    assert len([k for k in kayitlar(tmp_path, "tg_bastirildi") if k["tur"] == "kopya_sapmasi"]) == 1      # 6 saat dolmadı: yeni kayıt yok
     m._emir_tampon = [{"adres": adr(1), "coin": "BTC", "yon": "B", "usd": 20.0, "durum": "dolu", "eylem": "ac", "kayma": 0.0}]
     gonder = len(m.tg.gonderilen)
     m._saatlik_ozet(t + 32 * DK + 7 * 3_600_000, 60, True)           # 6 saat doldu: yine bir satır
-    assert "".join(m.tg.gonderilen[gonder:]).count("Kopya sapması") == 1
+    assert len([k for k in kayitlar(tmp_path, "tg_bastirildi") if k["tur"] == "kopya_sapmasi"]) == 2      # 6 saat doldu: bir kayıt daha
 
 
 def test_drift_satiri_bicimi():

@@ -95,4 +95,4 @@ def test_hata_ya_da_beklenmeyen_bicim_cozulmemis_kalir_sayac_sifirlanir(tmp_path
 def test_surekli_tuhaf_yanit_hic_cozmez_5_denemede_alarm(tmp_path, monkeypatch):
     m, sim, saat, tgp = _belirsiz_kur(tmp_path, monkeypatch, [{"error": "x"}] * 8)
     _dk(m, saat, 6)
-    assert len(m.hesap.belirsiz) == 1 and m.risk.acilis_durdu["belirsiz"] is True and any("belirsiz emir çözülemiyor" in x for x in tgp.gonderilen)
+    assert len(m.hesap.belirsiz) == 1 and m.risk.acilis_durdu["belirsiz"] is True and any("belirsiz emir çözülemiyor" in x.lower() for x in tgp.gonderilen)

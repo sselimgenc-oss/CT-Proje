@@ -59,7 +59,7 @@ def test_y1_altin_dur_yarim_kaldi_yeniden_baslatma_ilk_dakikada_iki_pozisyonu_ka
     m2, *_ = kur_gercek(tmp_path, monkeypatch, sim, saat=saat, tgp=tgp2)
     m2.baslat()
     assert m2.risk.dur and m2.dur_bekliyor and sorted(m2.kapanis_kuyrugu) == [f"{adr(1)}|BTC", f"{adr(1)}|ETH"]
-    assert any(x.startswith("🛑") and "DUR yarım kalmıştı: zirve_dusus" in x and "2 açık pozisyon kapanış kuyruğuna alındı" in x for x in tgp2.gonderilen)
+    assert any(x.startswith("🛑") and "DUR yarım kalmıştı: zirve dusus" in x and "2 açık pozisyon kapanış kuyruğuna alındı" in x for x in tgp2.gonderilen)
     k = kayitlar(tmp_path, "dur_yeniden_kapanis")
     assert len(k) == 1 and k[0]["neden"] == "zirve_dusus" and k[0]["kuyruk"] == 2 and k[0]["yerel_poz"] == 2 and k[0]["borsa_acik"] is None
     m2.dakika()                                                                                    # ilk dakikalık adım (aynı an: geri çekilme beklemesi yok)
