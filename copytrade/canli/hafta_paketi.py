@@ -345,6 +345,22 @@ def yazilacak_mi(simdi_ms: int, paylasim: Path) -> date | None:
     return None if (Path(paylasim) / f"CT_HAFTA_{pazar.isoformat()}.md").exists() else pazar
 
 
+RADAR_YENILE_MS = 3_600_000
+
+
+def onyukle(motor: Any) -> None:
+    """Radar okumasını (ağ) motor kilidi DIŞINDA yapar: `dakika()` kilidi almadan önce çağırır; sonuç `motor._radar_onbellek = (pazar, radar, ms)` (en çok saatte bir yenilenir).
+    `yaz_gerekirse` (kilit altında) yalnız bu önbelleği okur. Yazım penceresi dışında hiçbir şey yapmaz. Hata çağırana çıkar (çağıran yutar)."""
+    simdi = int(motor.saat_ms())
+    pazar = yazilacak_mi(simdi, Path(motor.durum_dizin) / "paylasim")
+    if pazar is None:
+        return
+    on = getattr(motor, "_radar_onbellek", None)
+    if on and on[0] == pazar and simdi - on[2] < RADAR_YENILE_MS:
+        return
+    motor._radar_onbellek = (pazar, radar_oku(motor.rules, pazar), simdi)
+
+
 def yaz_gerekirse(motor: Any, radar_okuyucu: Callable[[dict, date], list[dict] | None] | None = None) -> bool:
     """`gunluk_ozet.yaz_gerekirse` kancası (hata çağırana çıkar; çağıran yutar). Yazıldıysa True."""
     simdi = int(motor.saat_ms())
@@ -352,11 +368,15 @@ def yaz_gerekirse(motor: Any, radar_okuyucu: Callable[[dict, date], list[dict] |
     pazar = yazilacak_mi(simdi, paylasim)
     if pazar is None:
         return False
-    okuyucu = radar_okuyucu or radar_oku
-    try:
-        radar = okuyucu(motor.rules, pazar)
-    except Exception:                                                  # noqa: BLE001
-        radar = None
+    on = getattr(motor, "_radar_onbellek", None)
+    if radar_okuyucu is None and on and on[0] == pazar:                # dakika() kilit DIŞINDA önceden okudu: kilit altında ağ yok (denetim D1)
+        radar = on[1]
+    else:
+        okuyucu = radar_okuyucu or radar_oku                           # önbellek yoksa (dakika() dışı çağrı) eski yol
+        try:
+            radar = okuyucu(motor.rules, pazar)
+        except Exception:                                              # noqa: BLE001
+            radar = None
     metin = olustur(paylasim, pazar, radar, gecmis_oku(Path(motor.durum_dizin)))
     _yaz_atomik(paylasim / f"CT_HAFTA_{pazar.isoformat()}.md", metin)
     _yaz_atomik(paylasim / SON, metin)

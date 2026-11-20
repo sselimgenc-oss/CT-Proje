@@ -2,7 +2,7 @@
 
 Kaynaklar (ücretsiz, anahtarsız):
 - Piyasa duygusu: alternative.me Crypto Fear & Greed Index (`/fng/?limit=1`) -> `{deger 0-100, sinif}`.
-- Haber: herkese açık RSS (CoinDesk, Cointelegraph); stdlib `xml.etree`, yeni bağımlılık yok. Son 24 saatte coin'i anan başlık sayısı.
+- Haber: herkese açık RSS (CoinDesk, Cointelegraph); `defusedxml` (DTD/ENTITY yasak; paket yoksa RSS kapalı), 2 MB üst sınır. Son 24 saatte coin'i anan başlık sayısı.
 
 UYARI: ton etiketi KABA bir anahtar kelime sayımıdır (İngilizce başlık, bağlam/olumsuzlama anlaşılmaz). Gerçek kipte yalnız bilgidir (karar yoluna girmez); sanalda `_sanal_acilis_filtresi` kullanır.
 Her hata (ağ, zaman aşımı, bozuk XML/JSON) sessizce yutulur: son önbellek korunur; fonksiyonlar istisna fırlatmaz.
@@ -11,15 +11,20 @@ from __future__ import annotations
 
 import re
 import time
-import xml.etree.ElementTree as ET
 from email.utils import parsedate_to_datetime
 from typing import Any, Callable
+
+try:
+    from defusedxml import ElementTree as _GUVENLI_ET   # DTD/ENTITY/dış varlık reddedilir (DefusedXmlException)
+except ImportError:                                       # yoksa RSS KAPALI (güvenli taraf): stdlib xml.etree ile ayrıştırma yapılmaz
+    _GUVENLI_ET = None
 
 ZAMAN_ASIMI_SN = 5
 TOPLAM_BUTCE_SN = 12                      # bir okumadaki tüm ağ çağrıları için üst sınır; aşılırsa kalan kaynaklar atlanır
 PENCERE_MS = 24 * 3600 * 1000
 SAKLA_MS = 25 * 3600 * 1000
 EN_FAZLA_BASLIK = 150
+RSS_EN_FAZLA_BAYT = 2_000_000             # bundan büyük RSS reddedilir (bellek/CPU koruması)
 DUYGU_BAYAT_MS = 26 * 3600 * 1000         # endeks günlüktür; bundan eski okuma kayda yazılmaz
 
 POZITIF = ("surge", "rally", "soar", "gain", "jump", "record", "approv", "bullish", "adopt", "rise", "rebound", "breakout", "inflow")
@@ -84,9 +89,11 @@ def rss_coz(icerik: Any, simdi_ms: int) -> list[dict]:
     DTD/ENTITY içeren belge reddedilir (genişleme saldırısı)."""
     try:
         ham = icerik if isinstance(icerik, (bytes, bytearray)) else str(icerik).encode("utf-8")
-        if b"<!DOCTYPE" in ham.upper() or b"<!ENTITY" in ham.upper():
+        if len(ham) > RSS_EN_FAZLA_BAYT:
             return []
-        kok = ET.fromstring(ham)
+        if _GUVENLI_ET is None:
+            return []
+        kok = _GUVENLI_ET.fromstring(ham, forbid_dtd=True)
         cikti = []
         for oge in kok.iter("item"):
             baslik = (oge.findtext("title") or "").strip()

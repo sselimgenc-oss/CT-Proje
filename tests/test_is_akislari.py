@@ -743,7 +743,7 @@ def test_ci_ruff_sabit_surumle_yalniz_hata_kurallari_ve_testten_once():
 def test_requirements_kullanilmayan_paketleri_icermez():
     """09.11 temizlik: içe aktarılmayan paketler (yfinance, pynescript, antlr4, duckdb, pyarrow) requirements.txt'ten çıkarıldı; geri gelmez."""
     paketler = {s.split("==")[0].strip().lower() for s in (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines() if s.strip() and not s.startswith("#")}
-    assert paketler == {"pandas", "pytest", "requests", "pyyaml", "websockets"}          # websockets önce yfinance üzerinden dolaylı geliyordu; dinleyici/hl_public_adapter kullanır, açıkça sabitlendi (requirements-canli ile aynı sürüm)
+    assert paketler == {"defusedxml", "pandas", "pytest", "requests", "pyyaml", "websockets"}          # defusedxml (CT denetim: haber RSS, bandit B314; kullanılıyor: copytrade/canli/haber.py); websockets önce yfinance üzerinden dolaylı geliyordu; dinleyici/hl_public_adapter kullanır, açıkça sabitlendi (requirements-canli ile aynı sürüm)
 
 
 def test_g23_ucuncu_taraf_eylemler_tam_commit_sha_ile_sabit():

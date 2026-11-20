@@ -5,6 +5,8 @@
 #   -> duman testi: sg-sanal-kontrol "tamam": true -> servisleri başlat, ~60 sn sonra sg-sanal aktif mi. Haftada bir (bakim): git gc --auto + worktree prune.
 # Sunucu dayanıklılık alarmı (alarm_kontrol): her çalışmada, tüm erken çıkışlardan (dondurma, aynı sha, CI) ÖNCE; hata güncellemeyi bozmaz. Son 1 saatte >2 yeniden başlama veya OOM-kill -> [CT] CRIT (tür başına 6 saatte bir); düzelince tek [CT] INFO.
 # HERHANGİ bir hata: git reset --hard <önceki sha>, kilit/birimler geri, servisler yeniden başlar, Telegram [CT] CRIT. Başarıda [CT] INFO.
+# Yarım kalan güncelleme (D9): servisler durdurulmadan ÖNCE $DURUM/yarim yazılır (önceki/yeni sha, motor/zamanlayıcı durumu); başarı ya da geri alma sonunda silinir. Betik arada öldürülürse (SIGKILL/OOM/zaman aşımı) sonraki çalışma
+#   bu işareti görür: birleştirme olduysa uygulama yolunu (pip/birim/duman/başlat) TAMAMLAR, olmadıysa eski sürümü başlatır; tek ⚠️ satır. Kasıtlı duruş (durum/DUR, $DURUM/dondur) ezilmez: motor başlatılmaz.
 # Yerel durum (durum/ kayit/ pano/ depoda İZLENMEZ) git tarafından silinmez; yine de gelen commit bu yolları izlemeye başlarsa güncelleme REDDEDİLİR.
 # Sır: yalnız /etc/sg-sanal-telegram.env'den (token curl'e stdin ile verilir; argv/günlüğe girmez). Betik kendini geçici kopyadan çalıştırır (git merge çalışan dosyayı değiştirmesin).
 set -uo pipefail
@@ -31,6 +33,9 @@ ALARM_SINIR="${SANAL_ALARM_YENIDEN_SINIR:-2}"                       # son 1 saat
 ALARM_ARA_SN="${SANAL_ALARM_ARA_SN:-21600}"                         # aynı alarm türü en çok 6 saatte bir
 KILIT="${SANAL_GUNCELLE_KILIT:-/run/sg-sanal-guncelle.lock}"
 BEKLE="${GUNCELLE_BEKLE_SN:-60}"
+YARIM="$DURUM/yarim"                                                 # güncelleme sürerken var (D9)
+YEDEK="$DURUM/yedek_birimler"                                        # birim yedeği kalıcı dizinde (yarım kalırsa geri alma yedeği yaşasın)
+devam=0
 HEDEF="${SANAL_HEDEF_SHA:-}"                                       # elle geri alma kipi (sanal_geri_al.sh)
 GIT_SSH="ssh -i $SERIT/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$SERIT/.ssh/known_hosts -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=3"
 ZORUNLU_CI="test canli_sdk"
@@ -143,6 +148,7 @@ geri_al() {   # $1 = neden
   sleep "$BEKLE"
   motor_saglam || motor_durum="DEĞİL (elle bakın: journalctl -u sg-sanal)"
   printf '%s\n' "$yeni" > "$DURUM/kotu_sha"
+  rm -f -- "$YARIM"; rm -rf -- "$YEDEK"
   bildir WARN "⚠️ Bot güncellemesi başarısız, eski sürümle devam ediyor"
   exit 1
 }
@@ -235,7 +241,31 @@ SLUG="${GUNCELLE_REPO:-$(g remote get-url origin | sed -E 's#^.*github\.com[:/]+
 [[ "$SLUG" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { log "depo adı çıkarılamadı ($SLUG)"; exit 1; }
 
 head="$(g rev-parse HEAD)" || exit 1
-if [ -n "$HEDEF" ]; then
+if [ -z "$HEDEF" ] && [ -s "$YARIM" ]; then   # önceki güncelleme yarıda kesildi (D9)
+  { read -r y_onceki; read -r y_yeni; read -r y_motor; read -r y_zaman; } < "$YARIM" || true
+  if ! [[ "$y_onceki" =~ ^[0-9a-f]{40}$ ]] || ! [[ "$y_yeni" =~ ^[0-9a-f]{40}$ ]]; then
+    log "yarım güncelleme işareti bozuk; silindi"; rm -f -- "$YARIM"
+  elif [ -f "$DEPO/durum/DUR" ]; then
+    log "yarım güncelleme işareti var ama durum/DUR (kasıtlı duruş) var; motor başlatılmaz"; rm -f -- "$YARIM"; rm -rf -- "$YEDEK"
+  else
+    aktif_motor="$y_motor"; aktif_zaman="$y_zaman"
+    if [ "$head" = "$y_onceki" ]; then   # birleştirme olmamış: eski sürümle servisleri geri aç, normal akış sürsün
+      log "yarım güncelleme (birleştirme öncesi) bulundu; eski sürümle servisler başlatılıyor"
+      baslat_hepsi || log "UYARI: servisler başlatılamadı"
+      rm -f -- "$YARIM"; rm -rf -- "$YEDEK"
+      bildir WARN "⚠️ Yarım kalan güncelleme tamamlandı, bot yeniden başlatıldı"
+    else                                  # birleştirme olmuş: uygulama yolunu tamamla
+      devam=1; onceki="$y_onceki"; yeni="$head"
+      lock_degisti=0; birim_degisti=0
+      g diff --quiet "$onceki" "$yeni" -- requirements-canli.lock || lock_degisti=1
+      konu="$(g log -1 --format=%s "$yeni" | tr -d '\000-\037' | cut -c1-120)"
+      log "yarım kalan güncelleme tamamlanıyor: ${onceki:0:7} -> ${yeni:0:7} (${konu}); kilit değişti=$lock_degisti"
+      mkdir -p "$YEDEK"
+    fi
+  fi
+fi
+if [ "$devam" = 1 ]; then :
+elif [ -n "$HEDEF" ]; then
   yeni="$(g rev-parse --verify -q "${HEDEF}^{commit}")" || { log "hedef commit bulunamadı: $HEDEF"; exit 1; }
   onceki="$head"
 else
@@ -259,6 +289,7 @@ else
   if [ "$ci" != yesil ]; then log "CI yeşil değil/yok (${ci#kirmizi:}); ${yeni:0:7} uygulanmadı"; exit 0; fi
 fi
 
+if [ "$devam" != 1 ]; then   # (yarım kalan güncelleme devamında: denetimler/durdurma/birleştirme zaten yapıldı)
 # durum/ kayit/ pano/ yerel durumdur: gelen commit bunları izlemeye başlarsa dokunma
 if [ -n "$(g diff --name-only "$head" "$yeni" -- durum kayit pano)" ]; then
   log "hedef commit durum/ kayit/ pano/ yollarını içeriyor; yerel durum korunsun diye REDDEDİLDİ"
@@ -274,12 +305,14 @@ log "güncelleme: ${onceki:0:7} -> ${yeni:0:7} (${konu}); kilit değişti=$lock_
 aktif_motor=0; aktif_zaman=""
 aktif sg-sanal && aktif_motor=1
 for t in $ZAMANLAYICILAR; do if aktif "$t"; then aktif_zaman="$aktif_zaman $t"; fi; done
-YEDEK="$(mktemp -d)" || exit 1
+rm -rf -- "$YEDEK"; mkdir -p "$YEDEK" || exit 1
 for f in "$BIRIM_DIZIN"/sg-sanal*.service "$BIRIM_DIZIN"/sg-sanal*.timer; do [ -f "$f" ] && cp -- "$f" "$YEDEK/"; done
+printf '%s\n%s\n%s\n%s\n' "$onceki" "$yeni" "$aktif_motor" "$aktif_zaman" > "$YARIM.tmp" && mv -f -- "$YARIM.tmp" "$YARIM" || exit 1      # durdurmadan ÖNCE (D9)
 
 "$SYSTEMCTL" stop $ZAMANLAYICILAR || true
 "$SYSTEMCTL" stop sg-sanal || geri_al "sg-sanal durdurulamadı"           # durdururken son durum yayımlanır
 if [ -n "$HEDEF" ]; then g reset -q --hard "$yeni" || geri_al "git reset başarısız"; else g merge -q --ff-only "$yeni" || geri_al "git merge --ff-only başarısız"; fi
+fi
 if [ "$lock_degisti" = 1 ]; then pip_kur || geri_al "pip install başarısız"; fi
 birimleri_kur || geri_al "birim dosyaları kurulamadı"
 duman_testi || geri_al "duman testi (sg-sanal-kontrol) başarısız"
@@ -289,7 +322,8 @@ motor_saglam || geri_al "sg-sanal ${BEKLE} sn sonra aktif değil"
 
 [ -f "$BIRIM_DIZIN/sg-sanal-ikinci-alarm.timer" ] && { "$SYSTEMCTL" enable --now sg-sanal-ikinci-alarm.timer >/dev/null 2>&1 || log "ikinci alarm zamanlayıcısı açılamadı"; }   # bot durdu 20 dk ikinci mesaj (elle kurulum gerekmesin)
 printf '%s\n' "$yeni" > "$DURUM/uygulanan_sha"
-rm -f "$DURUM/kotu_sha" "$DURUM/reddedilen"; rm -rf "$YEDEK"
+rm -f "$DURUM/kotu_sha" "$DURUM/reddedilen" "$YARIM"; rm -rf "$YEDEK"
+if [ "$devam" = 1 ]; then bildir WARN "⚠️ Yarım kalan güncelleme tamamlandı, bot yeniden başlatıldı"; fi
 if [ -n "$HEDEF" ]; then
   bildir WARN "⚠️ Bot önceki sürüme döndürüldü"                                # tek satır; sürüm numaraları günlükte
   log "elle geri alındı: ${onceki:0:7}→${yeni:0:7} (${konu})"
