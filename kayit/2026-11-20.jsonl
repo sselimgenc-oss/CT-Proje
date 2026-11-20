@@ -1519,3 +1519,15 @@
 {"zaman_ms":1795160991414,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:MSFT","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1795160991043,"gorme_ms":1795160991413,"yas_ms":371}
 {"zaman_ms":1795161021411,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:MSFT","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1795161021006,"gorme_ms":1795161021410,"yas_ms":405}
 {"zaman_ms":1795161051501,"olay":"emir_yok","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:MSFT","eylem":"artir","karar":"atlandi","neden":"bant_ici","trader_dolum_ms":1795161051073,"gorme_ms":1795161051501,"yas_ms":428}
+{"zaman_ms":1795161359635,"olay":"kopya_drift","coin":"ETH","biz_usd":1164.04,"ideal_usd":1561.35,"drift":0.254,"sure_dk":30}
+{"zaman_ms":1795161631999,"olay":"funding","saat":498656,"saat_adet":1,"funding_usd":-0.16348665785081226,"toplam_funding_usd":-0.4878824713707205}
+{"zaman_ms":1795161664860,"olay":"tur","ozsermaye_usd":10008.9569}
+{"zaman_ms":1795161933308,"olay":"tg_bastirildi","tur":"kopya_sapmasi","metin":"📐 Kopya sapması: 7 coin, en büyük AERO %103 (yalnız bilgi)"}
+{"zaman_ms":1795161933308,"olay":"tg_bastirildi","tur":"emir_ozeti","metin":"🧾 Son 1 saat: 1 emir (1 artırma) · sanal\n💰 Kasa: 10.007,14 $ · bugün 🟢 +11,42 $ (+%0,1)"}
+{"zaman_ms":1795161933309,"olay":"tg_mesaj","tur":"emir_ozeti","anahtar":null,"seviye":"INFO","sessiz":false,"metin":"🧾 Son 1 saat: 1 emir (1 artırma) · sanal\n💰 Kasa: 10.007,14 $ · bugün 🟢 +11,42 $ (+%0,1)","gonderildi":false,"bastirildi":true}
+{"zaman_ms":1795161933911,"olay":"rejim_degisti","coin":"ETH","onceki":"range","yeni":"trend_down","1d":"trend_down"}
+{"zaman_ms":1795161933912,"olay":"rejim_degisti","coin":"HYPE","onceki":"range","yeni":"trend_down","1d":"trend_down"}
+{"zaman_ms":1795161933912,"olay":"rejim_degisti","coin":"AAPL","onceki":"unclear","yeni":"trend_down","1d":"trend_up"}
+{"zaman_ms":1795161933912,"olay":"rejim_degisti","coin":"AMZN","onceki":"unclear","yeni":"trend_down","1d":"volatile"}
+{"zaman_ms":1795161933912,"olay":"rejim_degisti","coin":"WMT","onceki":"unclear","yeni":"trend_up","1d":"trend_up"}
+{"zaman_ms":1795162203143,"olay":"kopya_drift","coin":"BCH","biz_usd":81.28,"ideal_usd":55.89,"drift":0.454,"sure_dk":31}
