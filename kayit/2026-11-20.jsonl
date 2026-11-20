@@ -878,3 +878,16 @@
 {"zaman_ms":1795145519574,"olay":"kacan_telafi_atlandi","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"HYPE","neden":"filtre_atlamisti:ters_netlesme"}
 {"zaman_ms":1795145568988,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795145452706,"gorme_ms":1795145452706,"yas_ms":116282}
 {"zaman_ms":1795145568989,"olay":"kacan_telafi","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","yon":"A","trader_giris":1758.5,"mark":1743.95,"kayma":0.008274,"yas_sa":5.01,"karar":"atlandi","neden":"ters_netlesme"}
+{"zaman_ms":1795146122926,"olay":"kacan_telafi_hata","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"HYPE","asama":"yas","tur":"RateLimitError"}
+{"zaman_ms":1795146122927,"olay":"kacan_telafi_hata","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"LIT","asama":"yas","tur":"RateLimitError"}
+{"zaman_ms":1795146122927,"olay":"kacan_telafi_hata","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"xyz:SP500","asama":"yas","tur":"RateLimitError"}
+{"zaman_ms":1795146123448,"olay":"kacan_telafi_hata","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795146123449,"olay":"kacan_telafi_hata","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795146123449,"olay":"kacan_telafi_hata","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795146123449,"olay":"kacan_telafi_hata","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795146123449,"olay":"kacan_telafi_hata","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795146123449,"olay":"kacan_telafi_hata","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795146123449,"olay":"kacan_telafi_hata","adres":"0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795146123450,"olay":"kacan_telafi_hata","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","asama":"giris_px","tur":"RateLimitError"}
+{"zaman_ms":1795146255558,"olay":"karsi_olgu_kapandi","coin":"HYPE","neden":"ters_netlesme","yon":"B","hayali_usd":38.05,"pnl_usd":-0.1437,"sure_sa":2.93,"kapanis":"trader_kapadi"}
+{"zaman_ms":1795146288857,"olay":"tur","ozsermaye_usd":10019.8669}
