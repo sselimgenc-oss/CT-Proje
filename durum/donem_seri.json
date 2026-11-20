@@ -2,18 +2,18 @@
  "bas_ms": 1794828600000,
  "btc_donem_fiyat": 64642.0,
  "doluluk": {
-  "brut_ms": 2220560506133.9326,
-  "kapasite_ms": 4166780750.0,
-  "nakit_ms": 156491273.59782448,
-  "net_ms": 377294133262.0457,
-  "slot_ms": 4166780750.0,
-  "son_ms": 1795214941000,
-  "sure_ms": 378798250
+  "brut_ms": 2228207372955.287,
+  "kapasite_ms": 4177376665.0,
+  "nakit_ms": 156675951.337676,
+  "net_ms": 378737256195.62823,
+  "slot_ms": 4177376665.0,
+  "son_ms": 1795215904265,
+  "sure_ms": 379761515
  },
  "donem": "2026-11-16T11:30:00Z",
  "emir_sayac": {
   "atlama_neden": {
-   "ara_dolum_siniri": 134,
+   "ara_dolum_siniri": 137,
    "bant_ici": 10946,
    "duygu_ters": 787,
    "gec_acilis": 8,
@@ -26,7 +26,7 @@
    "ters_netlesme": 1616,
    "trader_hesap_yok": 3
   },
-  "atlanan": 28620,
+  "atlanan": 28623,
   "emir": 384,
   "yuvarlanan": 21
  },
@@ -52,9 +52,9 @@
    "ozsermaye_usd": 9995.7175
   },
   {
-   "btc": 58953.5,
+   "btc": 59241.5,
    "gun": "2026-11-20",
-   "ozsermaye_usd": 9829.3762
+   "ozsermaye_usd": 9826.9609
   }
  ],
  "kasa_usd": 10000.0,
@@ -66,7 +66,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": 91.7871,
+   "net_usd": 92.7072,
    "sonuc": null
   },
   {
@@ -86,7 +86,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": -61.0231,
+   "net_usd": -55.1743,
    "sonuc": null
   },
   {
@@ -96,7 +96,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": -104.9753,
+   "net_usd": -107.6749,
    "sonuc": null
   },
   {
@@ -116,7 +116,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": -124.584,
+   "net_usd": -119.853,
    "sonuc": null
   },
   {
@@ -126,7 +126,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": -6.6526,
+   "net_usd": -5.8296,
    "sonuc": null
   },
   {
@@ -136,7 +136,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "kor_gevsetildi",
    "katman": "ilk11",
-   "net_usd": -136.0182,
+   "net_usd": -132.6828,
    "sonuc": null
   },
   {
@@ -156,7 +156,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "kor_gevsetildi",
    "katman": "yedek",
-   "net_usd": 82.4131,
+   "net_usd": 75.8328,
    "sonuc": null
   },
   {
@@ -166,7 +166,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "kor_gevsetildi",
    "katman": "yedek",
-   "net_usd": 115.6941,
+   "net_usd": 106.9004,
    "sonuc": null
   },
   {

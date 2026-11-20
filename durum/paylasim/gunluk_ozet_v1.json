@@ -1,15 +1,15 @@
 {
  "sema": "ortak.gunluk_ozet.v1",
  "proje": "CT",
- "uretim": "2026-11-20T22:04:19Z",
+ "uretim": "2026-11-20T23:04:33Z",
  "gun": "2026-11-20",
  "mod": "sanal",
  "kasa": {
   "baslangic": 10000.0,
-  "simdi": 9823.04,
-  "gun_pnl": -172.68,
-  "toplam_pnl": -176.96,
-  "zirveden_dusus_yuzde": 2.31
+  "simdi": 9825.9,
+  "gun_pnl": -169.81,
+  "toplam_pnl": -174.1,
+  "zirveden_dusus_yuzde": 2.28
  },
  "islem": {
   "gun_acilan": 29,
@@ -17,13 +17,13 @@
   "kazanan": 11,
   "kaybeden": 8,
   "acik_pozisyon": 41,
-  "alinmayan_sinyal": 6430
+  "alinmayan_sinyal": 6433
  },
  "hesaplar": [
   {
    "ad": "T_0c2447",
    "gun_pnl": -79.98,
-   "toplam_pnl": -125.16,
+   "toplam_pnl": -120.07,
    "islem": 59
   },
   {
@@ -35,43 +35,43 @@
   {
    "ad": "T_f6b664",
    "gun_pnl": 6.47,
-   "toplam_pnl": -65.22,
+   "toplam_pnl": -55.03,
    "islem": 47
   },
   {
    "ad": "T_99f0d4",
    "gun_pnl": 30.43,
-   "toplam_pnl": 92.74,
+   "toplam_pnl": 92.89,
    "islem": 13
   },
   {
    "ad": "T_2e4035",
    "gun_pnl": 0.41,
-   "toplam_pnl": -7.35,
+   "toplam_pnl": -5.89,
    "islem": 3
   },
   {
    "ad": "T_9934d6",
    "gun_pnl": -0.61,
-   "toplam_pnl": -140.38,
+   "toplam_pnl": -132.49,
    "islem": 1
   },
   {
    "ad": "T_b4c6ee",
    "gun_pnl": 0.23,
-   "toplam_pnl": 84.0,
+   "toplam_pnl": 74.91,
    "islem": 1
   },
   {
    "ad": "T_e7ae5a",
    "gun_pnl": 0,
-   "toplam_pnl": 116.96,
+   "toplam_pnl": 106.58,
    "islem": 0
   },
   {
    "ad": "T_7bb402",
    "gun_pnl": 1.01,
-   "toplam_pnl": -105.29,
+   "toplam_pnl": -107.73,
    "islem": 2
   },
   {
@@ -106,14 +106,14 @@
   "kaldirac_ayar": 3.0
  },
  "saglik": {
-  "son_nabiz": "2026-11-20T22:04:19Z",
+  "son_nabiz": "2026-11-20T23:04:33Z",
   "hata_sayisi_gun": 0,
-  "ram_mb": 96.4,
-  "ram_tepe_mb": 111.2,
+  "ram_mb": 104.5,
+  "ram_tepe_mb": 115.8,
   "disk_bos_gb": 63.61,
   "yuk_1dk": 0.0,
-  "yeniden_baslama_1s": 0,
-  "oom_son": false
+  "yeniden_baslama_1s": null,
+  "oom_son": null
  },
  "notlar": [
   "drift uyarısı aktif",
@@ -152,7 +152,7 @@
   },
   {
    "neden": "ara_dolum_siniri",
-   "adet": 134,
+   "adet": 137,
    "karsi_olgu_kapanan": 0,
    "karsi_olgu_pnl": null
   },

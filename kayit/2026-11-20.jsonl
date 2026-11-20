@@ -8304,3 +8304,12 @@
 {"zaman_ms":1795213751372,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"xyz:NATGAS","neden":"kayma_lehte_fazla","kayma":-0.010164,"trader_giris":3.74642,"mark":3.7845}
 {"zaman_ms":1795214374398,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"xyz:NATGAS","neden":"pozisyon_eski"}
 {"zaman_ms":1795214417781,"olay":"tur","ozsermaye_usd":9827.7933}
+{"zaman_ms":1795215272341,"olay":"tur","ozsermaye_usd":9820.0465}
+{"zaman_ms":1795215439579,"olay":"emir_yok","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"XRP","eylem":"azalt","karar":"atlandi","neden":"ara_dolum_siniri","trader_dolum_ms":1795215439281,"gorme_ms":1795215439578,"yas_ms":298}
+{"zaman_ms":1795215439612,"olay":"emir_yok","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"XRP","eylem":"azalt","karar":"atlandi","neden":"ara_dolum_siniri","trader_dolum_ms":1795215439281,"gorme_ms":1795215439578,"yas_ms":331}
+{"zaman_ms":1795215439646,"olay":"emir_yok","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"XRP","eylem":"azalt","karar":"atlandi","neden":"ara_dolum_siniri","trader_dolum_ms":1795215439281,"gorme_ms":1795215439578,"yas_ms":365}
+{"zaman_ms":1795215625022,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"xyz:NATGAS","neden":"kayma_lehte_fazla","kayma":-0.011793,"trader_giris":3.74642,"mark":3.7906}
+{"zaman_ms":1795215672363,"olay":"funding","saat":498671,"saat_adet":1,"funding_usd":-0.09792610366652672,"toplam_funding_usd":-1.713657975225024}
+{"zaman_ms":1795215840667,"olay":"tg_bastirildi","tur":"kopya_sapmasi","metin":"📐 Kopya sapması: 3 coin, en büyük xyz:SPCX %98 (yalnız bilgi)"}
+{"zaman_ms":1795215840668,"olay":"tg_bastirildi","tur":"saatlik_bos","metin":"🧾 Son 1 saat (01:03–02:03 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 3 (≈1 ayrı işlem)\n   • kural gereği 3: 3 ara dolum sınırı (ilk 2 sonrası)\n   • kaçırılan 0 (geç görülen / ve"}
+{"zaman_ms":1795215840668,"olay":"tg_mesaj","tur":"saatlik_bos","anahtar":null,"seviye":"INFO","sessiz":false,"metin":"🧾 Son 1 saat (01:03–02:03 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 3 (≈1 ayrı işlem)\n   • kural gereği 3: 3 ara dolum sınırı (ilk 2 sonrası)\n   • kaçırılan 0 (geç görülen / veri yok)\n💰 Kasa: 9.827,81 $ · bugün 🔻 −167,91 $ (−%1,7) · başlangıçtan 🔻 −172,19 $ (−%1,7)","gonderildi":false,"bastirildi":true}
