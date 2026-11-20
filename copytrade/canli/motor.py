@@ -1229,6 +1229,10 @@ class Motor:
             slot = slot * ders_carpan                              # ortak öğrenme: [0.5, 1.0] çarpan, yalnız açılış/artırma boyutu
         if golge_carpan is not None and golge_carpan != 1.0:
             slot = slot * golge_carpan                             # K-73 B5: trader kaldıracı > golge_kaldirac_uyari → yeni açılış/artırma boyutu x0.5 (yalnız sanal)
+        efektif_carpan = (ders_carpan if ders_carpan is not None else 1.0) * (golge_carpan if golge_carpan is not None else 1.0)
+        if eylem == "azalt":                                       # K-73 ek (O1): azaltma, açılışı küçülten AYNI çarpanla hedeflenir (Poz.boyut_carpan; yoksa 1.0)
+            bp = self.hesap.poz.get(adres, {}).get(o.coin)
+            slot = slot * (float(bp.boyut_carpan) if bp is not None else 1.0)
         mk = self.mark(o.coin, o.px)
         biz_usd = abs(biz_sz) * (mk or o.px)
         hesap_usd = self.trader_hesap_usd(adres, simdi, taze_sart=eylem in ("ac", "artir")) if eylem in ("ac", "artir", "azalt") else 0.0
@@ -1271,6 +1275,10 @@ class Motor:
             sonuc = self._kapat_coin(adres, o.coin, neden, simdi, o)
             return sonuc[1] or Sonuc(adres, o.coin, eylem, "atlandi", "kapanis_yok")
         s = self._yurut(o, adres, eylem, yon, emir_usd, not acilis, abs(biz_sz) if not acilis else None, neden, gec, simdi)
+        if acilis and s.karar == "emir":                           # K-73 ek (O1): uygulanan çarpanı pozisyona yaz (azaltma kullanır; hesap.json ile kalıcı)
+            yp = self.hesap.poz.get(adres, {}).get(o.coin)
+            if yp is not None:
+                yp.boyut_carpan = efektif_carpan
         if yeni_coin and s.karar == "emir":                        # O1: patlama freni yalnız GERÇEKTEN açılan farklı coinleri sayar (emir sonrası)
             self.risk.yeni_coin_kaydet(adres, o.coin, simdi)
         if eylem == "azalt":                                       # kısmi dolum kalırsa bir sonraki dakikada yeniden dene

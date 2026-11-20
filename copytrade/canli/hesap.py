@@ -20,6 +20,7 @@ class Poz:
     acilis_ms: int
     kaldirac: float = 3.0
     giris_ctx: dict | None = None   # açılış anı rejim/duygu damgası (yalnız bilgi; rejim_sonuc raporu)
+    boyut_carpan: float = 1.0       # K-73 ek (O1): açılış/artırmada slotu küçülten çarpan (ders × gölge B5); AZALTMA aynı çarpanla hedeflenir; hesap.json ile kalıcı
     zirve_kar: float = 0.0          # K-73 iz süren koruma (yalnız sanal): girişe göre en yüksek kâr oranı (artırmada ortalama giriş değişince sıfırlanır); hesap.json ile kalıcı
 
 
