@@ -722,3 +722,11 @@
 {"t":"sonuc","cloid":"0x509a41a397f41a1bdd9a1c2f8578d450","durum":"dolu","ms":1795191681955,"sz":0.39276317199155764,"px":129.57,"ucret":0.02290064588772575}
 {"t":"niyet","kimlik":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:880045246102436","eylem":"artir","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"xyz:SPCX","yon":"B","usd":56.198735,"reduce_only":false,"cloid":"0xe27188b54781ff2dc6d1c5521fe78abd","ms":1795191682010}
 {"t":"sonuc","cloid":"0xe27188b54781ff2dc6d1c5521fe78abd","durum":"dolu","ms":1795191682235,"sz":0.43373261240486927,"px":129.57,"ucret":0.02528943056518451}
+{"t":"niyet","kimlik":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda:1116658552449799","eylem":"ac","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","coin":"LIT","yon":"B","usd":46.458966,"reduce_only":false,"cloid":"0x965fe4b75b94a894fd54b59137e6de55","ms":1795194538359}
+{"t":"sonuc","cloid":"0x965fe4b75b94a894fd54b59137e6de55","durum":"dolu","ms":1795194538580,"sz":19.399935624690727,"px":2.3948,"ucret":0.02090653462530421}
+{"t":"niyet","kimlik":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda:201274800175693","eylem":"artir","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","coin":"LIT","yon":"B","usd":57.839211,"reduce_only":false,"cloid":"0x7c57e5aa87a9548f66bc559ad5ed2bb2","ms":1795194538612}
+{"t":"sonuc","cloid":"0x7c57e5aa87a9548f66bc559ad5ed2bb2","durum":"dolu","ms":1795194538841,"sz":24.142927466312603,"px":2.3957,"ucret":0.026027645098970296}
+{"t":"niyet","kimlik":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda:67846820590353","eylem":"artir","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","coin":"LIT","yon":"B","usd":78.801796,"reduce_only":false,"cloid":"0xc9c8e5d6ee6625774ff384e219f272cb","ms":1795194538883}
+{"t":"sonuc","cloid":"0xc9c8e5d6ee6625774ff384e219f272cb","durum":"dolu","ms":1795194539104,"sz":32.893015022170545,"px":2.3957,"ucret":0.03546080823987629}
+{"t":"niyet","kimlik":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda:136772024852675","eylem":"artir","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","coin":"LIT","yon":"B","usd":63.952151,"reduce_only":false,"cloid":"0xc94d0a39cb3d6064657ca92fca224fae","ms":1795194539152}
+{"t":"sonuc","cloid":"0xc94d0a39cb3d6064657ca92fca224fae","durum":"dolu","ms":1795194539375,"sz":26.70347456466827,"px":2.3949,"ucret":0.028778468055715812}
