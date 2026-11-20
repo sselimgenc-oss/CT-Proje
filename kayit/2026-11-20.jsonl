@@ -8314,3 +8314,9 @@
 {"zaman_ms":1795215840668,"olay":"tg_bastirildi","tur":"saatlik_bos","metin":"🧾 Son 1 saat (01:03–02:03 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 3 (≈1 ayrı işlem)\n   • kural gereği 3: 3 ara dolum sınırı (ilk 2 sonrası)\n   • kaçırılan 0 (geç görülen / ve"}
 {"zaman_ms":1795215840668,"olay":"tg_mesaj","tur":"saatlik_bos","anahtar":null,"seviye":"INFO","sessiz":false,"metin":"🧾 Son 1 saat (01:03–02:03 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 3 (≈1 ayrı işlem)\n   • kural gereği 3: 3 ara dolum sınırı (ilk 2 sonrası)\n   • kaçırılan 0 (geç görülen / veri yok)\n💰 Kasa: 9.827,81 $ · bugün 🔻 −167,91 $ (−%1,7) · başlangıçtan 🔻 −172,19 $ (−%1,7)","gonderildi":false,"bastirildi":true}
 {"zaman_ms":1795216136906,"olay":"tur","ozsermaye_usd":9832.7022}
+{"zaman_ms":1795216848955,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"VVV","neden":"pozisyon_eski"}
+{"zaman_ms":1795216848956,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"xyz:NATGAS","neden":"pozisyon_eski"}
+{"zaman_ms":1795216990867,"olay":"tur","ozsermaye_usd":9842.752}
+{"zaman_ms":1795217469980,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"VVV","neden":"kayma_fazla","kayma":0.01031,"trader_giris":21.1147,"mark":20.897}
+{"zaman_ms":1795217469980,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"xyz:NATGAS","neden":"kayma_lehte_fazla","kayma":-0.011472,"trader_giris":3.74642,"mark":3.7894}
+{"zaman_ms":1795217480602,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0x9eb42f017e793512e4734f8785de605c4cb3a24e","hesap_usd":300675.57188454,"anlik_kaldirac":4.942695322836813,"esik":5.0,"durum":"bitti"}
