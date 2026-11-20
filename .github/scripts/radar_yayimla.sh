@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Yalnız Actions'ın geçici checkout'unda çalışır; kullanıcı checkout'unda çalıştırmayın.
+# Yalnız GEÇİCİ checkout'ta çalışır (Actions checkout'u ya da sunucuda deploy/sanal_radar.sh'nin geçici worktree'si, RADAR_SUNUCU=1); kullanıcı checkout'unda / motorun çalışma dizininde çalıştırmayın.
 # Veri dalı `radar` (main'den) ya da `radar-deneme` (dal doğrulaması; `VERI_DALI`): radar/<tarih>/{havuz,kadro}.json + radar/son/kadro.json; 90 günden eski tarihli klasörler silinir. Kök commit yalnız dal ilk kez oluşurken (orphan); sonra düz commit.
 # Denetim R-1: günün İLK yayımı ayrıca radar/<tarih>/{kadro_ilk,havuz_ilk}.json olarak saklanır ve ASLA üzerine yazılmaz (motor K-39 ile günün ilk kadrosunu uygular; §7b isabeti onu ölçer).
 set -euo pipefail
-[ "${GITHUB_ACTIONS:-}" = true ] || { echo 'Yalnız GitHub Actions için.' >&2; exit 1; }
+{ [ "${GITHUB_ACTIONS:-}" = true ] || [ "${RADAR_SUNUCU:-}" = 1 ]; } || { echo 'Yalnız GitHub Actions ya da sunucu radar betiği (RADAR_SUNUCU=1) için.' >&2; exit 1; }
 veri_dali="${VERI_DALI:-radar}"
 case "$veri_dali" in radar|radar-deneme) ;; *) echo "Geçersiz VERI_DALI: $veri_dali" >&2; exit 1 ;; esac
 # G-23: checkout `persist-credentials: false`; yazma kimliği yalnız BU betiğe `YAYIM_TOKEN` ile gelir. Diske (.git/config) yazılmaz, argv'ye konmaz, yazdırılmaz:
@@ -33,8 +33,8 @@ for f in "$archive"/*.json "$archive"/isabet/*/isabet.json; do
   [ -f "$f" ] || continue
   if [ "$(stat -c %s "$f")" -gt 94371840 ]; then echo "Çok büyük: $(basename "$f") ($(stat -c %s "$f") bayt)" >&2; exit 1; fi
 done
-git config user.name 'github-actions[bot]'
-git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+git config user.name "${RADAR_GIT_AD:-github-actions[bot]}"
+git config user.email "${RADAR_GIT_EPOSTA:-41898282+github-actions[bot]@users.noreply.github.com}"
 if git ls-remote --exit-code --heads origin "$veri_dali" >/dev/null; then
   git fetch origin "$veri_dali"
   git checkout -f -B "$veri_dali" FETCH_HEAD

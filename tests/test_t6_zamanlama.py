@@ -93,7 +93,7 @@ def test_is_akislari_kontrol_isi_isabet_adimi_ve_zaman_butcesi():
     radar, canli = yukle("radar.yml"), yukle("canli_vardiya.yml")
     assert radar["jobs"]["radar"]["needs"] == "kontrol" and "atla != 'true'" in radar["jobs"]["radar"]["if"]
     assert canli["jobs"]["vardiya"]["needs"] == "kontrol" and "atla != 'true'" in canli["jobs"]["vardiya"]["if"]
-    assert radar["on"]["schedule"][1] == {"cron": "17 2 * * *"} and radar["jobs"]["kontrol"]["steps"][1]["env"]["YEDEK_CRON"] == "17 2 * * *"
+    assert "schedule" not in radar["on"] and "YEDEK_CRON" not in radar["jobs"]["kontrol"]["steps"][1]["env"]       # K-78: radar zamanlaması sunucuda; Actions'ta cron yok (elle yedek)
     assert canli["jobs"]["kontrol"]["steps"][1]["env"]["YEDEK_CRON"] == canli["on"]["schedule"][1]["cron"]
     adimlar = [a.get("name", a.get("uses", "")) for a in radar["jobs"]["radar"]["steps"]]
     assert adimlar.index("Günlük kadro (R2 form puanı)") < adimlar.index("Seçim isabeti (§7b)") < adimlar.index("Veri dalına yaz (radar)")     # K-66: Form Radarı adımları geri

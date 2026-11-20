@@ -587,12 +587,17 @@ def test_baska_vardiya_aktifse_baslamama_telegram_alarmi_ve_kayit(tmp_path):
 
 
 # ================================================================================================ Telegram politikası (kullanıcı kararı 05.11)
-def test_telegram_gercek_kipte_emir_aninda_gider_ozet_beklemez(tmp_path, monkeypatch):
+def test_telegram_gercek_kipte_islem_saatlik_ozet_olur_ayri_mesaj_gitmez(tmp_path, monkeypatch):
+    """K-79: gerçek kipte de işlem (açıldı) ayrı mesaj değil, saatlik özet satırı; saat dolunca TEK özet gider (GERÇEK PARA etiketli)."""
     sim = BorsaSim()
     m, sim, saat, tgp = kur_gercek(tmp_path, monkeypatch, sim)
     m.baslat()
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
-    assert any("GERÇEK PARA" in x and "BTC LONG" in x for x in tgp.gonderilen) and not m._emir_tampon
+    assert not any("BTC LONG" in x for x in tgp.gonderilen) and len(m._emir_tampon) == 1                 # ayrı "açıldı" mesajı yok
+    saat.ms += 60 * 60_000
+    m.emir_ozeti(saat())
+    oz = [x for x in tgp.gonderilen if x.startswith("🧾 Son ")]
+    assert len(oz) == 1 and "GERÇEK PARA" in oz[0] and "🟢 Açılan: BTC long" in oz[0] and not m._emir_tampon
 
 
 def test_telegram_gece_sessiz_alarm_her_zaman_sesli():

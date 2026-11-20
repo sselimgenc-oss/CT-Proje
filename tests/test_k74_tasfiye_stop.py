@@ -47,7 +47,12 @@ def test_dinamik_stop_acik_azami3_short_yuzde_11_3te_kapanir(tmp_path):
     assert any(x["olay"] == "felaket_stop" for x in kayitlar(tmp_path))
     em = [x for x in kayitlar(tmp_path, "emir") if x.get("reduce_only")]
     assert em and em[-1]["boyut_neden"] == "tasfiye_koruma_stop"                 # daraltılmış stop ayrı neden
-    assert any("Neden: tasfiye koruması stopu" in x for x in tgp.gonderilen)
+    assert not any("Neden: tasfiye koruması stopu" in x for x in tgp.gonderilen)                       # K-79: ayrı "kapandı" mesajı yok (kayıtta tek tek metin var), saatlik özette "stopla kapanan" satırı
+    assert any("Neden: tasfiye koruması stopu" in k["metin"] for k in kayitlar(tmp_path, "tg_mesaj") if k.get("tur") == "islem_satiri")
+    saat.ms += 3_600_000
+    m.emir_ozeti(saat())
+    oz = [x for x in tgp.gonderilen if x.startswith("🧾 Son ")]
+    assert len(oz) == 1 and "🛑 Stopla kapanan: SOL " in oz[0] and "(tasfiye koruması stopu)" in oz[0]
 
 
 def test_yaml_dinamik_stop_kullanici_onayiyla_acik():
@@ -101,8 +106,12 @@ def test_tasfiye_emir_kaydi_telegram_kapandi_ve_alarm(tmp_path):
     e = emirler[0]
     assert e["eylem"] == "kapat" and e["reduce_only"] and e["durum"] == "dolu" and e["yon"] == "B" and e["adres"] == adr(1) and e["coin"] == "SOL"
     assert e["dolum_px"] == pytest.approx(liq) and e["sz"] == pytest.approx(sz) and e["pnl_usd"] == pytest.approx(sz * (giris - liq), abs=1e-5)
-    assert any("kapandı" in x and "Neden: tasfiye" in x for x in tgp.gonderilen)
-    assert any(x.startswith("💥 Tasfiye (sanal)") and "Senden bir şey gerekmiyor." in x for x in tgp.gonderilen)
+    assert not any("kapandı" in x and "Neden: tasfiye" in x for x in tgp.gonderilen)                    # K-79: ayrı "kapandı" yok; saatlik özette satır
+    assert any("kapandı" in k["metin"] and "Neden: tasfiye" in k["metin"] for k in kayitlar(tmp_path, "tg_mesaj") if k.get("tur") == "islem_satiri")
+    assert any(x.startswith("💥 Tasfiye (sanal)") and "Senden bir şey gerekmiyor." in x for x in tgp.gonderilen)       # tasfiye ALARMI anında gider
+    saat.ms += 3_600_000
+    m.emir_ozeti(saat())
+    assert any(x.startswith("🧾 Son ") and "🛑 Stopla kapanan: SOL " in x and "(tasfiye)" in x for x in tgp.gonderilen)
     # pano: KAPANAN nedeni Tasfiye
     satirlar = pano.kapanan_islemler([{"olay": "emir", **{k: v for k, v in e.items() if k != "olay"}}], 0.2)
     assert satirlar and satirlar[0]["neden"] == "Tasfiye" and satirlar[0]["net"] == pytest.approx(e["pnl_usd"])
@@ -150,7 +159,7 @@ def test_tg_mesaj_kaydi_tam_metin_yapisal_alan_ve_gizli_deger_yok(tmp_path):
     kl = [x for x in kayitlar(tmp_path) if x["olay"] == "tg_mesaj"]
     kapandi = [x for x in kl if "kapandı" in x["metin"] and x.get("neden") == "tasfiye"]
     assert len(kapandi) == 1 and kapandi[0]["adres"] == adr(1) and kapandi[0]["coin"] == "SOL" and kapandi[0]["yon"] == "B" and kapandi[0]["pnl"] < 0
-    assert kapandi[0]["bastirildi"] is False and "gonderildi" in kapandi[0] and "sessiz" in kapandi[0] and "seviye" in kapandi[0]
+    assert kapandi[0]["tur"] == "islem_satiri" and kapandi[0]["bastirildi"] is True and kapandi[0]["gonderildi"] is False and "sessiz" in kapandi[0] and "seviye" in kapandi[0]     # K-79: tek tek kayıt sürer, ayrı mesaj gitmez
     assert any(x["metin"].startswith("💥 Tasfiye (sanal)") and "Senden bir şey gerekmiyor." in x["metin"] for x in kl)
     ham = "\n".join(str(x) for x in kl)
     from tests.test_canli_motor import TOKEN, CHAT

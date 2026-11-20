@@ -19,16 +19,22 @@ def _uc_emir_iki_atlama(m, saat):
 
 
 def _ozet_ac(m):
-    m.tg.bastirilan.discard("emir_ozeti")                                           # özet türü varsayılan BASTIRILIR (kod anahtarı); bu testler açık haliyle biçimi/pencereyi denetler
+    assert "islem_ozeti" not in m.tg.bastirilan                                     # K-79: saatlik işlem özeti Telegram'a GİDER (bastırılan tür değil); tek tek satır türü `islem_satiri` bastırılır
+    assert "islem_satiri" in m.tg.bastirilan and "emir_ozeti" in m.tg.bastirilan    # eski 15 dk'lık özet (dk=0) hâlâ bastırılan tür
 
 
-def test_ozet_varsayilan_bastirilir_kayda_yazilir(tmp_path):
+def test_ozet_varsayilan_gider_tek_tek_satirlar_bastirilip_kayda_yazilir(tmp_path):
+    """K-79: saat dolunca TEK özet gider; açıldı/azaltma/kapandı tek tek mesaj olarak gitmez ama `tg_mesaj` kayıtları (TAM metin + yapısal alan) sürer."""
     m, hl, saat, tgp = kur(tmp_path)
     m.baslat()
     _uc_emir_iki_atlama(m, saat)
+    assert _ozetler(tgp) == [] and not [x for x in tgp.gonderilen if " açıldı · trader " in x or " kapandı · trader " in x]
     saat.ms += SAAT
     m.emir_ozeti(saat())
-    assert _ozetler(tgp) == [] and any(k["tur"] == "emir_ozeti" for k in kayitlar(tmp_path, "tg_bastirildi"))
+    assert len(_ozetler(tgp)) == 1
+    satir_kayit = [k for k in kayitlar(tmp_path, "tg_mesaj") if k.get("tur") == "islem_satiri"]
+    assert len(satir_kayit) == 2 and all(k["gonderildi"] is False and k["bastirildi"] is True for k in satir_kayit)       # açıldı + kapandı (azaltma ayrı satır mesajı üretmez)
+    assert {k["neden"] for k in satir_kayit} >= {"ac"} and any(k["tur"] == "islem_ozeti" and k["gonderildi"] and k["emir"] == 3 for k in kayitlar(tmp_path, "tg_mesaj"))
 
 
 def test_saatlik_toplama_tek_mesaj_pencere_motor_saatinden(tmp_path):
@@ -49,7 +55,7 @@ def test_saatlik_toplama_tek_mesaj_pencere_motor_saatinden(tmp_path):
     assert len(oz) == 1
     assert oz[0].startswith("🧾 Son 1 saat: 3 emir (1 açılış, 1 azaltma, 1 kapanış) · sanal")
     assert "Kopyalanmayan" not in oz[0] and "En büyük" not in oz[0] and "Tutar toplamı" not in oz[0]      # kullanıcı standardı: atlanan dolum/ayrıntı Telegram'da yok (kayıt/pano)
-    assert len(oz[0].splitlines()) <= 3
+    assert len(oz[0].splitlines()) <= 5                                             # `[CT]` satırıyla en çok 6
     print("\n" + oz[0])
     saat.ms += SAAT
     m.emir_ozeti(saat())
@@ -80,7 +86,7 @@ def test_vardiya_sonu_kalan_tampon_gider_kisa_pencere_dakika_yazar(tmp_path):
 
 def test_sifir_eski_davranis_15_dk_ozeti(tmp_path):
     m, hl, saat, tgp = kur(tmp_path, kurallar={"canli_telegram_sanal_ozet_dk": 0})
-    _ozet_ac(m)
+    m.tg.bastirilan.discard("emir_ozeti")                                           # eski 15 dk'lık özet türü varsayılan bastırılır; bu test açık haliyle eski biçimi denetler
     m.baslat()
     _uc_emir_iki_atlama(m, saat)
     m.emir_ozeti(saat())
@@ -123,7 +129,9 @@ def test_mesaj_bicimi_altin_ornek():
     bas = 1_794_135_600_000 - 1_794_135_600_000 % SAAT
     assert tg.msg_sanal_saatlik(bas, bas + SAAT, 60, emirler, {"gec_acilis": 5, "hip3_atlandi": 2}) == (
         "🧾 Son 1 saat: 3 emir (1 açılış, 1 artırma, 1 kapanış) · sanal\n"
-        "⚠️ 1 emir tam dolmadı")
+        "⚠️ 1 emir tam dolmadı\n"
+        "🟢 Açılan: NEAR long 11,0 $\n"
+        "↕️ ETH artırıldı")
 
 
 def test_kasa_satiri_altin_ornek_elle_hesap():

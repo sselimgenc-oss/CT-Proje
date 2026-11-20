@@ -31,6 +31,13 @@ def _emirler(n, durum="dolu"):
             for i in range(n)]
 
 
+def _stoplu_emirler():
+    return [{"adres": ADR, "coin": c, "yon": "B", "usd": 20.0, "durum": "dolu", "eylem": "ac"} for c in ("BTC", "ETH", "SOL", "ADA", "DOGE", "XRP")] + [
+        {"adres": ADR, "coin": "BTC", "yon": "A", "usd": 20.0, "durum": "dolu", "eylem": "kapat", "kapandi": True, "kz": 1.2, "neden_kod": "tam_kapanis"},
+        {"adres": ADR, "coin": "ETH", "yon": "A", "usd": 20.0, "durum": "dolu", "eylem": "kapat", "kapandi": True, "kz": -4.2, "neden_kod": "felaket_stop"},
+        {"adres": ADR, "coin": "SOL", "yon": "A", "usd": 10.0, "durum": "dolu", "eylem": "azalt"}, {"adres": ADR, "coin": "ADA", "yon": "B", "usd": 10.0, "durum": "dolu", "eylem": "artir"}]
+
+
 def _tum_ornekler() -> dict[str, str]:
     kasa = (1012.6, 1005.0, 1000.0)
     return {
@@ -39,6 +46,8 @@ def _tum_ornekler() -> dict[str, str]:
         "emir_ozeti_cok": tg.msg_emir_ozeti("sanal", _emirler(12), 5),
         "emir_ozeti_gercek_sorunlu": tg.msg_emir_ozeti("gercek", _emirler(9, "red"), 0.1),
         "saatlik": tg.msg_sanal_saatlik(0, 3_600_000, 60, _emirler(8, "kismi"), {"gec_acilis": 5, "slot_tavani": 9}, kasa, 7, {}, "📐 Kopya sapması: 4 coin"),
+        "saatlik_stoplu": tg.msg_sanal_saatlik(0, 3_600_000, 60, _stoplu_emirler(), {}, kasa, None, None, "", "🔽 Zarar küçültme: Kartal-78 ½ (5 kapanış, −3,20 $)"),
+        "saatlik_gercek": tg.msg_sanal_saatlik(0, 3_600_000, 60, _stoplu_emirler(), {}, kasa, kip="gercek"),
         "alarm": tg.alarm("ALARM: kasa sınırı aşıldı", "Kasa 1.200 $ > sınır 1.000 $.\nYeni pozisyon açılmıyor."),
         "alarm_eylemli": tg.alarm("ALARM: API cüzdanı süresi", "HL API cüzdanının süresi 5 gün sonra bitiyor.\nSüre dolunca emirler reddedilir.", senden="Yeni API cüzdanı kaydetmen gerekiyor."),
         "duzeldi": tg.duzeldi_metni("HL okuması", "Yeni pozisyonlar yeniden serbest."),
@@ -233,8 +242,9 @@ def test_motor_iz_suren_koruma_kapanisi_mesajda_iz_suren_koruma(tmp_path):
     g = m.hesap.poz[tests_adr()]["BTC"].giris
     _fiyat(m, saat, g * 1.16)
     _fiyat(m, saat, g * 0.999)
-    kap = [x for x in m.tg.gonderilen if " BTC kapandı · trader " in x]
+    kap = [x for x in _islem_satirlari(tmp_path) if " BTC kapandı · trader " in x]
     assert len(kap) == 1 and kap[0].endswith("Neden: iz süren koruma") and kap[0].startswith("🔻 BTC kapandı")
+    assert not [x for x in m.tg.gonderilen if " BTC kapandı · trader " in x]                  # K-79: ayrı mesaj olarak gitmedi
 
 
 def tests_adr():
@@ -273,6 +283,12 @@ def test_motor_kapali_bekci_ve_cokme_bot_durdu_biciminde(tmp_path):
 
 
 # ---------------------------------------------------------------------------------------------- danışman düzeltmeleri (kopya doğruluğu, artırma/azaltma, bot durdu, güncelleme, işlem sınırı)
+def _islem_satirlari(tmp_path) -> list[str]:
+    """K-79: açıldı/kapandı AYRI Telegram mesajı değil; tek tek metin kayda (`tg_mesaj`, tür islem_satiri) ve saatlik özet satırına gider. Biçim denetimleri bu kayıttan okunur."""
+    from tests.test_canli_motor import kayitlar
+    return [k["metin"] for k in kayitlar(tmp_path, "tg_mesaj") if k.get("tur") == "islem_satiri"]
+
+
 def _kur10k(tmp_path, **kurallar):
     from tests.test_canli_motor import kur
     m, hl, saat, tgp = kur(tmp_path, kasa=10_000.0, kurallar=kurallar or None)
@@ -291,7 +307,7 @@ def test_motor_acildi_gercek_trader_fiyati_ve_esik_alti_gecikmede_ek_yok(tmp_pat
     from tests.test_canli_motor import olay, adr
     m, saat, tgp = _kur10k(tmp_path)
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat, yas_ms=100_000))        # 100 sn < canli_olay_stale_sn (120)
-    a = [x for x in tgp.gonderilen if x.startswith("🟢 BTC LONG açıldı")]
+    a = [x for x in _islem_satirlari(tmp_path) if x.startswith("🟢 BTC LONG açıldı")]
     assert len(a) == 1 and "(trader 100,00 · fark %" in a[0] and "sn geç" not in a[0] and len(a[0].splitlines()) == 2
 
 
@@ -300,10 +316,9 @@ def test_kapandi_toplam_tutar_artirma_ve_yuzde_toplam_tutara_gore(tmp_path):
     m, saat, tgp = _kur10k(tmp_path)
     m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))            # açılış
     m.olay_isle(olay("a:2", adr(1), "BTC", "B", 300, 100.0, 300.0, saat))          # artırma
-    n_oz = len(tgp.gonderilen)
     m.olay_isle(olay("a:3", adr(1), "BTC", "A", 600, 100.0, 600.0, saat))          # tam kapanış
-    k = [x for x in tgp.gonderilen if " BTC kapandı · trader " in x]
-    assert len(k) == 1 and len(k[0].splitlines()) == 3 and n_oz >= 1
+    k = [x for x in _islem_satirlari(tmp_path) if " BTC kapandı · trader " in x]
+    assert len(k) == 1 and len(k[0].splitlines()) == 3
     ust = k[0].splitlines()
     import re as _re
     toplam = float(_re.search(r"Toplam tutar ([\d.,]+) \$ \(1 artırma\)", ust[2]).group(1).replace(".", "").replace(",", "."))
@@ -358,29 +373,28 @@ def test_trader_kapatti_biz_kapatamadik_mesaji(tmp_path):
     assert len(k) == 1 and "kapanış emri doldurulamadı" in k[0]
 
 
-def test_islem_mesaji_saatlik_ust_sinir_ve_toplu_satir(tmp_path):
+def test_islem_mesaji_ayri_gitmez_ust_sinir_yok_saatlik_tek_ozet(tmp_path):
+    """K-79: eski saatlik üst sınır + "+N işlem daha" satırı kalktı; hiçbir açıldı/kapandı ayrı gitmez, hepsi saatlik özet satırı (sınırsız kalem, satırda ilk 4 + "… +N")."""
     from tests.test_canli_motor import olay, adr
     m, saat, tgp = _kur10k(tmp_path, canli_telegram_islem_saat_max=2)
-    for i, c in enumerate(("BTC", "ETH", "SOL", "ADA")):
+    for i, c in enumerate(("BTC", "ETH", "SOL", "ADA", "DOGE", "XRP")):
         m.olay_isle(olay(f"a:{i}", adr(1), c, "B", 300, 100.0, 0.0, saat))
-    assert len([x for x in tgp.gonderilen if "açıldı · trader" in x]) == 2                   # üst sınır 2
+    assert not [x for x in tgp.gonderilen if "açıldı · trader" in x or x.startswith("🧾 +")]
+    assert len(_islem_satirlari(tmp_path)) == m._say_gun["ac"] >= 3
     saat.ms += 3_600_000 + 60_000
     m.emir_ozeti(saat())
-    toplu = [x for x in tgp.gonderilen if x.startswith("🧾 +")]
-    fazla = m._say_gun["ac"] - 2
-    assert fazla >= 1 and toplu == [f"🧾 +{fazla} işlem daha: {fazla} açılış, 0 kapanış, net +0,00 $"] and tg.onem_duzeyi(toplu[0]) == "INFO"
+    oz = [x for x in tgp.gonderilen if x.startswith("🧾 Son ")]
+    assert len(oz) == 1 and oz[0].startswith("🧾 Son 1 saat: 6 emir (6 açılış)") and "… +" in oz[0]
     m.emir_ozeti(saat())
-    assert len([x for x in tgp.gonderilen if x.startswith("🧾 +")]) == 1
+    assert len([x for x in tgp.gonderilen if x.startswith("🧾 Son ")]) == 1
 
 
 def test_islem_mesajlari_sessiz_info(tmp_path):
     t, post, _ = _t()
     t.gonder(tg.msg_acildi(ADR, "SOL", "B", 150.25, 27.3, 120.2, "sanal"))
     t.gonder(tg.msg_kapandi(ADR, "SOL", -2.0, -0.05, "felaket_stop", "sanal"))
-    t.gonder(tg.msg_islem_toplu(4, 3, -2.1))
     t.gonder(tg.msg_kopya_hata("ac", "SOL", ADR, "geç görülen açılış"))
-    assert [y["disable_notification"] for y in post.yukler] == [True] * 4
-    assert post.yukler[2]["text"] == "[CT] 🧾 +7 işlem daha: 4 açılış, 3 kapanış, net −2,10 $"
+    assert [y["disable_notification"] for y in post.yukler] == [True] * 3
 
 
 def test_gunluk_rapor_kopya_dogrulugu_artirma_azaltma_ve_guncelleme_ilk_3_satir():
