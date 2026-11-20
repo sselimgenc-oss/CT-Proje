@@ -798,7 +798,7 @@ def msg_emir_ozeti(kip: str, emirler: list[dict], dakika: float) -> str:
 
 TSI = timezone(timedelta(hours=3))
 # S-13: atlanan sinyal etiketlerinin TEK kaynağı (Telegram + pano). `min_emir_atlandi` eşiği `radar_min_emir_usd` (11 $) ile aynı; test bunu denetler.
-ATLA_TR = {"gec_acilis": "geç görülen açılış", "spot_atlandi": "spot coin", "hip3_atlandi": "HIP-3 coin", "ters_netlesme": "ters netleşme (K‑41)", "trader_hesap_yok": "trader hesabı okunamadı",
+ATLA_TR = {"gec_acilis": "geç görülen açılış", "spot_atlandi": "spot coin", "hip3_atlandi": "HIP-3 coin", "ters_netlesme": "ters netleşme (K‑41)", "ara_dolum_siniri": "ara dolum sınırı (ilk 2 sonrası)", "trader_hesap_yok": "trader hesabı okunamadı",
            "hesap_yok": "trader hesap değeri kullanılamadı", "slot_tavani": "slot tavanı", "marj_yok": "marj yok", "coin_tavani": "coin tavanı", "min_nosyonel": "çok küçük emir",
            "min_emir_atlandi": "çok küçük (< 11 $)", "bant_ici": "toplu emir bekliyor (fark küçük)", "inen_trader": "ayrılan trader (yeni alım yok)", "ders_emekli": "ders: trader emekli (yeni alım yok)", "ml_filtre_atla": "ML filtresi (düşük puan)", "rejim_ters": "piyasa yönüne ters", "haber_ters": "haber akışı ters", "duygu_ters": "piyasa duygusu ters", "hesap_kucuk": "trader hesabı küçük", "kaldirac_cok_yuksek": "trader kaldıracı çok yüksek", "iz_suren_koruma": "iz süren koruma", "patlama_freni": "patlama freni", "dur": "motor durdu",
            "gunluk_kayip": "günlük kayıp freni", "mutabakat": "mutabakat farkı", "elle_dur": "elle duraklatma", "kasa_siniri": "kasa sınırı", "belirsiz": "belirsiz emir bekleniyor", "stop_korumasiz": "stopsuz pozisyon kapatıldı (geçici)",

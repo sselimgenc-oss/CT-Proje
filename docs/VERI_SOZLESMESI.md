@@ -578,3 +578,7 @@ JSON üst düzey: `n_istenen` (adet), `kasa_usd` ($; `--kasa-usd`, yoksa `canli_
 - `kayit` yeni olaylar: `kacan_telafi` (`adres`, `coin`, `yon`, `trader_giris`, `mark`, `kayma`, `yas_sa`, `karar`, `neden`), `kacan_telafi_atlandi` (`neden`: giris_px_yok | kayma_fazla | pozisyon_eski | `filtre_atlamisti:<neden>`; aynı neden tekrar yazılmaz), `kacan_telafi_hata` (`asama`: giris_px | yas | emir).
 - `motor.json` yeni: `son_atla` (`"adres|coin"` → [son açılış/artırma atlama nedeni, ms]; `bant_ici` hariç; emir verilince silinir; en çok 3000).
 - `motor.json` yeni: `stop_muaf` (`"adres|coin"` → [trader yön işareti (+1/−1), kendi korumamızla kapanış ms]; trader pozisyonu sıfırlanır/ters döner ya da kapanıştan sonra yeni açılış görülür/kopyalanırsa silinir). `kacan_telafi_atlandi.neden` ek değerler: `stop_muafiyeti` | `kayma_lehte_fazla` (`kayma_fazla` aleyhte, `kayma_lehte_fazla` lehte; ikisi de |kayma| > `kacan_telafi_kayma`).
+
+## 20.11 K-76: ara dolum sınırı (kullanıcı kararı)
+- `kurallar.yaml`: `kopya_ara_dolum_max` (adet, 2), `kopya_ara_dolum_kume_ms` (ms, 1000). `kayit`: `emir_yok` (ve `senkron_azalt`) yeni neden `ara_dolum_siniri` (3. ve sonraki ara dolum; `karar` atlandi; karşı-olgu kaydı YOK); `neden_say`/`ozet.json` aynı anahtar; pano/Telegram etiketi "ara dolum sınırı (ilk 2 sonrası)". `motor.json` yeni `ara_dolum`: `adres|coin` -> {`n` (sayılan ara dolum kümesi), `isaret` (1 | -1), `yon` (B | A, son küme), `ms` (son dolum), `izin` (bool)}. Kalıcıdır; tam kapanış / yön dönüşü / senkronda kapanış görülünce silinir. Ayrıntı: `docs/KARARLAR.md` K-76.
+

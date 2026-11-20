@@ -280,3 +280,8 @@ sanal_iz_suren: true                    # bool (gerçek kipte devre dışı)
 iz_basabas_oran: 0.15                   # oran (zirve kâr bu kadar olunca stop = giriş)
 iz_kilit_oran: 0.30                     # oran (zirve kâr bu kadar olunca stop = iz_kilit_seviye)
 iz_kilit_seviye: 0.15                   # oran (kilit stopunun kâr seviyesi)
+# K-76 (kullanıcı kararı 20.11, beyin fırtınası): kopyalama = ilk açılış + İLK `kopya_ara_dolum_max` ARA DOLUM + tam kapanış. Ara dolum = açılıştan sonra, tam kapanıştan önce aynı pozisyonda artır YA DA azalt;
+# sayaç pozisyon başına, tam kapanışta / yön dönüşünde sıfırlanır. 3. ve sonrası alınmaz (emir_yok / ara_dolum_siniri; kapanış her zaman alınır). Sanal ve gerçek kip. Karşı-olgu ölçülmez.
+kopya_ara_dolum_max: 2                  # adet
+# Bir emrin parçalı dolumları (oid Olay'da yok): aynı yön + önceki dolumdan en çok bu kadar ms sonra = aynı ara dolum
+kopya_ara_dolum_kume_ms: 1000           # ms
