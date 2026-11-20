@@ -15487,14 +15487,14 @@
  "kasa_ayar_usd": 10000.0,
  "kasa_usd": 10000.0,
  "kaynak": {
-  "cgroup_mb": 73.0,
-  "cgroup_tepe_mb": 79.0,
+  "cgroup_mb": 26.8,
+  "cgroup_tepe_mb": 26.8,
   "disk_bos_gb": 63.68,
   "disk_toplam_gb": 66.76,
-  "olc_ms": 1795140270939,
-  "ram_mb": 91.5,
-  "ram_tepe_mb": 97.3,
-  "yuk_1dk": 0.05
+  "olc_ms": 1795140288877,
+  "ram_mb": 40.4,
+  "ram_tepe_mb": 40.4,
+  "yuk_1dk": 0.18
  },
  "kip": "sanal",
  "kopya_drift": {
@@ -16520,6 +16520,7 @@
   }
  },
  "sahipsiz_ilk": {},
+ "son_atla": {},
  "son_funding_ms": null,
  "son_funding_saat": 498650,
  "son_olay_ms": 1795140089944,
@@ -16528,6 +16529,6 @@
  "ucret_gercek_usd": 0.0,
  "ucret_tahmin_say": 0,
  "vardiya": "sunucu",
- "yazildi_ms": 1795140270939,
+ "yazildi_ms": 1795140288878,
  "yetim_ilk": {}
 }

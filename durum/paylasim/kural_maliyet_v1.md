@@ -1,4 +1,4 @@
-# CT kural maliyeti (son 7 gün, 2026-11-20T02:03:45Z)
+# CT kural maliyeti (son 7 gün, 2026-11-20T02:04:49Z)
 
 **Slot tavanı:** 6425 olay, 5 trader; karşı-olgu toplam -8.34 $ (kapanan 0.68, açık -9.01; hayali nosyonel 651.27 $).
 
