@@ -120,6 +120,12 @@ Radar (tarama + kadro + isabet + PBO + rastgele + holdout mührü + `radar` dal�
 - **Actions:** `radar.yml`'de cron kaldırıldı; yalnız elle yedek (`workflow_dispatch`, sunucu radarı çalışmazsa). Sunucu ve Actions AYNI anda koşmamalı (ikisi de `radar` dalına yazar).
 - **Elle / izleme:** hemen koş: `sudo systemctl start --no-block sg-sanal-radar` (bugünün radarı veri dalında varsa iş yapmaz; zorlamak için `sudo systemctl edit sg-sanal-radar` ile geçici `Environment=RADAR_ZORLA=1`); günlük: `journalctl -u sg-sanal-radar -n 50 -o cat`; sonraki koşu: `systemctl list-timers sg-sanal-radar.timer`.
 
+## 6e. Yerel koruyucu (K-82)
+Ayrı süreç `sg-sanal-koruyucu.service` (Type=simple, `MemoryMax=100M`, `Restart=always`); elle kurulum gerekmez: `sanal_guncelle.sh` birimi kopyalar, `enable` + `restart` yapar (öz-denetim etkin mi bakar). Motordan bağımsız ikinci hat: günlük kayıp %5 -> yeni açılış dur, zirveden düşüş %20 -> hepsini kapat + dur, motor nabzı 180 sn yoksa ⚠️ alarm + açılış dur. Dosyalar: `durum/ortak/{ct,dur,koruyucu}.json`, günlük `kayit/koruyucu/`.
+- Zirve düşüşü sonrası yeniden açma: `durum/DUR` silinir, motor başlatılır; koruyucu DUR'un kalktığını görüp mandalı kendisi kaldırır (zirve güncel özsermayeye kurulur). Gerekirse `durum/ortak/dur.json` de silinebilir.
+- İlk kurulumda koruyucu henüz yokken motor kilitlenmez (yalnız uyarı); koruyucu bir kez görüldükten sonra nabzı 180 sn yoksa motor yeni açılış yapmaz.
+- Elle bakış: `systemctl status sg-sanal-koruyucu`, `cat durum/ortak/dur.json`.
+
 ## 7. Sorun giderme
 - `journalctl -u sg-sanal -n 100 -o cat`, `systemctl status sg-sanal sg-sanal-yayim.timer sg-sanal-pano.timer`.
 - Yayım: `sudo systemctl start sg-sanal-yayim; journalctl -u sg-sanal-yayim -n 20 -o cat` ("Permission denied (publickey)" = deploy anahtarı eklenmemiş/yazma izni yok).

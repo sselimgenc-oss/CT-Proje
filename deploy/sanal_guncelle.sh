@@ -120,7 +120,7 @@ yayim_taze() {   # veri dalındaki (origin/canli-durum) son yayım <= 50 dk mı:
 
 oz_denetim() {   # K-80: kurulum sonrası öz-denetim; sorun varsa nedeni yazar (stdout) ve 1 döner
   local ad bas sn=0 taze=0 sorun=""
-  for ad in sg-sanal-radar.timer sg-sanal-ikinci-alarm.timer sg-sanal-denetim.timer sg-sanal-bekci.timer; do
+  for ad in sg-sanal-radar.timer sg-sanal-ikinci-alarm.timer sg-sanal-denetim.timer sg-sanal-bekci.timer sg-sanal-koruyucu.service; do
     [ -f "$BIRIM_DIZIN/$ad" ] || continue
     "$SYSTEMCTL" is-enabled --quiet "$ad" || sorun="$sorun $ad-etkin-degil"
   done
@@ -392,6 +392,7 @@ motor_saglam || geri_al "sg-sanal ${BEKLE} sn sonra aktif değil"
 [ -f "$BIRIM_DIZIN/sg-sanal-ikinci-alarm.timer" ] && { "$SYSTEMCTL" enable --now sg-sanal-ikinci-alarm.timer >/dev/null 2>&1 || log "ikinci alarm zamanlayıcısı açılamadı"; }   # bot durdu 20 dk ikinci mesaj (elle kurulum gerekmesin)
 [ -f "$BIRIM_DIZIN/sg-sanal-denetim.timer" ] && { "$SYSTEMCTL" enable --now sg-sanal-denetim.timer >/dev/null 2>&1 || log "saatlik denetim zamanlayıcısı açılamadı"; }   # K-80: saatlik dayanıklılık alarmı (güncelleme günde 2 pencere)
 [ -f "$BIRIM_DIZIN/sg-sanal-bekci.timer" ] && { "$SYSTEMCTL" enable --now sg-sanal-bekci.timer >/dev/null 2>&1 || log "60 dk bekçi zamanlayıcısı açılamadı"; }   # K-80: yeni sürümden sonra 60 dk sağlık sayaçları; eşik aşılırsa otomatik geri dönüş
+[ -f "$BIRIM_DIZIN/sg-sanal-koruyucu.service" ] && { { "$SYSTEMCTL" enable sg-sanal-koruyucu.service >/dev/null 2>&1 && "$SYSTEMCTL" restart sg-sanal-koruyucu.service >/dev/null 2>&1; } || log "koruyucu servisi açılamadı"; }   # K-82: CT yerel koruyucu (ayrı süreç; restart = yeni kod yüklenir; durumu dosyada, güvenli)
 [ -f "$BIRIM_DIZIN/sg-sanal-radar.timer" ] && { "$SYSTEMCTL" enable --now sg-sanal-radar.timer >/dev/null 2>&1 || log "radar zamanlayıcısı açılamadı"; }   # günlük radar sunucuda (K-78; 00:37 UTC; elle kurulum gerekmesin; --now: Persistent kaçan koşuyu yakalar)
 if [ -f "$BIRIM_DIZIN/sg-sanal-binance-kagit.service" ] && [ ! -e "$DURUM/binance_kagit_kapali" ]; then   # K-81: Binance kâğıt motoru (HL sanal ile paralel kıyas) oto-kurulur, yeni kod için yeniden başlatılır. Kalıcı kapatma: $DURUM/binance_kagit_kapali
   if [ "$("$SYSTEMCTL" show -p ExecMainStatus --value sg-sanal-binance-kagit.service 2>/dev/null)" = 4 ]; then
