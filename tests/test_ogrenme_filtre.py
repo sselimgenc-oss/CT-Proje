@@ -66,6 +66,9 @@ def test_egitilir_dusuk_puan_atlanir_yuksek_gecer(tmp_path):
     assert skip and skip["puan"] < skip["esik"]
     assert o.filtre_kontrol(adr(1), "ETH", ms(19), {"trader_kaldirac": 2.0}) is None
     assert [e for e in olaylar if e["olay"] == "ml_filtre_atla"][0]["kurulum"] == alias
+    al = [e for e in olaylar if e["olay"] == "ml_filtre_al"]                              # "aldı" kararı da skoruyla kaydedilir (atla ile aynı alanlar)
+    assert len(al) == 1 and al[0]["kurulum"] == alias and al[0]["coin"] == "ETH" and al[0]["puan"] >= al[0]["esik"] and al[0]["n_egitim"] == 60
+    assert "0x" not in str(al)
     assert o.filtre_kontrol(adr(2), "BTC", ms(19), {"trader_kaldirac": 10.0}) is None      # başka trader: modeli yok → geçer
 
 

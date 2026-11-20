@@ -86,7 +86,7 @@ def test_pano_ozet_sekmesinde_saglik_kutusu_var():
     html = pano.html_olustur({"kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "yazildi_ms": SIMDI - 2 * DK, "vardiya": "v", "kip": "sanal", "dur": False}, {}, {}, [], [], SIMDI, kadro=kadro(satirlar=[], saha_n=0))
     assert "Sağlık" in html and "sorun yok" in html
     html2 = pano.html_olustur({"kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "yazildi_ms": SIMDI - 120 * DK, "vardiya": "v", "kip": "sanal", "dur": False}, {}, {}, [], [], SIMDI, kadro=kadro(satirlar=[], saha_n=0))
-    assert "acil" in html2 and "veri yazmıyor" in html2
+    assert "acil" in html2 and "Veri güncel değil" in html2 and "veri yazmıyor" not in html2
 
 
 def test_is_akisi_salt_okur_push_yok_hata_orulmez():

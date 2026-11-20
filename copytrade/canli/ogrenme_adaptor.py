@@ -426,6 +426,7 @@ class Ogrenme:
                 if p < float(paket["esik"]):
                     self._kayit(olay="ml_filtre_atla", kurulum=alias, coin=coin, puan=round(p, 4), esik=round(float(paket["esik"]), 4), n_egitim=paket["meta"].get("n_egitim"))
                     return {"puan": p, "esik": float(paket["esik"])}
+                self._kayit(olay="ml_filtre_al", kurulum=alias, coin=coin, puan=round(p, 4), esik=round(float(paket["esik"]), 4), n_egitim=paket["meta"].get("n_egitim"))      # "aldı" kararı (yalnız kayıt; karar mantığı aynı)
             else:
                 self._yok_logla(alias, simdi, "numpy_yok" if fm is None else "model_yok_ya_da_suresi_dolmus")
             self.bekleyen[f"{alias}|{coin}"] = {"ms": int(simdi), "ozellik": oz}

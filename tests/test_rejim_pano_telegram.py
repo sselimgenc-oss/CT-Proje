@@ -60,6 +60,6 @@ def test_pano_rejim_karti_uc_tablo_ve_kacis():
 def test_pano_html_rejim_karti_kwarg_ile_gelir_ve_kwarg_yoksa_veri_yok():
     ozet = {"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1010.0, "getiri": 0.01, "acik": [], "saha": 0, "saha_n": 0}
     h = pano.html_olustur(ozet, {}, {}, [], [], 1_800_000_000_000, rejim_sonuc=RS)
-    assert "Rejim ve duygu × sonuç" in h and "yükseliş" in h
+    assert "Rejim × duygu" in h and "yükseliş" in h
     h0 = pano.html_olustur(ozet, {}, {}, [], [], 1_800_000_000_000)
-    assert "Rejim ve duygu × sonuç" in h0 and "veri birikiyor" in h0
+    assert "Rejim × duygu" in h0 and "veri birikiyor" in h0

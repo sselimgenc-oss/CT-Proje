@@ -27,10 +27,10 @@ SAGLIK = {"yeniden_baslama_1s": 2, "oom_son": False}
 
 
 def kart(html: str, baslik: str) -> str:
-    """Başlığı `baslik` ile başlayan kartın (`<div class="p ...">`) iç HTML'i."""
-    m = re.search(r'<div class="p[^"]*"><div class="pb">' + re.escape(baslik) + r'.*?</div></div>(?=\n<div class="p|\n</section>)', html, re.S)
+    """TEKNİK sekmesinde başlığı `baslik` ile başlayan açılır kartın (`<details class="td">`) iç HTML'i."""
+    m = re.search(r'<details class="td"><summary><span>' + re.escape(baslik) + r'[^<]*</span>.*?</summary><div class="pi">(.*?)</div></details>', html, re.S)
     assert m, baslik
-    return m.group(0)
+    return m.group(1)
 
 
 def metin(h: str) -> str:
@@ -47,7 +47,7 @@ def test_ogrenme_karti_veri_ve_bos():
 
 def test_kural_maliyet_karti_slot_tavani_ilk_satir():
     h = pano._kural_maliyet_html(KM)
-    assert h.index("Slot tavanı") < h.index("ters netleşme") < h.index("ML filtresi")
+    assert h.index("Yer sınırı") < h.index("ters netleşme") < h.index("ML filtresi")
     assert "40 sinyal · 5 trader · −31,20 $" in h and "K‑41" not in h
     assert pano._kural_maliyet_html(None) == pano.BIRIKIYOR and pano._kural_maliyet_html({"satirlar": []}) == pano.BIRIKIYOR
     assert "yok" in pano._kural_maliyet_html({"satirlar": [KM["satirlar"][1]], "vurgu": {"slot_tavani": None}})
@@ -80,18 +80,16 @@ def _bos() -> str:
     return pano.html_olustur(OZET, {}, {}, [], [], SIMDI)
 
 
-BASLIKLAR = ["Öğrenme etkisi", "Kural maliyeti", "Alınmayan sinyaller (24 sa)", "Rejim ve duygu × sonuç", "Kopya kalitesi", "Seçim × rastgele", "Sunucu kaynakları"]
+BASLIKLAR = ["Sunucu kaynakları", "Kural maliyeti", "Alınmayan sinyaller", "Rejim × duygu", "Kopya kalitesi", "Seçim × rastgele", "Öğrenme etkisi"]
 
 
-def test_kartlar_siralama_ozet_sekmesinin_altinda():
+def test_kartlar_teknik_sekmesinde_ve_baska_sekmede_yok():
     h = _tam()
-    n1 = h[h.index('<section class="n1'):h.index('<section class="n6')]
-    konum = [n1.index(f'<div class="pb">{b}') for b in BASLIKLAR]
-    assert konum == sorted(konum)
-    ust = n1.index('<div class="pb">Özsermaye'), n1.index('<div class="pb">Günlük net'), n1.index('<div class="pb">Risk payı'), n1.index('<div class="pb">Sağlık')
-    assert list(ust) == sorted(ust) and ust[-1] < konum[0]
-    n3 = h[h.index('<section class="n3'):h.index('<section class="n5')]
-    assert all(f'<div class="pb">{b}' not in n3 for b in BASLIKLAR)             # tekrar yok
+    n6 = h[h.index('<section class="n6'):h.index("</section>", h.index('<section class="n6'))]
+    assert all(f"<span>{b}" in n6 for b in BASLIKLAR)
+    assert all("<details" in n6 for _ in BASLIKLAR)                                  # hepsi açılır kart
+    diger = h[h.index('<section class="n1'):h.index('<section class="n6')]
+    assert all(f"<span>{b}" not in diger and f'<div class="pb">{b}' not in diger for b in BASLIKLAR)             # tekrar yok
 
 
 @pytest.mark.parametrize("baslik", BASLIKLAR)
