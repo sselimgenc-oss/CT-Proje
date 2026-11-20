@@ -1,3 +1,5 @@
+> **İPTAL — kullanıcı kararı 20.11:** CT ile ML arasında hiçbir etkileşim olmayacak (ML CT'den veri okumaz; konsensüs, ortak ders deposu ve ortak koruyucunun ML bağlantısı iptal). Bu taslak uygulanmaz; yalnız arşiv. CT'nin yerel koruyucusu (K-82) aynen sürer.
+
 # Ortak koruyucu arayüzü (CT <-> ML) — TASLAK — ML onayı olmadan kesinleşmez
 
 Kapsam: CT ve ML'nin toplam riskini tek yerden izleyecek ortak koruyucunun dosya arayüzü (docs/binance-plan.md §5). Limit rakamları burada SEÇİLMEZ.

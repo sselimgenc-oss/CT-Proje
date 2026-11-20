@@ -457,3 +457,8 @@ Dayanak: `docs/binance-plan.md` §2-4/§7, `docs/binance-arastirma.md` §1b, Fab
 - Canlı WS geç dolum eşiği: mevcut `canli_olay_stale_sn` (120 sn) korunur; aşılırsa açılış `gec_acilis` ile alınmaz (kopya medyanı 0,7 sn, p90 1,5 sn; eşik kuyruk beklemesini de kapsar). Eşiği sıkılaştırmak ayrı karardır.
 - Senkron (`senkron_uygula`, `_senkron_azalt`): trader 0 → kapat, ters dönmüş → kapat (reduce-only), küçülmüş → azalt; senkron hiçbir zaman açılış/artırma üretmez, yalnız `poz_tr`'yi REST'e eşitler. K-76 sayaç budaması, K-77, K-74, K-82 değişmedi.
 - Bilinen nokta: trader kopma sırasında açtığı pozisyonu SONRADAN CANLI artırırsa (bizde yok) normal hedef tabanlı yol (K-36) artırmayı "ac" olarak değerlendirir; bu canlı yeni sinyaldir, bu kararla engellenmedi.
+
+## K-84 CT ↔ ML etkileşimi yok (kullanıcı kararı 20.11)
+- ML, CT'den veri okumaz; konsensüs, ortak ders deposu ve ortak koruyucunun ML bağlantısı İPTAL. `docs/ortak-koruyucu-arayuz.md` İPTAL (arşiv).
+- CT yerel koruyucusu (K-82) aynen sürer (yalnız CT'yi korur).
+- CT'de yalnız ML için yazılmış çıktı/kodun silinmesi kullanıcı onayına bağlı (liste orkestratöre iletildi).
