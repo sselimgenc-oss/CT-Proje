@@ -380,7 +380,7 @@
     "giris": 1784.9129512314632,
     "giris_ctx": null,
     "kaldirac": 3.0,
-    "sz": 0.2493581650363058,
+    "sz": 0.12497569749324282,
     "zirve_kar": 0.0
    },
    "io:SNDK": {
@@ -424,20 +424,6 @@
     "kaldirac": 3.0,
     "sz": 0.28240642034769947,
     "zirve_kar": 0.027606485559867656
-   },
-   "xyz:SPCX": {
-    "acilis_ms": 1795174842871,
-    "boyut_carpan": 1.0,
-    "giris": 132.30360492655677,
-    "giris_ctx": {
-     "duygu": "Extreme Fear",
-     "duygu_deger": 12,
-     "r1d": null,
-     "r4h": null
-    },
-    "kaldirac": 3.0,
-    "sz": 2.6444936571566764,
-    "zirve_kar": 1.0544485496133058e-05
    }
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": {
@@ -453,7 +439,7 @@
     },
     "kaldirac": 3.0,
     "sz": 0.8911723856940645,
-    "zirve_kar": 0.011083021909577113
+    "zirve_kar": 0.021891258151974877
    },
    "xyz:NVDA": {
     "acilis_ms": 1795140995402,
@@ -497,7 +483,7 @@
     },
     "kaldirac": 3.0,
     "sz": 0.4940945846683112,
-    "zirve_kar": 0.0010074912000747876
+    "zirve_kar": 0.006493056293664175
    },
    "xyz:ANT": {
     "acilis_ms": 1795141833183,
@@ -516,7 +502,7 @@
    "xyz:BE": {
     "acilis_ms": 1795138486314,
     "boyut_carpan": 1.0,
-    "giris": 161.3421287040441,
+    "giris": 158.7075134065211,
     "giris_ctx": {
      "duygu": "Extreme Fear",
      "duygu_deger": 12,
@@ -524,8 +510,8 @@
      "r4h": null
     },
     "kaldirac": 3.0,
-    "sz": 0.696268284801792,
-    "zirve_kar": 0.007176496958707175
+    "sz": 1.0257509353815566,
+    "zirve_kar": 0.0
    },
    "xyz:DRAM": {
     "acilis_ms": 1795139156755,
@@ -553,7 +539,7 @@
     },
     "kaldirac": 3.0,
     "sz": 0.2334780661303705,
-    "zirve_kar": 0.010934867023224985
+    "zirve_kar": 0.02174151952523995
    },
    "xyz:INTC": {
     "acilis_ms": 1795139558829,
@@ -572,7 +558,7 @@
    "xyz:META": {
     "acilis_ms": 1795141018443,
     "boyut_carpan": 1.0,
-    "giris": 589.66,
+    "giris": 584.4159324636507,
     "giris_ctx": {
      "duygu": "Extreme Fear",
      "duygu_deger": 12,
@@ -580,8 +566,8 @@
      "r4h": null
     },
     "kaldirac": 3.0,
-    "sz": 0.15560336371089334,
-    "zirve_kar": 0.001407590815046028
+    "sz": 0.2431946543698706,
+    "zirve_kar": 0.000332070919988737
    },
    "xyz:MSFT": {
     "acilis_ms": 1795141019547,
@@ -595,12 +581,12 @@
     },
     "kaldirac": 3.0,
     "sz": 0.25729991931934715,
-    "zirve_kar": 0.0
+    "zirve_kar": 0.003096773111641142
    },
    "xyz:MU": {
     "acilis_ms": 1795139132181,
     "boyut_carpan": 1.0,
-    "giris": 672.64,
+    "giris": 662.9085286707067,
     "giris_ctx": {
      "duygu": "Extreme Fear",
      "duygu_deger": 12,
@@ -608,13 +594,13 @@
      "r4h": null
     },
     "kaldirac": 3.0,
-    "sz": 0.08466611936776196,
-    "zirve_kar": 0.010778425309229305
+    "sz": 0.17788592369114864,
+    "zirve_kar": 0.0
    },
    "xyz:NVDA": {
     "acilis_ms": 1795140569862,
     "boyut_carpan": 1.0,
-    "giris": 143.76,
+    "giris": 142.50797657917622,
     "giris_ctx": {
      "duygu": "Extreme Fear",
      "duygu_deger": 12,
@@ -622,8 +608,8 @@
      "r4h": null
     },
     "kaldirac": 3.0,
-    "sz": 0.3879962716965645,
-    "zirve_kar": 0.007964663327768575
+    "sz": 0.7431049970586179,
+    "zirve_kar": 0.0
    },
    "xyz:PLTR": {
     "acilis_ms": 1795141017531,
@@ -956,7 +942,7 @@
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": {}
  },
  "realize": {
-  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": -22.01783483534587,
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": -28.95433026847345,
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 0.0,
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": -0.08645851069459667,
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 97.4120820862675,
@@ -983,7 +969,7 @@
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 909.0909090909091,
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 909.0909090909091
  },
- "son_niyet_cloid": "0xe5a9995177441e780a69a48ee1ca2a9e",
+ "son_niyet_cloid": "0xf94ab6b52512a78eae7ae9752943fc21",
  "tasfiyeler": [
   {
    "adres": "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89",
@@ -995,9 +981,9 @@
   }
  ],
  "ucret": {
-  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 1.5813771757518076,
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 1.8356053173788425,
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 0.3064685778617234,
-  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 0.8159723866702567,
+  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 0.911337757945879,
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 1.4851345470278854,
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": 0.8869822939847873,
   "0x9eb42f017e793512e4734f8785de605c4cb3a24e": 0.6136363636363636,
