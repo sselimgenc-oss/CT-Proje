@@ -408,3 +408,5 @@
 {"t":"sonuc","cloid":"0x4d4923a8526dd1c42462dcfeeed799a2","durum":"dolu","ms":1795127411993,"sz":5.375421238567576,"px":73.011,"ucret":0.17660919602207575}
 {"t":"niyet","kimlik":"kapat:0xdebd491a259a242fc9bd8fd780a507e8e062b67a:ETH:1795127416347:0:tam_kapanis","eylem":"kapat","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","yon":"A","usd":654.376784,"reduce_only":true,"cloid":"0x15346663cb017e925ce11d8d91c3d7f7","ms":1795127416347}
 {"t":"sonuc","cloid":"0x15346663cb017e925ce11d8d91c3d7f7","durum":"dolu","ms":1795127416600,"sz":0.35415029651338936,"px":1758.5,"ucret":0.28024798338845786}
+{"t":"niyet","kimlik":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9:893397718935849","eylem":"azalt","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"ZEC","yon":"B","usd":35.338703,"reduce_only":true,"cloid":"0x2f30c0f7ef19b6cac6c2aa310646d267","ms":1795136413055}
+{"t":"sonuc","cloid":"0x2f30c0f7ef19b6cac6c2aa310646d267","durum":"dolu","ms":1795136413395,"sz":0.03970640748639039,"px":890.0,"ucret":0.01590241619829935}
