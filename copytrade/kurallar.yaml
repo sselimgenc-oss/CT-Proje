@@ -298,3 +298,10 @@ fiyat_farki_min_dolum: 300
 fiyat_farki_min_gun: 3
 fiyat_farki_min_coin: 15
 fiyat_farki_grup_min_dolum: 30
+
+# K-77 (kullanıcı kararı 20.11, beyin fırtınası): zarar ettiren trader önce KÜÇÜLTÜLÜR, sonra (mevcut `kopya_zarar` radar elemesi, değişmedi) elenir. Ölçü: bu trader'dan KOPYALADIĞIMIZ tam kapanmış pozisyonların
+# toplam neti (pozisyon bazında giriş+çıkış ücreti dahil = pano `kapanan_ozeti` / `hesap.dolum_net`); pencere = `radar_pencere_saat` (kopya_zarar ölçümüyle AYNI, 168 sa). >= n1 kapanışta net < 0 → yeni açılış/artırma boyutu ×carpan1;
+# >= n2 kapanışta net hâlâ < 0 → en küçük boyut (asgari emir `radar_min_emir_usd`; artırma yok); net >= 0 → çarpan 1. Sanal ve gerçek kip (sanalda kapalı değil). Olay: `trader_kucult`.
+trader_zarar_kucult_n1: 5               # adet (ilk küçültme için en az kapanmış pozisyon)
+trader_zarar_kucult_carpan1: 0.5        # çarpan (n1'de yeni açılış/artırma boyutu)
+trader_zarar_kucult_n2: 10              # adet (en küçük boyut için en az kapanmış pozisyon)

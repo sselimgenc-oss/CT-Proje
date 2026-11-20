@@ -1241,7 +1241,9 @@ def _kadro_bolumu(ozet: dict, hesap: dict, kayitlar: list[dict], acik: list[dict
             ek += f'<div class="ms"><div><a class="ln" href="https://app.hyperliquid.xyz/explorer/address/{ad}" target="_blank" rel="noopener noreferrer">Trader sayfasını aç (Hyperliquid) ↗</a></div></div>'
         ayrinti += ek
         rozet = {"SAHADA": "art", "İNİYOR": "eks", "BEKLİYOR": "bk", "YEDEK": "yok", "KADRO DIŞI": "yok"}[durum]
-        gruplar[durum].append(f'<details class="kd{" kb" if durum == "BEKLİYOR" else ""}"><summary><span class="sr">{int(r.get("sira", 0)) or "·"}</span><b title="{esc(kisa_adres(ad))}">{esc(kisa(ad))}</b><span class="rz {rozet}">{durum}</span>'
+        ks = int((hesap.get("kucult") or {}).get(ad) or 0)             # K-77: zarar yüzünden küçültülmüş trader: küçük rozet (½ / en küçük)
+        kucult_rozet = "" if ks <= 0 else f'<span class="rz eks" title="Kopyalayınca zarar ettirdiği için boyutu küçültüldü (kâra dönünce ×1)">{"en küçük" if ks >= 2 else "½"}</span>'
+        gruplar[durum].append(f'<details class="kd{" kb" if durum == "BEKLİYOR" else ""}"><summary><span class="sr">{int(r.get("sira", 0)) or "·"}</span><b title="{esc(kisa_adres(ad))}">{esc(kisa(ad))}</b><span class="rz {rozet}">{durum}</span>{kucult_rozet}'
                        f'<span class="fb"><i style="width:{min(max(float(r.get("form") or 0), 0), 100):.0f}%"></i></span><span class="fm">{f"{float(r['form']):.0f}" if r.get("form") is not None else ""}</span>'
                        f'<span class="nt {renk(net)}">{esc(tl(net, True)) if net is not None else ""}</span></summary>{ayrinti}</details>')
     mut = (f'<div class="mt">Kartların toplamı <b class="{renk(toplam_net)}">{esc(tl(toplam_net, True))}</b> + takipten ayrılan traderlar <b>{esc(tl(float(hesap.get("kapanmis_net") or 0.0), True))}</b> = '

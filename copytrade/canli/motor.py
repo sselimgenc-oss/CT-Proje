@@ -652,6 +652,7 @@ class Motor:
         self._kesinti: dict | None = None                         # önceki oturum "Bot durdu" demişse: {"sn": kapalı kalma süresi}; Düzeldi `kesinti_duzeldi_bildir`de
         self._hafta_gunu: str | None = m.get("hafta_gunu")         # haftalık özet (Pazar 18:10 UTC = 21:10 TSİ): son gönderim günü; yalnız RAPOR, işlem mantığına girmez
         self._hafta_taban: dict | None = m.get("hafta_taban")      # {oz, btc, emir}: önceki haftalık özetteki özsermaye / BTC mark / emir sayacı
+        self._kucult_tampon: list[dict] = []               # K-77: özet penceresinde değişen trader küçültmeleri {adres, eski, yeni, n, net}; saatlik özete TEK satır (ayrı mesaj yok); yalnız bellek
         self._emir_tampon: list[dict] = []                 # Telegram: emirler dakikalık adımda TEK özet mesajına toplanır
         self._atla_tampon: dict[str, int] = {}             # Telegram sanal saatlik özet: pencerede atlanan sinyaller (neden -> adet)
         self._atla_islem: set[tuple[str, str, int]] = set()  # S-13: atlanan dolumların ayrı işlemleri (adres, coin, trader_dolum_ms // 1000)
@@ -1299,7 +1300,13 @@ class Motor:
             slot = slot * ders_carpan                              # ortak öğrenme: [0.5, 1.0] çarpan, yalnız açılış/artırma boyutu
         if golge_carpan is not None and golge_carpan != 1.0:
             slot = slot * golge_carpan                             # K-73 B5: trader kaldıracı > golge_kaldirac_uyari → yeni açılış/artırma boyutu x0.5 (yalnız sanal)
-        efektif_carpan = (ders_carpan if ders_carpan is not None else 1.0) * (golge_carpan if golge_carpan is not None else 1.0)
+        kucult_sv, kucult_carpan = 0, 1.0
+        if acilis:
+            kucult_sv = self._kucult_durumu(adres, simdi)[0]       # K-77: zarar ettiren trader önce KÜÇÜLTÜLÜR (iki kipte); çarpımsal, açılış çarpanına (Poz.boyut_carpan) girer
+            if kucult_sv == 1:
+                kucult_carpan = float(self.rules.get("trader_zarar_kucult_carpan1", 0.5))
+                slot = slot * kucult_carpan
+        efektif_carpan = (ders_carpan if ders_carpan is not None else 1.0) * (golge_carpan if golge_carpan is not None else 1.0) * kucult_carpan
         if eylem == "azalt":                                       # K-73 ek (O1): azaltma, açılışı küçülten AYNI çarpanla hedeflenir (Poz.boyut_carpan; yoksa 1.0)
             bp = self.hesap.poz.get(adres, {}).get(o.coin)
             slot = slot * (float(bp.boyut_carpan) if bp is not None else 1.0)
@@ -1316,6 +1323,17 @@ class Motor:
                              "biz_poz_usd": biz_usd, "biz_slot_toplam_usd": slot_toplam, "hedef_usd": hedef, "ders_carpan": ders_carpan, "golge_carpan": golge_carpan}
         if emir_usd <= 0:
             return self._atla(o, adres, eylem, "atlandi", neden)
+        if kucult_sv:                                              # K-77: en küçük boyut = asgari emir (`radar_min_emir_usd`); artırma yok (hedef zaten asgari); azaltma açılış çarpanıyla orantılı kalır
+            if kucult_sv == 2:
+                if eylem == "artir":
+                    return self._atla(o, adres, eylem, "atlandi", "trader_en_kucuk")
+                asgari = float(self.rules["radar_min_emir_usd"])
+                if eylem == "ac" and emir_usd > asgari + EPS:
+                    kucult_carpan = asgari / emir_usd
+                    efektif_carpan *= kucult_carpan
+                    emir_usd, neden = asgari, "trader_en_kucuk"
+            if self._boyut_girdi is not None:
+                self._boyut_girdi.update({"kucult_seviye": kucult_sv, "kucult_carpan": kucult_carpan})
         if acilis and self.ogrenme.filtre_kontrol(adres, o.coin, simdi, {"trader_hesap_usd": hesap_usd, "trader_poz_usd": abs(trader_sonra) * o.px,      # ortak öğrenme ML filtresi: yalnız ATLAR (counterfactual'a `_atla` yazar)
                                                   "trader_kaldirac": (self.kaldirac_tr.get(adres) or {}).get("anlik_kaldirac")}):
             return self._atla(o, adres, eylem, "atlandi", "ml_filtre_atla")
@@ -1355,6 +1373,23 @@ class Motor:
             hedef = biz_sz - (1 if biz_sz > 0 else -1) * min(emir_usd / (mk or o.px), abs(biz_sz))
             self._azalt_kuyruga(adres, o.coin, hedef, neden, simdi, mk or o.px)
         return s
+
+    def _kucult_durumu(self, adres: str, simdi: int) -> tuple[int, int, float]:
+        """K-77 (kullanıcı kararı 20.11): trader'ın KOPYALADIĞIMIZ kapanmış pozisyonlarına göre küçültme seviyesi (0 = ×1, 1 = ×0,5, 2 = en küçük) → (seviye, adet, net).
+        Pencere = radar `kopya_zarar` ölçümüyle AYNI (`radar_pencere_saat`, 168 sa). Seviye değişince TEK `trader_kucult` olayı (Telegram'da ayrı mesaj yok; saatlik özete satır). `kopya_zarar` elemesine dokunmaz."""
+        n1, n2 = int(self.rules.get("trader_zarar_kucult_n1", 5)), int(self.rules.get("trader_zarar_kucult_n2", 10))
+        sv, n, net = self.hesap.kucult_seviye(adres, simdi, int(float(self.rules.get("radar_pencere_saat", 168)) * 3600_000), n1, n2)
+        eski = self.hesap.kucult.get(adres, 0)
+        if sv != eski:
+            if sv:
+                self.hesap.kucult[adres] = sv
+            else:
+                self.hesap.kucult.pop(adres, None)
+            olay = {"adres": adres, "eski": eski, "yeni": sv, "n": n, "net": round(net, 6)}
+            self.kayit({"olay": "trader_kucult", **olay})
+            self._kucult_tampon.append(olay)
+            self._dolum_yaz()
+        return sv, n, net
 
     def _hedef_usd(self, adres: str, coin: str, mk: float) -> float | None:
         """Kopya hedefi ($, işaretli; `boyut.hedef_emir` ile aynı mantık: slot × trader nosyonel / trader hesap, coin tavanı `radar_slot_tavan_carpan` × slot). Ağ yok: önbellekteki hesap değeri; bilinmiyorsa None."""
@@ -1638,6 +1673,7 @@ class Motor:
             ozet["pnl"] += kz_dolum
             if kapandi:
                 self._poz_ozet.pop(anahtar_poz, None)
+                self._kucult_durumu(adres, dolum_ms)            # K-77: kapanış kapanan listesine yazıldı → seviye hemen güncellenir (olay)
         if belirsiz:                                        # alarm yukarıda gitti; sonuç `belirsiz_coz`da bildirilir
             pass
         elif acildi or kapandi:                             # kullanıcı standardı: açıldı/kapandı AYRI kısa mesaj (trader adı + giriş/tutar/stop ya da K/Z + neden)
@@ -3011,12 +3047,13 @@ class Motor:
             self.kayit({"olay": "tg_bastirildi", "tur": "kopya_sapmasi", "metin": tg.drift_satiri(adaylar)})
             for c in adaylar:
                 self.kopya_drift_tg_ms[c] = simdi
+        kucult, self._kucult_tampon = self._kucult_tampon, []          # K-77: pencerede değişen trader küçültmeleri → özette TEK satır
         metin = tg.msg_sanal_saatlik(bas, simdi, round((simdi - bas) / DAKIKA) if zorla else dk, emirler, atlanan,
-                                     (self.ozsermaye(), self.risk.gun_basi, self.kasa) if emirler else None, islem, adresler, "")
+                                     (self.ozsermaye(), self.risk.gun_basi, self.kasa) if emirler else None, islem, adresler, "", tg.kucult_satiri(kucult))
         if metin:
             self.tg.gonder(metin, tur="emir_ozeti")
         elif not zorla:                                                 # emirsiz "sistem çalışıyor" mesajı bastırılır; kayda `tg_bastirildi` yazılır
-            self.tg.gonder(tg.msg_sanal_saatlik_bos(bas, simdi, dk, atlanan, (self.ozsermaye(), self.risk.gun_basi, self.kasa), islem, adresler, ""), tur="saatlik_bos")
+            self.tg.gonder(tg.msg_sanal_saatlik_bos(bas, simdi, dk, atlanan, (self.ozsermaye(), self.risk.gun_basi, self.kasa), islem, adresler, "", tg.kucult_satiri(kucult)), tur="saatlik_bos")
 
     def _tasfiye(self, simdi: int) -> None:
         if self.kip != "sanal":
@@ -3025,6 +3062,7 @@ class Motor:
             self.kayit({"olay": "tasfiye", **e})
             self._stop_muaf_yaz(e["adres"], e["coin"], "tasfiye", simdi)
             self._tasfiye_emri(e, simdi)
+            self._kucult_durumu(e["adres"], simdi)                  # K-77: tasfiye de kapanmış pozisyondur
             self.tg.gonder(tg.alarm("Tasfiye (sanal)", f"{e['coin']} pozisyonu (trader {tg.kisa(e['adres'])}) {e['tasfiye_px']:.6g} fiyatında tasfiye oldu (piyasa {e['mark']:.6g}). Pozisyon kapandı, kayıt yazıldı.", "💥"))
 
     def _tasfiye_emri(self, e: dict, simdi: int) -> None:
@@ -3723,6 +3761,16 @@ class Motor:
         stats = getattr(self.post, "stats", None) or {}
         return {"acik": acik, "rest_istek": stats.get("istek"), "rest_429": stats.get("429"), "ogrenme": self.ogrenme.pano(), "duygu": haber.duygu_ozet(self.haber_anlik, self.saat_ms())}
 
+    def _kucult_aktif_satir(self) -> str:
+        """K-77: günlük rapora TEK satır: şu an küçültülmüş traderlar (yoksa '')."""
+        pencere = int(float(self.rules.get("radar_pencere_saat", 168)) * 3600_000)
+        simdi = self.saat_ms()
+        olaylar = []
+        for adres, sv in self.hesap.kucult.items():
+            n, net = self.hesap.kapanan_ozet(adres, simdi, pencere)
+            olaylar.append({"adres": adres, "yeni": sv, "n": n, "net": net})
+        return tg.kucult_satiri(olaylar)
+
     def _gunluk_metin(self) -> str:
         """Günlük rapor metni (`/rapor` ve zamanlı özet ortak; durum değiştirmez)."""
         oz = self.ozsermaye()
@@ -3730,7 +3778,7 @@ class Motor:
                              self.pano_ek()["acik"], self.hesap.funding_toplam() if self.kip == "sanal" else None, self.karsi_olgu_gun or None, gunluk_ozet.gunluk_etki(self),
                              dur=bool(self.risk.dur), bayraklar=self.risk_bayraklari(), saglik=self._gunluk_saglik(),
                              kopya_fark=(sum(self._kopya_fark) / len(self._kopya_fark)) if self._kopya_fark else None, gecikme_sn=(sum(self._gecikme) / len(self._gecikme)) if self._gecikme else None,
-                             artir=self._say_gun["artir"], azalt=self._say_gun["azalt"], guncelleme=gunluk_ozet.guncelleme_bugun())
+                             artir=self._say_gun["artir"], azalt=self._say_gun["azalt"], guncelleme=gunluk_ozet.guncelleme_bugun(), kucult_satir=self._kucult_aktif_satir())
 
     def _gunluk_saglik(self) -> list[str]:
         """Günlük raporun sağlık satırı için YALNIZ sorunlar (boşsa satır çıkmaz): bu oturumdaki Telegram gönderim hataları, borsa 429 sınırı."""

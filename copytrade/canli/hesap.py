@@ -40,6 +40,9 @@ def dinamik_stop_orani(yon_long: bool, giris: float, kaldirac: float, azami_kald
     return max(taban, min(float(ust), tasfiye_mesafe(yon_long, giris, kaldirac, azami_kaldirac) - float(pay)))
 
 
+KAPANAN_AZAMI = 200                                  # K-77: trader başına saklanan en çok kapanmış pozisyon kaydı
+
+
 def dolum_net(pnl: float, ucret: float, giris_ucret_payi: float = 0.0) -> float:
     """D3: bir dolumun NET K/Z'si = gerçekleşen − o dolumun ücreti − (kapanışta) pozisyonun giriş/artırma ücretinden düşen pay. Pano KAPANAN ve Telegram 'kapandı' AYNI tanımı kullanır (defter/para etkilenmez)."""
     return float(pnl) - float(ucret) - float(giris_ucret_payi)
@@ -58,6 +61,9 @@ class Hesap:
         self.son_niyet_cloid: str | None = None      # son UYGULANAN niyetin cloid'i (t4b #3: yeniden başlatmada bundan sonraki sonuçlu niyetler oynatılır)
         self.dinleyici = None                        # ortak öğrenme: uygula() sonrası çağrılan fonksiyon (serileşmez; motor bağlar)
         self.kapanmis_net = 0.0                      # sahadan çıkıp kaydı silinen üyelerin net K/Z'si (özsermaye sürekliliği)
+        self.poz_net: dict[str, float] = {}          # K-77: "adres|coin" -> AÇIK pozisyonun şimdiye dek net'i (gerçekleşen − her dolumun ücreti; giriş/artırma ücreti dahil = pano `dolum_net` toplamı)
+        self.kapanan: dict[str, list[list[float]]] = {}   # K-77: adres -> TAM kapanan pozisyonların [kapanış_ms, net] listesi (en çok `KAPANAN_AZAMI` son); hesap.json ile kalıcı (yeniden başlatmada kaybolmaz)
+        self.kucult: dict[str, int] = {}             # K-77: adres -> son bilinen küçültme seviyesi (0 = ×1, 1 = ×0,5, 2 = en küçük); olay tekrarını önler, pano rozeti buradan okur
         self.belirsiz: dict[str, dict] = {}         # G-1: cloid -> {ms, deneme, adres, coin} (Y-2: adres/coin yeni girdilerde); emri gönderilip yanıtı alınamayan (sonucu BELİRSİZ) niyetler. `son_niyet_cloid` ile AYNI atomik
                                                      # yazımda tutulur: çözülünce dolum deftere TEK kez uygulanır ve buradan silinir (oynatma bu niyetleri atlar: işaretçi zaten geçti)
 
@@ -135,6 +141,12 @@ class Hesap:
                 del self.poz[adres][coin]
         self.realize[adres] = self.realize.get(adres, 0.0) + pnl
         self.ucret[adres] = self.ucret.get(adres, 0.0) + ucret
+        anahtar = f"{adres}|{coin}"                                      # K-77: pozisyon başına net (pano KAPANAN neti ile aynı tanım); tam kapanışta trader kapanan listesine yazılır
+        self.poz_net[anahtar] = self.poz_net.get(anahtar, 0.0) + dolum_net(pnl, ucret)
+        if coin not in self.poz.get(adres, {}):
+            liste = self.kapanan.setdefault(adres, [])
+            liste.append([int(zaman_ms), self.poz_net.pop(anahtar)])
+            del liste[:-KAPANAN_AZAMI]
         if self.dinleyici is not None:                                   # ortak öğrenme: dolum bildirimi (hata hesabı bozmaz)
             try:
                 p2 = self.poz.get(adres, {}).get(coin)
@@ -205,11 +217,24 @@ class Hesap:
                     self.tasfiyeler.append(ev)
         return olaylar
 
+    # ------------------------------------------------------------------ K-77 zarar küçültme
+    def kapanan_ozet(self, adres: str, simdi_ms: int, pencere_ms: int) -> tuple[int, float]:
+        """K-77: trader'dan kopyaladığımız, son `pencere_ms` içinde TAM kapanan pozisyonların (adet, net toplam; pozisyon bazında net = giriş+çıkış ücreti dahil)."""
+        liste = [k for k in self.kapanan.get(adres, []) if simdi_ms - int(k[0]) <= pencere_ms]
+        return len(liste), sum(float(k[1]) for k in liste)
+
+    def kucult_seviye(self, adres: str, simdi_ms: int, pencere_ms: int, n1: int, n2: int) -> tuple[int, int, float]:
+        """K-77 (kullanıcı kararı 20.11): (seviye, adet, net). >= `n1` kapanışta net < 0 → 1 (×çarpan1); >= `n2` kapanışta net hâlâ < 0 → 2 (en küçük); net >= 0 → 0 (×1)."""
+        n, net = self.kapanan_ozet(adres, simdi_ms, pencere_ms)
+        if net >= 0 or n < n1:
+            return 0, n, net
+        return (2 if n >= n2 else 1), n, net
+
     # ------------------------------------------------------------------ kalıcılık
     def to_json(self) -> dict[str, Any]:
         return {"kasa_usd": self.kasa_usd, "kaldirac": self.kaldirac, "maks_kaldirac": self.maks_kaldirac, "realize": self.realize, "ucret": self.ucret, "slot_bas": self.slot_bas,
                 "poz": {a: {c: asdict(p) for c, p in coinler.items()} for a, coinler in self.poz.items()}, "tasfiyeler": self.tasfiyeler[-200:], "kapanmis_net": self.kapanmis_net, "funding": self.funding, "son_niyet_cloid": self.son_niyet_cloid,
-                "belirsiz": self.belirsiz}
+                "belirsiz": self.belirsiz, "poz_net": self.poz_net, "kapanan": self.kapanan, "kucult": self.kucult}
 
     @classmethod
     def from_json(cls, d: dict[str, Any], kaldirac: float | None = None) -> "Hesap":
@@ -220,6 +245,9 @@ class Hesap:
         h.tasfiyeler = list(d.get("tasfiyeler", []))
         h.kapanmis_net = float(d.get("kapanmis_net", 0.0))
         h.funding = dict(d.get("funding", {}))
+        h.poz_net = {k: float(v) for k, v in (d.get("poz_net") or {}).items()}
+        h.kapanan = {a: [[int(k[0]), float(k[1])] for k in v] for a, v in (d.get("kapanan") or {}).items()}
+        h.kucult = {a: int(v) for a, v in (d.get("kucult") or {}).items()}
         h.son_niyet_cloid = d.get("son_niyet_cloid")
         h.belirsiz = {k: dict(v) for k, v in (d.get("belirsiz") or {}).items()}
         return h
