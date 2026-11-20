@@ -761,14 +761,14 @@ def _kaynak_html(kaynak: dict | None, saglik: dict | None = None) -> str:
 # ------------------------------------------------------------------------------------------------------------------------------ pano v2 (6 sekme): saf yardımcılar
 SEKMELER = ("ÖZET", "AÇIK", "KAPANAN", "K/Z", "ÖĞRENME", "TEKNİK")
 UCRET_YOK = "Henüz ölçülemedi"
-NEDEN_KAPANIS = {"tasfiye": "Tasfiye", "felaket_stop": "Stop", "borsa_stop": "Stop", "borsa_stop_korumasiz": "Stop", "iz_suren_koruma": "İz süren",
+NEDEN_KAPANIS = {"tasfiye": "Tasfiye", "felaket_stop": "Stop", "tasfiye_koruma_stop": "Stop", "borsa_stop": "Stop", "borsa_stop_korumasiz": "Stop", "iz_suren_koruma": "İz süren",
                  "tam_kapanis": "Trader kapattı", "kucuk_kalan_kapat": "Trader kapattı", "trader_kapali_senkron": "Trader kapattı",
                  "trader_ters_senkron": "Trader yön değiştirdi", "inen_ters": "Konsensüs döndü",
                  "tamam": "Trader azalttı", "min_emir_yuvarlandi": "Trader azalttı", "slot_tavani": "Trader azalttı"}
 RISK_TR = {"risk": "risk freni", "dur": "motor durduruldu", "dur_tamam": "motor durdu", "mutabakat_alarm": "hesap uyuşmazlığı", "mutabakat_duzeldi": "hesap uyuşmazlığı giderildi",
            "kapanis_eksik": "kapanış eksik kaldı", "tasfiye": "zorla kapanma", "kuyruk_tasti": "olay kuyruğu taştı", "vardiya_boslugu": "çalışma kesintisi",
            "vardiya_baslamadi": "çalışma başlamadı", "telegram_yetkisiz": "yetkisiz Telegram denemesi"}
-NEDEN_AYRINTI = {"tasfiye": "Sanal tasfiye (zorla kapanma)", "felaket_stop": "Zarar stopu", "borsa_stop": "Borsa stopu", "borsa_stop_korumasiz": "Borsa stopu (koruma kurulamadı)", "iz_suren_koruma": "İz süren koruma",
+NEDEN_AYRINTI = {"tasfiye": "Sanal tasfiye (zorla kapanma)", "felaket_stop": "Zarar stopu", "tasfiye_koruma_stop": "Tasfiye koruması stopu (tasfiyeden 3 puan önce)", "borsa_stop": "Borsa stopu", "borsa_stop_korumasiz": "Borsa stopu (koruma kurulamadı)", "iz_suren_koruma": "İz süren koruma",
                  "tam_kapanis": "Trader pozisyonu kapattı", "kucuk_kalan_kapat": "Trader pozisyonu kapattı (küçük kalan)", "trader_kapali_senkron": "Trader pozisyonu kapattı",
                  "trader_ters_senkron": "Trader ters yöne geçti", "inen_ters": "Takipten ayrılan trader'ın pozisyonu, başka bir trader ters yönde açınca kapandı",
                  "tamam": "Trader pozisyonunu küçülttü", "min_emir_yuvarlandi": "Trader pozisyonunu küçülttü", "slot_tavani": "Trader pozisyonunu küçülttü"}

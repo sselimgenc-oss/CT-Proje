@@ -368,7 +368,8 @@ Kullanıcı "Hepsi tamam" dedi (K-43 + K1–K8, lider önerileri olduğu gibi):
 - 6) `kurallar.yaml` yorumları, VERI_SOZLESMESI ve DURUM güncellendi.
 - 8) İz süren koruma (yalnız sanal): kâr zirvesi (girişe göre, yön + mark) %15'e ulaşınca stop girişe; %30'a ulaşınca stop +%15 kâra; kâr stopa inerse pozisyon kapanır (`iz_suren_koruma`, trader sahada kalır). Zirve `Poz.zirve_kar` (hesap.json; yeniden başlatmada kalır; artırmada ortalama giriş değişince sıfırlanır). Sabit kâr al YOK; %20 felaket stopu aynen sürer. Ayarlar: `sanal_iz_suren`, `iz_basabas_oran` 0,15, `iz_kilit_oran` 0,30, `iz_kilit_seviye` 0,15.
 
-## K-74 (TASLAK, kullanıcı onayı bekliyor) — Tasfiyeden önce duran dinamik stop
+## K-74 (kullanıcı onayı 20.11) — Tasfiyeden önce duran dinamik stop
+- Karar: `dinamik_stop: true` (sanal + gerçek). Daraltılmış stopla kapanış nedeni `tasfiye_koruma_stop` (Telegram: "Neden: tasfiye koruması stopu").
 - Sorun: izole 3x'te HL azami kaldıracı 3 olan coin (örnek VVV, bakım marjı %16,7) girişten ~%14,3 aleyhe gidince tasfiye olur; %20 felaket stopu (gerçekte %22 borsa stopu) tasfiyeden SONRA kalır.
 - Öneri (bayrak `dinamik_stop`, varsayılan false = bugünkü davranış): yazılım stopu = min(`canli_felaket_stop_oran` 0,20; tasfiye mesafesi − 0,03); gerçekte borsa stopu = min(`canli_borsa_stop_oran` 0,22; tasfiye mesafesi − 0,01). Tasfiye mesafesi `hesap.tasfiye_fiyati` formülüyle: ortalama giriş, kaldıraç, coin azami kaldıracı. Mark fiyatıyla tetiklenir; artırmada ortalama giriş değişince yeniden hesaplanır (borsada mevcut stop eşitlemesi yeni stopu koyup eskisini iptal eder).
 - Örnekler (giriş 100, 3x): azami 3 short → tasfiye 114,2857, stop %11,2857 (111,2857); azami 5 short → 121,2121, stop %18,2121; azami 20 → stop %20 (değişmez); azami 3 long → tasfiye 80, stop %17.
