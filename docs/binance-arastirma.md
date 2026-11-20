@@ -2,7 +2,7 @@
 
 Tarih: 2026-11-20. Yalnız araştırma; bot koduna dokunulmadı. Cüzdan adresi yazılmadı.
 
-**Sonuç (kısa): KISMEN yapılabilir.** Coin kapsaması iyi (%97) ama "gecikmesiz" olamaz, Hollanda'dan erişim büyük olasılıkla yasak, ve fiyat sapması riski HL'ye göre artar. Ayrıntı en altta.
+**Sonuç (kısa): KISMEN yapılabilir.** Coin kapsaması iyi (47/50 coin; emirlerin %98,0'i, hacmin %98,9'u) ama "gecikmesiz" olamaz, Hollanda'dan erişim büyük olasılıkla yasak, ve fiyat sapması riski HL'ye göre artar. Ayrıntı en altta.
 
 ## Veri ve yöntem (neye ne kadar güvenilir)
 
@@ -148,7 +148,7 @@ Yani **ücret farkı önemsiz** (en fazla ~12 $/ay). Asıl maliyet fiyat sapmas�
 
 ## Sonuç: KISMEN yapılabilir
 
-- **Teknik olarak** mümkün: coin kapsaması %97–99 (47/50 coin), ücret farkı ~0, API sınırları yeterli, ~10–14 günlük iş.
+- **Teknik olarak** mümkün: coin kapsaması 47/50 coin (emir %98,0, hacim %98,9), ücret farkı ~0, API sınırları yeterli, ~10–14 günlük iş.
 - **"Gecikmesiz" olmaz:** izleme HL'de kaldığı için en az ~0,6 sn; bugünkü 0,57 sn'ye göre ~0,05–0,1 sn daha yavaş (tahmin).
 - **Engel/belirsizlik:** Hollanda IP'sinden erişim büyük olasılıkla kapalı (resmi 2021 duyurusu + 451 raporları); Türkiye için kesin kaynak bulunamadı; Binance fiyat/derinlik ölçülemedi.
 - Binance'i seçmenin tek net artısı derin likidite (özellikle küçük altlarda) olur; HL'de 50–300 $ emir için kayma zaten ~1 bp altında, yani HL'de bir likidite sorunu görünmüyor.
@@ -156,4 +156,13 @@ Yani **ücret farkı önemsiz** (en fazla ~12 $/ay). Asıl maliyet fiyat sapmas�
 
 ## Fable görüşü
 
-_(boş; doldurulacak)_
+**HAYIR (şimdilik değmez).** (20.11)
+1. Çözülecek sorun yok: HL'de 50–300 $ emirde kayma çoğu coinde 1 bp altı; Binance'in derinlik artısı bu boyutta işe yaramaz.
+2. Ücret kazancı yok: aylık fark 0 ile +12 $.
+3. Yeni maliyet: iki borsa fiyat farkı + ~0,6 sn gecikme; tahmini 3–5 bp ek sapma ≈ 70–115 $/ay (ölçülmedi). Gecikme iyileşmez, ~0,05–0,1 sn kötüleşir.
+4. Erişim: Amsterdam'dan Binance Futures büyük olasılıkla kapalı (451); bölge atlatma Binance şartlarını ihlal edebilir — kullanıcının hukuki kararı.
+5. Bedel: 10–14 gün iş, çift borsa karmaşıklığı, stop eşleme riski; 1.500 $ tavanlı gerçek kip HL'de bile henüz başlamadı.
+
+Önce yapılacak tek ölçüm (kod değişmeden, 1–2 gün): trader'ın HL dolum fiyatı ile ~0,6 sn sonraki Binance fiyatı arasındaki fark, bizim coinlerde. Bu fark HL'deki bugünkü kaymadan (medyan 0,4 bp, p90 6,6 bp) belirgin küçük çıkmazsa konu kapanır. Aynı ölçüm erişim sorusunu da cevaplar.
+
+Uyarı: veri ~4,1 gün (302 sanal emir); Binance tarafı ölçüm değil tahmin/arama özeti; sembol listesi 40 günlük üçüncü taraf dökümü.
