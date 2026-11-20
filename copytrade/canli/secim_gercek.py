@@ -10,9 +10,7 @@ Form geçmişi `durum/form_gecmis.json`da (gün -> {form: {adres: form}, ilk11_n
 from __future__ import annotations
 
 import json
-import os
 import random
-import tempfile
 from datetime import UTC, datetime
 from itertools import permutations
 from math import factorial
@@ -20,6 +18,8 @@ from pathlib import Path
 from typing import Any
 
 from copytrade.canli.ogrenme_adaptor import takma_ad
+from copytrade.canli.hafta_paketi import _yaz_atomik
+from copytrade.canli.rejim_sonuc import kayitlari_oku as _kayitlari_oku
 
 SEMA = "ct.secim_gercek.v1"
 DOSYA_JSON = "secim_gercek_v1.json"
@@ -207,21 +207,6 @@ def markdown(v: dict) -> str:
     return "\n".join(out) + "\n"
 
 
-def _yaz_atomik(yol: Path, metin: str) -> None:
-    yol.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=str(yol.parent), prefix=".sg-", suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(metin)
-        os.replace(tmp, yol)
-    except BaseException:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
-
-
 def gecmis_oku(durum_dizin: Path) -> dict:
     try:
         v = json.loads((Path(durum_dizin) / GECMIS).read_text(encoding="utf-8"))
@@ -243,20 +228,8 @@ def kadro_kaydet(motor: Any, kadro: dict, simdi_ms: int) -> None:
 
 
 def kayitlari_oku(dizin: Path, simdi_ms: int, gun: int = PENCERE_GUN) -> list[dict]:
-    satirlar: list[dict] = []
-    for i in range(gun + 1):
-        try:
-            with (Path(dizin) / f"{_gun(simdi_ms - i * _GUN_MS)}.jsonl").open(encoding="utf-8") as f:
-                for s in f:
-                    try:
-                        o = json.loads(s)
-                    except ValueError:
-                        continue
-                    if isinstance(o, dict) and o.get("olay") == "emir":
-                        satirlar.append(o)
-        except OSError:
-            continue
-    return satirlar
+    """Pencere kayıtlarından yalnız `emir` olayları (okuma `rejim_sonuc.kayitlari_oku` ile TEK yerde)."""
+    return [o for o in _kayitlari_oku(dizin, simdi_ms, gun) if o.get("olay") == "emir"]
 
 
 def yaz(motor: Any) -> None:

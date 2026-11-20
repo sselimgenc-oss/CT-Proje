@@ -18,7 +18,7 @@ RS = {"sema": "ct.rejim_sonuc.v1", "pencere_gun": 7, "tablolar": {
 # ---------------------------------------------------------------- Telegram: tek satır
 def test_rejim_satiri_en_iyi_en_kotu_bilinmiyor_haric():
     s = tg.rejim_satiri(RS["tablolar"]["rejim_1d"])
-    assert s == "🧭 Rejim (7g): en iyi trend_up 1g +45,00 $ (n=6), en kötü range 1g −30,00 $ (n=4)"
+    assert s == "🧭 Rejim (7g): en iyi yükseliş 1g +45,00 $ (n=6), en kötü yatay 1g −30,00 $ (n=4)"
 
 
 def test_rejim_satiri_bilinen_kova_yoksa_none():
@@ -37,7 +37,7 @@ def test_msg_haftalik_rejim_yoksa_eski_cikti_ayni():
 def test_msg_haftalik_rejim_satiri_sonda():
     metin = tg.msg_haftalik("sanal", 1000.0, 1030.0, 1000.0, 105.0, 100.0, 42, [], rejim=RS["tablolar"]["rejim_1d"])
     son = metin.splitlines()[-1]
-    assert son.startswith("🧭 Rejim (7g): en iyi trend_up 1g")
+    assert son.startswith("🧭 Rejim (7g): en iyi yükseliş 1g")
     assert metin.count("🧭") == 1
 
 
@@ -63,3 +63,10 @@ def test_pano_html_rejim_karti_kwarg_ile_gelir_ve_kwarg_yoksa_veri_yok():
     assert "Rejim × duygu" in h and "yükseliş" in h
     h0 = pano.html_olustur(ozet, {}, {}, [], [], 1_800_000_000_000)
     assert "Rejim × duygu" in h0 and "veri birikiyor" in h0
+
+
+def test_d13_rejim_satiri_volatile_ve_pano_ayni_turkce_sozluk():
+    from copytrade.canli import pano
+    s = tg.rejim_satiri([_satir("volatile", 3, 9.0), _satir("trend_down", 2, -4.0)])
+    assert "dalgalı" in s and "düşüş" in s and "volatile" not in s and "trend_down" not in s
+    assert pano.REJIM_TR is tg.REJIM_TR and pano.REJIM_TR["volatile"] == "dalgalı"

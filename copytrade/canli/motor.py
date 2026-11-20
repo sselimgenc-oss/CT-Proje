@@ -30,7 +30,7 @@ from typing import Any, Callable
 
 from copytrade import boyut
 from copytrade.canli import telegram as tg
-from copytrade.canli.hesap import Hesap, dinamik_stop_orani
+from copytrade.canli.hesap import Hesap, dinamik_stop_orani, dolum_net
 from copytrade.canli.kadro import Karar, Saha, kadro_taze_mi
 from copytrade.canli.mutabakat import poz_farki, sanal_tutarlilik
 from copytrade.canli.niyet import Niyet, cloid_uret
@@ -50,6 +50,7 @@ from copytrade.coin_sinif import asset_class
 from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter, RateLimitError, ledger_sayfala
 
 EPS = 1e-12
+TR_EPS = 1e-9                                                  # D5: TRADER pozisyonu için tek toz eşiği (poz_tr sıfırlama, eylem_belirle, kapanış önceliği); bizim defter pozisyonu `EPS`
 DAKIKA = 60_000
 SON_ATLA_MAX = 3000          # adet (K-75: "adres|coin" başına son açılış atlama nedeni; aşılırsa en eskiler düşer)
 TELAFI_YENIDEN_DENE = ("gec_acilis", "trader_hesap_yok", "hesap_yok", "hip3_atlandi")      # K-75 (hip3_atlandi: K-73 öncesi kalan atlama; açılış yine güncel HIP-3 kuralından geçer): bu nedenlerle atlanan açılış "kaçmış" sayılır (kural/filtre değil, veri/zaman) → telafi edilebilir; diğer atlama nedenlerine saygı gösterilir
@@ -388,13 +389,13 @@ def eylem_belirle(once: float, sonra: float, biz_sz: float) -> list[str]:
     """Trader dolumu (işaretli pozisyon önce → sonra) ve bizim pozisyonumuz → yürütülecek eylem sırası (`boyut.hedef_emir` eylemleri): kapat | azalt | ac | artir.
     Ters dönüş = [kapat (varsa), ac]. Bizde pozisyon yokken trader azaltıyorsa eylem yok.
     G-3: bizim pozisyon trader'ın SONRAKİ yönüne TERS ise (kaçan ters dönüş) önce reduce-only kapat, sonra hedefe göre aç → ters yönde reduce-only OLMAYAN emir hiç gitmez."""
-    if abs(sonra) < EPS:
+    if abs(sonra) < TR_EPS:
         return ["kapat"] if abs(biz_sz) > EPS else []
     if abs(biz_sz) > EPS and biz_sz * sonra < 0:
         return ["kapat", "ac"]
     if once * sonra < 0:
         return (["kapat"] if abs(biz_sz) > EPS else []) + ["ac"]
-    if abs(sonra) > abs(once) + EPS:
+    if abs(sonra) > abs(once) + TR_EPS:
         return ["ac"] if abs(biz_sz) < EPS else ["artir"]
     return ["azalt"] if abs(biz_sz) > EPS else []
 
@@ -1069,7 +1070,7 @@ class Motor:
         """Kuyruk önceliği için: dolum trader pozisyonunu azaltıyor / kapatıyor / ters çeviriyor mu (kapat/azalt önce işlenir)."""
         once = o.bas_poz if o.bas_poz is not None else self.poz_tr.get(o.adres, {}).get(o.coin, 0.0)
         sonra = once + (o.sz if o.yon == "B" else -o.sz) if o.sz is not None else once
-        return once * sonra < 0 or abs(sonra) < abs(once) - EPS
+        return once * sonra < 0 or abs(sonra) < abs(once) - TR_EPS
 
     def _poz_tr_esik(self, adres: str, coin: str, canli: bool) -> int:
         """G-14: bundan ESKİ dolum poz_tr'yi değiştirmez (ms, UTC). Her olay için: bu coinde son uygulanan dolumun zamanı. Canlı OLMAYAN olay (snapshot / abonelik öncesi) için ayrıca
@@ -1097,8 +1098,8 @@ class Motor:
         """Trader pozisyon tablosunu (`poz_tr`) dolumla günceller; döner (önce, sonra) işaretli coin miktarı."""
         once = o.bas_poz if o.bas_poz is not None else self.poz_tr.get(o.adres, {}).get(o.coin, 0.0)
         sonra = once + (o.sz if o.yon == "B" else -o.sz)
-        self.poz_tr.setdefault(o.adres, {})[o.coin] = 0.0 if abs(sonra) < 1e-9 else sonra
-        if abs(sonra) < 1e-9:
+        self.poz_tr.setdefault(o.adres, {})[o.coin] = 0.0 if abs(sonra) < TR_EPS else sonra
+        if abs(sonra) < TR_EPS:
             self.poz_tr[o.adres].pop(o.coin, None)
         self._poz_tr_ms[(o.adres, o.coin)] = max(self._poz_tr_ms.get((o.adres, o.coin), 0), o.zaman_ms)
         return once, sonra
@@ -1263,7 +1264,7 @@ class Motor:
         trader_once, trader_sonra = (0.0, sonra) if eylem == "ac" else ((once, 0.0) if eylem == "kapat" else (once, sonra))
         slot_toplam = sum(abs(p.sz) * (self.mark(c, p.giris) or p.giris) for c, p in self.hesap.poz.get(adres, {}).items())       # trader'ın TÜM coinlerdeki kopya nosyoneli (K‑35)
         emir_usd, neden = boyut.hedef_emir(eylem, trader_once, trader_sonra, hesap_usd or 0.0, biz_usd, slot, o.px, self.rules, slot_toplam, bant=True)
-        hedef = (min(float(slot) * abs(trader_sonra) * o.px / hesap_usd, float(self.rules["radar_slot_tavan_carpan"]) * float(slot)) if hesap_usd and o.px > 0 else None)
+        hedef = (boyut.hedef_usd(slot, trader_sonra, o.px, hesap_usd, self.rules) if hesap_usd and o.px > 0 else None)
         self._boyut_girdi = {"trader_poz_once": trader_once, "trader_poz_sonra": trader_sonra, "trader_hesap_usd": hesap_usd or None, "slot_usd": slot,        # elle denetim (VERI_SOZLESMESI): boyut girdileri
                              "biz_poz_usd": biz_usd, "biz_slot_toplam_usd": slot_toplam, "hedef_usd": hedef, "ders_carpan": ders_carpan, "golge_carpan": golge_carpan}
         if emir_usd <= 0:
@@ -1316,7 +1317,7 @@ class Motor:
         if hesap <= 0 or mk <= 0:
             return None
         slot = float(self.hesap.slot_bas.get(adres, self.saha.slot))
-        usd = min(slot * abs(poz) * mk / hesap, float(self.rules["radar_slot_tavan_carpan"]) * slot)
+        usd = boyut.hedef_usd(slot, poz, mk, hesap, self.rules)
         return usd if poz > 0 else -usd
 
     def _karsi_olgu_ac(self, o: Olay, adres: str, neden: str) -> None:
@@ -1355,7 +1356,7 @@ class Motor:
             if mk:
                 k["son_pnl"] = izleme.hayali_pnl(k["yon"], k["hayali_usd"], k["giris"], mk)
             poz = self.poz_tr.get(adres, {}).get(coin, 0.0)
-            bitti = abs(poz) < 1e-9 or (poz > 0) != (k["yon"] == "B")
+            bitti = abs(poz) < TR_EPS or (poz > 0) != (k["yon"] == "B")
             kapanis = "trader_kapadi" if bitti else ("sure_doldu" if simdi - int(k["ms"]) >= azami else None)
             if kapanis is None:
                 continue
@@ -1490,6 +1491,11 @@ class Motor:
         if neden == "min_emir_yuvarlandi":
             self.donem_emir_say("yuvarlanan")
         kimlik = kimlik if kimlik is not None else (o.kimlik or f"x:{adres}:{o.coin}:{simdi}")
+        if eylem in ("ac", "artir"):                        # D4: dolmayan AZALT kuyruğu mutlak hedef tutar; sonraki artırma/açılış onu geçersiz kılar (artırılmış pozisyon geri satılmasın)
+            kq = self.kapanis_kuyrugu.get(f"{adres}|{o.coin}")
+            if kq is not None and kq.get("tur") == "azalt":
+                self.kapanis_kuyrugu.pop(f"{adres}|{o.coin}", None)
+                self.kayit({"olay": "azalt_kuyrugu_iptal", "adres": adres, "coin": o.coin, "neden": eylem})
         cloid = cloid_uret(kimlik, eylem)
         emir_ms = self.saat_ms()
         self.niyet.niyet_yaz(kimlik=kimlik, eylem=eylem, adres=adres, coin=o.coin, yon=yon, usd=round(float(usd), 6), reduce_only=reduce_only, cloid=cloid, ms=emir_ms)      # ÖNCE yaz (fsync), SONRA emir
@@ -1568,7 +1574,7 @@ class Motor:
                 self._kopya_fark.append(abs(kayma_trader))
             if gecikme_sn is not None and gecikme_sn >= 0:
                 self._gecikme.append(gecikme_sn)
-            kz_dolum = float(pnl or 0.0) - (float(d.ucret or 0.0) if not acildi and eylem != "artir" else 0.0)   # pano ile aynı: kapanış/azaltma dolumunun neti (gerçekleşen − o dolumun ücreti)
+            kz_dolum = dolum_net(float(pnl or 0.0), float(d.ucret or 0.0))   # D3: pano ile aynı tanım; giriş/artırma ücreti de düşer (pozisyon toplamı = pano KAPANAN neti)
             anahtar_poz = f"{adres}|{o.coin}"
             if acildi:
                 ozet = self._poz_ozet[anahtar_poz] = {"tutar": float(d.usd_dolan or usd), "artir": 0, "azalt": 0, "pnl": 0.0}
@@ -2243,7 +2249,7 @@ class Motor:
                 return None, False
             bas, sz = float(bas), float(f["sz"])
             son = bas + (sz if str(f.get("side")) == "B" else -sz)
-            if abs(bas) < 1e-9 or bas * son < 0:
+            if abs(bas) < TR_EPS or bas * son < 0:
                 acilis = int(f["time"])
         return acilis, True
 
@@ -2355,7 +2361,7 @@ class Motor:
                             okuma += 1
                             self._telafi_ardisik_429 = 0
                         self._telafi_yas[yk] = (isr, acilis_ms, bilinen)
-                    if bilinen and acilis_ms is None:
+                    if (bilinen and acilis_ms is None) or (acilis_ms is not None and simdi - acilis_ms > pencere):     # D6: önbellekteki açılış anı zamanla 24 sa sınırını aşabilir: her seferde yeniden denetle
                         self._telafi_log_yaz(adres, coin, "pozisyon_eski")
                         continue
                     muaf = self.stop_muaf.get(yk)
@@ -3241,7 +3247,7 @@ class Motor:
         bs_oran = float(self.rules["canli_borsa_stop_oran"])
         oran_fn = (lambda c, uzun, giris: self._stop_orani(c, uzun, giris, bs_oran, 0.01)) if self.rules.get("dinamik_stop") else None     # K-74 (taslak): coin başına min(%22, tasfiye mesafesi − %1); bayrak kapalı → None (eski)
         hedef = borsa_stop.hedefler(self.hesap.poz, self.marks, bs_oran, float(self.rules.get("canli_min_nosyonel_usd", 10)), oran_fn)     # defter temelli (K-64)
-        hedef.update(borsa_stop.yetim_hedefler(self.yetim_ilk, self.marks, float(self.rules["canli_borsa_stop_oran"]), float(self.rules.get("canli_min_nosyonel_usd", 10))))      # Denetim-5 (K-68): defter dışı fazla için SABİT (ilk görülen mark) referanslı ek stop
+        hedef.update(borsa_stop.yetim_hedefler(self.yetim_ilk, self.marks, bs_oran, float(self.rules.get("canli_min_nosyonel_usd", 10)), oran_fn))      # D7: yetim stopu da dinamik oranı kullanır; Denetim-5 (K-68): defter dışı fazla için SABİT (ilk görülen mark) referanslı ek stop
         olay = self.borsa_stop.esitle(hedef, acik, self.yurutucu)
         yeniden = False
         for c in olay["kayip"]:
@@ -3680,9 +3686,10 @@ class Motor:
         d = datetime.fromtimestamp(simdi / 1000, UTC)
         if d.hour < int(self.rules["canli_ozet_saat_utc"]) or self._ozet_gunu == d.date().isoformat():
             return
+        metin = self._gunluk_metin()                        # D10: işaret mesaj KURULDUKTAN sonra atılır (istisnada o gün bir sonraki dakikada yeniden denenir)
         self._ozet_gunu = d.date().isoformat()
         oz = self.ozsermaye()
-        self.tg.gonder(self._gunluk_metin())
+        self.tg.gonder(metin)
         self.karsi_olgu_gun = {}
         self._ozet_oz, self._ozet_emir = oz, 0
         self._kopya_fark, self._gecikme, self._say_gun = [], [], {"ac": 0, "artir": 0, "azalt": 0, "kapat": 0}
@@ -3707,8 +3714,9 @@ class Motor:
         d = datetime.fromtimestamp(simdi / 1000, UTC)
         if d.weekday() != 6 or (d.hour, d.minute) < (18, 10) or self._hafta_gunu == d.date().isoformat():
             return
+        metin = self.haftalik_metin()                       # D10: işaret mesaj kurulduktan sonra
         self._hafta_gunu = d.date().isoformat()
-        self.tg.gonder(self.haftalik_metin())
+        self.tg.gonder(metin)
         self._hafta_taban = {"oz": self.ozsermaye(), "btc": self.marks.get("BTC"), "emir": self.sayac["emir"]}
 
     # ------------------------------------------------------------------ özet

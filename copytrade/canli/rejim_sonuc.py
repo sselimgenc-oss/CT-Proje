@@ -2,18 +2,17 @@
 
 Giriş anı damgası: pozisyon AÇILIRKEN coin'in rejimi (1g/4s) ve duygu sınıfı/değeri `Poz.giris_ctx`a yazılır (hesap.json ile kalıcı); kapanış `emir` kaydı bunu `giris_ctx` alanıyla taşır.
 Toplama: son 7 günün `kayit/*.jsonl` dosyalarındaki kapanış emirleri (`eylem=kapat`, dolu/kısmi, `pnl_usd` var). Damgasız (eski) işlemler "bilinmiyor" kovasına düşer.
-PnL = gerçekleşen K/Z (ücret hariç; gunluk_ozet ile aynı tanım).
+PnL = gerçekleşen K/Z (ücret hariç). Yalnız `kapat` dolumu toplanır (tasarım: rejim damgası kapanış kaydında; kısmi `azalt` dolumları dahil değil), bu yüzden gunluk_ozet'in toplam gerçekleşen K/Z'sinden FARKLI olabilir.
 """
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from copytrade.canli import haber, rejim
+from copytrade.canli.hafta_paketi import _yaz_atomik
 
 SEMA = "ct.rejim_sonuc.v1"
 DOSYA_JSON = "rejim_sonuc_v1.json"
@@ -117,21 +116,6 @@ def markdown(veri: dict) -> str:
         out.append("")
     out += ["Notlar:", ""] + [f"- {n}" for n in veri["notlar"]]
     return "\n".join(out) + "\n"
-
-
-def _yaz_atomik(yol: Path, metin: str) -> None:
-    yol.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=str(yol.parent), prefix=".rs-", suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(metin)
-        os.replace(tmp, yol)
-    except BaseException:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
 
 
 def yaz(motor: Any) -> None:

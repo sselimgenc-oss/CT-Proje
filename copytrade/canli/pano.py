@@ -16,14 +16,14 @@ import json
 import subprocess
 import sys
 import time
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime
 from html import escape as esc
 from pathlib import Path
 
 from copytrade import surum_karsilastirma
 from copytrade.canli.gunluk_ozet import alinmayan_neden, kopya_kalite
-from copytrade.canli.hesap import dinamik_stop_orani
-from copytrade.canli.telegram import ATLA_TR, KACIRILAN_NEDENLER, fiyat, kip_adi, tr_isaretli, tr_sayi, tr_yuzde
+from copytrade.canli.hesap import dinamik_stop_orani, dolum_net
+from copytrade.canli.telegram import ATLA_TR, KACIRILAN_NEDENLER, REJIM_TR, TSI, kisa, fiyat, kip_adi, tr_isaretli, tr_sayi, tr_yuzde
 from copytrade.saglik import durum as saglik_durum, kontrol as saglik_kontrol
 
 SAAT_MS = 3_600_000
@@ -31,10 +31,6 @@ GUN_MS = 24 * SAAT_MS
 KAYIT_GUN = 14                                                                          # pano kayıt penceresi (gün): veri dalı `kayit/` 14 günden eskisini siler (canli_yayimla.sh)
 FUNDING_OLAYLARI = ("funding", "funding_gercek")                                       # S-16: sanal kipte `funding`, gerçek kipte `funding_gercek` (HL); ikisi de `funding_usd` ($, + alınan / − ödenen)
 RISK_OLAYLARI = ("risk", "dur", "dur_tamam", "mutabakat_alarm", "mutabakat_duzeldi", "kapanis_eksik", "tasfiye", "kuyruk_tasti", "vardiya_boslugu", "vardiya_baslamadi", "telegram_yetkisiz")
-
-
-def kisa(adres: str) -> str:
-    return adres[:8] + "…" if len(adres) > 8 else adres
 
 
 def yuzde(v: float | None, isaretli: bool = True) -> str:
@@ -220,7 +216,6 @@ def pano_olustur(ozet: dict, risk: dict, hesap: dict, kayitlar: list[dict], isab
     return "\n".join(s) + "\n", gecmis_yeni
 
 
-TSI = timezone(timedelta(hours=3))
 
 RENKLER = ("#f5a524", "#3ddc84", "#5b9dff", "#ff5d5d", "#b07cff", "#2dd4bf", "#f472b6", "#a3a3a3")
 
@@ -663,10 +658,6 @@ def _kopya_kalite_html(satirlar: list[dict]) -> str:
 BIRIKIYOR = '<div class="bos">veri birikiyor</div>'
 
 
-REJIM_TR = {"trend_up": "yükseliş", "trend_down": "düşüş", "range": "yatay", "unclear": "belirsiz", "bilinmiyor": "bilinmiyor",
-            "Extreme Fear": "aşırı korku", "Fear": "korku", "Neutral": "nötr", "Greed": "açgözlülük", "Extreme Greed": "aşırı açgözlülük"}
-
-
 def _neden_tr(neden: str) -> str:
     """Atlama nedeni → sade Türkçe etiket (`ATLA_TR`); sözlükte olmayan teknik kod ham görünmez: "diğer" (Fable 19.11)."""
     return _sade(ATLA_TR.get(neden, "diğer"))
@@ -876,6 +867,7 @@ def kapanan_islemler(kayitlar: list[dict], felaket_oran: float = 0.0) -> list[di
         if not k.get("reduce_only"):
             o = acik.setdefault(anahtar, {"ms": ms, "ders": k.get("ders_carpan"), "sz": 0.0, "tr": 0.0, "biz": 0.0, "n": 0, "kalan": 0.0})
             s_ = abs(float(k.get("sz") or 0.0))
+            o["giris_ucret"] = o.get("giris_ucret", 0.0) + float(k.get("ucret") or 0.0)                       # D3: giriş/artırma ücretleri; kapanışlarda paylaştırılır
             o["tepe"] = o.get("tepe", 0.0) + s_                                                            # toplam açılan büyüklük (toz toleransı tabanı)
             o["kalan"] = o.get("kalan", 0.0) + s_                                                          # açık büyüklük (kapanış tespiti: sıfıra inince pozisyon bitmiştir)
             if k.get("trader_px") is not None and k.get("dolum_px") is not None and s_ > 0:
@@ -889,6 +881,10 @@ def kapanan_islemler(kayitlar: list[dict], felaket_oran: float = 0.0) -> list[di
         sz_k = abs(float(k.get("sz") or 0.0))
         kalan = o["kalan"] - sz_k if "kalan" in o else None
         tam = k.get("eylem") == "kapat" or (kalan is not None and kalan <= 1e-4 * o.get("tepe", o["kalan"]))      # toz: açılan büyüklüğün %0,01'i altı kalıntı = sıfır      # kapat / azaltmalarla sıfıra iniş / tasfiye: hepsi pozisyon sonu
+        giris_pay = 0.0
+        if o.get("giris_ucret"):                                                                           # D3: açık büyüklükteki payı oranında; tam kapanışta kalan hepsi (toplam = giriş ücreti)
+            giris_pay = o["giris_ucret"] if tam or o["kalan"] <= 0 else o["giris_ucret"] * min(1.0, sz_k / o["kalan"])
+            o["giris_ucret"] -= giris_pay
         if "kalan" in o:
             o["kalan"] = max(kalan, 0.0)
         poz = (anahtar[0], anahtar[1], seq.get(anahtar, 0))
@@ -899,7 +895,7 @@ def kapanan_islemler(kayitlar: list[dict], felaket_oran: float = 0.0) -> list[di
         uzun = k.get("yon") == "A"                                                                         # kapatan emir SAT ise pozisyon uzundu
         giris = o["biz"] / o["sz"] if o.get("sz") else (None if not sz or cikis is None else (float(cikis) - pnl / sz if uzun else float(cikis) + pnl / sz))
         tr_giris = o["tr"] / o["sz"] if o.get("sz") else None
-        net = pnl - ucret
+        net = dolum_net(pnl, ucret, giris_pay)
         kod = str(k.get("boyut_neden") or "")
         ayr = NEDEN_AYRINTI.get(kod, "Bilinmeyen kapanış nedeni")
         if kod == "felaket_stop" and felaket_oran > 0:

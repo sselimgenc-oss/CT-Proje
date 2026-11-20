@@ -62,7 +62,7 @@ def test_altin_cikti_tam_girdi(tmp_path):
     assert md.index("**Slot tavanı:** 900 olay") < md.index("| slot_tavani |")                         # slot tavanı satırı ilk
     assert "| hafta (1 gün kayıtlı) | 3 | +1.00 | 1 | 0 |" in md and "| bugün | 4 | -3.50 | 2 | 1 |" in md
     assert "| 120.5 | 1 | yok |" in md
-    assert "Kasa geçmişi 1/7 gün" in md                                                                 # kısmi geçmiş uyarısı
+    assert "Kasa geçmişi 1/8 gün" in md                                                                 # kısmi geçmiş uyarısı
     assert "0x" not in md
 
 
@@ -144,3 +144,11 @@ def test_radar_oku_404_atlanir_ve_dosya_okunur(monkeypatch):
 def test_yayim_betikleri_hafta_dosyalarini_kopyalar():
     for yol in (".github/scripts/canli_yayimla.sh", "deploy/sanal_yayimla.sh"):
         assert "CT_HAFTA_*.md" in (ROOT / yol).read_text(encoding="utf-8")
+
+
+def test_d11_haftalik_pnl_tam_7_gunu_kapsar_taban_pencereden_onceki_gun_sonu(tmp_path):
+    _dosyalar(tmp_path)
+    g = {"2026-11-15": {"oz": 9900.0}, "2026-11-16": {"oz": 10000.0}}                 # pencere Pzt 16 .. Paz 22; taban = Paz 15 gün sonu
+    md = hp.olustur(tmp_path, PAZAR, RADAR, g)
+    assert "| sanal | 10000.00 | 10050.00 | +50.00 | +150.00 |" in md                 # 10050 − 9900 (7 tam gün), 10000 değil
+    assert "2026-11-15 sonrası" in md

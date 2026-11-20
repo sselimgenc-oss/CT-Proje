@@ -40,6 +40,11 @@ def dinamik_stop_orani(yon_long: bool, giris: float, kaldirac: float, azami_kald
     return max(taban, min(float(ust), tasfiye_mesafe(yon_long, giris, kaldirac, azami_kaldirac) - float(pay)))
 
 
+def dolum_net(pnl: float, ucret: float, giris_ucret_payi: float = 0.0) -> float:
+    """D3: bir dolumun NET K/Z'si = gerçekleşen − o dolumun ücreti − (kapanışta) pozisyonun giriş/artırma ücretinden düşen pay. Pano KAPANAN ve Telegram 'kapandı' AYNI tanımı kullanır (defter/para etkilenmez)."""
+    return float(pnl) - float(ucret) - float(giris_ucret_payi)
+
+
 class Hesap:
     def __init__(self, kasa_usd: float, kaldirac: float = 3.0, maks_kaldirac: dict[str, float] | None = None) -> None:
         self.kasa_usd, self.kaldirac = float(kasa_usd), float(kaldirac)
@@ -56,11 +61,15 @@ class Hesap:
         self.belirsiz: dict[str, dict] = {}         # G-1: cloid -> {ms, deneme, adres, coin} (Y-2: adres/coin yeni girdilerde); emri gönderilip yanıtı alınamayan (sonucu BELİRSİZ) niyetler. `son_niyet_cloid` ile AYNI atomik
                                                      # yazımda tutulur: çözülünce dolum deftere TEK kez uygulanır ve buradan silinir (oynatma bu niyetleri atlar: işaretçi zaten geçti)
 
+    def _net(self, adres: str) -> float:
+        """Üyenin girişten beri net K/Z'si = realize − ücret + funding (sıra korunur: kayan nokta sonucu değişmez)."""
+        return self.realize.get(adres, 0.0) - self.ucret.get(adres, 0.0) + self.funding.get(adres, 0.0)
+
     # ------------------------------------------------------------------ slot
     def slot_ac(self, adres: str, slot_usd: float) -> None:
         """Yeni slot. M-1: üyenin eski defteri varsa (kapanışı teyit edilmeden sahadan inip geri giren üye: realize/ücret/funding ≠ 0, açık pozisyon kalmış olabilir)
         eski net (realize − ücret + funding) önce `kapanmis_net`e taşınır, sonra sıfırlanır: özsermaye değişmez (özdeşlik korunur). Açık pozisyon defterde kalır (K/Z'si yeni slota yazılır)."""
-        self.kapanmis_net += self.realize.get(adres, 0.0) - self.ucret.get(adres, 0.0) + self.funding.get(adres, 0.0)
+        self.kapanmis_net += self._net(adres)
         self.slot_bas[adres] = float(slot_usd)
         self.realize[adres] = self.ucret[adres] = self.funding[adres] = 0.0
         self.poz.setdefault(adres, {})
@@ -72,7 +81,7 @@ class Hesap:
             raise ValueError("dönem yalnız pozisyonsuzken yenilenir")
         eski = {"kasa_usd": self.kasa_usd, "ozsermaye": self.ozsermaye({}), "kapanmis_net": self.kapanmis_net, "slot_bas": dict(self.slot_bas)}
         for adres in list(self.slot_bas):
-            self.kapanmis_net += self.realize.get(adres, 0.0) - self.ucret.get(adres, 0.0) + self.funding.get(adres, 0.0)
+            self.kapanmis_net += self._net(adres)
             self.realize[adres] = self.ucret[adres] = self.funding[adres] = 0.0
             self.slot_bas[adres] = float(slot_usd)
         self.kasa_usd = float(kasa_usd)
@@ -81,7 +90,7 @@ class Hesap:
     def slot_kapat(self, adres: str) -> None:
         """Pozisyonsuz üyenin kaydını siler (açık pozisyonu varsa çağrılmaz)."""
         if not self.poz.get(adres):
-            self.kapanmis_net += self.realize.get(adres, 0.0) - self.ucret.get(adres, 0.0) + self.funding.get(adres, 0.0)
+            self.kapanmis_net += self._net(adres)
             for d in (self.poz, self.realize, self.ucret, self.slot_bas, self.funding):
                 d.pop(adres, None)
 

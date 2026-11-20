@@ -12,11 +12,12 @@ import json
 import os
 import re
 import tempfile
-from datetime import UTC, date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable
 
-TSI = timezone(timedelta(hours=3))                                     # Türkiye: sabit UTC+3 (yaz saati yok)
+from copytrade.canli.telegram import TSI
+
 GECMIS = "hafta_gecmis.json"
 GECMIS_GUN = 14
 RADAR_GUN = 8
@@ -138,10 +139,11 @@ def kaydet(durum_dizin: Path, ozet: dict) -> None:
     _yaz_atomik(Path(durum_dizin) / GECMIS, json.dumps(h, ensure_ascii=False, indent=1))
 
 
-def _hafta_gunleri(gecmis: dict, bitis: date) -> list[tuple[str, dict]]:
-    """Bitişe (Pazartesi) kadar son 7 UTC gününün kayıtları (Pazar akşamı yazılırken bitiş günü hariç: Pazar dahil geri 7 gün)."""
+def _hafta_gunleri(gecmis: dict, bitis: date, taban_gunu: bool = False) -> list[tuple[str, dict]]:
+    """Bitişe (Pazartesi) kadar son 7 UTC gününün kayıtları (Pazar akşamı yazılırken bitiş günü hariç: Pazar dahil geri 7 gün).
+    `taban_gunu`: pencereden BİR gün öncesini de ekler (D11: günlük kayıt gün SONU özsermayesidir; 7 tam günlük K/Z için taban pencerenin önceki gününün sonudur)."""
     son = bitis - timedelta(days=1)
-    alt = (son - timedelta(days=6)).isoformat()
+    alt = (son - timedelta(days=7 if taban_gunu else 6)).isoformat()
     return [(g, gecmis[g]) for g in sorted(gecmis) if alt <= g <= son.isoformat() and isinstance(gecmis[g], dict)]
 
 
@@ -158,8 +160,8 @@ def _b_kasa(oz: dict | None, rs: dict | None, hafta: list[tuple[str, dict]], uya
         g0, v0 = oz_l[0]
         haftalik = float(k["simdi"]) - v0
         kapsam = f"{g0} sonrası; {len(oz_l)} günlük kayıt"
-        if len(oz_l) < 7:
-            uyari.append(f"Kasa geçmişi {len(oz_l)}/7 gün: haftalık PnL kısmi ({g0} günü son değerinden itibaren).")
+        if len(oz_l) < 8:
+            uyari.append(f"Kasa geçmişi {len(oz_l)}/8 gün (7 tam gün için taban dahil): haftalık PnL kısmi ({g0} günü son değerinden itibaren).")
     else:
         uyari.append("Kasa geçmişi yok: haftalık PnL hesaplanamadı (toplam PnL başlangıçtan).")
     gerc = rs_toplam(rs)
@@ -321,7 +323,7 @@ def olustur(paylasim: Path, hafta_bitis: date, radar: list[dict] | None, gecmis:
     uyari: list[str] = []
     govde = [f"# CT haftalık veri paketi — {hafta_bitis.isoformat()}", "",
              f"Yalnız bilgi (karar/limit değiştirmez). Hafta: {(hafta_bitis - timedelta(days=7)).isoformat()} → {hafta_bitis.isoformat()}; özet üretimi: {(oz or {}).get('uretim', YOK)}.", ""]
-    govde += _b_kasa(oz, rs, hafta, uyari)
+    govde += _b_kasa(oz, rs, _hafta_gunleri(gecmis or {}, hafta_bitis, True), uyari)
     govde += _b_secim(radar, sg, uyari)
     govde += _b_rejim(rs, uyari)
     govde += _b_kural(km, uyari)
