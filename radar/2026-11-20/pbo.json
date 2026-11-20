@@ -1,0 +1,25 @@
+{
+ "sema": "pbo-v1",
+ "tarih": "2026-11-20",
+ "s": 8,
+ "gunler": [
+  "2026-11-05",
+  "2026-11-09"
+ ],
+ "t": 5,
+ "adaylar": [
+  "ilk11",
+  "havuz",
+  "elenen",
+  "evren_ornek30"
+ ],
+ "atlanan_aday": {
+  "ilk11_fiili": "tüm günlerde değer yok"
+ },
+ "atlanan_gun": [],
+ "uyari": "günlük 7 günlük pencereler örtüşür (ardışık dönemler bağımlı); PBO yalnız bilgidir, karar kuralına girmez",
+ "durum": "yetersiz veri",
+ "pbo": null,
+ "dsr": null,
+ "neden": "T=5 (gerekli ≥ 16), aday=4 (gerekli ≥ 2)"
+}
