@@ -14,7 +14,7 @@ import math
 GERCEK_KASA_UST_USD = 1500.0     # $ (K-72; önceki 1.000 $, kullanıcı 19.11'de yükseltti)
 GUNLUK_KAYIP_UST_ORAN = 0.05     # oran (gün başı özsermayeden kayıp)
 KALDIRAC_ALT = 1                 # x
-KALDIRAC_UST = 5                 # x (CT 3x kalır; 5x izole tasfiye ≈ −%17-19, bizim %20/%22 stoplarımızdan önce gelir)
+KALDIRAC_UST = 5                 # x (CT 3x kalır; K-74 dinamik stop: stop oranı = min(üst, tasfiye mesafesi − pay), yani stoplar tasfiyeden ÖNCE kalır; 5x izole tasfiye mesafesi ≈ %17-19)
 
 
 def etkin_kasa_ust(rules: dict) -> float:
