@@ -19180,7 +19180,8 @@
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9:122082841589743",
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9:102409941166085",
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9:954452485319571",
-  "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9:51869556571696"
+  "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9:51869556571696",
+  "kapat:0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:xyz:SNDK:1795200406352:0:tam_kapanis"
  ],
  "kaldirac_tr": {
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": {
@@ -19720,14 +19721,14 @@
  "kasa_ayar_usd": 10000.0,
  "kasa_usd": 10000.0,
  "kaynak": {
-  "cgroup_mb": 69.2,
-  "cgroup_tepe_mb": 76.7,
-  "disk_bos_gb": 63.62,
+  "cgroup_mb": 28.5,
+  "cgroup_tepe_mb": 28.5,
+  "disk_bos_gb": 63.61,
   "disk_toplam_gb": 66.76,
-  "olc_ms": 1795201350607,
-  "ram_mb": 87.3,
-  "ram_tepe_mb": 93.4,
-  "yuk_1dk": 0.0
+  "olc_ms": 1795201372102,
+  "ram_mb": 41.8,
+  "ram_tepe_mb": 41.8,
+  "yuk_1dk": 0.15
  },
  "kip": "sanal",
  "kopya_drift": {
@@ -21133,6 +21134,6 @@
  "ucret_gercek_usd": 0.0,
  "ucret_tahmin_say": 0,
  "vardiya": "sunucu",
- "yazildi_ms": 1795201350609,
+ "yazildi_ms": 1795201372103,
  "yetim_ilk": {}
 }
