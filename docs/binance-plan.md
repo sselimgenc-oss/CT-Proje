@@ -306,3 +306,21 @@ Teknik doğrulama bekleyen (Aşama 0 işi): sub-account uçlarının izinleri; A
 - Binance geliştirici dokümanı: Sub Account, "Get Futures Position-Risk of Sub-account (V1/V2)" (ana hesap ucu; izin bilgisi bulunamadı).
 - Binance SSS 360033162192 "Leverage and Margin of USDⓈ-M Futures" (bakım marjı = notional × MMR − bakım tutarı; izole tasfiye formülü).
 - Diğer her Binance bilgisi `docs/binance-arastirma.md` kaynaklarından (arama özetleri) ve bu belgede "doğrulanmadı" diye işaretlidir.
+
+## Fable görüşü (20.11, öneri; ölçülmedi)
+
+| Soru | Görüş | Gerekçe |
+|---|---|---|
+| F1 koruyucu işlem anahtarı | **Tutsun** (alt hesabın yalnız işlem izinli, çekme kapalı, IP kısıtlı anahtarı); yalnız %10 kapatma ve stopsuz pozisyon için | Borsa stopları pozisyon başına ~%22'de durur, günlük %10'u uygulamaz; motor ölürse kapatan kalmaz |
+| F2 %10 kapsamı | **Hesap başı öncelikli**; bir hesabın %10'u diğerini kapatmaz (diğerinde yalnız alarm); toplam %10 dolarsa ikisi de kapanır | ML öncelikli; CT'nin kötü günü ML'yi kapatmamalı |
+| F3 dolum | Açılış **IOC limit + bant** (majör 10 bp, altcoin/TradFi 25 bp; 5a p95 ile kesinleşir); kapanış/azaltma IOC dolmazsa hemen reduceOnly MARKET | Gecikmede kötü fiyata açmaktansa atlamak ucuz; kapanış dolmadan kalamaz |
+| F4 borsa stopu | CT stopları **miktarlı reduceOnly**; `closePosition` yalnız koruyucunun son-sigorta stopunda | BorsaStop net miktar mantığı aynen taşınır; kısmi azaltmada yanlış tam kapanış olmaz |
+| F5 HL gerçek kipi | **Kalsın (kapalı yedek)**, kod silinmesin, testler yeşil; yeni özellik yok; Aşama C'de 30 gün sorunsuzsa yeniden bakılır | 451 ve Algo stop belirsizliğinde tek geri dönüş yolu |
+
+**K5 kabul eşiği (5a ölçümü; kullanıcı onayına gelecek).** Yön düzeltilmiş fark (aleyhimize +):
+- **GEÇ:** medyan ≤ 1,0 bp **ve** p90 ≤ 10 bp **ve** ortalama ≤ 1,5 bp (bugünkü HL kayması: medyan 0,4, p90 6,6 bp; ~75 emir/gün × ~150 $ ile 1 bp ≈ 30–35 $/ay).
+- **GRİ:** medyan 1–2 bp ya da p90 10–15 bp → karar Aşama A'daki 5 günlük paralel kâğıt kıyasına kalır.
+- **DUR:** medyan > 2 bp ya da p90 > 15 bp ya da ortalama > 3 bp.
+- **Asgari örnek:** ≥ 300 eşleşmiş dolum, ≥ 3 gün (biri hafta sonu), ≥ 15 coin; majör / altcoin / TradFi ayrı raporlanır, 30 dolumdan az grup için karar verilmez (`dogrulandi:false` kalır).
+
+K1–K4, K6 (konum/yasal, KYC, tavan, başlangıç tutarı, BNB): Aşama C öncesi toplu sorulacak (orkestratör, 20.11). Aşama 0 ve A bunlara takılmadan sürer.
