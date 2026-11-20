@@ -31,7 +31,7 @@ HIZ_LIMITI_DK = 15                        # standart: dakikada en çok 15 mesaj 
 INFO_OMUR_S = 24 * 3600.0                 # standart: 24 saatten eski INFO mesajı atılır
 TEKRAR_PENCERE_S = 300.0                  # standart: aynı uyarı (WARN/CRIT, aynı metin / anahtar) bu sürede bir kez
 UYARI_ARA_S = 6 * 3600.0                  # kullanıcı standardı: aynı uyarı en çok 6 saatte bir (`Telegram.uyar`); düzelince TEK "Düzeldi" (`Telegram.duzeldi`)
-BASTIRILAN_TURLER = frozenset({"saha_giris", "saha_cikis", "saha_uyari", "saatlik_bos", "emir_ozeti", "emir_artir_azalt",
+BASTIRILAN_TURLER = frozenset({"saha_giris", "saha_cikis", "saha_uyari", "saatlik_bos", "emir_ozeti", "emir_artir_azalt", "islem_satiri",
                            "haftalik_kadro", "kopya_kacan", "kadro_surum_bekleniyor", "ogrenme_ders"})      # KOD ANAHTARI: bu türler Telegram'a GİTMEZ; kayda `tg_bastirildi` (tür ile) yazılır, tespit/kayıt/pano sürer. Geri açmak için `Telegram.bastirilan` kümesinden çıkarın
 MESAJ_AZAMI = 3500                        # standart: mesaj başına en çok karakter
 KACIRILAN_PENCERE_S = 15 * 60          # G-16: bundan eski (ya da motor başlamadan önce gelmiş) komut YÜRÜTÜLMEZ; "işlenmedi, yeniden gönder" yanıtı alır
@@ -627,11 +627,6 @@ def msg_kapandi(adres: str, coin: str, pnl_usd: float, pnl_oran: float | None, n
     return m
 
 
-def msg_islem_toplu(acilis: int, kapanis: int, net_usd: float) -> str:
-    """Saatlik işlem-mesajı üst sınırı aşılınca o saatin sonunda TEK satır: '+7 işlem daha: 4 açılış, 3 kapanış, net −2,10 $'."""
-    return f"🧾 +{acilis + kapanis} işlem daha: {acilis} açılış, {kapanis} kapanış, net {tr_isaretli(net_usd)} $"
-
-
 def msg_kopya_hata(tur: str, coin: str, adres: str, neden: str) -> str:
     """Sessiz bilgi: 'Trader açtı, biz açamadık: <neden>' / 'Trader kapattı, biz kapatamadık: <neden>' (yalnız hata/eksik kopya; kural gereği atlananlar için gönderilmez)."""
     return f"ℹ️ Trader {'açtı, biz açamadık' if tur == 'ac' else 'kapattı, biz kapatamadık'}: {neden}\n{coin} · trader {kisa(adres)}"
@@ -871,26 +866,70 @@ def kucult_satiri(olaylar: list[dict]) -> str:
     return ("🔽 Zarar küçültme: " + " · ".join(parca[:3]) + (f" … +{len(parca) - 3}" if len(parca) > 3 else "")) if parca else ""
 
 
+STOP_KAPANISLARI = frozenset({"felaket_stop", "borsa_stop", "borsa_stop_korumasiz", "tasfiye_koruma_stop", "iz_suren_koruma", "tasfiye"})      # K-79: "stopla kapanan" satırı (kendi korumamız / borsa stopu / tasfiye); anlık ALARM'ları ayrıca gider
+ISLEM_SATIR_AZAMI = 4                                                                                                                            # özet satırında en çok bu kadar kalem; fazlası "… +N"
+
+
+def _kalemler(parcalar: list[str], azami: int = ISLEM_SATIR_AZAMI) -> str:
+    return " · ".join(parcalar[:azami]) + (f" · … +{len(parcalar) - azami}" if len(parcalar) > azami else "")
+
+
+def _yon_tr(yon: str) -> str:
+    return "long" if yon == "B" else "short"
+
+
+def net_kz(emirler: list[dict]) -> float:
+    """K-79: özetin net K/Z'si = penceredeki TAM kapanan pozisyonların net toplamı. Pozisyon neti = pozisyonun tüm dolumlarının gerçekleşen K/Z'si − ücretleri (giriş/artırma ücreti dahil; `hesap.dolum_net`);
+    pano KAPANAN `net` ve 'kapandı' mesajıyla AYNI tanım (kısmi azaltmalar pozisyon sonunda zaten içindedir; çift sayılmaz)."""
+    return sum(float(e["kz"]) for e in emirler if e.get("kapandi") and e.get("kz") is not None)
+
+
 def msg_sanal_saatlik(bas_ms: int, bit_ms: int, sure_dk: float, emirler: list[dict], atlanan: dict[str, int], kasa_bilgi: tuple[float, float, float] | None = None,
-                      atla_islem: int | None = None, atla_adres: dict[str, dict[str, int]] | None = None, drift_satir: str = "", kucult_satir: str = "") -> str:
-    """SANAL kip emir partisi (tek mesaj, en çok 3 satır): kaç emir, ne tür (açılış/artırma/azaltma/kapanış), kasa özeti. Emir yoksa '' (mesaj gönderilmez).
-    `atlanan`/`atla_islem`/`atla_adres`/`drift_satir` imzada kalır ama mesaja GİRMEZ (kopyalanmayan dolumlar ve kopya sapması yalnız kayıt/pano; kullanıcı standardı: tekrar eden bilgi mesajı yok)."""
+                      atla_islem: int | None = None, atla_adres: dict[str, dict[str, int]] | None = None, drift_satir: str = "", kucult_satir: str = "", kip: str = "sanal") -> str:
+    """K-79: işlem partisi TEK saatlik özet (sanal VE gerçek kip; açıldı/kapandı/artırma/azaltma/stop kapanışı ayrı mesaj OLARAK GİTMEZ, satır olur). Emir yoksa '' (mesaj gönderilmez).
+    Satırlar (en çok 5): başlık (emir sayısı + tür + kip + net K/Z) · [⚠️ tam dolmayan] · 🟢 Açılan · ✅/🔻 Kapanan · 🛑 Stopla kapanan · ↕️ Artırılan/azaltılan · 💰 Kasa · 🔽 küçültme.
+    `emirler` satırı: {adres, coin, yon, usd, durum, eylem [, kapandi, kz (pozisyon neti), neden_kod]}. `atlanan`/`atla_*`/`drift_satir` imzada kalır, mesaja GİRMEZ (kayıt/pano)."""
     if not emirler:
         return ""
     sure = f"{int(sure_dk // 60)} saat" if sure_dk >= 60 and sure_dk % 60 == 0 else f"{sure_dk:.0f} dk"
     say = {k: sum(1 for e in emirler if e.get("eylem") == k) for k in ("ac", "artir", "azalt", "kapat")}
     ad = {"ac": "açılış", "artir": "artırma", "azalt": "azaltma", "kapat": "kapanış"}
     tur = ", ".join(f"{say[k]} {ad[k]}" for k in ("ac", "artir", "azalt", "kapat") if say[k])
-    satirlar = [f"🧾 Son {sure}: {len(emirler)} emir" + (f" ({tur})" if tur else "") + " · sanal"]
-    eksik = sum(1 for e in emirler if e["durum"] != "dolu")
-    if eksik:
-        satirlar.append(f"⚠️ {eksik} emir tam dolmadı")
+    kapananlar = [e for e in emirler if e.get("kapandi")]
+    net_s = f" · net {tr_isaretli(net_kz(emirler))} $" if kapananlar else ""
+    baslik = f"🧾 Son {sure}: {len(emirler)} emir" + (f" ({tur})" if tur else "") + ("" if kip == "gercek" else " · sanal") + (" · GERÇEK PARA" if kip == "gercek" else "") + net_s
+    eksik = sum(1 for e in emirler if e.get("durum") != "dolu")
+    uyari = f"⚠️ {eksik} emir tam dolmadı" if eksik else ""
+    acilanlar: dict[tuple, float] = {}
+    for e in emirler:
+        if e.get("eylem") == "ac":
+            k = (e.get("coin", "?"), e.get("yon", "B"))
+            acilanlar[k] = acilanlar.get(k, 0.0) + float(e.get("usd") or 0.0)
+    a_satir = ("🟢 Açılan: " + _kalemler([f"{c} {_yon_tr(y)} {tr_sayi(u, 0 if u >= 100 else 1)} $" for (c, y), u in acilanlar.items()])) if acilanlar else ""
+
+    def kalem(e: dict, neden: bool = False) -> str:
+        kz = e.get("kz")
+        return f"{e.get('coin', '?')} {tr_isaretli(float(kz)) + ' $' if kz is not None else 'kapandı'}" + (f" ({kapanis_nedeni_tr(str(e.get('neden_kod') or ''))})" if neden else "")
+    normal = [e for e in kapananlar if str(e.get("neden_kod") or "") not in STOP_KAPANISLARI]
+    stoplu = [e for e in kapananlar if str(e.get("neden_kod") or "") in STOP_KAPANISLARI]
+    k_satir = (f"{'🔻' if sum(float(e.get('kz') or 0) for e in normal) < 0 else '✅'} Kapanan: " + _kalemler([kalem(e) for e in normal])) if normal else ""
+    s_satir = ("🛑 Stopla kapanan: " + _kalemler([kalem(e, True) for e in stoplu])) if stoplu else ""
+    ara = [f"{e.get('coin', '?')} {'artırıldı' if e['eylem'] == 'artir' else 'azaltıldı'}" for e in emirler if e.get("eylem") in ("artir", "azalt")]
+    r_satir = ("↕️ " + _kalemler(ara)) if ara else ""
+    kasa = ""
     if kasa_bilgi is not None and kasa_bilgi[2] > 0:
-        oz, gun_basi, kasa = kasa_bilgi
+        oz, gun_basi, kasa_tut = kasa_bilgi
         gun = oz - gun_basi
-        satirlar.append(f"💰 Kasa: {tr_sayi(oz)} $ · bugün {'🟢' if gun >= 0 else '🔻'} {tr_isaretli(gun)} $ ({_yuzde1(gun / kasa)})")
-    if kucult_satir:
-        satirlar.append(kucult_satir)                      # K-77: tek satır (ayrı mesaj yok)
+        kasa = f"💰 Kasa: {tr_sayi(oz)} $ · bugün {'🟢' if gun >= 0 else '🔻'} {tr_isaretli(gun)} $ ({_yuzde1(gun / kasa_tut)})"
+    satirlar = [x for x in (baslik, uyari, a_satir, k_satir, s_satir, r_satir, kasa, kucult_satir) if x]
+    # `[CT]` satırıyla en çok 6 satır → gövde en çok 5. Sıkışırsa sırayla: artırma/azaltma kalemleri düşer (sayılar başlıkta) · tam dolmayan uyarısı başlığa katılır · küçültme satırı düşer (kayıt/pano/günlük raporda var)
+    if len(satirlar) > 5 and r_satir:
+        satirlar.remove(r_satir)
+    if len(satirlar) > 5 and uyari:
+        satirlar.remove(uyari)
+        satirlar[0] += f" · ⚠️ {eksik} tam dolmadı"
+    if len(satirlar) > 5 and kucult_satir:
+        satirlar.remove(kucult_satir)
     return "\n".join(satirlar)
 
 

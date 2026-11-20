@@ -190,7 +190,8 @@ canli_hesap_azami_yas_sn: 1800          # sn (F10 denetim 10.11: açılış/art�
 canli_ozet_saat_utc: 18                 # UTC saati (21:00 TSİ günlük rapor; ortak Telegram standardı; haftalık özet Pazar 18:10 UTC sabit)
 canli_telegram_emir_ozet_sn: 900     # sn (Telegram, SANAL kip: emirler bu aralıkta TEK özet mesajında toplanır; gerçek kipte her emir anında gider)
 canli_telegram_sanal_bos_mesaj: true    # SANAL kip: pencerede emir yoksa da tek kısa "emir yok · sistem çalışıyor" + kasa satırı (kullanıcı kararı 06.11); false = emir yoksa sessiz
-canli_telegram_sanal_ozet_dk: 60      # dakika (SANAL kip: emir bildirimleri bu pencerede TEK mesajda toplanır; emir yoksa mesaj yok; 0 = eski davranış = yukarıdaki 15 dk'lık özet. Gerçek kip ve alarmlar HER ZAMAN anında)
+canli_telegram_sanal_ozet_dk: 60      # dakika (K-79: işlem mesajları — açıldı/kapandı/artırma/azaltma/stop kapanışı — bu pencerede TEK özet mesajında; ayrı mesaj yok; işlem yoksa mesaj yok; 0 = eski 15 dk'lık özet, o da Telegram'a gitmez). Uyarılar HER ZAMAN anında
+canli_telegram_gercek_ozet_dk: 60     # dakika (K-79, GERÇEK kip: aynı saatlik tek özet; tam dolmayan/reddedilen emir 🚨, tasfiye/stop/risk/sağlık ALARM'ları HER ZAMAN anında; 0 = özet yok)
 canli_telegram_sessiz_bas_utc: 21    # UTC saati (00:00 TSİ; bu saatten sonra alarm dışı mesajlar sessiz gelir)
 canli_telegram_sessiz_bit_utc: 5     # UTC saati (08:00 TSİ)
 canli_telegram_gercek_tampon_sn: 2.5   # sn (G-18, GERÇEK kip: bu süre içindeki emir mesajları TEK mesajda birleşir; dolu olmayan emir 🚨 ile başlar, gece de sesli)

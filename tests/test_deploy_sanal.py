@@ -14,7 +14,7 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 DEPLOY = ROOT / "deploy"
 ZAMANLAMA = ROOT / ".github/scripts/zamanlama_kontrol.sh"
-BIRIMLER = ("sg-sanal.service", "sg-sanal-yayim.service", "sg-sanal-yayim.timer", "sg-sanal-pano.service", "sg-sanal-pano.timer", "sg-sanal-alarm.service", "sg-sanal-kontrol.service")
+BIRIMLER = ("sg-sanal.service", "sg-sanal-yayim.service", "sg-sanal-yayim.timer", "sg-sanal-pano.service", "sg-sanal-pano.timer", "sg-sanal-alarm.service", "sg-sanal-kontrol.service", "sg-sanal-radar.service", "sg-sanal-radar.timer")
 
 
 def _env(**ek):
@@ -54,7 +54,7 @@ def test_sanal_systemd_analyze_verify():
     assert not re.search(r"Unknown key|Unknown section|Invalid|Failed to parse", r.stdout + r.stderr), r.stdout + r.stderr
 
 
-@pytest.mark.parametrize("betik", ["sanal_baslat.sh", "sanal_yayimla.sh", "sanal_pano_cf.sh", "sanal_mod.sh"])
+@pytest.mark.parametrize("betik", ["sanal_baslat.sh", "sanal_yayimla.sh", "sanal_pano_cf.sh", "sanal_mod.sh", "sanal_radar.sh"])
 def test_sanal_betikleri_bash_sozdizimi(betik):
     assert subprocess.run(["bash", "-n", str(DEPLOY / betik)], capture_output=True, text=True).returncode == 0
 
@@ -451,6 +451,7 @@ def _ayar(birim: str) -> dict:
     ("sg-sanal-yayim.service", {"MemoryMax": "300M", "Nice": "5"}),
     ("sg-sanal-kontrol.service", {"MemoryMax": "400M"}),
     ("sg-sanal-guncelle.service", {"MemoryMax": "400M"}),
+    ("sg-sanal-radar.service", {"MemoryHigh": "550M", "MemoryMax": "700M", "Nice": "15", "CPUQuota": "60%", "IOSchedulingClass": "idle"}),
 ])
 def test_sanal_birimlerinde_kaynak_siniri(birim, beklenen):
     a = _ayar(birim)
@@ -555,3 +556,156 @@ def test_guncelleme_sayaci_saglik_jsona_yazilir_gunluk_rapor_icin(sunucu):
     assert (sunucu.durum / "guncelleme_gunlugu").read_text().split() == [time.strftime("%Y-%m-%d", time.gmtime())]
     sunucu.calistir()                                                                               # sonraki çalışma sağlık JSON'unu yazar
     assert json.loads(Path(sunucu.ortak["SANAL_SAGLIK_JSON"]).read_text())["guncelleme_bugun"] == 1
+
+
+# ------------------------------------------------------------------------------------------------ sunucu radarı (K-78): sg-sanal-radar.service/.timer + sanal_radar.sh
+RADAR_BETIK = DEPLOY / "sanal_radar.sh"
+
+
+def test_radar_birimleri_saat_oncelik_zaman_asimi_ve_sirsiz():
+    t = (DEPLOY / "sg-sanal-radar.timer").read_text(encoding="utf-8")
+    s = (DEPLOY / "sg-sanal-radar.service").read_text(encoding="utf-8")
+    assert re.search(r"^OnCalendar=\*-\*-\* 00:37:00 UTC$", t, re.M) and re.search(r"^Persistent=true$", t, re.M) and "WantedBy=timers.target" in t   # 00:37 UTC = 03:37 TSİ
+    assert 0 < int(re.search(r"^RandomizedDelaySec=(\d+)$", t, re.M).group(1)) <= 300                # küçük rastgele gecikme
+    assert re.search(r"^Type=oneshot$", s, re.M) and re.search(r"^User=sgsanal$", s, re.M) and "ExecStart=/bin/bash /var/lib/sg-sanal/depo/deploy/sanal_radar.sh" in s
+    assert re.search(r"^TimeoutStartSec=\S+$", s, re.M) and re.search(r"^OOMPolicy=continue$", s, re.M)
+    assert "EnvironmentFile=-/etc/sg-sanal-telegram.env" in s and "sg-sanal-pano.env" not in s         # Telegram isteğe bağlı; Cloudflare anahtarı yok
+    assert "/etc/sg-sanal-mod.env" not in s                                                           # mod dosyasındaki VERI_DALI (canli-durum) radar dalını ezmesin
+    assert "GIT_SSH_COMMAND=ssh -i /var/lib/sg-sanal/.ssh/id_ed25519" in s                           # push kimliği = SSH deploy anahtarı (sır repoda değil)
+    assert "HL_API_CUZDAN_ANAHTARI" not in s and "CANLI_KIP" not in re.sub(r"(?m)^#.*$", "", s)
+
+
+def test_radar_betigi_statik_guvenceler():
+    kod = re.sub(r"(?m)^\s*#.*$", "", RADAR_BETIK.read_text(encoding="utf-8"))
+    assert "flock -n 9" in kod and "timeout --kill-after" in kod and "git worktree add" in kod and 'cd "$work"' in kod   # tek koşu, zaman aşımı, ayrı worktree
+    assert "git push" not in kod and "git checkout" not in kod and "git reset" not in kod and "git merge" not in kod    # motorun deposuna dokunmaz (yayım radar_yayimla.sh'de, geçici worktree'de)
+    assert "--config -" in kod and not re.search(r"set -[a-z]*x", kod) and not re.search(r"(echo|log)\b[^\n]*\$\{?tok\b", kod)   # token yalnız stdin'den
+    assert "disable_notification" not in kod and kod.count("bildir ") <= 3                            # başarıda bildirim yok; yalnız başarısızlık yolu
+
+
+def test_radar_betigi_adimlari_radar_yml_ile_ayni_sirada():
+    import yaml
+    wf = yaml.safe_load((ROOT / ".github/workflows/radar.yml").read_text(encoding="utf-8"))
+    yml = [m for a in wf["jobs"]["radar"]["steps"] for m in re.findall(r"-m (copytrade\.\w+)", a.get("run", ""))]
+    sh = re.findall(r"-m (copytrade\.\w+)", RADAR_BETIK.read_text(encoding="utf-8"))
+    assert yml == sh and len(sh) == 6                                                                 # tarama, kadro, isabet, pbo, rastgele, holdout (formül/seçim kodu aynı)
+    assert "radar_yayimla.sh" in RADAR_BETIK.read_text(encoding="utf-8") and "schedule" not in (wf.get("on") or wf.get(True))
+
+
+def _radar_ortam(tmp_path, token=True):
+    """Gerçek git: bare origin + depo klonu (main; radar_yayimla.sh, kilit dosyası, HOLDOUT yok), sahte python (adımları günlüğe yazar) ve sahte curl."""
+    bare, tohum, depo, bin_ = tmp_path / "origin.git", tmp_path / "tohum", tmp_path / "depo", tmp_path / "bin"
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(bare)], check=True)
+    tohum.mkdir()
+    git(tohum, "init", "-q", "-b", "main")
+    (tohum / ".github/scripts").mkdir(parents=True)
+    shutil.copy(ROOT / ".github/scripts/radar_yayimla.sh", tohum / ".github/scripts/radar_yayimla.sh")
+    (tohum / "requirements-radar.lock").write_text("x==1\n")
+    git(tohum, "add", "-A")
+    git(tohum, "commit", "-q", "-m", "v1")
+    git(tohum, "remote", "add", "origin", str(bare))
+    git(tohum, "push", "-q", "origin", "main")
+    subprocess.run(["git", "clone", "-q", str(bare), str(depo)], check=True)
+    bin_.mkdir()
+    log = tmp_path / "cagri.log"
+    log.write_text("")
+    (bin_ / "python").write_text(
+        '#!/usr/bin/env bash\necho "py $*" >> "$CAGRI_LOG"\nmod="$3"\n'
+        '[ "${FAKE_BASARISIZ:-}" = "$mod" ] && exit 2\n'
+        'case "$mod" in\n'
+        '  copytrade.radar_tarama) d="radar/$(date -u +%F)"; mkdir -p "$d"; echo \'{"kosu_ms": 1}\' > "$d/havuz.json";;\n'
+        '  copytrade.radar_kadro) echo \'{"satirlar": []}\' > "$(dirname "$5")/kadro.json";;\n'
+        'esac\nexit 0\n')
+    (bin_ / "curl").write_text('#!/usr/bin/env bash\necho "curl" >> "$CAGRI_LOG"\ncat >/dev/null; for a in "$@"; do case "$a" in text=*) echo "TG:$a" >> "$CAGRI_LOG";; esac; done; exit 0\n')
+    for f in bin_.iterdir():
+        f.chmod(0o755)
+    tg = tmp_path / "tg.env"
+    if token:
+        tg.write_text("TELEGRAM_BOT_TOKEN=SIRTOKEN123\nTELEGRAM_CHAT_ID=42\n")
+    env = _env(PATH=f"{bin_}:{os.environ['PATH']}", SANAL_DEPO=str(depo), RADAR_PYTHON=str(bin_ / "python"), RADAR_KILIT=str(tmp_path / "radar.lock"), RADAR_TG_ENV=str(tg), CAGRI_LOG=str(log))
+    return bare, depo, log, env
+
+
+def _radar_kos(env, **ek):
+    return subprocess.run(["bash", str(RADAR_BETIK)], env={**env, **ek}, capture_output=True, text=True)
+
+
+def _dal_dosyalari(bare, dal="radar"):
+    return set(subprocess.run(["git", "ls-tree", "-r", "--name-only", dal], cwd=bare, capture_output=True, text=True).stdout.split())
+
+
+def test_radar_betigi_ayri_worktreede_radar_dalina_yazar_motor_dizinine_dokunmaz_ve_mesaj_atmaz(tmp_path):
+    bare, depo, log, env = _radar_ortam(tmp_path)
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=depo, capture_output=True, text=True).stdout.strip()
+    r = _radar_kos(env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    gun = time.strftime("%Y-%m-%d", time.gmtime())
+    assert {f"radar/{gun}/havuz.json", f"radar/{gun}/kadro.json", "radar/son/kadro.json", f"radar/{gun}/kadro_ilk.json"} <= _dal_dosyalari(bare)
+    adimlar = re.findall(r"-m (copytrade\.\w+)", log.read_text())
+    assert adimlar == ["copytrade.radar_tarama", "copytrade.radar_kadro", "copytrade.radar_isabet", "copytrade.pbo_rapor", "copytrade.radar_rastgele", "copytrade.holdout_muhur"]
+    assert "curl" not in log.read_text() and "TG:" not in log.read_text()                              # başarıda Telegram mesajı YOK
+    assert not (depo / "radar").exists() and not (depo / "durum").exists()                            # motorun çalışma dizininde iz yok
+    assert subprocess.run(["git", "rev-parse", "HEAD"], cwd=depo, capture_output=True, text=True).stdout.strip() == head
+    assert subprocess.run(["git", "status", "--porcelain"], cwd=depo, capture_output=True, text=True).stdout.strip() == ""
+    assert len(subprocess.run(["git", "worktree", "list"], cwd=depo, capture_output=True, text=True).stdout.strip().splitlines()) == 1   # geçici worktree temizlendi
+    assert "sg-sanal-sunucu" in subprocess.run(["git", "log", "-1", "--format=%an", "radar"], cwd=bare, capture_output=True, text=True).stdout
+    n = log.read_text().count("copytrade.radar_tarama")
+    r2 = _radar_kos(env)                                                                             # aynı gün ikinci tetik (Persistent/çift): iş yapılmaz
+    assert r2.returncode == 0 and "zaten var" in r2.stdout and log.read_text().count("copytrade.radar_tarama") == n
+    r3 = _radar_kos(env, RADAR_ZORLA="1")
+    assert r3.returncode == 0 and log.read_text().count("copytrade.radar_tarama") == n + 1
+
+
+def test_radar_betigi_kilit_doluysa_baslamaz(tmp_path):
+    bare, depo, log, env = _radar_ortam(tmp_path)
+    tutan = subprocess.Popen(["flock", env["RADAR_KILIT"], "sleep", "20"])
+    try:
+        time.sleep(0.5)
+        r = _radar_kos(env)
+        assert r.returncode == 0 and "sürüyor" in r.stdout and "copytrade.radar_tarama" not in log.read_text()
+        assert "radar" not in subprocess.run(["git", "branch", "--list"], cwd=bare, capture_output=True, text=True).stdout
+    finally:
+        tutan.kill()
+        tutan.wait()
+
+
+@pytest.mark.parametrize("adim", ["copytrade.radar_tarama", "copytrade.radar_kadro", "copytrade.radar_isabet"])
+def test_radar_betigi_basarisizlikta_tek_uyari_yayimlamaz_ve_sonrakini_kosmaz(tmp_path, adim):
+    bare, depo, log, env = _radar_ortam(tmp_path)
+    r = _radar_kos(env, FAKE_BASARISIZ=adim)
+    assert r.returncode == 1, r.stdout + r.stderr
+    metin = log.read_text()
+    assert metin.count("TG:") == 1 and "TG:text=[CT] ⚠️ Radar sunucuda çalışmadı" in metin             # tek ⚠️ satır
+    assert "SIRTOKEN123" not in r.stdout + r.stderr + metin                                           # token argv'ye/günlüğe girmez
+    assert "radar" not in subprocess.run(["git", "branch", "--list"], cwd=bare, capture_output=True, text=True).stdout   # kadro yayımlanmadı (son/ güncellenmez)
+    sira = ["copytrade.radar_tarama", "copytrade.radar_kadro", "copytrade.radar_isabet", "copytrade.pbo_rapor"]
+    assert sira[sira.index(adim) + 1] not in metin and not (depo / "radar").exists()
+
+
+def test_radar_betigi_telegram_anahtari_yoksa_sessiz_atlar(tmp_path):
+    bare, depo, log, env = _radar_ortam(tmp_path, token=False)
+    r = _radar_kos(env, FAKE_BASARISIZ="copytrade.radar_tarama")
+    assert r.returncode == 1 and "bildirim atlandı" in r.stdout and "TG:" not in log.read_text()
+
+
+def test_radar_veri_dali_yalniz_radar_ya_da_deneme(tmp_path):
+    bare, depo, log, env = _radar_ortam(tmp_path)
+    r = _radar_kos(env, RADAR_VERI_DALI="canli-durum")
+    assert r.returncode == 1 and "Geçersiz" in r.stderr and "copytrade.radar_tarama" not in log.read_text()
+
+
+def test_guncelle_radar_zamanlayicisini_kurar_ve_etkinlestirir(sunucu):
+    tohum = sunucu.depo.parent / "tohum"
+    git(tohum, "pull", "-q", "origin", "main")
+    (tohum / "deploy/sg-sanal-radar.service").write_text("[Service]\n# r1\n")
+    (tohum / "deploy/sg-sanal-radar.timer").write_text("[Timer]\nOnCalendar=*-*-* 00:37:00 UTC\n")
+    git(tohum, "add", "-A")
+    git(tohum, "commit", "-q", "-m", "radar birimleri")
+    git(tohum, "push", "-q", "origin", "main")
+    sunucu.ci(*YESIL)
+    r = sunucu.calistir()
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert (sunucu.birim / "sg-sanal-radar.timer").exists() and (sunucu.birim / "sg-sanal-radar.service").exists()   # birimler kuruldu
+    log = sunucu.log.read_text()
+    assert "systemctl enable --now sg-sanal-radar.timer" in log and log.index("daemon-reload") < log.index("enable --now sg-sanal-radar.timer")
+    assert "TG:" not in log                                                                           # kurulum mesaj atmaz

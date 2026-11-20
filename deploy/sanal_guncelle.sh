@@ -321,6 +321,7 @@ sleep "$BEKLE"
 motor_saglam || geri_al "sg-sanal ${BEKLE} sn sonra aktif değil"
 
 [ -f "$BIRIM_DIZIN/sg-sanal-ikinci-alarm.timer" ] && { "$SYSTEMCTL" enable --now sg-sanal-ikinci-alarm.timer >/dev/null 2>&1 || log "ikinci alarm zamanlayıcısı açılamadı"; }   # bot durdu 20 dk ikinci mesaj (elle kurulum gerekmesin)
+[ -f "$BIRIM_DIZIN/sg-sanal-radar.timer" ] && { "$SYSTEMCTL" enable --now sg-sanal-radar.timer >/dev/null 2>&1 || log "radar zamanlayıcısı açılamadı"; }   # günlük radar sunucuda (K-78; 00:37 UTC; elle kurulum gerekmesin; --now: Persistent kaçan koşuyu yakalar)
 printf '%s\n' "$yeni" > "$DURUM/uygulanan_sha"
 rm -f "$DURUM/kotu_sha" "$DURUM/reddedilen" "$YARIM"; rm -rf "$YEDEK"
 if [ "$devam" = 1 ]; then bildir WARN "⚠️ Yarım kalan güncelleme tamamlandı, bot yeniden başlatıldı"; fi
