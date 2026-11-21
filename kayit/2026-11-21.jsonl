@@ -845,3 +845,14 @@
 {"zaman_ms":1795253678789,"olay":"bekci_tetik","gecen_sn":183.2,"sinir_sn":180.0}
 {"zaman_ms":1795253678789,"olay":"telegram","metin":"🔴 Bot durdu (sanal · deneme parası)\nNeden: motor dondu (183 sn'dir bakım bitmedi)\nAçık pozisyon: 36 · Stop: bot kapalıyken yazılım stopu çalışmıyor\nYeni işlem açılmıyor; sistem motoru kendiliğinden yeniden başlatıyor.\nSenden bir şey gerekmiyor.","acik":true}
 {"zaman_ms":1795253678789,"olay":"tg_mesaj","tur":null,"anahtar":null,"seviye":"CRIT","sessiz":false,"metin":"🔴 Bot durdu (sanal · deneme parası)\nNeden: motor dondu (183 sn'dir bakım bitmedi)\nAçık pozisyon: 36 · Stop: bot kapalıyken yazılım stopu çalışmıyor\nYeni işlem açılmıyor; sistem motoru kendiliğinden yeniden başlatıyor.\nSenden bir şey gerekmiyor.","gonderildi":true,"bastirildi":false}
+{"zaman_ms":1795253733354,"olay":"kacan_tamamlandi","adet":0,"bas_ms":1795252759460}
+{"zaman_ms":1795253733354,"olay":"telegram","metin":"✅ Düzeldi: bot yeniden çalışıyor (sanal · deneme parası)\n1 dk kapalı kaldı; bu sürede kaçan işlem yok.","acik":true}
+{"zaman_ms":1795253733354,"olay":"tg_mesaj","tur":null,"anahtar":null,"seviye":"INFO","sessiz":false,"metin":"✅ Düzeldi: bot yeniden çalışıyor (sanal · deneme parası)\n1 dk kapalı kaldı; bu sürede kaçan işlem yok.","gonderildi":true,"bastirildi":false}
+{"zaman_ms":1795253818282,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"BTC","neden":"ara_dolum_siniri"}
+{"zaman_ms":1795253818282,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"HYPE","neden":"ara_dolum_siniri"}
+{"zaman_ms":1795253818282,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"VVV","neden":"ara_dolum_siniri"}
+{"zaman_ms":1795253818283,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"xyz:NVDA","neden":"ara_dolum_siniri"}
+{"zaman_ms":1795253818283,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"xyz:ANT","neden":"ara_dolum_siniri"}
+{"zaman_ms":1795253820901,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"ASTER","neden":"kayma_lehte_fazla","kayma":-0.172513,"trader_giris":0.586408,"mark":0.485245}
+{"zaman_ms":1795253820902,"olay":"kacan_telafi_geri_cekil","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","asama":"yas","sn":300.0,"ardisik":1}
+{"zaman_ms":1795253820902,"olay":"tur","ozsermaye_usd":9864.0474}

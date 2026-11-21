@@ -1,15 +1,15 @@
 {
  "sema": "ortak.gunluk_ozet.v1",
  "proje": "CT",
- "uretim": "2026-11-21T08:33:01Z",
+ "uretim": "2026-11-21T09:35:26Z",
  "gun": "2026-11-21",
  "mod": "sanal",
  "kasa": {
   "baslangic": 10000.0,
-  "simdi": 9882.44,
-  "gun_pnl": 48.76,
-  "toplam_pnl": -117.56,
-  "zirveden_dusus_yuzde": 1.72
+  "simdi": 9864.29,
+  "gun_pnl": 30.61,
+  "toplam_pnl": -135.71,
+  "zirveden_dusus_yuzde": 1.9
  },
  "islem": {
   "gun_acilan": 0,
@@ -17,13 +17,13 @@
   "kazanan": 1,
   "kaybeden": 2,
   "acik_pozisyon": 36,
-  "alinmayan_sinyal": 481
+  "alinmayan_sinyal": 532
  },
  "hesaplar": [
   {
    "ad": "T_0c2447",
    "gun_pnl": -7.46,
-   "toplam_pnl": -136.24,
+   "toplam_pnl": -133.2,
    "islem": 1
   },
   {
@@ -35,37 +35,37 @@
   {
    "ad": "T_f6b664",
    "gun_pnl": -2.63,
-   "toplam_pnl": -77.15,
+   "toplam_pnl": -75.34,
    "islem": 2
   },
   {
    "ad": "T_99f0d4",
    "gun_pnl": 0,
-   "toplam_pnl": 84.37,
+   "toplam_pnl": 85.59,
    "islem": 0
   },
   {
    "ad": "T_2e4035",
    "gun_pnl": 0,
-   "toplam_pnl": -12.79,
+   "toplam_pnl": -9.63,
    "islem": 0
   },
   {
    "ad": "T_9934d6",
    "gun_pnl": 0,
-   "toplam_pnl": -147.68,
+   "toplam_pnl": -147.01,
    "islem": 0
   },
   {
    "ad": "T_b4c6ee",
    "gun_pnl": 0,
-   "toplam_pnl": 120.67,
+   "toplam_pnl": 104.92,
    "islem": 0
   },
   {
    "ad": "T_e7ae5a",
    "gun_pnl": 50.32,
-   "toplam_pnl": 169.18,
+   "toplam_pnl": 156.88,
    "islem": 7
   },
   {
@@ -106,12 +106,12 @@
   "kaldirac_ayar": 3.0
  },
  "saglik": {
-  "son_nabiz": "2026-11-21T08:33:01Z",
+  "son_nabiz": "2026-11-21T09:35:26Z",
   "hata_sayisi_gun": 0,
-  "ram_mb": 86.1,
-  "ram_tepe_mb": 93.5,
-  "disk_bos_gb": 63.41,
-  "yuk_1dk": 0.0,
+  "ram_mb": 44.9,
+  "ram_tepe_mb": 52.2,
+  "disk_bos_gb": 63.4,
+  "yuk_1dk": 0.01,
   "yeniden_baslama_1s": 0,
   "oom_son": false
  },
@@ -123,7 +123,7 @@
  "alinmayan_neden": [
   {
    "neden": "ara_dolum_siniri",
-   "adet": 290,
+   "adet": 341,
    "karsi_olgu_kapanan": 0,
    "karsi_olgu_pnl": null
   },
