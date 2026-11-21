@@ -1,117 +1,18 @@
 {
  "sema": "ct.secim_gercek.v1",
  "proje": "CT",
- "uretim": "2026-11-21T12:30:50Z",
+ "uretim": "2026-11-21T12:58:01Z",
  "degisken": "form_sirasi_gercek_pnl_spearman",
  "pencere_gun": 14,
- "gunler": [
-  {
-   "gun": "2026-11-19",
-   "kadro_gunu": "2026-11-19",
-   "ilk11_n": 11,
-   "kadro_n": 17,
-   "kopyalanan_n": 4,
-   "yedek_n": 6,
-   "durum": "tamam",
-   "rho": -0.8,
-   "p": 0.9583,
-   "yontem": "tam",
-   "toplam_net_pnl": -2.43,
-   "traderlar": [
-    {
-     "takma_ad": "T_b4c6ee",
-     "form": 37.89,
-     "islem": 2,
-     "pnl": 0.0,
-     "ucret": 0.02,
-     "net_pnl": -0.02
-    },
-    {
-     "takma_ad": "T_e7ae5a",
-     "form": 35.16,
-     "islem": 4,
-     "pnl": -2.55,
-     "ucret": 0.18,
-     "net_pnl": -2.73
-    },
-    {
-     "takma_ad": "T_574595",
-     "form": 20.7,
-     "islem": 1,
-     "pnl": 0.0,
-     "ucret": 0.0,
-     "net_pnl": -0.0
-    },
-    {
-     "takma_ad": "T_2e4035",
-     "form": 18.75,
-     "islem": 8,
-     "pnl": 0.4,
-     "ucret": 0.08,
-     "net_pnl": 0.32
-    }
-   ]
-  },
-  {
-   "gun": "2026-11-20",
-   "kadro_gunu": "2026-11-20",
-   "ilk11_n": 11,
-   "kadro_n": 28,
-   "kopyalanan_n": 3,
-   "yedek_n": 17,
-   "durum": "tamam",
-   "rho": 1.0,
-   "p": 0.1667,
-   "yontem": "tam",
-   "toplam_net_pnl": 6.97,
-   "traderlar": [
-    {
-     "takma_ad": "T_f6b664",
-     "form": 61.34,
-     "islem": 47,
-     "pnl": 7.54,
-     "ucret": 1.07,
-     "net_pnl": 6.47
-    },
-    {
-     "takma_ad": "T_574595",
-     "form": 50.0,
-     "islem": 1,
-     "pnl": 0.27,
-     "ucret": 0.0,
-     "net_pnl": 0.27
-    },
-    {
-     "takma_ad": "T_b4c6ee",
-     "form": 43.75,
-     "islem": 1,
-     "pnl": 0.25,
-     "ucret": 0.02,
-     "net_pnl": 0.23
-    }
-   ]
-  },
-  {
-   "gun": "2026-11-21",
-   "kadro_gunu": "2026-11-21",
-   "ilk11_n": 11,
-   "kadro_n": 30,
-   "kopyalanan_n": 0,
-   "yedek_n": 19,
-   "durum": "az_trader"
-  }
- ],
+ "gunler": [],
  "toplu": {
-  "durum": "tamam",
-  "gun_n": 2,
-  "rho_ort": 0.1,
-  "p": 0.422,
-  "r": 1000
+  "durum": "yok",
+  "gun_n": 0
  },
  "notlar": [
   "Yalnız bilgi: seçim/eşik/limit değiştirmez.",
   "Değişken: gerçek kopya PnL'i yalnız sahadaki traderlar için var; 'rastgele 11' karşılaştırması yapılamaz (yedek için varsayımsal PnL yok). Bunun yerine form puanı sırası ile gerçek net PnL sırasının Spearman ilişkisi.",
   "rho > 0: yüksek form puanlı trader o gün daha çok kazandırmış. p tek yönlü permütasyon; küçük örneklem, günler bağımsız değil.",
-  "Kayıt penceresi: 6 gün; form geçmişi: 3 kadro günü; net = gerçekleşen K/Z - ücret."
+  "Kayıt penceresi: 0 gün; form geçmişi: 0 kadro günü; net = gerçekleşen K/Z - ücret."
  ]
 }

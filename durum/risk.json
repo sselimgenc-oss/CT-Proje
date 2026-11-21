@@ -1,79 +1,16 @@
 {
  "acilis_durdu": {
-  "elle_dur": true,
-  "gunluk_kayip": false,
-  "kapanis_eksik": false,
-  "kasa_siniri": false,
-  "mutabakat": false
+  "elle_dur": false,
+  "gunluk_kayip": false
  },
+ "donem": "2026-11-21T07:30:00Z",
  "dur": false,
  "dur_dosya": false,
  "dur_neden": null,
- "fren_bitis": {},
- "gun": "2026-11-21",
- "gun_basi": 9833.678594100575,
+ "gun": null,
+ "gun_basi": 1000.0,
+ "gunluk_acilis": {},
  "kapat_gunu": null,
- "son_oz": 9835.683827834533,
- "yeni_coin": {
-  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": [
-   [
-    1795201789635,
-    "UNI"
-   ]
-  ],
-  "0x3d380a67f690cb64a147ef084ad76fbed139dd33": [
-   [
-    1795206637325,
-    "xyz:SP500"
-   ]
-  ],
-  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": [
-   [
-    1795141744570,
-    "xyz:AMD"
-   ],
-   [
-    1795141744570,
-    "xyz:ANT"
-   ]
-  ],
-  "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": [
-   [
-    1795194538358,
-    "LIT"
-   ]
-  ],
-  "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": [],
-  "0x9eb42f017e793512e4734f8785de605c4cb3a24e": [
-   [
-    1795141744570,
-    "xyz:NVDA"
-   ]
-  ],
-  "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": [
-   [
-    1795111709671,
-    "ZEC"
-   ]
-  ],
-  "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": [
-   [
-    1795059969723,
-    "SOL"
-   ]
-  ],
-  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": [
-   [
-    1795126816140,
-    "BNB"
-   ]
-  ],
-  "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": [
-   [
-    1795082962151,
-    "XRP"
-   ]
-  ]
- },
- "zirve": 10055.58805862463
+ "son_oz": 1000.0,
+ "zirve": 1000.0
 }
