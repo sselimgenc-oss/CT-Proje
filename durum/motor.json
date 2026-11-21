@@ -1,5 +1,12 @@
 {
  "ara_dolum": {
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|BTC": {
+   "isaret": -1,
+   "izin": false,
+   "ms": 1795240953442,
+   "n": 3,
+   "yon": "A"
+  },
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|HYPE": {
    "isaret": -1,
    "izin": true,
@@ -20,6 +27,20 @@
    "ms": 1795201789104,
    "n": 1,
    "yon": "B"
+  },
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|VVV": {
+   "isaret": -1,
+   "izin": false,
+   "ms": 1795240778483,
+   "n": 6,
+   "yon": "A"
+  },
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|xyz:GOOGL": {
+   "isaret": -1,
+   "izin": true,
+   "ms": 1795240775862,
+   "n": 0,
+   "yon": "A"
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33|BTC": {
    "isaret": -1,
@@ -52,8 +73,8 @@
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9|BTC": {
    "isaret": -1,
    "izin": false,
-   "ms": 1795239358164,
-   "n": 7,
+   "ms": 1795240991609,
+   "n": 9,
    "yon": "B"
   },
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9|XRP": {
@@ -101,8 +122,8 @@
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|ADA": {
    "isaret": -1,
    "izin": false,
-   "ms": 1795239909417,
-   "n": 4,
+   "ms": 1795241111514,
+   "n": 5,
    "yon": "B"
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|BNB": {
@@ -129,8 +150,8 @@
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|SOL": {
    "isaret": -1,
    "izin": false,
-   "ms": 1795239319030,
-   "n": 3,
+   "ms": 1795241116002,
+   "n": 4,
    "yon": "B"
   }
  },
@@ -156,11 +177,21 @@
  "haber_anlik": {
   "duygu": {
    "deger": 12,
-   "ms": 1795237604208,
+   "ms": 1795241210203,
    "sinif": "Extreme Fear"
   },
-  "haber_ms": 1795237604208,
+  "haber_ms": 1795241210203,
   "haberler": [
+   {
+    "b": "XRP falls 10% as long bets unwind and ETF assets slip below $1 billion",
+    "t": 1795240759000,
+    "ton": "negatif"
+   },
+   {
+    "b": "Hong Kong pushes to bring crypto custodians, advisers under licensing rules",
+    "t": 1795239635000,
+    "ton": "notr"
+   },
    {
     "b": "Bitcoin tanks below $57,000 for the first time in two years, and its not alone",
     "t": 1795234207000,
@@ -355,16 +386,6 @@
     "b": "Big money bought a net $4 billion of bitcoin funds in Q3, ending 9 months of selling",
     "t": 1795152051000,
     "ton": "notr"
-   },
-   {
-    "b": "Ethereum’s next big upgrade is pushed into 2027 by apps it would break",
-    "t": 1795150688000,
-    "ton": "notr"
-   },
-   {
-    "b": "VanEck drops Gemini as custodian of its bitcoin, ether and SOL ETFs",
-    "t": 1795148932000,
-    "ton": "negatif"
    }
   ]
  },
@@ -372,52 +393,52 @@
  "hafta_taban": null,
  "hesap_tr": {
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": {
-   "deger": 120946.087504,
-   "ms": 1795240413793
+   "deger": 140004.95435,
+   "ms": 1795241044485
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": {
-   "deger": 75134.68945,
-   "ms": 1795240413793
+   "deger": 75506.167113,
+   "ms": 1795241044485
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": {
-   "deger": 70623.051857,
-   "ms": 1795240413793
+   "deger": 70117.178338,
+   "ms": 1795241044485
   },
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": {
-   "deger": 16094.77043632,
-   "ms": 1795240413793
+   "deger": 16017.22067532,
+   "ms": 1795241044485
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": {
-   "deger": 811650.28445579,
-   "ms": 1795240413793
+   "deger": 803707.76579779,
+   "ms": 1795241044485
   },
   "0x9eb42f017e793512e4734f8785de605c4cb3a24e": {
-   "deger": 275684.23844054,
-   "ms": 1795240413793
+   "deger": 271803.30447654,
+   "ms": 1795241044485
   },
   "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": {
    "deger": 13484.41227715,
-   "ms": 1795240413793
+   "ms": 1795241044485
   },
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": {
-   "deger": 1244883.680742,
-   "ms": 1795240413793
+   "deger": 1251712.521548,
+   "ms": 1795241044485
   },
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": {
-   "deger": 593927.851204,
-   "ms": 1795240413793
+   "deger": 596201.515824,
+   "ms": 1795241044485
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": {
-   "deger": 5019.0003129,
-   "ms": 1795240413793
+   "deger": 5015.9773069,
+   "ms": 1795241044485
   },
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": {
-   "deger": 208532.117008,
-   "ms": 1795240413793
+   "deger": 209064.715213,
+   "ms": 1795241044485
   },
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": {
-   "deger": 66566.306887,
-   "ms": 1795240413793
+   "deger": 66737.90854,
+   "ms": 1795241044485
   }
  },
  "hl_ofset": null,
@@ -22370,68 +22391,155 @@
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a:435634839211998",
   "0x6e9c76b40310cae8c7f9f6b93f33d56a59651ab3:643635685915902",
   "0x6e9c76b40310cae8c7f9f6b93f33d56a59651ab3:1055428851135558",
-  "0x6e9c76b40310cae8c7f9f6b93f33d56a59651ab3:309613929160414"
+  "0x6e9c76b40310cae8c7f9f6b93f33d56a59651ab3:309613929160414",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:1073862011566157",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:515121243913069",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:608478437512326",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:507614967199753",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:1007013910102320",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:454213600030001",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:286281799458799",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:279850387645347",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:233658554427911",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:139164917974166",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:1105588791483716",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:200951605826609",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:772008022037687",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:574649288783779",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:919299636541610",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:85347513658080",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:1122329221703942",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:519832214495045",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:1051294339119404",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:1004867511577638",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:941157491836532",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:322784395064055",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:535546674838697",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:257855805452712",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:518507305257208",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:63470666395814",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:954363761777451",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:265639849148507",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:63707325530952",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:269803050760691",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:18036175062880",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:664516603534912",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:796141495364065",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:27466341473079",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:792536859390997",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:15700269567895",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:882750230295721",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:876549483993030",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:510408590681327",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:706076248940927",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:731004209642679",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:856040753529544",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:210595059366882",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:530063232094309",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:270144641977175",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:194846609741618",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:464504724034553",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:808177190266905",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:1111871394034577",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:529470301989301",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:190734788796962",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:143646258612782",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:1054380472874814",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:737486838894319",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:619203395311801",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:1121577846740358",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:887763131274563",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:141852151662779",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:700158302041891",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:401117183903177",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:426400871484026",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:185119825650357",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:715870886107780",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:444880130319016",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:279827073426302",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:807391212918082",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:414784278480872",
+  "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9:353975844932680",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:19594972437028",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:842784522491694",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:535439162934447",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:2807653846094",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:333308815708557",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:337856275747326",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:591159023807926",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:372399724952001",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:182594707934451",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:532522250806420",
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89:457800536229034",
+  "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9:384741999712610",
+  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a:260613825054228",
+  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a:931202374110035",
+  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a:493047524748903",
+  "0x6e9c76b40310cae8c7f9f6b93f33d56a59651ab3:603809066775529",
+  "0x6e9c76b40310cae8c7f9f6b93f33d56a59651ab3:14298934112035",
+  "0x6e9c76b40310cae8c7f9f6b93f33d56a59651ab3:600329821407753",
+  "0x6e9c76b40310cae8c7f9f6b93f33d56a59651ab3:532497746118279"
  ],
  "kaldirac_tr": {
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": {
-   "anlik_kaldirac": 4.119897408544549,
-   "hesap_usd": 120946.087504,
-   "ms": 1795240545657
+   "anlik_kaldirac": 4.378361632410138,
+   "hesap_usd": 140004.95435,
+   "ms": 1795241477823
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33": {
-   "anlik_kaldirac": 2.088779780003469,
-   "hesap_usd": 75134.68945,
-   "ms": 1795240545657
+   "anlik_kaldirac": 2.076027434492985,
+   "hesap_usd": 75506.167113,
+   "ms": 1795241477823
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": {
-   "anlik_kaldirac": 3.5289996459604573,
-   "hesap_usd": 70623.051857,
-   "ms": 1795240545657
+   "anlik_kaldirac": 3.5539810772012874,
+   "hesap_usd": 70117.178338,
+   "ms": 1795241477823
   },
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": {
-   "anlik_kaldirac": 1.8213410012887725,
-   "hesap_usd": 16094.77043632,
-   "ms": 1795240545657
+   "anlik_kaldirac": 1.8308289427631386,
+   "hesap_usd": 16017.22067532,
+   "ms": 1795241477823
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": {
-   "anlik_kaldirac": 8.406603992310504,
-   "hesap_usd": 811650.28445579,
-   "ms": 1795240545657
+   "anlik_kaldirac": 8.480719000608595,
+   "hesap_usd": 803707.76579779,
+   "ms": 1795241477823
   },
   "0x9eb42f017e793512e4734f8785de605c4cb3a24e": {
-   "anlik_kaldirac": 5.295341640540908,
-   "hesap_usd": 275684.23844054,
-   "ms": 1795240545657
+   "anlik_kaldirac": 5.360057841536459,
+   "hesap_usd": 271803.30447654,
+   "ms": 1795241477823
   },
   "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": {
    "anlik_kaldirac": 0.0,
    "hesap_usd": 13484.41227715,
-   "ms": 1795240545657
+   "ms": 1795241477823
   },
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": {
-   "anlik_kaldirac": 2.975561627590887,
-   "hesap_usd": 1244883.680742,
-   "ms": 1795240545657
+   "anlik_kaldirac": 2.9496742276604415,
+   "hesap_usd": 1251712.521548,
+   "ms": 1795241477823
   },
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": {
-   "anlik_kaldirac": 2.351643678695352,
-   "hesap_usd": 593927.851204,
-   "ms": 1795240545657
+   "anlik_kaldirac": 2.340069730453105,
+   "hesap_usd": 596201.515824,
+   "ms": 1795241477823
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": {
-   "anlik_kaldirac": 1.6154496900828437,
-   "hesap_usd": 5019.0003129,
-   "ms": 1795240545657
+   "anlik_kaldirac": 1.4697837428128893,
+   "hesap_usd": 5015.9773069,
+   "ms": 1795241477823
   },
   "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": {
-   "anlik_kaldirac": 0.9621775379199864,
-   "hesap_usd": 208532.117008,
-   "ms": 1795240545657
+   "anlik_kaldirac": 0.9584067508276534,
+   "hesap_usd": 209064.715213,
+   "ms": 1795241477823
   },
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": {
-   "anlik_kaldirac": 1.9008261613160145,
-   "hesap_usd": 66566.306887,
-   "ms": 1795240545657
+   "anlik_kaldirac": 1.8934704545956993,
+   "hesap_usd": 66737.90854,
+   "ms": 1795241477823
   }
  },
  "kapanis_kuyrugu": {},
@@ -22441,15 +22549,23 @@
    "hayali_usd": 68.82161247570359,
    "ms": 1795194736758,
    "neden": "spot_atlandi",
-   "son_pnl": -3.200271257927332,
+   "son_pnl": -3.288641667416453,
    "yon": "B"
+  },
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|BTC": {
+   "giris": 55698.5,
+   "hayali_usd": 194.15246689334526,
+   "ms": 1795240906719,
+   "neden": "ters_netlesme",
+   "son_pnl": -0.08191572433714617,
+   "yon": "A"
   },
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|ETH": {
    "giris": 1724.85,
    "hayali_usd": 105.73054170820069,
    "ms": 1795151757823,
    "neden": "haber_ters",
-   "son_pnl": -10.08358646317014,
+   "son_pnl": -10.206183259074948,
    "yon": "B"
   },
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|HYPE": {
@@ -22457,7 +22573,7 @@
    "hayali_usd": 44.95134175876599,
    "ms": 1795239106083,
    "neden": "duygu_ters",
-   "son_pnl": 0.5203680980510017,
+   "son_pnl": 0.45986937540525175,
    "yon": "A"
   },
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|SOL": {
@@ -22465,7 +22581,15 @@
    "hayali_usd": 1.0136411061451063,
    "ms": 1795200157906,
    "neden": "duygu_ters",
-   "son_pnl": 0.052819588863820315,
+   "son_pnl": 0.05400200735757379,
+   "yon": "A"
+  },
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|VVV": {
+   "giris": 20.188,
+   "hayali_usd": 155.3666661551043,
+   "ms": 1795240742434,
+   "neden": "duygu_ters",
+   "son_pnl": 0.9927828380229913,
    "yon": "A"
   },
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|io:SNDK|slot_tavani|498650": {
@@ -22473,15 +22597,23 @@
    "hayali_usd": 67.25205488414464,
    "ms": 1795141123860,
    "neden": "slot_tavani",
-   "son_pnl": -9.331240854504342,
+   "son_pnl": -9.54281707403572,
    "yon": "B"
+  },
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|xyz:GOOGL": {
+   "giris": 267.705,
+   "hayali_usd": 1.941776706474927,
+   "ms": 1795240776252,
+   "neden": "duygu_ters",
+   "son_pnl": 0.002574963974518589,
+   "yon": "A"
   },
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|xyz:SOXL": {
    "giris": 36.1665,
    "hayali_usd": 0.6626570215749403,
    "ms": 1795191453482,
    "neden": "min_emir_atlandi",
-   "son_pnl": -0.07611124293537669,
+   "son_pnl": -0.0765143357000802,
    "yon": "B"
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33|BTC": {
@@ -22489,7 +22621,7 @@
    "hayali_usd": 366.8300330035792,
    "ms": 1795211229554,
    "neden": "ters_netlesme",
-   "son_pnl": 19.880077901264464,
+   "son_pnl": 20.33090856996689,
    "yon": "A"
   },
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33|NEAR": {
@@ -22497,7 +22629,7 @@
    "hayali_usd": 72.24380527813175,
    "ms": 1795157297250,
    "neden": "duygu_ters",
-   "son_pnl": 10.569654911120114,
+   "son_pnl": 10.959538718008035,
    "yon": "A"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|HYPE": {
@@ -22505,7 +22637,7 @@
    "hayali_usd": 0.12587636955198717,
    "ms": 1795166390417,
    "neden": "ters_netlesme",
-   "son_pnl": -0.017270269218668907,
+   "son_pnl": -0.017122387464110114,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:BE": {
@@ -22513,7 +22645,7 @@
    "hayali_usd": 6.202143759953235,
    "ms": 1795125149563,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.9021435910175412,
+   "son_pnl": -0.9043858700341552,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:DRAM": {
@@ -22521,7 +22653,7 @@
    "hayali_usd": 2.5923062428658836,
    "ms": 1795125665459,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.3028358646809355,
+   "son_pnl": -0.3063335204403142,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:MU": {
@@ -22529,7 +22661,7 @@
    "hayali_usd": 5.122262185552122,
    "ms": 1795125201007,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.6813538505149881,
+   "son_pnl": -0.6851657248432315,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:NVDA": {
@@ -22537,7 +22669,7 @@
    "hayali_usd": 10.895610035456087,
    "ms": 1795125388364,
    "neden": "hip3_atlandi",
-   "son_pnl": -1.328086722247697,
+   "son_pnl": -1.3474911924800312,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:SNDK": {
@@ -22545,7 +22677,7 @@
    "hayali_usd": 1.0521649380497893,
    "ms": 1795137128050,
    "neden": "min_emir_atlandi",
-   "son_pnl": -0.1607817761713185,
+   "son_pnl": -0.16376129859687094,
    "yon": "B"
   },
   "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461|xyz:XYZ100": {
@@ -22553,7 +22685,7 @@
    "hayali_usd": 20.813374854155487,
    "ms": 1795126548300,
    "neden": "hip3_atlandi",
-   "son_pnl": -1.0568017708571553,
+   "son_pnl": -1.0646619550955871,
    "yon": "B"
   },
   "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda|HYPE": {
@@ -22561,7 +22693,7 @@
    "hayali_usd": 245.85187029928431,
    "ms": 1795200735052,
    "neden": "ters_netlesme",
-   "son_pnl": -19.659131304442056,
+   "son_pnl": -19.35113958935095,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|AERO": {
@@ -22569,7 +22701,7 @@
    "hayali_usd": 8.278864680141467,
    "ms": 1795102626445,
    "neden": "slot_tavani",
-   "son_pnl": -1.0556283249438443,
+   "son_pnl": -1.0793241217503113,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|AERO|slot_tavani|498644": {
@@ -22577,7 +22709,7 @@
    "hayali_usd": 16.31401756283637,
    "ms": 1795119004127,
    "neden": "slot_tavani",
-   "son_pnl": -1.8719762356975178,
+   "son_pnl": -1.9193532921761192,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|ETC|slot_tavani|498644": {
@@ -22585,7 +22717,7 @@
    "hayali_usd": 33.60884198762696,
    "ms": 1795119011610,
    "neden": "slot_tavani",
-   "son_pnl": 3.600864466804998,
+   "son_pnl": 3.6675901216039954,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|ETC|slot_tavani|498645": {
@@ -22593,7 +22725,7 @@
    "hayali_usd": 53.67440418653558,
    "ms": 1795122012122,
    "neden": "slot_tavani",
-   "son_pnl": 5.526264669429264,
+   "son_pnl": 5.633326737654393,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|ETH": {
@@ -22601,7 +22733,7 @@
    "hayali_usd": 6.213363555515463,
    "ms": 1795173632708,
    "neden": "ters_netlesme",
-   "son_pnl": 0.6678055267160624,
+   "son_pnl": 0.6749136217316671,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|GRAM": {
@@ -22609,7 +22741,7 @@
    "hayali_usd": 23.57687550241162,
    "ms": 1795173526396,
    "neden": "duygu_ters",
-   "son_pnl": 2.706136573981216,
+   "son_pnl": 3.003066661144321,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|HBAR": {
@@ -22617,7 +22749,7 @@
    "hayali_usd": 62.78192035928987,
    "ms": 1795173571405,
    "neden": "duygu_ters",
-   "son_pnl": 6.106791718844084,
+   "son_pnl": 5.957646643474492,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|HYPE": {
@@ -22625,7 +22757,7 @@
    "hayali_usd": 61.03848087808651,
    "ms": 1795141868813,
    "neden": "ters_netlesme",
-   "son_pnl": -8.47217389309942,
+   "son_pnl": -8.400597824317293,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|ICP": {
@@ -22633,7 +22765,7 @@
    "hayali_usd": 10.176592814662664,
    "ms": 1795173594101,
    "neden": "duygu_ters",
-   "son_pnl": 1.122854546307156,
+   "son_pnl": 1.0748631256209187,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|JUP|slot_tavani|498644": {
@@ -22641,7 +22773,7 @@
    "hayali_usd": 136.13764095155776,
    "ms": 1795119029860,
    "neden": "slot_tavani",
-   "son_pnl": -22.289932722648537,
+   "son_pnl": -22.57078479475362,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|JUP|slot_tavani|498659": {
@@ -22649,7 +22781,7 @@
    "hayali_usd": 136.84052358435667,
    "ms": 1795173607434,
    "neden": "slot_tavani",
-   "son_pnl": -11.657753137578867,
+   "son_pnl": -11.96656779022996,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|LINK": {
@@ -22657,7 +22789,7 @@
    "hayali_usd": 63.30917426095572,
    "ms": 1795102629574,
    "neden": "slot_tavani",
-   "son_pnl": 6.815175745924046,
+   "son_pnl": 6.7825622158030745,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|POL|slot_tavani|498659": {
@@ -22665,7 +22797,7 @@
    "hayali_usd": 99.31789259641685,
    "ms": 1795173659492,
    "neden": "slot_tavani",
-   "son_pnl": -8.40695831699611,
+   "son_pnl": -8.428353270796832,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|SUI": {
@@ -22673,7 +22805,7 @@
    "hayali_usd": 0.5628497237806751,
    "ms": 1795173711446,
    "neden": "rejim_ters",
-   "son_pnl": -0.07390508009487554,
+   "son_pnl": -0.07356015139568847,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|TAO|slot_tavani|498644": {
@@ -22681,7 +22813,7 @@
    "hayali_usd": 35.150496012942035,
    "ms": 1795119004125,
    "neden": "slot_tavani",
-   "son_pnl": 4.706498099078701,
+   "son_pnl": 4.704684769046306,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|TAO|slot_tavani|498645": {
@@ -22689,7 +22821,7 @@
    "hayali_usd": 42.46664034898394,
    "ms": 1795122003671,
    "neden": "slot_tavani",
-   "son_pnl": 5.475230946727465,
+   "son_pnl": 5.473027634475257,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|VVV": {
@@ -22697,7 +22829,7 @@
    "hayali_usd": 19.710750210099217,
    "ms": 1795178777763,
    "neden": "duygu_ters",
-   "son_pnl": 0.386005192276698,
+   "son_pnl": 0.4498592850289346,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|WLD": {
@@ -22705,7 +22837,7 @@
    "hayali_usd": 5.732913880796282,
    "ms": 1795173814943,
    "neden": "duygu_ters",
-   "son_pnl": 0.7657691201274681,
+   "son_pnl": 0.792295306604081,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|XLM": {
@@ -22713,7 +22845,7 @@
    "hayali_usd": 82.82560587354048,
    "ms": 1795174047269,
    "neden": "duygu_ters",
-   "son_pnl": 7.271714132466641,
+   "son_pnl": 7.349904607009294,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|XRP": {
@@ -22721,7 +22853,7 @@
    "hayali_usd": 87.05785369257177,
    "ms": 1795173906566,
    "neden": "duygu_ters",
-   "son_pnl": 7.591010991745584,
+   "son_pnl": 7.74836836674721,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|XRP|slot_tavani|498644": {
@@ -22729,7 +22861,7 @@
    "hayali_usd": 54.083010754381526,
    "ms": 1795119038610,
    "neden": "slot_tavani",
-   "son_pnl": 5.137345233698019,
+   "son_pnl": 5.234265674755916,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|ZRO": {
@@ -22737,7 +22869,7 @@
    "hayali_usd": 0.15182532270295052,
    "ms": 1795173745436,
    "neden": "duygu_ters",
-   "son_pnl": 0.02116345620137152,
+   "son_pnl": 0.020817211366848512,
    "yon": "A"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|kPEPE|slot_tavani|498644": {
@@ -22745,7 +22877,7 @@
    "hayali_usd": 105.95103828458983,
    "ms": 1795119006603,
    "neden": "slot_tavani",
-   "son_pnl": -15.220578261032493,
+   "son_pnl": -15.4747252078772,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|xyz:GME": {
@@ -22753,7 +22885,7 @@
    "hayali_usd": 0.07334567345641733,
    "ms": 1795116752457,
    "neden": "hip3_atlandi",
-   "son_pnl": -0.0029483136477177255,
+   "son_pnl": -0.0027739365893904677,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|xyz:SNDK|slot_tavani|498659": {
@@ -22761,7 +22893,7 @@
    "hayali_usd": 0.24149418237523174,
    "ms": 1795173245556,
    "neden": "slot_tavani",
-   "son_pnl": -0.025290975532984396,
+   "son_pnl": -0.02601365275060795,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|xyz:SNDK|slot_tavani|498660": {
@@ -22769,7 +22901,7 @@
    "hayali_usd": 157.79983300349684,
    "ms": 1795176005548,
    "neden": "slot_tavani",
-   "son_pnl": -15.422963602608792,
+   "son_pnl": -15.898870141347887,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|xyz:SNDK|slot_tavani|498661": {
@@ -22777,7 +22909,7 @@
    "hayali_usd": 363.57549531974877,
    "ms": 1795179605573,
    "neden": "slot_tavani",
-   "son_pnl": -34.80909628526101,
+   "son_pnl": -35.9080253435877,
    "yon": "B"
   },
   "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e|xyz:SNDK|slot_tavani|498662": {
@@ -22785,7 +22917,7 @@
    "hayali_usd": 574.6996025713757,
    "ms": 1795183205566,
    "neden": "slot_tavani",
-   "son_pnl": -58.06882968232055,
+   "son_pnl": -59.79571104982307,
    "yon": "B"
   },
   "0x9eb42f017e793512e4734f8785de605c4cb3a24e|xyz:NVDA": {
@@ -22793,7 +22925,7 @@
    "hayali_usd": 12.67929202179325,
    "ms": 1795118504287,
    "neden": "hip3_atlandi",
-   "son_pnl": -1.603541003199092,
+   "son_pnl": -1.6260044008732162,
    "yon": "B"
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|ADA": {
@@ -22801,7 +22933,7 @@
    "hayali_usd": 49.111416824459006,
    "ms": 1795136111009,
    "neden": "ters_netlesme",
-   "son_pnl": 5.503586592061991,
+   "son_pnl": 5.419414091242218,
    "yon": "A"
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|BNB": {
@@ -22809,7 +22941,7 @@
    "hayali_usd": 2.022609636328028,
    "ms": 1795233312468,
    "neden": "rejim_ters",
-   "son_pnl": -0.02349183348145236,
+   "son_pnl": -0.03454220385971695,
    "yon": "B"
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|BTC": {
@@ -22817,7 +22949,7 @@
    "hayali_usd": 338.92116704738703,
    "ms": 1795186212998,
    "neden": "ters_netlesme",
-   "son_pnl": 31.93917766719018,
+   "son_pnl": 32.3380735123015,
    "yon": "A"
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|ETH": {
@@ -22825,7 +22957,7 @@
    "hayali_usd": 204.2402563718957,
    "ms": 1795156212371,
    "neden": "haber_ters",
-   "son_pnl": -21.208189042896244,
+   "son_pnl": -21.442792903990224,
    "yon": "B"
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|SOL": {
@@ -22833,7 +22965,7 @@
    "hayali_usd": 10.152800431041044,
    "ms": 1795176612212,
    "neden": "duygu_ters",
-   "son_pnl": 0.8137830715255755,
+   "son_pnl": 0.825275972798875,
    "yon": "A"
   },
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea|ADA": {
@@ -22841,7 +22973,7 @@
    "hayali_usd": 65.99886676902155,
    "ms": 1795169062539,
    "neden": "ters_netlesme",
-   "son_pnl": 6.233842541880693,
+   "son_pnl": 6.118483178116351,
    "yon": "A"
   },
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea|HYPE": {
@@ -22849,7 +22981,7 @@
    "hayali_usd": 154.9932171699959,
    "ms": 1795169125515,
    "neden": "duygu_ters",
-   "son_pnl": 21.224021842239516,
+   "son_pnl": 21.041877162978643,
    "yon": "A"
   },
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea|SOL": {
@@ -22857,7 +22989,7 @@
    "hayali_usd": 43.712923559604,
    "ms": 1795141893114,
    "neden": "ters_netlesme",
-   "son_pnl": -3.8895841874908217,
+   "son_pnl": -3.938592095941754,
    "yon": "B"
   },
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea|XRP": {
@@ -22865,7 +22997,7 @@
    "hayali_usd": 100.38806125821345,
    "ms": 1795169322873,
    "neden": "ters_netlesme",
-   "son_pnl": -9.345752112575141,
+   "son_pnl": -9.526030808624249,
    "yon": "B"
   },
   "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea|ZEC": {
@@ -22873,7 +23005,7 @@
    "hayali_usd": 119.5760800897156,
    "ms": 1795169155273,
    "neden": "duygu_ters",
-   "son_pnl": 21.13322358665871,
+   "son_pnl": 21.37264509603618,
    "yon": "A"
   }
  },
@@ -22906,13 +23038,13 @@
  "kasa_ayar_usd": 10000.0,
  "kasa_usd": 10000.0,
  "kaynak": {
-  "cgroup_mb": 97.1,
-  "cgroup_tepe_mb": 113.0,
+  "cgroup_mb": 105.9,
+  "cgroup_tepe_mb": 114.7,
   "disk_bos_gb": 63.41,
   "disk_toplam_gb": 66.76,
-  "olc_ms": 1795240548603,
-  "ram_mb": 114.8,
-  "ram_tepe_mb": 129.3,
+  "olc_ms": 1795241447771,
+  "ram_mb": 123.6,
+  "ram_tepe_mb": 130.7,
   "yuk_1dk": 0.0
  },
  "kip": "sanal",
@@ -22920,27 +23052,27 @@
   "AAVE": {
    "aktif": true,
    "bas_ms": 1795111473526,
-   "drift": 0.924
+   "drift": 0.931
   },
   "AERO": {
    "aktif": true,
    "bas_ms": 1795234076471,
-   "drift": 0.808
+   "drift": 0.805
   },
   "ETH": {
    "aktif": true,
    "bas_ms": 1795177086803,
-   "drift": 0.852
+   "drift": 0.859
   },
   "HYPE": {
    "aktif": true,
    "bas_ms": 1795169135078,
-   "drift": 0.396
+   "drift": 0.388
   },
   "LINK": {
    "aktif": true,
    "bas_ms": 1795232368143,
-   "drift": 0.329
+   "drift": 0.332
   },
   "NEAR": {
    "aktif": true,
@@ -22950,32 +23082,35 @@
   "SOL": {
    "aktif": true,
    "bas_ms": 1795176632847,
-   "drift": 0.415
-  },
-  "VVV": {
-   "aktif": true,
-   "bas_ms": 1795200286822,
-   "drift": 1.0
+   "drift": 0.462
   },
   "WLFI": {
    "aktif": true,
    "bas_ms": 1795102601627,
-   "drift": 1.688
+   "drift": 1.685
   },
   "ZEC": {
    "aktif": true,
    "bas_ms": 1795102601627,
    "drift": 1.0
   },
+  "io:SNDK": {
+   "aktif": false,
+   "bas_ms": 1795241044485
+  },
   "xyz:GME": {
    "aktif": true,
    "bas_ms": 1795133124749,
    "drift": 1.0
   },
+  "xyz:GOOGL": {
+   "aktif": false,
+   "bas_ms": 1795240776510
+  },
   "xyz:SNDK": {
    "aktif": true,
    "bas_ms": 1795200286822,
-   "drift": 0.652
+   "drift": 0.653
   },
   "xyz:SNXX": {
    "aktif": true,
@@ -23004,10 +23139,10 @@
   "TRX": 1795230363034,
   "UNI": 1795197807302,
   "VVV": 1795230363034,
-  "WLFI": 1795219446199,
+  "WLFI": 1795241210203,
   "XMR": 1795104409070,
   "XRP": 1795226747122,
-  "ZEC": 1795219446199,
+  "ZEC": 1795241210203,
   "io:NVDA": 1795136599352,
   "io:SNDK": 1795237604208,
   "kPEPE": 1795122116104,
@@ -23077,12 +23212,14 @@
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": {
    "@151": 41.127146647,
    "ASTER": 100000.0,
+   "BTC": -1.5,
    "ETH": 177.5,
    "HYPE": -200.0,
    "SOL": -500.0,
    "UNI": 4000.0,
-   "VVV": -1000.0,
+   "VVV": -1935.0,
    "io:SNDK": 260.0,
+   "xyz:GOOGL": -50.0,
    "xyz:SOXL": 250.0
   },
   "0x2d69d99e51f671d698369f4287065b30f78a4e16": {
@@ -23230,7 +23367,7 @@
    "LIT": 480.0,
    "LTC": -31.46,
    "MNT": -1191.3000000000002,
-   "NEAR": 4602.0,
+   "NEAR": 1991.5,
    "ONDO": -5003.0,
    "OP": -19106.0,
    "PENGU": -410262.0,
@@ -23409,7 +23546,7 @@
   },
   "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": {},
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": {
-   "BTC": -35.00966,
+   "BTC": -34.90057,
    "XRP": -2009874.0
   },
   "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": {
@@ -23435,11 +23572,11 @@
    "TIA": 29731.800000000003
   },
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": {
-   "ADA": -1120.0,
+   "ADA": -840.0,
    "BNB": 0.9,
    "BTC": -0.039,
    "ETH": 1.65,
-   "SOL": -42.0
+   "SOL": -31.500000000000004
   },
   "0xdf419d902a3af85b84a90d96bd8943de72ba8655": {},
   "0xdffef5d853e5e1dad3b909e37ba2dae94087c3cc": {
@@ -23527,7 +23664,7 @@
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|@107": 1795085220600,
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|@151": 1795195638803,
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|ARB": 1795152915314,
-  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|BTC": 1795201469157,
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|BTC": 1795240953442,
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|ETH": 1795193516064,
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|HYPE": 1795239105749,
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|LIT": 1794872343443,
@@ -23538,12 +23675,13 @@
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|PURR/USDC": 1795132800071,
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|SOL": 1795200690292,
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|UNI": 1795201789104,
-  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|VVV": 1794851745104,
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|VVV": 1795240778483,
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|ZEC": 1795152624868,
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|io:NVDA": 1795141644631,
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|io:SNDK": 1795142055885,
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|para:ANTH": 1795114046461,
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|xyz:CRCL": 1794850067387,
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|xyz:GOOGL": 1795240775862,
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|xyz:NVDA": 1794971298812,
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|xyz:SNDK": 1795200405451,
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|xyz:SOXL": 1795191453020,
@@ -23673,7 +23811,7 @@
   "0x6e9c76b40310cae8c7f9f6b93f33d56a59651ab3|LIT": 1795190436497,
   "0x6e9c76b40310cae8c7f9f6b93f33d56a59651ab3|LTC": 1795195847992,
   "0x6e9c76b40310cae8c7f9f6b93f33d56a59651ab3|MNT": 1795197665034,
-  "0x6e9c76b40310cae8c7f9f6b93f33d56a59651ab3|NEAR": 1795213333371,
+  "0x6e9c76b40310cae8c7f9f6b93f33d56a59651ab3|NEAR": 1795241267137,
   "0x6e9c76b40310cae8c7f9f6b93f33d56a59651ab3|ONDO": 1795194533195,
   "0x6e9c76b40310cae8c7f9f6b93f33d56a59651ab3|OP": 1795195862559,
   "0x6e9c76b40310cae8c7f9f6b93f33d56a59651ab3|PENGU": 1795197029270,
@@ -23841,7 +23979,7 @@
   "0xb7c886c1d452f419fbccc3261b42b792603657a2|xyz:CRWV": 1795232886195,
   "0xb7c886c1d452f419fbccc3261b42b792603657a2|xyz:INTC": 1795187209789,
   "0xb7c886c1d452f419fbccc3261b42b792603657a2|xyz:SOXL": 1795187882715,
-  "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9|BTC": 1795239358164,
+  "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9|BTC": 1795240991609,
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9|ETH": 1795220369660,
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9|XRP": 1795234828107,
   "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9|ZEC": 1795230766545,
@@ -23864,11 +24002,11 @@
   "0xd2cfeee986ae1e83fb2e6385f6d54cfedb2ea029|ZEC": 1795228723177,
   "0xd2cfeee986ae1e83fb2e6385f6d54cfedb2ea029|xyz:ANT": 1795187812585,
   "0xd2cfeee986ae1e83fb2e6385f6d54cfedb2ea029|xyz:NVDA": 1795208231059,
-  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|ADA": 1795239909417,
+  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|ADA": 1795241111514,
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|BNB": 1795234212071,
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|BTC": 1795235711089,
   "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|ETH": 1795232116987,
-  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|SOL": 1795239319030,
+  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a|SOL": 1795241116002,
   "0xdf419d902a3af85b84a90d96bd8943de72ba8655|SOL": 1795109424664,
   "0xdffef5d853e5e1dad3b909e37ba2dae94087c3cc|BTC": 1795131331586,
   "0xdffef5d853e5e1dad3b909e37ba2dae94087c3cc|NEAR": 1795123573653,
@@ -23923,18 +24061,18 @@
   "0xfb02009ab9221ec89dbac80d4f84bafd3cc20acc|xyz:SNDK": 1795122178402
  },
  "poz_tr_senk_ms": {
-  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 1795240416622,
-  "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 1795240416622,
-  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 1795240416622,
-  "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 1795240416622,
-  "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": 1795240416622,
-  "0x9eb42f017e793512e4734f8785de605c4cb3a24e": 1795240416622,
-  "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": 1795240416622,
-  "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": 1795240416622,
-  "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": 1795240416622,
-  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 1795240416622,
-  "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 1795240416622,
-  "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 1795240416622
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89": 1795241047193,
+  "0x3d380a67f690cb64a147ef084ad76fbed139dd33": 1795241047193,
+  "0x6a8686e35899b0ad75d388fca49c43a6a1eb6461": 1795241047193,
+  "0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda": 1795241047193,
+  "0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e": 1795241047193,
+  "0x9eb42f017e793512e4734f8785de605c4cb3a24e": 1795241047193,
+  "0xc2dd652a199eea136fcb4d1a30f76e0ab589c88f": 1795241047193,
+  "0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9": 1795241047193,
+  "0xc3602c55a23475df22818f78ac9d84c8b96dbda0": 1795241047193,
+  "0xdebd491a259a242fc9bd8fd780a507e8e062b67a": 1795241047193,
+  "0xe69accecc45dc1023fb8e9a24ef0ba9ac5b44a3a": 1795241047193,
+  "0xf83e8bd8dff2f1157d83ba11e698263411f3dbea": 1795241047193
  },
  "rejim_4h_son": {
   "1000SHIB": "trend_down",
@@ -24170,8 +24308,8 @@
    1795195639176
   ],
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|BTC": [
-   "rejim_ters",
-   1795185482135
+   "ara_dolum_siniri",
+   1795240953920
   ],
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|ETH": [
    "rejim_ters",
@@ -24184,6 +24322,14 @@
   "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|SOL": [
    "duygu_ters",
    1795200690788
+  ],
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|VVV": [
+   "ara_dolum_siniri",
+   1795240778781
+  ],
+  "0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89|xyz:GOOGL": [
+   "duygu_ters",
+   1795240776254
   ],
   "0x3d380a67f690cb64a147ef084ad76fbed139dd33|BTC": [
    "ara_dolum_siniri",
@@ -24315,14 +24461,14 @@
   ]
  },
  "son_funding_ms": null,
- "son_funding_saat": 498677,
- "son_olay_ms": 1795240089746,
+ "son_funding_saat": 498678,
+ "son_olay_ms": 1795241267137,
  "stop_muaf": {},
  "tg_offset": 260770056,
  "ucret_bekleyen": [],
  "ucret_gercek_usd": 0.0,
  "ucret_tahmin_say": 0,
  "vardiya": "sunucu",
- "yazildi_ms": 1795240548604,
+ "yazildi_ms": 1795241480570,
  "yetim_ilk": {}
 }
