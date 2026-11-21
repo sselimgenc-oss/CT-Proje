@@ -1,12 +1,12 @@
 {
  "sema": "ct.kural_maliyet.v1",
  "proje": "CT",
- "uretim": "2026-11-21T04:05:42Z",
+ "uretim": "2026-11-21T05:06:13Z",
  "pencere_gun": 7,
  "satirlar": [
   {
    "neden": "bant_ici",
-   "olay_adedi": 10950,
+   "olay_adedi": 10962,
    "trader_sayisi": 10,
    "karsi_olgu_kapanan_n": 0,
    "karsi_olgu_kapanan_pnl": 0.0,
@@ -22,8 +22,8 @@
    "karsi_olgu_kapanan_n": 10,
    "karsi_olgu_kapanan_pnl": -18.96,
    "karsi_olgu_acik_n": 17,
-   "karsi_olgu_acik_pnl": -149.27,
-   "toplam_karsi_olgu_pnl": -168.24,
+   "karsi_olgu_acik_pnl": -149.7,
+   "toplam_karsi_olgu_pnl": -168.66,
    "hayali_nosyonel": 4931.92
   },
   {
@@ -33,13 +33,13 @@
    "karsi_olgu_kapanan_n": 15,
    "karsi_olgu_kapanan_pnl": -24.96,
    "karsi_olgu_acik_n": 7,
-   "karsi_olgu_acik_pnl": -5.86,
-   "toplam_karsi_olgu_pnl": -30.81,
+   "karsi_olgu_acik_pnl": -5.83,
+   "toplam_karsi_olgu_pnl": -30.79,
    "hayali_nosyonel": 1085.16
   },
   {
    "neden": "min_emir_atlandi",
-   "olay_adedi": 3324,
+   "olay_adedi": 3325,
    "trader_sayisi": 7,
    "karsi_olgu_kapanan_n": 3,
    "karsi_olgu_kapanan_pnl": -0.35,
@@ -55,8 +55,8 @@
    "karsi_olgu_kapanan_n": 8,
    "karsi_olgu_kapanan_pnl": 80.7,
    "karsi_olgu_acik_n": 10,
-   "karsi_olgu_acik_pnl": 23.4,
-   "toplam_karsi_olgu_pnl": 104.11,
+   "karsi_olgu_acik_pnl": 18.27,
+   "toplam_karsi_olgu_pnl": 98.98,
    "hayali_nosyonel": 3373.15
   },
   {
@@ -66,14 +66,14 @@
    "karsi_olgu_kapanan_n": 3,
    "karsi_olgu_kapanan_pnl": 1.16,
    "karsi_olgu_acik_n": 13,
-   "karsi_olgu_acik_pnl": 75.32,
-   "toplam_karsi_olgu_pnl": 76.48,
+   "karsi_olgu_acik_pnl": 75.99,
+   "toplam_karsi_olgu_pnl": 77.15,
    "hayali_nosyonel": 665.99
   },
   {
    "neden": "ara_dolum_siniri",
-   "olay_adedi": 143,
-   "trader_sayisi": 3,
+   "olay_adedi": 182,
+   "trader_sayisi": 5,
    "karsi_olgu_kapanan_n": 0,
    "karsi_olgu_kapanan_pnl": 0.0,
    "karsi_olgu_acik_n": 0,
@@ -88,8 +88,8 @@
    "karsi_olgu_kapanan_n": 2,
    "karsi_olgu_kapanan_pnl": 1.06,
    "karsi_olgu_acik_n": 2,
-   "karsi_olgu_acik_pnl": -0.07,
-   "toplam_karsi_olgu_pnl": 0.99,
+   "karsi_olgu_acik_pnl": -0.08,
+   "toplam_karsi_olgu_pnl": 0.98,
    "hayali_nosyonel": 638.52
   },
   {
@@ -99,8 +99,8 @@
    "karsi_olgu_kapanan_n": 0,
    "karsi_olgu_kapanan_pnl": 0.0,
    "karsi_olgu_acik_n": 1,
-   "karsi_olgu_acik_pnl": -3.27,
-   "toplam_karsi_olgu_pnl": -3.27,
+   "karsi_olgu_acik_pnl": -3.11,
+   "toplam_karsi_olgu_pnl": -3.11,
    "hayali_nosyonel": 68.82
   },
   {
@@ -121,8 +121,8 @@
    "karsi_olgu_kapanan_n": 0,
    "karsi_olgu_kapanan_pnl": 0.0,
    "karsi_olgu_acik_n": 2,
-   "karsi_olgu_acik_pnl": -31.43,
-   "toplam_karsi_olgu_pnl": -31.43,
+   "karsi_olgu_acik_pnl": -30.95,
+   "toplam_karsi_olgu_pnl": -30.95,
    "hayali_nosyonel": 309.97
   },
   {
@@ -156,8 +156,8 @@
    "karsi_olgu_kapanan_n": 10,
    "karsi_olgu_kapanan_pnl": -18.96,
    "karsi_olgu_acik_n": 17,
-   "karsi_olgu_acik_pnl": -149.27,
-   "toplam_karsi_olgu_pnl": -168.24,
+   "karsi_olgu_acik_pnl": -149.7,
+   "toplam_karsi_olgu_pnl": -168.66,
    "hayali_nosyonel": 4931.92
   }
  },

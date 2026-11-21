@@ -265,3 +265,8 @@
 {"zaman_ms":1795236778410,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"VVV","neden":"kayma_lehte_fazla","kayma":-0.020331,"trader_giris":19.9004,"mark":20.305}
 {"zaman_ms":1795236799922,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","hesap_usd":121109.880547,"anlik_kaldirac":4.876551297079141,"esik":5.0,"durum":"bitti"}
 {"zaman_ms":1795236832670,"olay":"tur","ozsermaye_usd":9860.6957}
+{"zaman_ms":1795237229403,"olay":"funding","saat":498677,"saat_adet":1,"funding_usd":0.1176313099781212,"toplam_funding_usd":-1.3430024439769606}
+{"zaman_ms":1795237610764,"olay":"tg_bastirildi","tur":"kopya_sapmasi","metin":"📐 Kopya sapması: 4 coin, en büyük xyz:SPCX %82 (yalnız bilgi)"}
+{"zaman_ms":1795237610764,"olay":"telegram","metin":"🧾 Son 1 saat: 4 emir (4 azaltma) · sanal · net +3,49 $\n✅ Kapanan: VVV +3,49 $\n↕️ XRP azaltıldı · SOL azaltıldı · VVV azaltıldı · VVV azaltıldı\n💰 Kasa: 9.872,39 $ · bugün 🟢 +38,71 $ (+%0,4)","acik":true}
+{"zaman_ms":1795237610764,"olay":"tg_mesaj","tur":"islem_ozeti","anahtar":null,"seviye":"INFO","sessiz":false,"metin":"🧾 Son 1 saat: 4 emir (4 azaltma) · sanal · net +3,49 $\n✅ Kapanan: VVV +3,49 $\n↕️ XRP azaltıldı · SOL azaltıldı · VVV azaltıldı · VVV azaltıldı\n💰 Kasa: 9.872,39 $ · bugün 🟢 +38,71 $ (+%0,4)","gonderildi":true,"bastirildi":false,"emir":4,"kapanan":1,"net_kz":3.49281}
+{"zaman_ms":1795237676165,"olay":"tur","ozsermaye_usd":9870.8036}
