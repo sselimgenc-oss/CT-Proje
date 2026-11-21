@@ -1,0 +1,16 @@
+{
+ "acilis_durdu": {
+  "elle_dur": false,
+  "gunluk_kayip": false
+ },
+ "donem": "2026-11-21T07:30:00Z",
+ "dur": false,
+ "dur_dosya": false,
+ "dur_neden": null,
+ "gun": null,
+ "gun_basi": 1000.0,
+ "gunluk_acilis": {},
+ "kapat_gunu": null,
+ "son_oz": 1000.0,
+ "zirve": 1000.0
+}

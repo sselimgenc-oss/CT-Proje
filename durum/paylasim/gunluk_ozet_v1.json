@@ -1,7 +1,7 @@
 {
  "sema": "ortak.gunluk_ozet.v1",
  "proje": "CT",
- "uretim": "2026-11-21T13:58:40Z",
+ "uretim": "2026-11-21T14:04:11Z",
  "gun": "2026-11-21",
  "mod": "sanal",
  "kasa": {
@@ -28,12 +28,12 @@
   "kaldirac_ayar": 3.0
  },
  "saglik": {
-  "son_nabiz": "2026-11-21T13:58:40Z",
+  "son_nabiz": "2026-11-21T14:04:11Z",
   "hata_sayisi_gun": 0,
-  "ram_mb": 37.5,
-  "ram_tepe_mb": 37.5,
-  "disk_bos_gb": 63.39,
-  "yuk_1dk": 0.0,
+  "ram_mb": 37.1,
+  "ram_tepe_mb": 37.1,
+  "disk_bos_gb": 63.4,
+  "yuk_1dk": 0.07,
   "yeniden_baslama_1s": 0,
   "oom_son": false
  },

@@ -1,0 +1,6 @@
+{"zaman_ms":1795269917490,"olay":"kadro_surum_bekleniyor","gerekli":"v5","gelen":"v4"}
+{"zaman_ms":1795269917491,"olay":"tg_bastirildi","tur":"kadro_surum_bekleniyor","metin":"ℹ️ BİLGİ: yeni seçim yapısı bekleniyor\nGelen kadro sürümü v4, gereken v5. Trader alınmıyor; kasa nakitte.\nSenden bir şey gerekmiyor."}
+{"zaman_ms":1795269917492,"olay":"tg_mesaj","tur":"kadro_surum_bekleniyor","anahtar":null,"seviye":"INFO","sessiz":false,"metin":"ℹ️ BİLGİ: yeni seçim yapısı bekleniyor\nGelen kadro sürümü v4, gereken v5. Trader alınmıyor; kasa nakitte.\nSenden bir şey gerekmiyor.","gonderildi":false,"bastirildi":true}
+{"zaman_ms":1795269917508,"olay":"bekleme_vardiyasi","gerekli":"v5"}
+{"zaman_ms":1795269920616,"olay":"btc_donem","donem":"2026-11-21T07:30:00Z","bas_ms":1795246200000,"fiyat":58121.0,"kaynak":"mum_1m","mum_ms":1795246200000,"okundu_ms":1795269917508}
+{"zaman_ms":1795269920616,"olay":"tur","ozsermaye_usd":1000.0}
