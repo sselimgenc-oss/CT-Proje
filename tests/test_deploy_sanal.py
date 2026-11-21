@@ -942,11 +942,20 @@ def test_k85_guncelle_yeni_donemde_yerel_durumu_sifirlar_arsiv_acmaz_ve_radari_b
     (sunucu.depo / "durum/hesap.json").write_text("{}")
     (sunucu.depo / "durum/donem.txt").write_text("2026-11-16T11:30:00Z\n")
     (sunucu.depo / "kayit/eski.jsonl").write_text("{}\n")
+    for yol in ("durum/motor.json", "durum/risk.json", "durum/ozet.json", "durum/saha.json", "durum/binance_kagit/hesap.json", "durum/olcum/x.json", "durum/olcum_basladi", "durum/binance_kagit_kapali",
+                "durum/DUR", "durum/motor.lock", "durum/ortak/k.json", "kayit/binance_kagit/g.jsonl", "pano/p.json"):
+        (sunucu.depo / yol).parent.mkdir(parents=True, exist_ok=True)
+        (sunucu.depo / yol).write_text("x")
     sunucu.ci(*YESIL)
     r = sunucu.calistir()
     assert r.returncode == 0, r.stdout + r.stderr
     assert not (sunucu.depo / "durum/hesap.json").exists() and not (sunucu.depo / "kayit/eski.jsonl").exists()          # eski dönem durumu sıfırlandı
     assert (sunucu.depo / "durum/donem.txt").read_text().strip() == "2026-11-21T07:30:00Z"                               # koruyucu/motor yeni dönemi buradan okur
+    for yok in ("durum/motor.json", "durum/risk.json", "durum/saha.json", "pano/p.json"):
+        assert not (sunucu.depo / yok).exists(), yok                                                                    # CT durumu silindi
+    for var in ("durum/binance_kagit/hesap.json", "durum/olcum/x.json", "durum/olcum_basladi", "durum/binance_kagit_kapali", "durum/DUR", "durum/motor.lock", "durum/ortak/k.json", "kayit/binance_kagit/g.jsonl"):
+        assert (sunucu.depo / var).exists(), var                                                                        # binance kâğıt, ölçüm, DUR, işaretler KORUNDU
+    assert "durum/DUR" in r.stdout and "UYARI" in r.stdout
     assert not (sunucu.depo.parent / "arsiv").exists() and not (sunucu.depo / "arsiv").exists()                          # arşiv klasörü YOK
     assert sunucu.log.read_text().count("start --no-block sg-sanal-radar.service") == 1
     assert (sunucu.durum / "radar_basladi").read_text().strip() == "2026-11-21T07:30:00Z"
