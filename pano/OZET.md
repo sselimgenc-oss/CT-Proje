@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-21 12:29 UTC
+# Canlı rapor — 2026-11-21 12:30 UTC
 
 **Kip** sanal · vardiya `sunucu` · saha 11/11 (inen 1)
 
