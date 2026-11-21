@@ -137,3 +137,4 @@
 {"zaman_ms":1795227697777,"olay":"saha_uyari","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","neden":"form_sirasi:26"}
 {"zaman_ms":1795227697777,"olay":"tg_bastirildi","tur":"saha_uyari","metin":"⚠️ Hafta içi uyarı (çıkış yok, pazar değerlendirilir): Polaris-F8\n↳ form_sirasi:26"}
 {"zaman_ms":1795227697777,"olay":"tg_mesaj","tur":"saha_uyari","anahtar":null,"seviye":"WARN","sessiz":false,"metin":"⚠️ Hafta içi uyarı (çıkış yok, pazar değerlendirilir): Polaris-F8\n↳ form_sirasi:26","gonderildi":false,"bastirildi":true}
+{"zaman_ms":1795228191845,"olay":"tur","ozsermaye_usd":9837.9693}
