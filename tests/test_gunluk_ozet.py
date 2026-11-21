@@ -9,7 +9,7 @@ import pytest
 from copytrade.canli import gunluk_ozet as go
 from copytrade.canli import motor as mt
 from copytrade.canli import telegram as tg
-from copytrade.canli.ogrenme_adaptor import takma_ad
+from copytrade.canli.kimlik import takma_ad
 from tests.test_canli_motor import adr, kadro, kur, satir
 
 ROOT = Path(__file__).resolve().parent.parent

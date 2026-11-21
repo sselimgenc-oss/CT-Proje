@@ -664,9 +664,9 @@ def _h(**kw):
 
 def test_poz_ve_hesap_varsayilanlari():
     p = Poz(1.0, 2.0, 3)
-    assert (p.kaldirac, p.giris_ctx, p.zirve_kar) == (3.0, None, 0.0) and isinstance(p.zirve_kar, float)
+    assert (p.kaldirac, p.zirve_kar) == (3.0, 0.0) and isinstance(p.zirve_kar, float)
     h = _h()
-    assert h.dinleyici is None and h.son_niyet_cloid is None and h.kapanmis_net == 0.0 and h.tasfiyeler == []
+    assert h.son_niyet_cloid is None and h.kapanmis_net == 0.0 and h.tasfiyeler == []
     assert hs.EPS == 1e-12
 
 

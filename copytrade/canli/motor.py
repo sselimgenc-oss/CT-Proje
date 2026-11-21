@@ -34,9 +34,8 @@ from copytrade.canli.hesap import Hesap, dinamik_stop_orani, dolum_net
 from copytrade.canli.kadro import Karar, Saha, kadro_taze_mi
 from copytrade.canli.mutabakat import poz_farki, sanal_tutarlilik
 from copytrade.canli.niyet import Niyet, cloid_uret
-from copytrade.canli.ogrenme_adaptor import Ogrenme
 from copytrade.canli import borsa_stop, izleme
-from copytrade.canli import haber, rejim, rejim_sonuc, secim_gercek
+from copytrade.canli import haber, secim_gercek
 from copytrade.canli import gunluk_ozet, hafta_paketi, kaynak
 from copytrade import koruyucu
 from copytrade.canli import sert_sinirlar as sert
@@ -612,9 +611,7 @@ class Motor:
         self._golge_acik: dict[str, list[str]] = {a: list(k) for a, k in (m.get("golge_acik") or {}).items()}          # adres -> şu an doğru olan gölge kuralları (yalnız durum değişiminde kayıt)
         self.donem_seri: dict = _oku(durum_dizin / "donem_seri.json") or {}     # F-06: dönem boyu UTC gün sonu özsermaye + BTC serisi (pano 15 gün kırpmasından bağımsız, kalıcı)
         self.btc_donem: dict | None = m.get("btc_donem")          # BTC al-tut: {donem, bas_ms, fiyat, kaynak, okundu_ms}; dönem başında BİR kez okunur, motor.json'da kalıcı
-        self.rejim_anlik: dict = m.get("rejim_anlik") or {}          # ML rejim etiketi (rejim.py): son okuma {gecerli_son_ms, rejimler}; kayıt + sanalda açılış filtresi (K-73 sanal_rejim_filtre)
         self.haber_anlik: dict = m.get("haber_anlik") or {}          # haber/duygu etiketi (haber.py): önbellek; kayıt + sanalda açılış filtresi (K-73 sanal_haber_filtre)
-        self.rejim_4h_son: dict = m.get("rejim_4h_son") or {}        # coin -> son kaydedilen 4h rejimi (`rejim_degisti` tekilleştirme)
         self.son_olay_ms: int = int(m.get("son_olay_ms", 0))
         self._poz_tr_ms: dict[tuple[str, str], int] = {}              # (adres, coin) -> poz_tr'yi son güncelleyen trader dolum zamanı (kuyruktan düşen olayın geç uygulanması yeniyi ezmesin)
         for k, v in (m.get("poz_tr_ms") or {}).items():               # G-14: kalıcı (yeniden başlatmada snapshot'taki eski dolum poz_tr'yi ezmesin)
@@ -668,9 +665,6 @@ class Motor:
         self.atlanan_trader: dict[str, dict[str, int]] = {"spot_atlandi": {}, "hip3_atlandi": {}}      # K‑42 bilgi: neden -> {adres: adet}
         self.neden_say: dict[str, int] = {}          # boyut / risk nedenleri sayacı (slot_tavani, marj_yok, coin_tavani …)
         self.niyet = Niyet(durum_dizin / "niyet.jsonl")
-        self.ogrenme = Ogrenme(rules, durum_dizin / "ogrenme", self.kip, self.saat_ms, self.kayit, lambda m: self.tg.gonder(m, tur="ogrenme_ders"))      # ortak öğrenme (docs/ORTAK_OGRENME_CT.md): yalnız sanal kip; dersler yalnız riski azaltır
-        if self.ogrenme.aktif:
-            self.hesap.dinleyici = self.ogrenme.dolum
         if self._oynat_gecis:
             nl = [x["cloid"] for x in self.niyet.satirlar() if x.get("t") == "niyet"]
             self.hesap.son_niyet_cloid = nl[-1] if nl else None
@@ -768,57 +762,7 @@ class Motor:
         if self.donem_seri:
             _yaz(d / "donem_seri.json", self.donem_seri)
         self.niyet.sikistir(int(self.rules["canli_islenen_sakla"]))
-        try:                                                           # paylaşım verisi (salt okur, bilgi amaçlı): hata dakika döngüsüne ve durum yazımına ASLA yansımaz
-            _yaz(d / "paylasim" / "kadro_yon_v1.json", self.kadro_yon_ozet(self.saat_ms()))
-        except Exception as hata:                                      # noqa: BLE001
-            self.kayit({"olay": "kadro_yon_yazim_hata", "tur": type(hata).__name__})
         gunluk_ozet.yaz_gerekirse(self)                                # ortak günlük özet (paylasim/gunluk_ozet_v1.json; saatlik + günlük rapor anı; hata yutulur)
-
-    def kadro_yon_ozet(self, simdi: int) -> dict:
-        """Kopya kadrosunun (YALNIZ saha üyeleri) coin bazında toplu pozisyon yönü; başka projelerin okuması için (`durum/paylasim/kadro_yon_v1.json`, veri dalında `durum/paylasim/`).
-        Şema `ct.kadro_yon.v1` (docs/PAYLASIM_KADRO_YON.md). Alanlar:
-        sema, uretildi_utc (ISO8601 Z), kadro_surumu (kadro.json `radar_surum`; yoksa null), kadro_kosu_utc (kadro.json `kosu_ms` ISO Z; yoksa null),
-        saha_trader_sayisi (int, inen hariç), kip ("sanal"/"gercek"),
-        coinler: [{coin, long_trader, short_trader, net_yon ("long"/"short"/"notr": trader sayısı çoğunluğu, eşitse nominal işareti, o da 0 ise notr),
-        nominal_long_usd, nominal_short_usd, net_nominal_usd (trader pozisyon büyüklüğü × mark, $; mark yoksa null), veri_yasi_sn (trader pozisyon okumalarının en eskisi, sn; bilinmiyorsa null)}] — |net_nominal_usd| azalan (null sonda),
-        notlar. Trader adresi, bizim bakiye/özsermaye/kasa, emir bilgisi İÇERMEZ. Trader pozisyonlarının toplamıdır; bizim pozisyonumuz değildir; yatırım tavsiyesi değildir."""
-        uyeler = set(self.saha.uyeler)
-        coinler: dict[str, dict] = {}
-        for adres in uyeler:
-            for coin, sz in (self.poz_tr.get(adres) or {}).items():
-                if not sz:
-                    continue
-                c = coinler.setdefault(coin, {"lt": 0, "st": 0, "nl": 0.0, "ns": 0.0, "ms": []})
-                mark = self.marks.get(coin)
-                if sz > 0:
-                    c["lt"] += 1
-                else:
-                    c["st"] += 1
-                if mark:
-                    c["nl" if sz > 0 else "ns"] += abs(sz) * mark
-                ms = self._poz_tr_ms.get((adres, coin)) or self._poz_tr_senk_ms.get(adres)
-                if ms:
-                    c["ms"].append(int(ms))
-        satirlar = []
-        for coin, c in coinler.items():
-            net = round(c["nl"] - c["ns"], 2) if self.marks.get(coin) else None
-            if c["lt"] != c["st"]:
-                yon = "long" if c["lt"] > c["st"] else "short"
-            else:
-                yon = "long" if (net or 0) > 0 else "short" if (net or 0) < 0 else "notr"
-            satirlar.append({"coin": coin, "long_trader": c["lt"], "short_trader": c["st"], "net_yon": yon,
-                             "nominal_long_usd": round(c["nl"], 2) if self.marks.get(coin) else None,
-                             "nominal_short_usd": round(c["ns"], 2) if self.marks.get(coin) else None,
-                             "net_nominal_usd": net,
-                             "veri_yasi_sn": round(max(0, simdi - min(c["ms"])) / 1000, 1) if c["ms"] else None})
-        satirlar.sort(key=lambda r: (r["net_nominal_usd"] is None, -abs(r["net_nominal_usd"] or 0), r["coin"]))
-        kd = self._son_kadro or {}
-        kosu = kd.get("kosu_ms")
-        return {"sema": "ct.kadro_yon.v1", "uretildi_utc": _iso_z(simdi),
-                "kadro_surumu": str(kd["radar_surum"]) if kd.get("radar_surum") is not None else None,
-                "kadro_kosu_utc": _iso_z(int(kosu)) if kosu else None,
-                "saha_trader_sayisi": len(uyeler), "kip": self.kip, "coinler": satirlar,
-                "notlar": "Trader pozisyonlarının toplamı (kopya kadrosu). Bizim hesabımızın pozisyonu DEĞİL. Yatırım tavsiyesi değil."}
 
     def _motor_json(self) -> dict:
         return {"islenen": self.islenen, "poz_tr": self.poz_tr, "ara_dolum": self.ara_dolum, "poz_tr_ms": {f"{a}|{c}": ms for (a, c), ms in self._poz_tr_ms.items()}, "poz_tr_senk_ms": self._poz_tr_senk_ms, "hesap_tr": self.hesap_tr, "kaldirac_tr": self.kaldirac_tr, "golge_acik": self._golge_acik, "son_olay_ms": self.son_olay_ms,
@@ -826,7 +770,7 @@ class Motor:
                 "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "hl_onceki": list(self._hl_onceki) if self._hl_onceki else None, "hl_sicrama": self._hl_sicrama, "hl_sicrama_ms": self._hl_sicrama_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.kalici_offset,
                 "son_funding_ms": self.son_funding_ms, "funding_kimlik": self.funding_kimlik[-500:], "funding_gercek_usd": self.funding_gercek_usd, "ucret_gercek_usd": self.ucret_gercek_usd, "ucret_tahmin_say": self.ucret_tahmin_say,
                 "ucret_bekleyen": self.ucret_bekleyen[-500:], "btc_donem": self.btc_donem, "mutabakat_tutan": self.mutabakat_tutan, "yetim_ilk": self.yetim_ilk, "sahipsiz_ilk": self.sahipsiz_ilk,
-                "rejim_anlik": self.rejim_anlik, "rejim_4h_son": self.rejim_4h_son, "haber_anlik": self.haber_anlik, "son_atla": self.son_atla, "stop_muaf": self.stop_muaf,
+                "haber_anlik": self.haber_anlik, "son_atla": self.son_atla, "stop_muaf": self.stop_muaf,
                 "karsi_olgu": self.karsi_olgu, "karsi_olgu_gun": self.karsi_olgu_gun, "kopya_drift": self.kopya_drift, "kopya_drift_tg_ms": self.kopya_drift_tg_ms, "kaynak": self._kaynak}
 
     def _hesap_yaz(self) -> None:
@@ -982,31 +926,6 @@ class Motor:
                 self._golge_acik.pop(adres, None)
         for adres in [a for a in self.kaldirac_tr if a not in adresler]:
             del self.kaldirac_tr[adres]
-
-    def rejim_oku(self, simdi: int) -> dict | None:
-        """rejim_adimi'nin AĞ yarısı (kilit DIŞINDA çağrılır; denetim D2). Zamanı gelmediyse/adres yoksa None."""
-        url = str(self.rules.get("rejim_kaynak_url") or "").strip()
-        if not url or not self._aralik_mi("rejim", simdi, float(self.rules.get("rejim_okuma_dk", 30)) * 60):
-            return None
-        return rejim.oku_tam(url, simdi_ms=simdi)
-
-    def rejim_uygula(self, anlik: dict | None) -> None:
-        """rejim_adimi'nin durum yarısı (kilit altında; ağ yok)."""
-        if anlik is None:
-            return
-        self.rejim_anlik = anlik
-        for coin, z in (self.rejim_anlik.get("rejimler") or {}).items():
-            r4 = z.get("4h")
-            if r4 is None or self.rejim_4h_son.get(coin) == r4:
-                continue
-            self.kayit({"olay": "rejim_degisti", "coin": coin, "onceki": self.rejim_4h_son.get(coin), "yeni": r4, "1d": z.get("1d")})
-            self.rejim_4h_son[coin] = r4
-
-    def rejim_adimi(self, simdi: int) -> None:
-        """ML rejim etiketi (kayıt; sanalda K-73 `sanal_rejim_filtre` açılış filtresi için okunur): `rejim_okuma_dk` dakikada bir okunur; adres boşsa hiç ağ çağrısı yok.
-        4h rejimi değiştiğinde coin başına `rejim_degisti` olayı (son kaydedilenle karşılaştırılır). Okuma hatası/bayat veri → önbellek boş (etiket None).
-        `dakika()` okuma (rejim_oku, kilitsiz) ve uygulamayı (rejim_uygula, kilit altında) ayırır; bu bileşik yol doğrudan çağrı içindir."""
-        self.rejim_uygula(self.rejim_oku(simdi))
 
     def haber_oku(self, simdi: int) -> tuple[dict, list[dict]] | None:
         """haber_adimi'nin AĞ yarısı (kilit DIŞINDA; denetim D2). Zamanı gelmediyse None."""

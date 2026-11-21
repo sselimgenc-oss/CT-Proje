@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from copytrade.canli.rejim_sonuc import kayitlari_oku
+from copytrade.canli.kayit_oku import kayitlari_oku
 from copytrade.canli.hafta_paketi import _yaz_atomik
 
 SEMA = "ct.kural_maliyet.v1"

@@ -1,7 +1,7 @@
 """R3-1: yarım slotlu pozisyon trader %30 azaltınca (300->210) azaltılmaz: hedef çarpansız slot ile 190,9 $ > biz 136,4 $."""
 import pytest
 from copytrade.canli import motor as mt
-from copytrade.canli.ogrenme_adaptor import takma_ad
+from copytrade.canli.kimlik import takma_ad
 from tests.test_canli_motor import adr, kur, olay
 
 

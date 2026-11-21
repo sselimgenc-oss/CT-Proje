@@ -19,8 +19,7 @@ class Poz:
     giris: float              # ortalama giriş fiyatı
     acilis_ms: int
     kaldirac: float = 3.0
-    giris_ctx: dict | None = None   # açılış anı rejim/duygu damgası (yalnız bilgi; rejim_sonuc raporu)
-    boyut_carpan: float = 1.0       # K-73 ek (O1): açılış/artırmada slotu küçülten çarpan (ders × gölge B5); AZALTMA aynı çarpanla hedeflenir; hesap.json ile kalıcı
+    boyut_carpan: float = 1.0       # K-73 ek (O1): açılış/artırmada slotu küçülten çarpan (gölge B5); AZALTMA aynı çarpanla hedeflenir; hesap.json ile kalıcı
     zirve_kar: float = 0.0          # K-73 iz süren koruma (yalnız sanal): girişe göre en yüksek kâr oranı (artırmada ortalama giriş değişince sıfırlanır); hesap.json ile kalıcı
 
 
@@ -78,7 +77,6 @@ class Hesap:
         self.tasfiyeler: list[dict] = []
         self.funding: dict[str, float] = {}          # adres -> girişten beri funding ($, işaretli: + alınan / − ödenen; sanal kip)
         self.son_niyet_cloid: str | None = None      # son UYGULANAN niyetin cloid'i (t4b #3: yeniden başlatmada bundan sonraki sonuçlu niyetler oynatılır)
-        self.dinleyici = None                        # ortak öğrenme: uygula() sonrası çağrılan fonksiyon (serileşmez; motor bağlar)
         self.kapanmis_net = 0.0                      # sahadan çıkıp kaydı silinen üyelerin net K/Z'si (özsermaye sürekliliği)
         self.poz_net: dict[str, float] = {}          # K-77: "adres|coin" -> AÇIK pozisyonun şimdiye dek net'i (gerçekleşen − her dolumun ücreti; giriş/artırma ücreti dahil = pano `dolum_net` toplamı)
         self.kapanan: dict[str, list[list[float]]] = {}   # K-77: adres -> TAM kapanan pozisyonların [kapanış_ms, net] listesi (en çok `KAPANAN_AZAMI` son); hesap.json ile kalıcı (yeniden başlatmada kaybolmaz)
@@ -142,7 +140,6 @@ class Hesap:
         signed = sz if yon == "B" else -sz
         poz = self.poz.setdefault(adres, {}).get(coin)
         pnl = 0.0
-        yeni_poz = poz is None or abs(poz.sz) < EPS                      # ortak öğrenme dinleyicisi için (yalnız bildirim; hesabı etkilemez)
         if poz is None or abs(poz.sz) < EPS:
             self.poz[adres][coin] = Poz(signed, px, zaman_ms, self.kaldirac)
         elif poz.sz * signed > 0:                                        # artırma: ağırlıklı ortalama giriş
@@ -166,15 +163,6 @@ class Hesap:
             liste = self.kapanan.setdefault(adres, [])
             liste.append([int(zaman_ms), self.poz_net.pop(anahtar)])
             del liste[:-KAPANAN_AZAMI]
-        if self.dinleyici is not None:                                   # ortak öğrenme: dolum bildirimi (hata hesabı bozmaz)
-            try:
-                p2 = self.poz.get(adres, {}).get(coin)
-                ref = p2 if p2 is not None else poz                      # kapanmışsa silinen pozisyon nesnesi (açılış zamanı/kaldıraç için)
-                self.dinleyici({"adres": adres, "coin": coin, "yon": yon, "sz": sz, "px": px, "pnl": pnl, "ucret": ucret, "ms": zaman_ms, "yeni": yeni_poz,
-                                "kapandi": p2 is None, "poz_sz": 0.0 if p2 is None else p2.sz, "acilis_ms": zaman_ms if ref is None else ref.acilis_ms,
-                                "kaldirac": self.kaldirac if ref is None else ref.kaldirac})
-            except Exception:                                            # noqa: BLE001
-                pass
         return pnl
 
     def ucret_duzelt(self, adres: str, delta: float) -> None:
@@ -270,7 +258,7 @@ class Hesap:
         """`kaldirac` (güncel kural `canli_marj_kaldirac`) verilirse defterin YENİ pozisyon kaldıracı odur; açık pozisyonlar kendi `Poz.kaldirac` değerini korur."""
         h = cls(d["kasa_usd"], d.get("kaldirac", 3.0) if kaldirac is None else kaldirac, d.get("maks_kaldirac"))
         h.realize, h.ucret, h.slot_bas = dict(d.get("realize", {})), dict(d.get("ucret", {})), dict(d.get("slot_bas", {}))
-        h.poz = {a: {c: Poz(**p) for c, p in coinler.items()} for a, coinler in d.get("poz", {}).items()}
+        h.poz = {a: {c: Poz(**{k: v for k, v in p.items() if k != "giris_ctx"}) for c, p in coinler.items()} for a, coinler in d.get("poz", {}).items()}
         h.tasfiyeler = list(d.get("tasfiyeler", []))
         h.kapanmis_net = float(d.get("kapanmis_net", 0.0))
         h.funding = dict(d.get("funding", {}))

@@ -1006,7 +1006,7 @@ def kaynak_kz(hesap: dict, acik: list[dict], uyeler: dict, inenler: dict, kapana
 
 def _alias_haritasi(adresler: set[str]) -> dict[str, str]:
     """Takma ad (`T_xxxxxx`) → adres (yalnız bellekte; hiçbir dosyaya yazılmaz): ders/ML olayları takma adla tutulur, panoda trader adı gösterilebilsin diye."""
-    from copytrade.canli.ogrenme_adaptor import takma_ad
+    from copytrade.canli.kimlik import takma_ad
     return {takma_ad(a): a for a in adresler if a}
 
 

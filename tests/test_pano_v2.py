@@ -104,7 +104,7 @@ def test_ml_henuz_olculemedi_yolu():
 
 
 def test_ml_egitilmis_isabet_ve_karar_listesi():
-    from copytrade.canli.ogrenme_adaptor import takma_ad
+    from copytrade.canli.kimlik import takma_ad
     og = [{"kurulum": takma_ad(A1), "alinan": 40, "filtre": True, "carpan": None, "emekli": False}]
     kayit = [{"olay": "ml_filtre_atla", "zaman_ms": SIMDI - 1000 * i, "kurulum": takma_ad(A1), "coin": "BTC"} for i in range(1, 13)]
     kayit += [{"olay": "karsi_olgu_kapandi", "zaman_ms": SIMDI - 500 * i, "coin": "BTC", "neden": "ml_filtre_atla", "pnl_usd": -1.0 if i % 3 else 2.0} for i in range(1, 13)]
@@ -189,7 +189,7 @@ def test_saglik_mesajinda_dosya_adi_gorunmez():
 
 
 def test_ml_aldi_kararlari_kayittan_ve_isabet():
-    from copytrade.canli.ogrenme_adaptor import takma_ad
+    from copytrade.canli.kimlik import takma_ad
     al_ = takma_ad(A1)
     og = [{"kurulum": al_, "alinan": 40, "filtre": True, "carpan": None, "emekli": False}]
     kayit = []
