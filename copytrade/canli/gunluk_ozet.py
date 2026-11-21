@@ -122,13 +122,11 @@ def kopya_kalite(kayitlar: list[dict]) -> dict:
 def alinmayan_neden(kayitlar: list[dict]) -> list[dict]:
     """Alınmayan sinyallerin neden dağılımı (YALNIZ BİLGİ; karar/eşik değiştirmez). Girdi: çağıranın seçtiği kayıt satırları (günlük ya da 24 sa).
     Satır: {neden, adet, karsi_olgu_kapanan, karsi_olgu_pnl}.
-    - `adet`: `emir_yok` olaylarının neden başına sayısı. ML filtresi atlamaları motorda hem `ml_filtre_atla` olayı hem `emir_yok` (neden `ml_filtre_atla`) olarak yazılır: aynı atlamanın iki kaydıdır, bu yüzden ML adedi ikisinin büyüğüdür (çift sayılmaz).
+    - `adet`: `emir_yok` olaylarının neden başına sayısı.
     - `karsi_olgu_kapanan`: aynı nedenli kapanan `karsi_olgu_kapandi` kayıt sayısı.
     - `karsi_olgu_pnl`: bu kayıtların `pnl_usd` toplamı ($, hayali). Kapanan (geçerli pnl'li) kayıt yoksa null.
     Neden yoksa "?". Sıra: adet azalan, sonra neden adı. Veri yoksa boş liste."""
-    ML = "ml_filtre_atla"
     adet: dict[str, int] = {}
-    ml_olay = 0
     kapanan: dict[str, int] = {}
     pnl: dict[str, list[float]] = {}
     for k in kayitlar:
@@ -136,16 +134,12 @@ def alinmayan_neden(kayitlar: list[dict]) -> list[dict]:
         if olay == "emir_yok":
             n = str(k.get("neden") or "?")
             adet[n] = adet.get(n, 0) + 1
-        elif olay == ML:
-            ml_olay += 1
         elif olay == "karsi_olgu_kapandi":
             n = str(k.get("neden") or "?")
             kapanan[n] = kapanan.get(n, 0) + 1
             p = _say(k.get("pnl_usd"))
             if p is not None:
                 pnl.setdefault(n, []).append(p)
-    if ml_olay:
-        adet[ML] = max(adet.get(ML, 0), ml_olay)
     satirlar = [{"neden": n, "adet": adet.get(n, 0), "karsi_olgu_kapanan": kapanan.get(n, 0),
                  "karsi_olgu_pnl": round(sum(pnl[n]), 2) if pnl.get(n) else None} for n in set(adet) | set(kapanan)]
     return sorted(satirlar, key=lambda r: (-r["adet"], r["neden"]))

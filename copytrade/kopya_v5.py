@@ -61,8 +61,7 @@ def boyutlayici(trader_hesap_usd: float | Callable[[int], float], slot: float, r
                 hacim: dict[str, float] | None = None):
     """`copy_ledger(boyutlayici=…)` için geri çağrı. Defter birimi = coin / kasa; dönüş: dolumun kopyaya işaretli etkisi (aynı birim). Ters dönüş = kapanış + yeni açılış.
     `trader_hesap_usd`: sabit payda ya da `PaydaSerisi` (B8: yürütme anı `when`'deki değer). `kayit` verilirse her karar `(eylem, neden, emir_usd)` olarak eklenir (rapor; hesabı değiştirmez). `toplam_tavan=False`: K‑35 öncesi coin başına tavan (YALNIZ önce/sonra karşılaştırması için; üretimde True).
-    `hacim` (M-03, 14.11; coin → 24 sa nosyonel hacim $): verilirse açılış/artırmaya motorla AYNI sığ coin tavanı (`boyut.sig_coin_kirp`: hacim < `canli_sig_hacim_usd` → trader başına
-    ≤ `canli_sig_coin_tavan_slot_oran` × slot; listede olmayan coin sığ sayılır). None = sınır yok (eski davranış)."""
+    `hacim`: K-86'da sığ coin tavanı kaldırıldı; parametre imzada kalır, KULLANILMAZ (çağıranlar uyumlu kalsın)."""
 
     payda = payda_fonk(trader_hesap_usd)
 
@@ -90,17 +89,11 @@ def boyutlayici(trader_hesap_usd: float | Callable[[int], float], slot: float, r
             acilacak = sonra
         else:                                                # ekleme (artış)
             emir, neden = boyut.hedef_emir("artir", before_leader, sonra, trader_hesap, biz_usd, slot, price, rules, toplam_usd)
-            if hacim is not None and emir > 0:
-                emir, sn = boyut.sig_coin_kirp(rules, emir, biz_usd, float(hacim.get(coin, 0.0)), slot)
-                neden = sn or neden
             if kayit is not None:
                 kayit.append(("artir", neden, emir))
             return sign * birim(emir)
         if acilacak is not None:
             emir, neden = boyut.hedef_emir("ac", 0.0, acilacak, trader_hesap, 0.0, slot, price, rules, toplam_usd)
-            if hacim is not None and emir > 0:
-                emir, sn = boyut.sig_coin_kirp(rules, emir, 0.0, float(hacim.get(coin, 0.0)), slot)
-                neden = sn or neden
             if kayit is not None:
                 kayit.append(("ac", neden, emir))
             sonuc += sign * birim(emir)

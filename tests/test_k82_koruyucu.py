@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
 
 from copytrade import koruyucu as kr
 from copytrade.canli import telegram as tg
@@ -57,8 +56,7 @@ def test_yuzde5_yeni_acilis_dur(tmp_path):
     b = _bayrak(tmp_path)
     assert b["yeni_acilis_dur"] and not b["kapat_dur"] and "gunluk_kayip" in b["nedenler"]
     assert sum(x.startswith("⚠️ Koruyucu: günlük kayıp") for x in tgp.gonderilen) == 1 and "\n" not in tgp.gonderilen[0]
-    ct = json.loads((tmp_path / "durum/ortak/ct.json").read_text())
-    assert ct["sema"] == "ortak.hesap.v1" and ct["taraf"] == "ct" and ct["ozsermaye_usd"] == 949.0 and ct["gunluk_kayip_oran"] == pytest.approx(0.051)
+    assert not (tmp_path / "durum/ortak/ct.json").exists()          # K-86: ct.json çıktısı kaldırıldı
     k.adim()
     assert len(tgp.gonderilen) == 1                                 # aynı gün tekrar mesaj yok
     saat.ms += 86_400_000                                           # UTC gün dönümü: yeni taban = son gözlem (949), açılış serbest

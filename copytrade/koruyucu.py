@@ -1,7 +1,7 @@
 """CT yerel koruyucu (K-82): motordan BAĞIMSIZ ikinci hat. Ayrı süreç (`python -m copytrade.koruyucu`, deploy/sg-sanal-koruyucu.service).
 
 Okur (motorun dosyaları, salt okur): durum/risk.json (son özsermaye), durum/motor.json (kasa, kip), durum/kilit.json (motor nabzı).
-Yazar: durum/ortak/ct.json (taslak arayüz CT bölümü), durum/ortak/dur.json (bayrak), durum/ortak/koruyucu.json (nabız + kendi gün/zirve durumu), kayit/koruyucu/<gün>.jsonl.
+Yazar: durum/ortak/dur.json (bayrak), durum/ortak/koruyucu.json (nabız + kendi gün/zirve durumu), kayit/koruyucu/<gün>.jsonl.
 Denetler (kendi gün başı/zirve hesabıyla; motorunkine bağımlı değil, yalnız ilk kurulumda tohumlanır):
   günlük kayıp >= `canli_gunluk_kayip_oran`  -> `yeni_acilis_dur` (UTC gün dönümünde kalkar)
   zirveden düşüş >= `canli_zirve_dusus_oran` -> `kapat_dur` (mandal: yalnız insan kaldırır: DUR dosyası/bayrak silinir)
@@ -177,7 +177,6 @@ class Koruyucu:
         yaz(self.ortak / "dur.json", {"sema": SEMA_DUR, "surum": SURUM, "yazildi_ms": simdi, "toplam": None,
                                       "ct": {"yeni_acilis_dur": acilis or kapat, "kapat_dur": kapat, "nedenler": d["nedenler"] + ([d.get("kapat_neden")] if kapat else []), "ms": simdi},
                                       "ml": None})
-        yaz(self.ortak / "ct.json", self._ct_bolumu(simdi, r, m, oz, gunluk, dusus))
         d.update({"sema": SEMA_KORUYUCU, "surum": SURUM, "yazildi_ms": simdi})
         yaz(self.ortak / "koruyucu.json", d)
         return {"acilis_dur": acilis or kapat, "kapat_dur": kapat, "nedenler": d["nedenler"], "gunluk": gunluk, "dusus": dusus}
@@ -193,13 +192,6 @@ class Koruyucu:
         if oz is not None:
             d["zirve"] = oz                                                                          # yeniden başlatma: zirve güncel değere (motor `zirve_yenile` ile aynı mantık)
         self.kayit({"olay": "koruyucu", "tur": "mandal_kalkti", "neden": neden})
-
-    def _ct_bolumu(self, simdi: int, r: dict, m: dict, oz: float | None, gunluk: float | None, dusus: float | None) -> dict:
-        ozet = oku(self.durum / "ozet.json") or {}
-        d = self.d
-        return {"sema": SEMA_HESAP, "surum": SURUM, "taraf": "ct", "kip": m.get("kip"), "yazildi_ms": simdi, "ozsermaye_usd": oz,
-                "gun_basi_usd": d.get("gun_basi"), "zirve_usd": d.get("zirve"), "gunluk_kayip_oran": gunluk, "zirveden_dusus_oran": dusus,
-                "acik_nosyonel_usd": _sayi(ozet.get("brut_usd")), "kaldirac": None, "acik_pozisyon": ozet.get("acik_pozisyon"), "dur": bool(r.get("dur"))}
 
 
 # ---------------------------------------------------------------------- motor tarafı

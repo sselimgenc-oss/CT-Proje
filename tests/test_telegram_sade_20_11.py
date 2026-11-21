@@ -4,7 +4,7 @@ from copytrade.canli.hesap import Hesap
 
 
 def test_rutin_turler_bastirilir_ve_gonderilmez():
-    for t in ("haftalik_kadro", "kopya_kacan", "kadro_surum_bekleniyor", "ogrenme_ders", "saha_giris", "emir_ozeti", "islem_satiri"):
+    for t in ("haftalik_kadro", "kopya_kacan", "kadro_surum_bekleniyor", "saha_giris", "emir_ozeti", "islem_satiri"):
         assert t in tg.BASTIRILAN_TURLER
     assert "islem_ozeti" not in tg.BASTIRILAN_TURLER                                  # K-79: saatlik tek işlem özeti GİDER
     gid = []

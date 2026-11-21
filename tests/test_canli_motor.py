@@ -377,7 +377,7 @@ def test_uctan_uca_altin_ornek_acilis_azaltma_kapanis(tmp_path):
 def test_kucuk_acilis_11_dolara_yuvarlanir_ve_trader_hesap_yoksa_atlanir(tmp_path):
     m, hl, saat, _ = kur(tmp_path)
     m.baslat()
-    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 50, 100.0, 0.0, saat))                       # 5.000 $ / 100.000 → 4,55 $ → 11 $
+    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 80, 100.0, 0.0, saat))                       # 8.000 $ / 100.000 → 7,27 $ (≥ 5,5) → 11 $
     assert kayitlar(tmp_path, "emir")[0]["usd_istenen"] == 11.0 and kayitlar(tmp_path, "emir")[0]["boyut_neden"] == "min_emir_yuvarlandi"
     m2, hl2, saat2, _ = kur(tmp_path / "b", hl=SahteHL(hesap=0.0))
     m2.baslat()
@@ -1104,14 +1104,6 @@ def test_k38_motor_azaltma_hedef_tabanli_atlanan_parca_sonra_yakalanir_hesap_yok
     assert [(x.eylem, x.karar) for x in s3] == [("azalt", "emir")] and kayitlar(tmp_path, "emir")[-1]["usd_istenen"] == pytest.approx(13.6364, abs=1e-3) and not m.neden_say.get("hesap_yok")
 
 
-def test_k38_oransal_yedek_sayaci_neden_say_ve_kayitta(tmp_path):
-    """Lider onayı (05.11): trader hesabı bilinmiyorsa azaltma oransal yedeğe düşer ve `azalt_oransal_yedek` olarak SAYILIR (özet neden_say + emir kaydı boyut_neden)."""
-    m, hl, saat, _ = kur(tmp_path)
-    m.baslat()
-    m.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))
-    m.hesap_tr[adr(1)] = {"deger": 0.0, "ms": saat()}                                   # hesap değeri 0 ⇒ bilinmiyor gibi (oransal yedek)
-    s = m.olay_isle(olay("a:2", adr(1), "BTC", "A", 150, 100.0, 300.0, saat))
-    assert [(x.eylem, x.karar) for x in s] == [("azalt", "emir")] and m.neden_say.get("azalt_oransal_yedek") == 1 and kayitlar(tmp_path, "emir")[-1]["boyut_neden"] == "azalt_oransal_yedek"
 def test_k39_motor_gecis_beklemesi_silinir_ve_kayda_yazilir(tmp_path):
     import json as _j
     (tmp_path / "durum").mkdir()
@@ -1209,14 +1201,12 @@ def test_durum_gercek_risk_bayraklarini_gosterir_bayrak_yoksa_normal(tmp_path):
     m.risk.bayrak("gunluk_kayip", True)
     m.risk.bayrak("mutabakat", True)
     m._komutlar(["/dur"])
-    m.risk.fren_bitis[adr(1)] = saat() + 60_000
     metin = m.durum_metni()
-    for parca in ("Günlük kayıp freni", "Mutabakat", "duraklatıldı", "Patlama freni"):
+    for parca in ("Günlük kayıp freni", "Mutabakat", "duraklatıldı"):
         assert parca in metin
     assert "Risk: normal" not in metin
-    m.risk.fren_bitis[adr(1)] = saat() - 1
     m.risk.bayrak("gunluk_kayip", False)
-    assert "Patlama freni" not in m.durum_metni() and "Günlük kayıp" not in m.durum_metni()
+    assert "Günlük kayıp" not in m.durum_metni()
     m.risk.dur = True
     assert "DURDURULDU" in m.durum_metni()
     m._komutlar(["/durum"])
@@ -1378,8 +1368,8 @@ def test_emir_kaydinda_boyut_girdileri_elle_denetim(tmp_path):
     e1, e2 = kayitlar(tmp_path, "emir")[:2]
     assert (e1["trader_poz_once"], e1["trader_poz_sonra"], e1["trader_hesap_usd"]) == (0.0, 300.0, 100000.0)
     assert e1["slot_usd"] == pytest.approx(1000 / 11) and e1["biz_poz_usd"] == 0.0 and e1["biz_slot_toplam_usd"] == 0.0 and e1["hedef_usd"] == pytest.approx(27.2727, abs=1e-4)
-    assert e1["ders_carpan"] == 1.0                                                                  # açılışta ders çarpanı kayda yazılır (ders yok → 1,0)
-    assert (e2["trader_poz_once"], e2["trader_poz_sonra"]) == (300.0, 150.0) and e2["biz_poz_usd"] == pytest.approx(27.2727, abs=1e-3) and e2["hedef_usd"] == pytest.approx(13.6364, abs=1e-4)
+    assert e1["hak"] is None and "ders_carpan" not in e1 and "golge_carpan" not in e1                  # K-86: ders/gölge çarpanı yok; hak yalnız artırma/azaltmada
+    assert (e2["trader_poz_once"], e2["trader_poz_sonra"]) == (300.0, 150.0) and e2["biz_poz_usd"] == pytest.approx(27.2727, abs=1e-3) and e2["hedef_usd"] is None and e2["hak"] == "azalt"
     assert e2["biz_slot_toplam_usd"] == pytest.approx(27.2727, abs=1e-3)
 
 

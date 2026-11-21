@@ -42,27 +42,6 @@ def slot_usd(kasa_usd: float | None = None, rules: dict | None = None) -> float:
     return kasa / saha_sayisi(kasa, rules)
 
 
-def sig_coin_tavan(rules: dict, slot_usd: float | None = None) -> float:
-    """F-01 (14.11 denetim): sığ coin tavanı slotla ölçeklenir = `canli_sig_coin_tavan_slot_oran` × slot; slot ya da oran yoksa YEDEK mutlak `canli_sig_coin_tavan_usd`.
-    TEK YER (kural 7): canlı motor (`canli/risk.py`) ve radar kopya oynatması (`kopya_v5.boyutlayici`, M-03) bunu kullanır."""
-    oran = rules.get("canli_sig_coin_tavan_slot_oran")
-    if oran is not None and slot_usd:
-        return float(oran) * float(slot_usd)
-    return float(rules["canli_sig_coin_tavan_usd"])
-
-
-def sig_coin_kirp(rules: dict, emir_usd: float, mevcut_usd: float, hacim_usd: float | None, slot_usd: float | None = None) -> tuple[float, str]:
-    """K-62: sığ coinde (24 sa hacim < `canli_sig_hacim_usd`) trader başına kopya pozisyonu ≤ `sig_coin_tavan`. `hacim_usd` None = hacim verisi hiç yok (sınır uygulanmaz).
-    Döner (uygulanan $, neden): '' | 'sig_coin_kirpildi' | 'sig_coin_tavani' (kırpılan < min emir)."""
-    if hacim_usd is None or float(hacim_usd) >= float(rules["canli_sig_hacim_usd"]):
-        return emir_usd, ""
-    izin = sig_coin_tavan(rules, slot_usd) - float(mevcut_usd)
-    if emir_usd <= izin + 1e-9:
-        return emir_usd, ""
-    kirpilan = max(0.0, izin)
-    return (kirpilan, "sig_coin_kirpildi") if kirpilan >= float(rules["radar_min_emir_usd"]) else (0.0, "sig_coin_tavani")
-
-
 def hedef_ham(slot: float, trader_poz: float, fiyat: float, trader_hesap_usd: float) -> float:
     """Kopya hedef nosyoneli ($, tavansız) = slot × trader nosyonel / trader hesap. TEK YER: `hedef_emir` (ac/artir/azalt), motor `hedef_usd` kaydı ve `_hedef_usd` buna dayanır (işlem sırası korunur)."""
     return float(slot) * abs(float(trader_poz)) * float(fiyat) / float(trader_hesap_usd)
@@ -74,7 +53,7 @@ def hedef_usd(slot: float, trader_poz: float, fiyat: float, trader_hesap_usd: fl
 
 
 def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trader_hesap_usd: float, biz_poz_usd: float, slot: float, fiyat: float,
-               rules: dict | None = None, biz_slot_toplam_usd: float | None = None, bant: bool = False) -> tuple[float, str]:
+               rules: dict | None = None, biz_slot_toplam_usd: float | None = None) -> tuple[float, str]:
     """§5b: tek bir trader dolumunun bizdeki emir BÜYÜKLÜĞÜ ($, işaretsiz; yönü çağıran bilir) ve nedeni.
 
     `eylem`: `ac` (taze açılış; trader sonrası pozisyonu `trader_poz_sonra`, coin birimi, işaretli) · `artir` · `azalt` · `kapat` (trader tam kapanış).
@@ -86,10 +65,7 @@ def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trad
       (`slot_tavani`); emir < minimum → 0 (`min_emir_atlandi`); hesap/fiyat ≤ 0 → 0 (`hesap_yok`).
     - `azalt` (K‑38, hedef tabanlı): hedef = slot × trader nosyonel(sonra) / trader hesap (coin tavanı 3 × slot); fark = biz − hedef. hedef < minimum ve biz ≥ minimum → tamamı kapat (`kucuk_kalan_kapat`);
       fark ≥ minimum → fark kadar azalt; aksi halde 0 (`min_emir_atlandi`; atlanan azaltma KAYBOLMAZ, hedef tabanlı olduğundan bir sonraki dolumda yakalanır). Trader hesabı bilinmiyorsa eski oransal kural (yedek).
-    - `kapat`: bizim pozisyonun tamamı (trader tam kapattı).
-    - `bant` (TOPLU EMİR, kullanıcı kararı 15.11; Fable önerisi; YALNIZ canlı motor — radar kopya simülasyonu `bant=False`): `artir` farkı max(`canli_bant_usd`, `canli_bant_oran` × hedef)
-      altındaysa, `azalt` farkı max(`canli_bant_azalt_usd`, `canli_bant_azalt_oran` × hedef) altındaysa emir verilmez (`bant_ici`); fark KAYBOLMAZ (hedef tabanlı), eşik aşılınca tek emirle
-      hedefe eşitlenir. Muaf: `ac`, `kapat`, `kucuk_kalan_kapat`, trader hesabı bilinmeyen azaltma (oransal yedek)."""
+    - `kapat`: bizim pozisyonun tamamı (trader tam kapattı)."""
     rules = rules or load_rules()
     minimum, tavan = float(rules["radar_min_emir_usd"]), float(rules["radar_slot_tavan_carpan"]) * float(slot)
     biz = abs(float(biz_poz_usd))
@@ -123,8 +99,6 @@ def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trad
         emir, neden = max(0.0, hedef - biz), "tamam"
         if emir > kalan + EPS:
             emir, neden = kalan, "slot_tavani"
-        if bant and neden == "tamam" and emir < max(float(rules["canli_bant_usd"]), float(rules["canli_bant_oran"]) * hedef) - EPS:
-            return 0.0, "bant_ici"
         if emir >= minimum - EPS:
             return emir, neden
         return (0.0, "slot_tavani") if neden == "slot_tavani" else (0.0, "min_emir_atlandi")
@@ -142,9 +116,82 @@ def hedef_emir(eylem: str, trader_poz_once: float, trader_poz_sonra: float, trad
         if hedef < minimum - EPS and biz >= minimum - EPS:
             return biz, "kucuk_kalan_kapat"
         fark = biz - hedef
-        if bant and fark > 0 and fark < max(float(rules["canli_bant_azalt_usd"]), float(rules["canli_bant_azalt_oran"]) * hedef) - EPS:
-            return 0.0, "bant_ici"
         if fark >= minimum - EPS:
             return fark, "tamam"
         return 0.0, "min_emir_atlandi"
     raise ValueError(f"bilinmeyen eylem: {eylem}")
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------
+# K-86 (CT yeni plan — motor): CANLI motor boyutlandırması. Radar oynatması (`hedef_emir`) ayrı kalır; motor bu fonksiyonları kullanır. Tüm sayılar `kurallar.yaml` anahtarıdır.
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------
+def motor_slot(kasa_usd: float, rules: dict | None = None) -> float:
+    """Eşit slot = kasa / `canli_slot_sayisi` (5): 1.000 $ → 200 $."""
+    rules = rules or load_rules()
+    return float(kasa_usd) / int(rules.get("canli_slot_sayisi", 5))
+
+
+def min_emir_usd(rules: dict, coin: str | None = None) -> float:
+    """Sembol başına asgari emir ($; `canli_min_emir_usd` haritası: BTC 100, ETH 20, diğer 5; Binance asgarileri DOĞRULANMADI → `canli_min_emir_dogrulanmadi: true`).
+    Harita yoksa eski `radar_min_emir_usd` (yedek)."""
+    harita = rules.get("canli_min_emir_usd")
+    if not isinstance(harita, dict):
+        return float(rules.get("radar_min_emir_usd", 11.0))
+    if coin is not None and coin in harita:
+        return float(harita[coin])
+    return float(harita.get("diger", 5.0))
+
+
+def min_yuvarla(emir_usd: float, minimum: float) -> tuple[float, str]:
+    """K-86 kural 6: hesaplanan emir ≥ minimum → aynen; ≥ minimum/2 ve < minimum → minimuma YUKARI yuvarla (`min_emir_yuvarlandi`); < minimum/2 → emir yok (`min_alti`)."""
+    if emir_usd >= minimum - EPS:
+        return emir_usd, ""
+    if emir_usd >= minimum / 2 - EPS:
+        return minimum, "min_emir_yuvarlandi"
+    return 0.0, "min_alti"
+
+
+def motor_hedef_usd(slot: float, trader_poz: float, fiyat: float, trader_hesap_usd: float, rules: dict) -> float:
+    """Kopya hedef nosyoneli ($): trader nosyoneli ile orantılı (slot × nosyonel / trader hesap), pozisyon başına tavan `canli_pozisyon_tavan_slot` (1,0) × slot."""
+    return min(hedef_ham(slot, trader_poz, fiyat, trader_hesap_usd), float(rules.get("canli_pozisyon_tavan_slot", 1.0)) * float(slot))
+
+
+def motor_emir(eylem: str, trader_poz_sonra: float, trader_hesap_usd: float, biz_poz_usd: float, slot: float, fiyat: float, rules: dict, biz_slot_toplam_usd: float | None = None,
+               coin: str | None = None, azalt_hedef_usd: float | None = None) -> tuple[float, str]:
+    """K-86: tek trader olayının bizdeki emir büyüklüğü ($, işaretsiz) ve nedeni.
+    - `ac` / `artir`: hedef = `motor_hedef_usd` (trader ile orantılı, pozisyon başına ≤ 1 × slot); `artir` emri = max(0, hedef − mevcut); trader başına TÜM coinler toplamı ≤ `canli_slot_toplam_tavan_carpan` (3) × slot (`slot_tavani`);
+      sonra sembol asgarisi (`min_yuvarla`: ≥ yarısı → asgariye yuvarla, altı `min_alti`). Fark/hedef 0 ise `hedefte`.
+    - `azalt`: hedef = `azalt_hedef_usd` (trader oranı × yeni trader pozisyonu; çağıran hesaplar); fark = mevcut − hedef; hedef asgarinin altında ve mevcut ≥ asgari → tamamı kapat (`kucuk_kalan_kapat`); aksi halde fark `min_yuvarla`'dan geçer.
+    - `kapat`: pozisyonun tamamı."""
+    biz = abs(float(biz_poz_usd))
+    if eylem == "kapat":
+        return biz, "tam_kapanis"
+    minimum = min_emir_usd(rules, coin)
+    if eylem == "azalt":
+        hedef = max(0.0, float(azalt_hedef_usd or 0.0))
+        if hedef < minimum - EPS and biz >= minimum - EPS:
+            return biz, "kucuk_kalan_kapat"
+        fark = biz - hedef
+        if fark <= EPS:
+            return 0.0, "hedefte"
+        emir, neden = min_yuvarla(fark, minimum)
+        return (min(emir, biz), neden or "tamam") if emir > 0 else (0.0, neden)
+    if trader_hesap_usd <= 0 or fiyat <= 0:
+        return 0.0, "hesap_yok"
+    toplam = biz if biz_slot_toplam_usd is None else abs(float(biz_slot_toplam_usd))
+    kalan = max(0.0, float(rules.get("canli_slot_toplam_tavan_carpan", 3.0)) * float(slot) - toplam)
+    hedef = motor_hedef_usd(slot, trader_poz_sonra, fiyat, trader_hesap_usd, rules)
+    emir = hedef if eylem == "ac" else max(0.0, hedef - biz)
+    if emir <= EPS:
+        return 0.0, "hedefte"
+    neden = "tamam"
+    if emir > kalan + EPS:
+        emir, neden = kalan, "slot_tavani"
+        if emir < minimum / 2 - EPS:
+            return 0.0, "slot_tavani"
+    emir2, mn = min_yuvarla(emir, minimum)
+    if emir2 <= 0:
+        return 0.0, mn
+    if mn == "min_emir_yuvarlandi" and emir2 > kalan + EPS:
+        return 0.0, "slot_tavani"
+    return emir2, mn or neden

@@ -649,9 +649,8 @@ def test_radar_hip3_kopya_false_yalniz_perp_kopyalanir_trader_olculeri_degismez(
     assert s["likit_pay"] == 1.0 and s["gecti"] is True
 
 
-def test_radar_hip3_kopya_ve_sanal_hip3_kopya_varsayilanlari_ayni():
-    assert RULES["radar_hip3_kopya"] is RULES["sanal_hip3_kopya"] is True          # K-73: radar sanal motorla tutarlı; gerçek kip canli_hip3_kopya=false kalır
-    assert RULES["canli_hip3_kopya"] is False
+def test_radar_hip3_kopya_varsayilani_ve_motor_hip3_anahtarlari_silindi():
+    assert RULES["radar_hip3_kopya"] is True and "sanal_hip3_kopya" not in RULES and "canli_hip3_kopya" not in RULES          # K-86: motor HIP-3 anahtarları silindi (coin listesi)
 
 
 def test_ozet_md_gecti_11den_azsa_uyari_satiri(tmp_path):
@@ -695,7 +694,7 @@ def test_m02_g_ve_y_acik_kopya_islemini_sanal_kapanisla_katar():
     assert [t["sonuc_usd"] for t in r.g_y_islemleri(sonuc)] == [20.0, -60.0, 5.0]
 
 
-def test_m03_radar_kopyasi_funding_ve_sig_coin_tavani_motorla_ayni():
+def test_m03_radar_kopyasi_funding_ve_hacimden_bagimsiz_slot_tavani():
     """M-03 (Fable mantık denetimi, 14.11). Kasa 1.000 → slot 90,909 $.
     Funding: altın örnekteki 0,11 BTC kopya 10:01–11:01 açık, 11:00'de oran 0,001, fiyat 110 → −0,11 × 110 × 0,001 = −0,0121 $ → kopya 0,001078055 − 0,0000121 = 0,001065955; ayna (10:00–11:00 açık, saat açılışı 100) −0,11 × 100 × 0,001 = −0,011 $ → 0,0011 − 0,000011.
     Sığ coin: ALT (24 sa hacim 1.000 $ < `canli_sig_hacim_usd`): trader 30.000 $ açar / hesap 20.000 → hedef 1,5 × slot = 136,36 $ → sığ tavan 0,75 × slot = 68,18 $ → ayna 0,6818 × 10 / 1.000 = 0,0068182."""
@@ -712,7 +711,5 @@ def test_m03_radar_kopyasi_funding_ve_sig_coin_tavani_motorla_ayni():
     alt = [dolum(ms("10:00:00"), "ALT", "B", 300, 0, 100), dolum(ms("11:00:00"), "ALT", "A", 300, 300, 110, kapanan=3000.0)]
     b2 = r.Baglam(Sahte([], {}, fiyat), KOSU, BAS, RULES)
     b2.piyasa_oku()
-    sig = b2.kopya_oynat(alt, 20_000.0)
-    assert sig["ayna"]["getiri"] == pytest.approx(0.75 * 1000 / 11 * 0.1 / 1000)
-    b2.hacim["ALT"] = 5e8                                                        # derin coin: yalnız slot tavanı (1,5 × slot)
+    b2.hacim["ALT"] = 1000.0                                                     # K-86: sığ coin tavanı kaldırıldı; düşük hacim de yalnız slot tavanı (1,5 × slot)
     assert b2.kopya_oynat(alt, 20_000.0)["ayna"]["getiri"] == pytest.approx(1.5 * 1000 / 11 * 0.1 / 1000)
