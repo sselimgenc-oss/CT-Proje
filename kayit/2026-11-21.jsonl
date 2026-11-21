@@ -587,3 +587,13 @@
 {"zaman_ms":1795246313685,"olay":"vardiya_baslamadi","neden":"sanal kasa 1000 $ (--sanal-kasa-usd) durum dizinindeki kasa (10000 $) ile uyuşmuyor: ayrı durum dizini / veri dalı gerekli","vardiya":"sunucu"}
 {"zaman_ms":1795246313686,"olay":"telegram","metin":"🚨 Vardiya BAŞLAMADI (sanal · deneme parası)\nsanal kasa 1000 $ (--sanal-kasa-usd) durum dizinindeki kasa (10000 $) ile uyuşmuyor: ayrı durum dizini / veri dalı gerekli\nÇıkış kodu 3; motor çalışmıyor.\nSenden bir şey gerekmiyor.","acik":true}
 {"zaman_ms":1795246313686,"olay":"tg_mesaj","tur":null,"anahtar":null,"seviye":"CRIT","sessiz":false,"metin":"🚨 Vardiya BAŞLAMADI (sanal · deneme parası)\nsanal kasa 1000 $ (--sanal-kasa-usd) durum dizinindeki kasa (10000 $) ile uyuşmuyor: ayrı durum dizini / veri dalı gerekli\nÇıkış kodu 3; motor çalışmıyor.\nSenden bir şey gerekmiyor.","gonderildi":true,"bastirildi":false}
+{"zaman_ms":1795246388483,"olay":"kacan_tamamlandi","adet":0,"bas_ms":1795246212088}
+{"zaman_ms":1795246388484,"olay":"telegram","metin":"✅ Düzeldi: bot yeniden çalışıyor (sanal · deneme parası)\n1 dk kapalı kaldı; bu sürede kaçan işlem yok.","acik":true}
+{"zaman_ms":1795246388484,"olay":"tg_mesaj","tur":null,"anahtar":null,"seviye":"INFO","sessiz":false,"metin":"✅ Düzeldi: bot yeniden çalışıyor (sanal · deneme parası)\n1 dk kapalı kaldı; bu sürede kaçan işlem yok.","gonderildi":true,"bastirildi":false}
+{"zaman_ms":1795246473730,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"BTC","neden":"ara_dolum_siniri"}
+{"zaman_ms":1795246473731,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"VVV","neden":"ara_dolum_siniri"}
+{"zaman_ms":1795246476316,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"SOL","neden":"kayma_fazla","kayma":0.01633,"trader_giris":68.922,"mark":67.7965}
+{"zaman_ms":1795246476317,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"HYPE","neden":"kayma_lehte_fazla","kayma":-0.0333,"trader_giris":56.772,"mark":58.6625}
+{"zaman_ms":1795246476317,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"ASTER","neden":"kayma_lehte_fazla","kayma":-0.18399,"trader_giris":0.586408,"mark":0.478515}
+{"zaman_ms":1795246476317,"olay":"kacan_telafi_geri_cekil","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","asama":"yas","sn":300.0,"ardisik":1}
+{"zaman_ms":1795246476317,"olay":"tur","ozsermaye_usd":9872.24}
