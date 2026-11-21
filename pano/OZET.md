@@ -14,8 +14,6 @@ Başarı kıyası (aynı dönemde): toplam −%1,60 · BTC al-tut: −%9,5 · fa
 
 Komisyon (dönem): ödenen ücret: 19,12 $ · brüt K/Z ≤ 0: ücret zararı büyütüyor _(ücret işlem hacmine bağlıdır, emir sayısına değil)_
 
-Piyasa duygusu (Fear & Greed 0-100; sanalda ≥75 yeni long, ≤25 yeni short atlatır; gerçekte yalnız kayıt): 12 · Extreme Fear
-
 ## Açık pozisyonlar
 
 | trader | coin | yön | $ | K/Z |
@@ -67,19 +65,6 @@ _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun gü
 
 - 36 kapandı · toplam +65,56 $ · ters_netlesme 4 (+98,08 $) · slot_tavani 8 (−19,64 $) · hip3_atlandi 11 (−10,00 $) · haber_ters 1 (−5,39 $) · duygu_ters 5 (+1,94 $) · rejim_ters 3 (+0,83 $) · min_emir_atlandi 2 (−0,33 $) · elle_dur 2 (+0,07 $)
 
-## Ortak öğrenme karnesi (sanal)
-
-| kurulum | aday | ort R | sanal kasa | getiri | en derin | drift | ders | filtre |
-|---|---|---|---|---|---|---|---|---|
-| T_0c2447 | 9 | -0.83 | 919,85 $ | −%8,01 | 16.2% | normal | — | yok |
-| T_574595 | 1 | +1.25 | 1.012,53 $ | +%1,25 | 0.0% | normal | — | yok |
-| T_7bb402 | 4 | +0.90 | 1.035,38 $ | +%3,54 | 2.2% | normal | — | yok |
-| T_99f0d4 | 1 | +2.79 | 1.027,92 $ | +%2,79 | 0.0% | normal | — | yok |
-| T_b4c6ee | 1 | +0.30 | 1.003,05 $ | +%0,30 | 0.0% | normal | — | yok |
-| T_c2c3cf | 5 | -0.29 | 985,23 $ | −%1,48 | 1.5% | normal | — | yok |
-| T_e7ae5a | 1 | +6.47 | 1.064,71 $ | +%6,47 | 0.0% | normal | — | yok |
-| T_f6b664 | 8 | -0.22 | 981,25 $ | −%1,88 | 4.1% | normal | — | yok |
-
 ## Saha değişiklikleri (24 sa)
 
 değişiklik yok
@@ -87,6 +72,7 @@ değişiklik yok
 ## Risk olayları (24 sa)
 
 - 07:31 `vardiya_baslamadi` sanal kasa 1000 $ (--sanal-kasa-usd) durum dizinindeki kasa (10000 $) ile uyuşmuyor: ayrı durum dizini / veri dalı gerekli
+- 12:29 `vardiya_baslamadi` sanal kasa 1000 $ (--sanal-kasa-usd) durum dizinindeki kasa (10000 $) ile uyuşmuyor: ayrı durum dizini / veri dalı gerekli
 
 ## Vardiya sağlığı
 
