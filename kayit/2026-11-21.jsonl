@@ -58,3 +58,5 @@
 {"zaman_ms":1795221214499,"olay":"kacan_telafi_atlandi","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","coin":"HYPE","neden":"filtre_atlamisti:ters_netlesme"}
 {"zaman_ms":1795221220137,"olay":"kacan_telafi_atlandi","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ADA","neden":"ara_dolum_siniri"}
 {"zaman_ms":1795221326478,"olay":"tur","ozsermaye_usd":9832.4049}
+{"zaman_ms":1795221835285,"olay":"kacan_telafi_atlandi","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","coin":"HYPE","neden":"kayma_lehte_fazla","kayma":-0.011008,"trader_giris":61.2386,"mark":60.5645}
+{"zaman_ms":1795222180378,"olay":"tur","ozsermaye_usd":9840.16}
