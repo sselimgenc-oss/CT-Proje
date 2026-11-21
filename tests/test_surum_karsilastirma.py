@@ -60,11 +60,11 @@ def test_bos_kayit_ve_bozuk_olaylar():
     assert "henüz yok" in SK.html_tablo(SK.karsilastir([]))
 
 
-def test_pano_markdown_bolumu_ve_pbo_satiri():
+def test_pano_markdown_bolumu():
     ozet = {"kip": "sanal", "vardiya": "1", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "getiri": 0.0, "saha": 0, "saha_n": 11, "inen": 0, "sure_dk": 1.0}
     kayit = [emir(T0, 5.0, 1.0), {"olay": "karsi_olgu_kapandi", "zaman_ms": T0 + 5, "neden": SK.ML_NEDEN, "pnl_usd": 2.0}]
-    md, _ = pano.pano_olustur(ozet, {}, {}, kayit, [], [], T0 + 3_600_000, surum_gun={G0: "v4"}, pbo={"durum": "yetersiz veri", "neden": "T=3"})
+    md, _ = pano.pano_olustur(ozet, {}, {}, kayit, [], T0 + 3_600_000, surum_gun={G0: "v4"})
     assert "## Sürüm karşılaştırma" in md and "**v4** · dönem: fiili +4.00 $ · taban +6.00 $" in md
-    assert "PBO (aşırı uydurma olasılığı, bilgi): yetersiz veri" in md
-    md2, _ = pano.pano_olustur(ozet, {}, {}, [], [], [], T0 + 3_600_000, pbo={"durum": "tamam", "pbo": 0.4375, "kullanilan_t": 16, "adaylar": ["a", "b"]})
-    assert "0.44" in md2 and "kapanan işlem kaydı yok" in md2
+    assert "PBO" not in md
+    md2, _ = pano.pano_olustur(ozet, {}, {}, [], [], T0 + 3_600_000)
+    assert "kapanan işlem kaydı yok" in md2

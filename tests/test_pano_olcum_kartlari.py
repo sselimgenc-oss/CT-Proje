@@ -16,8 +16,6 @@ KM = {"pencere_gun": 7, "satirlar": [
     {"neden": "ters_netlesme", "olay_adedi": 9, "trader_sayisi": 2, "toplam_karsi_olgu_pnl": 14.0},
     {"neden": "yon_tavani", "olay_adedi": 12, "trader_sayisi": 4, "toplam_karsi_olgu_pnl": -5.0}],
     "vurgu": {"slot_tavani": {"neden": "slot_tavani", "olay_adedi": 40, "trader_sayisi": 5, "toplam_karsi_olgu_pnl": -31.2}}}
-ISABET = [{"tarih": "2026-11-18", "rastgele_karsilastirma": {"durum": "tamam", "secilen_ortalama": 0.021, "rastgele_medyan": 0.008, "yuzdelik": 71.0, "p": 0.29}},
-          {"tarih": "2026-11-19", "rastgele_karsilastirma": {"durum": "havuz_yok"}}]
 SG = {"toplu": {"durum": "tamam", "gun_n": 5, "rho_ort": 0.12, "p": 0.31, "r": 1000}}
 KAYIT = [{"zaman_ms": SIMDI - 3_600_000, "olay": "emir", "durum": "dolu", "adres": "0x" + "1" * 40, "coin": "BTC", "yon": "uzun", "usd_dolan": 50.0, "kayma_trader": 0.0004, "gecikme_ms": 1500, "gorme_ms": 800, "eylem": "ac"},
          {"zaman_ms": SIMDI - 3_600_000, "olay": "emir_yok", "neden": "hak_bitti", "adres": "0x" + "1" * 40, "coin": "ETH", "eylem": "ac"}]
@@ -43,13 +41,11 @@ def test_kural_maliyet_karti_slot_tavani_ilk_satir():
     assert "yok" in pano._kural_maliyet_html({"satirlar": [KM["satirlar"][1]], "vurgu": {"slot_tavani": None}})
 
 
-def test_secim_rastgele_karti_iki_kaynak_ve_bos():
-    h = pano._secim_rastgele_html(ISABET, SG)                       # isabet verisi öncelikli
-    assert "+%2,10" in h and "+%0,80" in h and "%29" in h and "Ölçülen gün: <b>1" in h
-    g = pano._secim_rastgele_html([], SG)                           # yedek: form × gerçek K/Z
+def test_secim_rastgele_karti_gercek_kz_ve_bos():
+    g = pano._secim_rastgele_html(SG)                               # form × gerçek K/Z
     assert "Ölçülen gün: <b>5" in g and "+0,12" in g
-    assert pano._secim_rastgele_html([], None) == pano.BIRIKIYOR
-    assert pano._secim_rastgele_html(ISABET[1:], {"toplu": {"durum": "yok", "gun_n": 0}}) == pano.BIRIKIYOR
+    assert pano._secim_rastgele_html(None) == pano.BIRIKIYOR
+    assert pano._secim_rastgele_html({"toplu": {"durum": "yok", "gun_n": 0}}) == pano.BIRIKIYOR
 
 
 def test_sunucu_sagligi_satirlari():
@@ -62,7 +58,7 @@ def test_sunucu_sagligi_satirlari():
 
 
 def _tam() -> str:
-    return pano.html_olustur(OZET, {}, {}, KAYIT, [], SIMDI, isabetler=ISABET, kaynak={"ram_mb": 300.0, "disk_bos_gb": 9.0}, gunluk_ozet={"saglik": SAGLIK},
+    return pano.html_olustur(OZET, {}, {}, KAYIT, [], SIMDI, kaynak={"ram_mb": 300.0, "disk_bos_gb": 9.0}, gunluk_ozet={"saglik": SAGLIK},
                              kural_maliyet=KM, secim_gercek=SG)
 
 

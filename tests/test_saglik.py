@@ -23,7 +23,7 @@ def ozet(**kw):
 
 
 def kadro(**kw):
-    d = {"kosu_ms": SIMDI - 6 * SA, "gecti_sayisi": 14, "saha_n": 11, "satirlar": [{"katman": "ilk11"}] * 11}
+    d = {"kosu_ms": SIMDI - 6 * SA, "gecti_sayisi": 14, "saha_n": 5, "sade": True, "satirlar": [{"katman": "ilk11"}] * 5}
     d.update(kw)
     return d
 
@@ -58,15 +58,14 @@ def test_kapanis_eksik_dur_telegram_kopma_kritik_uyari_bilgi():
     assert s.ozet_metin(b).splitlines()[0].startswith("🚨")                                         # kritik önce
 
 
-def test_radar_yasi_gecti_araligi_kadro_eksik():
+def test_radar_yasi_ve_sade_kadro():
     assert kodlar(s.kontrol(SIMDI, ozet(), kadro(kosu_ms=SIMDI - 31 * SA))) == {"radar_gecikti"}
     assert kodlar(s.kontrol(SIMDI, ozet(), kadro(kosu_ms=SIMDI - 55 * SA))) == {"radar_durdu"}
-    assert kodlar(s.kontrol(SIMDI, ozet(), kadro(gecti_sayisi=7))) == {"gecti_aralik_disi"} and kodlar(s.kontrol(SIMDI, ozet(), kadro(gecti_sayisi=31))) == {"gecti_aralik_disi"}
-    assert kodlar(s.kontrol(SIMDI, ozet(), kadro(gecti_sayisi=22))) == set()  # 2026-11-17: üst sınır 30
-    assert s.kontrol(SIMDI, ozet(), kadro(gecti_sayisi=11)) == [] and s.kontrol(SIMDI, ozet(), kadro(gecti_sayisi=20)) == []                         # sınırlar dahil
-    assert kodlar(s.kontrol(SIMDI, ozet(), kadro(satirlar=[{"katman": "ilk11"}] * 9))) == {"kadro_eksik"}
-    b = s.kontrol(SIMDI, ozet(), kadro(gecti_sayisi=8))                                                                                      # K‑43: 11'den az = UYARI (KRİTİK değil)
-    assert kodlar(b) == {"kadro_11den_az"} and s.durum(b) == "UYARI"
+    for n in (1, 3, 5, 32):                                                                       # sade kadro: eski 8–30 beklentisi yok
+        assert s.kontrol(SIMDI, ozet(), kadro(gecti_sayisi=n, satirlar=[{"katman": "ilk11"}] * min(n, 5))) == []
+    b = s.kontrol(SIMDI, ozet(), kadro(gecti_sayisi=0, satirlar=[]))
+    assert kodlar(b) == {"kadro_bos"} and "Kadro boş: kuralları geçen aday yok" in b[0].mesaj and s.durum(b) == "UYARI"
+    assert kodlar(s.kontrol(SIMDI, ozet(), kadro(satirlar=[]))) == {"kadro_bos"}
 
 
 def test_pano_ve_cloudflare():
@@ -83,9 +82,9 @@ def test_canli_sayfa_zamani_okunur():
 
 def test_pano_ozet_sekmesinde_saglik_kutusu_var():
     from copytrade.canli import pano
-    html = pano.html_olustur({"kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "yazildi_ms": SIMDI - 2 * DK, "vardiya": "v", "kip": "sanal", "dur": False}, {}, {}, [], [], SIMDI, kadro=kadro(satirlar=[], saha_n=0))
+    html = pano.html_olustur({"kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "yazildi_ms": SIMDI - 2 * DK, "vardiya": "v", "kip": "sanal", "dur": False}, {}, {}, [], [], SIMDI, kadro=kadro(satirlar=[{"adres": "0xaaaa111122223333", "sira": 1, "katman": "ilk11", "form": 75.0}]))
     assert "Sağlık" in html and "sorun yok" in html
-    html2 = pano.html_olustur({"kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "yazildi_ms": SIMDI - 120 * DK, "vardiya": "v", "kip": "sanal", "dur": False}, {}, {}, [], [], SIMDI, kadro=kadro(satirlar=[], saha_n=0))
+    html2 = pano.html_olustur({"kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "yazildi_ms": SIMDI - 120 * DK, "vardiya": "v", "kip": "sanal", "dur": False}, {}, {}, [], [], SIMDI, kadro=kadro(satirlar=[{"adres": "0xaaaa111122223333", "sira": 1, "katman": "ilk11", "form": 75.0}]))
     assert "acil" in html2 and "Veri güncel değil" in html2 and "veri yazmıyor" not in html2
 
 
@@ -241,8 +240,3 @@ def test_vardiya_boslugu_sonrasi_vardiya_surerken_uyari_yoksa_kritik():
     assert [(x.kod, x.seviye) for x in b] == [("vardiya_boslugu", "UYARI")]
     assert s.durum(s.kontrol(SIMDI, ozet(yazildi_ms=SIMDI - 50 * DK), kadro(), olaylar=ol, veri_dali_commit_ms=SIMDI - 5 * DK)) == "KRITIK"      # olaydan sonra yazım yok
     assert s.durum(s.kontrol(SIMDI, ozet(yazildi_ms=SIMDI - 5 * DK), kadro(), olaylar=ol, veri_dali_commit_ms=SIMDI - 60 * DK)) == "KRITIK"      # veri bayat
-
-
-def test_v3_kadro_gecti_araligi_denetlenir():                                                  # K-66: D+'a özgü K-60 istisnası kaldırıldı; Form Radarı 8–20 beklentisi
-    v3 = kadro(gecti_sayisi=5, saha_n=5, satirlar=[{"katman": "ilk11"}] * 5, radar_surum="v3")
-    assert kodlar(s.kontrol(SIMDI, ozet(), v3)) == {"gecti_aralik_disi"}

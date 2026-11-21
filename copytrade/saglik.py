@@ -21,8 +21,6 @@ VARDIYA_YAZMA_KRITIK = 60 * DAKIKA
 RADAR_UYARI = 30 * SAAT                    # günlük radar (K-78: sunucu zamanlayıcısı 00:37Z, tarama ~2-3 sa sürer; Actions yalnız elle yedek); 30 sa üstü: bugünkü radar gelmedi (yeni saatle de doğru: normal yaş ≤ ~27 sa)
 RADAR_KRITIK = 54 * SAAT
 PANO_UYARI = 45 * DAKIKA                   # veri dalındaki pano 15 dk'da bir; canlı Cloudflare sayfası en az bir yayın geride olabilir
-GECTI_ALT = 8                              # RADAR_V1 günlük beklenti 8–20 (devir kontrol listesi)
-GECTI_UST = 30                             # 2026-11-17 kullanıcı: 20 sık yanlış alarm veriyordu (21–22 normal)
 TELEGRAM_HATA_UYARI = 5
 KOPMA_UYARI = 5
 # G2 (2026-11-06): kalıcı durum + kayıt olayları + iş akışı koşusu + veri dalı commit yaşı
@@ -215,15 +213,9 @@ def kontrol(simdi_ms: int, ozet: dict[str, Any] | None, kadro: dict[str, Any] | 
             b.append(Bulgu("KRITIK", "radar_durdu", f"Radar {_sa(yas)}dir çalışmadı: kadro çok eski."))
         elif yas * DAKIKA >= RADAR_UYARI:
             b.append(Bulgu("UYARI", "radar_gecikti", f"Bugünkü radar henüz gelmedi (kadro {_sa(yas)} eski)."))
-        gecti = kadro.get("gecti_sayisi")                                              # K-66: Form Radarı beklentisi 8–20 (D+'a özgü K-60 istisnası kaldırıldı)
-        if gecti is not None and not (GECTI_ALT <= int(gecti) <= GECTI_UST):
-            b.append(Bulgu("UYARI", "gecti_aralik_disi", f"Radarı geçen trader sayısı {int(gecti)} (beklenen {GECTI_ALT}–{GECTI_UST}); strateji/veri kontrol edilmeli."))
-        elif gecti is not None and int(gecti) < 11:
-            b.append(Bulgu("UYARI", "kadro_11den_az", f"Radarı geçen {int(gecti)} kişi: kadro 11'den az; saha dolmayabilir (otomatik true'ya dönülmez, lider karar verir)."))
-        n, satir = int(kadro.get("saha_n") or 0), kadro.get("satirlar") or []
-        ilk11 = [s for s in satir if s.get("katman") == "ilk11"]
-        if n and len(ilk11) < n:
-            b.append(Bulgu("UYARI", "kadro_eksik", f"Kadroda {len(ilk11)}/{n} trader var."))
+        gecti = kadro.get("gecti_sayisi")                                              # K-85 sade kadro: 0–5 üye normal (yedek yok, boş slot serbest); yalnız hiç aday/üye yoksa uyarı
+        if (gecti is not None and int(gecti) == 0) or not (kadro.get("satirlar") or []):
+            b.append(Bulgu("UYARI", "kadro_bos", "Kadro boş: kuralları geçen aday yok."))
 
     # --- pano
     if pano_ms is not None:

@@ -240,7 +240,7 @@ def test_eski_telafi_kayitlari_pano_ve_rapor_kodunu_bozmaz():
     from copytrade.canli.gunluk_ozet import alinmayan_neden, kopya_kalite
     simdi = 1_800_000_000_000
     ozet = {"kip": "sanal", "vardiya": "1", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "getiri": 0.0, "saha": 1, "saha_n": 11, "inen": 0, "sure_dk": 10.0, "dinleyici": {}, "rest_429": 0, "acik": []}
-    md, _ = pano.pano_olustur(ozet, {"gun_basi": 1000.0, "zirve": 1000.0}, {}, ESKI_KAYITLAR, [], [], simdi)
+    md, _ = pano.pano_olustur(ozet, {"gun_basi": 1000.0, "zirve": 1000.0}, {}, ESKI_KAYITLAR, [], simdi)
     assert isinstance(md, str) and md
     assert isinstance(pano.kapanan_islemler(ESKI_KAYITLAR), list)
     assert isinstance(alinmayan_neden(ESKI_KAYITLAR), list)

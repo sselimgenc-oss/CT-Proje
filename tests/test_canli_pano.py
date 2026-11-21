@@ -34,14 +34,12 @@ def test_pano_altin_ornek_sayilar():
                 kayit("emir", 25, durum="dolu", kayma_trader=0.9, ucret=9.0), kayit("funding", 1, funding_usd=-0.05), kayit("funding", 5, funding_usd=-0.07),
                 kayit("saha_giris", 6, adres=A1, neden="ilk_gun"), kayit("saha_dus", 7, adres=A2, neden="islem_yok"),
                 kayit("risk", 3, tur="gunluk_kayip"), kayit("vardiya_boslugu", 8, dk=45.0)]
-    isabet = {"tarih": "2026-11-05", "pencere_gun": 7.0, "pencere_tam": True, "eksik": False, "ic": 0.31, "fark_ilk11_havuz": 0.004, "fark_ilk11_elenen": 0.02,
-              "gruplar": {"ilk11": {"n": 11}, "havuz_geri": {"n": 3}, "elenen": {"n": 30}}}
-    md, yeni = pano.pano_olustur(OZET, RISK, {}, kayitlar, [isabet], GECMIS, SIMDI)
+    md, yeni = pano.pano_olustur(OZET, RISK, {}, kayitlar, GECMIS, SIMDI)
     assert "| 1.000,00 $ | 1.012,50 $ | +%1,25 | " in md and "| +%1,25 | −%1,22 |" in md                    # gün +%1,25; toplam +%1,25; zirveden düşüş −%1,22
     assert "emir 3 · dolum 2 · kayma p50 +%0,30 / max +%0,30 (n=2)" in md and "funding −0,12 $ · ücret 0,03 $" in md
     assert "| Vega-11 | BTC | L | 55,00 $ | +5,00 $ |" in md and "| Serçe-22 | ETH | S | 2.010,00 $ | −10,00 $ |" in md
     assert "giriş Vega-11 — ilk_gun" in md and "çıkış Serçe-22 — islem_yok" in md and "`risk` gunluk_kayip" in md and "boşluk 45.0 dk" in md and "REST 429 0" in md
-    assert "| 2026-11-05 | 7.0 gün | +0.31 | +%0,40 | +%2,00 | 11/3/30 |" in md
+    assert "Seçim isabeti" not in md and "PBO" not in md
     assert yeni[-1] == {"gun": gunler(), "ozsermaye": 1012.5} and len(yeni) == 3
 
 
@@ -54,12 +52,12 @@ def test_hafta_getirisi_gecmisten_ve_yetersiz_gecmis():
     assert pano.hafta_getirisi(g[2:], 1012.5, SIMDI, 1000.0) is None and pano.hafta_getirisi([], 1012.5, SIMDI, 1000.0) is None
 
 
-def test_isabet_yoksa_ilk_olcum_yazilir_acik_pozisyon_yoksa_ve_hesap_json_yedegi():
-    md, _ = pano.pano_olustur({**OZET, "acik": []}, {}, {}, [], [], [], SIMDI)
-    assert "henüz ölçüm yok" in md and "2026-11-12" not in md and "açık pozisyon yok" in md and "değişiklik yok" in md and "olay yok" in md and "(geçmiş < 7 gün)" in md
+def test_acik_pozisyon_yoksa_ve_hesap_json_yedegi():
+    md, _ = pano.pano_olustur({**OZET, "acik": []}, {}, {}, [], [], SIMDI)
+    assert "Seçim isabeti" not in md and "açık pozisyon yok" in md and "değişiklik yok" in md and "olay yok" in md and "(geçmiş < 7 gün)" in md
     # ozet'te 'acik' yoksa hesap.json'dan (mark yok → K/Z —)
     ozet = {k: v for k, v in OZET.items() if k != "acik"}
-    md2, _ = pano.pano_olustur(ozet, RISK, {"poz": {A1: {"BTC": {"sz": 0.5, "giris": 100.0}}}}, [], [], [], SIMDI)
+    md2, _ = pano.pano_olustur(ozet, RISK, {"poz": {A1: {"BTC": {"sz": 0.5, "giris": 100.0}}}}, [], [], SIMDI)
     assert "| Vega-11 | BTC | L | 50,00 $ | — |" in md2
 
 
@@ -97,7 +95,7 @@ def test_motor_pano_ek_acik_pozisyon_kz_ve_rest_sayaclari(tmp_path):
     assert acik["BTC"]["usd"] == pytest.approx(220.0) and acik["BTC"]["kz_usd"] == pytest.approx(20.0)
     assert acik["ETH"]["usd"] == pytest.approx(1990.0) and acik["ETH"]["kz_usd"] == pytest.approx(10.0) and acik["ETH"]["sz"] == -1.0
     assert ek["rest_istek"] == 120 and ek["rest_429"] == 2
-    ozet_md, _ = pano.pano_olustur({**OZET, **ek}, RISK, {}, [], [], [], SIMDI)
+    ozet_md, _ = pano.pano_olustur({**OZET, **ek}, RISK, {}, [], [], SIMDI)
     assert "| Papağan-00 | ETH | S | 1.990,00 $ | +10,00 $ |" in ozet_md and "REST 429 2" in ozet_md
 
 
@@ -245,7 +243,7 @@ def test_html_pano_kadro_bolumleri_sahada_bekliyor_iniyor_yedek_sirasi():
     h = pano.html_olustur(ozet, {}, {}, [], [], 1_793_900_000_000, kadro, saha)
     assert "SAHADA (1/11)" in h and "BEKLİYOR (1)" in h and "İNİYOR (1)" in h and "YEDEK (1)" in h
     assert h.index("SAHADA (1/11)") < h.index("BEKLİYOR (1)") < h.index("İNİYOR (1)") < h.index("YEDEK (1)")
-    assert "iniyor — yedeğe düşecek" in h and "sahaya çıkmayı bekliyor" in h
+    assert "iniyor — yedeğe düşecek" in h and "kadroda, henüz pozisyon yok" in h and "sahaya çıkmayı bekliyor" not in h
     assert "rz bk" in h and "kd kb" in h and "--bk:#f5d90a" in h                                       # BEKLİYOR sarı
     assert "Takip edilen traderlar (1/11)" in h
 
@@ -303,9 +301,10 @@ def _s4_kayit():
         {"olay": "funding", "zaman_ms": _gun_ms("2026-11-03", 14), "funding_usd": -0.05}, {"olay": "funding", "zaman_ms": _gun_ms("2026-11-05", 1), "funding_usd": -0.15}]
 
 
-def test_s4_cli_maliyet_ve_kapanan_tum_pencereyi_okur(tmp_path):
+def test_s4_cli_maliyet_ve_kapanan_tum_pencereyi_okur(tmp_path, monkeypatch):
     """Uçtan uca (CLI): kayıtlar 3 dosyada. Ücret 1,0 + 0,5 + 0,25 + 0,25 = 2,00 $ (eski kod son 2 gün: 0,50 $); kayma 0,20 $; funding −0,20 $ ⇒ maliyet 2,0 + 0,2 + 0,2 = 2,40 $.
     Seri pencere içinde başladı (geçmişte 11-03'ten önce nokta yok) ⇒ net = 1004 − 1000 = +4,00; brüt = 6,40. Kapanan: 3 adet, net +2,5 −1,25 +1,75 = +3,00 $; kazanma 2/3 = %67."""
+    monkeypatch.setattr(pano, "donem_basi_ms", lambda: None)                      # eski tarihli sabit kayıtlar: dönem süzmesi kapalı (süzme ayrı testte)
     (tmp_path / "durum").mkdir()
     (tmp_path / "kayit").mkdir()
     (tmp_path / "durum/ozet.json").write_text(json.dumps({"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1004.0, "getiri": 0.004, "acik": []}), encoding="utf-8")
@@ -347,7 +346,7 @@ def test_s14_s17_bugun_cubuk_risk_payi_ve_zirve_tek_kaynak():
 
 def test_s14_md_gun_payda_gun_basi():
     """OZET.md 'gün' = (909 − 900) / 900 = +%1,00 (kasaya bölseydi +%0,90 olurdu); tanım satırı yazılır."""
-    md, _ = pano.pano_olustur({**OZET, "ozsermaye_usd": 909.0, "getiri": -0.091}, {"gun_basi": 900.0, "zirve": 1000.0}, {}, [], [], [], SIMDI)
+    md, _ = pano.pano_olustur({**OZET, "ozsermaye_usd": 909.0, "getiri": -0.091}, {"gun_basi": 900.0, "zirve": 1000.0}, {}, [], [], SIMDI)
     assert "| 1.000,00 $ | 909,00 $ | +%1,00 | " in md and "−%9,10 |" in md and "UTC gün başı özsermayesi" in md
 
 
@@ -365,5 +364,17 @@ def test_s16_funding_gercek_sayilir_ve_24sa_ile_pencere_ayri_etiketli():
     h = pano.html_olustur({"kip": "gercek", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "acik": []}, {}, {}, kayit, [], SIMDI_D)
     assert "Fonlama ücreti (24 sa)" in h and "+0,30 $" in h and "± Fonlama ücreti (HL)" in h
     assert pano.funding_toplam(kayit + [{"olay": "funding", "zaman_ms": SIMDI_D - 3 * SAAT, "funding_usd": -0.1}]) == pytest.approx(0.3)
-    md, _ = pano.pano_olustur({**OZET, "acik": []}, RISK, {}, [{**kayit[0], "zaman_ms": SIMDI - 2 * SAAT}], [], [], SIMDI)
+    md, _ = pano.pano_olustur({**OZET, "acik": []}, RISK, {}, [{**kayit[0], "zaman_ms": SIMDI - 2 * SAAT}], [], SIMDI)
     assert "funding +0,30 $" in md
+
+
+def test_donem_suz_onceki_donem_kayit_ve_gecmis_panoda_yok():
+    bas = 1_793_900_000_000
+    gun_ = "2026-11-02"
+    from datetime import UTC, datetime
+    g = datetime.fromtimestamp(bas / 1000, UTC).date().isoformat()
+    kay = [{"olay": "emir", "zaman_ms": bas - 1}, {"olay": "emir", "zaman_ms": bas + 5}]
+    ges = [{"gun": "2000-01-01", "ozsermaye": 900.0}, {"gun": g, "ozsermaye": 1000.0}]
+    k2, g2 = pano.donem_suz(kay, ges, bas)
+    assert [x["zaman_ms"] for x in k2] == [bas + 5] and g2 == [ges[1]] and gun_
+    assert pano.donem_suz(kay, ges, None) == (kay, ges)
