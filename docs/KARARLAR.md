@@ -496,3 +496,4 @@ Dayanak: kâğıtta her özellik açık ve işleme etkili (K-73); kullanıcı ye
 
 - **Aday sayımı (21.11 gece, tam evren 2428):** a–c ile 1 aday; Fable sırasıyla d (haftada ≤ 20) ve e (30 g düşüş ≤ %30) uygulandı → 2 aday (kopya koruma/kopya getirisi süzgecinden önce). 5'e ulaşılamadı: boş slotlarla başlanır (slot 200 $, büyütülmez).
 - **Kullanıcı onayı (21.11):** coin başına toplam brüt tavanı (kasa × %30) ve trader başına tüm coinler ≤ 3 × slot tavanı KALIR (K-86 açık nokta kapandı).
+- **Kullanıcı kararı (21.11 sabah):** coin listesi 12 coine büyüdü (BTC, ETH, SOL, XRP, ZEC, HYPE, NEAR, BNB, DOGE, SUI, ADA, TRX); sabit; coin şartı (%80 hacim + %70 kâr) ve gevşetmeler aynen; yeni coinlerin asgari emri 'diger' 5 $, doğrulanmadı.

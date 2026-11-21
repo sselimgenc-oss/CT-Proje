@@ -51,7 +51,7 @@ def _emirler(tmp_path):
 
 # ------------------------------------------------------------------ yapılandırma
 def test_uretim_degerleri_ve_dogrulanmadi_bayragi():
-    assert ASIL["canli_coin_listesi"] == ["BTC", "ETH", "BNB", "XRP", "SOL", "TRX"] and ASIL["canli_slot_sayisi"] == 5
+    assert ASIL["canli_coin_listesi"] == ["BTC", "ETH", "SOL", "XRP", "ZEC", "HYPE", "NEAR", "BNB", "DOGE", "SUI", "ADA", "TRX"] and ASIL["canli_slot_sayisi"] == 5
     assert ASIL["canli_min_emir_usd"] == {"BTC": 100, "ETH": 20, "diger": 5} and ASIL["canli_min_emir_dogrulanmadi"] is True
     assert (ASIL["canli_pozisyon_tavan_slot"], ASIL["canli_marj_kaldirac"], ASIL["canli_gunluk_acilis_max"], ASIL["net_yon_tavani_oran"]) == (1.0, 3, 3, 0.60)
     assert (ASIL["kopya_hak_esik"], ASIL["kopya_senk_esik"], ASIL["canli_olay_stale_sn"], ASIL["canli_ioc_bant"]) == (0.10, 0.50, 120, 0.005)
@@ -77,7 +77,7 @@ def test_kural1_liste_disi_acilmaz_sayilir_kapanis_azaltma_serbest(tmp_path):
     assert s[0].eylem == "azalt" and s[0].karar == "emir"
     s = _ol(m, saat, "a:4", A, "SOL", "A", 600, 600.0, 100.0)                # tam kapanış serbest
     assert _kd(s) == [("kapat", "emir", "tam_kapanis")] or s[0].karar == "emir"
-    assert _ol(m, saat, "a:5", A, "DOGE", "B", 10, 0.0, 1.0)[0].neden == "liste_disi" and m.neden_say["liste_disi"] == 2
+    assert _ol(m, saat, "a:5", A, "AVAX", "B", 10, 0.0, 1.0)[0].neden == "liste_disi" and m.neden_say["liste_disi"] == 2
 
 
 # ------------------------------------------------------------------ kural 2: slot ve boyut
@@ -323,7 +323,7 @@ def test_yeni_nedenler_sayaclarda_ve_etiketlerde():
 
 def test_ozet_yeni_neden_sayaclari(tmp_path):
     m, _, saat = _kur(tmp_path)
-    _ol(m, saat, "a:1", A, "DOGE", "B", 10, 0.0, 1.0)
+    _ol(m, saat, "a:1", A, "AVAX", "B", 10, 0.0, 1.0)
     oz = m.ozet()
     assert oz["liste_disi"] == 1 and oz["neden_say"]["liste_disi"] == 1
     for k in ("hak_bitti", "kucuk_hareket", "gunluk_acilis_siniri", "yon_tavani", "min_alti"):

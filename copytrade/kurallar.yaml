@@ -87,7 +87,7 @@ radar_pencere_gun: 30                   # gün (seçim penceresi; `radar_pencere
 radar_min_hafta_karli: 3                # son 4 haftanın en az bu kadarı kârlı (sınır dahil)
 radar_max_dusus_30g: 0.30               # oran, 30 g azami düşüş (sınır dahil; Fable gevşetme e, 21.11: tam evrende 5 aday çıkmadı)
 radar_min_getiri_7g: -0.05              # oran, 7 g getiri veto tabanı (sınır dahil)
-radar_coinler: [BTC, ETH, BNB, XRP, SOL, TRX]   # sabit coin listesi (haftalık yenileme yok); kopya yalnız bunlarda
+radar_coinler: [BTC, ETH, SOL, XRP, ZEC, HYPE, NEAR, BNB, DOGE, SUI, ADA, TRX]   # sabit coin listesi (haftalık yenileme yok); kopya yalnız bunlarda
 radar_coin_hacim_pay_min: 0.80          # oran, işlem nosyonelinin en az bu payı listedeki coinlerde
 radar_coin_kar_pay_min: 0.70            # oran, 30 g kârın en az bu payı listedeki coinlerden
 radar_min_islem: 8                      # listedeki coinlerde 30 g kapanan işlem (sınır dahil)
@@ -134,7 +134,7 @@ canli_marj_kaldirac: 3                  # x (coin başına izole marj)
 canli_min_azami_kaldirac: 5              # x (K-67, 17.11: gerçek kipte HL azami kaldıracı bunun altındaki coinde AÇILIŞ yok; izole 3x'te azami 3 olan coin −%20'de tasfiye olur, stoplar %20/%22; sanal kip etkilenmez)
 canli_ioc_bant: 0.005                   # oran (IOC limit fiyatı = en iyi karşı fiyat ± bu bant)
 # ---- K-86 CT yeni plan — motor (kâğıtta HEPSİ açık ve işleme etkili, K-73). Tüm sayılar buradan.
-canli_coin_listesi: [BTC, ETH, BNB, XRP, SOL, TRX]   # kural 1: YALNIZ bu coinlerde açılış/artırma (diğer: `liste_disi`); kapanış/azaltma her zaman serbest
+canli_coin_listesi: [BTC, ETH, SOL, XRP, ZEC, HYPE, NEAR, BNB, DOGE, SUI, ADA, TRX]   # kural 1: YALNIZ bu coinlerde açılış/artırma (diğer: `liste_disi`); kapanış/azaltma her zaman serbest
 canli_slot_sayisi: 5                    # kural 2: kadro 5 trader, eşit slot = kasa / 5 (1.000 $ → 200 $)
 canli_pozisyon_tavan_slot: 1.0          # x slot (kural 2: pozisyon başına en çok 1 × slot nosyonel; 3x izole marj `canli_marj_kaldirac`)
 canli_slot_toplam_tavan_carpan: 3.0     # x slot (trader başına TÜM coinler toplam nosyonel tavanı; 3x izole = slotun tamamı marj)
@@ -146,7 +146,7 @@ kopya_senk_hak: 1                       # adet (kural 3: >%50 kapanışta yenide
 kopya_kume_ms: 1000                     # ms (aynı yönde önceki dolumdan en çok bu kadar sonra gelen dolum aynı emrin parçası; hareket kümenin toplamı)
 canli_gunluk_acilis_max: 3              # adet (kural 4: trader başına UTC günde en çok bu kadar yeni açılış; `gunluk_acilis_siniri`)
 net_yon_tavani_oran: 0.60               # oran × kasa (kural 5: tüm coinlerde net long (ya da net short) nosyonel + yeni emir bunu aşarsa yeni açılış/artırma alınmaz: `yon_tavani`)
-canli_min_emir_usd: {BTC: 100, ETH: 20, diger: 5}    # $ (kural 6: sembol başına asgari emir; hesaplanan ≥ yarısı ve < asgari → asgariye yuvarlanır, < yarısı → `min_alti`). Binance asgarileri DOĞRULANMADI (aşağıdaki bayrak)
+canli_min_emir_usd: {BTC: 100, ETH: 20, diger: 5}    # $ (kural 6: sembol başına asgari emir; hesaplanan ≥ yarısı ve < asgari → asgariye yuvarlanır, < yarısı → `min_alti`). Binance asgarileri DOĞRULANMADI (12 coinin hepsi; yeni 6 coin 'diger' = 5 $) (aşağıdaki bayrak)
 canli_min_emir_dogrulanmadi: true       # bool (kural 6: yukarıdaki asgariler Binance'ten doğrulanmadı; doğrulanınca false)
 canli_coin_tavan_oran: 0.30             # oran (aynı coinde tüm slotların brüt nosyoneli <= kasa x bu)
 canli_gunluk_kayip_oran: 0.05           # oran (gün başı özsermayeden kayıp >= bu: o gün yeni açılış yok)
