@@ -41,3 +41,20 @@
 {"zaman_ms":1795220226028,"olay":"emir_yok","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795220225711,"gorme_ms":1795220226026,"yas_ms":317}
 {"zaman_ms":1795220226029,"olay":"emir_yok","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795220225711,"gorme_ms":1795220226026,"yas_ms":318}
 {"zaman_ms":1795220371046,"olay":"karsi_olgu_kapandi","coin":"ETH","neden":"ters_netlesme","yon":"A","hayali_usd":1.44,"pnl_usd":-0.001,"sure_sa":0.04,"kapanis":"trader_kapadi"}
+{"zaman_ms":1795220470591,"olay":"tur","ozsermaye_usd":9828.0609}
+{"zaman_ms":1795220587182,"olay":"kacan_telafi_atlandi","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","coin":"HYPE","neden":"kayma_lehte_fazla","kayma":-0.012526,"trader_giris":61.2386,"mark":60.4715}
+{"zaman_ms":1795220593871,"olay":"kacan_telafi_atlandi","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"ZEC","neden":"filtre_atlamisti:duygu_ters"}
+{"zaman_ms":1795221092882,"olay":"emir_yok","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"ZEC","eylem":"ac","karar":"atlandi","neden":"duygu_ters","trader_dolum_ms":1795221092599,"gorme_ms":1795221092881,"yas_ms":283}
+{"zaman_ms":1795221092883,"olay":"emir_yok","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"ZEC","eylem":"ac","karar":"atlandi","neden":"duygu_ters","trader_dolum_ms":1795221092599,"gorme_ms":1795221092881,"yas_ms":284}
+{"zaman_ms":1795221092884,"olay":"emir_yok","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"ZEC","eylem":"ac","karar":"atlandi","neden":"duygu_ters","trader_dolum_ms":1795221092599,"gorme_ms":1795221092881,"yas_ms":285}
+{"zaman_ms":1795221097579,"olay":"telegram_onay_istendi","komut":"/durdur","kim":"8311396150","sure_sn":120}
+{"zaman_ms":1795221097579,"olay":"telegram","metin":"🔐 /durdur onayı (sanal · deneme parası)\n━━━━━━━━━━━━━━\nNe olacak: YENİ girişler ve artırmalar durur; açık pozisyonlar trader'ı izlemeye ve azaltmaya/kapatmaya devam eder.\nOnaylamak için 120 sn içinde şu 4 haneli kodu yanıt olarak yazın: 1364\nVazgeçmek için hiçbir şey yazmayın; yanlış kod ya da süre ","acik":true}
+{"zaman_ms":1795221097579,"olay":"tg_mesaj","tur":null,"anahtar":null,"seviye":"WARN","sessiz":true,"metin":"🔐 /durdur onayı (sanal · deneme parası)\n━━━━━━━━━━━━━━\nNe olacak: YENİ girişler ve artırmalar durur; açık pozisyonlar trader'ı izlemeye ve azaltmaya/kapatmaya devam eder.\nOnaylamak için 120 sn içinde şu 4 haneli kodu yanıt olarak yazın: 1364\nVazgeçmek için hiçbir şey yazmayın; yanlış kod ya da süre dolarsa işlem yapılmaz.","gonderildi":true,"bastirildi":false}
+{"zaman_ms":1795221130686,"olay":"telegram_onay_sonuc","komut":"/durdur","sonuc":"onaylandi","kim":"8311396150","istenen_kim":"8311396150"}
+{"zaman_ms":1795221130688,"olay":"komut_yurutuldu","komut":"/durdur"}
+{"zaman_ms":1795221130688,"olay":"elle_dur"}
+{"zaman_ms":1795221130688,"olay":"telegram","metin":"⏸️ Yeni işlemler duraklatıldı (sanal · deneme parası)\nYeni pozisyon açılmaz, artırılmaz; açık pozisyonlar izlenmeye devam eder.\nAçmak istediğinde /devam yaz (kod ister).","acik":true}
+{"zaman_ms":1795221130689,"olay":"tg_mesaj","tur":null,"anahtar":null,"seviye":"WARN","sessiz":true,"metin":"⏸️ Yeni işlemler duraklatıldı (sanal · deneme parası)\nYeni pozisyon açılmaz, artırılmaz; açık pozisyonlar izlenmeye devam eder.\nAçmak istediğinde /devam yaz (kod ister).","gonderildi":true,"bastirildi":false}
+{"zaman_ms":1795221214499,"olay":"kacan_telafi_atlandi","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","coin":"HYPE","neden":"filtre_atlamisti:ters_netlesme"}
+{"zaman_ms":1795221220137,"olay":"kacan_telafi_atlandi","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ADA","neden":"ara_dolum_siniri"}
+{"zaman_ms":1795221326478,"olay":"tur","ozsermaye_usd":9832.4049}
