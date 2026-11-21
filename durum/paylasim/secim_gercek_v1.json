@@ -1,7 +1,7 @@
 {
  "sema": "ct.secim_gercek.v1",
  "proje": "CT",
- "uretim": "2026-11-20T23:04:33Z",
+ "uretim": "2026-11-21T00:04:45Z",
  "degisken": "form_sirasi_gercek_pnl_spearman",
  "pencere_gun": 14,
  "gunler": [
@@ -103,6 +103,6 @@
   "Yalnız bilgi: seçim/eşik/limit değiştirmez.",
   "Değişken: gerçek kopya PnL'i yalnız sahadaki traderlar için var; 'rastgele 11' karşılaştırması yapılamaz (yedek için varsayımsal PnL yok). Bunun yerine form puanı sırası ile gerçek net PnL sırasının Spearman ilişkisi.",
   "rho > 0: yüksek form puanlı trader o gün daha çok kazandırmış. p tek yönlü permütasyon; küçük örneklem, günler bağımsız değil.",
-  "Kayıt penceresi: 5 gün; form geçmişi: 2 kadro günü; net = gerçekleşen K/Z - ücret."
+  "Kayıt penceresi: 5 gün; form geçmişi: 3 kadro günü; net = gerçekleşen K/Z - ücret."
  ]
 }

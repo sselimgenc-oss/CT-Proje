@@ -8322,3 +8322,7 @@
 {"zaman_ms":1795217480602,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0x9eb42f017e793512e4734f8785de605c4cb3a24e","hesap_usd":300675.57188454,"anlik_kaldirac":4.942695322836813,"esik":5.0,"durum":"bitti"}
 {"zaman_ms":1795217841345,"olay":"tur","ozsermaye_usd":9852.6915}
 {"zaman_ms":1795218091859,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"VVV","neden":"pozisyon_eski"}
+{"zaman_ms":1795218714783,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"VVV","neden":"kayma_fazla","kayma":0.010074,"trader_giris":21.1147,"mark":20.902}
+{"zaman_ms":1795218714784,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"xyz:NATGAS","neden":"pozisyon_eski"}
+{"zaman_ms":1795218725396,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0x9eb42f017e793512e4734f8785de605c4cb3a24e","hesap_usd":287465.87584454,"anlik_kaldirac":5.117928839841265,"esik":5.0,"durum":"basladi"}
+{"zaman_ms":1795218758324,"olay":"tur","ozsermaye_usd":9830.8217}
