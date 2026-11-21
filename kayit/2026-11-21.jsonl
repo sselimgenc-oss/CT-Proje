@@ -574,3 +574,9 @@
 {"zaman_ms":1795244919432,"olay":"telegram","metin":"🧾 Son 1 saat: 4 emir (3 azaltma, 1 kapanış) · sanal · net +30,77 $\n✅ Kapanan: SOL +30,77 $\n↕️ LINK azaltıldı · AAVE azaltıldı · AAVE azaltıldı\n💰 Kasa: 9.876,43 $ · bugün 🟢 +42,75 $ (+%0,4)","acik":true}
 {"zaman_ms":1795244919432,"olay":"tg_mesaj","tur":"islem_ozeti","anahtar":null,"seviye":"INFO","sessiz":false,"metin":"🧾 Son 1 saat: 4 emir (3 azaltma, 1 kapanış) · sanal · net +30,77 $\n✅ Kapanan: SOL +30,77 $\n↕️ LINK azaltıldı · AAVE azaltıldı · AAVE azaltıldı\n💰 Kasa: 9.876,43 $ · bugün 🟢 +42,75 $ (+%0,4)","gonderildi":true,"bastirildi":false,"emir":4,"kapanan":1,"net_kz":30.771764}
 {"zaman_ms":1795245017063,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"rejim_ters","trader_dolum_ms":1795245016579,"gorme_ms":1795245017061,"yas_ms":484}
+{"zaman_ms":1795245531878,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"VVV","neden":"kayma_lehte_fazla","kayma":-0.028573,"trader_giris":21.1147,"mark":21.718}
+{"zaman_ms":1795245543036,"olay":"tur","ozsermaye_usd":9866.6194}
+{"zaman_ms":1795245624258,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"ara_dolum_siniri","trader_dolum_ms":1795245623949,"gorme_ms":1795245624257,"yas_ms":309}
+{"zaman_ms":1795245913308,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"BTC","eylem":"ac","karar":"atlandi","neden":"rejim_ters","trader_dolum_ms":1795245912984,"gorme_ms":1795245913307,"yas_ms":324}
+{"zaman_ms":1795245937227,"olay":"karsi_olgu_kapandi","coin":"BTC","neden":"ters_netlesme","yon":"A","hayali_usd":338.92,"pnl_usd":18.1456,"sure_sa":16.59,"kapanis":"trader_kapadi"}
+{"zaman_ms":1795246002639,"olay":"kopya_drift","coin":"TRX","biz_usd":402.51,"ideal_usd":540.69,"drift":0.256,"sure_dk":30}
