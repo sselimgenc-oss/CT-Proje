@@ -1,5 +1,5 @@
 """Pano ve bekleme vardiyası (kullanıcı onayı 14.11, Fable denetimi): bekleme vardiyasında ozet.json + dönem serisi, dönem boyu slot/emir/doluluk kayıtları
-(`durum/donem_seri.json`), kadro kasası uyarısı yalnız güncel kadroda; pano bölümleri (dönem eğrisi, trader katkısı, İlk 11 ↔ Yedek, giriş/çıkış, doluluk, huni, atlanan oranı, isabet)."""
+(`durum/donem_seri.json`), kadro kasası uyarısı yalnız güncel kadroda; pano bölümleri (dönem eğrisi, trader katkısı, giriş/çıkış, doluluk, huni, atlanan oranı, isabet)."""
 from __future__ import annotations
 
 import asyncio
@@ -124,22 +124,21 @@ def test_pano_donem_ozetleri_altin_ornek():
 
 def test_pano_html_donem_sekmesi_ve_kaldirilanlar():
     ozet = {"kip": "sanal", "kasa_usd": 10_000.0, "ozsermaye_usd": 10_250.0, "getiri": 0.025, "acik": [], "saha": 3, "saha_n": 5, "donem": DONEM}
-    isabet = [{"tarih": "2027-01-08", "pencere_gun": 7.0, "pencere_tam": True, "ic": 0.12, "fark_ilk11_havuz": 0.01, "fark_ilk11_elenen": 0.03,
-               "gruplar": {"ilk11": {"n": 11}, "havuz_geri": {"n": 5}, "elenen": {"n": 30}}}]
-    h = pano.html_olustur(ozet, {}, {}, [], [], T0 + GUN, KADRO, {"uyeler": {}, "inen": {}}, donem_seri=DS, isabetler=isabet)
+    h = pano.html_olustur(ozet, {}, {}, [], [], T0 + GUN, KADRO, {"uyeler": {}, "inen": {}}, donem_seri=DS)
+    assert "Seçim isabeti" not in h and "ölçüm · ortalama" not in h
     assert "İçgörüler" not in h and "Bu hafta" not in h and "Hype yakalama" not in h                           # madde 8
     assert "SAHADA (0/5)" in h and "Takip edilen traderlar (0/5)" in h and "/11" not in h                               # madde 7: saha_n
     assert 'class="sirit s6"' in h                                                                             # 6 kutulu üst şerit
     assert "Dönem eğrisi" in h and "<polyline" in h and "BTC al-tut" in h and "%4/ay hedef" in h               # 9a
     assert "Trader katkısı" in h and "sahada" in h and "+200,00 $" in h                                        # 9b
-    assert "İlk 11</b> · 2 trader" in h and "Yedek</b> · 1 trader" in h                                           # 9c
+    assert "İlk 11 ↔ Yedek" not in h                                                                              # 9c: kaldırıldı
     assert "çıkış ·" in h and "(sonuçla)" in h                                                                # 9d
     assert "%75" in h and "%40" in h                                                                           # 9e
     assert "Evren · <b>2457</b>" in h and "≥10 işlem · <b>140</b>" in h and "az işlem" in h and "islem_az" not in h                    # 9f
     assert "atlanan sinyal <b>%25" in h and "yuvarlanan emir <b>%10" in h                                      # 9g
-    assert "+0,12" in h and "İLK11−HAVUZ" in h                                                                 # 9h
+    assert "İLK11−HAVUZ" not in h and "Seçim isabeti" not in h                                                  # 9h: kaldırıldı
     bos = pano.html_olustur({**ozet, "donem": None}, {}, {}, [], [], T0, None, None)
-    assert "dönem eğrisi ilk günün sonunda çizilir" in bos and "kadroda huni özeti yok" in bos and "henüz ölçüm yok" in bos and "2026-11-12" not in bos
+    assert "dönem eğrisi ilk günün sonunda çizilir" in bos and "kadroda huni özeti yok" in bos and "henüz ölçüm yok" not in bos
 
 
 def test_pano_bu_hafta_yalniz_farkliysa_ve_serit_sutunu():
@@ -152,10 +151,10 @@ def test_pano_bu_hafta_yalniz_farkliysa_ve_serit_sutunu():
 
 
 def test_pano_md_donem_bolumu():
-    md, _ = pano.pano_olustur({"kip": "sanal", "kasa_usd": 10_000.0, "ozsermaye_usd": 10_250.0, "donem": DONEM}, {}, {}, [], [], [], T0, DS, KADRO)
-    assert "## Dönem (kalıcı seri)" in md and "İlk 11 2 slot +150,00 $" in md and "Yedek 1 slot +100,00 $" in md
+    md, _ = pano.pano_olustur({"kip": "sanal", "kasa_usd": 10_000.0, "ozsermaye_usd": 10_250.0, "donem": DONEM}, {}, {}, [], [], T0, DS, KADRO)
+    assert "## Dönem (kalıcı seri)" in md and "- katkı:" not in md
     assert "saha doluluğu %75" in md and "atlanan sinyal %25" in md and "evren 2457 → aday 900 → ≥10 işlem 140 → geçen 12" in md
-    assert "ilk ölçüm ≈ 2027-01-22" in md
+    assert "ilk ölçüm" not in md and "Seçim isabeti" not in md
 
 
 # ================================================================================================ M-04 + M-05 (kullanıcı kararı 14.11; yalnız rapor)
@@ -179,14 +178,12 @@ def test_m04_maruziyet_ozeti_altin_ornek_ve_motor_birikimi(tmp_path):
     assert m.donem_seri["kilitler"] == [{"ms": saat(), "tur": "gunluk_kayip"}]
 
 
-def test_m05_pano_karar_kutusu_isabet_ozeti_ve_kilit_isareti():
+def test_m05_pano_karar_kutusu_ve_kilit_isareti():
     ozet = {"kip": "sanal", "kasa_usd": 10_000.0, "ozsermaye_usd": 10_250.0, "getiri": 0.025, "acik": [], "donem": DONEM, "aylik_esdeger": 0.06, "aylik_hedef": 0.04,
             "btc_al_tut_getiri": -0.01, "hedef_gecer": True}
-    isabet = [{"tarih": "2027-01-08", "ic": 0.2, "fark_ilk11_havuz": 0.01, "fark_ilk11_elenen": -0.01}, {"tarih": "2027-01-09", "ic": 0.0, "fark_ilk11_havuz": 0.03, "fark_ilk11_elenen": 0.03}]
     ds = {**DS, "kilitler": [{"ms": DONEM_MS + 20 * SAAT, "tur": "gunluk_kayip"}], "doluluk": {**DS["doluluk"], "brut_ms": 2500.0 * 10 * SAAT, "net_ms": 500.0 * 10 * SAAT}}
-    h = pano.html_olustur(ozet, {}, {}, [], [], T0 + GUN, KADRO, None, donem_seri=ds, isabetler=isabet)
+    h = pano.html_olustur(ozet, {}, {}, [], [], T0 + GUN, KADRO, None, donem_seri=ds)
     assert "Başarı ölçütü" in h and "GEÇİYOR" in h
-    assert "2 ölçüm · ortalama sıralama uyumu <b>+0,10</b>" in h and "(2/2 pozitif)" in h and "(1/2 pozitif)" in h        # (0,2 + 0) / 2; havuz farkı 2/2, elenen 1/2 pozitif
     assert 'stroke="#ff5d5d" stroke-width="1"' in h and "Risk freni olayı: 1" in h and "gölge" not in h
     assert "kullanılan sermaye getirisi <b>+%10,00" in h                                                    # 250 / 2.500
 

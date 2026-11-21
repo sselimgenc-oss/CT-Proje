@@ -174,11 +174,11 @@ def test_btc_al_tut_saatlik_mum_ve_mid_yedegi(tmp_path):
 
 def test_btc_al_tut_pano_ozet_md_ve_html(tmp_path):
     ozet = {"kip": "sanal", "kasa_usd": 10000.0, "ozsermaye_usd": 10500.0, "getiri": 0.05, "btc_al_tut_getiri": -0.032, "btc_fark": 0.082, "acik": []}
-    md, _ = pano.pano_olustur(ozet, {}, {}, [], [], [], T0)
+    md, _ = pano.pano_olustur(ozet, {}, {}, [], [], T0)
     assert "BTC al-tut: −%3,2" in md and "fark: +%8,2" in md
     html = pano.html_olustur(ozet, {}, {}, [], [], T0)
     assert "BTC al-tut −%3,20" in html and "fark +%8,20" in html
-    bos, _ = pano.pano_olustur({**ozet, "btc_al_tut_getiri": None, "btc_fark": None}, {}, {}, [], [], [], T0)
+    bos, _ = pano.pano_olustur({**ozet, "btc_al_tut_getiri": None, "btc_fark": None}, {}, {}, [], [], T0)
     assert "BTC al-tut: — · fark: —" in bos
 
 
@@ -258,7 +258,7 @@ def test_f06_donem_seri_kalici_gun_sonu_ve_hedef(tmp_path):
 def test_f06_pano_md_ve_html_aylik_ve_hedef():
     ozet = {"kip": "sanal", "kasa_usd": 10000.0, "ozsermaye_usd": 10300.0, "getiri": 0.03, "btc_al_tut_getiri": 0.01, "btc_fark": 0.02,
             "aylik_esdeger": 0.0609, "aylik_hedef": 0.04, "hedef_gecer": True, "acik": []}
-    md, _ = pano.pano_olustur(ozet, {}, {}, [], [], [], T0)
+    md, _ = pano.pano_olustur(ozet, {}, {}, [], [], T0)
     assert "aylık eşdeğer: +%6,1" in md and "hedef %4/ay: geçiyor" in md and "BTC al-tut: +%1,0" in md
     html = pano.html_olustur(ozet, {}, {}, [], [], T0)
     assert "aylık eşdeğer ≥ %4" in html and "GEÇİYOR" in html
@@ -304,7 +304,7 @@ def test_saha_uygun_aday_yoksa_bos_kalir_kayit_ve_pano(tmp_path):
     assert len(eksik) == 1 and eksik[0]["saha"] == 10 and eksik[0]["n"] == 11
     o = m.ozet()
     assert pano.saha_metni(o) == "saha 10/11, uygun aday yok · bugün R1'i geçen trader: 42"
-    md, _ = pano.pano_olustur(o, {}, {}, [], [], [], T0)
+    md, _ = pano.pano_olustur(o, {}, {}, [], [], T0)
     assert "saha 10/11, uygun aday yok" in md
     html = pano.html_olustur(o, {}, {}, [], [], T0)
     assert "Saha doluluğu" in html and "10/11" in html and "uygun aday yok" in html and "bugün radar elemesini geçen trader: 42" in html

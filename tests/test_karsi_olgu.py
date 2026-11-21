@@ -86,7 +86,7 @@ def test_gunluk_ozet_ve_ozet_md_satiri(tmp_path):
     assert "Alınmayan" not in tg.msg_gunluk("sanal", 1000.0, 1000.0, 1000.0, 0, 1, 11, [], None, None)
     simdi = 1_800_000_000_000
     ev = [{"olay": "karsi_olgu_kapandi", "zaman_ms": simdi - 1000, "neden": "liste_disi", "pnl_usd": 3.5}, {"olay": "karsi_olgu_kapandi", "zaman_ms": simdi - 2000, "neden": "min_alti", "pnl_usd": -1.0}]
-    md, _ = pano.pano_olustur({"kasa_usd": 1000.0, "ozsermaye_usd": 1000.0}, {}, {}, ev, [], [], simdi)
+    md, _ = pano.pano_olustur({"kasa_usd": 1000.0, "ozsermaye_usd": 1000.0}, {}, {}, ev, [], simdi)
     assert "Alınmayan sinyaller" in md and "2 kapandı" in md and "liste_disi 1" in md
     m, saat, tgp = hazir(tmp_path)
     m.karsi_olgu_gun = {"liste_disi": [1, 2.0]}
