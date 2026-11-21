@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-21 13:46 UTC
+# Canlı rapor — 2026-11-21 14:01 UTC
 
 **Kip** sanal · vardiya `sunucu` · saha 0/5 (inen 0) · **bekleme vardiyası** (saha boş / kadro bekleniyor)
 
@@ -10,7 +10,7 @@
 |---|---|---|---|---|---|
 | 1.000,00 $ | 1.000,00 $ | +%0,00 | — (geçmiş < 7 gün) | +%0,00 | +%0,00 |
 
-Başarı kıyası (aynı dönemde): toplam +%0,00 · BTC al-tut: +%4,0 · fark: −%4,0 · aylık eşdeğer: — · hedef %4/ay: —
+Başarı kıyası (aynı dönemde): toplam +%0,00 · BTC al-tut: +%4,1 · fark: −%4,1 · aylık eşdeğer: — · hedef %4/ay: —
 
 Komisyon (dönem): ödenen ücret: 0,00 $ · brüt K/Z ≤ 0: ücret zararı büyütüyor _(ücret işlem hacmine bağlıdır, emir sayısına değil)_
 
@@ -35,7 +35,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 46 dk · WS kopma — / yeniden bağlanma — · boşluk yok · REST 429 0
+- süre 61 dk · WS kopma — / yeniden bağlanma — · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
@@ -56,7 +56,7 @@ kapanan işlem kaydı yok
 
 ## Dönem (kalıcı seri)
 
-- motor 1.000,00 $ · BTC al-tut 1.039,70 $ · %4/ay hedef çizgisi 1.000,90 $
+- motor 1.000,00 $ · BTC al-tut 1.041,37 $ · %4/ay hedef çizgisi 1.000,90 $
 - katkı: — (henüz slot yok)
 - saha doluluğu — · nakitte kalan — (0,0 gün ölçüldü)
 - kullanılan sermaye getirisi — · ort. brüt maruziyet — · ort. net — · risk kilidi olayı 0 (gölge eğri yok)
