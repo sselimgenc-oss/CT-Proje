@@ -1,6 +1,6 @@
 """Binance KÂĞIT süreci (K-81, Aşama A; docs/binance-plan.md §7): HL sanal motoruyla AYNI sinyalleri Binance fiyatlarıyla ayrı bir sanal kasada yürüten ikinci süreç.
 
-Mimari: `python -m copytrade.canli.motor --kip sanal --borsa binance_kagit --durum-dizin durum/binance_kagit --sanal-kasa-usd 10000 ...` = AYNI motor kodu, ayrı durum/kayıt dizini, ayrı sanal kasa;
+Mimari: `python -m copytrade.canli.motor --kip sanal --borsa binance_kagit --durum-dizin durum/binance_kagit --sanal-kasa-usd 1000 ...` = AYNI motor kodu, ayrı durum/kayıt dizini, ayrı sanal kasa;
 yalnız (1) `post` = `piyasa_post` (fiyat/fonlama Binance, trader/kadro okumaları HL) ve (2) yürütücü = `BinanceKagitYurutucu`. HL sanal motoru (sg-sanal) AYNEN sürer; bu süreç ayrı systemd biriminde
 olduğundan Binance erişimi (451) ya da çökme HL motorunu etkilemez. Kâğıtta her özellik açık ve işleme etkili: bu süreç gerçekten açar/kapar, kendi stopu/tasfiyesi/K-Z'si vardır (gölge/yalnız-kayıt değil).
 Telegram: BU süreç ayrı işlem mesajı göndermez (kanal kapalı + komut yok); tek istisna erişim kesilince TEK ⚠️. HL motorunun saatlik özeti `ozet_satiri` ile tek satır ekler.

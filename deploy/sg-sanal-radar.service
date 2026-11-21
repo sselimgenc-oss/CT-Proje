@@ -1,4 +1,4 @@
-# Günlük Form Radarı (tarama + kadro + isabet + yayım; K-78): Actions yerine sunucuda. Betik: deploy/sanal_radar.sh (ayrı worktree, flock, zaman aşımı; başarısızlıkta tek ⚠️ Telegram, başarıda mesaj yok). Zamanlayıcı: sg-sanal-radar.timer.
+# Günlük radar (30 günlük sade seçim + kadro + yayım; K-78, K-85): Actions yerine sunucuda. Betik: deploy/sanal_radar.sh (ayrı worktree, flock, zaman aşımı; başarısızlıkta tek ⚠️ Telegram, başarıda mesaj yok). Zamanlayıcı: sg-sanal-radar.timer.
 # Sır YOK: tarama halka açık Hyperliquid verisi. Git kimliği = sunucudaki SSH deploy anahtarı (repoda sır yok). Telegram anahtarı isteğe bağlı (/etc/sg-sanal-telegram.env; yoksa alarm atlanır).
 # Kaynak: motor (300M) ve pano/yayım ile çakışmasın diye düşük öncelik + bellek tavanı. OOMPolicy=continue: bellek tavanı aşılırsa betik ölmez, adım başarısız görünür ve ⚠️ alarmı gider.
 [Unit]
@@ -20,7 +20,7 @@ Environment=RADAR_KILIT=/var/lib/sg-sanal/radar.lock
 Environment=RADAR_VENV=/var/lib/sg-sanal/venv-radar
 Environment="GIT_SSH_COMMAND=ssh -i /var/lib/sg-sanal/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/var/lib/sg-sanal/.ssh/known_hosts"
 ExecStart=/bin/bash /var/lib/sg-sanal/depo/deploy/sanal_radar.sh
-TimeoutStartSec=4h
+TimeoutStartSec=6h
 OOMPolicy=continue
 # Kaynak sınırı (2 GB sunucu; motor 300M, pano 400M, yayım 300M): düşük öncelik
 MemoryHigh=550M

@@ -372,58 +372,14 @@ def test_kasa_siniri_tam_sinir_ve_tolerans():
     assert r.kasa_siniri_asildi(1500.0) is False and r.kasa_siniri_asildi(1500.01) is True    # varsayılan: etkin sert sınır
 
 
-def test_acilis_izni_dur_bayrak_patlama_ve_serbest():
+def test_acilis_izni_dur_bayrak_ve_serbest():
     r = _risk()
     assert r.acilis_izni("a", "BTC", False, T0) == (True, "")
     r.bayrak("mutabakat", True)
     assert r.acilis_izni("a", "BTC", False, T0) == (False, "mutabakat")
     r.bayrak("mutabakat", False)
-    r.fren_bitis["a"] = T0 + 5
-    assert r.acilis_izni("a", "BTC", False, T0) == (False, "patlama_freni")
     r.dur = True
     assert r.acilis_izni("a", "BTC", False, T0) == (False, "dur")
-
-
-def test_patlama_freni_sureleri_tam_sinir():
-    r = _risk()
-    r.fren_bitis["a"] = 1000
-    assert r.patlama_freni("a", "X", False, 999) is True
-    assert r.patlama_freni("a", "X", False, 1000) is False                          # bitiş anı dahil değil
-    assert _risk().patlama_freni("a", "X", False, 0) is False                       # kayıt yok: varsayılan 0, 0 < 0 değil
-
-
-def test_patlama_freni_esik_8_farkli_coin_ve_kayit():
-    r = _risk()
-    for i in range(7):
-        r.yeni_coin_kaydet("a", f"C{i}", T0 + i)
-    r.yeni_coin_kaydet("a", "C0", T0 + 50)                                          # aynı coin tekrar: sayılmaz
-    assert len(r.yeni_coin["a"]) == 7
-    assert r.patlama_freni("a", "C3", False, T0 + 100) is False                     # yeni coin değil: sayılmaz
-    assert r.patlama_freni("a", "YENI", True, T0 + 100) is True                     # 7 + yeni = 8 ≥ 8
-    assert r.fren_bitis["a"] == T0 + 100 + 30 * rk.DAKIKA and "a" not in r.yeni_coin
-    assert r.patlama_freni("a", "Z", False, T0 + 100 + 30 * rk.DAKIKA - 1) is True
-    assert r.patlama_freni("a", "Z", False, T0 + 100 + 30 * rk.DAKIKA) is False
-
-
-def test_patlama_freni_7_farkli_coin_yetmez_ve_yeni_coin_zaten_kayitli_sayilir_bir_kez():
-    r = _risk()
-    for i in range(6):
-        r.yeni_coin_kaydet("a", f"C{i}", T0)
-    assert r.patlama_freni("a", "YENI", True, T0 + 1) is False                      # 6 + 1 = 7 < 8
-    assert r.patlama_freni("a", "C2", True, T0 + 1) is False                        # kayıtlı coin: yine 6 farklı
-    assert "a" not in r.fren_bitis
-
-
-def test_patlama_penceresi_tam_sinir():
-    for sapma, beklenen in ((0, True), (-1, True), (1, False)):                     # 10 dk: tam sınırda kayıt hâlâ pencerede
-        r = _risk()
-        for i in range(7):
-            r.yeni_coin_kaydet("a", f"C{i}", T0)
-        assert r.patlama_freni("a", "YENI", True, T0 + 10 * rk.DAKIKA + sapma) is beklenen
-    r = _risk()
-    r.yeni_coin_kaydet("a", "C0", T0)
-    assert r._pencere_coinleri("b", T0) == set() and r._pencere_coinleri("a", T0 + 1) == {"C0"}
-    assert r._pencere_coinleri("a", T0 + 10 * rk.DAKIKA + 1) == set()
 
 
 def test_coin_tavani_tolerans_ve_negatif_izin_kucuk_min():
@@ -664,9 +620,9 @@ def _h(**kw):
 
 def test_poz_ve_hesap_varsayilanlari():
     p = Poz(1.0, 2.0, 3)
-    assert (p.kaldirac, p.giris_ctx, p.zirve_kar) == (3.0, None, 0.0) and isinstance(p.zirve_kar, float)
+    assert p.kaldirac == 3.0 and not hasattr(p, "zirve_kar") and not hasattr(p, "boyut_carpan")
     h = _h()
-    assert h.dinleyici is None and h.son_niyet_cloid is None and h.kapanmis_net == 0.0 and h.tasfiyeler == []
+    assert h.son_niyet_cloid is None and h.kapanmis_net == 0.0 and h.tasfiyeler == []
     assert hs.EPS == 1e-12
 
 
@@ -743,23 +699,18 @@ def test_uygula_gecersiz_dolum():
     assert h.poz["a"]["BTC"].giris == 1.0 and h.poz["a"]["SHIB"].giris == 0.5
 
 
-def test_uygula_acilis_artirma_azaltma_kapanis_ve_dinleyici():
+def test_uygula_acilis_artirma_azaltma_kapanis():
     h = _h()
-    olaylar = []
-    h.dinleyici = olaylar.append
     assert h.uygula("a", "BTC", "B", 1.0, 100.0, 0.5, 1000) == 0.0
     p = h.poz["a"]["BTC"]
-    assert (p.sz, p.giris, p.acilis_ms, p.kaldirac, p.zirve_kar) == (1.0, 100.0, 1000, 3.0, 0.0)
-    assert olaylar[-1] == {"adres": "a", "coin": "BTC", "yon": "B", "sz": 1.0, "px": 100.0, "pnl": 0.0, "ucret": 0.5, "ms": 1000, "yeni": True, "kapandi": False, "poz_sz": 1.0, "acilis_ms": 1000, "kaldirac": 3.0}
-    p.zirve_kar = 0.3
+    assert (p.sz, p.giris, p.acilis_ms, p.kaldirac) == (1.0, 100.0, 1000, 3.0)
     p.kaldirac = 5.0
-    h.uygula("a", "BTC", "B", 1.0, 200.0, 0.0, 2000)                                  # artırma: ağırlıklı ortalama, zirve sıfırlanır
-    assert (p.sz, p.giris, p.zirve_kar, p.acilis_ms) == (2.0, 150.0, 0.0, 1000) and olaylar[-1]["yeni"] is False and olaylar[-1]["acilis_ms"] == 1000 and olaylar[-1]["kaldirac"] == 5.0
+    h.uygula("a", "BTC", "B", 1.0, 200.0, 0.0, 2000)                                  # artırma: ağırlıklı ortalama
+    assert (p.sz, p.giris, p.acilis_ms) == (2.0, 150.0, 1000)
     pnl = h.uygula("a", "BTC", "A", 0.5, 170.0, 0.1, 3000)                            # azaltma: long kâr
-    assert pnl == pytest.approx(0.5 * 20.0) and p.sz == 1.5 and olaylar[-1]["kapandi"] is False and olaylar[-1]["poz_sz"] == 1.5 and olaylar[-1]["pnl"] == pnl
+    assert pnl == pytest.approx(0.5 * 20.0) and p.sz == 1.5
     pnl2 = h.uygula("a", "BTC", "A", 1.5, 140.0, 0.0, 4000)                           # kapanış: kayıp
     assert pnl2 == pytest.approx(1.5 * -10.0) and "BTC" not in h.poz["a"]
-    assert olaylar[-1]["kapandi"] is True and olaylar[-1]["poz_sz"] == 0.0 and olaylar[-1]["acilis_ms"] == 1000 and olaylar[-1]["kaldirac"] == 5.0    # silinen pozisyondan
     assert h.realize["a"] == pytest.approx(pnl + pnl2) and h.ucret["a"] == pytest.approx(0.6)
 
 
@@ -771,19 +722,6 @@ def test_uygula_short_pnl_ve_kayitsiz_adres_varsayilanlari():
     h2 = _h()
     h2.uygula("a", "BTC", "A", 1.0, 100.0, 0.0, 1)
     assert h2.uygula("a", "BTC", "B", 1.0, 110.0, 0.0, 2) == pytest.approx(-10.0)     # short zarar
-
-
-def test_uygula_dinleyici_hatasi_hesabi_bozmaz_ve_cagrilir():
-    h = _h()
-    cagri = []
-
-    def patla(e):
-        cagri.append(e)
-        raise RuntimeError("x")
-    h.dinleyici = patla
-    h.uygula("a", "BTC", "B", 1.0, 100.0, 0.0, 1)
-    assert len(cagri) == 1 and h.poz["a"]["BTC"].sz == 1.0
-    _h().uygula("a", "BTC", "B", 1.0, 100.0, 0.0, 1)                                  # dinleyici yok: sorunsuz
 
 
 def test_uygula_eps_ve_tolerans_sinirlari():
@@ -898,10 +836,3 @@ def test_stop_durum_bos_cloid_sorulmaz_her_zaman_oid_donen_yurutucu():
     assert bs._stop_durum(Hep(), "x") == 7 and Hep.cagri == 1
 
 
-def test_dinleyici_yeni_bayragi_tam_eps_pozisyonda_false():
-    h = _h()
-    olaylar = []
-    h.dinleyici = olaylar.append
-    h.poz = {"a": {"BTC": Poz(1e-12, 100.0, 5)}}
-    h.uygula("a", "BTC", "B", 1.0, 100.0, 0.0, 7)
-    assert olaylar[-1]["yeni"] is False

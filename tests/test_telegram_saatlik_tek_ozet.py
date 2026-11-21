@@ -60,11 +60,11 @@ def test_ozet_net_kz_pano_tanimiyla_ayni(tmp_path):
 
 def test_stopla_kapanan_ayri_vurgulu_satir(tmp_path):
     emirler = [{"adres": "0xf43a34aaaaaaaa", "coin": c, "yon": "A", "usd": 20.0, "durum": "dolu", "eylem": "kapat", "kapandi": True, "kz": kz, "neden_kod": n}
-               for c, kz, n in (("BTC", 1.5, "tam_kapanis"), ("ETH", -4.2, "felaket_stop"), ("SOL", -1.1, "iz_suren_koruma"), ("ADA", -9.0, "tasfiye"))]
+               for c, kz, n in (("BTC", 1.5, "tam_kapanis"), ("ETH", -4.2, "felaket_stop"), ("SOL", -1.1, "tasfiye_koruma_stop"), ("ADA", -9.0, "tasfiye"))]
     m = tg.msg_sanal_saatlik(0, SAAT, 60, emirler, {})
     s = m.splitlines()
     assert any(x.startswith("✅ Kapanan: BTC +1,50 $") for x in s)
-    assert any(x.startswith("🛑 Stopla kapanan: ETH −4,20 $ (stop) · SOL −1,10 $ (iz süren koruma) · ADA −9,00 $ (tasfiye)") for x in s)
+    assert any(x.startswith("🛑 Stopla kapanan: ETH −4,20 $ (stop) · SOL −1,10 $ (tasfiye koruması stopu) · ADA −9,00 $ (tasfiye)") for x in s)
     assert f"net {tg.tr_isaretli(1.5 - 4.2 - 1.1 - 9.0)} $" in s[0]
 
 

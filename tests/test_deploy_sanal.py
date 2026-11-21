@@ -30,7 +30,7 @@ def git(cwd, *a):
 # ------------------------------------------------------------------------------------------------ birim dosyaları
 def test_sanal_ana_birim_kip_kasa_ve_anahtarsiz():
     s = (DEPLOY / "sg-sanal.service").read_text(encoding="utf-8")
-    assert "--kip sanal --sanal-kasa-usd 10000" in s and "--sure-sn" not in s                      # sürekli çalışır, vardiya süresi yok
+    assert "--kip sanal --sanal-kasa-usd 1000" in s and "--sure-sn" not in s                      # sürekli çalışır, vardiya süresi yok
     assert "gercek" not in re.sub(r"(?m)^#.*$", "", s).lower()                                       # birim gerçek kipe işaret etmez
     assert "/etc/sg-canli.env" not in s and "HL_API_CUZDAN_ANAHTARI" not in s and "CANLI_KIP" not in re.sub(r"(?m)^#.*$", "", s)   # HL anahtarı/gerçek kip yüklenmez
     assert "EnvironmentFile=-/etc/sg-sanal-telegram.env" in s                                         # Telegram isteğe bağlı ('-')
@@ -590,7 +590,7 @@ def test_radar_betigi_adimlari_radar_yml_ile_ayni_sirada():
     wf = yaml.safe_load((ROOT / ".github/workflows/radar.yml").read_text(encoding="utf-8"))
     yml = [m for a in wf["jobs"]["radar"]["steps"] for m in re.findall(r"-m (copytrade\.\w+)", a.get("run", ""))]
     sh = re.findall(r"-m (copytrade\.\w+)", RADAR_BETIK.read_text(encoding="utf-8"))
-    assert yml == sh and len(sh) == 6                                                                 # tarama, kadro, isabet, pbo, rastgele, holdout (formül/seçim kodu aynı)
+    assert yml == sh and len(sh) == 2                                                                 # K-85: tarama, kadro (isabet/pbo/rastgele/holdout kaldırıldı)
     assert "radar_yayimla.sh" in RADAR_BETIK.read_text(encoding="utf-8") and "schedule" not in (wf.get("on") or wf.get(True))
 
 
@@ -644,7 +644,7 @@ def test_radar_betigi_ayri_worktreede_radar_dalina_yazar_motor_dizinine_dokunmaz
     gun = time.strftime("%Y-%m-%d", time.gmtime())
     assert {f"radar/{gun}/havuz.json", f"radar/{gun}/kadro.json", "radar/son/kadro.json", f"radar/{gun}/kadro_ilk.json"} <= _dal_dosyalari(bare)
     adimlar = re.findall(r"-m (copytrade\.\w+)", log.read_text())
-    assert adimlar == ["copytrade.radar_tarama", "copytrade.radar_kadro", "copytrade.radar_isabet", "copytrade.pbo_rapor", "copytrade.radar_rastgele", "copytrade.holdout_muhur"]
+    assert adimlar == ["copytrade.radar_tarama", "copytrade.radar_kadro"]
     assert "curl" not in log.read_text() and "TG:" not in log.read_text()                              # başarıda Telegram mesajı YOK
     assert not (depo / "radar").exists() and not (depo / "durum").exists()                            # motorun çalışma dizininde iz yok
     assert subprocess.run(["git", "rev-parse", "HEAD"], cwd=depo, capture_output=True, text=True).stdout.strip() == head
@@ -671,7 +671,7 @@ def test_radar_betigi_kilit_doluysa_baslamaz(tmp_path):
         tutan.wait()
 
 
-@pytest.mark.parametrize("adim", ["copytrade.radar_tarama", "copytrade.radar_kadro", "copytrade.radar_isabet"])
+@pytest.mark.parametrize("adim", ["copytrade.radar_tarama", "copytrade.radar_kadro"])
 def test_radar_betigi_basarisizlikta_tek_uyari_yayimlamaz_ve_sonrakini_kosmaz(tmp_path, adim):
     bare, depo, log, env = _radar_ortam(tmp_path)
     r = _radar_kos(env, FAKE_BASARISIZ=adim)
@@ -680,8 +680,8 @@ def test_radar_betigi_basarisizlikta_tek_uyari_yayimlamaz_ve_sonrakini_kosmaz(tm
     assert metin.count("TG:") == 1 and "TG:text=[CT] ⚠️ Radar sunucuda çalışmadı" in metin             # tek ⚠️ satır
     assert "SIRTOKEN123" not in r.stdout + r.stderr + metin                                           # token argv'ye/günlüğe girmez
     assert "radar" not in subprocess.run(["git", "branch", "--list"], cwd=bare, capture_output=True, text=True).stdout   # kadro yayımlanmadı (son/ güncellenmez)
-    sira = ["copytrade.radar_tarama", "copytrade.radar_kadro", "copytrade.radar_isabet", "copytrade.pbo_rapor"]
-    assert sira[sira.index(adim) + 1] not in metin and not (depo / "radar").exists()
+    sira = ["copytrade.radar_tarama", "copytrade.radar_kadro"]
+    assert (len(sira) == sira.index(adim) + 1 or sira[sira.index(adim) + 1] not in metin) and not (depo / "radar").exists()
 
 
 def test_radar_betigi_telegram_anahtari_yoksa_sessiz_atlar(tmp_path):
@@ -925,3 +925,57 @@ def test_guncelle_binance_kagit_motorunu_kurar_ve_baslatir_erisim_yoksa_tekrarla
     r = sunucu.calistir()
     assert r.returncode == 0, r.stdout + r.stderr
     assert "sg-sanal-binance-kagit" not in sunucu.log.read_text()
+
+
+# ------------------------------------------------------------------------------------------------ K-85: yeni dönem (durum sıfırlama) + radarın tek seferlik başlatılması
+def test_k85_guncelle_yeni_donemde_yerel_durumu_sifirlar_arsiv_acmaz_ve_radari_bir_kez_baslatir(sunucu):
+    tohum = sunucu.depo.parent / "tohum"
+    git(tohum, "pull", "-q", "origin", "main")
+    (tohum / "copytrade/canli").mkdir(parents=True)
+    (tohum / "copytrade/canli/DONEM").write_text("2026-11-21T07:30:00Z\n")
+    (tohum / "deploy/sg-sanal-radar.service").write_text("[Service]\n# r1\n")
+    git(tohum, "add", "-A")
+    git(tohum, "commit", "-q", "-m", "yeni donem")
+    git(tohum, "push", "-q", "origin", "main")
+    (sunucu.depo / "durum").mkdir(exist_ok=True)
+    (sunucu.depo / "kayit").mkdir(exist_ok=True)
+    (sunucu.depo / "durum/hesap.json").write_text("{}")
+    (sunucu.depo / "durum/donem.txt").write_text("2026-11-16T11:30:00Z\n")
+    (sunucu.depo / "kayit/eski.jsonl").write_text("{}\n")
+    for yol in ("durum/motor.json", "durum/risk.json", "durum/ozet.json", "durum/saha.json", "durum/binance_kagit/hesap.json", "durum/olcum/x.json", "durum/olcum_basladi", "durum/binance_kagit_kapali",
+                "durum/DUR", "durum/motor.lock", "durum/ortak/k.json", "kayit/binance_kagit/g.jsonl", "pano/p.json"):
+        (sunucu.depo / yol).parent.mkdir(parents=True, exist_ok=True)
+        (sunucu.depo / yol).write_text("x")
+    sunucu.ci(*YESIL)
+    r = sunucu.calistir()
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert not (sunucu.depo / "durum/hesap.json").exists() and not (sunucu.depo / "kayit/eski.jsonl").exists()          # eski dönem durumu sıfırlandı
+    assert (sunucu.depo / "durum/donem.txt").read_text().strip() == "2026-11-21T07:30:00Z"                               # koruyucu/motor yeni dönemi buradan okur
+    for yok in ("durum/motor.json", "durum/risk.json", "durum/saha.json", "pano/p.json"):
+        assert not (sunucu.depo / yok).exists(), yok                                                                    # CT durumu silindi
+    for var in ("durum/binance_kagit/hesap.json", "durum/olcum/x.json", "durum/olcum_basladi", "durum/binance_kagit_kapali", "durum/DUR", "durum/motor.lock", "durum/ortak/k.json", "kayit/binance_kagit/g.jsonl"):
+        assert (sunucu.depo / var).exists(), var                                                                        # binance kâğıt, ölçüm, DUR, işaretler KORUNDU
+    assert "durum/DUR" in r.stdout and "UYARI" in r.stdout
+    assert not (sunucu.depo.parent / "arsiv").exists() and not (sunucu.depo / "arsiv").exists()                          # arşiv klasörü YOK
+    assert sunucu.log.read_text().count("start --no-block sg-sanal-radar.service") == 1
+    assert (sunucu.durum / "radar_basladi").read_text().strip() == "2026-11-21T07:30:00Z"
+    (sunucu.depo / "durum/hesap.json").write_text('{"canli": 1}')                                                        # aynı dönemde sonraki güncelleme: durum KORUNUR, radar yeniden başlamaz
+    sunucu.yeni_commit("v3")
+    sunucu.ci(*YESIL)
+    r = sunucu.calistir()
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert (sunucu.depo / "durum/hesap.json").exists() and sunucu.log.read_text().count("start --no-block sg-sanal-radar.service") == 1
+
+
+def test_k85_radar_betigi_yeni_donemde_bugunku_eski_kadro_olsa_da_kosar(tmp_path):
+    bare, depo, log, env = _radar_ortam(tmp_path)
+    (depo / "copytrade/canli").mkdir(parents=True, exist_ok=True)
+    (depo / "copytrade/canli/DONEM").write_text("2026-11-21T07:30:00Z\n")
+    git(depo, "add", "-A")
+    git(depo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "donem")
+    gun = time.strftime("%Y-%m-%d", time.gmtime())
+    assert _radar_kos(env).returncode == 0                                                           # eski (sade olmayan) kadro bugün yayımlandı
+    n = log.read_text().count("copytrade.radar_tarama")
+    r = _radar_kos(env)
+    assert r.returncode == 0 and log.read_text().count("copytrade.radar_tarama") == n + 1, r.stdout   # kadroda `sade`/`donem` yok → yeni dönem kadrosu sayılmaz: yeniden koşar
+    assert f"radar/{gun}/kadro.json" in _dal_dosyalari(bare)

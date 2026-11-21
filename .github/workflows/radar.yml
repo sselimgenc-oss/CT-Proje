@@ -3,13 +3,12 @@ name: Radar (günlük tarama + kadro)
 # K-78 (20.11, kullanıcı kararı): günlük radar artık SUNUCUDA koşar (deploy/sanal_radar.sh + sg-sanal-radar.timer, 00:37 UTC = 03:37 TSİ). Actions cron'u ~7 sa geç tetikleniyordu (kadro 03:37 yerine ~10:42'de çıkıyordu).
 # Bu iş akışında zamanlama (cron) YOK: yalnız ELLE YEDEK (workflow_dispatch; sunucu radarı çalışmazsa). Adımlar sunucu betiğiyle AYNIDIR (formül değişmedi).
 
-# K-66 (14.11, kullanıcı kararı): Form Radarı v1/v1.1 (docs/RADAR_V1.md §2, §4, §5; K-53) yeniden yürürlükte (D+ kapandı ve silindi). Her gün 00:37 UTC (03:37 TSİ)
-# tarama (aday = radar_aday_tavan = 900 (kullanıcı 14.11; önce 300), 7 gün getiriye göre; K-31) → R2 form puanı → kadro 30 (İlk 11 + Yedek 19) → isabet ölçümü.
+# K-85 (21.11, kullanıcı kararı): yeni sade seçim. 30 günlük veri, TÜM radar evreni (7 günlük sıralama / 900 aday ön kesmesi yok); 5 trader, yedek yok; kadro yalnız Pazartesi/Perşembe değişir
+# (ilk kurulum / yeni dönemde hemen kurulur). Form puanı, bootstrap, isabet / PBO / rastgele / holdout adımları KALDIRILDI. Kontrol günü değilse tarama yapılmaz, kadro aynen sürer.
 # Salt okunur halka açık Hyperliquid verisi; secret YOK. Çıktı veri dalı `radar` (kök commit yalnız ilk koşuda; sonra tarihli klasör eklenir, 90 gün tutulur):
-#   radar/<tarih>/{havuz,kadro}.json  +  radar/son/kadro.json  (T4 motoru `son/kadro.json`'u okur).
-# Eksik koşuda (zaman bütçesi aşıldı / satır eksik / `veri_hatasi` payı > `radar_veri_hatasi_pay_max`, R-2) `radar_kadro` çıkış kodu 2 verir → iş kırmızı biter ve `son/` GÜNCELLENMEZ.
-# Kadro `radar_surum` v4 (M-09, 14.11; motor `copytrade/canli/RADAR_SURUM` ile yalnız bunu uygular).
-# `kural_ust` / `aday_sayisi` girdisi YOK (donmuş kurallar).
+#   radar/<tarih>/{havuz,kadro}.json  +  radar/son/kadro.json  (motor `son/kadro.json`'u okur; `radar_surum` v5).
+# Eksik koşuda (zaman bütçesi aşıldı / `veri_hatasi` payı > `radar_veri_hatasi_pay_max`) `radar_kadro` çıkış kodu 2 verir → iş kırmızı biter ve `son/` GÜNCELLENMEZ.
+# `kural_ust` / `aday_sayisi` girdisi YOK (kurallar kurallar.yaml'da).
 # Dal doğrulaması: main dışı dalda `workflow_dispatch` AYNI iş akışını koşturur ama veri dalı `radar-deneme`'ye yazar (gerçek `radar` dalı yalnız main'den dokunulur).
 # 14.11 denetim: `push` tetiği yalnız main (`branches: [main]`); dalda `copytrade/radar/CALISTIR` push'u artık koşu BAŞLATMAZ.
 # G-23 (canli_vardiya.yml ile aynı desen): checkout'lar `persist-credentials: false` (token diske yazılmaz); yazma izni yalnız `radar` işinde; push kimliği yalnız
@@ -54,7 +53,7 @@ jobs:
     needs: kontrol
     if: ${{ needs.kontrol.outputs.atla != 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 210             # 14.11: tarama bütçesi radar_zaman_butcesi_dk 150 + isabet 30 + kurulum/yayım payı (900 aday)
+    timeout-minutes: 300             # K-85: tarama bütçesi radar_zaman_butcesi_dk 240 + kurulum/yayım payı (tüm evren)
     permissions:
       contents: write               # veri dalı yayımı (yalnız radar_yayimla.sh, YAYIM_TOKEN ile)
     steps:
@@ -67,63 +66,30 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
-      - name: Radar taraması (R0 + R1 + R2 girdileri)
+      - name: Radar taraması (K-85 30 günlük sade seçim)
         env:
           VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
         run: |
           mkdir -p radar
-          # v1.1 (K-53) nedene bağlı çıkış: önceki kadro (veri dalı son/kadro.json) üyeleri R0 dışına düşse de R1'den geçirilir. Yoksa (ilk koşu) argümansız.
-          tutma=()
-          if git cat-file -e "origin/$VERI_DALI:radar/son/kadro.json" 2>/dev/null; then
-            git show "origin/$VERI_DALI:radar/son/kadro.json" > "$RUNNER_TEMP/onceki_kadro_tarama.json"
-            tutma=(--onceki-kadro "$RUNNER_TEMP/onceki_kadro_tarama.json")
-          fi
-          # B8 (08.11): zamana bağlı payda karar sayısıdır; `--payda-yan-yana` eski (sabit payda) sayıları `*_eski` alanlarına ve özete yazar (yalnız bilgi, kural 6: eski seri yan yana)
-          python -u -m copytrade.radar_tarama --cikti radar --payda-yan-yana "${tutma[@]}" --ozet-md radar/OZET.md
-      - name: Günlük kadro (R2 form puanı)
-        env:
-          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
-        run: |
-          havuz="$(ls radar/*/havuz.json | tail -n 1)"
-          # Yalnız bilgi alanları (elenenler, eski_uye_neden): önceki kadro = veri dalındaki son/kadro.json (bugünkü yayından önce). Dal/dosya yoksa (ilk koşu) argümansız; seçim etkilenmez.
+          # K-85: önceki kadro (veri dalı son/kadro.json: üyeler, yasak listesi, dönem) kontrol günü / ilk kurulum kararı için okunur. Yoksa (ilk koşu) argümansız = ilk kurulum.
           onceki=()
           if git cat-file -e "origin/$VERI_DALI:radar/son/kadro.json" 2>/dev/null; then
             git show "origin/$VERI_DALI:radar/son/kadro.json" > "$RUNNER_TEMP/onceki_kadro.json"
             onceki=(--onceki-kadro "$RUNNER_TEMP/onceki_kadro.json")
           fi
+          python -u -m copytrade.radar_tarama --cikti radar "${onceki[@]}" --ozet-md radar/OZET.md
+      - name: Kadro (5 trader, Pazartesi/Perşembe değişimi)
+        env:
+          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
+        run: |
+          havuz="$(ls radar/*/havuz.json | tail -n 1)"
+          onceki=()
+          if [ -f "$RUNNER_TEMP/onceki_kadro.json" ]; then onceki=(--onceki-kadro "$RUNNER_TEMP/onceki_kadro.json"); fi
           python -u -m copytrade.radar_kadro --havuz "$havuz" "${onceki[@]}"
-      - name: Seçim isabeti (§7b)
-        env:
-          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
-        run: |
-          # 7 gün önceki havuz+kadro (veri dalından) için arada geçen 7 günün kopya getirisi; en çok 30 dk, hata tarama işini bozmaz (eksik yazılır). İlk ölçüm 2026-11-12.
-          python -u -m copytrade.radar_isabet --cikti radar --veri-dali "$VERI_DALI" --ozet-md radar/ISABET_OZET.md
-      - name: Aşırı uydurma raporu (PBO, yalnız bilgi)
-        env:
-          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
-        run: |
-          # Faz 2 (docs/HOLDOUT_PBO.md): isabet verisinden aday seçim yöntemleri için CSCV PBO + deflated Sharpe; radar/<tarih>/pbo.json + ISABET_OZET.md'ye tek satır. Hata radar yayımını engellemez (::error:: basılır).
-          python -u -m copytrade.pbo_rapor --kok radar --veri-dali "$VERI_DALI" --cikti radar --ozet-md radar/ISABET_OZET.md
-      - name: Seçim rastgeleye karşı (yalnız bilgi)
-        env:
-          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
-        run: |
-          # Seçilen İlk 11'in sonraki_7g ortalaması vs aynı havuzdan (ilk11 ∪ havuz_geri) rastgele 11'ler (R=1000, sabit tohum); radar/<tarih>/rastgele_karsilastirma.json + ISABET_OZET.md tablosu. Seçimi etkilemez; hata yayımı engellemez.
-          python -u -m copytrade.radar_rastgele --kok radar --veri-dali "$VERI_DALI" --cikti radar --ozet-md radar/ISABET_OZET.md
-      - name: Holdout mührü (append-only)
-        env:
-          VERI_DALI: ${{ github.ref == 'refs/heads/main' && 'radar' || 'radar-deneme' }}
-        run: |
-          # holdout_bas (kurallar.yaml) sonrası havuz_ilk/kadro_ilk/isabet dosyalarının SHA-256'sı radar/holdout/manifest.json'a yalnız eklenir; değişen dosya ::error:: ile görünür. Yayım radar_yayimla.sh'de.
-          # Holdout kullanımı (tarih | amaç | not | tekrar) main'deki copytrade/radar/HOLDOUT_KULLANIM.txt dosyasına PR ile yazılır; her koşu yeni satırları manifest'e işler (aynı tarih+amaç bir kez).
-          ek=()
-          if [ -f copytrade/radar/HOLDOUT_KULLANIM.txt ]; then ek+=(--kullanim-dosya copytrade/radar/HOLDOUT_KULLANIM.txt); fi
-          python -u -m copytrade.holdout_muhur muhurla --kok radar --manifest radar/holdout/manifest.json --veri-dali "$VERI_DALI" "${ek[@]}"
       - name: Özet
         if: ${{ always() && hashFiles('radar/OZET.md') != '' }}
         run: |
           cat radar/OZET.md >> "$GITHUB_STEP_SUMMARY"
-          if [ -s radar/ISABET_OZET.md ]; then cat radar/ISABET_OZET.md >> "$GITHUB_STEP_SUMMARY"; fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:

@@ -7,9 +7,9 @@ from tests.test_canli_motor import SAAT, kadro, kayitlar, kur, satir
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_radar_surum_dosyasi_v4_ve_donem_yeni():
-    assert mt.radar_surum_oku() == "v4"                                                                       # K-66 (14.11 mantık denetimi): kural sürümü v4; v3 ve D+ v2 kadrosu uygulanmaz
-    assert (ROOT / "copytrade/canli/DONEM").read_text(encoding="utf-8").strip() == "2026-11-16T11:30:00Z"     # K-66 haftalık kadro (16.11 14:30 TSİ): yeni sanal dönem 10.000 $ / 11; eski dönem verisi git geçmişinde arşivli
+def test_radar_surum_dosyasi_v5_ve_donem_yeni():
+    assert mt.radar_surum_oku() == "v5"                                                                       # K-85 (21.11): sade seçim v5; eski v4 / v3 kadrosu uygulanmaz
+    assert (ROOT / "copytrade/canli/DONEM").read_text(encoding="utf-8").strip() == "2026-11-21T07:30:00Z"     # K-85 (21.11 10:30 TSİ): yeni sanal dönem 1.000 $; eski dönem verisi git geçmişinde
 
 
 def test_radar_surum_oku_yorum_bos_yok(tmp_path):
@@ -79,3 +79,41 @@ def test_bekleme_vardiyasi_cokmez_kadro_gelince_erken_biter(tmp_path):
     ozet = asyncio.run(mt.bekleme_vardiyasi(m, 3600, uyku=uyku))
     assert ozet["kadro_geldi"] is True and len(uyunan) == 2 and len(m.saha.uyeler) == 1
     assert kayitlar(tmp_path, "bekleme_vardiyasi") and kayitlar(tmp_path, "bekleme_bitti_kadro_geldi")
+
+
+def test_sure_sn_yoksa_bos_kadroda_cikmaz_kadro_gelince_normal_calismaya_gecer(tmp_path, monkeypatch):
+    """Sunucu `--sure-sn` vermez: boş/eski kadroda süreç çıkış 0 ile BİTMEZ (systemd yeniden başlatmaz, güncelleme geri alınırdı); kadro gelene dek bekler, gelince aynı süreçte dinleyiciyi başlatır.
+    GERÇEK kurallar (`K86_GEVSEK` değil): `load_rules_asil`."""
+    import asyncio
+
+    from copytrade.kurallar import load_rules_asil
+    asil = load_rules_asil()
+    m, _, saat, _ = kur(tmp_path, kurallar={k: v for k, v in asil.items() if k.startswith(("canli_", "kopya_", "net_yon")) or k == "radar_saha_max"})
+    m.radar_surum_gerekli = "v5"
+    bos = {**kadro([], saat() - SAAT), "radar_surum": "v4"}                    # eski sürüm: uygulanmaz
+    m.kadro_oku = lambda: bos
+    uyunan, basladi = [], []
+
+    async def uyku(sn):
+        uyunan.append(sn)
+        saat.ms += int(sn * 1000)
+        if len(uyunan) == 6:
+            m.kadro_oku = lambda: {**kadro([satir(1, 1)], saat() - SAAT), "radar_surum": "v5"}
+
+    class SahteDin:
+        def __init__(self, *a, **k):
+            pass
+
+        def durdur(self):
+            pass
+
+        async def calis(self):
+            basladi.append(sorted(m.saha.uyeler))
+
+        def ozet(self):
+            return {"genel": {}}
+    monkeypatch.setattr(mt, "CanliDinleyici", SahteDin)
+    ozet = asyncio.run(mt.calis(m, None, uyku=uyku))
+    assert len(uyunan) == 6 and len(basladi) == 1 and len(m.saha.uyeler) == 1          # 6 yoklama boyunca çıkmadı; kadro gelince dinleyici başladı
+    assert not ozet.get("bekleme_vardiyasi") and kayitlar(tmp_path, "bekleme_bitti_kadro_geldi")
+    assert m.saat_ms() > 0 and all(u == max(1.0, float(m.rules["canli_kadro_aralik_sn"])) for u in uyunan)

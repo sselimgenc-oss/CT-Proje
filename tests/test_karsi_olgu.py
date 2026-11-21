@@ -12,7 +12,6 @@ HIP3 = "xyz:GOLD"
 
 
 def hazir(tmp_path, **k):
-    k["kurallar"] = {"sanal_hip3_kopya": False, **(k.get("kurallar") or {})}          # K-73: sanalda HIP-3 artık açık; bu testler atlanan açılış için HIP-3'ü örnek alır → bayrak kapatılır
     m, hl, saat, tgp = kur(tmp_path, **k)
     m.baslat()
     m.hesap_tr[adr(1)] = {"deger": 100_000.0, "ms": saat()}
@@ -28,7 +27,7 @@ def test_altin_hayali_pnl():
 def test_atlanan_acilis_hayali_pozisyon_ve_trader_kapaninca_kapanir(tmp_path):
     m, saat, _ = hazir(tmp_path)
     s = m.olay_isle(olay("a:1", adr(1), HIP3, "B", 300, 100.0, 0.0, saat))
-    assert [(x.karar, x.neden) for x in s] == [("atlandi", "hip3_atlandi")]
+    assert [(x.karar, x.neden) for x in s] == [("atlandi", "liste_disi")]
     assert m.hesap.sz(adr(1), HIP3) == 0.0                          # karar yolu değişmedi: emir yok
     # hedef = slot (1000/11) × 30.000 / 100.000 = 27,2727 $
     k = m.karsi_olgu[f"{adr(1)}|{HIP3}"]
@@ -41,9 +40,9 @@ def test_atlanan_acilis_hayali_pozisyon_ve_trader_kapaninca_kapanir(tmp_path):
     m.karsi_olgu_adimi(saat())
     assert not m.karsi_olgu
     e = kayitlar(tmp_path, "karsi_olgu_kapandi")[0]
-    assert (e["coin"], e["neden"], e["yon"], e["kapanis"]) == (HIP3, "hip3_atlandi", "B", "trader_kapadi")
+    assert (e["coin"], e["neden"], e["yon"], e["kapanis"]) == (HIP3, "liste_disi", "B", "trader_kapadi")
     assert e["hayali_usd"] == pytest.approx(27.27, abs=0.01) and e["pnl_usd"] == pytest.approx(2.7273, abs=1e-4) and e["sure_sa"] == pytest.approx(2.0)
-    assert m.karsi_olgu_gun["hip3_atlandi"] == [1, pytest.approx(2.7273, abs=1e-4)]
+    assert m.karsi_olgu_gun["liste_disi"] == [1, pytest.approx(2.7273, abs=1e-4)]
 
 
 def test_kisa_yon_ve_sure_dolunca_kapanir(tmp_path):
@@ -77,20 +76,20 @@ def test_hata_karar_yolunu_bozmaz(tmp_path):
         raise RuntimeError("boom")
     m._karsi_olgu_ac = patla
     s = m.olay_isle(olay("a:1", adr(1), HIP3, "B", 300, 100.0, 0.0, saat))
-    assert s[0].neden == "hip3_atlandi"
+    assert s[0].neden == "liste_disi"
     assert kayitlar(tmp_path, "karsi_olgu_hata")[0]["tur"] == "RuntimeError"
 
 
 def test_gunluk_ozet_ve_ozet_md_satiri(tmp_path):
-    metin = tg.msg_gunluk("sanal", 1000.0, 1000.0, 1000.0, 0, 1, 11, [], None, {"hip3_atlandi": [2, 3.5], "min_emir_atlandi": [1, -1.0]})
-    assert "Alınmayan sinyal" in metin and "3 kapandı" in metin and "+2,50 $" in metin and "HIP-3 coin 2/+3,50" in metin and "hip3_atlandi" not in metin and "min_emir_atlandi" not in metin      # 19.11 orkestratör: günlük mesajda kod adı yok, sade etiket
+    metin = tg.msg_gunluk("sanal", 1000.0, 1000.0, 1000.0, 0, 1, 11, [], None, {"liste_disi": [2, 3.5], "min_alti": [1, -1.0]})
+    assert "Alınmayan sinyal" in metin and "3 kapandı" in metin and "+2,50 $" in metin and "coin listesi dışı 2/+3,50" in metin and "liste_disi" not in metin and "min_alti" not in metin      # 19.11 orkestratör: günlük mesajda kod adı yok, sade etiket
     assert "Alınmayan" not in tg.msg_gunluk("sanal", 1000.0, 1000.0, 1000.0, 0, 1, 11, [], None, None)
     simdi = 1_800_000_000_000
-    ev = [{"olay": "karsi_olgu_kapandi", "zaman_ms": simdi - 1000, "neden": "hip3_atlandi", "pnl_usd": 3.5}, {"olay": "karsi_olgu_kapandi", "zaman_ms": simdi - 2000, "neden": "min_emir_atlandi", "pnl_usd": -1.0}]
+    ev = [{"olay": "karsi_olgu_kapandi", "zaman_ms": simdi - 1000, "neden": "liste_disi", "pnl_usd": 3.5}, {"olay": "karsi_olgu_kapandi", "zaman_ms": simdi - 2000, "neden": "min_alti", "pnl_usd": -1.0}]
     md, _ = pano.pano_olustur({"kasa_usd": 1000.0, "ozsermaye_usd": 1000.0}, {}, {}, ev, [], [], simdi)
-    assert "Alınmayan sinyaller" in md and "2 kapandı" in md and "hip3_atlandi 1" in md
+    assert "Alınmayan sinyaller" in md and "2 kapandı" in md and "liste_disi 1" in md
     m, saat, tgp = hazir(tmp_path)
-    m.karsi_olgu_gun = {"hip3_atlandi": [1, 2.0]}
+    m.karsi_olgu_gun = {"liste_disi": [1, 2.0]}
     gun_ms = (saat() // 86_400_000 + 1) * 86_400_000 + (int(m.rules["canli_ozet_saat_utc"]) + 1) * 3_600_000
     m._gunluk_ozet(gun_ms)
     assert any("Alınmayan sinyal" in x for x in m.tg.gonderilen) and m.karsi_olgu_gun == {}
@@ -138,7 +137,7 @@ def test_diger_neden_hala_adres_coin_basina_tek_kayit(tmp_path):
     o = olay("a:1", adr(1), HIP3, "B", 300, 100.0, 0.0, saat)
     for dilim in range(3):
         saat.ms = h0 + dilim * SAAT + 60_000
-        m._karsi_olgu_ac(o, adr(1), "hip3_atlandi")
+        m._karsi_olgu_ac(o, adr(1), "liste_disi")
     assert list(m.karsi_olgu) == [f"{adr(1)}|{HIP3}"]                 # 2 parçalı anahtar, tek kayıt
 
 
@@ -148,7 +147,7 @@ def test_sik_azami_sinirı_ve_diger_neden_etkilenmez(tmp_path):
     for coin in (HIP3, "xyz:SILVER", "xyz:OIL"):                       # üçü de aynı saat dilimi
         m._karsi_olgu_ac(olay("a:1", adr(1), coin, "B", 300, 100.0, 0.0, saat), adr(1), "slot_tavani")
     assert len(m.karsi_olgu) == 2                                     # sık azami 2: üçüncüsü eklenmez
-    m._karsi_olgu_ac(olay("a:1", adr(1), HIP3, "B", 300, 100.0, 0.0, saat), adr(1), "hip3_atlandi")
+    m._karsi_olgu_ac(olay("a:1", adr(1), HIP3, "B", 300, 100.0, 0.0, saat), adr(1), "liste_disi")
     assert f"{adr(1)}|{HIP3}" in m.karsi_olgu and len(m.karsi_olgu) == 3   # sık dolsa da diğer neden yazılır
 
 
@@ -165,7 +164,7 @@ def test_sik_kapanis_ve_eski_iki_parcali_anahtar(tmp_path):
     e = kayitlar(tmp_path, "karsi_olgu_kapandi")[0]
     assert (e["coin"], e["neden"], e["kapanis"]) == (HIP3, "slot_tavani", "trader_kapadi")
     # eski (2 parçalı) kalıcı anahtar hâlâ yüklenip kapanır
-    m.karsi_olgu[f"{adr(1)}|{HIP3}"] = {"yon": "B", "hayali_usd": 10.0, "giris": 100.0, "neden": "hip3_atlandi", "ms": saat(), "son_pnl": 0.0}
+    m.karsi_olgu[f"{adr(1)}|{HIP3}"] = {"yon": "B", "hayali_usd": 10.0, "giris": 100.0, "neden": "liste_disi", "ms": saat(), "son_pnl": 0.0}
     m.karsi_olgu_adimi(saat())
     assert not m.karsi_olgu
     assert kayitlar(tmp_path, "karsi_olgu_kapandi")[1]["coin"] == HIP3

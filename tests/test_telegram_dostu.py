@@ -230,23 +230,6 @@ def test_senden_satiri_sunucu_journalctl_dosya_adi_icermez():
         assert not yasak.search(t) and not KOD_ADI.search(t), t
 
 
-def test_kapandi_iz_suren_koruma_nedeni_gorunur():
-    m = tg.msg_kapandi(ADR, "BTC", 4.5, 0.0, "iz_suren_koruma", "sanal")
-    assert m.splitlines()[1] == "+4,50 $ (+%0,00) · Neden: iz süren koruma" and not KOD_ADI.search(m)
-
-
-def test_motor_iz_suren_koruma_kapanisi_mesajda_iz_suren_koruma(tmp_path):
-    from tests.test_k73_sanal_hepsi_acik import _ac, _fiyat, _motor
-    m, saat = _motor(tmp_path)
-    assert _ac(m, saat).karar == "emir"
-    g = m.hesap.poz[tests_adr()]["BTC"].giris
-    _fiyat(m, saat, g * 1.16)
-    _fiyat(m, saat, g * 0.999)
-    kap = [x for x in _islem_satirlari(tmp_path) if " BTC kapandı · trader " in x]
-    assert len(kap) == 1 and kap[0].endswith("Neden: iz süren koruma") and kap[0].startswith("🔻 BTC kapandı")
-    assert not [x for x in m.tg.gonderilen if " BTC kapandı · trader " in x]                  # K-79: ayrı mesaj olarak gitmedi
-
-
 def tests_adr():
     from tests.test_canli_motor import adr
     return adr(1)
@@ -377,7 +360,7 @@ def test_islem_mesaji_ayri_gitmez_ust_sinir_yok_saatlik_tek_ozet(tmp_path):
     """K-79: eski saatlik üst sınır + "+N işlem daha" satırı kalktı; hiçbir açıldı/kapandı ayrı gitmez, hepsi saatlik özet satırı (sınırsız kalem, satırda ilk 4 + "… +N")."""
     from tests.test_canli_motor import olay, adr
     m, saat, tgp = _kur10k(tmp_path, canli_telegram_islem_saat_max=2)
-    for i, c in enumerate(("BTC", "ETH", "SOL", "ADA", "DOGE", "XRP")):
+    for i, c in enumerate(("BTC", "ETH", "SOL", "BNB", "DOGE", "XRP")):
         m.olay_isle(olay(f"a:{i}", adr(1), c, "B", 300, 100.0, 0.0, saat))
     assert not [x for x in tgp.gonderilen if "açıldı · trader" in x or x.startswith("🧾 +")]
     assert len(_islem_satirlari(tmp_path)) == m._say_gun["ac"] >= 3

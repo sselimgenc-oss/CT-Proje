@@ -185,9 +185,9 @@ def test_radar_yml_elle_yedek_kadro_ve_yayim_sirasi():
     assert "inputs" not in (wf["on"]["workflow_dispatch"] or {})                              # donmuş kurallar: aday sayısı / kural_ust girdisi YOK
     assert wf["permissions"] == {"contents": "read"} and wf["jobs"]["radar"]["permissions"] == {"contents": "write"} and wf["concurrency"]["cancel-in-progress"] is False   # G-23: yazma yalnız radar işinde
     ad = adimlar(wf, "radar")
-    # K-66 (14.11): Form Radarı adımları (tarama → kadro → isabet) geri; D+ (secim_d) adımı yok
-    assert ad.index("Radar taraması (R0 + R1 + R2 girdileri)") < ad.index("Günlük kadro (R2 form puanı)") < ad.index("Seçim isabeti (§7b)") < ad.index("Veri dalına yaz (radar)")
-    tarama, kadro = adim(wf, "radar", "Radar taraması")["run"], adim(wf, "radar", "Günlük kadro")["run"]
+    # K-85 (21.11): sade seçim adımları (tarama → kadro); isabet / PBO / rastgele / holdout kaldırıldı
+    assert ad.index("Radar taraması (K-85 30 günlük sade seçim)") < ad.index("Kadro (5 trader, Pazartesi/Perşembe değişimi)") < ad.index("Veri dalına yaz (radar)")
+    tarama, kadro = adim(wf, "radar", "Radar taraması")["run"], adim(wf, "radar", "Kadro")["run"]
     assert "--aday-sayisi" not in tarama and "--kural-ust" not in tarama and "kural_ust" not in (WF / "radar.yml").read_text(encoding="utf-8").replace("`kural_ust`", "")
     assert "python -u -m copytrade.radar_tarama --cikti radar" in tarama and "copytrade.radar_kadro" in kadro and "copytrade.secim_d" not in (WF / "radar.yml").read_text(encoding="utf-8")
     assert adim(wf, "radar", "Veri dalına yaz")["run"] == "bash .github/scripts/radar_yayimla.sh" and "if" not in adim(wf, "radar", "Veri dalına yaz")      # yalnız başarıda (varsayılan success())

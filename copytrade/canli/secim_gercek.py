@@ -17,9 +17,9 @@ from math import factorial
 from pathlib import Path
 from typing import Any
 
-from copytrade.canli.ogrenme_adaptor import takma_ad
+from copytrade.canli.kimlik import takma_ad
 from copytrade.canli.hafta_paketi import _yaz_atomik
-from copytrade.canli.rejim_sonuc import kayitlari_oku as _kayitlari_oku
+from copytrade.canli.kayit_oku import kayitlari_oku as _kayitlari_oku
 
 SEMA = "ct.secim_gercek.v1"
 DOSYA_JSON = "secim_gercek_v1.json"
@@ -228,7 +228,7 @@ def kadro_kaydet(motor: Any, kadro: dict, simdi_ms: int) -> None:
 
 
 def kayitlari_oku(dizin: Path, simdi_ms: int, gun: int = PENCERE_GUN) -> list[dict]:
-    """Pencere kayıtlarından yalnız `emir` olayları (okuma `rejim_sonuc.kayitlari_oku` ile TEK yerde)."""
+    """Pencere kayıtlarından yalnız `emir` olayları (okuma `kayit_oku.kayitlari_oku` ile TEK yerde)."""
     return [o for o in _kayitlari_oku(dizin, simdi_ms, gun) if o.get("olay") == "emir"]
 
 

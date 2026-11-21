@@ -2,76 +2,30 @@
 from __future__ import annotations
 
 import json
-import re
 
 import pytest
-import yaml
 
-from copytrade import boyut, radar_isabet, radar_kadro
-from copytrade import radar_tarama as r
 from copytrade.canli import kadro as kd
 from copytrade.canli import motor as mt
 from copytrade.canli import pano
 from copytrade.kurallar import load_rules, load_rules_asil
 from tests.test_canli_motor import GUN, SAAT, T0, SahteHL, adr, kadro, kayitlar, kur, n_kadro, satir
-from tests.test_radar_tarama import A1, Sahte, lider, satir_al
-from tests.test_radar_tarama import KOSU, dolum, ms
 
 ROOT = __import__("pathlib").Path(__file__).resolve().parents[1]
 URETIM = load_rules_asil()                       # dosyadaki gerçek değerler (conftest v1 boyut değerlerini EZMEZ)
 
 
 # ================================================================================================ D-01: radar kasası
-def test_d01_uretim_radar_kasasi_motor_sanal_kasasiyla_ayni_gercek_para_degismez():
-    assert URETIM["radar_kasa_usd"] == 10000 and URETIM["canli_sanal_kasa_ust_usd"] == 10000
-    assert URETIM["canli_kasa_usd"] == 1000 and URETIM["canli_kasa_ust_usd"] == 1500                      # gerçek para sınırı 1.500 $ (K-72)
-    wf = (ROOT / ".github/workflows/canli_vardiya.yml").read_text(encoding="utf-8")
-    sanal = re.findall(r"--sanal-kasa-usd (\d+(?:\.\d+)?)", wf)
-    assert sanal and all(float(x) == float(URETIM["radar_kasa_usd"]) for x in sanal)                     # motor sanal kasası = radar kasası
-    assert "--kasa" not in (ROOT / ".github/workflows/radar.yml").read_text(encoding="utf-8")              # radar iş akışı kasayı kurallardan alır
 
 
-def test_d01_radar_kasa_onceligi_arguman_kural_eski():
-    assert boyut.radar_kasa(URETIM) == 10000.0
-    assert boyut.radar_kasa(URETIM, 2500.0) == 2500.0                                                      # CLI argümanı önce
-    assert boyut.radar_kasa({k: v for k, v in URETIM.items() if k != "radar_kasa_usd"}) == 1000.0        # anahtar yoksa eski canli_kasa_usd
 
 
-def _senaryo():
-    """Trader hesap 50.000 $, 10 BTC × 100 $ = 1.000 $ açar (oran 0,02), 110'dan kapatır.
-    Üretim boyutu: kasa 1.000 → N = min(11, 1000/200) = 5, slot 200 $ → hedef 4 $ < yuvarlama alt sınırı 5,5 $ → ATLANIR (kopya işlemi yok).
-    kasa 10.000 → N 11, slot 909,09 $ → hedef 18,18 $ ≥ 11 $ → AÇILIR (kâr 0,1818 BTC × 10 = 1,818 $ ayna)."""
-    dolumlar = {A1: [dolum(ms("10:00:00"), "BTC", "B", 10, 0, 100), dolum(ms("11:00:00"), "BTC", "A", 10, 10, 110, kapanan=100.0)]}
-    fiyat = lambda coin, t: 110.0 if t >= ms("11:00:00") else 100.0               # noqa: E731
-    return Sahte([lider(A1, 50_000, 100, 5_000)], dolumlar, fiyat)
 
 
-def _kos(tmp_path, rules, **kw):
-    return r.kos(_senaryo(), KOSU, tmp_path / "radar", None, rules, log=lambda *_: None, **kw)
 
 
-def test_d01_kucuk_acilis_1000_de_atlanir_10000_de_acilir_radar_kasa_usd_kullanilir(tmp_path):
-    kurallar = {**URETIM, "radar_min_islem": 1, "radar_min_kopya_islem": 1}
-    varsayilan = _kos(tmp_path / "a", kurallar)                                                            # argüman yok → radar_kasa_usd (10.000)
-    s10 = satir_al(varsayilan, A1)
-    assert varsayilan["kasa_usd"] == 10000.0
-    assert s10["kopya_islem_sayisi"] == 1 and s10["ayna_getiri_7g"] == pytest.approx(0.1818182 * 10 / 10000, rel=1e-5)
-    kucuk = _kos(tmp_path / "b", {**kurallar, "radar_kasa_usd": 1000})                                     # aynı veri, 1.000 $ ölçek
-    s1 = satir_al(kucuk, A1)
-    assert kucuk["kasa_usd"] == 1000.0 and not s1["kopya_islem_sayisi"] and not s1["ayna_getiri_7g"]
-    arg = _kos(tmp_path / "c", kurallar, kasa_usd=1000.0)                                                  # CLI argümanı kuralın önünde
-    assert arg["kasa_usd"] == 1000.0 and not satir_al(arg, A1)["kopya_islem_sayisi"]
-    yazilan = json.loads(next((tmp_path / "a" / "radar").glob("*/havuz.json")).read_text(encoding="utf-8"))
-    assert yazilan["kasa_usd"] == 10000.0                                                                  # havuz.json `kasa_usd`
 
 
-def test_d01_kadro_ve_isabet_radar_kasasini_kullanir():
-    havuz = {"sema": radar_kadro.HAVUZ_SEMA, "kosu_ms": 1, "satirlar": []}
-    k = radar_kadro.kadro_olustur(havuz, URETIM)
-    assert k["kasa_usd"] == 10000.0 and k["saha_n"] == 11 and k["slot_usd"] == pytest.approx(10000 / 11)
-    assert radar_kadro.kadro_olustur(havuz, URETIM, 1000.0)["kasa_usd"] == 1000.0                        # --kasa önce
-    assert r.Baglam(Sahte([], {}), 1, 0, URETIM).kasa_usd == 10000.0                                       # isabet `Baglam(client, bit, bas, rules)` ile aynı yol
-    assert "radar_kasa_usd" in radar_isabet.__doc__
 
 
 def test_d01_motor_kadro_kasasi_farkliysa_bir_kez_kayit_ve_uyari_durmaz(tmp_path):
@@ -237,8 +191,6 @@ def test_donem_oku(tmp_path):
     assert mt.donem_oku() is not None                                                                       # depodaki gerçek dosya geçerli
 
 
-def test_yaml_okunur():
-    assert yaml.safe_load((ROOT / "copytrade/kurallar.yaml").read_text(encoding="utf-8"))["radar_kasa_usd"] == 10000
 
 
 # ================================================================================================ F-03 / F-08 / F-09: radar R2 girdileri
@@ -248,49 +200,18 @@ EGRI = [["2026-10-31", 10_000.0], ["2026-11-01", 10_000.0], ["2026-11-02", 10_10
 KOSU7 = GUN0 + 7 * GUN + 37 * 60_000          # 2026-11-07 00:37 UTC
 
 
-def test_f03_son_72_saat_egriden_slot_olceginde_eriyen_pozisyon_sayilir():
-    """Kasa 10.000, slot 909,09. t = KOSU − 72 sa = 04.11 00:37 → başlangıç = 03.11 gün sonu 10.300 $ (03.11'de açılıp sonra eriyen pozisyon).
-    Getiri = (10.100 − 10.300) / 909,09 = −0,22 (slot) → soğuyor (< −0,02). Eski ayrı boş başlayan oynatma 72 sa içinde işlem yoksa 0 görürdü (geçerdi)."""
-    g, durum = r.son_saat_getirisi(EGRI, KOSU7, 72, 10_000.0, 10_000 / 11)
-    assert durum == "egri" and g == pytest.approx(-200 / (10_000 / 11))
-    from copytrade import radar_form
-    assert radar_form.soguyor({"kopya_getiri_72s": g}, load_rules()) is True
-    assert r.son_saat_getirisi(EGRI[:2], GUN0 + 36 * SAAT, 72, 10_000.0, 1_000.0) == (pytest.approx(0.0), "egri")    # gün sonu yok: başlangıç = kasa
-    assert r.son_saat_getirisi([], KOSU7, 72, 10_000.0, 909.0) == (0.0, "hesaplanamadi")                               # eski davranış (0 = geçer), ama işaretli
 
 
-def test_f08_kismi_son_gun_seriden_atilir():
-    assert len(r.tam_gunler(EGRI, KOSU7)) == 7 and r.tam_gunler(EGRI, KOSU7)[-1][0] == "2026-11-06"           # 07.11 yalnız 37 dk
-    assert r.tam_gunler(EGRI, GUN0 + 8 * GUN) == EGRI                                                       # 08.11 00:00: 07.11 tam gün
 
 
-def test_f03_akil_sagligi_slot_getirisine_gore():
-    kurallar = load_rules()
-    temel = {"devir_hafta": 1.0, "islem_sayisi": 50, "medyan_tutma_saat": 5.0, "kisa_islem_payi": 0.0, "max_kaldirac": 3.0, "likit_pay": 1.0, "kopya_getiri_7g": 0.30,
-             "kopya_koruma": 0.9, "kopya_islem_sayisi": 50, "kopya_alt20": 0.1, "hesap_usd": 10_000.0}
-    assert r.degerlendir({**temel, "kopya_slot_kat": 1.0}, kurallar) == (True, None)                         # kasa %30 (kat yok) geçer
-    assert r.degerlendir({**temel, "kopya_slot_kat": 11.0}, kurallar) == (False, "akil_sagligi")             # slot %330 > %300
-    assert r.degerlendir({**temel, "kopya_getiri_7g": 0.25, "kopya_slot_kat": 11.0}, kurallar) == (True, None)   # slot %275
 
 
-def test_f09_h_agirligi_sifirsa_hype_mumu_cekilmez(tmp_path):
-    kurallar = {**URETIM, "radar_min_islem": 1, "radar_min_kopya_islem": 1}
-    assert kurallar["radar_agirlik_h"] == 0
-    istemci = _senaryo()
-    mum_cagrilari: list = []
-    asil = istemci.candles
-    istemci.candles = lambda coin, bas, son, interval="1m": (mum_cagrilari.append(coin), asil(coin, bas, son, interval))[1]
-    s = satir_al(r.kos(istemci, KOSU, tmp_path / "radar", None, kurallar, log=lambda *_: None), A1)
-    assert s["gecti"] is True and s["hype_payi"] is None and set(mum_cagrilari) == {"BTC"}                 # H olsaydı tüm ana coinler (ETH, ALT) okunurdu
-    mum_cagrilari.clear()
-    s2 = satir_al(r.kos(istemci, KOSU, tmp_path / "radar2", None, {**kurallar, "radar_agirlik_h": 0.1}, log=lambda *_: None), A1)
-    assert s2["hype_payi"] is not None and {"ETH", "ALT"} <= set(mum_cagrilari)
 
 
-def test_f10_kontrol_adimi_da_sanal_kasa_10000():
+def test_f10_kontrol_adimi_da_sanal_kasa_1000():
     wf = (ROOT / ".github/workflows/canli_vardiya.yml").read_text(encoding="utf-8")
     satirlar = [s for s in wf.splitlines() if "copytrade.canli.motor" in s and "python" in s]
-    assert any("--kontrol" in s for s in satirlar) and all("--sanal-kasa-usd 10000" in s for s in satirlar)
+    assert any("--kontrol" in s for s in satirlar) and all("--sanal-kasa-usd 1000" in s for s in satirlar)
 
 
 # ================================================================================================ F-06: dönem serisi ve aylık eşdeğer ölçütü

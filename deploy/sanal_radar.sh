@@ -3,7 +3,9 @@
 # Actions cron'u ~7 sa geç tetikleniyordu → kadro 03:37 TSİ yerine ~10:42'de çıkıyordu). Zamanlayıcı: sg-sanal-radar.timer (00:37 UTC = 03:37 TSİ, Persistent). Actions'ta yalnız elle yedek (workflow_dispatch) kalır.
 # Sır: tarama halka açık Hyperliquid verisini okur, ANAHTAR YOK. Push kimliği yalnız sunucudaki SSH deploy anahtarıdır (GIT_SSH_COMMAND, birimden). Telegram (isteğe bağlı) yalnız başarısızlıkta tek ⚠️ satır; başarıda mesaj YOK.
 # Motorun çalışma dizinine DOKUNMAZ: kod için depodan geçici AYRI worktree (HEAD'de sabit; otomatik güncelleme ortada merge yapsa da koşu kendi kod kopyasıyla biter), yayım da o worktree'de (radar_yayimla.sh).
-# Tek koşu: flock (RADAR_KILIT). Bugünün radar/<tarih>/havuz.json'u veri dalında varsa iş yapılmaz (Persistent yeniden koşusu / çift tetik; RADAR_ZORLA=1 ile atlanır).
+# Tek koşu: flock (RADAR_KILIT). Bugünün radar/<tarih>/kadro.json'u veri dalında VAR ve `son/kadro.json` bu dönemin (copytrade/canli/DONEM) sade kadrosuysa iş yapılmaz (Persistent yeniden koşusu / çift tetik; RADAR_ZORLA=1 ile atlanır).
+# K-85: yeni dönemde (güncelleme betiği `sg-sanal-radar.service`'i bir kez başlatır) bugünkü eski kurallı kadro varsa bile koşar → yeni kadro aynı gün çıkar. Tam evren taraması 1–2 sa sürebilir; kesilirse
+# `RADAR_ILERLEME` dizininden (varsayılan /var/lib/sg-sanal/radar-ilerleme) kaldığı yerden sürer.
 # Bağımlılık: pandas/numpy canlı motorun venv'inde yok → ayrı venv (RADAR_VENV), requirements-radar.lock (sha256 kilitli) değişince kendiliğinden kurulur/yenilenir.
 set -uo pipefail
 veri_dali="${RADAR_VERI_DALI:-radar}"
@@ -46,7 +48,14 @@ cd "$kaynak" || { log "depo yok: $kaynak"; exit 1; }
 git fetch -q origin "+refs/heads/$veri_dali:refs/remotes/origin/$veri_dali" || { log "UYARI: $veri_dali dalı çekilemedi"; }
 git fetch -q origin "+refs/heads/canli-durum:refs/remotes/origin/canli-durum" 2>/dev/null || log "UYARI: canli-durum dalı çekilemedi (isabet ek grupları eksik kalabilir)"
 bugun="$(date -u +%F)"
-if [ "${RADAR_ZORLA:-}" != 1 ] && git cat-file -e "origin/$veri_dali:radar/$bugun/havuz.json" 2>/dev/null; then log "radar/$bugun/ veri dalında zaten var; iş yapılmadı"; exit 0; fi
+donem="$(tr -d '[:space:]' < "$kaynak/copytrade/canli/DONEM" 2>/dev/null || true)"
+son_donem="$(git show "origin/$veri_dali:radar/son/kadro.json" 2>/dev/null | python3 -c 'import json,sys
+try:
+    k = json.load(sys.stdin)
+    print(k.get("donem", "") if k.get("sade") else "")
+except Exception:
+    print("")' 2>/dev/null || true)"
+if [ "${RADAR_ZORLA:-}" != 1 ] && git cat-file -e "origin/$veri_dali:radar/$bugun/kadro.json" 2>/dev/null && [ "$son_donem" = "$donem" ]; then log "radar/$bugun/ veri dalında zaten var (dönem $donem); iş yapılmadı"; exit 0; fi
 
 work="$(mktemp -d)" || exit 1
 trap 'git -C "$kaynak" worktree remove --force "$work" 2>/dev/null || rm -rf "$work"' EXIT
@@ -67,22 +76,17 @@ if [ -n "${RADAR_PYTHON:-}" ]; then py="$RADAR_PYTHON"; else
 fi
 
 mkdir -p radar
-tutma=(); onceki=()
+onceki=()
 if git cat-file -e "origin/$veri_dali:radar/son/kadro.json" 2>/dev/null; then
-  git show "origin/$veri_dali:radar/son/kadro.json" > "$work/onceki_kadro_tarama.json" && tutma=(--onceki-kadro "$work/onceki_kadro_tarama.json")
   git show "origin/$veri_dali:radar/son/kadro.json" > "$work/onceki_kadro.json" && onceki=(--onceki-kadro "$work/onceki_kadro.json")
 fi
 export VERI_DALI="$veri_dali"
-# Süreler: tarama bütçesi radar_zaman_butcesi_dk 150 + pay (radar.yml iş zaman aşımı 210 dk karşılığı: toplam < birimin TimeoutStartSec'i).
-kos "tarama" 10200 "$py" -u -m copytrade.radar_tarama --cikti radar --payda-yan-yana "${tutma[@]}" --ozet-md radar/OZET.md
+ilerleme="${RADAR_ILERLEME:-/var/lib/sg-sanal/radar-ilerleme}"
+# Süreler: tarama bütçesi radar_zaman_butcesi_dk 240 + pay (birimin TimeoutStartSec'i 6 sa).
+kos "tarama" 16200 "$py" -u -m copytrade.radar_tarama --cikti radar "${onceki[@]}" --ilerleme "$ilerleme" --ozet-md radar/OZET.md
 havuz="$(ls radar/*/havuz.json 2>/dev/null | tail -n 1)"
 [ -n "$havuz" ] || basarisiz "tarama (havuz.json yok)" 1
-kos "kadro" 1500 "$py" -u -m copytrade.radar_kadro --havuz "$havuz" "${onceki[@]}"
-kos "seçim isabeti" 2400 "$py" -u -m copytrade.radar_isabet --cikti radar --veri-dali "$veri_dali" --ozet-md radar/ISABET_OZET.md
-kos "aşırı uydurma raporu" 900 "$py" -u -m copytrade.pbo_rapor --kok radar --veri-dali "$veri_dali" --cikti radar --ozet-md radar/ISABET_OZET.md
-kos "rastgele karşılaştırma" 900 "$py" -u -m copytrade.radar_rastgele --kok radar --veri-dali "$veri_dali" --cikti radar --ozet-md radar/ISABET_OZET.md
-ek=(); if [ -f copytrade/radar/HOLDOUT_KULLANIM.txt ]; then ek+=(--kullanim-dosya copytrade/radar/HOLDOUT_KULLANIM.txt); fi
-kos "holdout mührü" 600 "$py" -u -m copytrade.holdout_muhur muhurla --kok radar --manifest radar/holdout/manifest.json --veri-dali "$veri_dali" "${ek[@]}"
+kos "kadro" 900 "$py" -u -m copytrade.radar_kadro --havuz "$havuz" "${onceki[@]}"
 # Yayım: aynı betik (Actions ile ortak); geçici worktree içinde veri dalına geçer; push kimliği = SSH deploy anahtarı (GIT_SSH_COMMAND).
 kos "veri dalına yayım" 900 env RADAR_SUNUCU=1 RADAR_GIT_AD=sg-sanal-sunucu RADAR_GIT_EPOSTA=sg-sanal-sunucu@users.noreply.github.com bash .github/scripts/radar_yayimla.sh
 log "tamam: radar/$(basename "$(dirname "$havuz")") yayımlandı"

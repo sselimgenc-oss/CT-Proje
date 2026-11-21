@@ -6,7 +6,7 @@
 ## Mimari (Actions ↔ sunucu)
 | Parça | Actions (şimdi) | Sunucu |
 |---|---|---|
-| Motor | `canli_vardiya.yml` 4 sa 15 dk vardiya zinciri | `sg-sanal.service` sürekli (`--kip sanal --sanal-kasa-usd 10000`) |
+| Motor | `canli_vardiya.yml` 4 sa 15 dk vardiya zinciri | `sg-sanal.service` sürekli (`--kip sanal --sanal-kasa-usd 1000`) |
 | Durum yayımı | `canli_yayimla.sh` (15 dk, `GITHUB_TOKEN`) | `sg-sanal-yayim.timer` → `deploy/sanal_yayimla.sh` (15 dk + servis durunca; SSH deploy anahtarı) |
 | Veri dalı | `canli-durum` | `canli-durum` |
 | Pano | `pano` işi → `sg-pano` | `sg-sanal-pano.timer` → `deploy/sanal_pano_cf.sh` → `sg-pano` |

@@ -52,7 +52,7 @@ done
 for f in hesap.json saha.json risk.json motor.json kilit.json ozet.json donem_seri.json; do
   if [ -f "$kaynak/durum/binance_kagit/$f" ]; then mkdir -p "$work/durum/binance_kagit"; cp "$kaynak/durum/binance_kagit/$f" "$work/durum/binance_kagit/$f"; fi
 done
-for f in kadro_yon_v1.json gunluk_ozet_v1.json rejim_sonuc_v1.json rejim_sonuc_v1.md secim_gercek_v1.json secim_gercek_v1.md kural_maliyet_v1.json kural_maliyet_v1.md; do if [ -f "$kaynak/durum/paylasim/$f" ]; then mkdir -p "$work/durum/paylasim"; cp "$kaynak/durum/paylasim/$f" "$work/durum/paylasim/$f"; fi; done
+for f in gunluk_ozet_v1.json secim_gercek_v1.json secim_gercek_v1.md kural_maliyet_v1.json kural_maliyet_v1.md; do if [ -f "$kaynak/durum/paylasim/$f" ]; then mkdir -p "$work/durum/paylasim"; cp "$kaynak/durum/paylasim/$f" "$work/durum/paylasim/$f"; fi; done
 for f in "$kaynak"/durum/paylasim/CT_HAFTA_*.md; do if [ -f "$f" ]; then mkdir -p "$work/durum/paylasim"; cp "$f" "$work/durum/paylasim/$(basename "$f")"; fi; done   # haftalık veri paketi (CT_HAFTA_<Pazartesi>.md + CT_HAFTA_son.md)
 if [ -d "$kaynak/kayit" ]; then cp -r "$kaynak/kayit/." "$work/kayit/"; fi
 if [ -s "$kaynak/pano/OZET.md" ]; then mkdir -p "$work/pano"; cp "$kaynak/pano/OZET.md" "$work/pano/OZET.md"; fi
