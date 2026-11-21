@@ -48,15 +48,3 @@ def test_dakika_kaldirac_adimi_calisir_hata_vermez(tmp_path):
 def _html(kaldirac_tr, satir):
     ozet = {"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "acik": []}
     return pano.html_olustur(ozet, {}, {}, [], [], 1_793_900_000_000, {"kosu_ms": 1_793_863_000_000, "satirlar": [satir]}, {"uyeler": {}, "inen": {}}, kaldirac_tr=kaldirac_tr)
-
-
-def test_pano_kart_anlik_kaldirac_ve_radar_etiketi_ve_eksik_veri():
-    a = "0xaaaa111122223333"
-    satir = {"adres": a, "sira": 1, "katman": "ilk11", "form": 75.0, "kopya_getiri_7g": 0.014, "max_kaldirac": 7.5}
-    h = _html({a: {"anlik_kaldirac": 3.26, "hesap_usd": 12345.0, "ms": 1}}, satir)
-    assert "Anlık kaldıraç" in h and "3,3x (hesap 12.345 $)" in h
-    assert "Radar azami (7g)" in h and "7,5x" in h and "Azami kaldıraç" not in h
-    h2 = _html(None, satir)                                                  # veri yok → "—"
-    assert "Anlık kaldıraç</span><br>—" in h2 and "7,5x" in h2
-    h3 = _html({a: {"anlik_kaldirac": None, "hesap_usd": None}}, {**satir, "max_kaldirac": None})
-    assert "Anlık kaldıraç</span><br>—" in h3 and "Radar azami (7g)</span><br>—" in h3

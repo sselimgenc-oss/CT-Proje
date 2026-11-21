@@ -119,8 +119,8 @@ def test_html_pano_kadro_sekmesi_ilk11_yedek_ve_bize_verdigi(tmp_path):
     hesap = {"realize": {a1: 5.0}, "ucret": {a1: 1.0}, "slot_bas": {a1: 90.0}}
     saha = {"uyeler": {a1: {"giris_ms": 1_793_800_000_000}}, "inen": {}}
     h = pano.html_olustur(ozet, {}, hesap, [{"olay": "emir", "adres": a1, "zaman_ms": 1_793_850_000_000, "coin": "BTC", "yon": "B", "durum": "dolu"}], [], 1_793_900_000_000, kadro, saha)
-    assert 'SAHADA' in h and 'BEKLİYOR' in h and 'YEDEK' in h and "YEDEK (1)" in h
-    assert "+2,00 $" in h and "Emir sayısı" in h                                                      # a1 net = 5 − 1 + (−2) = +2,00 $
+    assert "Takip edilen traderlar (1/11)" in h and "BEKLİYOR" not in h and "YEDEK" not in h and "Emir sayısı" not in h           # yedek/bekliyor kartı yok; tek tablo
+    assert "+2,00 $" in h and "+%2,22" in h                                                           # a1 net = 5 − 1 + (−2) = +2,00 $; slot 90 $ ⇒ +%2,22
 
 
 def test_html_pano_kadro_funding_dahil_bilinmeyen_kz_tire_kadro_disi_ve_mutabakat():
@@ -133,7 +133,7 @@ def test_html_pano_kadro_funding_dahil_bilinmeyen_kz_tire_kadro_disi_ve_mutabaka
     saha = {"uyeler": {a1: {}, a2: {}}, "inen": {a3: {"inis_ms": 1}}}
     h = pano.html_olustur(ozet, {}, hesap, [], [], 1_793_900_000_000, kadro, saha)
     assert "+1,50 $" in h                                  # a1 net = 5 − 1 − 0,5 + (−2) = +1,50 (funding dahil)
-    assert "0xbbbb11" in h and "0xdddd11" in h and "İNİYOR" in h and "Radar listesinde yok" in h   # radar listesinde olmayan sahada/inen üyeler de görünür
+    assert "İNİYOR" not in h and "Radar listesinde yok" not in h and h.count("<tr><td><b title=") == 3          # sahada + inen + defterdeki 3 trader tabloda (kart tipi yok)
     assert "bazı K/Z bilinmiyor" in h and "takipten ayrılan traderlar" in h                           # a2'nin açık K/Z'si bilinmiyor → 0 sayılmaz, toplam eksik işaretli
 
 
@@ -195,14 +195,15 @@ def test_pano_c1_canli_kopya_korumasi_ve_c6_kadro_kartlari():
     a1, a2, kadro, ozet, hesap, saha, kayit = _c_veri()
     # a1 net = realize 4 − ücret 0,5 + funding (−0,1) + açık K/Z (3 − 1 = 2) = +5,4 $ → slot 100 $ ⇒ bizim getiri +%5,40; trader hesabı 100.000 → 103.000 ⇒ +%3,00; koruma = 5,4 / 3 = 1,8
     h = pano.html_olustur(ozet, {}, hesap, kayit, [], 1_793_900_000_000, kadro, saha, {a1: {"deger": 103_000.0, "ms": 1}}, {a1: {"yatirma_payi": 0.3, "kopya_koruma": 0.75}, a2: {"yatirma_payi": 0.05}})
-    assert "+%5,40" in h and "+%3,00" in h and ">1,80<" in h                      # C1: bizim getiri / trader getirisi / koruma oranı
-    assert "+%30,00" in h and "0,75" in h                                       # C6: yatirma_payi 0,3 > 0,2 ⇒ kırmızı; radar koruma
-    assert "Güven ayarlı getiri" in h and "Hype yakalama" not in h                # C6: form bileşenleri; 14.11: H (ağırlık 0) çubuğu gösterilmez
+    assert "+%5,40" in h                                                          # C1: bizim getiri (slot 100 $ ⇒ +%5,40); koruma oranı/yatırma kartları kaldırıldı (pano 21.11)
+    assert "Güven ayarlı getiri" not in h and "Koruma oranı" not in h and "Hype yakalama" not in h
+
+
     from copytrade.canli.takma_ad import kisa_adres, takma_ad
-    assert f'<b title="{kisa_adres(a1)}">{takma_ad(a1)}</b>' in h and a1 not in h.replace(f'explorer/address/{a1}', '')      # takma ad ana etiket; adres yalnız tooltip (kısa) + bağlantı href'inde
-    assert f'href="https://app.hyperliquid.xyz/explorer/address/{a1}"' in h       # C6: trader sayfası bağlantısı (yalnız geçerli 42 karakterli adres)
-    h2 = pano.html_olustur(ozet, {}, hesap, kayit, [], 1_793_900_000_000, kadro, {"uyeler": {a1: {"giris_ms": 1}}, "inen": {}}, None, None)
-    assert "girişte kaydedilmemiş" in h2                                          # eski üyede giriş hesabı yok → "—"
+    assert f'<b title="{kisa_adres(a1)}">{takma_ad(a1)}</b>' in h and a1 not in h                               # takma ad ana etiket; adres yalnız tooltip (kısa)
+
+
+
 
 
 def test_pano_c2_c3_c4_c5_atlanan_kapanan_maliyet_maruziyet():
@@ -212,7 +213,7 @@ def test_pano_c2_c3_c4_c5_atlanan_kapanan_maliyet_maruziyet():
     # C2: min_alti ×2, slot_tavani ×1 → %67 / %33
     assert "<b>2</b> × asgari emrin yarısından küçük" in h and "<b>1</b> × yer sınırı" in h and "%67" in h                  # S-13: etiketler telegram.ATLA_TR'den (tek sözlük)
     # C3: iki kapanış dolumu: net +5,0 − 0,5 = +4,5 (kâr) ve −2,0 − 0,1 = −2,1 (zarar) → 2 adet, kazanma %50, ort. kâr 4,50 $, ort. zarar −2,10 $, kâr faktörü 4,5 / 2,1 = 2,14, net +2,40 $
-    assert '<td>TOPLAM</td><td class="sg">2</td><td class="sg">%50</td><td class="sg art">4,50 $</td><td class="sg eks">−2,10 $</td><td class="sg art">+2,40 $</td></tr><tr class="alt"><td colspan="6">kâr faktörü 2,14</td>' in h        # 06.11: kâr faktörü telefonda taşmasın diye ikinci satıra alındı (sayı aynı)
+    assert pano.kapanan_trader_ozeti(kayit)[a1] == (2, 0.5) and "2 / %50" in h                         # trader tablosu: kapanan / kazanma (net +4,5 kâr, −2,1 zarar)
     # C4: ücret 0,5 + 0,1 + 0,2 = 0,8; kayma = 0,001 × 100 + (−0,0004 × 50) + 0 = 0,1 − 0,02 = 0,08; funding −0,1 ⇒ maliyet = 0,8 + 0,08 − (−0,1) = 0,98; net 1004 − 1000 = +4,00; brüt = 4,98
     assert "−0,80 $" in h and "−0,08 $" in h and "−0,10 $" in h and "+4,98 $" in h and "Toplam maliyet 0,98 $" in h
     # C5: uzun 200, kısa 100 ⇒ net +100; brüt 300 = %30 kasa; teminat 300 / 3 = 100 = %10 özsermaye (1004); BTC 200 / (0,30 × 1000 = 300) = %67 doluluk
@@ -241,10 +242,10 @@ def test_html_pano_kadro_bolumleri_sahada_bekliyor_iniyor_yedek_sirasi():
     ozet = {"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "acik": []}
     saha = {"uyeler": {a1: {}}, "inen": {a4: {"inis_ms": 1}}}
     h = pano.html_olustur(ozet, {}, {}, [], [], 1_793_900_000_000, kadro, saha)
-    assert "SAHADA (1/11)" in h and "BEKLİYOR (1)" in h and "İNİYOR (1)" in h and "YEDEK (1)" in h
-    assert h.index("SAHADA (1/11)") < h.index("BEKLİYOR (1)") < h.index("İNİYOR (1)") < h.index("YEDEK (1)")
-    assert "iniyor — yedeğe düşecek" in h and "kadroda, henüz pozisyon yok" in h and "sahaya çıkmayı bekliyor" not in h
-    assert "rz bk" in h and "kd kb" in h and "--bk:#f5d90a" in h                                       # BEKLİYOR sarı
+    assert "Takip edilen traderlar (1/11)" in h and "BEKLİYOR" not in h and "İNİYOR" not in h and "YEDEK" not in h
+
+
+
     assert "Takip edilen traderlar (1/11)" in h
 
 
@@ -254,7 +255,7 @@ def test_html_pano_kadro_sahada_bos_bolum_gizlenmez():
     ozet = {"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "acik": []}
     for k, s in ((kadro, {}), (None, None)):
         h = pano.html_olustur(ozet, {}, {}, [], [], 1_793_900_000_000, k, s)
-        assert "SAHADA (0/11)" in h and "henüz sahaya çıkan yok" in h and "Takip edilen traderlar (0/11)" in h
+        assert "henüz sahaya çıkan yok" in h and "Takip edilen traderlar (0/11)" in h and "SAHADA" not in h
 
 
 def test_pano_grafik_tur_noktalarindan_kapanan_tablo_ve_ortanca_fark():
@@ -265,7 +266,7 @@ def test_pano_grafik_tur_noktalarindan_kapanan_tablo_ve_ortanca_fark():
                for i, (p, k) in enumerate([(2.0, 0.0001), (-1.0, 0.0003), (3.0, -0.0002)])]
     ozet = {"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1030.0, "getiri": 0.03, "saha": 3, "saha_n": 11, "acik": []}
     h = pano.html_olustur(ozet, {"gun_basi": 1000.0}, {}, tur + emirler, [{"gun": "2026-11-01", "ozsermaye": 990.0}, {"gun": "2026-11-02", "ozsermaye": 1000.0}], now)
-    assert "Özsermaye (son 30 gün)" in h and "KÂR FAKTÖRÜ" not in h and "kâr faktörü 5" in h                 # (2+3)/1 = 5
+    assert "Özsermaye (son 30 gün)" in h and pano.kapanan_trader_ozeti(tur + emirler)[A1] == (3, 2 / 3)      # trader başına 3 kapanış, kazanma 2/3
     assert "Ortanca fark" in h and "+%0,01" in h                           # sıralı fark [-2, 1, 3] bp → ortanca +1 bp = +%0,01
 
 
@@ -316,8 +317,8 @@ def test_s4_cli_maliyet_ve_kapanan_tum_pencereyi_okur(tmp_path, monkeypatch):
     h = (tmp_path / "p/index.html").read_text(encoding="utf-8")
     assert "−2,00 $" in h and "−0,20 $" in h and "Toplam maliyet 2,40 $" in h and "+6,40 $" in h and "Net K/Z (başlangıçtan beri)" in h
     assert "Kayıt penceresi: 03.11–05.11 · 3 gün (en çok 14 gün)" in h and "Kayıtlı dönem (≤ 14 gün)" not in h
-    assert 'class="per per4"' in h and "Trader bazında kapanışlar" in h
-    assert '<td>TOPLAM</td><td class="sg">3</td><td class="sg">%67</td>' in h and '<td class="sg art">+3,00 $</td>' in h
+    assert 'class="per per4"' in h and "Trader bazında kapanışlar" not in h
+    assert pano.kapanan_trader_ozeti(pano.kayitlari_oku(tmp_path / "kayit"))[A1] == (3, 2 / 3)
 
 
 def test_s4_maliyet_net_pencere_basindan_gecmisle():

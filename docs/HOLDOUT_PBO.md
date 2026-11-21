@@ -1,6 +1,6 @@
 # Aşırı uydurma koruması: holdout mührü, PBO, sürüm karşılaştırma
 
-Kapsam: **yalnız raporlama** (Faz 2). Strateji, `radar_*` eşikleri ve emir kararları değişmez. Kod: `copytrade/holdout_muhur.py`, `copytrade/pbo.py`, `copytrade/pbo_rapor.py`, `copytrade/surum_karsilastirma.py`.
+Kapsam: **yalnız raporlama** (Faz 2). Strateji, `radar_*` eşikleri ve emir kararları değişmez. Kod: `copytrade/holdout_muhur.py`, `copytrade/pbo.py`, `copytrade/pbo_rapor.py`.
 
 ## 1. Holdout mührü (sınav kâğıdını mühürlemek)
 

@@ -127,11 +127,11 @@ def test_pano_html_donem_sekmesi_ve_kaldirilanlar():
     h = pano.html_olustur(ozet, {}, {}, [], [], T0 + GUN, KADRO, {"uyeler": {}, "inen": {}}, donem_seri=DS)
     assert "Seçim isabeti" not in h and "ölçüm · ortalama" not in h
     assert "İçgörüler" not in h and "Bu hafta" not in h and "Hype yakalama" not in h                           # madde 8
-    assert "SAHADA (0/5)" in h and "Takip edilen traderlar (0/5)" in h and "/11" not in h                               # madde 7: saha_n
+    assert "Takip edilen traderlar (0/5)" in h and "SAHADA (" not in h and "/11" not in h                               # madde 7: saha_n
     assert 'class="sirit s6"' in h                                                                             # 6 kutulu üst şerit
-    assert "Dönem eğrisi" in h and "<polyline" in h and "BTC al-tut" in h and "%4/ay hedef" in h               # 9a
-    assert "Trader katkısı" in h and "sahada" in h and "+200,00 $" in h                                        # 9b
+    assert "Dönem eğrisi" in h and "<polyline" in h and "BTC al-tut" in h and "%4/ay hedef" not in h               # 9a
     assert "İlk 11 ↔ Yedek" not in h                                                                              # 9c: kaldırıldı
+    assert "Trader katkısı" not in h and "Trader bazında kapanışlar" not in h and "Trader değişiklikleri" not in h and "Sürüm karşılaştırma" not in h   # 21.11: tek tabloya birleşti / kaldırıldı
     assert "çıkış ·" in h and "(sonuçla)" in h                                                                # 9d
     assert "%75" in h and "%40" in h                                                                           # 9e
     assert "Evren · <b>2457</b>" in h and "≥10 işlem · <b>140</b>" in h and "az işlem" in h and "islem_az" not in h                    # 9f
@@ -198,3 +198,22 @@ def test_komisyon_ozeti_ve_tutma_sinifi_1511():
     assert p.komisyon_ozeti(kay, {"kasa_usd": 1000.0, "ozsermaye_usd": 980.0}, {"bas_ms": 100})[2] is None          # brüt ≤ 0: oran yok
     assert p.komisyon_metni(kay, {"kasa_usd": 1000.0, "ozsermaye_usd": 1030.0}, {"bas_ms": 100})[1] == "brüt kârın %25'i"
     assert [p.tutma_sinifi(x) for x in (0.2, 1.2, 4.0, 10.0, 30.0, None)] == ["scalp", "kısa day", "day", "day", "swing", "—"]
+
+
+def test_pano_kayitlar_bolumu_tam_bes_baslik_ve_trader_tablosu_yeni_sutunlar():
+    """Kayıtlar bölümü (kullanıcı onayı 21.11): tam 5 başlık; trader tablosunda katkı $ ve kapanan / kazanma sütunları; Emirler kapalı (<details> open'sız)."""
+    import re
+    ozet = {"kip": "sanal", "kasa_usd": 10_000.0, "ozsermaye_usd": 10_250.0, "getiri": 0.025, "acik": [], "saha": 1, "saha_n": 5, "donem": DONEM}
+    a = adr(2)
+    hesap = {"slot_bas": {a: 200.0}, "realize": {a: 10.0}, "ucret": {a: 0.0}}
+    kayit = [{"olay": "emir", "adres": a, "zaman_ms": T0, "coin": "BTC", "yon": "A", "durum": "dolu", "reduce_only": True, "pnl_usd": 5.0, "ucret": 0.0},
+             {"olay": "emir", "adres": a, "zaman_ms": T0 + 1, "coin": "BTC", "yon": "A", "durum": "dolu", "reduce_only": True, "pnl_usd": -1.0, "ucret": 0.0}]
+    h = pano.html_olustur(ozet, {}, hesap, kayit, [], T0 + GUN, KADRO, {"uyeler": {a: {}}, "inen": {}}, donem_seri=DS)
+    kayitlar_b = h[h.index('<div class="grp">Kayıtlar</div>'):]
+    basliklar = re.findall(r"<details class=\"td\"[^>]*><summary><span>([^<]+)</span>", kayitlar_b.split("</section>")[0])
+    ic = [b for b in basliklar if b != "ayrıntı"]                                           # maliyet içindeki "ayrıntı" alt açılırı başlık değil
+    assert ic == ["Dönem eğrisi", "Takip edilen traderlar (1/5)", "Giriş / çıkış geçmişi", "Emirler (24 sa)", "Maliyet dökümü"]
+    assert "<th class=\"sg\">KATKI $</th>" in h and "<th class=\"sg\">KAPANAN / KAZANMA</th>" in h and "<th class=\"sg\">AYRILAN PARA</th>" in h and "ÇIKIŞA (−%10)" in h
+    assert "200,00 $" in h and "2 / %50" in h and "+%5,00" in h and "%15,0 kaldı" in h                   # net 10 / slot 200 = +%5; çıkışa −%10'a mesafe 15 puan
+    assert re.search(r"<details class=\"td\"><summary><span>Emirler \(24 sa\)", h) and re.search(r"<details class=\"td\"><summary><span>Maliyet dökümü", h)   # kapalı
+    assert "ücret <b>" in h and "kayma <b>" in h and "fonlama ücreti <b>" in h
