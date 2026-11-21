@@ -786,3 +786,7 @@
 {"t":"sonuc","cloid":"0x5cef712c49ef05829b2e1680bd451eb9","durum":"dolu","ms":1795206648960,"sz":0.06525237443277697,"px":6934.2,"ucret":0.20361285665629292}
 {"t":"niyet","kimlik":"kapat:0x3d380a67f690cb64a147ef084ad76fbed139dd33:xyz:SP500:1795209124002:0:tam_kapanis","eylem":"kapat","adres":"0x3d380a67f690cb64a147ef084ad76fbed139dd33","coin":"xyz:SP500","yon":"A","usd":1431.634171,"reduce_only":true,"cloid":"0x2ff34e7f8326818b0b355c9261077cbf","ms":1795209124002}
 {"t":"sonuc","cloid":"0x2ff34e7f8326818b0b355c9261077cbf","durum":"dolu","ms":1795209124225,"sz":0.19653351913234712,"px":6941.150881905765,"ucret":0.6138759643422906}
+{"t":"niyet","kimlik":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461:403342092058708","eylem":"azalt","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:PLTR","yon":"A","usd":22.508107,"reduce_only":true,"cloid":"0x03cf9c39c0eb635af94ed9186a2c903f","ms":1795232106705}
+{"t":"sonuc","cloid":"0x03cf9c39c0eb635af94ed9186a2c903f","durum":"dolu","ms":1795232106930,"sz":0.15559854344729318,"px":144.29,"ucret":0.010103091225304468}
+{"t":"niyet","kimlik":"kapat:0x6a8686e35899b0ad75d388fca49c43a6a1eb6461:xyz:AMD:1795232110261:0:tam_kapanis","eylem":"kapat","adres":"0x6a8686e35899b0ad75d388fca49c43a6a1eb6461","coin":"xyz:AMD","yon":"A","usd":17.630834,"reduce_only":true,"cloid":"0xce21d1c6565d280cc6cf9f852ea41ee5","ms":1795232110261}
+{"t":"sonuc","cloid":"0xce21d1c6565d280cc6cf9f852ea41ee5","durum":"dolu","ms":1795232110494,"sz":0.03887318101838341,"px":431.6499999999999,"ucret":0.007550823863963339}
