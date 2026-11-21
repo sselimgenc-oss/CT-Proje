@@ -839,3 +839,5 @@
 {"zaman_ms":1795250825609,"olay":"emir_yok","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"HYPE","eylem":"ac","karar":"atlandi","neden":"ara_dolum_siniri","trader_dolum_ms":1795250825256,"gorme_ms":1795250825608,"yas_ms":353}
 {"zaman_ms":1795251529169,"olay":"tur","ozsermaye_usd":9875.3809}
 {"zaman_ms":1795251630457,"olay":"funding","saat":498681,"saat_adet":1,"funding_usd":0.2074069857957633,"toplam_funding_usd":-2.2382059875074143}
+{"zaman_ms":1795252382391,"olay":"tur","ozsermaye_usd":9864.829}
+{"zaman_ms":1795252975008,"olay":"kopya_drift","coin":"TRX","biz_usd":403.15,"ideal_usd":539.7,"drift":0.253,"sure_dk":30}
