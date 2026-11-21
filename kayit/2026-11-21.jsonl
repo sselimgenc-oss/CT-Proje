@@ -99,3 +99,6 @@
 {"zaman_ms":1795225576950,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"VVV","neden":"pozisyon_eski"}
 {"zaman_ms":1795225579570,"olay":"kacan_telafi_atlandi","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"ZEC","neden":"filtre_atlamisti:duygu_ters"}
 {"zaman_ms":1795225622803,"olay":"tur","ozsermaye_usd":9846.033}
+{"zaman_ms":1795226169540,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"VVV","neden":"kayma_lehte_fazla","kayma":-0.016093,"trader_giris":21.1147,"mark":21.4545}
+{"zaman_ms":1795226418930,"olay":"funding","saat":498674,"saat_adet":1,"funding_usd":-0.053054088760843304,"toplam_funding_usd":-1.9155419861403327}
+{"zaman_ms":1795226484824,"olay":"tur","ozsermaye_usd":9839.4383}

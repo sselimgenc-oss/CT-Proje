@@ -1,15 +1,15 @@
 {
  "sema": "ortak.gunluk_ozet.v1",
  "proje": "CT",
- "uretim": "2026-11-21T01:04:50Z",
+ "uretim": "2026-11-21T02:05:16Z",
  "gun": "2026-11-21",
  "mod": "sanal",
  "kasa": {
   "baslangic": 10000.0,
-  "simdi": 9845.23,
-  "gun_pnl": 11.55,
-  "toplam_pnl": -154.77,
-  "zirveden_dusus_yuzde": 2.09
+  "simdi": 9841.06,
+  "gun_pnl": 7.38,
+  "toplam_pnl": -158.94,
+  "zirveden_dusus_yuzde": 2.13
  },
  "islem": {
   "gun_acilan": 0,
@@ -17,13 +17,13 @@
   "kazanan": 0,
   "kaybeden": 0,
   "acik_pozisyon": 41,
-  "alinmayan_sinyal": 37
+  "alinmayan_sinyal": 56
  },
  "hesaplar": [
   {
    "ad": "T_0c2447",
    "gun_pnl": 0,
-   "toplam_pnl": -122.12,
+   "toplam_pnl": -122.17,
    "islem": 0
   },
   {
@@ -35,43 +35,43 @@
   {
    "ad": "T_f6b664",
    "gun_pnl": 0,
-   "toplam_pnl": -58.12,
+   "toplam_pnl": -57.76,
    "islem": 0
   },
   {
    "ad": "T_99f0d4",
    "gun_pnl": 0,
-   "toplam_pnl": 86.73,
+   "toplam_pnl": 85.49,
    "islem": 0
   },
   {
    "ad": "T_2e4035",
    "gun_pnl": 0,
-   "toplam_pnl": -6.76,
+   "toplam_pnl": -7.58,
    "islem": 0
   },
   {
    "ad": "T_9934d6",
    "gun_pnl": 0,
-   "toplam_pnl": -131.53,
+   "toplam_pnl": -125.46,
    "islem": 0
   },
   {
    "ad": "T_b4c6ee",
    "gun_pnl": 0,
-   "toplam_pnl": 88.55,
+   "toplam_pnl": 83.19,
    "islem": 0
   },
   {
    "ad": "T_e7ae5a",
    "gun_pnl": 0,
-   "toplam_pnl": 120.08,
+   "toplam_pnl": 116.83,
    "islem": 0
   },
   {
    "ad": "T_7bb402",
    "gun_pnl": 0,
-   "toplam_pnl": -104.33,
+   "toplam_pnl": -104.22,
    "islem": 0
   },
   {
@@ -106,12 +106,12 @@
   "kaldirac_ayar": 3.0
  },
  "saglik": {
-  "son_nabiz": "2026-11-21T01:04:50Z",
+  "son_nabiz": "2026-11-21T02:05:16Z",
   "hata_sayisi_gun": 0,
-  "ram_mb": 104.2,
-  "ram_tepe_mb": 120.3,
+  "ram_mb": 108.1,
+  "ram_tepe_mb": 120.7,
   "disk_bos_gb": 63.42,
-  "yuk_1dk": 0.0,
+  "yuk_1dk": 0.14,
   "yeniden_baslama_1s": null,
   "oom_son": null
  },
@@ -123,7 +123,7 @@
  "alinmayan_neden": [
   {
    "neden": "duygu_ters",
-   "adet": 31,
+   "adet": 50,
    "karsi_olgu_kapanan": 0,
    "karsi_olgu_pnl": null
   },
