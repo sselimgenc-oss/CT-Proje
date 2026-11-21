@@ -558,3 +558,8 @@
 {"zaman_ms":1795242313426,"olay":"tg_mesaj","tur":"islem_satiri","anahtar":null,"seviye":"INFO","sessiz":false,"metin":"✅ SOL kapandı · trader Bukalemun-DE (sanal)\n+30,77 $ (+%9,42) · Neden: trader kapattı","gonderildi":false,"bastirildi":true,"adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","yon":"B","pnl":30.771764,"neden":"tam_kapanis"}
 {"zaman_ms":1795242352413,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"HYPE","neden":"filtre_atlamisti:duygu_ters"}
 {"zaman_ms":1795242374398,"olay":"karsi_olgu_kapandi","coin":"SOL","neden":"duygu_ters","yon":"A","hayali_usd":10.15,"pnl_usd":0.7592,"sure_sa":18.25,"kapanis":"trader_kapadi"}
+{"zaman_ms":1795242605251,"olay":"kopya_drift","coin":"xyz:GOOGL","biz_usd":0.0,"ideal_usd":-111.45,"drift":1.0,"sure_dk":30}
+{"zaman_ms":1795242869174,"olay":"tur","ozsermaye_usd":9883.7995}
+{"zaman_ms":1795242869175,"olay":"kopya_drift","coin":"io:SNDK","biz_usd":119.1,"ideal_usd":85.7,"drift":0.39,"sure_dk":30}
+{"zaman_ms":1795243212378,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"BTC","eylem":"ac","karar":"atlandi","neden":"ara_dolum_siniri","trader_dolum_ms":1795243211926,"gorme_ms":1795243212376,"yas_ms":452}
+{"zaman_ms":1795243212414,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"BTC","eylem":"ac","karar":"atlandi","neden":"ara_dolum_siniri","trader_dolum_ms":1795243211926,"gorme_ms":1795243212376,"yas_ms":488}
