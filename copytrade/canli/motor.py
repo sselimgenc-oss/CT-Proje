@@ -52,9 +52,7 @@ from copytrade.tarama import KAPI_YENIDEN_BEKLEME, PublicClient, RateLimiter, Ra
 EPS = 1e-12
 TR_EPS = 1e-9                                                  # D5: TRADER pozisyonu için tek toz eşiği (poz_tr sıfırlama, eylem_belirle, kapanış önceliği); bizim defter pozisyonu `EPS`
 DAKIKA = 60_000
-SON_ATLA_MAX = 3000          # adet (K-75: "adres|coin" başına son açılış atlama nedeni; aşılırsa en eskiler düşer)
-TELAFI_YENIDEN_DENE = ("gec_acilis", "trader_hesap_yok", "hesap_yok", "hip3_atlandi")      # K-75 (hip3_atlandi: K-73 öncesi kalan atlama; açılış yine güncel HIP-3 kuralından geçer): bu nedenlerle atlanan açılış "kaçmış" sayılır (kural/filtre değil, veri/zaman) → telafi edilebilir; diğer atlama nedenlerine saygı gösterilir
-STOP_MUAF_NEDENLER = ("felaket_stop", "tasfiye_koruma_stop", "iz_suren_koruma", "tasfiye", "borsa_stop", "borsa_stop_korumasiz", "gunluk_kapat")      # K-75 ek: kendi korumamızla kapanış; trader tutarken telafi yeniden açmaz (`dur:*` önekli nedenler de)
+GEC_KAYNAKLAR = ("dolgu", "rest")     # K-83: kopma sonrası dolgu / açılışta REST tamamlama: bu kaynaklardan gelen açılış/artırma "geç görülen" sayılır (alınmaz); canlı WS için eşik `canli_olay_stale_sn` (`gec_acilis`)
 SNAP_SAKLA = 50_000          # adet (yalnız snapshot görülen dolum kimlikleri, bellekte; HL userFills snapshot'ı adres başına ≤ 2000 dolum × 10 adres + trades snapshot'ları)
 
 
@@ -629,13 +627,6 @@ class Motor:
         self.karsi_olgu_gun: dict[str, list[float]] = {k: [float(x) for x in v] for k, v in (m.get("karsi_olgu_gun") or {}).items() if isinstance(v, list) and len(v) == 2}      # günlük özet: neden -> [adet, hayali K/Z $]
         self.kopya_drift: dict[str, dict] = {k: dict(v) for k, v in (m.get("kopya_drift") or {}).items() if isinstance(v, dict)}        # coin -> {bas_ms, aktif}: eşik üstü drift (yalnız uyarı)
         self.kopya_drift_tg_ms: dict[str, int] = {k: int(v) for k, v in (m.get("kopya_drift_tg_ms") or {}).items()}                  # coin -> son Telegram uyarısı (hız sınırı)
-        self.son_atla: dict[str, list] = {k: [str(v[0]), int(v[1])] for k, v in (m.get("son_atla") or {}).items() if isinstance(v, list) and len(v) == 2}      # K-75: "adres|coin" -> [son açılış/artırma atlama nedeni, ms]; kaçan açılış telafisi filtre atlamasına saygı gösterir
-        self.stop_muaf: dict[str, list] = {k: [int(v[0]), int(v[1])] for k, v in (m.get("stop_muaf") or {}).items() if isinstance(v, list) and len(v) == 2}      # K-75 ek: kendi korumamızla kapanan "adres|coin" -> [trader poz yönü işareti, kapanış ms]; telafi yeniden açmaz (trader pozisyonu kapanıp/ters dönüp/yeniden açılana dek)
-        self._telafi_log: dict[str, str] = {}                           # K-75: "adres|coin" -> son kaydedilen telafi atlama nedeni (aynı neden her senkronda yeniden yazılmaz; yalnız bellek)
-        self._telafi_yas: dict[str, tuple[int, int | None, bool]] = {}   # K-75 429 düzeltmesi: "adres|coin" -> (trader poz yönü işareti, açılış ms | None, bilinen_mi); pozisyon açıkken açılış anı değişmez (kapanınca/ters dönünce silinir)
-        self._telafi_dolum: dict[str, tuple[int, list[dict]]] = {}      # adres -> (okuma ms, dolumlar): REST dolum geçmişi TTL önbelleği (`kacan_telafi_dolum_ttl_dk`)
-        self._telafi_geri_bit_ms: int = 0                               # telafi geri çekilmesi bitiş (ms; yalnız telafi durur, kopya hızı etkilenmez)
-        self._telafi_ardisik_429: int = 0                               # ardışık 429 sayısı (başarılı okumada sıfırlanır)
         self.marks: dict[str, float] = {}
         self.mark_ms: dict[str, int] = {}
         self.sayac = {"emir": 0, "dolu": 0, "kismi": 0, "dolmadi": 0, "red": 0, "atlandi": 0, "engel": 0, "gec_goruldu": 0, "gec_acilis": 0, "kapanis_eksik": 0, "min_nosyonel": 0, "funding_oran_yok": 0}
@@ -770,7 +761,7 @@ class Motor:
                 "kapanis_kuyrugu": self.kapanis_kuyrugu, "dur_bekliyor": self.dur_bekliyor, "hl_ofset": self.hl_ofset, "ledger_son_ms": self.ledger_son_ms, "hl_onceki": list(self._hl_onceki) if self._hl_onceki else None, "hl_sicrama": self._hl_sicrama, "hl_sicrama_ms": self._hl_sicrama_ms, "son_funding_saat": self.son_funding_saat, "tg_offset": self.tg.kalici_offset,
                 "son_funding_ms": self.son_funding_ms, "funding_kimlik": self.funding_kimlik[-500:], "funding_gercek_usd": self.funding_gercek_usd, "ucret_gercek_usd": self.ucret_gercek_usd, "ucret_tahmin_say": self.ucret_tahmin_say,
                 "ucret_bekleyen": self.ucret_bekleyen[-500:], "btc_donem": self.btc_donem, "mutabakat_tutan": self.mutabakat_tutan, "yetim_ilk": self.yetim_ilk, "sahipsiz_ilk": self.sahipsiz_ilk,
-                "haber_anlik": self.haber_anlik, "son_atla": self.son_atla, "stop_muaf": self.stop_muaf,
+                "haber_anlik": self.haber_anlik,
                 "karsi_olgu": self.karsi_olgu, "karsi_olgu_gun": self.karsi_olgu_gun, "kopya_drift": self.kopya_drift, "kopya_drift_tg_ms": self.kopya_drift_tg_ms, "kaynak": self._kaynak}
 
     def _hesap_yaz(self) -> None:
@@ -1057,7 +1048,7 @@ class Motor:
         return True, izin
 
     def _ara_dolum_asildi(self, adres: str, coin: str) -> bool:
-        """K-76: bu pozisyonda sınır aşıldı (alınmayan ara dolum var)? Telafi yeniden açmasın, drift alarmı yalan söylemesin diye."""
+        """K-76: bu pozisyonda sınır aşıldı (alınmayan ara dolum var)? Drift alarmı yalan söylemesin diye."""
         c = self.ara_dolum.get(f"{adres}|{coin}")
         return c is not None and int(c.get("n", 0)) > int(self.rules.get("kopya_ara_dolum_max", 2))
 
@@ -1120,6 +1111,9 @@ class Motor:
         biz_sz = self.hesap.sz(adres, o.coin)
         ara_dolum, ara_izin = self._ara_dolum_say(o, once, sonra)
         for eylem in eylem_belirle(once, sonra, biz_sz):
+            if eylem in ("ac", "artir") and o.kaynak in GEC_KAYNAKLAR:                  # K-83 (kullanıcı kararı 20.11): kopma/açılış sonrası REST'ten (dolgu / rest) görülen AÇILIŞ/artırma ALINMAZ, telafi yok; kapanış/azaltma aynen uygulanır
+                sonuclar.append(self._atla(o, adres, eylem, "atlandi", "gec_goruldu_alinmaz"))
+                continue
             if ara_dolum and not ara_izin and eylem in ("ac", "artir", "azalt"):       # K-76: 3. ve sonraki ara dolum: emir yok (kapanış / yön dönüşü kapat parçası her zaman alınır)
                 sonuclar.append(self._atla(o, adres, eylem, "atlandi", "ara_dolum_siniri"))
                 _yaz(self.durum_dizin / "motor.json", self._motor_json())              # sayaç + işlenen kimlik kalıcı (emir yolu yazmıyor)
@@ -1180,7 +1174,7 @@ class Motor:
         if len(z) >= 3 and self._aralik_mi("filtre_hata_uyari:" + tur, simdi, 6 * 3600):
             self.tg.gonder(tg.msg_filtre_hata(len(z)), "WARN", "sanal_filtre_hata:" + tur)
 
-    def _emir_isle(self, o: Olay, adres: str, eylem: str, once: float, sonra: float, biz_sz: float, simdi: int, gec: bool, telafi: dict | None = None) -> Sonuc:
+    def _emir_isle(self, o: Olay, adres: str, eylem: str, once: float, sonra: float, biz_sz: float, simdi: int, gec: bool) -> Sonuc:
         acilis = eylem in ("ac", "artir")
         if acilis and simdi - o.zaman_ms > float(self.rules["canli_olay_stale_sn"]) * 1000:
             self.sayac["gec_acilis"] += 1
@@ -1277,14 +1271,6 @@ class Motor:
                 return self._atla(o, adres, eylem, "engel", mn)
             neden = mn or neden
         yon = ("B" if sonra > 0 else "A") if acilis else ("A" if biz_sz > 0 else "B")
-        if acilis:
-            self.son_atla.pop(f"{adres}|{o.coin}", None)           # K-75: emir verildi → eski atlama nedeni geçersiz
-            if telafi is None:
-                self.stop_muaf.pop(f"{adres}|{o.coin}", None)      # normal (canlı) yeni açılış kopyalandı: muafiyet biter
-        if telafi is not None and acilis:                          # K-75: kaçan açılış telafisi: boyut TÜM kurallardan geçti (aynı yol); kayıtta neden "kacan_telafi", asıl boyut nedeni ayrı alanda
-            if self._boyut_girdi is not None:
-                self._boyut_girdi.update({**telafi, "telafi_boyut_neden": neden})
-            neden = "kacan_telafi"
         if eylem == "kapat":                                       # trader tam kapanış: teyitli kapanış (yeniden deneme merdiveni, K‑37 §1)
             sonuc = self._kapat_coin(adres, o.coin, neden, simdi, o)
             return sonuc[1] or Sonuc(adres, o.coin, eylem, "atlandi", "kapanis_yok")
@@ -1478,16 +1464,11 @@ class Motor:
             self._atla_islem.add((adres, o.coin, int(o.zaman_ms) // 1000))
             ad = self._atla_adres.setdefault(neden, {})
             ad[adres] = ad.get(adres, 0) + 1
-        if eylem in ("ac", "artir") and neden != "bant_ici":              # K-75: son açılış atlama nedeni (kaçan açılış telafisi filtre/kural atlamasına saygı gösterir; kalıcı)
-            self.son_atla[f"{adres}|{o.coin}"] = [neden, self.saat_ms()]
-            if len(self.son_atla) > SON_ATLA_MAX:
-                for k in sorted(self.son_atla, key=lambda x: self.son_atla[x][1])[:len(self.son_atla) - SON_ATLA_MAX]:
-                    del self.son_atla[k]
         self.kayit({"olay": "emir_yok", "adres": adres, "coin": o.coin, "eylem": eylem, "karar": karar, "neden": neden, "trader_dolum_ms": o.zaman_ms, "gorme_ms": o.alma_ms,
                     "yas_ms": self.saat_ms() - o.zaman_ms})
         if eylem == "ac" and neden in tg.KACIRILAN_NEDENLER:          # kaçırılan (geç görülen / veri yok) = eksik kopya → sessiz bilgi; kural gereği atlananlar gönderilmez
             self.tg.gonder(tg.msg_kopya_hata("ac", o.coin, adres, tg.atla_etiket(neden)), "INFO", tur="kopya_kacan")      # rutin (geç görülen/veri yok): Telegram'a gitmez; gerçek hata (emir reddedildi/kapanış doldurulamadı) `_kopya_hata` ile gider
-        if eylem in ("ac", "artir") and neden not in ("bant_ici", "ara_dolum_siniri"):      # K-76: ara dolum sınırı için karşı-olgu ÖLÇÜLMEZ (kullanıcı kararı 20.11)
+        if eylem in ("ac", "artir") and neden not in ("bant_ici", "ara_dolum_siniri", "gec_goruldu_alinmaz"):      # K-76: ara dolum sınırı için karşı-olgu ÖLÇÜLMEZ (kullanıcı kararı 20.11); K-83: geç görülen açılış (telafi yok) de ölçülmez
             try:
                 self._karsi_olgu_ac(o, adres, neden)
             except Exception as hata:                      # noqa: BLE001
@@ -1723,15 +1704,6 @@ class Motor:
                 pass
             self.kayit({"olay": "kapanis_duzeltme", "adres": adres, "coin": coin, "sz": sz, "neden": neden})
 
-    def _stop_muaf_yaz(self, adres: str, coin: str, neden: str, simdi: int) -> None:
-        """K-75 ek: kendi korumamızla (felaket/tasfiye-koruma/iz_süren/borsa stop/sert limit/DUR) kapanan pozisyon için trader hâlâ aynı yönde tutuyorsa telafi muafiyeti yazılır (yön işareti + ms)."""
-        if neden not in STOP_MUAF_NEDENLER and not neden.startswith("dur:"):
-            return
-        poz = self.poz_tr.get(adres, {}).get(coin, 0.0)
-        if abs(poz) < EPS:
-            return
-        self.stop_muaf[f"{adres}|{coin}"] = [1 if poz > 0 else -1, int(simdi)]
-
     def _kapat_coin(self, adres: str, coin: str, neden: str, simdi: int, o: Olay | None = None, bantlar: list[float] | None = None, baslangic: int = 0) -> tuple[bool, Sonuc | None]:
         """Adresin tek coindeki pozisyonunu reduce‑only kapatır: IOC sonrası kalan varsa TAZE defterle yeniden dener (en çok `len(bantlar)` = 5; bant %0,5 → %1 → %2).
         Gerçek kipte her denemeden sonra borsa pozisyonu okunur; "kapandı" yalnız kalan ≈ 0 iken yazılır. Teyit yoksa `kapanis_kuyrugu`na (alarm + dakikalık yeniden deneme) girer. Döner (teyitli, son Sonuc)."""
@@ -1749,7 +1721,6 @@ class Motor:
                     self._harici_kapanis(adres, coin, kalan, mk, simdi, neden)
                 self._yerel_temizle(adres, coin, mk, simdi, neden)
                 self.kapanis_kuyrugu.pop(f"{adres}|{coin}", None)
-                self._stop_muaf_yaz(adres, coin, neden, simdi)
                 return True, son
             if i >= len(bantlar):
                 break
@@ -2221,173 +2192,7 @@ class Motor:
                     self._senkron_azalt(adres, coin, i, g, simdi)                       # S-1: kaçan kısmi azaltma (trader küçüldü, izlenen büyük kaldı)
         return duzeltilen
 
-    # ------------------------------------------------------------------ K-75: kaçan açılış telafisi (yalnız sanal)
-    def _telafi_log_yaz(self, adres: str, coin: str, neden: str, **ek: Any) -> None:
-        """Telafi atlama nedeni değişince bir kez kaydedilir (her 10 dk'lık senkronda aynı satır tekrarlanmaz)."""
-        anahtar = f"{adres}|{coin}"
-        if self._telafi_log.get(anahtar) != neden:
-            self._telafi_log[anahtar] = neden
-            self.kayit({"olay": "kacan_telafi_atlandi", "adres": adres, "coin": coin, "neden": neden, **ek})
-
-    def _telafi_dolumlar(self, adres: str, simdi: int, pencere_ms: int, ttl_ms: int, taze_zorla: bool) -> tuple[list[dict], bool]:
-        """Trader dolum geçmişi: TTL içindeki önbellek (REST yok) ya da yeni okuma. Döner (dolumlar, rest_okundu_mu)."""
-        c = self._telafi_dolum.get(adres)
-        if c is not None and not taze_zorla and simdi - c[0] < ttl_ms:
-            return c[1], False
-        dolumlar = rest_dolumlar(self.post_hizli, adres, simdi - pencere_ms, simdi)
-        self._telafi_dolum[adres] = (simdi, dolumlar)
-        return dolumlar, True
-
-    @staticmethod
-    def _dolumdan_acilis(dolumlar: list[dict], coin: str, simdi: int, pencere_ms: int) -> tuple[int | None, bool]:
-        acilis: int | None = None
-        for f in sorted((x for x in dolumlar if str(x.get("coin", "")) == coin and int(x["time"]) >= simdi - pencere_ms), key=lambda x: int(x["time"])):
-            bas = f.get("startPosition")
-            if bas is None:
-                return None, False
-            bas, sz = float(bas), float(f["sz"])
-            son = bas + (sz if str(f.get("side")) == "B" else -sz)
-            if abs(bas) < TR_EPS or bas * son < 0:
-                acilis = int(f["time"])
-        return acilis, True
-
-    def _trader_poz_acilis_ms(self, adres: str, coin: str, simdi: int, pencere_ms: int) -> tuple[int | None, bool, bool]:
-        """Trader'ın coindeki ŞU ANKİ pozisyonunun açılış anı (son sıfırdan açılış / yön değişimi dolumu), son `pencere_ms` içinde. Döner (ms | None, bilinen_mi, rest_okundu_mu).
-        bilinen=False: dolumlarda `startPosition` yok (yaş bilinmiyor). Pencerede o coinde açılış dolumu yoksa (None, True): pozisyon pencereden eski. Dolumlar adres başına TTL'li önbellekten gelir;
-        önbellekten açılış bulunamazsa (pozisyon yeni açılmış olabilir) bir kez taze okunur. Okuma hatası istisna olarak yükselir."""
-        ttl = int(float(self.rules.get("kacan_telafi_dolum_ttl_dk", 30)) * 60_000)
-        dolumlar, okundu = self._telafi_dolumlar(adres, simdi, pencere_ms, ttl, False)
-        acilis, bilinen = self._dolumdan_acilis(dolumlar, coin, simdi, pencere_ms)
-        if not okundu and bilinen and acilis is None:
-            dolumlar, okundu = self._telafi_dolumlar(adres, simdi, pencere_ms, ttl, True)
-            acilis, bilinen = self._dolumdan_acilis(dolumlar, coin, simdi, pencere_ms)
-        return acilis, bilinen, okundu
-
-    def _telafi_hiz_siniri_soguma(self) -> bool:
-        """Paylaşılan REST sınırlayıcısında (`GuvenliLimiter`) 429 soğuması sürüyorsa telafi okuması en düşük öncelikli: hiç denemez."""
-        lim = getattr(getattr(self.post, "istemci", None), "limiter", None)
-        f = getattr(lim, "soguma_kalan", None)
-        try:
-            return bool(f and f() > 0)
-        except Exception:                                  # noqa: BLE001
-            return False
-
-    def _telafi_geri_cekil(self, adres: str, asama: str, simdi: int) -> None:
-        """429: yalnız telafi durur (`kacan_telafi_geri_cekil_sn`, ardışık 429'da ikiye katlanır, tavan 1 sa); backoff başına TEK olay."""
-        taban = float(self.rules.get("kacan_telafi_geri_cekil_sn", 300))
-        self._telafi_ardisik_429 += 1
-        sn = min(taban * 2 ** (self._telafi_ardisik_429 - 1), 3600.0)
-        self._telafi_geri_bit_ms = simdi + int(sn * 1000)
-        self.kayit({"olay": "kacan_telafi_geri_cekil", "adres": adres, "asama": asama, "sn": sn, "ardisik": self._telafi_ardisik_429})
-
-    def kacan_telafi(self, simdi: int) -> int:
-        """K-75 (kullanıcı kararı 20.11; YALNIZ sanal kip, bayrak `sanal_kacan_acilis_telafi`): saha traderının açık pozisyonunu biz tutmuyorsak (aynı coin; bizde sıfır) ve açılış kaçmışsa (yeniden başlatma, `gec_acilis`,
-        60 dk pencere dışı) AYNI açılış yolundan (`_emir_isle`: tüm filtre/tavan/ders/ML kuralları geçerli; boyut hedef tabanlı) açar. Koşullar: (1) güncel mark, trader giriş fiyatına göre bizim aleyhimize
-        en çok `kacan_telafi_kayma` (long: mark/giriş−1, short: 1−mark/giriş; lehimize sınırsız); (2) trader pozisyon yaşı ≤ `kacan_telafi_max_saat` (dolumlardan; okunamazsa atlanır, `startPosition` yoksa bilinmiyor = serbest);
-        (3) son açılış atlama nedeni (`son_atla`) `TELAFI_YENIDEN_DENE` dışındaysa (filtre/kural: rejim, haber, slot_tavani, ...) SAYGI gösterilir, açılmaz (pozisyon açılışından önceki eski atlama yok sayılır). Kayıt: emir `boyut_neden`
-        "kacan_telafi" (+ `telafi_*` alanları). Senkron adımında (`dakika`; ilk dakika başlatmada hemen) çağrılır; kilit altında. Döner: verilen emir sayısı."""
-        r = self.rules
-        if self.kip != "sanal" or not r.get("sanal_kacan_acilis_telafi", False):
-            return 0
-        ust = float(r.get("kacan_telafi_kayma", 0.01))
-        pencere = int(float(r.get("kacan_telafi_max_saat", 24)) * 3_600_000)
-        taze = float(r["canli_olay_stale_sn"]) * 1000
-        if simdi < self._telafi_geri_bit_ms or self._telafi_hiz_siniri_soguma():           # 429 geri çekilmesi / paylaşılan soğuma: telafi bu senkronda hiç REST okumaz
-            return 0
-        butce = int(r.get("kacan_telafi_okuma_max", 3))                                      # senkron başına yaş/dolum REST okuma bütçesi; kalan adaylar sonraki senkrona
-        okuma = 0
-        sayi = 0
-        for anahtar in list(self._telafi_yas):
-            a_, c_ = anahtar.split("|", 1)
-            if self.poz_tr.get(a_, {}).get(c_, 0.0) * self._telafi_yas[anahtar][0] <= 0:
-                self._telafi_yas.pop(anahtar, None)                                              # trader pozisyonu kapandı / yön değiştirdi: yaş önbelleği geçersiz
-        for anahtar in list(self.stop_muaf):
-            a_, c_ = anahtar.split("|", 1)
-            if self.poz_tr.get(a_, {}).get(c_, 0.0) * self.stop_muaf[anahtar][0] <= 0:
-                self.stop_muaf.pop(anahtar, None)                                                # trader pozisyonu sıfırlandı / ters döndü: stop muafiyeti biter
-        for adres in list(self.saha.uyeler):
-            aday: list[tuple[str, float, float]] = []
-            for coin, poz in list(self.poz_tr.get(adres, {}).items()):
-                if abs(poz) < EPS or abs(self.hesap.sz(adres, coin)) > EPS or coin_sinifi(coin) == "spot":
-                    continue
-                if self._ara_dolum_asildi(adres, coin):                                              # K-76: hedef tabanlı telafi atlanan ara dolumları geri getirirdi
-                    self._telafi_log_yaz(adres, coin, "ara_dolum_siniri")
-                    continue
-                if simdi - self._son_olay_coin.get((adres, coin), -10**15) <= taze:                  # taze dolum: normal yol (zaten karar verdi / verecek)
-                    continue
-                mk = self.marks.get(coin)
-                if not mk:
-                    continue
-                aday.append((coin, poz, float(mk)))
-            if not aday:
-                continue
-            try:
-                girisler = clearinghouse_giris_pxleri(self.post_hizli, adres, self._dexler())
-            except RateLimitError:
-                self._telafi_geri_cekil(adres, "giris_px", simdi)
-                return sayi
-            except Exception as hata:                      # noqa: BLE001
-                self.kayit({"olay": "kacan_telafi_hata", "adres": adres, "asama": "giris_px", "tur": type(hata).__name__})
-                continue
-            for coin, poz, mk in aday:
-                try:
-                    giris = girisler.get(coin)
-                    if not giris:
-                        self._telafi_log_yaz(adres, coin, "giris_px_yok")
-                        continue
-                    kayma = (mk / giris - 1.0) * (1.0 if poz > 0 else -1.0)                         # + = bizim aleyhimize (long daha pahalı / short daha ucuz)
-                    if kayma > ust + 1e-12:
-                        self._telafi_log_yaz(adres, coin, "kayma_fazla", kayma=round(kayma, 6), trader_giris=giris, mark=mk)
-                        continue
-                    if kayma < -ust - 1e-12:                                                          # lehimize de en çok %1: kovalamak yok
-                        self._telafi_log_yaz(adres, coin, "kayma_lehte_fazla", kayma=round(kayma, 6), trader_giris=giris, mark=mk)
-                        continue
-                    yk = f"{adres}|{coin}"
-                    isr = 1 if poz > 0 else -1
-                    onb = self._telafi_yas.get(yk)
-                    if onb is not None and onb[0] == isr:
-                        _, acilis_ms, bilinen = onb
-                    else:
-                        if okuma >= butce:                 # bütçe doldu: aday sonraki senkronda (sessiz)
-                            continue
-                        try:
-                            acilis_ms, bilinen, okundu = self._trader_poz_acilis_ms(adres, coin, simdi, pencere)
-                        except RateLimitError:
-                            self._telafi_geri_cekil(adres, "yas", simdi)
-                            return sayi
-                        except Exception as hata:          # noqa: BLE001
-                            self.kayit({"olay": "kacan_telafi_hata", "adres": adres, "coin": coin, "asama": "yas", "tur": type(hata).__name__})
-                            continue
-                        if okundu:
-                            okuma += 1
-                            self._telafi_ardisik_429 = 0
-                        self._telafi_yas[yk] = (isr, acilis_ms, bilinen)
-                    if (bilinen and acilis_ms is None) or (acilis_ms is not None and simdi - acilis_ms > pencere):     # D6: önbellekteki açılış anı zamanla 24 sa sınırını aşabilir: her seferde yeniden denetle
-                        self._telafi_log_yaz(adres, coin, "pozisyon_eski")
-                        continue
-                    muaf = self.stop_muaf.get(yk)
-                    if muaf is not None:
-                        if muaf[0] == isr and (acilis_ms is None or acilis_ms <= muaf[1]):
-                            self._telafi_log_yaz(adres, coin, "stop_muafiyeti")
-                            continue
-                        self.stop_muaf.pop(yk, None)                                                   # trader'ın daha yeni bir açılışı görüldü: muafiyet biter
-                    son = self.son_atla.get(f"{adres}|{coin}")
-                    if son and son[0] not in TELAFI_YENIDEN_DENE and (acilis_ms is None or son[1] >= acilis_ms):
-                        self._telafi_log_yaz(adres, coin, "filtre_atlamisti:" + son[0])
-                        continue
-                    yas_sa = round((simdi - acilis_ms) / 3_600_000, 2) if acilis_ms is not None else None
-                    o = Olay(f"telafi:{adres}:{coin}:{simdi}", adres[:12], adres, simdi, simdi, "telafi", False, "", coin, mk, abs(poz), "B" if poz > 0 else "A", 0.0)
-                    s = self._emir_isle(o, adres, "ac", 0.0, poz, 0.0, simdi, False,
-                                        telafi={"telafi_trader_giris": giris, "telafi_kayma": round(kayma, 6), "telafi_yas_sa": yas_sa})
-                    self._telafi_log.pop(f"{adres}|{coin}", None)
-                    self.kayit({"olay": "kacan_telafi", "adres": adres, "coin": coin, "yon": "B" if poz > 0 else "A", "trader_giris": giris, "mark": mk, "kayma": round(kayma, 6), "yas_sa": yas_sa,
-                                "karar": s.karar, "neden": s.neden})
-                    if s.karar == "emir":
-                        sayi += 1
-                except Exception as hata:                  # noqa: BLE001
-                    self.kayit({"olay": "kacan_telafi_hata", "adres": adres, "coin": coin, "asama": "emir", "tur": type(hata).__name__, "mesaj": str(hata)[:160]})
-        return sayi
-
+    # ------------------------------------------------------------------ senkron: kaçan azaltma (K-83: kaçan açılış/artırma telafisi YOK)
     def _senkron_azalt(self, adres: str, coin: str, izlenen: float, gercek: float, simdi: int) -> None:
         """S-1: REST trader pozisyonu izlenenden küçük (aynı yön) → normal hedef tabanlı azaltma yolu (K‑38, `boyut.hedef_emir` `azalt`, reduce-only). Hedef zaten karşılanıyorsa emir yok."""
         mk = self.mark(coin)
@@ -2736,7 +2541,6 @@ class Motor:
                 ("inen", lambda: self.karar_uygula(self.saha.inenleri_kapat(simdi), simdi)), ("sahipsiz", lambda: self._sahipsiz_tara(simdi)),
                 ("hl_izle", lambda: self._hl_izle(hl_zamani, hl, simdi)), ("mutabakat", lambda: self._mutabakat(simdi, hl)), ("kapanis_kuyrugu", lambda: self._kuyruk_isle(simdi)),
                 ("kadro", lambda: self._kadro_uygula(kadro, simdi)), ("senkron", lambda: (self.senkron_uygula(senkron), self.hesap_uygula(hesaplar, simdi)) if senkron is not None else None),
-                ("kacan_telafi", lambda: self.kacan_telafi(simdi) if senkron is not None else None),                   # K-75 (yalnız sanal, bayraklı): senkrondan SONRA (kapanışlar önce, hesap değerleri taze)
                 ("telegram", lambda: self._komutlar(komutlar)), ("ajan_suresi", lambda: self.ajan_suresi_uygula(ajan, simdi)), ("ozet", lambda: self._gunluk_ozet(simdi)), ("haftalik", lambda: self._haftalik_ozet(simdi)),
                 ("emir_ozeti", lambda: self.emir_ozeti(simdi)), ("btc_donem", lambda: self.btc_donem_uygula(btc)), ("donem_seri", lambda: self.donem_seri_guncelle(simdi)),
                 ("ogrenme", lambda: self.ogrenme.adim(simdi)), ("tur_kaydi", lambda: self._tur_kaydi(simdi)), ("golge_kural", lambda: self.golge_kural_adimi(simdi)), ("karsi_olgu", lambda: self.karsi_olgu_adimi(simdi)), ("kopya_drift", lambda: self.kopya_drift_adimi(simdi)),          # yalnız kayıt + pano verisi; karar yolunda değil
@@ -2986,7 +2790,6 @@ class Motor:
             return                                         # gerçek kipte tasfiyeyi HL yapar; mutabakat farkı yakalar
         for e in self.hesap.tasfiye_kontrol(self.marks, simdi):
             self.kayit({"olay": "tasfiye", **e})
-            self._stop_muaf_yaz(e["adres"], e["coin"], "tasfiye", simdi)
             self._tasfiye_emri(e, simdi)
             self._kucult_durumu(e["adres"], simdi)                  # K-77: tasfiye de kapanmış pozisyondur
             self.tg.gonder(tg.alarm("Tasfiye (sanal)", f"{e['coin']} pozisyonu (trader {tg.kisa(e['adres'])}) {e['tasfiye_px']:.6g} fiyatında tasfiye oldu (piyasa {e['mark']:.6g}). Pozisyon kapandı, kayıt yazıldı.", "💥"))
