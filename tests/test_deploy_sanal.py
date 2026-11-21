@@ -152,6 +152,99 @@ def test_baslat_uretim_actions_canliysa_baslamaz_birakildiysa_baslar(tmp_path):
         assert (c2 / "durum/motor.json").exists() and (c2 / "durum/kilit.json").exists()               # üretim: kilit korunur (sahiplik devri motorun kuralıyla)
 
 
+def test_baslat_kendi_vardiyamizin_taze_kilidi_serbest_sayilir_baskasininki_bekletir(tmp_path):
+    """Üretim olayı: güncellemede durum silinince sunucunun KENDİ (vardiya=sunucu) taze kilidi 30 dk beklenmemeli (ExecStartPre takılır, 60 sn'de geri alım)."""
+    kendi = {"vardiya": "sunucu", "nabiz_ms": int(time.time() * 1000) - 5_000, "birakildi": False}
+    c = _depo(tmp_path / "a", kendi)
+    t0 = time.time()
+    r = _baslat(c, "uretim", VARDIYA_ID="sunucu", GECIS_BEKLE_SN="20", GECIS_ARALIK_SN="20")
+    assert r.returncode == 0, r.stderr
+    assert time.time() - t0 < 15 and "bekleniyor" not in r.stdout                                      # beklemedi
+    c2 = _depo(tmp_path / "b", kendi)                                                                  # VARDIYA_ID verilmemiş: varsayılan "sunucu"
+    assert _baslat(c2, "uretim", GECIS_BEKLE_SN="20", GECIS_ARALIK_SN="20").returncode == 0
+    baska = {**kendi, "vardiya": "actions-123"}
+    c3 = _depo(tmp_path / "c", baska)
+    r3 = _baslat(c3, "uretim", VARDIYA_ID="sunucu", GECIS_BEKLE_SN="1", GECIS_ARALIK_SN="1")
+    assert r3.returncode == 75 and "bekleniyor" in r3.stdout and not (c3 / "durum/motor.json").exists()
+
+
+def test_guncelle_yeni_donem_durumu_siler_sonra_baslat_kendi_kilidinde_takilmaz(tmp_path):
+    """Tam yol: donem_sifirla (sanal_guncelle.sh'den alınan işlev) yerel durumu siler -> sanal_baslat kendi taze kilidini beklemeden çıkar."""
+    kendi = {"vardiya": "sunucu", "nabiz_ms": int(time.time() * 1000) - 3_000, "birakildi": False}
+    c = _depo(tmp_path, kendi, donem="2026-11-21T07:30:00Z")
+    (c / "durum").mkdir()
+    (c / "durum/motor.json").write_text("{}")
+    (c / "durum/hesap.json").write_text("{}")
+    (c / "durum/donem.txt").write_text("2026-11-14T00:00:00Z\n")
+    assert subprocess.run(["bash", str(DEPLOY / "donem_sifirla.sh")], env=_env(SANAL_DEPO=str(c)), capture_output=True, text=True).returncode == 0
+    assert not (c / "durum/motor.json").exists() and not (c / "durum/hesap.json").exists()
+    (c / "durum/kilit.json").write_text(json.dumps(kendi))                                             # (yerel kilit dosyası sıfırlamada silinir; dal kilidi asıl kaynak)
+    t0 = time.time()
+    r = _baslat(c, "uretim", VARDIYA_ID="sunucu", GECIS_BEKLE_SN="20", GECIS_ARALIK_SN="20")
+    assert r.returncode == 0, r.stderr
+    assert time.time() - t0 < 15
+
+
+KORUNAN = ("binance_kagit_x", "olcum_1", "paylasim", "ortak", "DUR", "radar_basladi", "motor.lock", "guncelleme_zamani", "kotu_sha", "alarm_a")
+
+
+def _eski_durum(c, donem_txt="2026-11-14T00:00:00Z"):
+    """Eski dönemden kalan yerel durum (kasa 10000 $) + korunacak dosyalar."""
+    (c / "durum").mkdir(exist_ok=True)
+    (c / "durum/motor.json").write_text(json.dumps({"kasa_usd": 10000}))
+    (c / "durum/hesap.json").write_text(json.dumps({"kasa": 10000}))
+    (c / "durum/kilit.json").write_text("{}")
+    if donem_txt is not None:
+        (c / "durum/donem.txt").write_text(donem_txt + "\n")
+    for ad in KORUNAN:
+        (c / "durum" / ad).write_text("k")
+    (c / "kayit").mkdir(exist_ok=True)
+    (c / "kayit/2026-11-14.jsonl").write_text("{}\n")
+    (c / "kayit/binance_kagit.jsonl").write_text("{}\n")
+    (c / "kayit/olcum.jsonl").write_text("{}\n")
+    (c / "pano").mkdir(exist_ok=True)
+    (c / "pano/gecmis.json").write_text("[]")
+
+
+@pytest.mark.parametrize("donem_txt", ["2026-11-14T00:00:00Z", None])
+def test_baslat_eski_donem_yerel_durumunu_siler_korunanlari_tutar_ve_kendi_kilidinde_takilmaz(tmp_path, donem_txt):
+    """Üretim olayı #2: eski güncelleme betiği donem_sifirla'sız koştu → yerel durum (kasa 10000 $) kaldı → motor çıkış 3. sanal_baslat (taze depodan) sıfırlamalı."""
+    kendi = {"vardiya": "sunucu", "nabiz_ms": int(time.time() * 1000) - 3_000, "birakildi": False}
+    c = _depo(tmp_path, kendi, donem="2026-11-21T07:30:00Z", durum_donem="2026-11-14T00:00:00Z")
+    _eski_durum(c, donem_txt)
+    t0 = time.time()
+    r = _baslat(c, "uretim", VARDIYA_ID="sunucu", GECIS_BEKLE_SN="20", GECIS_ARALIK_SN="20")
+    assert r.returncode == 0, r.stderr
+    assert time.time() - t0 < 15
+    assert "YENİ DÖNEM" in r.stdout and "yerel durum var" not in r.stdout
+    assert not (c / "durum/motor.json").exists() and not (c / "durum/hesap.json").exists()           # kip_uyumu_denetle'yi tetikleyen kasa gitti
+    assert not (c / "kayit/2026-11-14.jsonl").exists() and not (c / "pano/gecmis.json").exists()
+    for ad in KORUNAN:
+        assert (c / "durum" / ad).exists(), ad
+    assert (c / "kayit/binance_kagit.jsonl").exists() and (c / "kayit/olcum.jsonl").exists()
+    assert (c / "durum/donem.txt").read_text().strip() == "2026-11-21T07:30:00Z"
+
+
+def test_baslat_ayni_donemde_yerel_durumu_silmez(tmp_path):
+    c = _depo(tmp_path, {"vardiya": "sunucu", "nabiz_ms": 0, "birakildi": True}, donem="2026-11-21T07:30:00Z")
+    _eski_durum(c, "2026-11-21T07:30:00Z")
+    r = _baslat(c, "uretim")
+    assert r.returncode == 0 and "yerel durum var" in r.stdout and (c / "durum/motor.json").exists()
+
+
+def test_guncelle_radari_saatlik_denetimde_de_bir_kez_baslatir(sunucu):
+    """Sıfırlamayı sanal_baslat (sgsanal; birim başlatamaz) yaptıysa radar işareti yok → root'ta çalışan saatlik denetim radarı BİR KEZ başlatır."""
+    (sunucu.birim / "sg-sanal-radar.service").write_text("[Service]\n")
+    (sunucu.depo / "copytrade/canli").mkdir(parents=True)
+    (sunucu.depo / "copytrade/canli/DONEM").write_text("2026-11-21T07:30:00Z\n")
+    r = sunucu.calistir(SANAL_YALNIZ_ALARM="1")
+    assert r.returncode == 0 and "systemctl start --no-block sg-sanal-radar.service" in sunucu.log.read_text()
+    assert (sunucu.durum / "radar_basladi").read_text().strip() == "2026-11-21T07:30:00Z"
+    sunucu.log.write_text("")
+    sunucu.calistir(SANAL_YALNIZ_ALARM="1")
+    assert "sg-sanal-radar.service" not in sunucu.log.read_text()                                      # işaret var: tekrar yok
+
+
 def test_baslat_yeni_donemde_eski_durum_yuklenmez_ve_mod_dal_cifti_zorunlu(tmp_path):
     c = _depo(tmp_path / "a", {"vardiya": "1", "nabiz_ms": 0, "birakildi": True}, donem="2026-01-02T00:00:00Z", durum_donem="2026-01-01T00:00:00Z")
     r = _baslat(c, "uretim", GECIS_BEKLE_SN="1")
@@ -934,6 +1027,7 @@ def test_k85_guncelle_yeni_donemde_yerel_durumu_sifirlar_arsiv_acmaz_ve_radari_b
     (tohum / "copytrade/canli").mkdir(parents=True)
     (tohum / "copytrade/canli/DONEM").write_text("2026-11-21T07:30:00Z\n")
     (tohum / "deploy/sg-sanal-radar.service").write_text("[Service]\n# r1\n")
+    shutil.copy(DEPLOY / "donem_sifirla.sh", tohum / "deploy/donem_sifirla.sh")                       # ortak betik depoda (yeni sürümle gelir)
     git(tohum, "add", "-A")
     git(tohum, "commit", "-q", "-m", "yeni donem")
     git(tohum, "push", "-q", "origin", "main")
