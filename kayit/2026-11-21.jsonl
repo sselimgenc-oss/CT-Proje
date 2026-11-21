@@ -1006,3 +1006,12 @@
 {"zaman_ms":1795255823164,"olay":"emir_yok","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"DOGE","eylem":"ac","karar":"atlandi","neden":"rejim_ters","trader_dolum_ms":1795255822842,"gorme_ms":1795255823163,"yas_ms":322}
 {"zaman_ms":1795255958769,"olay":"emir_yok","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"DOGE","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795255958390,"gorme_ms":1795255958766,"yas_ms":379}
 {"zaman_ms":1795255990789,"olay":"karsi_olgu_kapandi","coin":"DOGE","neden":"rejim_ters","yon":"B","hayali_usd":131.86,"pnl_usd":-0.226,"sure_sa":0.05,"kapanis":"trader_kapadi"}
+{"zaman_ms":1795256113982,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795256113680,"gorme_ms":1795256113981,"yas_ms":302}
+{"zaman_ms":1795256113982,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","eylem":"ac","karar":"atlandi","neden":"ters_netlesme","trader_dolum_ms":1795256113680,"gorme_ms":1795256113981,"yas_ms":302}
+{"zaman_ms":1795256179865,"olay":"emir_yok","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"TRX","eylem":"ac","karar":"atlandi","neden":"rejim_ters","trader_dolum_ms":1795256179520,"gorme_ms":1795256179865,"yas_ms":345}
+{"zaman_ms":1795256179866,"olay":"emir_yok","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"TRX","eylem":"ac","karar":"atlandi","neden":"rejim_ters","trader_dolum_ms":1795256179520,"gorme_ms":1795256179865,"yas_ms":346}
+{"zaman_ms":1795256245704,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"xyz:ANT","neden":"filtre_atlamisti:duygu_ters"}
+{"zaman_ms":1795256261546,"olay":"kacan_telafi_atlandi","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"HYPE","neden":"ara_dolum_siniri"}
+{"zaman_ms":1795256264579,"olay":"kacan_telafi_atlandi","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"DOGE","neden":"filtre_atlamisti:ters_netlesme"}
+{"zaman_ms":1795256297686,"olay":"tur","ozsermaye_usd":9871.1153}
+{"zaman_ms":1795256859106,"olay":"kacan_telafi_atlandi","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","neden":"filtre_atlamisti:ters_netlesme"}
