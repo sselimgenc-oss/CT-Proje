@@ -140,3 +140,11 @@
 {"zaman_ms":1795228191845,"olay":"tur","ozsermaye_usd":9837.9693}
 {"zaman_ms":1795228675705,"olay":"kacan_telafi_atlandi","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"ZEC","neden":"kayma_fazla","kayma":0.032987,"trader_giris":752.5906,"mark":727.765}
 {"zaman_ms":1795229047608,"olay":"tur","ozsermaye_usd":9856.1474}
+{"zaman_ms":1795229923591,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"VVV","neden":"kayma_fazla","kayma":0.014218,"trader_giris":21.1147,"mark":20.8145}
+{"zaman_ms":1795229923592,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"xyz:NATGAS","neden":"kayma_lehte_fazla","kayma":-0.010124,"trader_giris":3.74642,"mark":3.78435}
+{"zaman_ms":1795229923592,"olay":"kacan_telafi_atlandi","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"ZEC","neden":"ara_dolum_siniri"}
+{"zaman_ms":1795229967245,"olay":"tur","ozsermaye_usd":9855.4875}
+{"zaman_ms":1795230035828,"olay":"funding","saat":498675,"saat_adet":1,"funding_usd":-0.0061088844019177016,"toplam_funding_usd":-1.9216508705422501}
+{"zaman_ms":1795230369792,"olay":"tg_bastirildi","tur":"kopya_sapmasi","metin":"📐 Kopya sapması: 9 coin, en büyük xyz:SNXX %100 (yalnız bilgi)"}
+{"zaman_ms":1795230369793,"olay":"tg_bastirildi","tur":"saatlik_bos","metin":"🧾 Son 1 saat (05:05–06:06 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 9.866,67 $ · bugün 🟢 +32,99 $ (+%0,3) · başlangıçtan 🔻 −133,33 $ (−%1,3)"}
+{"zaman_ms":1795230369793,"olay":"tg_mesaj","tur":"saatlik_bos","anahtar":null,"seviye":"INFO","sessiz":false,"metin":"🧾 Son 1 saat (05:05–06:06 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 9.866,67 $ · bugün 🟢 +32,99 $ (+%0,3) · başlangıçtan 🔻 −133,33 $ (−%1,3)","gonderildi":false,"bastirildi":true}

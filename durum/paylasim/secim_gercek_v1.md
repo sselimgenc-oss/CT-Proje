@@ -1,4 +1,4 @@
-# CT kadro seçimi x gerçek kopya PnL (form sırası, 2026-11-21T02:05:16Z)
+# CT kadro seçimi x gerçek kopya PnL (form sırası, 2026-11-21T03:05:32Z)
 
 Toplu: 2 gün, ortalama rho = 0.100, p = 0.422 (tek yönlü).
 
