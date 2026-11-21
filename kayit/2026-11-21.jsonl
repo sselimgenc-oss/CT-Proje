@@ -96,3 +96,6 @@
 {"zaman_ms":1795224747943,"olay":"tur","ozsermaye_usd":9841.8147}
 {"zaman_ms":1795224976055,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"VVV","neden":"kayma_lehte_fazla","kayma":-0.014364,"trader_giris":21.1147,"mark":21.418}
 {"zaman_ms":1795224978799,"olay":"kacan_telafi_atlandi","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"ZEC","neden":"kayma_fazla","kayma":0.010624,"trader_giris":752.5906,"mark":744.595}
+{"zaman_ms":1795225576950,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"VVV","neden":"pozisyon_eski"}
+{"zaman_ms":1795225579570,"olay":"kacan_telafi_atlandi","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"ZEC","neden":"filtre_atlamisti:duygu_ters"}
+{"zaman_ms":1795225622803,"olay":"tur","ozsermaye_usd":9846.033}
