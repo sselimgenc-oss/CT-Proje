@@ -174,3 +174,7 @@
 {"zaman_ms":1795232117406,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"rejim_ters","trader_dolum_ms":1795232116987,"gorme_ms":1795232117406,"yas_ms":419}
 {"zaman_ms":1795232117407,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"ETH","eylem":"ac","karar":"atlandi","neden":"rejim_ters","trader_dolum_ms":1795232116987,"gorme_ms":1795232117406,"yas_ms":420}
 {"zaman_ms":1795232140769,"olay":"karsi_olgu_kapandi","coin":"xyz:AMD","neden":"hip3_atlandi","yon":"B","hayali_usd":3.49,"pnl_usd":-0.3636,"sure_sa":29.49,"kapanis":"trader_kapadi"}
+{"zaman_ms":1795232426248,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"xyz:NATGAS","neden":"pozisyon_eski"}
+{"zaman_ms":1795232437295,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0x9eb42f017e793512e4734f8785de605c4cb3a24e","hesap_usd":280037.00068754,"anlik_kaldirac":5.225436149177801,"esik":5.0,"durum":"basladi"}
+{"zaman_ms":1795232536223,"olay":"tur","ozsermaye_usd":9854.1292}
+{"zaman_ms":1795233058001,"olay":"kacan_telafi_atlandi","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"BTC","neden":"ara_dolum_siniri"}
