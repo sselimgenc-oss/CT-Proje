@@ -42,8 +42,8 @@ KARLI = [i * 100.0 for i in range(31)]            # her hafta kârlı, düşüş
 # ------------------------------------------------------------------------------------------------ yapılandırma
 def test_k85_kural_anahtarlari_ve_silinenler():
     assert RULES["radar_coinler"] == ["BTC", "ETH", "BNB", "XRP", "SOL", "TRX"]
-    assert (RULES["radar_min_hesap_usd"], RULES["radar_pencere_gun"], RULES["radar_max_dusus_30g"], RULES["radar_min_getiri_7g"]) == (25000, 30, 0.25, -0.05)
-    assert (RULES["radar_coin_hacim_pay_min"], RULES["radar_coin_kar_pay_min"], RULES["radar_min_islem"], RULES["radar_max_acilis_hafta"]) == (0.80, 0.70, 8, 15)
+    assert (RULES["radar_min_hesap_usd"], RULES["radar_pencere_gun"], RULES["radar_max_dusus_30g"], RULES["radar_min_getiri_7g"]) == (25000, 30, 0.30, -0.05)
+    assert (RULES["radar_coin_hacim_pay_min"], RULES["radar_coin_kar_pay_min"], RULES["radar_min_islem"], RULES["radar_max_acilis_hafta"]) == (0.80, 0.70, 8, 20)
     assert (RULES["radar_min_medyan_tutma_saat"], RULES["radar_max_kaldirac"], RULES["radar_kopya_koruma_min"], RULES["radar_siralama_dusus_taban"]) == (4.0, 10.0, 0.50, 0.05)
     assert (RULES["radar_kadro_n"], RULES["radar_kontrol_gunleri"], RULES["radar_degisim_azami"], RULES["radar_cikis_kopya_esigi"], RULES["radar_yasak_gun"], RULES["radar_cikanlar_saat"]) == (5, [0, 3], 2, -0.10, 14, 72)
     for silinen in ("radar_aday_tavan", "radar_agirlik_g", "radar_bootstrap_tekrar", "radar_max_devir_hafta", "radar_kisa_islem_payi_max", "radar_akil_sagligi_getiri_max", "radar_soguyor_saat",
@@ -127,17 +127,17 @@ def test_pencere_basinda_acik_pozisyon_kapaninca_sayilir_tutma_bilinmez():
 
 # ------------------------------------------------------------------------------------------------ kural sırası
 def tam_satir(**ek) -> dict:
-    s = {"adres": adr(1), "getiri_30g": 0.06, "pnl_30g": 3000.0, "pnl_90g": 4000.0, "hafta_karli": 3, "dusus_30g": 0.25, "getiri_7g": -0.05, "coin_hacim_pay": 0.80, "coin_kar_pay": 0.70, "tek_islem_haric_pnl": 1.0,
-         "islem_sayisi": 8, "acilis_hafta": 15.0, "medyan_tutma_saat": 4.0, "max_kaldirac": 10.0, "kopya_getiri_30g": 0.01, "kopya_koruma": 0.50}
+    s = {"adres": adr(1), "getiri_30g": 0.06, "pnl_30g": 3000.0, "pnl_90g": 4000.0, "hafta_karli": 3, "dusus_30g": 0.30, "getiri_7g": -0.05, "coin_hacim_pay": 0.80, "coin_kar_pay": 0.70, "tek_islem_haric_pnl": 1.0,
+         "islem_sayisi": 8, "acilis_hafta": 20.0, "medyan_tutma_saat": 4.0, "max_kaldirac": 10.0, "kopya_getiri_30g": 0.01, "kopya_koruma": 0.50}
     s.update(ek)
     return s
 
 
 def test_degerlendir_sinirlar_dahil_ve_her_kural_kendi_nedeniyle_eler():
     assert r.degerlendir(tam_satir(), RULES) == (True, None)
-    elenecek = {"pnl_30g": ("ay_pnl", 0.0), "pnl_90g": ("pnl_90g", 0.0), "hafta_karli": ("hafta_karli", 2), "dusus_30g": ("dusus_yuksek", 0.2501), "getiri_7g": ("getiri_7g_dusuk", -0.0501),
+    elenecek = {"pnl_30g": ("ay_pnl", 0.0), "pnl_90g": ("pnl_90g", 0.0), "hafta_karli": ("hafta_karli", 2), "dusus_30g": ("dusus_yuksek", 0.3001), "getiri_7g": ("getiri_7g_dusuk", -0.0501),
                 "coin_hacim_pay": ("coin_hacim", 0.79), "coin_kar_pay": ("coin_kar", 0.69), "tek_islem_haric_pnl": ("kar_tek_islem", 0.0), "islem_sayisi": ("islem_az", 7),
-                "acilis_hafta": ("acilis_fazla", 15.01), "medyan_tutma_saat": ("tutma_kisa", 3.99), "max_kaldirac": ("kaldirac_yuksek", 10.01),
+                "acilis_hafta": ("acilis_fazla", 20.01), "medyan_tutma_saat": ("tutma_kisa", 3.99), "max_kaldirac": ("kaldirac_yuksek", 10.01),
                 "kopya_getiri_30g": ("kopya_zarar", 0.0), "kopya_koruma": ("kopya_koruma_dusuk", 0.49)}
     for alan, (neden, deger) in elenecek.items():
         assert r.degerlendir(tam_satir(**{alan: deger}), RULES) == (False, neden), alan

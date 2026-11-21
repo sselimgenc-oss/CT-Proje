@@ -85,13 +85,13 @@ risk_dry_run:
 radar_min_hesap_usd: 25000              # trader_$ (hesap değeri alt sınırı)
 radar_pencere_gun: 30                   # gün (seçim penceresi; `radar_pencere_saat` 168 yalnız motorun trader_kucult ölçümü içindir)
 radar_min_hafta_karli: 3                # son 4 haftanın en az bu kadarı kârlı (sınır dahil)
-radar_max_dusus_30g: 0.25               # oran, 30 g azami düşüş (sınır dahil)
+radar_max_dusus_30g: 0.30               # oran, 30 g azami düşüş (sınır dahil; Fable gevşetme e, 21.11: tam evrende 5 aday çıkmadı)
 radar_min_getiri_7g: -0.05              # oran, 7 g getiri veto tabanı (sınır dahil)
 radar_coinler: [BTC, ETH, BNB, XRP, SOL, TRX]   # sabit coin listesi (haftalık yenileme yok); kopya yalnız bunlarda
 radar_coin_hacim_pay_min: 0.80          # oran, işlem nosyonelinin en az bu payı listedeki coinlerde
 radar_coin_kar_pay_min: 0.70            # oran, 30 g kârın en az bu payı listedeki coinlerden
 radar_min_islem: 8                      # listedeki coinlerde 30 g kapanan işlem (sınır dahil)
-radar_max_acilis_hafta: 15              # listedeki coinlerde haftada açılış (sınır dahil; ileride en çok 20)
+radar_max_acilis_hafta: 20              # listedeki coinlerde haftada açılış (sınır dahil; Fable gevşetme d, 21.11; kullanıcı tavanı 20)
 radar_min_medyan_tutma_saat: 4.0        # saat, listedeki coinlerde medyan tutma (süresi bilinmeyenler hariç; sınır dahil)
 radar_max_kaldirac: 10.0                # x, sınır dahil
 radar_siralama_dusus_taban: 0.05        # oran, sıra = 30 g getiri / max(30 g düşüş, bu)
