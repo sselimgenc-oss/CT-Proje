@@ -116,4 +116,28 @@ def test_sure_sn_yoksa_bos_kadroda_cikmaz_kadro_gelince_normal_calismaya_gecer(t
     ozet = asyncio.run(mt.calis(m, None, uyku=uyku))
     assert len(uyunan) == 6 and len(basladi) == 1 and len(m.saha.uyeler) == 1          # 6 yoklama boyunca çıkmadı; kadro gelince dinleyici başladı
     assert not ozet.get("bekleme_vardiyasi") and kayitlar(tmp_path, "bekleme_bitti_kadro_geldi")
-    assert m.saat_ms() > 0 and all(u == max(1.0, float(m.rules["canli_kadro_aralik_sn"])) for u in uyunan)
+    assert m.saat_ms() > 0 and all(u == max(1.0, min(float(m.rules["canli_kadro_aralik_sn"]), float(m.rules.get("koruyucu_motor_nabiz_bayat_sn", 180)) / 3)) for u in uyunan)
+
+
+def test_bekleme_nabzi_koruyucu_esiginin_altinda_kalir(tmp_path):
+    """21.11 olayı: kadro 300 sn'de bir okunuyor, nabız da yalnız o an yazılıyordu → koruyucu (180 sn) 5 dk'da bir yanlış alarm verdi.
+    Bekleme uykuları nabız eşiğinin üçte birini aşmaz ve aralarda nabız (`durum_yaz`) yazılır."""
+    import asyncio
+    m, _, saat, _ = kur(tmp_path)
+    m.rules = {**m.rules, "canli_kadro_aralik_sn": 300, "koruyucu_motor_nabiz_bayat_sn": 180}
+    m.radar_surum_gerekli = "v5"
+    bos = {**kadro([], saat() - SAAT), "radar_surum": "v4"}
+    m.kadro_oku = lambda: bos
+    uyunan, yazim = [], []
+    asil_yaz = m.durum_yaz
+    m.durum_yaz = lambda: (yazim.append(saat()), asil_yaz())[1]
+
+    async def uyku(sn):
+        uyunan.append(sn)
+        saat.ms += int(sn * 1000)
+        if sum(uyunan) >= 600:
+            m.kadro_oku = lambda: {**bos, "radar_surum": "v5", "satirlar": kadro([satir(1, 1)], saat())["satirlar"]}
+
+    asyncio.run(mt.bekleme_vardiyasi(m, 900, uyku=uyku))
+    assert uyunan and max(uyunan) <= 60
+    assert len(yazim) >= 10                                                     # 600 sn bekleme: en az her 60 sn nabız
