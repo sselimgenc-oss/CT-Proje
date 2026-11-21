@@ -103,7 +103,7 @@ radar_yasak_gun: 14                     # gün (çıkarılan geri giremez)
 radar_cikanlar_saat: 72                 # saat (`cikanlar` listesi: motor çıkanların açık pozisyonunu bu süre yönetir)
 radar_dolum_tavan: 4000                 # (21.11: 15000→4000 hız; haftada ≤20 açılış kuralını geçemeyecek aşırı aktifler erken elenir) dolum (30 günde bu kadar ya da fazlası kopyalanamaz: `dolum_fazla`)
 radar_api_agirlik_dk: 1000              # (21.11: 600→1000 hız) ağırlık/dk (radar istemcisi nazik hız; HL IP sınırı 1.200, sunucuda motor da var)
-radar_zaman_butcesi_dk: 330             # (21.11: 240→330; birim TimeoutStartSec 6 sa) dakika (koşu süresi; aşılınca kalan adaylar `zaman_yok`, koşu eksik: kadro yazılmaz, yeniden koşuda kaldığı yerden sürer)
+radar_zaman_butcesi_dk: 280             # (21.11: 240→280; Actions iş zaman aşımı 300 dk − 20) dakika (koşu süresi; aşılınca kalan adaylar `zaman_yok`, koşu eksik: kadro yazılmaz, yeniden koşuda kaldığı yerden sürer)
 radar_veri_hatasi_pay_max: 0.10         # oran, `veri_hatasi` payı bunu aşan koşu eksik sayılır
 radar_payda_zaman: true                 # bool, kopya oynatmasında trader hesap paydası emir anındaki değer (portfolio); false = sabit
 radar_kasa_usd: 1000                    # $ (radar kopya oynatma kasası = motorun sanal kasası)
