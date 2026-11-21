@@ -138,3 +138,5 @@
 {"zaman_ms":1795227697777,"olay":"tg_bastirildi","tur":"saha_uyari","metin":"⚠️ Hafta içi uyarı (çıkış yok, pazar değerlendirilir): Polaris-F8\n↳ form_sirasi:26"}
 {"zaman_ms":1795227697777,"olay":"tg_mesaj","tur":"saha_uyari","anahtar":null,"seviye":"WARN","sessiz":false,"metin":"⚠️ Hafta içi uyarı (çıkış yok, pazar değerlendirilir): Polaris-F8\n↳ form_sirasi:26","gonderildi":false,"bastirildi":true}
 {"zaman_ms":1795228191845,"olay":"tur","ozsermaye_usd":9837.9693}
+{"zaman_ms":1795228675705,"olay":"kacan_telafi_atlandi","adres":"0xc30c7ea910a71ce06ae840868b0c7e47616ba4c9","coin":"ZEC","neden":"kayma_fazla","kayma":0.032987,"trader_giris":752.5906,"mark":727.765}
+{"zaman_ms":1795229047608,"olay":"tur","ozsermaye_usd":9856.1474}
