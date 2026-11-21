@@ -1110,7 +1110,7 @@ class Motor:
         return sonuclar
 
     def _coin_listesi(self) -> set[str]:
-        """K-86 kural 1: açılış/artırma yalnız bu coinlerde (`canli_coin_listesi`; BTC, ETH, BNB, XRP, SOL, TRX). Liste boş/yok = kısıt yok değil, HİÇ açılış yok."""
+        """K-86 kural 1: açılış/artırma yalnız bu coinlerde (`canli_coin_listesi`; BTC, ETH, SOL, XRP, ZEC, HYPE, NEAR, BNB, DOGE, SUI, ADA, TRX). Liste boş/yok = kısıt yok değil, HİÇ açılış yok."""
         return {str(c) for c in (self.rules.get("canli_coin_listesi") or [])}
 
     def _min_emir(self, coin: str) -> float:

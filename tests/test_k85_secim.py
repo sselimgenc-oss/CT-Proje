@@ -41,7 +41,7 @@ KARLI = [i * 100.0 for i in range(31)]            # her hafta kârlı, düşüş
 
 # ------------------------------------------------------------------------------------------------ yapılandırma
 def test_k85_kural_anahtarlari_ve_silinenler():
-    assert RULES["radar_coinler"] == ["BTC", "ETH", "BNB", "XRP", "SOL", "TRX"]
+    assert RULES["radar_coinler"] == ["BTC", "ETH", "SOL", "XRP", "ZEC", "HYPE", "NEAR", "BNB", "DOGE", "SUI", "ADA", "TRX"]
     assert (RULES["radar_min_hesap_usd"], RULES["radar_pencere_gun"], RULES["radar_max_dusus_30g"], RULES["radar_min_getiri_7g"]) == (25000, 30, 0.30, -0.05)
     assert (RULES["radar_coin_hacim_pay_min"], RULES["radar_coin_kar_pay_min"], RULES["radar_min_islem"], RULES["radar_max_acilis_hafta"]) == (0.80, 0.70, 8, 20)
     assert (RULES["radar_min_medyan_tutma_saat"], RULES["radar_max_kaldirac"], RULES["radar_kopya_koruma_min"], RULES["radar_siralama_dusus_taban"]) == (4.0, 10.0, 0.50, 0.05)
@@ -106,7 +106,7 @@ def test_acilis_sayisi_ve_ters_donus():
 
 def test_dolum_olculeri_liste_paylari_tek_islem_tutma_ve_acilis():
     bas = KOSU - 29 * GUN
-    f = dolumlar("BTC", 9, bas, pnl=50.0, tutma_saat=6) + dolumlar("DOGE", 1, bas + 12 * GUN, pnl=100.0, sira0=500)
+    f = dolumlar("BTC", 9, bas, pnl=50.0, tutma_saat=6) + dolumlar("AVAX", 1, bas + 12 * GUN, pnl=100.0, sira0=500)
     o = r.dolum_olculeri(f, 50_000, 550.0, RULES)
     assert o["islem_sayisi"] == 9 and o["medyan_tutma_saat"] == pytest.approx(6.0)
     # kâr payı: liste (9 × ~49,8) / toplam (9 × 49,8 + ~99,8)
@@ -114,7 +114,7 @@ def test_dolum_olculeri_liste_paylari_tek_islem_tutma_ve_acilis():
     assert o["coin_kar_pay"] == pytest.approx(liste_kar / toplam_kar, rel=1e-6)
     notional = lambda n, px: n * 10 * px                              # noqa: E731
     assert o["coin_hacim_pay"] == pytest.approx(9 * (1000 + 1050) / (9 * 2050 + 2050))
-    assert o["tek_islem_haric_pnl"] == pytest.approx(550.0 - 99.8)    # en büyük kazanan (DOGE) çıkarılır
+    assert o["tek_islem_haric_pnl"] == pytest.approx(550.0 - 99.8)    # en büyük kazanan (AVAX) çıkarılır
     assert o["acilis_hafta"] == pytest.approx(9 / (30 / 7))
     assert notional(1, 100) == 1000
 
@@ -172,10 +172,10 @@ def iyi_dolum() -> list[dict]:
 
 def test_kopyalanabilirlik_uctan_uca_kopya_yalniz_liste_coinleri_ve_giris_getirisi():
     b = Baglamsiz()
-    s = r.kopyalanabilirlik(aday(), b, portfoy(KARLI), lambda: iyi_dolum() + dolumlar("DOGE", 1, KOSU - 5 * GUN, sira0=900), vault_mi=lambda: False, giris_ms=KOSU - 3 * GUN)
+    s = r.kopyalanabilirlik(aday(), b, portfoy(KARLI), lambda: iyi_dolum() + dolumlar("AVAX", 1, KOSU - 5 * GUN, sira0=900), vault_mi=lambda: False, giris_ms=KOSU - 3 * GUN)
     assert s["gecti"] and s["neden"] is None, s
     assert s["kopya_getiri_30g"] == 0.02 and s["kopya_koruma"] == pytest.approx(0.02 / 0.03) and s["skor"] == pytest.approx(0.06 / 0.05)
-    assert b.cagri[0] == (20, None) and b.cagri[1] == (20, KOSU - 3 * GUN)           # DOGE (listede değil) kopya oynatmasına girmez; 10×2 liste dolumu
+    assert b.cagri[0] == (20, None) and b.cagri[1] == (20, KOSU - 3 * GUN)           # AVAX (listede değil) kopya oynatmasına girmez; 10×2 liste dolumu
     assert s["giris_getiri"] == pytest.approx(-0.004 * 5)                           # slot ölçeği = kasa getirisi × (kasa / slot)
 
 
