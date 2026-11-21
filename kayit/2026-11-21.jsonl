@@ -1015,3 +1015,8 @@
 {"zaman_ms":1795256264579,"olay":"kacan_telafi_atlandi","adres":"0xf83e8bd8dff2f1157d83ba11e698263411f3dbea","coin":"DOGE","neden":"filtre_atlamisti:ters_netlesme"}
 {"zaman_ms":1795256297686,"olay":"tur","ozsermaye_usd":9871.1153}
 {"zaman_ms":1795256859106,"olay":"kacan_telafi_atlandi","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","neden":"filtre_atlamisti:ters_netlesme"}
+{"zaman_ms":1795257160887,"olay":"tur","ozsermaye_usd":9859.8623}
+{"zaman_ms":1795257292407,"olay":"kopya_drift","coin":"xyz:ANT","biz_usd":0.0,"ideal_usd":-183.68,"drift":1.0,"sure_dk":30}
+{"zaman_ms":1795257325164,"olay":"tg_bastirildi","tur":"kopya_sapmasi","metin":"📐 Kopya sapması: 8 coin, en büyük xyz:SNXX %100 (yalnız bilgi)"}
+{"zaman_ms":1795257325165,"olay":"telegram","metin":"🧾 Son 1 saat: 1 emir (1 kapanış) · sanal · net −18,50 $\n🔻 Kapanan: ETH −18,50 $\n💰 Kasa: 9.857,31 $ · bugün 🟢 +23,63 $ (+%0,2)","acik":true}
+{"zaman_ms":1795257325165,"olay":"tg_mesaj","tur":"islem_ozeti","anahtar":null,"seviye":"INFO","sessiz":false,"metin":"🧾 Son 1 saat: 1 emir (1 kapanış) · sanal · net −18,50 $\n🔻 Kapanan: ETH −18,50 $\n💰 Kasa: 9.857,31 $ · bugün 🟢 +23,63 $ (+%0,2)","gonderildi":true,"bastirildi":false,"emir":1,"kapanan":1,"net_kz":-18.502636}
