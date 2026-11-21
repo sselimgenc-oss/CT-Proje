@@ -495,3 +495,4 @@ Dayanak: kâğıtta her özellik açık ve işleme etkili (K-73); kullanıcı ye
 - Test: `tests/test_k86_motor.py` (her kural + dönem geçişi); eski altın testler `tests/conftest.py` `K86_GEVSEK` profiliyle (slot kasa/11, geniş liste, hak/gün/yön sınırı kapalı) çalışır.
 
 - **Aday sayımı (21.11 gece, tam evren 2428):** a–c ile 1 aday; Fable sırasıyla d (haftada ≤ 20) ve e (30 g düşüş ≤ %30) uygulandı → 2 aday (kopya koruma/kopya getirisi süzgecinden önce). 5'e ulaşılamadı: boş slotlarla başlanır (slot 200 $, büyütülmez).
+- **Kullanıcı onayı (21.11):** coin başına toplam brüt tavanı (kasa × %30) ve trader başına tüm coinler ≤ 3 × slot tavanı KALIR (K-86 açık nokta kapandı).
