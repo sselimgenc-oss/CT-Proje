@@ -2,16 +2,18 @@
  "bas_ms": 1795246200000,
  "btc_donem_fiyat": 58121.0,
  "doluluk": {
-  "kapasite_ms": 0.0,
-  "nakit_ms": 0.0,
+  "brut_ms": 0.0,
+  "kapasite_ms": 1575635.0,
+  "nakit_ms": 315127.0,
+  "net_ms": 0.0,
   "slot_ms": 0.0,
-  "son_ms": 1795273555623,
-  "sure_ms": 0
+  "son_ms": 1795274173799,
+  "sure_ms": 315127
  },
  "donem": "2026-11-21T07:30:00Z",
  "gunler": [
   {
-   "btc": 60441.39666667,
+   "btc": 60037.73197826,
    "gun": "2026-11-21",
    "ozsermaye_usd": 1000.0
   }

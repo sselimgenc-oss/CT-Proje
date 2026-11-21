@@ -1,4 +1,4 @@
-# CT kadro seçimi x gerçek kopya PnL (form sırası, 2026-11-21T15:04:51Z)
+# CT kadro seçimi x gerçek kopya PnL (form sırası, 2026-11-21T15:10:56Z)
 
 Toplu: veri yok.
 

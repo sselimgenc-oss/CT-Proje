@@ -30,10 +30,10 @@
   "cgroup_tepe_mb": 24.1,
   "disk_bos_gb": 63.39,
   "disk_toplam_gb": 66.76,
-  "olc_ms": 1795273794741,
-  "ram_mb": 37.5,
-  "ram_tepe_mb": 37.5,
-  "yuk_1dk": 0.0
+  "olc_ms": 1795274174143,
+  "ram_mb": 37.4,
+  "ram_tepe_mb": 37.4,
+  "yuk_1dk": 0.11
  },
  "kip": "sanal",
  "kopya_drift": {},
@@ -55,6 +55,6 @@
  "ucret_gercek_usd": 0.0,
  "ucret_tahmin_say": 0,
  "vardiya": "sunucu",
- "yazildi_ms": 1795273794741,
+ "yazildi_ms": 1795274174143,
  "yetim_ilk": {}
 }

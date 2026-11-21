@@ -1,4 +1,4 @@
-# CT kural maliyeti (son 7 gün, 2026-11-21T15:04:51Z)
+# CT kural maliyeti (son 7 gün, 2026-11-21T15:10:56Z)
 
 **Slot tavanı:** son 7 günde kayıt yok.
 

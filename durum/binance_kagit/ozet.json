@@ -17,19 +17,19 @@
    "erisim_yok": 0,
    "fonlama_kaynak": "yok",
    "hata": 0,
-   "istek": 14,
+   "istek": 6,
    "kesinti_sn": 0.0,
-   "son_basari_ms": 1795273556424,
+   "son_basari_ms": 1795274174596,
    "son_hata": ""
   }
  },
  "brut_usd": 0,
- "btc_al_tut_getiri": 0.03992355029455785,
+ "btc_al_tut_getiri": 0.03297830350923081,
  "btc_donem_fiyat": 58121.0,
- "btc_fark": -0.03992355029455785,
- "btc_fiyat": 60441.39666667,
+ "btc_fark": -0.03297830350923081,
+ "btc_fiyat": 60037.73197826,
  "donem": "2026-11-21T07:30:00Z",
- "donem_gun": 0.3166512615740741,
+ "donem_gun": 0.3238085763888889,
  "dur": false,
  "emir": {
   "atlandi": 0,
@@ -61,11 +61,7 @@
  "kasa_usd": 1000.0,
  "kayit_sayac": {
   "bekleme_vardiyasi": 1,
-  "btc_donem": 1,
-  "kadro_surum_bekleniyor": 1,
-  "tg_bastirildi": 1,
-  "tg_mesaj": 1,
-  "tur": 5
+  "tur": 1
  },
  "kayma_n": 0,
  "kip": "sanal",
@@ -87,13 +83,13 @@
  "ozsermaye_usd": 1000.0,
  "r1_gecen": null,
  "rest_429": 0,
- "rest_istek": 166,
+ "rest_istek": 77,
  "saha": 0,
  "saha_eksik_neden": null,
  "saha_n": 5,
  "slot_tavani": 0,
  "slot_usd": 200.0,
- "sure_dk": 60.80623333333333,
+ "sure_dk": 4.390933333333333,
  "tasfiye": 0,
  "telegram_hata": 0,
  "ters_netlesme": 0,
@@ -104,7 +100,7 @@
  "ucret_tahmin_say": 0,
  "uyeler": [],
  "vardiya": "binance-kagit",
- "yazildi_ms": 1795273558669,
+ "yazildi_ms": 1795274177061,
  "yon_tavani": 0,
  "yurutucu": "binance_kagit"
 }
