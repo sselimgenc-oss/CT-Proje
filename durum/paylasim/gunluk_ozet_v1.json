@@ -1,15 +1,15 @@
 {
  "sema": "ortak.gunluk_ozet.v1",
  "proje": "CT",
- "uretim": "2026-11-21T00:04:45Z",
+ "uretim": "2026-11-21T01:04:50Z",
  "gun": "2026-11-21",
  "mod": "sanal",
  "kasa": {
   "baslangic": 10000.0,
-  "simdi": 9832.89,
-  "gun_pnl": -0.79,
-  "toplam_pnl": -167.11,
-  "zirveden_dusus_yuzde": 2.21
+  "simdi": 9845.23,
+  "gun_pnl": 11.55,
+  "toplam_pnl": -154.77,
+  "zirveden_dusus_yuzde": 2.09
  },
  "islem": {
   "gun_acilan": 0,
@@ -17,13 +17,13 @@
   "kazanan": 0,
   "kaybeden": 0,
   "acik_pozisyon": 41,
-  "alinmayan_sinyal": 0
+  "alinmayan_sinyal": 37
  },
  "hesaplar": [
   {
    "ad": "T_0c2447",
    "gun_pnl": 0,
-   "toplam_pnl": -122.22,
+   "toplam_pnl": -122.12,
    "islem": 0
   },
   {
@@ -35,43 +35,43 @@
   {
    "ad": "T_f6b664",
    "gun_pnl": 0,
-   "toplam_pnl": -61.76,
+   "toplam_pnl": -58.12,
    "islem": 0
   },
   {
    "ad": "T_99f0d4",
    "gun_pnl": 0,
-   "toplam_pnl": 91.32,
+   "toplam_pnl": 86.73,
    "islem": 0
   },
   {
    "ad": "T_2e4035",
    "gun_pnl": 0,
-   "toplam_pnl": -6.52,
+   "toplam_pnl": -6.76,
    "islem": 0
   },
   {
    "ad": "T_9934d6",
    "gun_pnl": 0,
-   "toplam_pnl": -136.06,
+   "toplam_pnl": -131.53,
    "islem": 0
   },
   {
    "ad": "T_b4c6ee",
    "gun_pnl": 0,
-   "toplam_pnl": 82.95,
+   "toplam_pnl": 88.55,
    "islem": 0
   },
   {
    "ad": "T_e7ae5a",
    "gun_pnl": 0,
-   "toplam_pnl": 116.84,
+   "toplam_pnl": 120.08,
    "islem": 0
   },
   {
    "ad": "T_7bb402",
    "gun_pnl": 0,
-   "toplam_pnl": -104.4,
+   "toplam_pnl": -104.33,
    "islem": 0
   },
   {
@@ -106,20 +106,34 @@
   "kaldirac_ayar": 3.0
  },
  "saglik": {
-  "son_nabiz": "2026-11-21T00:04:45Z",
+  "son_nabiz": "2026-11-21T01:04:50Z",
   "hata_sayisi_gun": 0,
-  "ram_mb": 104.8,
-  "ram_tepe_mb": 120.2,
-  "disk_bos_gb": 63.61,
-  "yuk_1dk": 0.01,
+  "ram_mb": 104.2,
+  "ram_tepe_mb": 120.3,
+  "disk_bos_gb": 63.42,
+  "yuk_1dk": 0.0,
   "yeniden_baslama_1s": null,
   "oom_son": null
  },
  "notlar": [
+  "yeni açılış kapalı: elle_dur",
   "drift uyarısı aktif",
   "hesaplar.gun_pnl = bugün gerçekleşen K/Z - ücret (açık pozisyon değişimi yok)"
  ],
- "alinmayan_neden": [],
+ "alinmayan_neden": [
+  {
+   "neden": "duygu_ters",
+   "adet": 31,
+   "karsi_olgu_kapanan": 0,
+   "karsi_olgu_pnl": null
+  },
+  {
+   "neden": "ters_netlesme",
+   "adet": 6,
+   "karsi_olgu_kapanan": 1,
+   "karsi_olgu_pnl": -0.0
+  }
+ ],
  "kopya_kalite": {
   "n": 0,
   "gecikme_ms_medyan": null,

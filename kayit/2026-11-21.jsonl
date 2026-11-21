@@ -60,3 +60,14 @@
 {"zaman_ms":1795221326478,"olay":"tur","ozsermaye_usd":9832.4049}
 {"zaman_ms":1795221835285,"olay":"kacan_telafi_atlandi","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","coin":"HYPE","neden":"kayma_lehte_fazla","kayma":-0.011008,"trader_giris":61.2386,"mark":60.5645}
 {"zaman_ms":1795222180378,"olay":"tur","ozsermaye_usd":9840.16}
+{"zaman_ms":1795222344810,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0x9eb42f017e793512e4734f8785de605c4cb3a24e","hesap_usd":296413.21137754,"anlik_kaldirac":4.998787149361429,"esik":5.0,"durum":"bitti"}
+{"zaman_ms":1795222377715,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0x9eb42f017e793512e4734f8785de605c4cb3a24e","hesap_usd":296413.21137754,"anlik_kaldirac":5.000323878301017,"esik":5.0,"durum":"basladi"}
+{"zaman_ms":1795222460962,"olay":"kacan_telafi_atlandi","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","coin":"HYPE","neden":"filtre_atlamisti:ters_netlesme"}
+{"zaman_ms":1795222463734,"olay":"kacan_telafi_atlandi","adres":"0x76c2cd1b8a249f465f8445c455cb78e0eed36f1e","coin":"VVV","neden":"pozisyon_eski"}
+{"zaman_ms":1795222707392,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0x9eb42f017e793512e4734f8785de605c4cb3a24e","hesap_usd":295957.70461754,"anlik_kaldirac":4.999747216488935,"esik":5.0,"durum":"bitti"}
+{"zaman_ms":1795222740237,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0x9eb42f017e793512e4734f8785de605c4cb3a24e","hesap_usd":295957.70461754,"anlik_kaldirac":5.002633017945273,"esik":5.0,"durum":"basladi"}
+{"zaman_ms":1795222809673,"olay":"funding","saat":498673,"saat_adet":1,"funding_usd":-0.08091207117823117,"toplam_funding_usd":-1.8624878973794894}
+{"zaman_ms":1795223090101,"olay":"kacan_telafi_geri_cekil","adres":"0x6d2667193fc4d2ce2c151dc006fa49ebb1a55cda","asama":"giris_px","sn":300.0,"ardisik":1}
+{"zaman_ms":1795223090101,"olay":"tur","ozsermaye_usd":9845.233}
+{"zaman_ms":1795223138761,"olay":"tg_bastirildi","tur":"saatlik_bos","metin":"🧾 Son 1 saat (03:04–04:05 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 37 (≈3 ayrı işlem)\n   • kural gereği 37: 31 piyasa duygusu ters · 6 ters netleşme (K‑41)\n   • kaçırılan 0 (g"}
+{"zaman_ms":1795223138762,"olay":"tg_mesaj","tur":"saatlik_bos","anahtar":null,"seviye":"INFO","sessiz":false,"metin":"🧾 Son 1 saat (03:04–04:05 TSİ): emir yok · sistem çalışıyor\n⏭️ Kopyalanmayan trader dolumu: 37 (≈3 ayrı işlem)\n   • kural gereği 37: 31 piyasa duygusu ters · 6 ters netleşme (K‑41)\n   • kaçırılan 0 (geç görülen / veri yok)\n💰 Kasa: 9.850,29 $ · bugün 🟢 +16,61 $ (+%0,2) · başlangıçtan 🔻 −149,71 $ (−%1,5)","gonderildi":false,"bastirildi":true}
