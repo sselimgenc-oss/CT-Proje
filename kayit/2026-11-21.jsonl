@@ -148,3 +148,8 @@
 {"zaman_ms":1795230369792,"olay":"tg_bastirildi","tur":"kopya_sapmasi","metin":"📐 Kopya sapması: 9 coin, en büyük xyz:SNXX %100 (yalnız bilgi)"}
 {"zaman_ms":1795230369793,"olay":"tg_bastirildi","tur":"saatlik_bos","metin":"🧾 Son 1 saat (05:05–06:06 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 9.866,67 $ · bugün 🟢 +32,99 $ (+%0,3) · başlangıçtan 🔻 −133,33 $ (−%1,3)"}
 {"zaman_ms":1795230369793,"olay":"tg_mesaj","tur":"saatlik_bos","anahtar":null,"seviye":"INFO","sessiz":false,"metin":"🧾 Son 1 saat (05:05–06:06 TSİ): emir yok · sistem çalışıyor\n💰 Kasa: 9.866,67 $ · bugün 🟢 +32,99 $ (+%0,3) · başlangıçtan 🔻 −133,33 $ (−%1,3)","gonderildi":false,"bastirildi":true}
+{"zaman_ms":1795230542770,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"SOL","neden":"kayma_fazla","kayma":0.014502,"trader_giris":68.922,"mark":67.9225}
+{"zaman_ms":1795230563795,"olay":"kopya_drift_bitti","coin":"TRX","biz_usd":400.81,"ideal_usd":532.94,"drift":0.248,"sure_dk":802}
+{"zaman_ms":1795230794248,"olay":"karsi_olgu_kapandi","coin":"ZEC","neden":"duygu_ters","yon":"A","hayali_usd":0.85,"pnl_usd":0.0508,"sure_sa":2.95,"kapanis":"trader_kapadi"}
+{"zaman_ms":1795230827298,"olay":"tur","ozsermaye_usd":9860.7695}
+{"zaman_ms":1795231187772,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0x9eb42f017e793512e4734f8785de605c4cb3a24e","hesap_usd":295751.98390754,"anlik_kaldirac":5.0095781460867075,"esik":5.0,"durum":"basladi"}
