@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-21 06:56 UTC
+# Canlı rapor — 2026-11-21 07:11 UTC
 
 **Kip** sanal · vardiya `sunucu` · saha 11/11 (inen 1)
 
@@ -8,9 +8,9 @@
 
 | kasa | özsermaye | gün | hafta | toplam | zirveden düşüş |
 |---|---|---|---|---|---|
-| 10.000,00 $ | 9.878,37 $ | +%0,45 | — (geçmiş < 7 gün) | −%1,22 | −%1,76 |
+| 10.000,00 $ | 9.871,09 $ | +%0,38 | — (geçmiş < 7 gün) | −%1,29 | −%1,83 |
 
-Başarı kıyası (aynı dönemde): toplam −%1,22 · BTC al-tut: −%10,7 · fark: +%9,5 · aylık eşdeğer: −%7,3 · hedef %4/ay: geçmiyor
+Başarı kıyası (aynı dönemde): toplam −%1,29 · BTC al-tut: −%9,8 · fark: +%8,5 · aylık eşdeğer: −%7,8 · hedef %4/ay: geçmiyor
 
 Komisyon (dönem): ödenen ücret: 18,98 $ · brüt K/Z ≤ 0: ücret zararı büyütüyor _(ücret işlem hacmine bağlıdır, emir sayısına değil)_
 
@@ -20,47 +20,47 @@ Piyasa duygusu (Fear & Greed 0-100; sanalda ≥75 yeni long, ≤25 yeni short at
 
 | trader | coin | yön | $ | K/Z |
 |---|---|---|---|---|
-| Bülbül-C3 | XRP | S | 1.249,69 $ | +101,25 $ |
-| Antares-9E | xyz:NVDA | L | 1.228,62 $ | −135,02 $ |
-| Orkinos-76 | TRX | L | 401,38 $ | −2,71 $ |
-| Vega-C3 | XRP | S | 354,35 $ | +35,26 $ |
-| Rakun-6A | xyz:BE | L | 348,62 $ | −22,86 $ |
-| Rakun-6A | xyz:MU | L | 262,22 $ | −14,56 $ |
-| Doğan-6D | LIT | L | 239,07 $ | −7,98 $ |
-| Vega-C3 | HYPE | S | 225,54 $ | +41,50 $ |
-| Vega-C3 | SOL | S | 214,39 $ | +18,39 $ |
-| Orkinos-76 | WLFI | S | 205,89 $ | +8,40 $ |
-| Doğan-2D | ETH | L | 204,77 $ | −18,30 $ |
-| Rakun-6A | xyz:DRAM | L | 198,88 $ | −9,96 $ |
-| Rakun-6A | xyz:XYZ100 | L | 196,62 $ | −8,65 $ |
-| Rakun-6A | xyz:SNDK | L | 135,47 $ | −7,10 $ |
-| Doğan-2D | io:SNDK | L | 120,54 $ | −17,83 $ |
-| Orkinos-76 | INJ | L | 99,98 $ | −9,33 $ |
-| Rakun-6A | xyz:NVDA | L | 96,26 $ | −9,64 $ |
-| Orkinos-76 | AERO | L | 96,23 $ | −11,57 $ |
-| Doğan-2D | UNI | L | 88,16 $ | +0,67 $ |
-| Orkinos-76 | BCH | L | 75,36 $ | −6,20 $ |
-| Vega-C3 | LINK | S | 60,95 $ | +6,43 $ |
-| Orkinos-76 | kSHIB | L | 60,20 $ | −6,04 $ |
-| Orkinos-76 | TAO | S | 59,50 $ | +5,89 $ |
-| Vega-C3 | AAVE | S | 43,86 $ | +7,45 $ |
-| Orkinos-76 | WLD | S | 41,18 $ | +7,50 $ |
-| Orkinos-76 | DOGE | L | 40,74 $ | −4,22 $ |
-| Orkinos-76 | ADA | L | 29,17 $ | −2,18 $ |
-| Orkinos-76 | ALGO | L | 22,70 $ | −2,16 $ |
-| Doğan-2D | xyz:SOXL | L | 13,84 $ | −1,53 $ |
-| Orkinos-76 | HBAR | S | 12,86 $ | +1,75 $ |
-| Orkinos-76 | BTC | L | 11,63 $ | −1,28 $ |
-| Orkinos-76 | DOT | S | 10,37 $ | +1,21 $ |
-| Orkinos-76 | ETC | S | 9,75 $ | +1,25 $ |
+| Bülbül-C3 | XRP | S | 1.251,51 $ | +99,43 $ |
+| Antares-9E | xyz:NVDA | L | 1.225,87 $ | −137,77 $ |
+| Orkinos-76 | TRX | L | 402,93 $ | −1,15 $ |
+| Vega-C3 | XRP | S | 354,86 $ | +34,75 $ |
+| Rakun-6A | xyz:BE | L | 348,21 $ | −23,28 $ |
+| Rakun-6A | xyz:MU | L | 261,72 $ | −15,05 $ |
+| Doğan-6D | LIT | L | 238,64 $ | −8,41 $ |
+| Vega-C3 | HYPE | S | 227,10 $ | +39,93 $ |
+| Vega-C3 | SOL | S | 213,72 $ | +19,05 $ |
+| Orkinos-76 | WLFI | S | 205,52 $ | +8,77 $ |
+| Doğan-2D | ETH | L | 204,39 $ | −18,68 $ |
+| Rakun-6A | xyz:DRAM | L | 198,77 $ | −10,07 $ |
+| Rakun-6A | xyz:XYZ100 | L | 197,07 $ | −8,20 $ |
+| Rakun-6A | xyz:SNDK | L | 135,26 $ | −7,30 $ |
+| Doğan-2D | io:SNDK | L | 120,48 $ | −17,89 $ |
+| Orkinos-76 | INJ | L | 100,02 $ | −9,30 $ |
+| Orkinos-76 | AERO | L | 96,54 $ | −11,26 $ |
+| Rakun-6A | xyz:NVDA | L | 96,04 $ | −9,86 $ |
+| Doğan-2D | UNI | L | 88,25 $ | +0,77 $ |
+| Orkinos-76 | BCH | L | 75,21 $ | −6,35 $ |
+| Vega-C3 | LINK | S | 61,02 $ | +6,36 $ |
+| Orkinos-76 | kSHIB | L | 60,26 $ | −5,99 $ |
+| Orkinos-76 | TAO | S | 59,67 $ | +5,72 $ |
+| Vega-C3 | AAVE | S | 43,74 $ | +7,57 $ |
+| Orkinos-76 | WLD | S | 41,43 $ | +7,25 $ |
+| Orkinos-76 | DOGE | L | 40,69 $ | −4,27 $ |
+| Orkinos-76 | ADA | L | 29,11 $ | −2,24 $ |
+| Orkinos-76 | ALGO | L | 22,76 $ | −2,09 $ |
+| Doğan-2D | xyz:SOXL | L | 13,77 $ | −1,60 $ |
+| Orkinos-76 | HBAR | S | 12,93 $ | +1,68 $ |
+| Orkinos-76 | BTC | L | 11,74 $ | −1,17 $ |
+| Orkinos-76 | DOT | S | 10,38 $ | +1,20 $ |
+| Orkinos-76 | ETC | S | 9,78 $ | +1,22 $ |
 | Orkinos-76 | AVAX | L | 9,75 $ | −1,25 $ |
-| Orkinos-76 | FIL | S | 9,34 $ | +1,66 $ |
-| Orkinos-76 | NEAR | S | 8,93 $ | +2,07 $ |
+| Orkinos-76 | FIL | S | 9,38 $ | +1,62 $ |
+| Orkinos-76 | NEAR | S | 8,91 $ | +2,09 $ |
 
 ## Son 24 saat
 
 - emir 161 · dolum 160 · kayma p50 +%0,00 / max +%0,82 (n=160)
-- funding −1,09 $ · ücret 6,37 $
+- funding −2,25 $ · ücret 6,37 $
 
 _gün = (özsermaye − UTC gün başı özsermayesi) / gün başı (motorun günlük kayıp tanımı); hafta/toplam kasaya göre; zirveden düşüş motorun zirvesine göre._
 
@@ -91,7 +91,7 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 653 dk · WS kopma 5 / yeniden bağlanma 5 · boşluk yok · REST 429 0
+- süre 669 dk · WS kopma 5 / yeniden bağlanma 5 · boşluk yok · REST 429 0
 
 ## Seçim isabeti (son 7)
 
@@ -125,24 +125,24 @@ _Taban = fiili + ML/ders yüzünden atlanan sinyallerin hayali K/Z'si (ücret/ka
 
 ## Dönem (kalıcı seri)
 
-- motor 9.878,37 $ · BTC al-tut 8.932,66 $ · %4/ay hedef çizgisi 10.072,44 $
-- katkı: İlk 11 7 slot −236,11 $ · Yedek 5 slot +114,48 $
-- saha doluluğu %100,00 · nakitte kalan %39,99 (4,7 gün ölçüldü)
-- kullanılan sermaye getirisi −%2,03 · ort. brüt maruziyet 5.986,70 $ · ort. net 1.031,55 $ · risk kilidi olayı 0 (gölge eğri yok)
-- atlanan sinyal %98,66 · yuvarlanan emir %5,32 (emir 395, atlanan 29000)
+- motor 9.871,09 $ · BTC al-tut 9.016,82 $ · %4/ay hedef çizgisi 10.072,44 $
+- katkı: İlk 11 7 slot −241,44 $ · Yedek 5 slot +112,52 $
+- saha doluluğu %100,00 · nakitte kalan %39,98 (4,7 gün ölçüldü)
+- kullanılan sermaye getirisi −%2,15 · ort. brüt maruziyet 5.987,89 $ · ort. net 1.032,59 $ · risk kilidi olayı 0 (gölge eğri yok)
+- atlanan sinyal %98,66 · yuvarlanan emir %5,32 (emir 395, atlanan 29001)
 - radar hunisi: evren 2428 → aday 906 → ≥10 işlem 129 → geçen 32
 
 | trader | katman | giriş | çıkış | net $ |
 |---|---|---|---|---|
-| Vega-C3 | yedek | 16.11 14:30 | sahada | +156,10 $ |
-| Bülbül-C3 | yedek | 16.11 14:30 | sahada | +100,43 $ |
-| Doğan-6D | ilk11 | 16.11 14:30 | sahada | +88,14 $ |
+| Vega-C3 | yedek | 16.11 14:30 | sahada | +154,72 $ |
+| Bülbül-C3 | yedek | 16.11 14:30 | sahada | +98,61 $ |
+| Doğan-6D | ilk11 | 16.11 14:30 | sahada | +87,73 $ |
 | Polaris-F8 | yedek | 19.11 12:20 | sahada | +0,26 $ |
 | Akrep-C2 | ilk11 | 16.11 14:30 | 19.11 12:20 islem_yok | +0,00 $ |
 | Karga-E6 | ilk11 | 16.11 14:30 | sahada | +0,00 $ |
-| Orkinos-76 | yedek | 16.11 14:30 | sahada | −11,85 $ |
+| Orkinos-76 | yedek | 16.11 14:30 | sahada | −10,19 $ |
 | Antares-3D | ilk11 | 16.11 14:30 | sahada | −27,53 $ |
-| Rakun-6A | ilk11 | 16.11 14:30 | sahada | −69,62 $ |
+| Rakun-6A | ilk11 | 16.11 14:30 | sahada | −71,29 $ |
 | Bukalemun-DE | ilk11 | 16.11 14:30 | sahada | −90,66 $ |
-| Doğan-2D | yedek | 16.11 14:30 | sahada | −130,46 $ |
-| Antares-9E | ilk11 | 16.11 14:30 | sahada | −136,44 $ |
+| Doğan-2D | yedek | 16.11 14:30 | sahada | −130,88 $ |
+| Antares-9E | ilk11 | 16.11 14:30 | sahada | −139,70 $ |
