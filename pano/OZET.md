@@ -1,4 +1,4 @@
-# Canlı rapor — 2026-11-21 14:16 UTC
+# Canlı rapor — 2026-11-21 14:31 UTC
 
 **Kip** sanal · vardiya `sunucu` · saha 0/5 (inen 0) · **bekleme vardiyası** (saha boş / kadro bekleniyor)
 
@@ -35,12 +35,12 @@ olay yok
 
 ## Vardiya sağlığı
 
-- süre 10 dk · WS kopma — / yeniden bağlanma — · boşluk yok · REST 429 0
+- süre 25 dk · WS kopma — / yeniden bağlanma — · boşluk yok · REST 429 0
 
 
 ## Dönem (kalıcı seri)
 
-- motor 1.000,00 $ · BTC al-tut 1.037,72 $
+- motor 1.000,00 $ · BTC al-tut 1.038,08 $
 - saha doluluğu %0,00 · nakitte kalan %100,00 (0,0 gün ölçüldü)
 - kullanılan sermaye getirisi — · ort. brüt maruziyet 0,00 $ · ort. net 0,00 $ · risk kilidi olayı 0 (gölge eğri yok)
 - atlanan sinyal — · yuvarlanan emir — (emir 0, atlanan 0)
