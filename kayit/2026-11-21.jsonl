@@ -259,3 +259,9 @@
 {"zaman_ms":1795235711520,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"BTC","eylem":"ac","karar":"atlandi","neden":"ara_dolum_siniri","trader_dolum_ms":1795235711089,"gorme_ms":1795235711484,"yas_ms":431}
 {"zaman_ms":1795235907715,"olay":"kopya_drift","coin":"AERO","biz_usd":92.73,"ideal_usd":51.18,"drift":0.812,"sure_dk":30}
 {"zaman_ms":1795235974102,"olay":"tur","ozsermaye_usd":9846.6231}
+{"zaman_ms":1795236474169,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","hesap_usd":117847.494371,"anlik_kaldirac":5.009979084221141,"esik":5.0,"durum":"basladi"}
+{"zaman_ms":1795236572494,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","hesap_usd":117847.494371,"anlik_kaldirac":4.9994475607249775,"esik":5.0,"durum":"bitti"}
+{"zaman_ms":1795236605420,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","hesap_usd":117847.494371,"anlik_kaldirac":5.005063005947908,"esik":5.0,"durum":"basladi"}
+{"zaman_ms":1795236778410,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"VVV","neden":"kayma_lehte_fazla","kayma":-0.020331,"trader_giris":19.9004,"mark":20.305}
+{"zaman_ms":1795236799922,"olay":"golge_kural","kural":"B_kaldirac_5x","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","hesap_usd":121109.880547,"anlik_kaldirac":4.876551297079141,"esik":5.0,"durum":"bitti"}
+{"zaman_ms":1795236832670,"olay":"tur","ozsermaye_usd":9860.6957}
