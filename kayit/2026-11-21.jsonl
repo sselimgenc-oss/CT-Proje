@@ -382,3 +382,5 @@
 {"zaman_ms":1795239298751,"olay":"tg_mesaj","tur":"islem_satiri","anahtar":null,"seviye":"INFO","sessiz":false,"metin":"🔻 xyz:SPCX kapandı · trader Doğan-2D (sanal)\n−7,46 $ (−%1,11) · Neden: trader kapattı","gonderildi":false,"bastirildi":true,"adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"xyz:SPCX","yon":"A","pnl":-7.461093,"neden":"tam_kapanis"}
 {"zaman_ms":1795239319459,"olay":"emir_yok","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","eylem":"azalt","karar":"atlandi","neden":"ara_dolum_siniri","trader_dolum_ms":1795239319030,"gorme_ms":1795239319458,"yas_ms":429}
 {"zaman_ms":1795239387672,"olay":"tur","ozsermaye_usd":9877.4621}
+{"zaman_ms":1795239858114,"olay":"kacan_telafi_atlandi","adres":"0x2d29c09ef733f48fe10074a2dd7c38b50a9d4d89","coin":"HYPE","neden":"filtre_atlamisti:duygu_ters"}
+{"zaman_ms":1795240251629,"olay":"tur","ozsermaye_usd":9879.2433}
