@@ -4124,7 +4124,7 @@ async def bekleme_vardiyasi(motor: Motor, sure_sn: float | None, uyku: Callable[
     motor.kayit({"olay": "bekleme_vardiyasi", "gerekli": str(motor.radar_surum_gerekli)})
     surekli = sure_sn is None                               # K-86: sunucu `--sure-sn` vermez → kadro gelene dek SÜRESİZ bekle (çıkış 0 olursa systemd yeniden başlatmaz, güncelleme geri alınır)
     bitis = float("inf") if surekli else motor.saat_ms() + int(sure_sn * 1000)
-    aralik = max(1.0, float(motor.rules["canli_kadro_aralik_sn"]))
+    aralik = max(1.0, min(float(motor.rules["canli_kadro_aralik_sn"]), float(motor.rules.get("koruyucu_motor_nabiz_bayat_sn", 180)) / 3))   # 21.11: her yoklamada nabız yazılır; aralık koruyucu eşiğinin (180 sn) üçte birini aşmaz, yoksa 5 dk'da bir yanlış "nabız yok" alarmı
     kadro_geldi = False
     while True:
         simdi = motor.saat_ms()
