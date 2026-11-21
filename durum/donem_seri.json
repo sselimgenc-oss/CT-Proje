@@ -2,13 +2,13 @@
  "bas_ms": 1794828600000,
  "btc_donem_fiyat": 64642.0,
  "doluluk": {
-  "brut_ms": 2558424656710.7896,
-  "kapasite_ms": 4688175129.0,
-  "nakit_ms": 169614614.8661049,
-  "net_ms": 445767041052.38806,
-  "slot_ms": 4688175129.0,
-  "son_ms": 1795262340489,
-  "sure_ms": 426197739
+  "brut_ms": 2564537037968.7124,
+  "kapasite_ms": 4699058177.0,
+  "nakit_ms": 169983228.6475309,
+  "net_ms": 446881420038.26636,
+  "slot_ms": 4699058177.0,
+  "son_ms": 1795263329857,
+  "sure_ms": 427187107
  },
  "donem": "2026-11-16T11:30:00Z",
  "emir_sayac": {
@@ -58,9 +58,9 @@
    "ozsermaye_usd": 9833.6786
   },
   {
-   "btc": 58211.5,
+   "btc": 58352.5,
    "gun": "2026-11-21",
-   "ozsermaye_usd": 9845.7728
+   "ozsermaye_usd": 9846.0887
   }
  ],
  "kasa_usd": 10000.0,
@@ -72,7 +72,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": 89.0151,
+   "net_usd": 89.5276,
    "sonuc": null
   },
   {
@@ -92,7 +92,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "ilk11",
-   "net_usd": -74.8538,
+   "net_usd": -75.0937,
    "sonuc": null
   },
   {
@@ -122,7 +122,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": -130.7601,
+   "net_usd": -130.5482,
    "sonuc": null
   },
   {
@@ -132,7 +132,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "ilk_gun",
    "katman": "yedek",
-   "net_usd": -12.8349,
+   "net_usd": -10.2093,
    "sonuc": null
   },
   {
@@ -142,7 +142,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "kor_gevsetildi",
    "katman": "ilk11",
-   "net_usd": -145.8934,
+   "net_usd": -145.7059,
    "sonuc": null
   },
   {
@@ -162,7 +162,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "kor_gevsetildi",
    "katman": "yedek",
-   "net_usd": 93.8399,
+   "net_usd": 92.8677,
    "sonuc": null
   },
   {
@@ -172,7 +172,7 @@
    "giris_ms": 1794828602613,
    "giris_neden": "kor_gevsetildi",
    "katman": "yedek",
-   "net_usd": 145.1824,
+   "net_usd": 143.173,
    "sonuc": null
   },
   {

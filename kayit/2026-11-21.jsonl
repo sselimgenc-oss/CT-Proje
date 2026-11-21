@@ -1259,3 +1259,7 @@
 {"zaman_ms":1795261806762,"olay":"kacan_telafi_atlandi","adres":"0xc3602c55a23475df22818f78ac9d84c8b96dbda0","coin":"VVV","neden":"ara_dolum_siniri"}
 {"zaman_ms":1795261812051,"olay":"kacan_telafi_atlandi","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","neden":"filtre_atlamisti:ters_netlesme"}
 {"zaman_ms":1795262310419,"olay":"tur","ozsermaye_usd":9846.5531}
+{"zaman_ms":1795262434539,"olay":"kacan_telafi_atlandi","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","neden":"kayma_fazla","kayma":0.010334,"trader_giris":68.0988,"mark":68.8025}
+{"zaman_ms":1795262477148,"olay":"funding","saat":498684,"saat_adet":1,"funding_usd":0.15734173620041209,"toplam_funding_usd":-2.0989250660839667}
+{"zaman_ms":1795263064369,"olay":"kacan_telafi_atlandi","adres":"0xdebd491a259a242fc9bd8fd780a507e8e062b67a","coin":"SOL","neden":"filtre_atlamisti:ters_netlesme"}
+{"zaman_ms":1795263168396,"olay":"tur","ozsermaye_usd":9848.0443}
