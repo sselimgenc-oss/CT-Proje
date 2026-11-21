@@ -841,3 +841,7 @@
 {"zaman_ms":1795251630457,"olay":"funding","saat":498681,"saat_adet":1,"funding_usd":0.2074069857957633,"toplam_funding_usd":-2.2382059875074143}
 {"zaman_ms":1795252382391,"olay":"tur","ozsermaye_usd":9864.829}
 {"zaman_ms":1795252975008,"olay":"kopya_drift","coin":"TRX","biz_usd":403.15,"ideal_usd":539.7,"drift":0.253,"sure_dk":30}
+{"zaman_ms":1795253298908,"olay":"tur","ozsermaye_usd":9865.1352}
+{"zaman_ms":1795253678789,"olay":"bekci_tetik","gecen_sn":183.2,"sinir_sn":180.0}
+{"zaman_ms":1795253678789,"olay":"telegram","metin":"🔴 Bot durdu (sanal · deneme parası)\nNeden: motor dondu (183 sn'dir bakım bitmedi)\nAçık pozisyon: 36 · Stop: bot kapalıyken yazılım stopu çalışmıyor\nYeni işlem açılmıyor; sistem motoru kendiliğinden yeniden başlatıyor.\nSenden bir şey gerekmiyor.","acik":true}
+{"zaman_ms":1795253678789,"olay":"tg_mesaj","tur":null,"anahtar":null,"seviye":"CRIT","sessiz":false,"metin":"🔴 Bot durdu (sanal · deneme parası)\nNeden: motor dondu (183 sn'dir bakım bitmedi)\nAçık pozisyon: 36 · Stop: bot kapalıyken yazılım stopu çalışmıyor\nYeni işlem açılmıyor; sistem motoru kendiliğinden yeniden başlatıyor.\nSenden bir şey gerekmiyor.","gonderildi":true,"bastirildi":false}
