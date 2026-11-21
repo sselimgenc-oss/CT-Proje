@@ -3,9 +3,11 @@
 # Ortam (hepsi /etc/sg-sanal-mod.env'den; sırsız): SUNUCU_MOD = uretim ; VERI_DALI = canli-durum (eski deneme modu 19.11'de kaldırıldı).
 # Ne yapar:
 #   1) Mod/dal çifti tutarlı mı: yalnız uretim ↔ canli-durum. Değilse çıkış 3 (kalıcı; systemd yeniden denemez).
+#   1b) Dönem sıfırlama (deploy/donem_sifirla.sh): durum/donem.txt ≠ copytrade/canli/DONEM ise eski CT durumu silinir (tutma listesi güncelleme betiğiyle aynı).
 #   2) Yerel durum zaten varsa (yeniden başlatma / sunucu açılışı) HİÇBİR ŞEY geri yüklenmez: yerel durum asıl kaynaktır (daha eski dal ucundan geri dönmek çift işlem yaratırdı).
 #   3) Durum yoksa (ilk açılış):
 #      uretim: GEÇİŞ KAPISI — canli-durum/durum/kilit.json'da Actions vardiyası hâlâ canlı görünüyorsa (bırakılmamış ve nabız `canli_kilit_dk` içinde) bekler (en çok GECIS_BEKLE_SN, 1800 sn); olmazsa çıkış 75 (geçici, systemd yeniden dener).
+#              KENDİ vardiyamızın (VARDIYA_ID, varsayılan sunucu) kilidi serbest sayılır: güncellemede dönem sıfırlanıp durum silinince bizim durdurduğumuz motorun taze kilidi beklenmez.
 #              Böylece iki motor aynı anda çalışmaz (asıl anahtar: GitHub'da SUNUCU_AKTIF=evet; bu kapı ikinci güvence).
 #      durum/kayit/pano geçmişi canli-durum dalından dönem kuralıyla (donem_geri.sh ile aynı) geri yüklenir: dönem aynıysa devam, farklıysa sıfırdan.
 # Hiçbir sır basmaz/yazmaz. GITHUB_ACTIONS gerektirmez.
@@ -17,6 +19,8 @@ case "$mod:$veri_dali" in
   uretim:canli-durum) ;;
   *) echo "HATA: geçersiz mod/dal çifti ($mod / $veri_dali): yalnız uretim=canli-durum geçerli" >&2; exit 3 ;;
 esac
+# 0) Dönem sıfırlama (ortak betik; güncelleme betiği eski sürümden koşsa da burada, taze depodan yapılır): eski dönemin yerel durumu silinir → aşağıda "durum yok" yoluna düşer.
+SANAL_DEPO="$PWD" bash "$(dirname "${BASH_SOURCE[0]}")/donem_sifirla.sh" || echo "sanal_baslat: UYARI: donem_sifirla.sh başarısız" >&2
 if [ -s durum/motor.json ] || [ -s durum/hesap.json ]; then
   echo "sanal_baslat: yerel durum var; geri yükleme yok, kaldığı yerden devam ($mod)"
   exit 0
@@ -30,7 +34,7 @@ if [ "$mod" = uretim ]; then
     if git ls-remote --exit-code --heads origin "$geri_dali" >/dev/null 2>&1; then
       git fetch -q origin "$geri_dali"
       if git cat-file -e FETCH_HEAD:durum/kilit.json 2>/dev/null; then
-        serbest="$(git show FETCH_HEAD:durum/kilit.json | python3 -c 'import json,sys,time; k=json.load(sys.stdin); print("hayir" if (not k.get("birakildi")) and time.time()*1000-int(k.get("nabiz_ms",0)) < float(sys.argv[1])*60000 else "evet")' "$kilit_dk")"
+        serbest="$(git show FETCH_HEAD:durum/kilit.json | python3 -c 'import json,sys,time; k=json.load(sys.stdin); print("hayir" if (not k.get("birakildi")) and k.get("vardiya") != sys.argv[2] and time.time()*1000-int(k.get("nabiz_ms",0)) < float(sys.argv[1])*60000 else "evet")' "$kilit_dk" "${VARDIYA_ID:-sunucu}")"
       fi
     fi
     if [ "$serbest" = evet ]; then break; fi
