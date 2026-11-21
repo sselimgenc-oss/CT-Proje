@@ -19,9 +19,6 @@ class Poz:
     giris: float              # ortalama giriş fiyatı
     acilis_ms: int
     kaldirac: float = 3.0
-    giris_ctx: dict | None = None   # açılış anı rejim/duygu damgası (yalnız bilgi; rejim_sonuc raporu)
-    boyut_carpan: float = 1.0       # K-73 ek (O1): açılış/artırmada slotu küçülten çarpan (ders × gölge B5); AZALTMA aynı çarpanla hedeflenir; hesap.json ile kalıcı
-    zirve_kar: float = 0.0          # K-73 iz süren koruma (yalnız sanal): girişe göre en yüksek kâr oranı (artırmada ortalama giriş değişince sıfırlanır); hesap.json ile kalıcı
 
 
 def tasfiye_fiyati(yon_long: bool, giris: float, kaldirac: float, azami_kaldirac: float | None, mmr: float | None = None, cum_oran: float = 0.0) -> float:
@@ -78,11 +75,9 @@ class Hesap:
         self.tasfiyeler: list[dict] = []
         self.funding: dict[str, float] = {}          # adres -> girişten beri funding ($, işaretli: + alınan / − ödenen; sanal kip)
         self.son_niyet_cloid: str | None = None      # son UYGULANAN niyetin cloid'i (t4b #3: yeniden başlatmada bundan sonraki sonuçlu niyetler oynatılır)
-        self.dinleyici = None                        # ortak öğrenme: uygula() sonrası çağrılan fonksiyon (serileşmez; motor bağlar)
         self.kapanmis_net = 0.0                      # sahadan çıkıp kaydı silinen üyelerin net K/Z'si (özsermaye sürekliliği)
         self.poz_net: dict[str, float] = {}          # K-77: "adres|coin" -> AÇIK pozisyonun şimdiye dek net'i (gerçekleşen − her dolumun ücreti; giriş/artırma ücreti dahil = pano `dolum_net` toplamı)
         self.kapanan: dict[str, list[list[float]]] = {}   # K-77: adres -> TAM kapanan pozisyonların [kapanış_ms, net] listesi (en çok `KAPANAN_AZAMI` son); hesap.json ile kalıcı (yeniden başlatmada kaybolmaz)
-        self.kucult: dict[str, int] = {}             # K-77: adres -> son bilinen küçültme seviyesi (0 = ×1, 1 = ×0,5, 2 = en küçük); olay tekrarını önler, pano rozeti buradan okur
         self.belirsiz: dict[str, dict] = {}         # G-1: cloid -> {ms, deneme, adres, coin} (Y-2: adres/coin yeni girdilerde); emri gönderilip yanıtı alınamayan (sonucu BELİRSİZ) niyetler. `son_niyet_cloid` ile AYNI atomik
                                                      # yazımda tutulur: çözülünce dolum deftere TEK kez uygulanır ve buradan silinir (oynatma bu niyetleri atlar: işaretçi zaten geçti)
 
@@ -124,14 +119,14 @@ class Hesap:
         p = self.poz.get(adres, {}).get(coin)
         return p.sz if p else 0.0
 
-    def ters_yonlu_var(self, adres: str, coin: str, yon: str, marks: dict[str, float] | None = None, toz_usd: float = 0.0) -> bool:
+    def ters_yonlu_var(self, adres: str, coin: str, yon: str, marks: dict[str, float] | None = None, toz_usd: float = 0.0, haric: set[str] | None = None) -> bool:
         """K‑41: `adres` DIŞINDAKİ bir trader'ın kopya pozisyonu bu coinde `yon` (B/A) açılışının TERSİNE mi? (Tek HL hesabında coin netleşir; ters açılış net pozisyonu küçültür.)
-        Nosyoneli (mark, yoksa giriş) `toz_usd` ve altındaki kalıntı (toz; `canli_kapanis_toz_usd`) sayılmaz. Coin dizgesi birebir eşleşir (HIP‑3 `dex:COIN` ayrı coindir)."""
+        Nosyoneli (mark, yoksa giriş) `toz_usd` ve altındaki kalıntı (toz; `canli_kapanis_toz_usd`) sayılmaz. `haric`: sayılmayacak adresler (K-86: sahadan çıkan traderların pozisyonları yeni traderın ters açılışını engellemez). Coin dizgesi birebir eşleşir (HIP‑3 `dex:COIN` ayrı coindir)."""
         isaret = 1.0 if yon == "B" else -1.0
         marks = marks or {}
         for a, c in self.poz.items():
             p = c.get(coin)
-            if a != adres and p is not None and p.sz * isaret < -EPS and abs(p.sz) * (marks.get(coin) or p.giris) > toz_usd:
+            if a != adres and a not in (haric or ()) and p is not None and p.sz * isaret < -EPS and abs(p.sz) * (marks.get(coin) or p.giris) > toz_usd:
                 return True
         return False
 
@@ -142,14 +137,12 @@ class Hesap:
         signed = sz if yon == "B" else -sz
         poz = self.poz.setdefault(adres, {}).get(coin)
         pnl = 0.0
-        yeni_poz = poz is None or abs(poz.sz) < EPS                      # ortak öğrenme dinleyicisi için (yalnız bildirim; hesabı etkilemez)
         if poz is None or abs(poz.sz) < EPS:
             self.poz[adres][coin] = Poz(signed, px, zaman_ms, self.kaldirac)
         elif poz.sz * signed > 0:                                        # artırma: ağırlıklı ortalama giriş
             toplam = abs(poz.sz) + abs(signed)
             poz.giris = (poz.giris * abs(poz.sz) + px * abs(signed)) / toplam
             poz.sz += signed
-            poz.zirve_kar = 0.0                                          # ortalama giriş değişti: eski zirve geçersiz
         else:                                                            # azaltma / kapanış
             kapanan = min(abs(poz.sz), abs(signed))
             if abs(signed) > abs(poz.sz) + 1e-9:
@@ -166,15 +159,6 @@ class Hesap:
             liste = self.kapanan.setdefault(adres, [])
             liste.append([int(zaman_ms), self.poz_net.pop(anahtar)])
             del liste[:-KAPANAN_AZAMI]
-        if self.dinleyici is not None:                                   # ortak öğrenme: dolum bildirimi (hata hesabı bozmaz)
-            try:
-                p2 = self.poz.get(adres, {}).get(coin)
-                ref = p2 if p2 is not None else poz                      # kapanmışsa silinen pozisyon nesnesi (açılış zamanı/kaldıraç için)
-                self.dinleyici({"adres": adres, "coin": coin, "yon": yon, "sz": sz, "px": px, "pnl": pnl, "ucret": ucret, "ms": zaman_ms, "yeni": yeni_poz,
-                                "kapandi": p2 is None, "poz_sz": 0.0 if p2 is None else p2.sz, "acilis_ms": zaman_ms if ref is None else ref.acilis_ms,
-                                "kaldirac": self.kaldirac if ref is None else ref.kaldirac})
-            except Exception:                                            # noqa: BLE001
-                pass
         return pnl
 
     def ucret_duzelt(self, adres: str, delta: float) -> None:
@@ -245,24 +229,11 @@ class Hesap:
                     self.tasfiyeler.append(ev)
         return olaylar
 
-    # ------------------------------------------------------------------ K-77 zarar küçültme
-    def kapanan_ozet(self, adres: str, simdi_ms: int, pencere_ms: int) -> tuple[int, float]:
-        """K-77: trader'dan kopyaladığımız, son `pencere_ms` içinde TAM kapanan pozisyonların (adet, net toplam; pozisyon bazında net = giriş+çıkış ücreti dahil)."""
-        liste = [k for k in self.kapanan.get(adres, []) if simdi_ms - int(k[0]) <= pencere_ms]
-        return len(liste), sum(float(k[1]) for k in liste)
-
-    def kucult_seviye(self, adres: str, simdi_ms: int, pencere_ms: int, n1: int, n2: int) -> tuple[int, int, float]:
-        """K-77 (kullanıcı kararı 20.11): (seviye, adet, net). >= `n1` kapanışta net < 0 → 1 (×çarpan1); >= `n2` kapanışta net hâlâ < 0 → 2 (en küçük); net >= 0 → 0 (×1)."""
-        n, net = self.kapanan_ozet(adres, simdi_ms, pencere_ms)
-        if net >= 0 or n < n1:
-            return 0, n, net
-        return (2 if n >= n2 else 1), n, net
-
     # ------------------------------------------------------------------ kalıcılık
     def to_json(self) -> dict[str, Any]:
         return {"kasa_usd": self.kasa_usd, "kaldirac": self.kaldirac, "maks_kaldirac": self.maks_kaldirac, "realize": self.realize, "ucret": self.ucret, "slot_bas": self.slot_bas,
                 "poz": {a: {c: asdict(p) for c, p in coinler.items()} for a, coinler in self.poz.items()}, "tasfiyeler": self.tasfiyeler[-200:], "kapanmis_net": self.kapanmis_net, "funding": self.funding, "son_niyet_cloid": self.son_niyet_cloid,
-                "belirsiz": self.belirsiz, "poz_net": self.poz_net, "kapanan": self.kapanan, "kucult": self.kucult,
+                "belirsiz": self.belirsiz, "poz_net": self.poz_net, "kapanan": self.kapanan,
                 **({"mmr_varsayilan": self.mmr_varsayilan} if self.mmr_varsayilan is not None else {}), **({"mmr_kademe": self.mmr_kademe} if self.mmr_kademe else {})}
 
     @classmethod
@@ -270,13 +241,12 @@ class Hesap:
         """`kaldirac` (güncel kural `canli_marj_kaldirac`) verilirse defterin YENİ pozisyon kaldıracı odur; açık pozisyonlar kendi `Poz.kaldirac` değerini korur."""
         h = cls(d["kasa_usd"], d.get("kaldirac", 3.0) if kaldirac is None else kaldirac, d.get("maks_kaldirac"))
         h.realize, h.ucret, h.slot_bas = dict(d.get("realize", {})), dict(d.get("ucret", {})), dict(d.get("slot_bas", {}))
-        h.poz = {a: {c: Poz(**p) for c, p in coinler.items()} for a, coinler in d.get("poz", {}).items()}
+        h.poz = {a: {c: Poz(**{k: v for k, v in p.items() if k not in ("giris_ctx", "boyut_carpan", "zirve_kar")}) for c, p in coinler.items()} for a, coinler in d.get("poz", {}).items()}
         h.tasfiyeler = list(d.get("tasfiyeler", []))
         h.kapanmis_net = float(d.get("kapanmis_net", 0.0))
         h.funding = dict(d.get("funding", {}))
         h.poz_net = {k: float(v) for k, v in (d.get("poz_net") or {}).items()}
         h.kapanan = {a: [[int(k[0]), float(k[1])] for k in v] for a, v in (d.get("kapanan") or {}).items()}
-        h.kucult = {a: int(v) for a, v in (d.get("kucult") or {}).items()}
         h.son_niyet_cloid = d.get("son_niyet_cloid")
         h.belirsiz = {k: dict(v) for k, v in (d.get("belirsiz") or {}).items()}
         h.mmr_varsayilan = None if d.get("mmr_varsayilan") is None else float(d["mmr_varsayilan"])

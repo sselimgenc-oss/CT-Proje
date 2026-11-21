@@ -334,7 +334,7 @@ def _kayit(dizin, tur):
 
 def test_binance_eslemesiz_dogrulanmamis_ve_min_nosyonel_atlanir_nedenle_hl_acar(tmp_path):
     saat, hl = Saat(), SahteHL2()
-    mb, _, _, _ = bin_motor(tmp_path, hl, saat)
+    mb, _, _, _ = bin_motor(tmp_path, hl, saat, kurallar={"canli_coin_listesi": ["BTC", "xyz:SPCX", "PURR"]})          # K-86: coin listesi kapısı Binance eşleme kapısından ÖNCE; ikisini de sınamak için listeye alındı
     mb.baslat()
     s = mb.olay_isle(olay("a:1", adr(1), "BTC", "B", 300, 100.0, 0.0, saat))                      # BTCUSDT minNotional 100 > 27 $
     assert (s[0].karar, s[0].neden) == ("red", "binance_min_nosyonel")

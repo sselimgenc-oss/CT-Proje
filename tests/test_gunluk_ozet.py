@@ -9,11 +9,11 @@ import pytest
 from copytrade.canli import gunluk_ozet as go
 from copytrade.canli import motor as mt
 from copytrade.canli import telegram as tg
-from copytrade.canli.ogrenme_adaptor import takma_ad
+from copytrade.canli.kimlik import takma_ad
 from tests.test_canli_motor import adr, kadro, kur, satir
 
 ROOT = Path(__file__).resolve().parent.parent
-ANAHTARLAR = ["sema", "proje", "uretim", "gun", "mod", "kasa", "islem", "hesaplar", "ogrenme", "rejim", "drift_uyari", "limitler", "saglik", "notlar"]
+ANAHTARLAR = ["sema", "proje", "uretim", "gun", "mod", "kasa", "islem", "hesaplar", "drift_uyari", "limitler", "saglik", "notlar"]
 
 
 @pytest.fixture(autouse=True)
@@ -53,7 +53,7 @@ def test_sema_ve_sayimlar(tmp_path):
     assert h[takma_ad(adr(2))]["gun_pnl"] == pytest.approx(-2.0 + 1.0 - 0.2)
     assert o["kasa"]["baslangic"] == 1000.0 and o["kasa"]["simdi"] == 1000.0 and o["kasa"]["toplam_pnl"] == 0.0
     assert o["limitler"]["kaldirac_tavan"] == 5 and o["limitler"]["durdu_mu"] is False and o["limitler"]["gunluk_kayip_yuzde"] > 0
-    assert o["rejim"] is None and o["drift_uyari"] is False and len(o["notlar"]) <= 5
+    assert o["drift_uyari"] is False and len(o["notlar"]) <= 5
 
 
 def test_adres_sizintisi_yok_ve_dur_notu_maskelenir(tmp_path):
@@ -75,52 +75,11 @@ def test_kasa_alanlari_gun_pnl_ve_dusus(tmp_path):
     assert k["simdi"] == 950.0 and k["toplam_pnl"] == -50.0 and k["gun_pnl"] == -50.0 and k["zirveden_dusus_yuzde"] == pytest.approx(13.64)
 
 
-def test_rejim_drift_ogrenme(tmp_path):
+def test_drift_uyari(tmp_path):
     m, _ = _motor(tmp_path)
-    m.rejim_anlik = {"rejimler": {"BTC": {"4h": "trend_yukari"}}}
     m.kopya_drift = {"ETH": {"bas_ms": 1, "aktif": True}}
     o = go.olustur(m, {})
-    assert o["rejim"] == "trend_yukari" and o["drift_uyari"] is True
-    assert o["ogrenme"]["filtre_aktif"] is True and o["ogrenme"]["aktif_ders"] is None             # ders.json yok → null
-    gun = o["gun"]
-    (m.ogrenme.dizin).mkdir(parents=True, exist_ok=True)
-    m.ogrenme.ders_yolu.write_text(json.dumps({"a": {"status": "alive", "born": gun}, "b": {"status": "alive", "born": "2000-01-01"}, "c": {"status": "retired", "born": "2000-01-01"}}), encoding="utf-8")
-    etki = ("filtre_atlanan", "filtre_karsi_olgu_pnl", "ders_kucultulen", "ders_engellenen")      # öğrenme etkisi alanları ayrı testte (aşağıda)
-    assert {k: v for k, v in go.olustur(m, {})["ogrenme"].items() if k != "filtre_aktif" and k not in etki} == {"aktif_ders": 2, "yeni_ders": 1, "emekli_ders": 1}
-
-
-def test_ogrenme_etki_sayimlari_ve_ozet_alanlari(tmp_path):
-    m, _ = _motor(tmp_path)
-    for _ in range(3):
-        m.kayit({"olay": "ml_filtre_atla", "kurulum": "T_aaaaaa", "coin": "BTC"})
-    m.kayit({"olay": "karsi_olgu_kapandi", "neden": "ml_filtre_atla", "pnl_usd": -10.0})
-    m.kayit({"olay": "karsi_olgu_kapandi", "neden": "ml_filtre_atla", "pnl_usd": -2.5})
-    m.kayit({"olay": "karsi_olgu_kapandi", "neden": "hip3_atlandi", "pnl_usd": 50.0})          # ML değil: sayılmaz
-    m.kayit({"olay": "emir_yok", "neden": "ders_emekli", "eylem": "ac"})
-    m.kayit({"olay": "emir_yok", "neden": "ders_emekli", "eylem": "artir"})
-    m.kayit({"olay": "emir_yok", "neden": "bant_ici", "eylem": "ac"})                          # ders değil: sayılmaz
-    beklenen = {"filtre_atlanan": 3, "filtre_karsi_olgu_pnl": -12.5, "ders_kucultulen": None, "ders_engellenen": 2}
-    assert go.gunluk_etki(m) == beklenen
-    og = go.olustur(m, {})["ogrenme"]
-    assert {k: og[k] for k in beklenen} == beklenen and og["filtre_aktif"] is True
-
-
-def test_ogrenme_etki_kapanmamis_karsi_olgu_null(tmp_path):
-    m, _ = _motor(tmp_path)
-    m.kayit({"olay": "ml_filtre_atla", "kurulum": "T_aaaaaa", "coin": "BTC"})                  # skip var, kapanan karşı-olgu yok
-    assert go.gunluk_etki(m)["filtre_karsi_olgu_pnl"] is None and go.gunluk_etki(m)["filtre_atlanan"] == 1
-
-
-def test_ogrenme_satiri_ve_gunluk_rapor(tmp_path):
-    assert tg.ogrenme_satiri({"filtre_atlanan": 3, "filtre_karsi_olgu_pnl": -12.0, "ders_kucultulen": None, "ders_engellenen": 0}) == "🧠 Öğrenme: filtre 3 sinyal atladı (karşı-olgu −12,00 $)"
-    assert tg.ogrenme_satiri({"filtre_atlanan": 0, "filtre_karsi_olgu_pnl": None, "ders_kucultulen": None, "ders_engellenen": 1}) == "🧠 Öğrenme: ders 1 işlemi engelledi"
-    assert tg.ogrenme_satiri({"filtre_atlanan": 0, "filtre_karsi_olgu_pnl": None, "ders_kucultulen": None, "ders_engellenen": 0}) is None
-    assert tg.ogrenme_satiri(None) is None
-    ozet = {"filtre_atlanan": 3, "filtre_karsi_olgu_pnl": -12.0, "ders_kucultulen": None, "ders_engellenen": 0}
-    metin = tg.msg_gunluk("sanal", 1000.0, 1000.0, 1000.0, 0, 1, 11, [], None, None, ozet)
-    assert "🧠 Öğrenme: filtre 3 sinyal atladı (karşı-olgu −12,00 $)" in metin.splitlines()
-    assert "Öğrenme" not in tg.msg_gunluk("sanal", 1000.0, 1000.0, 1000.0, 0, 1, 11, [], None, None, None)
-    assert "Öğrenme" not in tg.msg_gunluk("sanal", 1000.0, 1000.0, 1000.0, 0, 1, 11, [], None, None, {"filtre_atlanan": 0, "filtre_karsi_olgu_pnl": None, "ders_kucultulen": None, "ders_engellenen": 0})
+    assert o["drift_uyari"] is True and "ogrenme" not in o and "rejim" not in o
 
 
 @pytest.mark.parametrize("kip,ortam,beklenen", [
@@ -161,7 +120,7 @@ def test_hata_yutulur_ve_kayit(tmp_path, monkeypatch):
 def test_yayim_betikleri_dosyayi_kopyalar():
     for yol in (".github/scripts/canli_yayimla.sh", "deploy/sanal_yayimla.sh"):
         s = (ROOT / yol).read_text(encoding="utf-8")
-        assert "kadro_yon_v1.json" in s and "gunluk_ozet_v1.json" in s
+        assert "gunluk_ozet_v1.json" in s and "kadro_yon_v1.json" not in s and "rejim_sonuc_v1" not in s and "durum/ogrenme" not in s
 
 
 def test_saglik_kaynak_alanlari_eklendi(tmp_path):
@@ -191,28 +150,12 @@ def test_saglik_sunucu_alanlari(tmp_path, monkeypatch):
     assert go.olustur(m)["saglik"]["oom_son"] is None
 
 
-def test_ogrenme_etki_ders_kucultulen_emir_kaydindan(tmp_path):
-    m, _ = _motor(tmp_path)
-    m.kayit({"olay": "emir", "eylem": "ac", "usd_dolan": 40.0, "ders_carpan": 0.5})             # ders küçülttü, doldu: sayılır
-    m.kayit({"olay": "emir", "eylem": "artir", "usd_dolan": 20.0, "ders_carpan": 0.8})          # sayılır
-    m.kayit({"olay": "emir", "eylem": "ac", "usd_dolan": 50.0, "ders_carpan": 1.0})             # çarpan 1: sayılmaz
-    m.kayit({"olay": "emir", "eylem": "ac", "usd_dolan": 0.0, "ders_carpan": 0.5})              # dolmadı: sayılmaz
-    m.kayit({"olay": "emir", "eylem": "kapat", "usd_dolan": 30.0, "ders_carpan": None})         # kapanış: çarpan yok
-    assert go.gunluk_etki(m)["ders_kucultulen"] == 2
-
-
-def test_ogrenme_etki_ders_carpani_olmayan_eski_kayit_null(tmp_path):
-    m, _ = _motor(tmp_path)
-    m.kayit({"olay": "emir", "eylem": "ac", "usd_dolan": 40.0})                                 # eski kayıt: alan yok
-    assert go.gunluk_etki(m)["ders_kucultulen"] is None
-
-
 def _dolu_gunluk(**kw):
     """Her satırın tetiklendiği tam dolu günlük rapor girdisi (en uzun durum)."""
     acik = [{"coin": c, "sz": 1.0, "usd": 1000.0 - i * 10, "kz_usd": (-1.0) ** i} for i, c in enumerate(["BTC", "ETH", "SOL", "HYPE", "DOGE", "AVAX", "LINK", "ARB"])]
     args = dict(kip="sanal", kasa=1000.0, ozsermaye=1012.5, onceki_oz=1000.0, emir_sayisi=58, saha=9, n=11, acik=acik, funding_usd=-0.12,
-                karsi_olgu={"hip3_atlandi": [2, 3.5], "min_emir_atlandi": [1, -1.0]}, ogrenme={"filtre_atlanan": 3, "filtre_karsi_olgu_pnl": -12.0, "ders_kucultulen": 1, "ders_engellenen": 0},
-                dur=False, bayraklar=["gunluk_kayip", "mutabakat", "elle_dur", "fren", "kasa_siniri"], saglik=["Telegram gönderim hatası 2", "borsa istek sınırı (429) 5"])
+                karsi_olgu={"liste_disi": [2, 3.5], "min_alti": [1, -1.0]},
+                dur=False, bayraklar=["gunluk_kayip", "mutabakat", "elle_dur", "kasa_siniri"], saglik=["Telegram gönderim hatası 2", "borsa istek sınırı (429) 5"])
     args.update(kw)
     return tg.msg_gunluk(**args)
 

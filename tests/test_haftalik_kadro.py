@@ -105,14 +105,14 @@ def _motor_iki_trader(tmp_path):
     return m, saat, a_, olay
 
 
-def test_inen_ters_yon_pozisyonu_kapanir_yeni_kadronun_acilisi_engellenmez(tmp_path):
+def test_inen_ters_yon_pozisyonu_kapanmaz_ama_yeni_kadronun_acilisini_engellemez(tmp_path):
     m, saat, a_, olay = _motor_iki_trader(tmp_path)
     s = m.olay_isle(olay("b:1", a_(2), "BTC", "A", 300, 100.0, 0.0, saat))              # sahadaki T2 BTC short açar
     assert [(x.eylem, x.karar) for x in s] == [("ac", "emir")]
-    assert m.hesap.sz(a_(1), "BTC") == 0.0 and m.hesap.sz(a_(2), "BTC") < 0
+    assert m.hesap.sz(a_(1), "BTC") > 0 and m.hesap.sz(a_(2), "BTC") < 0                 # K-86 kural 8: çıkan trader'ın pozisyonu kapatılmaz, yeni açılışı engellemez
 
 
-def test_inen_toplam_tavani_asilinca_en_zarardaki_inen_kapanir(tmp_path):
+def test_inen_toplam_tavani_asilinca_en_eski_inen_kapanir(tmp_path):
     m, saat, a_, _ = _motor_iki_trader(tmp_path)
     m.rules["canli_inen_tavan_oran"] = 0.001                                              # kasa 1.000 × 0,001 = 1 $ < T1'in BTC nosyoneli
     m._inen_tavan(saat())

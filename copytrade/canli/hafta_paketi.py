@@ -1,8 +1,8 @@
 """CT haftalık veri paketi (YALNIZ BİLGİ; karar/limit/eşik/işlem mantığına girmez): orkestratör ve danışmanın Pazartesi sabahı okuduğu TEK Markdown.
 
-Girdi (hesap yeniden yapılmaz, hazır dosyalar okunur): `durum/paylasim/{gunluk_ozet,rejim_sonuc,secim_gercek,kural_maliyet}_v1.json`, radar dalı (`radar/<tarih>/isabet.json`,
+Girdi (hesap yeniden yapılmaz, hazır dosyalar okunur): `durum/paylasim/{gunluk_ozet,secim_gercek,kural_maliyet}_v1.json`, radar dalı (`radar/<tarih>/isabet.json`,
 raw.githubusercontent.com; kadro okumasıyla aynı repo/dal kuralı, kısa zaman aşımı, hata = "radar verisi okunamadı") ve `durum/hafta_gecmis.json` (günlük özet damgalarından
-her yazımda güncellenen 14 günlük küçük geçmiş: haftalık kasa farkı, filtre/ders toplamı, gecikme/kayma, RAM tepe, yeniden başlama).
+her yazımda güncellenen 14 günlük küçük geçmiş: haftalık kasa farkı, gecikme/kayma, RAM tepe, yeniden başlama).
 Yazım: `durum/paylasim/CT_HAFTA_<YYYY-AA-GG>.md` (tarih = yaklaşan Pazartesi, TSİ) + `CT_HAFTA_son.md`; Pazar 21:00 TSİ'den sonra, haftada bir (dosya varsa tekrar yazılmaz).
 Trader adresi yok (özet dosyaları zaten takma ad/adetle gelir; burada adres deseni ayrıca maskelenir).
 """
@@ -123,13 +123,12 @@ def kaydet(durum_dizin: Path, ozet: dict) -> None:
         return
     h = gecmis_oku(durum_dizin)
     s = h.get(gun) if isinstance(h.get(gun), dict) else {}
-    og, sg, kk, ks = ozet.get("ogrenme") or {}, ozet.get("saglik") or {}, ozet.get("kopya_kalite") or {}, ozet.get("kasa") or {}
+    sg, kk, ks = ozet.get("saglik") or {}, ozet.get("kopya_kalite") or {}, ozet.get("kasa") or {}
     saat = str(ozet.get("uretim") or "")[11:13]
     rb = dict(s.get("rb") or {})
     if saat and isinstance(sg.get("yeniden_baslama_1s"), int):
         rb[saat] = sg["yeniden_baslama_1s"]
-    s.update({"oz": ks.get("simdi"), "baslangic": ks.get("baslangic"), "filtre_atlanan": og.get("filtre_atlanan"), "filtre_kp": og.get("filtre_karsi_olgu_pnl"),
-              "ders_kucultulen": og.get("ders_kucultulen"), "ders_engellenen": og.get("ders_engellenen"), "kk_n": kk.get("n"),
+    s.update({"oz": ks.get("simdi"), "baslangic": ks.get("baslangic"), "kk_n": kk.get("n"),
               "gecikme_med": kk.get("gecikme_ms_medyan"), "gecikme_p90": kk.get("gecikme_ms_p90"), "kayma_med": kk.get("kayma_bps_medyan"), "kayma_p90": kk.get("kayma_bps_p90"),
               "ram_tepe": max([x for x in (_say(s.get("ram_tepe")), _say(sg.get("ram_tepe_mb")), _say(sg.get("ram_mb"))) if x is not None], default=None),
               "rb": rb, "oom": bool(s.get("oom")) or sg.get("oom_son") is True, "oom_olculdu": bool(s.get("oom_olculdu")) or isinstance(sg.get("oom_son"), bool)})
@@ -148,7 +147,7 @@ def _hafta_gunleri(gecmis: dict, bitis: date, taban_gunu: bool = False) -> list[
 
 
 # ---------------------------------------------------------------------------------------------------- bölümler
-def _b_kasa(oz: dict | None, rs: dict | None, hafta: list[tuple[str, dict]], uyari: list[str]) -> list[str]:
+def _b_kasa(oz: dict | None, hafta: list[tuple[str, dict]], uyari: list[str]) -> list[str]:
     out = ["## 1) Kasa ve haftalık PnL", ""]
     if not oz:
         uyari.append("gunluk_ozet_v1.json okunamadı: kasa bölümü boş.")
@@ -164,22 +163,12 @@ def _b_kasa(oz: dict | None, rs: dict | None, hafta: list[tuple[str, dict]], uya
             uyari.append(f"Kasa geçmişi {len(oz_l)}/8 gün (7 tam gün için taban dahil): haftalık PnL kısmi ({g0} günü son değerinden itibaren).")
     else:
         uyari.append("Kasa geçmişi yok: haftalık PnL hesaplanamadı (toplam PnL başlangıçtan).")
-    gerc = rs_toplam(rs)
     out += _tablo(["Mod", "Başlangıç $", "Şimdi $", "Toplam PnL $", "Haftalık PnL $", "Zirveden düşüş %", "Açık poz."],
                   [[str(oz.get("mod") or YOK), _f(k.get("baslangic")), _f(k.get("simdi")), _f(k.get("toplam_pnl"), isaret=True), _f(haftalik, isaret=True),
                     _f(k.get("zirveden_dusus_yuzde")), str(isl.get("acik_pozisyon", YOK))]])
     satir = f"Haftalık PnL = şimdiki özsermaye − kayıtlı en eski gün sonu ({kapsam or 'geçmiş yok'})."
-    if gerc:
-        satir += f" Son 7 günde kapanan {gerc[0]} işlemde gerçekleşen K/Z (ücret hariç): {gerc[1]:+.2f} $."
     out += ["", satir, ""]
     return out
-
-
-def rs_toplam(rs: dict | None) -> tuple[int, float] | None:
-    satirlar = (((rs or {}).get("tablolar") or {}).get("rejim_1d")) or []
-    if not satirlar:
-        return None
-    return sum(int(r.get("n") or 0) for r in satirlar), sum(_say(r.get("toplam_pnl")) or 0.0 for r in satirlar)
 
 
 def _b_secim(radar: list[dict] | None, sg: dict | None, uyari: list[str]) -> list[str]:
@@ -219,26 +208,8 @@ def _b_secim(radar: list[dict] | None, sg: dict | None, uyari: list[str]) -> lis
     return out + [""]
 
 
-def _b_rejim(rs: dict | None, uyari: list[str]) -> list[str]:
-    out = ["## 3) Rejim × sonuç (son 7 gün kapanan işlemler)", ""]
-    if not rs:
-        uyari.append("rejim_sonuc_v1.json yok: rejim bölümü boş.")
-        return out + ["Veri yok.", ""]
-    ad = {"rejim_1d": "Rejim 1g", "rejim_4h": "Rejim 4s", "duygu": "Duygu"}
-    satirlar = []
-    for b, a in ad.items():
-        for r in (rs.get("tablolar") or {}).get(b) or []:
-            satirlar.append([a, str(r.get("etiket")), str(r.get("n")), _f(r.get("isabet_yuzde"), 1), _f(r.get("toplam_pnl"), isaret=True), _f(r.get("ortalama_pnl"), isaret=True)])
-    out += _tablo(["Boyut", "Etiket", "İşlem", "İsabet %", "Toplam PnL $", "Ort. PnL $"], satirlar) if satirlar else ["Kapanan işlem yok."]
-    tum = rs_toplam(rs)
-    bil = sum(int(r.get("n") or 0) for r in (rs.get("tablolar") or {}).get("rejim_1d", []) if r.get("etiket") == "bilinmiyor")
-    if tum and tum[0] and bil == tum[0]:
-        uyari.append("Tüm kapanan işlemlerin rejimi 'bilinmiyor' (giriş damgası yeni; rejim kırılımı henüz anlamsız).")
-    return out + [""]
-
-
 def _b_kural(km: dict | None, uyari: list[str]) -> list[str]:
-    out = ["## 4) Kural maliyeti (alınmayan sinyal × karşı-olgu)", ""]
+    out = ["## 3) Kural maliyeti (alınmayan sinyal × karşı-olgu)", ""]
     if not km:
         uyari.append("kural_maliyet_v1.json yok: kural maliyeti boş.")
         return out + ["Slot tavanı: veri yok.", ""]
@@ -261,26 +232,8 @@ def _topla(hafta: list[tuple[str, dict]], anahtar: str) -> float | None:
     return sum(v) if v else None
 
 
-def _b_ogrenme(oz: dict | None, hafta: list[tuple[str, dict]], uyari: list[str]) -> list[str]:
-    out = ["## 5) Öğrenme etkisi (filtre / ders)", ""]
-    og = (oz or {}).get("ogrenme") or {}
-    if not og and not hafta:
-        uyari.append("Öğrenme verisi yok (günlük özet ve geçmiş boş).")
-        return out + ["Veri yok.", ""]
-    n = len(hafta)
-    atlanan, kp, kucuk, engel = (_topla(hafta, k) for k in ("filtre_atlanan", "filtre_kp", "ders_kucultulen", "ders_engellenen"))
-    out += _tablo(["Kapsam", "Filtre atlanan", "Filtre karşı-olgu $", "Ders küçültülen", "Ders engellenen"],
-                  [[f"hafta ({n} gün kayıtlı)", _f(atlanan, 0), _f(kp, isaret=True), _f(kucuk, 0), _f(engel, 0)],
-                   ["bugün", _f(og.get("filtre_atlanan"), 0), _f(og.get("filtre_karsi_olgu_pnl"), isaret=True), _f(og.get("ders_kucultulen"), 0), _f(og.get("ders_engellenen"), 0)]])
-    out += ["", f"Filtre aktif: {'evet' if og.get('filtre_aktif') else 'hayır'}; dersler: aktif {og.get('aktif_ders', YOK)}, yeni {og.get('yeni_ders', YOK)}, emekli {og.get('emekli_ders', YOK)}. "
-                "Karşı-olgu $ = filtrenin/dersin atladığı işlemlerin hayali sonucu (+ = atlanan işlem kazanacaktı, yani atlamak maliyetli; − = atlamak kâr).", ""]
-    if n < 7:
-        uyari.append(f"Öğrenme haftalık toplamı {n}/7 gün kayıttan.")
-    return out
-
-
 def _b_kalite(oz: dict | None, hafta: list[tuple[str, dict]], uyari: list[str]) -> list[str]:
-    out = ["## 6) Kopya kalitesi (gecikme / kayma)", ""]
+    out = ["## 4) Kopya kalitesi (gecikme / kayma)", ""]
     kk = (oz or {}).get("kopya_kalite") or {}
     satirlar = [[g, str(s.get("kk_n", YOK)), _f(s.get("gecikme_med"), 0), _f(s.get("gecikme_p90"), 0), _f(s.get("kayma_med"), 1, True), _f(s.get("kayma_p90"), 1, True)]
                 for g, s in hafta if s.get("kk_n")]
@@ -296,7 +249,7 @@ def _b_kalite(oz: dict | None, hafta: list[tuple[str, dict]], uyari: list[str]) 
 
 
 def _b_saglik(oz: dict | None, hafta: list[tuple[str, dict]], uyari: list[str]) -> list[str]:
-    out = ["## 7) Sunucu sağlığı", ""]
+    out = ["## 5) Sunucu sağlığı", ""]
     sg = (oz or {}).get("saglik") or {}
     ram = [x for x in [_say(s.get("ram_tepe")) for _, s in hafta] + [_say(sg.get("ram_tepe_mb"))] if x is not None]
     rb_ol = [s for _, s in hafta if isinstance(s.get("rb"), dict) and s["rb"]]
@@ -318,19 +271,17 @@ def _b_saglik(oz: dict | None, hafta: list[tuple[str, dict]], uyari: list[str]) 
 def olustur(paylasim: Path, hafta_bitis: date, radar: list[dict] | None, gecmis: dict | None = None) -> str:
     """Haftalık paket Markdown'u. `radar`: radar_oku çıktısı (None = okunamadı). Saf okuma."""
     p = Path(paylasim)
-    oz, rs, sg, km = (_oku(p / f) for f in ("gunluk_ozet_v1.json", "rejim_sonuc_v1.json", "secim_gercek_v1.json", "kural_maliyet_v1.json"))
+    oz, sg, km = (_oku(p / f) for f in ("gunluk_ozet_v1.json", "secim_gercek_v1.json", "kural_maliyet_v1.json"))
     hafta = _hafta_gunleri(gecmis or {}, hafta_bitis)
     uyari: list[str] = []
     govde = [f"# CT haftalık veri paketi — {hafta_bitis.isoformat()}", "",
              f"Yalnız bilgi (karar/limit değiştirmez). Hafta: {(hafta_bitis - timedelta(days=7)).isoformat()} → {hafta_bitis.isoformat()}; özet üretimi: {(oz or {}).get('uretim', YOK)}.", ""]
-    govde += _b_kasa(oz, rs, _hafta_gunleri(gecmis or {}, hafta_bitis, True), uyari)
+    govde += _b_kasa(oz, _hafta_gunleri(gecmis or {}, hafta_bitis, True), uyari)
     govde += _b_secim(radar, sg, uyari)
-    govde += _b_rejim(rs, uyari)
     govde += _b_kural(km, uyari)
-    govde += _b_ogrenme(oz, hafta, uyari)
     govde += _b_kalite(oz, hafta, uyari)
     govde += _b_saglik(oz, hafta, uyari)
-    govde += ["## 8) Uyarılar / veri boşlukları", ""]
+    govde += ["## 6) Uyarılar / veri boşlukları", ""]
     govde += [f"- {u}" for u in uyari] or ["- Eksik girdi yok."]
     return _ADRES.sub("[gizli]", "\n".join(govde) + "\n")
 

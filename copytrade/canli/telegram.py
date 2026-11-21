@@ -33,7 +33,7 @@ INFO_OMUR_S = 24 * 3600.0                 # standart: 24 saatten eski INFO mesaj
 TEKRAR_PENCERE_S = 300.0                  # standart: aynı uyarı (WARN/CRIT, aynı metin / anahtar) bu sürede bir kez
 UYARI_ARA_S = 6 * 3600.0                  # kullanıcı standardı: aynı uyarı en çok 6 saatte bir (`Telegram.uyar`); düzelince TEK "Düzeldi" (`Telegram.duzeldi`)
 BASTIRILAN_TURLER = frozenset({"saha_giris", "saha_cikis", "saha_uyari", "saatlik_bos", "emir_ozeti", "emir_artir_azalt", "islem_satiri",
-                           "haftalik_kadro", "kopya_kacan", "kadro_surum_bekleniyor", "ogrenme_ders"})      # KOD ANAHTARI: bu türler Telegram'a GİTMEZ; kayda `tg_bastirildi` (tür ile) yazılır, tespit/kayıt/pano sürer. Geri açmak için `Telegram.bastirilan` kümesinden çıkarın
+                           "haftalik_kadro", "kopya_kacan", "kadro_surum_bekleniyor", })      # KOD ANAHTARI: bu türler Telegram'a GİTMEZ; kayda `tg_bastirildi` (tür ile) yazılır, tespit/kayıt/pano sürer. Geri açmak için `Telegram.bastirilan` kümesinden çıkarın
 MESAJ_AZAMI = 3500                        # standart: mesaj başına en çok karakter
 KACIRILAN_PENCERE_S = 15 * 60          # G-16: bundan eski (ya da motor başlamadan önce gelmiş) komut YÜRÜTÜLMEZ; "işlenmedi, yeniden gönder" yanıtı alır
 YENIDEN_BEKLEME_S = (2.0, 5.0, 15.0)   # G-18: önemli mesaj (ONEMLI_ONEKLER) gönderilemezse bu beklemelerle 3 kez daha denenir
@@ -610,24 +610,9 @@ def msg_yardim() -> str:
             "Sunucuya taşınınca bu gecikme kalkar.")
 
 
-REJIM_TR = {"trend_up": "yükseliş", "trend_down": "düşüş", "range": "yatay", "volatile": "dalgalı", "unclear": "belirsiz", "bilinmiyor": "bilinmiyor",
-            "Extreme Fear": "aşırı korku", "Fear": "korku", "Neutral": "nötr", "Greed": "açgözlülük", "Extreme Greed": "aşırı açgözlülük"}      # D13: rejim/duygu etiketi → Türkçe (Telegram + pano TEK sözlük)
-
-
-def rejim_satiri(tablo: list[dict] | None) -> str | None:
-    """Haftalık 1g rejim tablosundan tek satır (`rejim_sonuc.topla(...)["rejim_1d"]`): en iyi/en kötü rejim toplam PnL'e göre; "bilinmiyor" ve boş kovalar hariç. Bilinen kova yoksa None (satır atlanır)."""
-    bilinen = [r for r in (tablo or []) if isinstance(r, dict) and r.get("etiket") != "bilinmiyor" and int(r.get("n") or 0) >= 1]
-    if not bilinen:
-        return None
-    iyi, kotu = max(bilinen, key=lambda r: float(r["toplam_pnl"])), min(bilinen, key=lambda r: float(r["toplam_pnl"]))
-    return (f"🧭 Rejim (7g): en iyi {REJIM_TR.get(str(iyi['etiket']), iyi['etiket'])} 1g {tr_isaretli(float(iyi['toplam_pnl']))} $ (n={int(iyi['n'])}), "
-            f"en kötü {REJIM_TR.get(str(kotu['etiket']), kotu['etiket'])} 1g {tr_isaretli(float(kotu['toplam_pnl']))} $ (n={int(kotu['n'])})")
-
-
 def msg_haftalik(kip: str, kasa: float, oz: float, onceki_oz: float | None, btc: float | None, onceki_btc: float | None, emir: int, slotlar: list[tuple[str, float]],
-                 rejim: list[dict] | None = None, acik_poz: int | None = None) -> str:
-    """Haftalık özet (Pazar 21:10 TSİ; yalnız rapor): hafta K/Z, BTC kıyası, emir sayısı, slot K/Z'ye göre en iyi/en kötü trader. `onceki_oz` None → ilk özet: başlangıçtan (kasa).
-    `rejim` (opsiyonel, 1g rejim satırları): bilinen kova varsa tek satır "🧭 Rejim (7g)" eklenir; None ise eski çıktı aynen kalır."""
+                 acik_poz: int | None = None) -> str:
+    """Haftalık özet (Pazar 21:10 TSİ; yalnız rapor): hafta K/Z, BTC kıyası, emir sayısı, slot K/Z'ye göre en iyi/en kötü trader. `onceki_oz` None → ilk özet: başlangıçtan (kasa)."""
     ilk = onceki_oz is None
     fark = oz - (kasa if ilk else onceki_oz)
     satirlar = [f"🗓️ Haftalık özet ({kip_adi(kip)})", AYRAC,                                                 # ilk 3 satır: özsermaye, hafta K/Z, açık pozisyon
@@ -644,9 +629,6 @@ def msg_haftalik(kip: str, kasa: float, oz: float, onceki_oz: float | None, btc:
         satirlar += [f"🏆 En iyi trader: {kisa(en_iyi[0])} · {tr_isaretli(en_iyi[1])} $ (slot K/Z)", f"🔻 En kötü trader: {kisa(en_kotu[0])} · {tr_isaretli(en_kotu[1])} $ (slot K/Z)"]
     else:
         satirlar.append("👥 Sahada trader yok")
-    rejim_s = rejim_satiri(rejim)
-    if rejim_s:
-        satirlar.append(rejim_s)
     return "\n".join(satirlar)
 
 
@@ -725,11 +707,11 @@ def msg_acildi(adres: str, coin: str, yon: str, giris: float, usd: float, stop: 
 
 KAPANIS_NEDEN_TR = {"tasfiye": "tasfiye", "felaket_stop": "stop", "tasfiye_koruma_stop": "tasfiye koruması stopu", "borsa_stop": "stop", "borsa_stop_korumasiz": "stopsuz kaldığı için kapatıldı", "tam_kapanis": "trader kapattı",
                     "trader_kapali_senkron": "trader kapattı", "trader_ters_senkron": "trader yön değiştirdi", "gunluk_kapat": "günlük kayıp freni",
-                    "sahipsiz_pozisyon": "sahipsiz pozisyon kuralı", "iz_suren_koruma": "iz süren koruma", "dur": "bot durduruldu", "komut": "sen kapattın (/hepsini_kapat)", "inen_24sa": "trader takipten çıktı", "inen_ters": "trader takipten çıktı"}
+                    "sahipsiz_pozisyon": "sahipsiz pozisyon kuralı", "dur": "bot durduruldu", "komut": "sen kapattın (/hepsini_kapat)", "inen_24sa": "trader takipten çıktı", "inen_ters": "trader takipten çıktı"}
 
 
 def kapanis_nedeni_tr(neden: str) -> str:
-    """Kapanış nedeni, kullanıcı dilinde: stop / iz süren koruma / trader kapattı; diğer kural kesmeleri 'koruma kuralı'."""
+    """Kapanış nedeni, kullanıcı dilinde: stop / trader kapattı; diğer kural kesmeleri 'koruma kuralı'."""
     if neden in KAPANIS_NEDEN_TR:
         return KAPANIS_NEDEN_TR[neden]
     return "koruma kuralı" if neden else "trader kapattı"
@@ -806,22 +788,6 @@ def msg_emir(adres: str, coin: str, yon: str, usd: float, px: float | None, kaym
     return ilk + nedeni + (f"\n↳ Fiyat {fiyat(px)}" if px else "") + (f" · trader'a göre fark {kayma * 1e4:+.1f} bp" if kayma is not None else "")
 
 
-def ogrenme_satiri(o: dict | None) -> str | None:
-    """Öğrenme etkisi tek satırı (günlük rapor). Hepsi 0/null ise None (satır atlanır). `o`: gunluk_ozet.ogrenme_etki anahtarları."""
-    if not o:
-        return None
-    a, p = int(o.get("filtre_atlanan") or 0), o.get("filtre_karsi_olgu_pnl")
-    k, e = int(o.get("ders_kucultulen") or 0), int(o.get("ders_engellenen") or 0)
-    parcalar = []
-    if a:
-        parcalar.append(f"filtre {a} sinyal atladı" + (f" (karşı-olgu {tr_isaretli(float(p))} $)" if p is not None else ""))
-    if k:
-        parcalar.append(f"ders {k} işlemi küçülttü")
-    if e:
-        parcalar.append(f"ders {e} işlemi engelledi")
-    return "🧠 Öğrenme: " + ", ".join(parcalar) if parcalar else None
-
-
 def risk_satiri(dur: bool = False, bayraklar: list[str] | None = None) -> str:
     """Günlük rapordaki tek risk satırı: durdu mu / yeni işlem kapalı mı. Etkin bayraklar BAYRAK_TR metniyle."""
     if dur:
@@ -831,11 +797,11 @@ def risk_satiri(dur: bool = False, bayraklar: list[str] | None = None) -> str:
     return "🛡️ Risk: normal, motor çalışıyor"
 
 
-def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_sayisi: int, saha: int, n: int, acik: list[dict], funding_usd: float | None = None, karsi_olgu: dict[str, list[float]] | None = None, ogrenme: dict | None = None,
+def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_sayisi: int, saha: int, n: int, acik: list[dict], funding_usd: float | None = None, karsi_olgu: dict[str, list[float]] | None = None,
                dur: bool = False, bayraklar: list[str] | None = None, saglik: list[str] | None = None, kopya_fark: float | None = None, gecikme_sn: float | None = None,
-               artir: int = 0, azalt: int = 0, guncelleme: int | None = None, kucult_satir: str = "") -> str:
+               artir: int = 0, azalt: int = 0, guncelleme: int | None = None) -> str:
     """Günlük rapor (21:00 TSİ, ortak standart; en çok ~12 satır, ayrıntı pano). Sıra: kasa → son 24 saat → emirler/takip → açık pozisyon → risk → (varsa) alınmayan sinyal, öğrenme, sağlık → 'Ayrıntı: pano'.
-    `onceki_oz`: önceki özetteki özsermaye (ilk özette kasa). `acik`: {coin, sz, usd, kz_usd}. `karsi_olgu`: alınmayan sinyal özeti. `ogrenme`: öğrenme etkisi (satır yalnız sayı > 0 ise).
+    `onceki_oz`: önceki özetteki özsermaye (ilk özette kasa). `acik`: {coin, sz, usd, kz_usd}. `karsi_olgu`: alınmayan sinyal özeti.
     `dur`/`bayraklar`: risk durumu (`risk_satiri`). `saglik`: YALNIZ sorun varsa dolu liste (boşsa satır yok)."""
     fark = ozsermaye - onceki_oz
     satirlar = [f"📋 Günlük rapor ({kip_adi(kip)})", AYRAC,                                                  # ilk 3 satır: özsermaye, günün K/Z'si, açık pozisyon
@@ -855,13 +821,9 @@ def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_s
     if guncelleme:
         satirlar.append(f"🔄 Bot bugün {guncelleme} kez güncellendi")
     satirlar.append(risk_satiri(dur, bayraklar))
-    if kucult_satir:
-        satirlar.append(kucult_satir)                                                                       # K-77: küçültülmüş traderlar (tek satır)
     if karsi_olgu:
         kn, kk = sum(int(v[0]) for v in karsi_olgu.values()), sum(v[1] for v in karsi_olgu.values())
         satirlar.append(f"🔍 Alınmayan sinyal (hayali, işlem yok): {kn} kapandı · {tr_isaretli(kk)} $ — " + " · ".join(f"{ATLA_TR.get(ad, ad).replace(' (K‑41)', '')} {int(v[0])}/{tr_isaretli(v[1])}" for ad, v in sorted(karsi_olgu.items(), key=lambda kv: -abs(kv[1][1]))[:3]))
-    if (og := ogrenme_satiri(ogrenme)):
-        satirlar.append(og)
     if saglik:
         satirlar.append("🩺 Sağlık (bu oturum): " + " · ".join(saglik))
     satirlar.append("Ayrıntı: pano")
@@ -869,12 +831,12 @@ def msg_gunluk(kip: str, kasa: float, ozsermaye: float, onceki_oz: float, emir_s
 
 
 BAYRAK_TR = {"gunluk_kayip": "🔻 Günlük kayıp freni: bugün yeni işlem yok", "mutabakat": "🧮 Mutabakat farkı: yeni işlem kapalı", "koruyucu": "🛡️ Koruyucu: yeni işlem kapalı", "koruyucu_nabiz": "🛡️ Koruyucu nabzı yok: yeni işlem kapalı", "elle_dur": "⏸️ Yeni işlem duraklatıldı (/devam ile açılır)",
-             "fren": "🧯 Patlama freni: bir trader'dan yeni açılış beklemede", "kasa_siniri": "🔒 Kasa sınırı aşıldı: yeni işlem kapalı",
+             "kasa_siniri": "🔒 Kasa sınırı aşıldı: yeni işlem kapalı",
              "belirsiz": "❓ Sonucu belirsiz emir borsadan sorgulanıyor: yeni işlem kapalı", "stop_korumasiz": "🛑 Borsa stopu kurulamadığı için pozisyon kapatıldı: yeni işlem geçici kapalı"}
 
 
 def msg_durum(kip: str, ozsermaye: float, kasa: float, saha: int, n: int, inen: int, acik_poz: int, emir: int, dur: bool, duraklat: bool = False, bayraklar: list[str] | None = None) -> str:
-    """Anlık durum. `bayraklar`: etkin risk bayrakları (`gunluk_kayip`, `mutabakat`, `elle_dur`, `fren`...); yoksa 'normal'."""
+    """Anlık durum. `bayraklar`: etkin risk bayrakları (`gunluk_kayip`, `mutabakat`, `elle_dur`...); yoksa 'normal'."""
     bayrak = list(dict.fromkeys([*(bayraklar or []), *(["elle_dur"] if duraklat else [])]))
     risk = ("🛑 Motor DURDURULDU" if dur else "\n".join(BAYRAK_TR.get(b, f"⚠️ {b}") for b in bayrak) if bayrak else "🛡️ Risk: normal, motor çalışıyor")
     return (f"📊 Anlık durum ({kip_adi(kip)})\n{AYRAC}\n💰 Özsermaye {tr_sayi(ozsermaye)} $ (kasaya göre {tr_yuzde(ozsermaye / kasa - 1)})\n"
@@ -912,10 +874,12 @@ def msg_emir_ozeti(kip: str, emirler: list[dict], dakika: float) -> str:
 
 
 TSI = timezone(timedelta(hours=3))
-# S-13: atlanan sinyal etiketlerinin TEK kaynağı (Telegram + pano). `min_emir_atlandi` eşiği `radar_min_emir_usd` (11 $) ile aynı; test bunu denetler.
-ATLA_TR = {"gec_acilis": "geç görülen açılış", "gec_goruldu_alinmaz": "geç görülen açılış (kopma sonrası alınmaz)", "spot_atlandi": "spot coin", "hip3_atlandi": "HIP-3 coin", "ters_netlesme": "ters netleşme (K‑41)", "ara_dolum_siniri": "ara dolum sınırı (ilk 2 sonrası)", "trader_hesap_yok": "trader hesabı okunamadı",
+# S-13: atlanan sinyal etiketlerinin TEK kaynağı (Telegram + pano).
+ATLA_TR = {"gec_acilis": "geç görülen açılış", "gec_goruldu_alinmaz": "geç görülen açılış (kopma sonrası alınmaz)", "liste_disi": "coin listesi dışı", "hak_bitti": "kopya hakkı bitti (ilk artırma/azaltma sonrası)", "kucuk_hareket": "küçük hareket (< %10, hak tüketmez)",
+           "gunluk_acilis_siniri": "günlük açılış sınırı (3)", "yon_tavani": "yön tavanı (net %60)", "min_alti": "asgari emrin yarısından küçük", "hedefte": "hedefte (fark yok)",
+           "ters_netlesme": "ters netleşme (K‑41)", "trader_hesap_yok": "trader hesabı okunamadı",
            "hesap_yok": "trader hesap değeri kullanılamadı", "slot_tavani": "slot tavanı", "marj_yok": "marj yok", "coin_tavani": "coin tavanı", "min_nosyonel": "çok küçük emir",
-           "min_emir_atlandi": "çok küçük (< 11 $)", "bant_ici": "toplu emir bekliyor (fark küçük)", "inen_trader": "ayrılan trader (yeni alım yok)", "ders_emekli": "ders: trader emekli (yeni alım yok)", "ml_filtre_atla": "ML filtresi (düşük puan)", "rejim_ters": "piyasa yönüne ters", "haber_ters": "haber akışı ters", "duygu_ters": "piyasa duygusu ters", "hesap_kucuk": "trader hesabı küçük", "kaldirac_cok_yuksek": "trader kaldıracı çok yüksek", "iz_suren_koruma": "iz süren koruma", "patlama_freni": "patlama freni", "dur": "motor durdu",
+           "inen_trader": "ayrılan trader (yeni alım yok)", "dur": "motor durdu",
            "gunluk_kayip": "günlük kayıp freni", "mutabakat": "mutabakat farkı", "elle_dur": "elle duraklatma", "koruyucu": "koruyucu bayrağı", "koruyucu_nabiz": "koruyucu nabzı yok", "kasa_siniri": "kasa sınırı", "belirsiz": "belirsiz emir bekleniyor", "stop_korumasiz": "stopsuz pozisyon kapatıldı (geçici)",
            "kapanis_eksik": "kapanış eksik", "kaldirac_dusuk": "azami kaldıraç düşük (< 5x)", "kaldirac_bilinmiyor": "azami kaldıraç okunamadı", "mark_eski": "fiyat verisi eski",
            "hl_deger": "HL hesap değeri geçersiz",
@@ -973,20 +937,7 @@ def drift_satiri(drift: dict[str, float]) -> str:
     return f"📐 Kopya sapması: {len(drift)} coin, en büyük {coin} %{round(oran * 100)} (yalnız bilgi)"
 
 
-def kucult_satiri(olaylar: list[dict]) -> str:
-    """K-77: özet penceresinde boyutu küçülen/geri dönen traderlar için TEK satır (ayrı mesaj yok): '🔽 Zarar küçültme: Kartal-78 ½ (5 kapanış, −3,20 $) · Vaşak-12 geri ×1'. Olay yoksa ''.
-    Aynı trader birden çok kez değiştiyse son hâli. Seviye: 1 = ½, 2 = en küçük, 0 = geri ×1."""
-    son: dict[str, dict] = {}
-    for e in olaylar or []:
-        son[e["adres"]] = e
-    parca = []
-    for adres, e in son.items():
-        ad = {0: "geri ×1", 1: "½", 2: "en küçük"}.get(int(e["yeni"]), "?")
-        parca.append(f"{kisa(adres)} {ad}" + (f" ({e['n']} kapanış, {tr_isaretli(float(e['net']))} $)" if int(e["yeni"]) else ""))
-    return ("🔽 Zarar küçültme: " + " · ".join(parca[:3]) + (f" … +{len(parca) - 3}" if len(parca) > 3 else "")) if parca else ""
-
-
-STOP_KAPANISLARI = frozenset({"felaket_stop", "borsa_stop", "borsa_stop_korumasiz", "tasfiye_koruma_stop", "iz_suren_koruma", "tasfiye"})      # K-79: "stopla kapanan" satırı (kendi korumamız / borsa stopu / tasfiye); anlık ALARM'ları ayrıca gider
+STOP_KAPANISLARI = frozenset({"felaket_stop", "borsa_stop", "borsa_stop_korumasiz", "tasfiye_koruma_stop", "tasfiye"})      # K-79: "stopla kapanan" satırı (kendi korumamız / borsa stopu / tasfiye); anlık ALARM'ları ayrıca gider
 ISLEM_SATIR_AZAMI = 4                                                                                                                            # özet satırında en çok bu kadar kalem; fazlası "… +N"
 
 
@@ -1005,9 +956,9 @@ def net_kz(emirler: list[dict]) -> float:
 
 
 def msg_sanal_saatlik(bas_ms: int, bit_ms: int, sure_dk: float, emirler: list[dict], atlanan: dict[str, int], kasa_bilgi: tuple[float, float, float] | None = None,
-                      atla_islem: int | None = None, atla_adres: dict[str, dict[str, int]] | None = None, drift_satir: str = "", kucult_satir: str = "", kip: str = "sanal") -> str:
+                      atla_islem: int | None = None, atla_adres: dict[str, dict[str, int]] | None = None, drift_satir: str = "", kip: str = "sanal") -> str:
     """K-79: işlem partisi TEK saatlik özet (sanal VE gerçek kip; açıldı/kapandı/artırma/azaltma/stop kapanışı ayrı mesaj OLARAK GİTMEZ, satır olur). Emir yoksa '' (mesaj gönderilmez).
-    Satırlar (en çok 5): başlık (emir sayısı + tür + kip + net K/Z) · [⚠️ tam dolmayan] · 🟢 Açılan · ✅/🔻 Kapanan · 🛑 Stopla kapanan · ↕️ Artırılan/azaltılan · 💰 Kasa · 🔽 küçültme.
+    Satırlar (en çok 5): başlık (emir sayısı + tür + kip + net K/Z) · [⚠️ tam dolmayan] · 🟢 Açılan · ✅/🔻 Kapanan · 🛑 Stopla kapanan · ↕️ Artırılan/azaltılan · 💰 Kasa.
     `emirler` satırı: {adres, coin, yon, usd, durum, eylem [, kapandi, kz (pozisyon neti), neden_kod]}. `atlanan`/`atla_*`/`drift_satir` imzada kalır, mesaja GİRMEZ (kayıt/pano)."""
     if not emirler:
         return ""
@@ -1041,42 +992,30 @@ def msg_sanal_saatlik(bas_ms: int, bit_ms: int, sure_dk: float, emirler: list[di
         oz, gun_basi, kasa_tut = kasa_bilgi
         gun = oz - gun_basi
         kasa = f"💰 Kasa: {tr_sayi(oz)} $ · bugün {'🟢' if gun >= 0 else '🔻'} {tr_isaretli(gun)} $ ({_yuzde1(gun / kasa_tut)})"
-    satirlar = [x for x in (baslik, uyari, a_satir, k_satir, s_satir, r_satir, kasa, kucult_satir) if x]
+    satirlar = [x for x in (baslik, uyari, a_satir, k_satir, s_satir, r_satir, kasa) if x]
     # `[CT]` satırıyla en çok 6 satır → gövde en çok 5. Sıkışırsa sırayla: artırma/azaltma kalemleri düşer (sayılar başlıkta) · tam dolmayan uyarısı başlığa katılır · küçültme satırı düşer (kayıt/pano/günlük raporda var)
     if len(satirlar) > 5 and r_satir:
         satirlar.remove(r_satir)
     if len(satirlar) > 5 and uyari:
         satirlar.remove(uyari)
         satirlar[0] += f" · ⚠️ {eksik} tam dolmadı"
-    if len(satirlar) > 5 and kucult_satir:
-        satirlar.remove(kucult_satir)
     return "\n".join(satirlar)
 
 
 def msg_sanal_saatlik_bos(bas_ms: int, bit_ms: int, sure_dk: float, atlanan: dict[str, int], kasa_bilgi: tuple[float, float, float] | None = None,
-                          atla_islem: int | None = None, atla_adres: dict[str, dict[str, int]] | None = None, drift_satir: str = "", kucult_satir: str = "") -> str:
+                          atla_islem: int | None = None, atla_adres: dict[str, dict[str, int]] | None = None, drift_satir: str = "") -> str:
     """SANAL kip: pencerede emir YOK ama sistem canlı (`canli_telegram_sanal_bos_mesaj`). Tek kısa satır grubu; emir sayısı 0."""
     sure = f"{int(sure_dk // 60)} saat" if sure_dk >= 60 and sure_dk % 60 == 0 else f"{sure_dk:.0f} dk"
     satirlar = [f"🧾 Son {sure} ({_tsi_saat(bas_ms)}–{_tsi_saat(bit_ms)} TSİ): emir yok · sistem çalışıyor"]
     satirlar += atlanan_satirlari(atlanan, atla_islem, atla_adres)
     if drift_satir:
         satirlar.append(drift_satir)
-    if kucult_satir:
-        satirlar.append(kucult_satir)
     if kasa_bilgi is not None and kasa_bilgi[2] > 0:
         oz, gun_basi, kasa = kasa_bilgi
         gun, top = oz - gun_basi, oz - kasa
         isaret = lambda x: "🟢" if x >= 0 else "🔻"        # noqa: E731
         satirlar.append(f"💰 Kasa: {tr_sayi(oz)} $ · bugün {isaret(gun)} {tr_isaretli(gun)} $ ({_yuzde1(gun / kasa)}) · başlangıçtan {isaret(top)} {tr_isaretli(top)} $ ({_yuzde1(top / kasa)})")
     return "\n".join(satirlar)
-
-
-def msg_filtre_hata(sayi: int) -> str:
-    """Sanal açılış filtresi tekrarlayan hata uyarısı (başına gonder() "[CT] " ekler)."""
-    return (f"⚠️ Sanal filtre 1 saatte {sayi} kez hata verdi\n"
-            "Bazı yeni alımlar filtre kontrolü yapılamadan geçti.\n"
-            "Alımlar filtresiz sürüyor, hata kaydediliyor.\n"
-            "Senden bir şey gerekmiyor.")
 
 
 def sade_ad(ad: str) -> str:

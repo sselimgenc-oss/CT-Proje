@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from copytrade.canli import secim_gercek as sg
-from copytrade.canli.ogrenme_adaptor import takma_ad
+from copytrade.canli.kimlik import takma_ad
 from tests.test_canli_motor import kur
 
 ROOT = Path(__file__).resolve().parent.parent

@@ -315,11 +315,11 @@ def test_g19_ajan_bitis_oku_listede_yoksa_userrole():
 # ================================================================================================ S-13
 def test_s13_bolum5_ornekleri_birebir():
     a = "0x8730ab" + "0" * 34
-    assert tg.atlanan_satirlari({"inen_trader": 86, "min_emir_atlandi": 21}, 86, {"inen_trader": {a: 86}, "min_emir_atlandi": {a: 21}}) == [
+    assert tg.atlanan_satirlari({"inen_trader": 86, "min_alti": 21}, 86, {"inen_trader": {a: 86}, "min_alti": {a: 21}}) == [
         "⏭️ Kopyalanmayan trader dolumu: 107 (≈86 ayrı işlem)",
-        "   • kural gereği 107: 86 ayrılan trader Orkinos-87 (yeni alım yok) · 21 çok küçük (< 11 $)",
+        "   • kural gereği 107: 86 ayrılan trader Orkinos-87 (yeni alım yok) · 21 asgari emrin yarısından küçük",
         "   • kaçırılan 0 (geç görülen / veri yok)"]
-    assert tg.atlanan_satirlari({"gec_acilis": 180, "slot_tavani": 100, "min_emir_atlandi": 61}, 32) == [
+    assert tg.atlanan_satirlari({"gec_acilis": 180, "slot_tavani": 100, "min_alti": 61}, 32) == [
         "⚠️ Kopyalanmayan trader dolumu: 341 (≈32 ayrı işlem)",
         "   • kural gereği 161",
         "   • KAÇIRILAN 180: geç görülen açılış"]
@@ -330,9 +330,9 @@ def test_s13_bolum5_ornekleri_birebir():
 def test_s13_tek_sozluk_motor_nedenleri_ve_esik():
     from copytrade.canli import pano
     assert not hasattr(pano, "ATLA_ETIKET") and pano.ATLA_TR is tg.ATLA_TR
-    assert f"< {float(RULES['radar_min_emir_usd']):g} $" in tg.ATLA_TR["min_emir_atlandi"]           # etiket eşiği kurallarla aynı (11 $)
-    risk_nedenleri = {"dur", "patlama_freni", "gunluk_kayip", "mutabakat", "elle_dur", "kasa_siniri", "belirsiz", "kapanis_eksik"}
-    motor_nedenleri = {"gec_acilis", "spot_atlandi", "hip3_atlandi", "inen_trader", "ters_netlesme", "trader_hesap_yok", "min_emir_atlandi", "slot_tavani", "hesap_yok",
+    assert "yarısından" in tg.ATLA_TR["min_alti"]
+    risk_nedenleri = {"dur", "gunluk_kayip", "mutabakat", "elle_dur", "kasa_siniri", "belirsiz", "kapanis_eksik"}
+    motor_nedenleri = {"gec_acilis", "liste_disi", "hak_bitti", "kucuk_hareket", "gunluk_acilis_siniri", "yon_tavani", "inen_trader", "ters_netlesme", "trader_hesap_yok", "min_alti", "slot_tavani", "hesap_yok",
                        "coin_tavani", "marj_yok", "min_nosyonel"}
     assert (risk_nedenleri | motor_nedenleri) <= set(tg.ATLA_TR)
 

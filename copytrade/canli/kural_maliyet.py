@@ -11,14 +11,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from copytrade.canli.rejim_sonuc import kayitlari_oku
+from copytrade.canli.kayit_oku import kayitlari_oku
 from copytrade.canli.hafta_paketi import _yaz_atomik
 
 SEMA = "ct.kural_maliyet.v1"
 DOSYA_JSON = "kural_maliyet_v1.json"
 DOSYA_MD = "kural_maliyet_v1.md"
 PENCERE_GUN = 7
-ML = "ml_filtre_atla"
 VURGU = "slot_tavani"
 
 
@@ -38,7 +37,6 @@ def topla(kayitlar: list[dict], karsi_olgu: dict | None, simdi_ms: int, gun: int
     """Neden başına satırlar (saf). Sıra: olay_adedi azalan, sonra neden. Pencere: zaman_ms >= simdi - gun gün (zamansız satır dahil)."""
     esik = simdi_ms - gun * 86_400_000
     olay: dict[str, int] = {}
-    ml_olay = 0
     tr: dict[str, set] = {}
     kap_n: dict[str, int] = {}
     kap_pnl: dict[str, float] = {}
@@ -53,17 +51,11 @@ def topla(kayitlar: list[dict], karsi_olgu: dict | None, simdi_ms: int, gun: int
             olay[n] = olay.get(n, 0) + 1
             if k.get("adres"):
                 tr.setdefault(n, set()).add(k["adres"])
-        elif o == ML:
-            ml_olay += 1
-            if k.get("adres"):
-                tr.setdefault(ML, set()).add(k["adres"])
         elif o == "karsi_olgu_kapandi":
             n = _t(k.get("neden"))
             kap_n[n] = kap_n.get(n, 0) + 1
             kap_pnl[n] = kap_pnl.get(n, 0.0) + (_say(k.get("pnl_usd")) or 0.0)
             kap_usd[n] = kap_usd.get(n, 0.0) + (_say(k.get("hayali_usd")) or 0.0)
-    if ml_olay:
-        olay[ML] = max(olay.get(ML, 0), ml_olay)                     # ML atlaması iki kayıt yazar; çift sayılmaz
     ac_n: dict[str, int] = {}
     ac_pnl: dict[str, float] = {}
     ac_usd: dict[str, float] = {}
@@ -89,7 +81,7 @@ def olustur(kayitlar: list[dict], karsi_olgu: dict | None, simdi_ms: int) -> dic
     vurgu = next((r for r in satirlar if r["neden"] == VURGU), None)
     notlar = ["Yalnız bilgi: kural, eşik, slot tavanı ve işlem mantığını değiştirmez.",
               "Karşı-olgu adres|coin başına TEK açılır (ilk atlama); slot_tavani gibi sık nedenleri eksik örnekler, $ değerleri alt sınır/yaklaşıktır.",
-              "Olay = emir_yok adedi (ML atlaması bir kez sayılır); karşı-olgu yalnız ac/artir (bant_ici hariç).",
+              "Olay = emir_yok adedi; karşı-olgu yalnız ac/artir (hak_bitti, kucuk_hareket, gec_goruldu_alinmaz hariç).",
               "Açık anlık $ = şu an açık hayali pozisyonların son değerlemesi; toplam = kapanan + açık; hayali nosyonel = ikisinin hayali_usd toplamı.",
               f"Pencere son {PENCERE_GUN} gün; trader adresi yok, yalnız adet."]
     return {"sema": SEMA, "proje": "CT", "uretim": datetime.fromtimestamp(simdi_ms / 1000, UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),

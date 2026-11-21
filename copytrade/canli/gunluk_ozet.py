@@ -1,7 +1,7 @@
 """Ortak günlük özet (`ortak.gunluk_ozet.v1`): `durum/paylasim/gunluk_ozet_v1.json` (orkestratör okur; haftalık karşılaştırma). YALNIZ BİLGİ: karar/emir yoluna girmez.
 
 Yazım: motorun `durum_yaz()` çağrısındaki tek satırlık kanca `yaz_gerekirse(motor)` ile; (a) günlük Telegram raporu gönderildiği dakikada (21:00 TSİ = `canli_ozet_saat_utc` 18 UTC),
-(b) en geç her saatte bir (`SAATLIK_MS`). Hata dışarı çıkmaz. Bilinmeyen alan `null` (alan atlanmaz). Adres/anahtar/e-posta YOK: hesaplar `ogrenme_adaptor.takma_ad` (T_xxxxxx) ile adlanır;
+(b) en geç her saatte bir (`SAATLIK_MS`). Hata dışarı çıkmaz. Bilinmeyen alan `null` (alan atlanmaz). Adres/anahtar/e-posta YOK: hesaplar `kimlik.takma_ad` (T_xxxxxx) ile adlanır;
 çıktıda `0x...` kalıntısı maskelenir.
 
 `mod`: gerçek kip → "canli"; sunucu (`SUNUCU_MOD=deneme` ya da `VERI_DALI` canli-durum-deneme) → "deneme"; diğer sanal (Actions `canli-durum`, sunucu `uretim`) → "sanal".
@@ -21,9 +21,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from copytrade.canli import hafta_paketi, kaynak, kural_maliyet, rejim_sonuc, secim_gercek
+from copytrade.canli import hafta_paketi, kaynak, kural_maliyet, secim_gercek
 from copytrade.canli import sert_sinirlar as sert
-from copytrade.canli.ogrenme_adaptor import takma_ad
+from copytrade.canli.kimlik import takma_ad
 
 SEMA = "ortak.gunluk_ozet.v1"
 SAATLIK_MS = 3_600_000
@@ -70,21 +70,6 @@ def _say(v: Any) -> float | None:
     except (TypeError, ValueError):
         return None
     return f if f == f and abs(f) != float("inf") else None
-
-
-def ogrenme_etki(kayitlar: list[dict]) -> dict:
-    """Öğrenme katmanının bugünkü etkisi (YALNIZ OKUMA; günlük kayıt satırlarından, yeni sayım mantığı yok):
-    - `filtre_atlanan`: `ml_filtre_atla` olayı sayısı (ML filtresinin atladığı açılış sinyalleri).
-    - `filtre_karsi_olgu_pnl`: bugün KAPANAN `karsi_olgu_kapandi` kayıtlarından neden `ml_filtre_atla` olanların `pnl_usd` toplamı ($, hayali). Kapanış anahtarı (adres|coin) kayıtta yok; neden ile eşleşir. Hiç kapanan yoksa null.
-    - `ders_kucultulen`: dolan (`usd_dolan` > 0) açılış/artırma `emir` kayıtlarından `ders_carpan` < 1 olanların sayısı (ders slotu küçülttü). Alanı taşıyan kayıt yoksa (eski kayıtlar) null.
-    - `ders_engellenen`: `emir_yok` olaylarında neden `ders_emekli` olan (emekli dersle engellenen açılış) sayısı."""
-    filtre = sum(1 for k in kayitlar if k.get("olay") == "ml_filtre_atla")
-    pnl = [_say(k.get("pnl_usd")) for k in kayitlar if k.get("olay") == "karsi_olgu_kapandi" and k.get("neden") == "ml_filtre_atla"]
-    kapali = [p for p in pnl if p is not None]
-    carpanli = [_say(k.get("ders_carpan")) for k in kayitlar if k.get("olay") == "emir" and "ders_carpan" in k and (_say(k.get("usd_dolan")) or 0.0) > 0]
-    carpanli = [c for c in carpanli if c is not None]
-    engel = sum(1 for k in kayitlar if k.get("olay") == "emir_yok" and k.get("neden") == "ders_emekli")
-    return {"filtre_atlanan": filtre, "filtre_karsi_olgu_pnl": round(sum(kapali), 2) if kapali else None, "ders_kucultulen": sum(1 for c in carpanli if c < 1.0) if carpanli else None, "ders_engellenen": engel}
 
 
 def _medyan(v: list[float]) -> float | None:
@@ -137,13 +122,11 @@ def kopya_kalite(kayitlar: list[dict]) -> dict:
 def alinmayan_neden(kayitlar: list[dict]) -> list[dict]:
     """Alınmayan sinyallerin neden dağılımı (YALNIZ BİLGİ; karar/eşik değiştirmez). Girdi: çağıranın seçtiği kayıt satırları (günlük ya da 24 sa).
     Satır: {neden, adet, karsi_olgu_kapanan, karsi_olgu_pnl}.
-    - `adet`: `emir_yok` olaylarının neden başına sayısı. ML filtresi atlamaları motorda hem `ml_filtre_atla` olayı hem `emir_yok` (neden `ml_filtre_atla`) olarak yazılır: aynı atlamanın iki kaydıdır, bu yüzden ML adedi ikisinin büyüğüdür (çift sayılmaz).
+    - `adet`: `emir_yok` olaylarının neden başına sayısı.
     - `karsi_olgu_kapanan`: aynı nedenli kapanan `karsi_olgu_kapandi` kayıt sayısı.
     - `karsi_olgu_pnl`: bu kayıtların `pnl_usd` toplamı ($, hayali). Kapanan (geçerli pnl'li) kayıt yoksa null.
     Neden yoksa "?". Sıra: adet azalan, sonra neden adı. Veri yoksa boş liste."""
-    ML = "ml_filtre_atla"
     adet: dict[str, int] = {}
-    ml_olay = 0
     kapanan: dict[str, int] = {}
     pnl: dict[str, list[float]] = {}
     for k in kayitlar:
@@ -151,60 +134,19 @@ def alinmayan_neden(kayitlar: list[dict]) -> list[dict]:
         if olay == "emir_yok":
             n = str(k.get("neden") or "?")
             adet[n] = adet.get(n, 0) + 1
-        elif olay == ML:
-            ml_olay += 1
         elif olay == "karsi_olgu_kapandi":
             n = str(k.get("neden") or "?")
             kapanan[n] = kapanan.get(n, 0) + 1
             p = _say(k.get("pnl_usd"))
             if p is not None:
                 pnl.setdefault(n, []).append(p)
-    if ml_olay:
-        adet[ML] = max(adet.get(ML, 0), ml_olay)
     satirlar = [{"neden": n, "adet": adet.get(n, 0), "karsi_olgu_kapanan": kapanan.get(n, 0),
                  "karsi_olgu_pnl": round(sum(pnl[n]), 2) if pnl.get(n) else None} for n in set(adet) | set(kapanan)]
     return sorted(satirlar, key=lambda r: (-r["adet"], r["neden"]))
 
 
-def gunluk_etki(motor: Any) -> dict:
-    """Bugünün (UTC gün) öğrenme etkisi: Telegram günlük raporu için. Hata yutulur; hata olursa tüm alanlar null/0."""
-    try:
-        gun = datetime.fromtimestamp(int(motor.saat_ms()) / 1000, UTC).date().isoformat()
-        return ogrenme_etki(_gunluk_kayitlar(motor, gun))
-    except Exception:                                                # noqa: BLE001
-        return {"filtre_atlanan": 0, "filtre_karsi_olgu_pnl": None, "ders_kucultulen": None, "ders_engellenen": 0}
-
-
-def _ogrenme(motor: Any, gun: str, kayitlar: list[dict]) -> dict:
-    og = getattr(motor, "ogrenme", None)
-    bos = {"aktif_ders": None, "yeni_ders": None, "emekli_ders": None, "filtre_aktif": False, **ogrenme_etki(kayitlar)}
-    if og is None or not getattr(og, "aktif", False):
-        return bos
-    try:
-        ham = json.loads(Path(og.ders_yolu).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        ham = None
-    sonuc = {**bos, "filtre_aktif": bool(og.k.get("ogrenme_filtre_aktif"))}
-    if isinstance(ham, dict):
-        durumlar = [v for v in ham.values() if isinstance(v, dict)]
-        sonuc["aktif_ders"] = sum(1 for v in durumlar if v.get("status") == "alive")
-        sonuc["emekli_ders"] = sum(1 for v in durumlar if v.get("status") == "retired")
-        sonuc["yeni_ders"] = sum(1 for v in durumlar if str(v.get("born", ""))[:10] == gun)
-    return sonuc
-
-
-def _rejim_btc(motor: Any) -> str | None:
-    z = ((getattr(motor, "rejim_anlik", None) or {}).get("rejimler") or {}).get("BTC") or {}
-    r = z.get("4h") or (getattr(motor, "rejim_4h_son", None) or {}).get("BTC")
-    return str(r) if r else None
-
-
 def _drift_uyari(motor: Any) -> bool:
-    if any(isinstance(v, dict) and v.get("aktif") for v in (getattr(motor, "kopya_drift", None) or {}).values()):
-        return True
-    og = getattr(motor, "ogrenme", None)
-    satirlar = og.pano() if og is not None else None
-    return any(isinstance(r, dict) and r.get("drift") == "uyari" for r in (satirlar or []))
+    return any(isinstance(v, dict) and v.get("aktif") for v in (getattr(motor, "kopya_drift", None) or {}).values())
 
 
 def _kaynak_saglik(motor: Any) -> dict:
@@ -285,7 +227,7 @@ def olustur(motor: Any, ortam: dict | None = None) -> dict:
         "islem": {"gun_acilan": sum(1 for k in dolu if k.get("eylem") == "ac"), "gun_kapanan": len(kapanis),
                   "kazanan": sum(1 for k in kapanis if _say(k["pnl_usd"]) > 0), "kaybeden": sum(1 for k in kapanis if _say(k["pnl_usd"]) < 0),
                   "acik_pozisyon": sum(len(c) for c in motor.hesap.poz.values()), "alinmayan_sinyal": sum(1 for k in kayitlar if k.get("olay") == "emir_yok")},
-        "hesaplar": hesaplar, "ogrenme": _ogrenme(motor, gun, kayitlar), "rejim": _rejim_btc(motor), "drift_uyari": drift,
+        "hesaplar": hesaplar, "drift_uyari": drift,
         "limitler": {"gunluk_kayip_yuzde": round((yaml_kayip if yaml_kayip is not None else sert.GUNLUK_KAYIP_UST_ORAN) * 100, 2), "kaldirac_tavan": sert.KALDIRAC_UST, "durdu_mu": durdu,
                      "kaldirac_ayar": _say(motor.rules.get("canli_marj_kaldirac"))},
         "saglik": {"son_nabiz": _iso(simdi), "hata_sayisi_gun": sum(1 for k in kayitlar if k.get("olay") == "adim_hata"), **_kaynak_saglik(motor), **_sunucu_saglik(ortam)},
@@ -320,10 +262,6 @@ def yaz_gerekirse(motor: Any, ortam: dict | None = None) -> bool:
             return False
         veri = olustur(motor, ortam)
         _yaz(Path(motor.durum_dizin) / "paylasim" / DOSYA, veri)
-        try:                                                         # rejim/duygu x sonuç raporu (aynı an; kendi hatası günlük özeti bozmaz)
-            rejim_sonuc.yaz(motor)
-        except Exception as hata:                                    # noqa: BLE001
-            motor.kayit({"olay": "rejim_sonuc_hata", "tur": type(hata).__name__})
         try:                                                         # kadro seçimi x gerçek PnL (form sırası Spearman; yalnız bilgi)
             secim_gercek.yaz(motor)
         except Exception as hata:                                    # noqa: BLE001

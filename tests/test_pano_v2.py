@@ -24,7 +24,7 @@ def emir(ms, coin="ETH", adres=A1, eylem="kapat", pnl=-2.0, neden="tam_kapanis",
             "durum": "dolu", "boyut_neden": neden, "ucret": 0.05, "dolum_px": 1800.0, "kayma_trader": 0.0002, **ek}
 
 
-KAYIT = [emir(SIMDI - 5 * 3_600_000, eylem="ac", pnl=0.0, neden="tamam"), emir(SIMDI - 4 * 3_600_000), emir(SIMDI - 3 * 3_600_000, pnl=1.5, neden="iz_suren_koruma"),
+KAYIT = [emir(SIMDI - 5 * 3_600_000, eylem="ac", pnl=0.0, neden="tamam"), emir(SIMDI - 4 * 3_600_000), emir(SIMDI - 3 * 3_600_000, pnl=1.5, neden="felaket_stop"),
          emir(SIMDI - 2 * 3_600_000, pnl=-1.0, neden="uydurma_kod"), {"olay": "saha_giris", "zaman_ms": SIMDI - 3_600_000, "adres": A1, "neden": "ilk_gun"},
          {"olay": "emir_yok", "zaman_ms": SIMDI - 3_600_000, "adres": A1, "coin": "BTC", "neden": "kod_olmayan_neden"}]
 
@@ -38,11 +38,11 @@ def gorunur(h: str) -> str:
     return html_mod.unescape(re.sub(r"<[^>]+>", " ", h))
 
 
-def test_alti_sekme_sirasi():
+def test_bes_sekme_sirasi():
     h = sayfa()
     etiketler = re.findall(r'<label for="t\d">([^<]+)</label>', h)
-    assert etiketler == ["ÖZET", "AÇIK (2)", "KAPANAN (bugün 3)", "K/Z", "ÖĞRENME", "TEKNİK"]
-    assert len(re.findall(r'<section class="n\d">', h)) == 6
+    assert etiketler == ["ÖZET", "AÇIK (2)", "KAPANAN (bugün 3)", "K/Z", "TEKNİK"]
+    assert len(re.findall(r'<section class="n\d">', h)) == 5
 
 
 def test_ust_serit_alti_kutu_ve_sabit_sirasi():
@@ -82,7 +82,7 @@ def test_gorunur_metinde_utc_bp_ve_kod_kelimeleri_yok():
 def test_kapananlar_tek_tek_ve_neden_etiketleri():
     satirlar = pano.kapanan_islemler(KAYIT)
     assert len(satirlar) == 3                                                               # 3 kapanış dolumu = 3 ayrı satır (trader/gün toplamı yok)
-    assert [r["neden"] for r in satirlar] == ["diğer", "İz süren", "Trader kapattı"]       # yeniden eskiye; bilinmeyen kod → diğer
+    assert [r["neden"] for r in satirlar] == ["diğer", "Stop", "Trader kapattı"]       # yeniden eskiye; bilinmeyen kod → diğer
     h = sayfa()
     per4 = h[h.index('class="per per4"'):]
     assert per4.count('<details class="r">') == 3
@@ -94,35 +94,6 @@ def test_kapananlar_yirmi_satir_ve_daha_fazla():
     h = sayfa(kayit=kayit)
     per4 = h[h.index('class="per per4"'):]
     assert per4.count('<details class="r">') == 30 and "daha fazla (10)" in per4
-
-
-def test_ml_henuz_olculemedi_yolu():
-    og = [{"kurulum": "T_abcdef", "alinan": 8, "filtre": False, "carpan": None, "emekli": False}]
-    h = sayfa(ozet={**OZET, "ogrenme": og}, gunluk_ozet={"ogrenme": {"aktif_ders": 0}})
-    assert "Veri birikiyor: 8/20 işlem" in h and "Henüz ölçülemedi" not in h
-    assert "Açık, henüz eğitilmedi" in h
-
-
-def test_ml_egitilmis_isabet_ve_karar_listesi():
-    from copytrade.canli.ogrenme_adaptor import takma_ad
-    og = [{"kurulum": takma_ad(A1), "alinan": 40, "filtre": True, "carpan": None, "emekli": False}]
-    kayit = [{"olay": "ml_filtre_atla", "zaman_ms": SIMDI - 1000 * i, "kurulum": takma_ad(A1), "coin": "BTC"} for i in range(1, 13)]
-    kayit += [{"olay": "karsi_olgu_kapandi", "zaman_ms": SIMDI - 500 * i, "coin": "BTC", "neden": "ml_filtre_atla", "pnl_usd": -1.0 if i % 3 else 2.0} for i in range(1, 13)]
-    kayit += [{"olay": "ml_filtre_egitildi", "zaman_ms": SIMDI - 86_400_000, "kurulum": takma_ad(A1), "n_egitim": 42}]
-    h = sayfa(ozet={**OZET, "ogrenme": og}, kayit=kayit)
-    assert "son 12 kararın 8'i tuttu" in h
-    assert "42 örnek" in h and "almadı" in h and "doğru karar" in h
-    assert "ML'in atlattığı işlem: 12" in h and "küçültme" not in h
-
-
-def test_ders_karti_durumlari():
-    og = [{"kurulum": "T_x", "alinan": 5, "filtre": False, "carpan": None, "emekli": False}]
-    assert 'rz bk">Açık, henüz ders çıkmadı' in sayfa(ozet={**OZET, "ogrenme": og})        # ders yok → sarı (kırmızı değil)
-    og2 = [{**og[0], "carpan": 0.5}]
-    assert 'rz eks">Açık ama işlemlere uygulanmıyor' in sayfa(ozet={**OZET, "ogrenme": og2})   # ders çıktı ama son 7 günde hiçbir işleme uygulanmadı → kırmızı
-    uygulanan = [emir(SIMDI - 3_600_000, eylem="ac", pnl=0.0, neden="tamam", ders_carpan=0.5)]
-    assert 'rz art">Açık, işlemleri etkiliyor' in sayfa(ozet={**OZET, "ogrenme": og2}, kayit=uygulanan)
-    assert "Kapalı" in sayfa(ozet={**OZET, "ogrenme": og}, kurallar={"canli_gunluk_kayip_oran": 0.05, "canli_zirve_dusus_oran": 0.2, "canli_coin_tavan_oran": 0.3, "ogrenme_aktif": False})
 
 
 def test_koyu_tema_degiskenleri_kendine_baglanmaz():
@@ -147,7 +118,7 @@ def test_tema_cihazi_izler_varsayilan_data_theme_yok():
 def test_sekme_rozetleri_yalniz_acik_ve_kapanan():
     h = sayfa()
     etiketler = re.findall(r'<label for="t\d">([^<]+)</label>', h)
-    assert [("(" in e) for e in etiketler] == [False, True, True, False, False, False]
+    assert [("(" in e) for e in etiketler] == [False, True, True, False, False]
     assert etiketler[1] == "AÇIK (2)" and etiketler[2] == "KAPANAN (bugün 3)"
 
 
@@ -165,20 +136,11 @@ def test_iframe_icinde_baslik_gizlenir_ve_yenileme_metni():
     assert "~15 dakikada" not in h and "location.reload()},180000)" in h and 'id="bayat"' in h and 'classList.toggle("bayat"' in h
 
 
-def test_durum_isigi_kirmizi_ustte_sari_rejim_haber():
-    sarı = sayfa(rejim_anlik={"gecerli_son_ms": SIMDI - 1, "rejimler": {}}, kadro=None)
-    g = gorunur(sarı)
-    assert "Rejim verisi güncel değil" in g or "Teknik sorun" in g
-    h = sayfa(ozet={**OZET, "yazildi_ms": SIMDI - 3 * 3_600_000})
-    ozet_bolumu = h[h.index('<section class="n1">'):h.index('<section class="n2">')]
-    assert ozet_bolumu.index("Durum ışığı") < ozet_bolumu.index("Ne yapmalıyım?")           # teknik sorun → kırmızı kart en üstte
-
-
 def test_acik_satir_ayrintilari_ve_bos_veri():
-    hesap = {"poz": {A1: {"ETH": {"acilis_ms": SIMDI - 90 * DK, "giris": 1800.0, "kaldirac": 3.0, "zirve_kar": 0.2, "sz": 0.5}}}}
+    hesap = {"poz": {A1: {"ETH": {"acilis_ms": SIMDI - 90 * DK, "giris": 1800.0, "kaldirac": 3.0, "sz": 0.5}}}}
     h = sayfa(hesap=hesap)
     n2 = h[h.index('<section class="n2">'):h.index('<section class="n3">')]
-    assert "1 sa 30 dk" in n2 and "başa baş" in n2 and "1.440,00 (girişten %20 aleyhe)" in n2 and "3x" in n2
+    assert "1 sa 30 dk" in n2 and "1.440,00 (girişten %20 aleyhe)" in n2 and "3x" in n2
     bos = pano.html_olustur({"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0}, {}, {}, [], [], SIMDI)
     assert "Açık işlem yok" in bos and "veri birikiyor" in bos and "Ne yapmalıyım?" in bos
 
@@ -186,21 +148,6 @@ def test_acik_satir_ayrintilari_ve_bos_veri():
 def test_saglik_mesajinda_dosya_adi_gorunmez():
     g = gorunur(pano.html_olustur({"kip": "sanal", "kasa_usd": 1000.0, "ozsermaye_usd": 1000.0, "yazildi_ms": SIMDI, "vardiya": "v"}, {}, {}, [], [], SIMDI))
     assert ".json" not in g and ".py" not in g and ".yml" not in g
-
-
-def test_ml_aldi_kararlari_kayittan_ve_isabet():
-    from copytrade.canli.ogrenme_adaptor import takma_ad
-    al_ = takma_ad(A1)
-    og = [{"kurulum": al_, "alinan": 40, "filtre": True, "carpan": None, "emekli": False}]
-    kayit = []
-    for i in range(1, 11):                                                                  # 10 onay: 7'si kazandı, 3'ü kaybetti
-        ms = SIMDI - 100_000 * i
-        kayit += [{"olay": "ml_filtre_al", "zaman_ms": ms, "kurulum": al_, "coin": f"C{i}", "puan": 0.7, "esik": 0.5, "n_egitim": 40},
-                  {"olay": "ogrenme_aday", "zaman_ms": ms + 1000, "kurulum": al_, "coin": f"C{i}", "r": 1.0, "net_usd": 3.0 if i <= 7 else -2.0}]
-    h = sayfa(ozet={**OZET, "ogrenme": og}, kayit=kayit)
-    assert "son 10 kararın 7'si tuttu" in h and "10 işlem onaylandı" in h and "aldı" in h and "sonuç +3,00 $" in h
-    yeni = pano.ogrenme_ozeti(kayit, {**OZET, "ogrenme": og}, None, {"ogrenme_aktif": True, "ogrenme_filtre_aktif": True}, SIMDI, {})
-    assert yeni["onay7"] == 10 and yeni["isabet"] == (7, 10)
 
 
 def test_kapanan_pozisyon_bazinda_kazanma_ve_kismi_kapanis_tek_sonuc():

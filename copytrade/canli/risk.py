@@ -1,17 +1,15 @@
 """Portföy riski (docs/RADAR_V1.md §6; görev T4 §1). SAF durum makinesi: saat ve özsermaye dışarıdan verilir.
 
-- Coin yoğunlaşması: aynı coinde TÜM slotların brüt nosyoneli ≤ `coin_tavan_usd` = max(kasa × `canli_coin_tavan_oran`, tek slot tavanı `radar_slot_tavan_carpan` × slot) (K-65 eki 13.11:
-  1.000 $ / 5 slotta ikisi eşit 300 $; 600 $ / 3 slotta oran 180 $ verip tek trader'ın slotunu kırpıyordu); aşan açılış KIRPILIR (kırpılan < `radar_min_emir_usd` ise 0).
-- Patlama freni: bir trader `canli_patlama_pencere_dk` dk içinde ≥ `canli_patlama_coin` YENİ coin açarsa (o sekizinci açılış dahil) `canli_patlama_ara_dk` dk ondan yeni açılış kopyalanmaz (kapanışlar izlenir).
+- Coin yoğunlaşması: aynı coinde TÜM slotların brüt nosyoneli ≤ `coin_tavan_usd` = max(kasa × `canli_coin_tavan_oran`, tek pozisyon tavanı `canli_pozisyon_tavan_slot` × slot); aşan açılış KIRPILIR (kırpılan < asgari emir ise 0).
+- K-86 günlük açılış sınırı: trader başına UTC günde en çok `canli_gunluk_acilis_max` (3) YENİ açılış (`gunluk_acilis_siniri`).
+- K-86 net yön tavanı: tüm coinlerde net long (ya da net short) nosyoneli + yeni emir > kasa × `net_yon_tavani_oran` (0,60) ise o yönde yeni açılış/artırma alınmaz (`yon_tavani`); kapanış/azaltma hep serbest.
 - Günlük kayıp: UTC gün başı özsermayeden kayıp ≥ `canli_gunluk_kayip_oran` → o gün yeni açılış yok.
 - K-62 günlük sert fren: gün başından kayıp ≥ `canli_gunluk_kapat_oran` → `gunluk_kapat` olayı (motor tüm pozisyonları kapatır; o gün açılış yok; DUR değil, ertesi gün sürer).
-- K-62 sığ coin: 24 sa hacmi < `canli_sig_hacim_usd` olan coinde trader başına kopya pozisyonu ≤ `canli_sig_coin_tavan_slot_oran` × slot (F-01; yedek `canli_sig_coin_tavan_usd`).
 - Zirveden düşüş ≥ `canli_zirve_dusus_oran` → `DUR`: tüm pozisyonlar reduce‑only kapatılır, motor durur, `durum/DUR` yazılır (elle silinmeden yeniden açılmaz; S-2: silinip yeniden başlatılınca zirve güncel özsermayeye kurulur). `/kapat` aynı (yeni `/dur` yalnız yeni girişi durdurur).
 - Kasa > kasa üst sınırı (gerçek kip `canli_kasa_ust_usd` = 1.000 $, AGENTS.md; sanal kip motor `kasa_ust` ile verir, K-66): yeni açılış yok + alarm.
 """
 from __future__ import annotations
 
-from collections import deque
 from datetime import UTC, datetime
 from typing import Any
 
@@ -26,11 +24,11 @@ def gun(ms: int) -> str:
 
 
 def coin_tavan_usd(rules: dict, kasa_usd: float) -> float:
-    """Aynı coinde tüm slotların brüt tavanı ($): max(kasa × `canli_coin_tavan_oran`, `radar_slot_tavan_carpan` × slot). Slot kurulamıyorsa / kural yoksa yalnız oran."""
+    """Aynı coinde tüm slotların brüt tavanı ($): max(kasa × `canli_coin_tavan_oran`, `canli_pozisyon_tavan_slot` × slot). Slot kurulamıyorsa yalnız oran."""
     oran = float(rules["canli_coin_tavan_oran"]) * float(kasa_usd)
     try:
-        slot_tavan = float(rules["radar_slot_tavan_carpan"]) * boyut.slot_usd(float(kasa_usd), rules)
-    except (KeyError, ValueError):
+        slot_tavan = float(rules.get("canli_pozisyon_tavan_slot", 1.0)) * boyut.motor_slot(float(kasa_usd), rules)
+    except (KeyError, ValueError, ZeroDivisionError):
         slot_tavan = 0.0
     return max(oran, slot_tavan)
 
@@ -46,9 +44,9 @@ class Risk:
         self.dur: bool = bool(d.get("dur", False))
         self.dur_neden: str | None = d.get("dur_neden")
         self.dur_dosya: bool = bool(d["dur_dosya"]) if "dur_dosya" in d else self.dur      # Denetim-3: `durum/DUR` yazıldı/görüldü mü (False + dur → yazılamadı/çökme: motor kurtarır). Eski biçim (alan yok): dur açıksa yazılmış sayılır
-        self.fren_bitis: dict[str, int] = {k: int(v) for k, v in (d.get("fren_bitis") or {}).items()}
-        self.yeni_coin: dict[str, deque[tuple[int, str]]] = {a: deque((int(x[0]), str(x[1])) if isinstance(x, (list, tuple)) else (int(x), "") for x in v) for a, v in (d.get("yeni_coin") or {}).items()}      # (ms, coin); eski biçim (yalnız ms) okunur
+        self.gunluk_acilis: dict[str, dict] = {a: {"gun": str(v.get("gun")), "n": int(v.get("n", 0))} for a, v in (d.get("gunluk_acilis") or {}).items() if isinstance(v, dict)}      # K-86: adres -> {gun (UTC), n}: o gün açılan yeni pozisyon sayısı
         self.acilis_durdu: dict[str, bool] = dict(d.get("acilis_durdu") or {})        # neden -> aktif mi (gunluk_kayip, mutabakat, kasa_siniri, kadro)
+        self.donem: str | None = d.get("donem")                                            # K-86: son uygulanan dönem başı (`copytrade/canli/DONEM`); değişince eski dönem açılış engelleri temizlenir
         self.kapat_gunu: str | None = d.get("kapat_gunu")                                  # K-62: günlük sert frenin tetiklendiği UTC günü (günde bir kez)
 
     # ------------------------------------------------------------------ özsermaye izleme
@@ -108,65 +106,47 @@ class Risk:
         for ad, aktif in self.acilis_durdu.items():
             if aktif:
                 return False, ad
-        if self.patlama_freni(adres, coin, yeni_coin_mu, simdi_ms):
-            return False, "patlama_freni"
         return True, ""
 
-    def patlama_freni(self, adres: str, coin: str, yeni_coin_mu: bool, simdi_ms: int) -> bool:
-        """O1 (RADAR §6: '≥ 8 yeni coin'): pencere içindeki FARKLI coin sayısı (açılmak istenen coin dahil) eşiğe varırsa fren. Burada sayılmaz; açılış gerçekleşince `yeni_coin_kaydet`."""
-        if simdi_ms < self.fren_bitis.get(adres, 0):
-            return True
-        if not yeni_coin_mu:
-            return False
-        farkli = self._pencere_coinleri(adres, simdi_ms) | {coin}
-        if len(farkli) >= int(self.rules["canli_patlama_coin"]):
-            self.fren_bitis[adres] = simdi_ms + int(self.rules["canli_patlama_ara_dk"]) * DAKIKA
-            self.yeni_coin.pop(adres, None)
-            return True
-        return False
+    def gunluk_acilis_say(self, adres: str, simdi_ms: int) -> int:
+        """K-86: bu trader'ın BUGÜN (UTC) kopyalanan yeni açılış sayısı."""
+        k = self.gunluk_acilis.get(adres)
+        return int(k["n"]) if k and k.get("gun") == gun(simdi_ms) else 0
 
-    def _pencere_coinleri(self, adres: str, simdi_ms: int) -> set[str]:
-        pencere = int(self.rules["canli_patlama_pencere_dk"]) * DAKIKA
-        kuyruk = self.yeni_coin.get(adres)
-        if kuyruk is None:
-            return set()
-        while kuyruk and kuyruk[0][0] < simdi_ms - pencere:
-            kuyruk.popleft()
-        return {c for _, c in kuyruk}
+    def gunluk_acilis_siniri(self, adres: str, simdi_ms: int) -> bool:
+        """K-86 kural 4: trader başına UTC günde en çok `canli_gunluk_acilis_max` yeni açılış; dolduysa True (yeni açılış alınmaz)."""
+        return self.gunluk_acilis_say(adres, simdi_ms) >= int(self.rules.get("canli_gunluk_acilis_max", 3))
 
-    def yeni_coin_kaydet(self, adres: str, coin: str, simdi_ms: int) -> None:
-        """Gerçekten AÇILAN yeni coini patlama frenine yazar (aynı coin pencerede bir kez sayılır)."""
-        self._pencere_coinleri(adres, simdi_ms)
-        kuyruk = self.yeni_coin.setdefault(adres, deque())
-        if coin not in {c for _, c in kuyruk}:
-            kuyruk.append((simdi_ms, coin))
+    def gunluk_acilis_kaydet(self, adres: str, simdi_ms: int) -> None:
+        """Gerçekten AÇILAN yeni pozisyonu (emir dolunca) günlük sayaca yazar; eski günün kayıtları budanır."""
+        g = gun(simdi_ms)
+        self.gunluk_acilis = {a: v for a, v in self.gunluk_acilis.items() if v.get("gun") == g}
+        k = self.gunluk_acilis.setdefault(adres, {"gun": g, "n": 0})
+        k["n"] = int(k["n"]) + 1
 
-    def coin_tavani(self, emir_usd: float, coin_brut_usd: float) -> tuple[float, str]:
+    def yon_tavani_asildi(self, net_long_usd: float, net_short_usd: float, yeni_usd: float, long_mu: bool, kasa_usd: float | None = None) -> bool:
+        """K-86 kural 5: yeni açılış/artırma yönünün (tüm coinlerdeki net nosyonel + yeni emir) kasa × `net_yon_tavani_oran`'ı aşması → True (alınmaz). Kapanış/azaltma çağırmaz."""
+        kasa = self.kasa if kasa_usd is None else float(kasa_usd)
+        mevcut = float(net_long_usd if long_mu else net_short_usd)
+        return mevcut + float(yeni_usd) > float(self.rules.get("net_yon_tavani_oran", 0.60)) * kasa + 1e-9
+
+    def coin_tavani(self, emir_usd: float, coin_brut_usd: float, minimum: float | None = None) -> tuple[float, str]:
         """Aynı coindeki toplam brüt ≤ `coin_tavan_usd`. Döner (uygulanan $, neden): kırpılmadıysa neden ''; kırpılan < min emir ise 0 ('coin_tavani')."""
         izin = coin_tavan_usd(self.rules, self.kasa) - coin_brut_usd
         if emir_usd <= izin + 1e-9:
             return emir_usd, ""
         kirpilan = max(0.0, izin)
-        return (kirpilan, "coin_tavani_kirpildi") if kirpilan >= float(self.rules["radar_min_emir_usd"]) else (0.0, "coin_tavani")
+        return (kirpilan, "coin_tavani_kirpildi") if kirpilan >= (boyut.min_emir_usd(self.rules) if minimum is None else minimum) else (0.0, "coin_tavani")
 
-    def sig_coin_tavan(self, slot_usd: float | None = None) -> float:
-        """F-01 (14.11 denetim): sığ coin tavanı = `canli_sig_coin_tavan_slot_oran` × slot (yedek `canli_sig_coin_tavan_usd`); tek yer `boyut.sig_coin_tavan` (M-03: radar da kullanır)."""
-        return boyut.sig_coin_tavan(self.rules, slot_usd)
-
-    def sig_coin_kirp(self, emir_usd: float, mevcut_usd: float, hacim_usd: float | None, slot_usd: float | None = None) -> tuple[float, str]:
-        """K-62: sığ coin tavanı (trader başına); tek yer `boyut.sig_coin_kirp`. Döner (uygulanan $, neden): '' | 'sig_coin_kirpildi' | 'sig_coin_tavani'."""
-        return boyut.sig_coin_kirp(self.rules, emir_usd, mevcut_usd, hacim_usd, slot_usd)
-
-    def marj_kirp(self, emir_usd: float, marj_kullanilan_usd: float, ozsermaye_usd: float, kaldirac: float | None = None) -> tuple[float, str]:
+    def marj_kirp(self, emir_usd: float, marj_kullanilan_usd: float, ozsermaye_usd: float, kaldirac: float | None = None, minimum: float | None = None) -> tuple[float, str]:
         """K‑35 toplam marj tavanı: açık pozisyonların başlangıç marjı toplamı (nosyonel / kaldıraç) + yeni emrin marjı ≤ özsermaye (serbest kasa). Aşan kısım KIRPILIR (`marj_yok`);
         kırpılan < `radar_min_emir_usd` ise 0. Gerçek kipte HL zaten reddeder; sanal kipte bu olmadan getiri şişerdi. Döner (uygulanan $, neden: '' | 'marj_yok')."""
         k = float(kaldirac if kaldirac is not None else self.rules["canli_marj_kaldirac"])
         izin = max(0.0, float(ozsermaye_usd) - float(marj_kullanilan_usd)) * k
         if emir_usd <= izin + 1e-9:
             return emir_usd, ""
-        return (izin, "marj_yok") if izin >= float(self.rules["radar_min_emir_usd"]) else (0.0, "marj_yok")
+        return (izin, "marj_yok") if izin >= (boyut.min_emir_usd(self.rules) if minimum is None else minimum) else (0.0, "marj_yok")
 
     # ------------------------------------------------------------------ kalıcılık
     def to_json(self) -> dict[str, Any]:
-        return {"zirve": self.zirve, "gun": self.gun, "gun_basi": self.gun_basi, "son_oz": self.son_oz, "dur": self.dur, "dur_neden": self.dur_neden, "dur_dosya": self.dur_dosya, "fren_bitis": self.fren_bitis,
-                "yeni_coin": {a: list(v) for a, v in self.yeni_coin.items()}, "acilis_durdu": self.acilis_durdu, "kapat_gunu": self.kapat_gunu}
+        return {"zirve": self.zirve, "gun": self.gun, "gun_basi": self.gun_basi, "son_oz": self.son_oz, "dur": self.dur, "dur_neden": self.dur_neden, "dur_dosya": self.dur_dosya, "gunluk_acilis": self.gunluk_acilis, "acilis_durdu": self.acilis_durdu, "kapat_gunu": self.kapat_gunu, "donem": self.donem}

@@ -127,18 +127,28 @@ radar_slot_tavan_carpan: 1.5            # x (slot kasası başına pozisyon tava
 radar_kadro_ilk: 11                     # kişi (İlk katman)
 # ---- Canlı motor (T4; RADAR_V1.md §5, §5b, §6; K-29, K-30, K-33). Oranlar kesir; süre adıyla; $ = kasa ölçeği (kopya_$) ----
 canli_kip: sanal                        # yalnız sanal (G4: gercek yazılırsa motor KipHatasi; gerçek kip YALNIZ sunucuda CANLI_KIP=gercek + CANLI_KASA_USD ortamıyla, Actions'ta ASLA)
-canli_hip3_kopya: false                # K‑42: GERÇEK kip: false = HIP‑3 (dex:COIN) yeni açılış/artırma atlanır (hip3_atlandi); kapanış/azaltma hep serbest. Gerçek kipte SDK perp_dexs gelmeden true YAPMA. Sanal kip bunu KULLANMAZ (aşağıdaki sanal_hip3_kopya)
-sanal_hip3_kopya: true                  # bool, K-73: SANAL kipte HIP‑3 açılışı kopyalanır (kullanıcı kararı 19.11 gece); gerçek kip etkilenmez
 canli_kadro_dali: radar                 # kadro.json'un okunduğu veri dalı (radar/son/kadro.json); dal doğrulamasında radar-deneme
 canli_kadro_aralik_sn: 300              # sn (kadro.json okuma sıklığı)
 canli_kadro_eski_saat: 36               # saat (kosu_ms bundan eskiyse kadro bayat: yeni giriş yok, düşme kuralları çalışır, alarm günde 1)
 canli_marj_kaldirac: 3                  # x (coin başına izole marj)
 canli_min_azami_kaldirac: 5              # x (K-67, 17.11: gerçek kipte HL azami kaldıracı bunun altındaki coinde AÇILIŞ yok; izole 3x'te azami 3 olan coin −%20'de tasfiye olur, stoplar %20/%22; sanal kip etkilenmez)
 canli_ioc_bant: 0.005                   # oran (IOC limit fiyatı = en iyi karşı fiyat ± bu bant)
+# ---- K-86 CT yeni plan — motor (kâğıtta HEPSİ açık ve işleme etkili, K-73). Tüm sayılar buradan.
+canli_coin_listesi: [BTC, ETH, BNB, XRP, SOL, TRX]   # kural 1: YALNIZ bu coinlerde açılış/artırma (diğer: `liste_disi`); kapanış/azaltma her zaman serbest
+canli_slot_sayisi: 5                    # kural 2: kadro 5 trader, eşit slot = kasa / 5 (1.000 $ → 200 $)
+canli_pozisyon_tavan_slot: 1.0          # x slot (kural 2: pozisyon başına en çok 1 × slot nosyonel; 3x izole marj `canli_marj_kaldirac`)
+canli_slot_toplam_tavan_carpan: 3.0     # x slot (trader başına TÜM coinler toplam nosyonel tavanı; 3x izole = slotun tamamı marj)
+kopya_hak_esik: 0.10                    # oran (kural 3: trader pozisyonunun bundan KÜÇÜK hareketi yok sayılır, hak tüketmez: `kucuk_hareket`)
+kopya_senk_esik: 0.50                   # oran (kural 3: trader pozisyonun bundan FAZLASINI kapatırsa bir kez yeniden eşitleme hakkı `senk`)
+kopya_artir_hak: 1                      # adet (kural 3: bölüm başına kopyalanan artırma sayısı)
+kopya_azalt_hak: 1                      # adet (kural 3: bölüm başına kopyalanan azaltma sayısı)
+kopya_senk_hak: 1                       # adet (kural 3: >%50 kapanışta yeniden eşitleme sayısı)
+kopya_kume_ms: 1000                     # ms (aynı yönde önceki dolumdan en çok bu kadar sonra gelen dolum aynı emrin parçası; hareket kümenin toplamı)
+canli_gunluk_acilis_max: 3              # adet (kural 4: trader başına UTC günde en çok bu kadar yeni açılış; `gunluk_acilis_siniri`)
+net_yon_tavani_oran: 0.60               # oran × kasa (kural 5: tüm coinlerde net long (ya da net short) nosyonel + yeni emir bunu aşarsa yeni açılış/artırma alınmaz: `yon_tavani`)
+canli_min_emir_usd: {BTC: 100, ETH: 20, diger: 5}    # $ (kural 6: sembol başına asgari emir; hesaplanan ≥ yarısı ve < asgari → asgariye yuvarlanır, < yarısı → `min_alti`). Binance asgarileri DOĞRULANMADI (aşağıdaki bayrak)
+canli_min_emir_dogrulanmadi: true       # bool (kural 6: yukarıdaki asgariler Binance'ten doğrulanmadı; doğrulanınca false)
 canli_coin_tavan_oran: 0.30             # oran (aynı coinde tüm slotların brüt nosyoneli <= kasa x bu)
-canli_patlama_coin: 8                   # adet (trader 10 dk içinde bu kadar YENİ coin açarsa fren)
-canli_patlama_pencere_dk: 10            # dakika
-canli_patlama_ara_dk: 30                # dakika (fren süresi: yeni açılış kopyalanmaz, kapanışlar izlenir)
 canli_gunluk_kayip_oran: 0.05           # oran (gün başı özsermayeden kayıp >= bu: o gün yeni açılış yok)
 canli_gunluk_kapat_oran: 0.10            # oran (K-62 günlük sert fren: gün başı özsermayeden kayıp >= bu: TÜM pozisyonlar kapanır, o gün açılış yok, motor ertesi gün sürer; DUR değil)
 canli_felaket_stop_oran: 0.20            # oran (K-62 felaket stopu: pozisyon ortalama girişten bu kadar aleyhe giderse o pozisyon kapanır; normalde slot kuralı daha önce keser)
@@ -147,9 +157,6 @@ dinamik_stop: true                       # K-74 (kullanıcı onayı 20.11): true
 canli_borsa_stop_sn: 60                 # sn (gerçek kip: açık emir okuma + stop eşitleme aralığı)
 canli_borsa_stop_korumasiz_sn: 1800       # sn (K-65, K-69: 7200 → 1800 (kullanıcı kararı 17.11); stop beklenen coin bu kadar borsada stopsuz kalırsa pozisyon otomatik kapatılır; gerçek kip)
 canli_borsa_stop_ceza_sn: 21600          # sn (K-65: zorunlu kapatmadan sonra bu süre yeni açılış/artırma yok; kapanış serbest)
-canli_sig_hacim_usd: 20000000            # $ (K-62: 24 sa nosyonel hacmi bunun altındaki coin "sığ"; hacim okunamayan / listede olmayan coin de sığ sayılır)
-canli_sig_coin_tavan_slot_oran: 0.75    # oran × slot (F-01, 14.11 denetim: sığ coinde trader başına kopya pozisyon tavanı slotla ölçeklenir; 200 $ slotta 150 $ = eski değer, sanal 909 $ slotta ≈ 682 $; majörde 1,5 × slot)
-canli_sig_coin_tavan_usd: 150            # $ (K-62; F-01 sonrası YALNIZ yedek: slot bilinmezse kullanılır)
 koruyucu_aralik_sn: 30                 # sn (K-82 yerel koruyucu döngü aralığı)
 koruyucu_motor_nabiz_bayat_sn: 180      # sn (K-82: motor nabzı bundan eskiyse koruyucu alarm + yeni açılış dur; plan §5 önerisi 3 dk)
 koruyucu_nabiz_bayat_sn: 180            # sn (K-82: koruyucu nabzı (bir kez görüldükten sonra) bundan eskiyse motor yeni açılış yapmaz)
@@ -167,10 +174,6 @@ canli_kor_max: 2                        # kişi (sahada birbirine benzer en çok
 canli_inen_saat: 72                     # saat (sahadan inenin açık pozisyonu bu süre sonra kapatılır; kullanıcı kararı 16.11 + Fable: 24 → 72, trader kapatana kadar izlenir)
 canli_haftalik_kadro: true              # kullanıcı kararı 16.11: kadro pazardan pazara değişir; hafta içi yalnız güvenlik çıkışları (slot −%20, kaldıraç, 72 sa işlem yok, stoplar, frenler, kilit)
 canli_inen_tavan_oran: 0.15             # oran × kasa (Fable 16.11: trader'a bırakılan inen pozisyonların toplam nosyonel tavanı; aşılırsa en zarardaki inen kapanır)
-canli_bant_usd: 50                      # $ (TOPLU EMİR, kullanıcı kararı 15.11; Fable: max(50 $, %10) — 14 sa veride 456 → ~190 emir, sonuç aynı) artırma farkı bundan küçükse emir verilmez, birikir
-canli_bant_oran: 0.10                   # oran × hedef (artırma bandı = max(canli_bant_usd, bu × hedef); açılış / tam kapanış / küçük kalan kapatma muaf)
-canli_bant_azalt_usd: 25                # $ (azaltma bandı daha dar: kâr alma / risk azaltma gecikmesin; Fable önerisi)
-canli_bant_azalt_oran: 0.05             # oran × hedef
 canli_mutabakat_sn: 60                  # sn
 canli_mutabakat_oran: 0.01              # oran (fark_usd > kasa x bu => alarm + yeni açılış dur)
 canli_yetim_kapat_sn: 600               # sn (K-68, gerçek kip: defter dışı borsa fazlası bu kadar KESİNTİSİZ sürerse reduce-only, borsa teyitli kapatılır; coinde belirsiz emir varken kapatılmaz; eşikten sonra her dakika denenir)
@@ -205,27 +208,6 @@ canli_emir_zaman_asimi_sn: 10          # sn (G-12a: gerçek kip SDK `Exchange` H
 canli_hl_sicrama_oran: 0.10            # oran (gerçek kip S-6: iki HL okuması arasında yerel defterle açıklanmayan özsermaye değişimi > kasa x bu → mutabakat bayrağı + alarm; o okumada risk/DUR bir okuma ertelenir)
 canli_bekci_sn: 180                     # sn (G-12: dakikalık bakım bu süre boyunca tamamlanmazsa bekçi alarm verir ve süreç çıkış kodu 1 ile biter; systemd yeniden başlatır)
 
-# Gölge kurallar (Fable 18.11): motor `golge_kural` olayı yazar (kural başlayınca/bitince). K-73: SANAL kipte `sanal_golge_kurallar_etkin` ile açılış/artırmayı etkiler (A, B20: atla; B5: boyut x0,5); gerçek kipte yalnız kayıt
-golge_hesap_alt_usd: 5000               # $ (trader hesap değeri bundan KÜÇÜKSE A_hesap_5k; sanalda yeni açılış atlanır: hesap_kucuk)
-golge_kaldirac_uyari: 5                 # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_5x; sanalda yeni açılış/artırma boyutu x0,5)
-golge_kaldirac_cikar: 20                # x (anlık kaldıraç bundan BÜYÜKSE B_kaldirac_20x; sanalda yeni açılış atlanır: kaldirac_cok_yuksek)
-sanal_golge_kurallar_etkin: true        # bool, K-73: yalnız sanal kip; false = gölge kurallar yalnız kayıt
-# ML Otonom rejim etiketi (kayıt; K-73: sanalda sanal_rejim_filtre ile açılış filtresi): motor `rejim_degisti` olayı ve emir olaylarındaki `rejim` alanını yazar.
-rejim_kaynak_url: "https://trader-pano-acik.sselimgenc-c18.workers.dev/rejim.json"                    # URL (boşsa kapalı; ağ çağrısı yapılmaz). Yayın: ML Otonom rejim.json (belirtim: rejim-yayini-spec)
-rejim_okuma_dk: 30                      # dakika
-sanal_rejim_filtre: true                # bool, K-73: SANAL kipte 1d ve 4h rejimi ikisi de giriş yönüne TERS (long/trend_down, short/trend_up) ise yeni açılış/artırma atlanır (rejim_ters); bilinmeyen etiket = atlama yok; gerçek kip etkilenmez
-# Haber / duygu etiketi (kayıt; K-73: sanalda sanal_haber_filtre ve sanal_duygu_filtre ile açılış filtresi): `emir` olaylarına `duygu` + `haber` (o coin), `duygu_degisti` olayı; ton etiketi KABA anahtar kelime sayımıdır
-haber_aktif: true                       # false ise ağ çağrısı yapılmaz (haber filtresi de bilgisiz kalır)
-sanal_haber_filtre: true                # bool, K-73: SANAL kipte coin haber tonu giriş yönüne ters (long/negatif, short/pozitif) ve 24 sa başlık sayısı >= sanal_haber_min_baslik ise yeni açılış/artırma atlanır (haber_ters); gerçek kip etkilenmez
-sanal_haber_min_baslik: 2               # adet (haber_ters için asgari 24 sa başlık sayısı)
-sanal_duygu_filtre: true                # bool, K-73: SANAL kipte Fear&Greed >= duygu_ust iken yeni long, <= duygu_alt iken yeni short açılış/artırma atlanır (duygu_ters); değer yok/bayat = atlama yok; gerçek kip etkilenmez
-duygu_ust: 75                           # endeks (0-100; bu değer ve üstü = aşırı açgözlülük: yeni long yok)
-duygu_alt: 25                           # endeks (0-100; bu değer ve altı = aşırı korku: yeni short yok)
-haber_okuma_dk: 60                      # dakika
-haber_kaynaklar:                        # herkese açık RSS (anahtarsız); 24 sa içinde coin'i anan başlıklar sayılır
-  - "https://www.coindesk.com/arc/outboundfeeds/rss/"
-  - "https://cointelegraph.com/rss"
-duygu_kaynak_url: "https://api.alternative.me/fng/?limit=1"      # Crypto Fear & Greed (0-100); boşsa duygu okunmaz
 
 # Alınmayan sinyal kaydı + kopya drift alarmı (yalnız kayıt/uyarı, işlem etkisi yok)
 karsi_olgu_azami_saat: 72               # saat (hayali pozisyon trader kapatmazsa bu sürede kapanır; yalnız kayıt/uyarı, işlem etkisi yok)
@@ -238,33 +220,6 @@ kopya_drift_min_usd: 50                 # $ (ideal nosyonel bundan küçük coin
 kopya_drift_tg_saat: 6                  # saat (aynı coin saatlik özetteki "Kopya sapması" satırında en çok bu aralıkta bir; AYRI Telegram mesajı yok, önem INFO)
 kopya_drift_telegram: false             # ayrı (tek coin) Telegram uyarısı KAPALI; sapma yalnız saatlik özet satırında (kod yolu kaldırıldı, bayrak main ile uyumlu)
 
-# Ortak öğrenme (kullanıcı kararı 19.11; docs/ORTAK_OGRENME_CT.md): her kapanan kopya işlemi kaydedilir, dersler YALNIZ riski azaltır (emekli = yeni açılış yok; çarpan 0,5–1,0). Yalnız sanal kip; sert sınırlara dokunmaz
-ogrenme_aktif: true                     # açık/kapalı (false: kayıt da, ders de yok). Gerçek kipte zaten çalışmaz
-ogrenme_r_birim_oran: 0.02              # oran (1R = pozisyonun en büyük nosyonelinin bu kadarı; R = net K/Z ÷ 1R)
-ogrenme_shrink_n: 5                     # adet (ders etkisi n/(n+shrink_n) ile küçültülür: az örnekle uygulama temkinli)
-ogrenme_min_n: 2                        # adet (bir ders en az bu kadar işlemle ölçülmüşse uygulanır)
-ogrenme_agirlik_etki_r: 1.0             # R (bir trader için canlı derslerin toplam etkisi bundan büyük/eşitse slot çarpanı düşer)
-ogrenme_emekli_etki_r: 3.0              # R (toplam etki bundan büyük/eşitse trader "emekli": yeni açılışı haftalık kadro değişimine dek kopyalanmaz; çarpan bu etkide 0,5'e iner)
-ogrenme_fren_esik_r: 10.0               # R (uygulanan derslerin uygulamadan sonraki toplamı bunun altına inerse HEPSİ geri alınır; paket fren_durumu)
-ogrenme_geri_alma_r: 3.0                # R (tek bir uygulanan dersin etkisi bunun altına inerse o ders geri alınır)
-ogrenme_degerlendirme_dk: 60            # dakika (ders değerlendirmesi en çok bu sıklıkta; hata motoru durdurmaz)
-# Ortak öğrenme ML filtresi (parça 2; kullanıcı kararı 19.11): trader başına ridge-lojistik; yeni açılış/artırmayı puanlar, puan eşiğin altındaysa ATLAR (`ml_filtre_atla`; alınmayan sinyal kaydına düşer). Asla artırmaz
-ogrenme_filtre_aktif: true              # kapatma anahtarı (false: filtre eğitilmez/uygulanmaz). Model yok / süresi (21 gün) dolmuş / numpy yok → her şey geçer + `ml_filtre_yok` kaydı
-ogrenme_filtre_min_n: 20                # adet (bir trader için en az bu kadar kapanan etiketli işlem yoksa model EĞİTİLMEZ)
-ogrenme_filtre_egitim_gun: 3            # gün (model bu yaştan eskiyse saatlik adımda yeniden eğitilir; ayrıca haftalık kadro değişiminde zorla; 21 günlük son kullanmadan çok önce)
-ogrenme_filtre_log_saat: 6              # saat (aynı trader için `ml_filtre_yok` kaydı en çok bu aralıkta bir)
-sanal_ogrenme_drift_eylem: true        # bool, K-73: SANAL kipte CUSUM drift alarmı → filtre bir sonraki saatlik adımda yeniden eğitilir + kurulumun slot çarpanı min(mevcut, 0,5) (haftalık kadro değişiminde biter); olay `drift_eylem`
-ogrenme_drift_telegram: false           # CUSUM drift Telegram UYARISI (varsayılan KAPALI: eşikler CT için kalibre değil; olay `kurulum_drift` + OZET karnesi yine yazılır)
-# K-73/8 iz süren koruma (YALNIZ sanal kip): pozisyon kârı (girişe göre, yön + mark) zirvesi %15'e ulaşınca stop girişe (başa baş), %30'a ulaşınca +%15 kâra çekilir; kâr stopa inerse pozisyon kapanır (iz_suren_koruma). Sabit kâr al YOK; %20 felaket stopu aynen sürer
-sanal_iz_suren: true                    # bool (gerçek kipte devre dışı)
-iz_basabas_oran: 0.15                   # oran (zirve kâr bu kadar olunca stop = giriş)
-iz_kilit_oran: 0.30                     # oran (zirve kâr bu kadar olunca stop = iz_kilit_seviye)
-iz_kilit_seviye: 0.15                   # oran (kilit stopunun kâr seviyesi)
-# K-76 (kullanıcı kararı 20.11, beyin fırtınası): kopyalama = ilk açılış + İLK `kopya_ara_dolum_max` ARA DOLUM + tam kapanış. Ara dolum = açılıştan sonra, tam kapanıştan önce aynı pozisyonda artır YA DA azalt;
-# sayaç pozisyon başına, tam kapanışta / yön dönüşünde sıfırlanır. 3. ve sonrası alınmaz (emir_yok / ara_dolum_siniri; kapanış her zaman alınır). Sanal ve gerçek kip. Karşı-olgu ölçülmez.
-kopya_ara_dolum_max: 2                  # adet
-# Bir emrin parçalı dolumları (oid Olay'da yok): aynı yön + önceki dolumdan en çok bu kadar ms sonra = aynı ara dolum
-kopya_ara_dolum_kume_ms: 1000           # ms
 # Fiyat farkı ölçümü kabul ölçütü (copytrade/olcum/fiyat_farki.py; Binance hazırlığı 5a). KULLANICI ONAYI BEKLENİYOR: eşikler koordinatör önerisidir, onaylanana dek değiştirilebilir. Birim bp, yön düzeltilmiş (aleyhimize +).
 # GEÇ = medyan ≤ gec_medyan_bp VE p90 ≤ gec_p90_bp VE ortalama ≤ gec_ortalama_bp; DUR = medyan > dur_medyan_bp VEYA p90 > dur_p90_bp VEYA ortalama > dur_ortalama_bp; arası GRİ.
 # Yeterlilik: toplam eşleşmiş dolum, gün ve coin asgarisi altında "örnek yetersiz"; grup başına asgari dolumun altında "karar yok".
@@ -279,12 +234,6 @@ fiyat_farki_min_gun: 3
 fiyat_farki_min_coin: 15
 fiyat_farki_grup_min_dolum: 30
 
-# K-77 (kullanıcı kararı 20.11, beyin fırtınası): zarar ettiren trader önce KÜÇÜLTÜLÜR, sonra (mevcut `kopya_zarar` radar elemesi, değişmedi) elenir. Ölçü: bu trader'dan KOPYALADIĞIMIZ tam kapanmış pozisyonların
-# toplam neti (pozisyon bazında giriş+çıkış ücreti dahil = pano `kapanan_ozeti` / `hesap.dolum_net`); pencere = `radar_pencere_saat` (kopya_zarar ölçümüyle AYNI, 168 sa). >= n1 kapanışta net < 0 → yeni açılış/artırma boyutu ×carpan1;
-# >= n2 kapanışta net hâlâ < 0 → en küçük boyut (asgari emir `radar_min_emir_usd`; artırma yok); net >= 0 → çarpan 1. Sanal ve gerçek kip (sanalda kapalı değil). Olay: `trader_kucult`.
-trader_zarar_kucult_n1: 5               # adet (ilk küçültme için en az kapanmış pozisyon)
-trader_zarar_kucult_carpan1: 0.5        # çarpan (n1'de yeni açılış/artırma boyutu)
-trader_zarar_kucult_n2: 10              # adet (en küçük boyut için en az kapanmış pozisyon)
 
 # K-81 (kullanıcı onayı 20.11, Aşama A): CT sinyallerini Binance USDⓈ-M fiyatlarıyla KÂĞITTA yürüten AYRI süreç (`motor --borsa binance_kagit`, ayrı durum/binance_kagit dizini ve 10.000 $ sanal kasa; HL sanal motoru aynen sürer).
 # Kâğıtta her özellik açık ve işleme etkili (K-73). "DOĞRULANMADI": Binance dokümanı bu ortamdan okunamadı (docs/binance-plan.md okuma notu); resmi sayfadan teyit edilene dek VARSAYIMDIR.

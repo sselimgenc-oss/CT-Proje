@@ -32,7 +32,6 @@ OZET = {"sema": "ortak.gunluk_ozet.v1", "uretim": "2026-11-22T18:05:00Z", "gun":
         "ogrenme": {"aktif_ders": 2, "yeni_ders": 0, "emekli_ders": 1, "filtre_aktif": True, "filtre_atlanan": 4, "filtre_karsi_olgu_pnl": -3.5, "ders_kucultulen": 2, "ders_engellenen": 1},
         "saglik": {"hata_sayisi_gun": 0, "ram_mb": 90.0, "ram_tepe_mb": 120.5, "disk_bos_gb": 60.0, "yeniden_baslama_1s": 1, "oom_son": False},
         "kopya_kalite": {"n": 40, "gecikme_ms_medyan": 500.0, "gecikme_ms_p90": 900.0, "kayma_bps_medyan": 0.1, "kayma_bps_p90": 2.0}}
-REJIM = {"tablolar": {"rejim_1d": [{"etiket": "range", "n": 4, "kazanan": 3, "isabet_yuzde": 75.0, "toplam_pnl": 8.0, "ortalama_pnl": 2.0}], "rejim_4h": [], "duygu": []}}
 SECIM = {"toplu": {"durum": "tamam", "gun_n": 3, "rho_ort": 0.12, "p": 0.31},
          "gunler": [{"gun": "2026-11-21", "durum": "tamam", "kopyalanan_n": 5, "kadro_n": 11, "rho": 0.2, "p": 0.2, "toplam_net_pnl": 4.0}]}
 KURAL = {"vurgu": {"slot_tavani": {"olay_adedi": 900, "trader_sayisi": 8, "toplam_karsi_olgu_pnl": 12.5, "karsi_olgu_kapanan_pnl": 10.0, "karsi_olgu_acik_pnl": 2.5, "hayali_nosyonel": 5000.0}},
@@ -45,7 +44,7 @@ GECMIS = {"2026-11-16": {"oz": 10000.0, "filtre_atlanan": 3, "filtre_kp": 1.0, "
 
 def _dosyalar(d: Path, **ekle):
     d.mkdir(parents=True, exist_ok=True)
-    for ad, v in {"gunluk_ozet_v1.json": OZET, "rejim_sonuc_v1.json": REJIM, "secim_gercek_v1.json": SECIM, "kural_maliyet_v1.json": KURAL, **ekle}.items():
+    for ad, v in {"gunluk_ozet_v1.json": OZET, "secim_gercek_v1.json": SECIM, "kural_maliyet_v1.json": KURAL, **ekle}.items():
         if v is not None:
             (d / ad).write_text(json.dumps(v), encoding="utf-8")
 
@@ -55,23 +54,23 @@ def test_altin_cikti_tam_girdi(tmp_path):
     md = hp.olustur(tmp_path, PAZAR, RADAR, GECMIS)
     assert md.startswith("# CT haftalık veri paketi — 2026-11-23\n")
     basliklar = [s for s in md.splitlines() if s.startswith("## ")]
-    assert [b[:5] for b in basliklar] == [f"## {i})" for i in range(1, 9)]
+    assert [b[:5] for b in basliklar] == [f"## {i})" for i in range(1, 7)]
     assert "| sanal | 10000.00 | 10050.00 | +50.00 | +50.00 | 0.70 | 12 |" in md                      # haftalık = 10050 - 10000
     assert "| 2026-11-21 | 10 | +1.00 | 0.60 | +0.20 | 80 | 0.200 |" in md                            # radar
-    assert "ρ = +0.120" in md and "| Rejim 1g | range | 4 | 75.0 | +8.00 | +2.00 |" in md
+    assert "ρ = +0.120" in md
     assert md.index("**Slot tavanı:** 900 olay") < md.index("| slot_tavani |")                         # slot tavanı satırı ilk
-    assert "| hafta (1 gün kayıtlı) | 3 | +1.00 | 1 | 0 |" in md and "| bugün | 4 | -3.50 | 2 | 1 |" in md
+    assert "ders" not in md.lower() and "rejim" not in md.lower() and "filtre" not in md.lower()   # K-86: ML / ders / rejim bölümleri yok
     assert "| 120.5 | 1 | yok |" in md
     assert "Kasa geçmişi 1/8 gün" in md                                                                 # kısmi geçmiş uyarısı
     assert "0x" not in md
 
 
 def test_eksik_girdi_uyarilari(tmp_path):
-    _dosyalar(tmp_path, **{"rejim_sonuc_v1.json": None, "secim_gercek_v1.json": None, "kural_maliyet_v1.json": None, "gunluk_ozet_v1.json": None})
+    _dosyalar(tmp_path, **{"secim_gercek_v1.json": None, "kural_maliyet_v1.json": None, "gunluk_ozet_v1.json": None})
     md = hp.olustur(tmp_path, PAZAR, None, {})
-    for parca in ("gunluk_ozet_v1.json okunamadı", "radar verisi okunamadı", "secim_gercek_v1.json yok", "rejim_sonuc_v1.json yok", "kural_maliyet_v1.json yok"):
+    for parca in ("gunluk_ozet_v1.json okunamadı", "radar verisi okunamadı", "secim_gercek_v1.json yok", "kural_maliyet_v1.json yok"):
         assert parca in md
-    assert len([s for s in md.splitlines() if s.startswith("## ")]) == 8                                # her bölüm yine de var
+    assert len([s for s in md.splitlines() if s.startswith("## ")]) == 6                                # her bölüm yine de var
     assert "Eksik girdi yok" not in md
     assert "son 8 günde isabet dosyası yok" in hp.olustur(tmp_path, PAZAR, [], {})
 
