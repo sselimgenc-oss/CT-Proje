@@ -201,6 +201,20 @@ geri_al() {   # $1 = neden
   exit 1
 }
 
+donem_sifirla() {   # K-85: yerel durum dönemi (durum/donem.txt) depodaki DONEM'den farklıysa (yeni dönem; ilk kurulumda donem.txt yok) eski durum/kayıt/pano SİLİNİR: motor, koruyucu ve pano yeni dönemi sıfırdan başlatır.
+  # Arşiv klasörü açılmaz; eski dönemin verisi veri dalında (canli-durum, git geçmişi) kalır. Servisler bu sırada DURMUŞTUR. Hata güncellemeyi bozmaz.
+  local yeni_donem eski_donem
+  yeni_donem="$(tr -d '[:space:]' < "$DEPO/copytrade/canli/DONEM" 2>/dev/null)" || return 0
+  [ -n "$yeni_donem" ] || return 0
+  eski_donem="$(tr -d '[:space:]' < "$DEPO/durum/donem.txt" 2>/dev/null)"
+  [ "$eski_donem" = "$yeni_donem" ] && return 0
+  log "yeni dönem ${yeni_donem} (yerelde: '${eski_donem:-yok}'): durum/kayıt/pano sıfırlanıyor"
+  find "$DEPO/durum" -mindepth 1 -maxdepth 1 ! -name guncelleme_zamani -exec rm -rf -- {} + 2>/dev/null || log "UYARI: durum temizlenemedi"
+  [ -d "$DEPO/kayit" ] && { find "$DEPO/kayit" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + 2>/dev/null || log "UYARI: kayıt temizlenemedi"; }
+  [ -d "$DEPO/pano" ] && { find "$DEPO/pano" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + 2>/dev/null || log "UYARI: pano temizlenemedi"; }
+  mkdir -p "$DEPO/durum" && printf '%s\n' "$yeni_donem" > "$DEPO/durum/donem.txt" && chmod 644 "$DEPO/durum/donem.txt" \
+    && { [ -z "$KULLANICI" ] || chown -R "$KULLANICI" "$DEPO/durum" "$DEPO/kayit" "$DEPO/pano" 2>/dev/null || true; } || log "UYARI: durum/donem.txt yazılamadı"
+}
 son_guncelleme_metni() {   # K-80: bağlam satırı için "son güncelleme N dk/sa önce" (işaret yoksa "kayıt yok")
   local ts gecen
   ts="$(head -n1 "$ISARET" 2>/dev/null | tr -dc '0-9')"
@@ -383,6 +397,7 @@ fi
 if [ "$lock_degisti" = 1 ]; then pip_kur || geri_al "pip install başarısız"; fi
 birimleri_kur || geri_al "birim dosyaları kurulamadı"
 duman_testi || geri_al "duman testi (sg-sanal-kontrol) başarısız"
+if [ -z "$HEDEF" ]; then donem_sifirla; fi                                                       # K-85: yeni dönem (DONEM değişti) → yerel durum/kayıt/pano sıfırdan (arşiv klasörü YOK)
 isaret_yaz                                                                                       # K-80: servisler başlamadan ÖNCE (ilk dakikadan 15 dk yalnız ölümcül uyarı)
 baslat_ms=$(( $(date +%s) * 1000 - 2000 ))
 baslat_hepsi || geri_al "servisler başlatılamadı"
@@ -404,6 +419,12 @@ if [ -f "$BIRIM_DIZIN/sg-sanal-binance-kagit.service" ] && [ ! -e "$DURUM/binanc
 fi
 if [ -f "$BIRIM_DIZIN/sg-sanal-olcum.service" ] && [ ! -e "$DURUM/olcum_basladi" ]; then   # 5a fiyat farkı ölçümü: BİR KEZ başlatılır (96 sa sonra kendi biter; işaret varken yeniden başlatılmaz)
   if "$SYSTEMCTL" start --no-block sg-sanal-olcum.service >/dev/null 2>&1; then date -u +%FT%TZ > "$DURUM/olcum_basladi"; log "fiyat farkı ölçümü başlatıldı"; else log "fiyat farkı ölçümü başlatılamadı"; fi
+fi
+if [ -f "$BIRIM_DIZIN/sg-sanal-radar.service" ] && [ -z "$HEDEF" ]; then   # K-85: yeni dönemde radar BİR KEZ hemen başlatılır (kadro aynı gün çıksın; 00:37 zamanlayıcısını beklemeden). İşaret: $DURUM/radar_basladi = başlatılan dönem.
+  radar_donem="$(tr -d '[:space:]' < "$DEPO/copytrade/canli/DONEM" 2>/dev/null)"
+  if [ -n "$radar_donem" ] && [ "$(cat "$DURUM/radar_basladi" 2>/dev/null)" != "$radar_donem" ]; then   # (bu dönemin sade kadrosu veri dalında varsa betik zaten iş yapmaz)
+    if "$SYSTEMCTL" start --no-block sg-sanal-radar.service >/dev/null 2>&1; then printf '%s\n' "$radar_donem" > "$DURUM/radar_basladi"; log "radar yeni dönem için başlatıldı (${radar_donem})"; else log "radar yeni dönem için başlatılamadı"; fi
+  fi
 fi
 if [ -z "$HEDEF" ]; then   # K-80: kurulum sonrası öz-denetim; başarısızsa geri alma (geri_al)
   if oz_neden="$(oz_denetim)"; then log "öz-denetim tamam"; else geri_al "öz-denetim başarısız: $oz_neden"; fi

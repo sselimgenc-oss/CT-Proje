@@ -18,6 +18,10 @@ Kararlar `Karar` olarak döner (giriş / düş / değiştir / inen_kapat) — uy
 - Kadro bayat / yok (`kosu_ms` > `canli_kadro_eski_saat` saat): yeni giriş yok, düşme kuralları çalışır (günlük sıra kuralları kadro verisi gerektirdiğinden yeni kosu_ms olmadan işlemez;
   R-6: kadro verisi gerektirmeyen `canli_islem_yok_saat` (72 sa) işlem yok düşmesi bayat/yok kadroda da HER çağrıda denetlenir).
 - Sahadan inen (yalnız SONUÇ DIŞI düşme, M-07): yeni açılış durur, trader'ın kapanışları izlenir, `canli_inen_saat` sonra kalan pozisyon kapatılır (`inen_kapat`). Sonuçla düşen anında kapatılır.
+
+K-85 (kullanıcı kararı 21.11) SADE KADRO (`kadro["sade"]` true; `copytrade/radar_kadro.py`): radar kadroyu KENDİ yönetir (5 üye, yedek yok, Pazartesi/Perşembe değişim, 14 gün yasak). Burada karar YOK:
+üye = kadro `satirlar`; kadroda olmayan üye "kadro_cikti" ile (sonuç dışı) iner → `inen`: trader kapanışları izlenir, `canli_inen_saat` (72) sonra kalan pozisyon kapatılır (kadro `cikanlar` aynı süreyi bildirir);
+boş slot kadro sırasıyla dolar. Korelasyon, histerezis, sıra/kadro dışı günleri, 72 sa işlem yok, slot düşüş stopu, haftalık kadro BU kipte çalışmaz (yukarıdaki kurallar eski v4 kadroları içindir).
 """
 from __future__ import annotations
 
@@ -135,6 +139,7 @@ class Saha:
         self.alarm_gunu: str | None = d.get("alarm_gunu")
         self.gun_kadro: dict | None = d.get("gun_kadro")           # K‑39: {"gun": UTC günü, "kadro": o günün İLK kadrosu}
         self.k39_gecis: bool = bool(d.get("k39_gecis", False))
+        self.sade: bool = bool(d.get("sade", False))               # K-85: son uygulanan kadro sade kadro muydu
         self.hafta: dict | None = d.get("hafta")                   # Haftalık kadro (kullanıcı kararı 16.11): {"hafta": pazar günü (UTC, "YYYY-MM-DD"), "kadro": haftanın kadrosu}
         self.eksik: dict | None = None                             # Saha hep dolu (kullanıcı 14.11): doldurmadan sonra yer boşsa {saha, n, neden: "uygun_aday_yok"} (kayıt + pano)
         self.gecis_silinen: list[str] = []                         # bu yüklemede silinen bekleme kayıtları (motor kayda yazar)
@@ -190,6 +195,8 @@ class Saha:
         """Slot düşüşü ≥ eşik ya da kaldıraç ihlali → anında düş (sonuçla). `kadro` verilirse kaldıraç (R1/4) kadro satırından okunur.
         S-3: `slot_bas` verilirse düşüş üyenin KENDİ slot tabanına göre ölçülür (kasa değişince eski tabanla açılmış üye yeni slota göre yanlış düşmez); yoksa / bilinmiyorsa güncel slot."""
         kararlar: list[Karar] = []
+        if self.sade or (kadro or {}).get("sade"):
+            return kararlar                                        # K-85: sade kadroda çıkış kararı yalnız radardadır
         satir = {s["adres"]: s for s in (kadro or {}).get("satirlar", [])}
         for adres in list(self.uyeler):
             ozs = slot_ozsermaye(adres)
@@ -227,9 +234,12 @@ class Saha:
         taze, neden = kadro_taze_mi(kadro, simdi_ms, self.rules)
         kararlar: list[Karar] = []
         if not taze:
-            for adres in list(self.uyeler):                         # R-6 (06.11 denetimi): kadro bayatken de işlem yok (72 sa) düşmesi çalışır (kadro verisi gerektirmez; sonuç dışı)
+            for adres in list(self.uyeler) if not self.sade else []:                         # R-6 (06.11 denetimi): kadro bayatken de işlem yok (72 sa) düşmesi çalışır (kadro verisi gerektirmez; sonuç dışı)
                 self._islem_yok_dus(adres, simdi_ms, kararlar)
             return kararlar, neden
+        if kadro.get("sade"):
+            return self._sade_degerlendir(kadro, simdi_ms)
+        self.sade = False
         kadro = self._gun_kadrosu(kadro)
         if self.haftalik:
             return self._haftalik_degerlendir(kadro, simdi_ms)
@@ -241,6 +251,28 @@ class Saha:
         ilk_gun = not self.kurulu
         self._doldur(kadro, satirlar, simdi_ms, ilk_gun, kararlar)
         self._degistir(kadro, satirlar, simdi_ms, kararlar)
+        self.eksik = {"saha": len(self.uyeler), "n": self.n, "neden": "uygun_aday_yok"} if len(self.uyeler) < self.n else None
+        if self.uyeler:
+            self.kurulu = True
+        return kararlar, "ok"
+
+    def _sade_degerlendir(self, kadro: dict, simdi_ms: int) -> tuple[list[Karar], str]:
+        """K-85: kadro `satirlar` = üyeler. Kadroda olmayan üye iner (`kadro_cikti`, sonuç dışı: pozisyonlar trader kapatana kadar izlenir); boş slot kadro sırasıyla dolar. Her çağrıda en güncel kadro uygulanır."""
+        kararlar: list[Karar] = []
+        ilk_gun = not self.kurulu or not self.sade
+        self.sade = True
+        satirlar = {s["adres"]: s for s in kadro["satirlar"]}
+        for adres in list(self.uyeler):
+            if adres not in satirlar:
+                self._dus(adres, "kadro_cikti", False, simdi_ms, kararlar)
+        for s in sorted(kadro["satirlar"], key=lambda x: int(x.get("sira") or 0)):
+            if len(self.uyeler) >= self.n:
+                break
+            if s["adres"] in self.uyeler or s["adres"] in self.inen:
+                continue
+            self._ekle(s["adres"], s, simdi_ms)
+            kararlar.append(Karar("giris", s["adres"], "ilk_gun" if ilk_gun and not self.uyeler else "bos_slot"))
+        self.son_kosu_ms = int(kadro["kosu_ms"])
         self.eksik = {"saha": len(self.uyeler), "n": self.n, "neden": "uygun_aday_yok"} if len(self.uyeler) < self.n else None
         if self.uyeler:
             self.kurulu = True
@@ -421,4 +453,4 @@ class Saha:
 
     # ------------------------------------------------------------------ kalıcılık
     def to_json(self) -> dict[str, Any]:
-        return {"uyeler": self.uyeler, "inen": self.inen, "bekleme": self.bekleme, "degisiklik": self.degisiklik, "son_kosu_ms": self.son_kosu_ms, "kurulu": self.kurulu, "alarm_gunu": self.alarm_gunu, "gun_kadro": self.gun_kadro, "k39_gecis": self.k39_gecis, "hafta": self.hafta}
+        return {"uyeler": self.uyeler, "inen": self.inen, "bekleme": self.bekleme, "degisiklik": self.degisiklik, "son_kosu_ms": self.son_kosu_ms, "kurulu": self.kurulu, "alarm_gunu": self.alarm_gunu, "gun_kadro": self.gun_kadro, "k39_gecis": self.k39_gecis, "hafta": self.hafta, **({"sade": True} if self.sade else {})}

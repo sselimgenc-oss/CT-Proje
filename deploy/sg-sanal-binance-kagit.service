@@ -20,7 +20,7 @@ Environment=PATH=/var/lib/sg-sanal/venv/bin:/usr/local/bin:/usr/bin:/bin
 Environment=TELEGRAM_KOMUT=kapali
 Environment=VARDIYA_ID=binance-kagit
 ExecStartPre=/bin/mkdir -p durum/binance_kagit kayit/binance_kagit
-ExecStart=/var/lib/sg-sanal/venv/bin/python -u -m copytrade.canli.motor --kip sanal --borsa binance_kagit --sanal-kasa-usd 10000 --kadro-dali ${KADRO_DALI} --durum-dizin durum/binance_kagit --kayit-dizin kayit/binance_kagit --vardiya ${VARDIYA_ID}
+ExecStart=/var/lib/sg-sanal/venv/bin/python -u -m copytrade.canli.motor --kip sanal --borsa binance_kagit --sanal-kasa-usd 1000 --kadro-dali ${KADRO_DALI} --durum-dizin durum/binance_kagit --kayit-dizin kayit/binance_kagit --vardiya ${VARDIYA_ID}
 Restart=on-failure
 RestartSec=30
 RestartSteps=5

@@ -39,7 +39,7 @@ def test_ortam_kasasi_radar_kopya_boyut_etkilemez_motor_300_ile_calisir(monkeypa
     assert rules["canli_kasa_usd"] == 1000 and boyut.saha_sayisi(1000.0, rules) == 11
     assert boyut.slot_usd(None, rules) == pytest.approx(90.9091, abs=1e-4)
     kadro = radar_kadro.kadro_olustur({"sema": radar_kadro.HAVUZ_SEMA, "kosu_ms": 1, "satirlar": []}, rules)
-    assert kadro["kasa_usd"] == 1000.0 and kadro["slot_usd"] == pytest.approx(90.9091, abs=1e-4) and kadro["saha_n"] == 11
+    assert kadro["kasa_usd"] == 1000.0 and kadro["slot_usd"] == pytest.approx(90.9091, abs=1e-4) and kadro["saha_n"] == 5          # K-85: kadro 5 trader (radar_kadro_n)
     t0 = pd.Timestamp("2026-01-01", tz="UTC")
     v5 = kopya_v5.hesapla([], {}, {}, {}, [], t0, t0 + pd.Timedelta(days=7), 1, "intraday", rules, trader_hesap_usd=10_000.0)
     assert v5["kasa_usd"] == 1000.0 and v5["slot_usd"] == pytest.approx(90.9091, abs=1e-4)

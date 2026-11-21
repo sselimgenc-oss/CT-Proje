@@ -1,39 +1,91 @@
-"""Günlük kadro (docs/RADAR_V1.md §5; görev T3 §3): T2 `havuz.json` → R2 form puanı → sıra = form azalan; 1–11 `ilk11`, 12–30 `yedek`. Saha kararları (slot −%10, bekleme, günde 2 değişiklik) burada DEĞİL:
-T4 motoru `kadro.json`'u okuyup §5 kurallarını uygular.
+"""Kadro, K-85 sade seçim (kullanıcı kararı 21.11): `havuz.json` (radar_tarama) + önceki kadro → `kadro.json`. Motor kadroyu okur (`copytrade/canli/kadro.py`).
 
-    python -m copytrade.radar_kadro --havuz radar/2026-11-05/havuz.json [--kasa 10000] [--onceki-kadro onceki/kadro.json]    # → radar/2026-11-05/kadro.json
+Kurallar (tümü `kurallar.yaml` radar_* anahtarları):
+- 5 trader (`radar_kadro_n`), eşit slot, YEDEK YOK. Kuralları geçen 5'ten azsa slotlar BOŞ kalır (geçmeyen asla doldurulmaz).
+- İlk kurulum: kadro dosyası yok / dönem (`copytrade/canli/DONEM`) değişti / hiç üye yok → sıradaki en iyi ≤5 hemen girer (tarama o gün yapılır).
+- Sonra değişiklik YALNIZ kontrol günlerinde (`radar_kontrol_gunleri`: UTC Pazartesi ve Perşembe; aynı gün ikinci koşu kontrol yapmaz): süzgeçten düşen YA DA girişten beri kopya sonucu ≤ `radar_cikis_kopya_esigi`
+  olan üye çıkar (en çok `radar_degisim_azami`; önce süzgeçten düşenler, sonra en kötü sonuç); çıkan `radar_yasak_gun` gün geri giremez; boş slotlar sıralı listeden dolar.
+  Veri hatası (`veri_hatasi`, `zaman_yok`) çıkış nedeni DEĞİLDİR.
+- Kontrol günü değilse tarama yapılmaz; kadro aynen sürer (yalnız `kosu_ms` tazelenir, motor 36 saatten eski kadroyu bayat sayar).
 
-`kadro.json` (docs/VERI_SOZLESMESI.md "Radar kadro"): {sema "radar-kadro-v1", kosu_ms, kasa_usd, slot_usd, saha_n, gecti_sayisi, soguyan[], satirlar[{adres, sira, katman, form, bilesenler{G,K,I1,I2,Y,H},
-kopya_getiri_7g, max_kaldirac, form_h_siz, sira_h_siz, medyan_tutma_saat, devir_hafta (bilgi)}], korelasyon{adresler, gun_sayisi, matris}, h_siz_girenler[], onceki_kosu_ms, elenenler[], eski_uye_neden{}, huni{}, olusturma_ms}.
-`form_h_siz`/`sira_h_siz`/`h_siz_girenler`/`onceki_kosu_ms`/`elenenler`/`huni` YALNIZ BİLGİDİR: seçim, sıra ve eşikler değişmez (karar `form`'dadır). `eski_uye_neden` seçimi değiştirmez ama
-canlı motor TÜKETİR (D-02): `r1:<neden>` → üye aynı gün sonuçla düşer; `veri:<neden>` (veri_hatasi / payda_yok / zaman_yok; kullanıcı 14.11) sonuç vermez (K-39 iki gün kadro dışı kuralı). Eksik koşuda (zaman bütçesi aşıldı / satır eksik / `veri_hatasi` payı > `radar_veri_hatasi_pay_max`, R-2) kadro YAZILMAZ ve çıkış kodu 2 (`radar.yml` `son/` yayımlamaz)."""
+`kadro.json` (motorun okuduğu biçim korundu): {sema "radar-kadro-v1", radar_surum, kosu_ms, kasa_usd, slot_usd, saha_n, gecti_sayisi, soguyan[], satirlar[{adres, sira, katman, form, bilesenler, ...}], korelasyon, elenenler[],
+eski_uye_neden{}, huni{}, olusturma_ms} + K-85 alanları: `sade` true, `donem`, `kontrol_gun` (son kontrolün UTC günü), `yasak` {adres: bitiş_ms}, `degisim[]` (bu koşunun giriş/çıkışları),
+`cikanlar` [{adres, cikis_ms}] (son `radar_cikanlar_saat` saatte çıkarılanlar; motor açık pozisyonlarını yönetir; eski dosyada yoksa boş sayılır).
+
+    python -m copytrade.radar_kadro --havuz radar/2026-11-21/havuz.json [--onceki-kadro onceki/kadro.json]
+"""
 from __future__ import annotations
 
 import argparse
 import json
 import sys
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 
 from copytrade import boyut
 from copytrade.kurallar import load_rules
-from copytrade.radar_form import form_h_siz, form_puanla, korelasyon
 
 SEMA = "radar-kadro-v1"
-HAVUZ_SEMA = "radar-havuz-v1"
+HAVUZ_SEMA = "radar-havuz-v2"
+VERI_NEDENLERI = ("veri_hatasi", "zaman_yok")       # çıkış / sonuç nedeni DEĞİL (okuma / bütçe)
+SAAT = 3_600_000
+GUN = 24 * SAAT
+DONEM_DOSYA = Path(__file__).with_name("canli") / "DONEM"
+
+
+def donem_oku(yol: Path = DONEM_DOSYA) -> str | None:
+    """`copytrade/canli/DONEM` (UTC ISO). Yok / boş → None."""
+    try:
+        metin = yol.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    return metin or None
+
+
+def _gun(ms: int) -> str:
+    return datetime.fromtimestamp(ms / 1000, UTC).date().isoformat()
+
+
+def aktif_onceki(onceki: dict | None, donem: str | None, rules: dict) -> dict | None:
+    """Önceki kadro bu kuralların ve bu dönemin kadrosuysa kendisi, değilse None (eski sürüm / eski dönem kadrosu devralınmaz)."""
+    if not onceki or onceki.get("sema") != SEMA or not onceki.get("sade") or str(onceki.get("radar_surum")) != str(rules["radar_surum"]):
+        return None
+    if donem is not None and onceki.get("donem") != donem:
+        return None
+    return onceki
+
+
+def aktif_uyeler(onceki: dict | None, donem: str | None, rules: dict) -> list[dict]:
+    a = aktif_onceki(onceki, donem, rules)
+    return [dict(s) for s in (a or {}).get("satirlar") or []]
+
+
+def tarama_gerekli(onceki: dict | None, donem: str | None, kosu_ms: int, rules: dict) -> tuple[bool, str]:
+    """(gerekli mi, sebep): ilk kurulum / yeni dönem / üye yok → her gün; aksi halde yalnız kontrol günü (UTC) ve o gün kontrol yapılmadıysa."""
+    a = aktif_onceki(onceki, donem, rules)
+    if a is None:
+        return True, "ilk_kurulum"
+    if not a.get("satirlar"):
+        return True, "kadro_bos"
+    if a.get("kontrol_gun") == _gun(kosu_ms):
+        return False, "bugun_kontrol_yapildi"
+    if datetime.fromtimestamp(kosu_ms / 1000, UTC).weekday() in {int(x) for x in rules["radar_kontrol_gunleri"]}:
+        return True, "kontrol_gunu"
+    return False, "kontrol_gunu_degil"
 
 
 def kosu_tam_mi(havuz: dict, rules: dict | None = None) -> tuple[bool, str | None]:
-    """Koşu tam mı: `zaman_yok` satırı yok, satır sayısı = min(`radar_aday_tavan`, evren_toplam) ve (R-2, 06.11 denetimi) `veri_hatasi` satırlarının payı ≤ `radar_veri_hatasi_pay_max`
-    (HL kesintisinde küçük/boş kadro "taze" yayımlanmasın; tam sınır tamdır). Değilse (False, neden). Aday sayısı kurala göredir (deneme `--aday-sayisi` koşuları `radar.yml`'de yok)."""
+    """Koşu tam mı: tarama yapıldıysa `zaman_yok` satırı yok, lider tablosu boş değil ve `veri_hatasi` payı ≤ `radar_veri_hatasi_pay_max`. Tarama yapılmadıysa (kadro aynen sürer) her zaman tam."""
     rules = rules or load_rules()
+    if not havuz.get("tarama"):
+        return True, None
     satirlar = havuz["satirlar"]
+    if int(havuz.get("evren_toplam") or 0) <= 0:
+        return False, "lider tablosu boş"
     zaman_yok = sum(1 for s in satirlar if s.get("neden") == "zaman_yok")
     if zaman_yok:
         return False, f"{zaman_yok} aday zaman_yok (zaman bütçesi aşıldı)"
-    beklenen = min(int(rules["radar_aday_tavan"]), int(havuz["evren_toplam"]))
-    if len(satirlar) < beklenen:
-        return False, f"satır {len(satirlar)} < beklenen {beklenen}"
     hatali = sum(1 for s in satirlar if s.get("neden") == "veri_hatasi")
     esik = float(rules["radar_veri_hatasi_pay_max"])
     if satirlar and hatali / len(satirlar) > esik + 1e-12:
@@ -41,91 +93,82 @@ def kosu_tam_mi(havuz: dict, rules: dict | None = None) -> tuple[bool, str | Non
     return True, None
 
 
-VERI_NEDENLERI = ("veri_hatasi", "payda_yok", "zaman_yok")     # kullanıcı 14.11: R1 performans/kopyalanabilirlik nedeni DEĞİL (veri/okuma/bütçe); sonuçla düşme ve bekleme vermez
+def _uye(s: dict, giris_ms: int, sira: int) -> dict:
+    return {"adres": s["adres"], "sira": sira, "katman": "ilk11", "form": s.get("skor"), "bilesenler": {}, "kopya_getiri_7g": None, "kopya_getiri_30g": s.get("kopya_getiri_30g"),
+            "getiri_30g": s.get("getiri_30g"), "dusus_30g": s.get("dusus_30g"), "skor": s.get("skor"), "max_kaldirac": s.get("max_kaldirac"), "medyan_tutma_saat": s.get("medyan_tutma_saat"),
+            "giris_ms": giris_ms, "tutma": False}
 
 
-def onceki_karsilastir(onceki: dict | None, havuz: dict, satirlar: list[dict], soguyan: list[dict]) -> tuple[list[dict], dict[str, str]]:
-    """Önceki kadronun (`onceki`, radar-kadro-v1) bugünkü kadroda OLMAYAN üyeleri için neden (bugünkü havuza göre). Seçimi değiştirmez; canlı motor `eski_uye_neden`'i okur (D-02):
-    `soguyan` (R1'i geçti ama form sürmüyor) · `r1:<neden>` (havuzda, `gecti` false, gerçek R1 nedeni → motor aynı gün sonuçla düşürür) · `veri:<neden>` (havuzda, `gecti` false ama neden
-    `VERI_NEDENLERI`: veri_hatasi / payda_yok / zaman_yok → sonuç YOK, K-39 kadro dışı kuralı) · `r0_disi` (havuzda yok: 7 g getiri ilk `radar_aday_tavan`'dan düştü) · `sira_disi` (puanlandı, form sırası > kadro).
-    `elenenler` = bunlardan gerçek R1 nedeniyle elenenler [{adres, onceki_sira, neden}] (önceki sıra artan; `veri:` girmez). `onceki` None → ([], {})."""
-    if not onceki:
-        return [], {}
-    if onceki.get("sema") != SEMA:
-        raise ValueError(f"önceki kadro şeması {SEMA} olmalı: {onceki.get('sema')!r}")
-    bugun = {s["adres"] for s in satirlar}
-    havuz_satiri = {s["adres"]: s for s in havuz["satirlar"]}
-    soguyan_adres = {s["adres"] for s in soguyan}
-    elenenler, neden = [], {}
-    for u in sorted(onceki.get("satirlar") or [], key=lambda u: u["sira"]):
-        a = u["adres"]
-        if a in bugun:
-            continue
-        h = havuz_satiri.get(a)
-        if h is None:
-            neden[a] = "r0_disi"
-        elif not h.get("gecti") and h.get("neden") in VERI_NEDENLERI:
-            neden[a] = f"veri:{h.get('neden')}"
-        elif not h.get("gecti"):
-            neden[a] = f"r1:{h.get('neden')}"
-            elenenler.append({"adres": a, "onceki_sira": u["sira"], "neden": h.get("neden")})
-        elif a in soguyan_adres:
-            neden[a] = "soguyan"
-        else:
-            neden[a] = "sira_disi"
-    return elenenler, neden
-
-
-def huni_ozeti(havuz: dict, rules: dict, kadro_n: int) -> dict:
-    """Radar hunisi (BİLGİ; pano 14.11): evren (R0 lider tablosu) → aday (taranan satır) → işlem yeterli (dolumu ölçülüp `islem_sayisi` ≥ `radar_min_islem`) → R1 geçen → kadro.
-    `neden`: elenme nedeni → adet (havuz satırlarının `neden`i; geçen yok sayılır). Yeni hesap yok: havuz.json alanlarının sayımı."""
-    satirlar = havuz.get("satirlar") or []
-    esik = int(rules["radar_min_islem"])
-    nedenler: dict[str, int] = {}
-    for x in satirlar:
-        if not x.get("gecti"):
-            nedenler[str(x.get("neden"))] = nedenler.get(str(x.get("neden")), 0) + 1
-    return {"evren": havuz.get("evren_toplam"), "aday": len(satirlar), "islem_yeterli": sum(1 for x in satirlar if (x.get("islem_sayisi") or 0) >= esik),
-            "islem_esik": esik, "gecen": sum(1 for x in satirlar if x.get("gecti")), "kadro": kadro_n, "neden": dict(sorted(nedenler.items(), key=lambda kv: (-kv[1], kv[0])))}
-
-
-def kadro_olustur(havuz: dict, rules: dict | None = None, kasa_usd: float | None = None, onceki: dict | None = None) -> dict:
-    """Havuz → kadro (saf fonksiyon). `kasa_usd` verilmezse `radar_kasa_usd` (D-01, K-66: motorun sanal kasasıyla aynı; `boyut.radar_kasa`); slot = kasa / N (`boyut`, K‑28). Havuzda 30'dan az `gecti` varsa kadro o kadardır.
-    `onceki` (önceki günün kadrosu, isteğe bağlı) yalnız bilgi alanları `elenenler`/`eski_uye_neden` içindir; seçimi etkilemez."""
+def kadro_olustur(havuz: dict, rules: dict | None = None, onceki: dict | None = None, donem: str | None = None, kasa_usd: float | None = None) -> dict:
+    """Havuz + önceki kadro → kadro (saf fonksiyon)."""
     rules = rules or load_rules()
     if havuz.get("sema") != HAVUZ_SEMA:
         raise ValueError(f"havuz şeması {HAVUZ_SEMA} olmalı: {havuz.get('sema')!r}")
-    kasa = boyut.radar_kasa(rules, kasa_usd)
-    n = boyut.saha_sayisi(kasa, rules)
-    puanli, soguyan = form_puanla(havuz["satirlar"], rules)
-    havuz_satiri = {h["adres"]: h for h in havuz["satirlar"]}
-    toplam, ilk = int(rules["radar_kadro_toplam"]), int(rules["radar_kadro_ilk"])
-    secilen = puanli[:toplam]
-    # Bilgi: H'siz form ve tüm puanlı havuzdaki sırası (eşitlikte adres; karar sırası `form`'dur)
-    hsiz = {p["adres"]: form_h_siz(p["bilesenler"], rules) for p in puanli}
-    hsiz_sira = {a: i for i, a in enumerate(sorted(hsiz, key=lambda a: (-hsiz[a], a)), 1)}
-    satirlar = [{"adres": p["adres"], "sira": i, "katman": "ilk11" if i <= ilk else "yedek", "form": p["form"], "bilesenler": p["bilesenler"],
-                 "kopya_getiri_7g": p["kopya_getiri_7g"], "max_kaldirac": p["max_kaldirac"], "form_h_siz": hsiz[p["adres"]], "sira_h_siz": hsiz_sira[p["adres"]],
-                 "g_t_istat": havuz_satiri[p["adres"]].get("g_t_istat"), "tutma": bool(havuz_satiri[p["adres"]].get("tutma")),
-                 "medyan_tutma_saat": havuz_satiri[p["adres"]].get("medyan_tutma_saat"), "devir_hafta": havuz_satiri[p["adres"]].get("devir_hafta")}   # 15.11 yalnız bilgi (Fable): tutma sınıfı / devir ölçümü; seçimi ETKİLEMEZ
-                for i, p in enumerate(secilen, 1)]
-    secilen_adres = {p["adres"] for p in secilen}
-    h_siz_girenler = [{"adres": a, "sira_h_siz": hsiz_sira[a], "form_h_siz": hsiz[a]} for a in sorted(hsiz_sira, key=hsiz_sira.get)
-                      if hsiz_sira[a] <= toplam and a not in secilen_adres]
-    elenenler, eski_uye_neden = onceki_karsilastir(onceki, havuz, satirlar, soguyan)
-    return {"sema": SEMA, "radar_surum": str(rules.get("radar_surum", "v1")), "kosu_ms": havuz["kosu_ms"], "kasa_usd": kasa, "slot_usd": boyut.slot_usd(kasa, rules), "saha_n": n,
-            "gecti_sayisi": sum(1 for s in havuz["satirlar"] if s.get("gecti")), "soguyan": soguyan, "satirlar": satirlar,
-            "korelasyon": korelasyon([{"adres": p["adres"], "kopya_gunluk": p["kopya_gunluk"]} for p in secilen]),          # K-45 eki (08.11): tüm kadro (İlk 11 + Yedek); Yedek boş slota girebildiği için benzerlik denetimi onları da kapsar
-            "h_siz_girenler": h_siz_girenler, "onceki_kosu_ms": (onceki or {}).get("kosu_ms"), "elenenler": elenenler, "eski_uye_neden": eski_uye_neden,
-            "huni": huni_ozeti(havuz, rules, len(satirlar))}
+    donem = donem if donem is not None else havuz.get("donem")
+    kosu = int(havuz["kosu_ms"])
+    a = aktif_onceki(onceki, donem, rules)
+    uyeler = [dict(s) for s in (a or {}).get("satirlar") or []]
+    yasak = {k: int(v) for k, v in ((a or {}).get("yasak") or {}).items() if int(v) > kosu}
+    cikanlar = [c for c in ((a or {}).get("cikanlar") or (onceki or {}).get("cikanlar") or []) if kosu - int(c["cikis_ms"]) <= float(rules["radar_cikanlar_saat"]) * SAAT]
+    kontrol_gun = (a or {}).get("kontrol_gun")
+    degisim: list[dict] = []
+    n = int(rules["radar_kadro_n"])
+    satir = {s["adres"]: s for s in havuz["satirlar"]}
+    if havuz.get("tarama"):
+        kontrol_gun = _gun(kosu)
+        ilk = a is None or not uyeler
+        if not ilk:
+            adaylar = []
+            for u in uyeler:
+                s = satir.get(u["adres"])
+                if s is None:
+                    continue
+                dustu = not s.get("gecti") and s.get("neden") not in VERI_NEDENLERI
+                kayip = s.get("giris_getiri") is not None and s["giris_getiri"] <= float(rules["radar_cikis_kopya_esigi"]) + 1e-12
+                if dustu or kayip:
+                    adaylar.append((0 if dustu else 1, s.get("giris_getiri") if s.get("giris_getiri") is not None else 0.0, u["adres"], f"suzgec:{s.get('neden')}" if dustu else "kopya_kayip"))
+            for _, _, adres, neden in sorted(adaylar)[:int(rules["radar_degisim_azami"])]:
+                uyeler = [u for u in uyeler if u["adres"] != adres]
+                yasak[adres] = kosu + int(rules["radar_yasak_gun"]) * GUN
+                cikanlar.append({"adres": adres, "cikis_ms": kosu})
+                degisim.append({"tur": "cikis", "adres": adres, "neden": neden})
+        sirali = sorted((s for s in havuz["satirlar"] if s.get("gecti")), key=lambda s: (-(s.get("skor") or 0.0), s["adres"]))
+        mevcut = {u["adres"] for u in uyeler}
+        for s in sirali:
+            if len(uyeler) >= n:
+                break
+            if s["adres"] in mevcut or s["adres"] in yasak:
+                continue
+            uyeler.append(_uye(s, kosu, 0))
+            mevcut.add(s["adres"])
+            degisim.append({"tur": "giris", "adres": s["adres"], "neden": "ilk_kurulum" if ilk else "bos_slot"})
+    for u in uyeler:                                                          # yenilenen ölçüler (yalnız bilgi); giriş zamanı korunur
+        s = satir.get(u["adres"])
+        if s and havuz.get("tarama"):
+            u.update({k: s.get(k) for k in ("kopya_getiri_30g", "getiri_30g", "dusus_30g", "skor", "max_kaldirac", "medyan_tutma_saat")})
+            u["form"] = s.get("skor")
+    uyeler.sort(key=lambda u: (-(u.get("skor") if u.get("skor") is not None else -1e9), u["adres"]))
+    for i, u in enumerate(uyeler, 1):
+        u["sira"], u["katman"] = i, "ilk11"
+    kasa = boyut.radar_kasa(rules, kasa_usd if kasa_usd is not None else havuz.get("kasa_usd"))
+    sayilar: dict[str, int] = {}
+    for s in havuz["satirlar"]:
+        if not s.get("gecti"):
+            sayilar[str(s.get("neden"))] = sayilar.get(str(s.get("neden")), 0) + 1
+    return {"sema": SEMA, "radar_surum": str(rules["radar_surum"]), "sade": True, "donem": donem, "kosu_ms": kosu, "kasa_usd": kasa, "slot_usd": boyut.slot_usd(kasa, rules), "saha_n": n,
+            "gecti_sayisi": sum(1 for s in havuz["satirlar"] if s.get("gecti")) if havuz.get("tarama") else (a or {}).get("gecti_sayisi", 0), "soguyan": [], "satirlar": uyeler,
+            "korelasyon": {"adresler": [], "matris": []}, "elenenler": [], "eski_uye_neden": {}, "h_siz_girenler": [], "onceki_kosu_ms": (onceki or {}).get("kosu_ms"),
+            "kontrol_gun": kontrol_gun, "yasak": yasak, "cikanlar": cikanlar, "degisim": degisim,
+            "huni": {"evren": havuz.get("evren_toplam"), "aday": len(havuz["satirlar"]), "gecen": sum(1 for s in havuz["satirlar"] if s.get("gecti")), "kadro": len(uyeler),
+                     "neden": dict(sorted(sayilar.items(), key=lambda kv: (-kv[1], kv[0])))}}
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--havuz", type=Path, required=True)
     ap.add_argument("--cikti", type=Path, default=None, help="varsayılan: havuz.json'ın yanına kadro.json")
-    ap.add_argument("--kasa", type=float, default=None, help="kasa $ (varsayılan kurallar.yaml radar_kasa_usd; D-01)")
-    ap.add_argument("--onceki-kadro", type=Path, default=None, help="önceki günün kadro.json'u (yalnız bilgi: elenenler, eski_uye_neden); yoksa boş")
+    ap.add_argument("--onceki-kadro", type=Path, default=None, help="önceki kadro.json (üyeler, yasak listesi, çıkanlar); yoksa ilk kurulum")
+    ap.add_argument("--donem", default=None, help="dönem başı (UTC ISO); varsayılan copytrade/canli/DONEM")
     args = ap.parse_args(argv)
     rules = load_rules()
     havuz = json.loads(args.havuz.read_text(encoding="utf-8"))
@@ -134,13 +177,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"EKSİK KOŞU: {neden}; kadro yazılmadı", file=sys.stderr)
         return 2
     onceki = json.loads(args.onceki_kadro.read_text(encoding="utf-8")) if args.onceki_kadro else None
-    kadro = {**kadro_olustur(havuz, rules, args.kasa, onceki), "olusturma_ms": int(time.time() * 1000)}     # M-10: isabet `sonraki_7g` penceresi bu andan (yayımdan hemen önce) başlar
+    kadro = {**kadro_olustur(havuz, rules, onceki, args.donem or donem_oku()), "olusturma_ms": int(time.time() * 1000)}
     cikti = args.cikti or args.havuz.with_name("kadro.json")
     gecici = cikti.with_suffix(".json.tmp")
     gecici.write_text(json.dumps(kadro, ensure_ascii=False, indent=1, allow_nan=False) + "\n", encoding="utf-8")
     gecici.replace(cikti)
-    print(f"kadro: {len(kadro['satirlar'])} kişi (ilk11 {sum(1 for s in kadro['satirlar'] if s['katman'] == 'ilk11')}, yedek {sum(1 for s in kadro['satirlar'] if s['katman'] == 'yedek')}), "
-          f"gecti {kadro['gecti_sayisi']}, soğuyan {len(kadro['soguyan'])}, kasa {kadro['kasa_usd']:.0f} $, slot {kadro['slot_usd']:.2f} $ → {cikti}")
+    print(f"kadro: {len(kadro['satirlar'])}/{kadro['saha_n']} kişi, tarama {'evet' if havuz.get('tarama') else 'hayır'}, değişim {kadro['degisim']}, gecti {kadro['gecti_sayisi']} → {cikti}")
     return 0
 
 

@@ -147,9 +147,11 @@ def test_azaltma_acilis_carpanini_kullanir(tmp_path):
 
 
 def test_kopya_zarar_elemesi_degismedi():
-    assert "kopya_zarar" in radar_tarama.R1_SIRA if hasattr(radar_tarama, "R1_SIRA") else True
-    kaynak = open(radar_tarama.__file__, encoding="utf-8").read()
-    assert '("kopya_zarar", basarisiz(satir.get("kopya_getiri_7g"), lambda v: v > 0))' in kaynak
+    """K-85: 'kopya getirisi > 0' seçim kuralı sürer (30 günlük pencerede, `kopya_getiri_30g`); sınırda (0) elenir."""
+    satir = {"getiri_30g": 0.06, "pnl_30g": 1.0, "hafta_karli": 4, "dusus_30g": 0.0, "getiri_7g": 0.0, "coin_hacim_pay": 1.0, "coin_kar_pay": 1.0, "tek_islem_haric_pnl": 1.0, "islem_sayisi": 9,
+             "acilis_hafta": 1.0, "medyan_tutma_saat": 6.0, "max_kaldirac": 2.0, "kopya_getiri_30g": 0.0, "kopya_koruma": 1.0}
+    assert radar_tarama.degerlendir(satir) == (False, "kopya_zarar")
+    assert radar_tarama.degerlendir({**satir, "kopya_getiri_30g": 0.001}) == (True, None)
 
 
 def test_ozet_satiri():
