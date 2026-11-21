@@ -28,9 +28,9 @@
  "kaynak": {
   "cgroup_mb": 24.1,
   "cgroup_tepe_mb": 24.1,
-  "disk_bos_gb": 63.39,
+  "disk_bos_gb": 63.4,
   "disk_toplam_gb": 66.76,
-  "olc_ms": 1795269520841,
+  "olc_ms": 1795269823930,
   "ram_mb": 37.5,
   "ram_tepe_mb": 37.5,
   "yuk_1dk": 0.0
@@ -55,6 +55,6 @@
  "ucret_gercek_usd": 0.0,
  "ucret_tahmin_say": 0,
  "vardiya": "sunucu",
- "yazildi_ms": 1795269520841,
+ "yazildi_ms": 1795269823930,
  "yetim_ilk": {}
 }
