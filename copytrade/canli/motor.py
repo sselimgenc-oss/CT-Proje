@@ -41,7 +41,7 @@ from copytrade import koruyucu
 from copytrade.canli import sert_sinirlar as sert
 from copytrade.canli.borsa_stop import BorsaStop
 from copytrade.canli.risk import Risk, coin_tavan_usd, gun
-from copytrade.canli.yurutucu import AnahtarYok, Dolum, SanalYurutucu, Yurutucu, gercek_yurutucu_olustur, ucret_eslestir
+from copytrade.canli.yurutucu import sanal_min_nosyonel, AnahtarYok, Dolum, SanalYurutucu, Yurutucu, gercek_yurutucu_olustur, ucret_eslestir
 from copytrade.dinleyici import Ayar, Dinleyici, Izlenen, Olay, clearinghouse_ayristir, clearinghouse_giris_pxleri, clearinghouse_pozisyonlari, clearinghouse_yuk, coin_listesi, rest_dolumlar, rest_post_fabrikasi, ws_baglan
 from copytrade.hl_ortak import spot_usdc
 from copytrade.izleme_liste import perp_dex_names
@@ -3806,7 +3806,7 @@ class Motor:
         kalan_usd = float(n.get("usd", 0.0)) - dolan * px
         if kalan_usd <= 0:
             return
-        if kalan_usd < float(self.rules.get("canli_min_nosyonel_usd", 10)):
+        if kalan_usd < (float(self.rules.get("canli_min_nosyonel_usd", 10)) if self.kip == "gercek" else sanal_min_nosyonel(self.rules, str(n.get("coin", "")))):
             self.sayac["min_nosyonel"] += 1
             self._say_neden("min_nosyonel")
             self.kayit({"olay": "kismi_azaltma_atlandi", "adres": adres, "coin": coin, "kalan_usd": round(kalan_usd, 6)})
@@ -4122,7 +4122,8 @@ async def bekleme_vardiyasi(motor: Motor, sure_sn: float | None, uyku: Callable[
     zinciri koptu); vardiya boyunca kadroyu aralıkla yoklar, uygun kadro gelince erken ve temiz biter (sonraki vardiya adreslerle başlar). 14.11: her yoklamada `bekleme_yaz`
     (ozet.json + dönem serisi + BTC dönem fiyatı) — pano vardiya sonunu beklemez."""
     motor.kayit({"olay": "bekleme_vardiyasi", "gerekli": str(motor.radar_surum_gerekli)})
-    bitis = motor.saat_ms() + int((sure_sn or 0) * 1000)
+    surekli = sure_sn is None                               # K-86: sunucu `--sure-sn` vermez → kadro gelene dek SÜRESİZ bekle (çıkış 0 olursa systemd yeniden başlatmaz, güncelleme geri alınır)
+    bitis = float("inf") if surekli else motor.saat_ms() + int(sure_sn * 1000)
     aralik = max(1.0, float(motor.rules["canli_kadro_aralik_sn"]))
     kadro_geldi = False
     while True:
@@ -4135,10 +4136,12 @@ async def bekleme_vardiyasi(motor: Motor, sure_sn: float | None, uyku: Callable[
         if motor.saha.uyeler or (motor._son_kadro or {}).get("satirlar"):
             kadro_geldi = True
             motor.kayit({"olay": "bekleme_bitti_kadro_geldi", "uye": len(motor.saha.uyeler)})
+            if surekli:
+                return {"bekleme_vardiyasi": True, "kadro_geldi": True, "devam": True}      # süreç çıkmaz: `calis` normal döngüye geçer (nabız `bekleme_yaz` → `durum_yaz` ile canlı kaldı)
             break
         if simdi >= bitis:
             break
-        await uyku(min(aralik, max(1.0, (bitis - simdi) / 1000)))
+        await uyku(aralik if surekli else min(aralik, max(1.0, (bitis - simdi) / 1000)))
     ozet = {**motor.ozet(), **motor.pano_ek(), "bekleme_vardiyasi": True, "kadro_geldi": kadro_geldi, "yazildi_ms": motor.saat_ms()}
     motor.kayit({"olay": "kapanis", "ozet": ozet})
     _yaz(motor.durum_dizin / "ozet.json", ozet)
@@ -4148,13 +4151,18 @@ async def bekleme_vardiyasi(motor: Motor, sure_sn: float | None, uyku: Callable[
     return ozet
 
 
-async def calis(motor: Motor, sure_sn: float | None = None, ws: Callable[[], Any] = ws_baglan, cikti: Path | None = None) -> dict:
+async def calis(motor: Motor, sure_sn: float | None = None, ws: Callable[[], Any] = ws_baglan, cikti: Path | None = None, uyku: Callable[[float], Any] = asyncio.sleep) -> dict:
     """Ana döngü: dinleyici + tüketici + periyodik görevler; `sure_sn` dolunca (vardiya) ya da DUR/SIGTERM ile biter. Son özet `kayit`'a ve `durum/ozet.json`'a yazılır."""
     oncelik = [*motor.saha.uyeler, *motor.saha.inen]                      # userFills aboneliği ilk `userfills_adet` adrese: önce saha/inen
     adaylar = [s["adres"] for s in ((motor._son_kadro or {}).get("satirlar") or [])]
     adresler = list(dict.fromkeys([*oncelik, *adaylar]))
     if not adresler and motor.radar_surum_gerekli:
-        return await bekleme_vardiyasi(motor, sure_sn)
+        ozet = await bekleme_vardiyasi(motor, sure_sn, uyku=uyku)
+        if not ozet.get("devam"):
+            return ozet
+        oncelik = [*motor.saha.uyeler, *motor.saha.inen]                  # kadro geldi (süresiz bekleme): adresleri yeniden kur, normal çalışmaya devam
+        adaylar = [s["adres"] for s in ((motor._son_kadro or {}).get("satirlar") or [])]
+        adresler = list(dict.fromkeys([*oncelik, *adaylar]))
     if not adresler:
         raise KipHatasi("izlenecek adres yok (kadro okunamadı, saha boş)")
     liste = [Izlenen(a[:12], a) for a in adresler]

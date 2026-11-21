@@ -406,3 +406,13 @@ def test_donem_kayitli_donem_yoksa_son_yazimdan_sonraysa_yeni_sayilir(tmp_path):
     m_yeni.donem = gelecek                                                     # dönem başı son durum yazımından SONRA
     m_yeni.baslat()
     assert m_yeni.risk.acilis_durdu["elle_dur"] is False
+
+
+def test_kagit_yurutucu_tabani_sembol_haritasini_izler_gercek_kurallarla(tmp_path):
+    """Kâğıtta `canli_min_nosyonel_usd` (10 $) sembol haritasından (diger 5 $) sıkı olamaz: 5-10 $ 'diger' emir düşmez; BTC hâlâ 100 $."""
+    from copytrade.canli.yurutucu import sanal_min_nosyonel
+    assert ASIL["canli_min_nosyonel_usd"] == 10
+    assert sanal_min_nosyonel(ASIL, "SOL") == 5 and sanal_min_nosyonel(ASIL, "ETH") == 10 and sanal_min_nosyonel(ASIL, "BTC") == 10
+    m, _, saat = _kur(tmp_path, kurallar={"canli_min_nosyonel_usd": ASIL["canli_min_nosyonel_usd"]})
+    s = _ol(m, saat, "a:1", A, "SOL", "B", 40, 0.0, 100.0)                    # 8 $ (5-10 $ arası)
+    assert s[0].karar == "emir" and _emirler(tmp_path)[0]["usd_istenen"] == pytest.approx(8.0) and m.sayac["min_nosyonel"] == 0

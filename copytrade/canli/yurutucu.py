@@ -75,6 +75,15 @@ def kayma(yon: str, referans: float | None, dolum_px: float | None) -> float | N
     return ham if yon == "B" else -ham
 
 
+def sanal_min_nosyonel(rules: dict, coin: str) -> float:
+    """Kâğıt (sanal HL) yürütücü tabanı = min(`canli_min_nosyonel_usd`, sembol asgarisi `canli_min_emir_usd`): harita 5 $ diyorsa 5-10 $ emir 10 $ tabanına takılmaz. Harita yoksa eski taban."""
+    taban = float(rules.get("canli_min_nosyonel_usd", 10))
+    if isinstance(rules.get("canli_min_emir_usd"), dict):
+        from copytrade.boyut import min_emir_usd
+        return min(taban, min_emir_usd(rules, coin))
+    return taban
+
+
 def defter_yuru(seviyeler: list[dict], yon: str, usd: float, bant: float, acik_sz: float | None = None, tuketim: list | None = None) -> tuple[float, float, float]:
     """Karşı defteri yürür. `seviyeler`: karşı taraf (alışta ask artan, satışta bid azalan) [{px, sz}]. En iyi fiyattan ± `bant` dışındaki seviye dolmaz.
     Döner (sz, usd_dolan, referans_px = en iyi karşı fiyat). `acik_sz`: reduce‑only tavanı (coin; None = sınırsız). `tuketim` verilirse tüketilen (px, sz) çiftleri eklenir."""
@@ -139,7 +148,7 @@ class SanalYurutucu:
             return d
         simdi = self.saat_ms()
         seviyeler = self._derinlik_dus(coin, yon, asks if yon == "B" else bids, simdi)
-        if seviyeler and not min_nosyonel_ok(float(usd) / float(seviyeler[0]["px"]), float(seviyeler[0]["px"]), reduce_only, acik_sz, float(self.rules.get("canli_min_nosyonel_usd", 10))):
+        if seviyeler and not min_nosyonel_ok(float(usd) / float(seviyeler[0]["px"]), float(seviyeler[0]["px"]), reduce_only, acik_sz, sanal_min_nosyonel(self.rules, coin)):          # K-86: kâğıtta sembol haritası (`canli_min_emir_usd`) belirler; HL tabanı ondan sıkı olamaz
             d.referans_px, d.neden = float(seviyeler[0]["px"]), "min_nosyonel"
             return d
         tuketim: list = []
